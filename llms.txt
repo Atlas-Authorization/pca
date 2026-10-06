@@ -1,0 +1,34 @@
+# Proof-Carrying Authority (PCA)
+
+> An execution-authentication framework ("authF") for autonomous agents: replace the bearer token with a proof-carrying action (PCActn) verified offline against a committed plan, an attenuating capability chain, risk-scaled co-signing and a trust budget. Status: Preview.
+
+Live docs: https://atlasauth.net/pca
+Repo: https://github.com/Atlas-Authorization/pca
+npm: @atlasauth/pca (core), @atlasauth/pca-agent (agent client), @atlasauth/backend (verifyPCActn, requirePCA)
+
+## Docs
+- [Overview](docs/README.md)
+- [authN, authZ, authF](docs/concepts/authf.md)
+- [Plan commitment](docs/concepts/plan-commitment.md)
+- [Credential model](docs/concepts/credential-model.md)
+- [Policy and risk](docs/concepts/policy-and-risk.md)
+- [Threshold and step-up](docs/concepts/threshold-and-step-up.md)
+- [Ledger and revocation](docs/concepts/ledger-and-revocation.md)
+- [Attestation](docs/concepts/attestation.md)
+- [Optimistic and zero-knowledge](docs/concepts/optimistic-and-zk.md)
+- [Agent quickstart](docs/guides/agent-quickstart.md)
+- [Resource-server quickstart](docs/guides/resource-server-quickstart.md)
+- [Verify in your language](docs/guides/verify-in-your-language.md)
+- [Playground](docs/guides/playground.md)
+- [API reference](docs/reference/api.md)
+- [Wire formats](docs/reference/wire-formats.md)
+- [Glossary](docs/reference/glossary.md)
+- [Threat model](docs/security/threat-model.md)
+- [Trust model](docs/security/trust-model.md)
+- [PCA vs OAuth vs WebAuthn](docs/migration.md)
+
+## Conformance and verifiers
+- [Conformance rules](conformance/README.md)
+- [Vectors](conformance/vectors.json), [keys](conformance/keys.json)
+- Verifiers: verifiers/go-pca, python-pca, rust-pca, java-pca, php-pca, ruby-pca, dotnet-pca
+- [SDK map](sdks.md)
