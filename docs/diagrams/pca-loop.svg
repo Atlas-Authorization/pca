@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 1624" width="1340" height="1624" role="img" aria-labelledby="t d">
+<title id="t">The PCA loop</title>
+<desc id="d">Sequence diagram of the Proof-Carrying Authority loop between principal, agent, policy VM and guardian, resource server and transparency ledger, with a step-up branch for risk above the second threshold and a reject branch for out-of-plan actions.</desc>
+<style>
+text{font-family:ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;fill:#1c1c1f}
+.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+.title{font-size:26px;font-weight:700;letter-spacing:-.3px}
+.sub{font-size:14px;fill:#5f5f6b}
+.h{font-size:16px;font-weight:650}
+.h2{font-size:14px;font-weight:650}
+.b{font-size:13px}
+.s{font-size:12px;fill:#5f5f6b}
+.xs{font-size:11px;fill:#9b9ba7}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;fill:#9b9ba7}
+.w{fill:#fff}
+.pd{fill:#5a3fd6}
+.ad{fill:#0c7a52}
+.rd{fill:#d6455d}
+.lbl{font-size:12.5px;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.lbls{font-size:11.5px;fill:#5f5f6b;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.card{fill:#fbfbfd;stroke:#d8d8e0;stroke-width:1.5}
+.node{fill:#fff;stroke:#d8d8e0;stroke-width:1.5}
+.nodeP{fill:#f1edff;stroke:#7c5cff;stroke-width:1.5}
+.nodeA{fill:#e5fbf1;stroke:#34e5a0;stroke-width:1.5}
+.nodeI{fill:#1c1c1f;stroke:#1c1c1f;stroke-width:1.5}
+.nodeR{fill:#fdecef;stroke:#d6455d;stroke-width:1.5}
+.fillP{fill:#7c5cff}
+.fillA{fill:#34e5a0}
+.dash{stroke-dasharray:6 5}
+.ln{stroke:#5f5f6b;stroke-width:1.5;fill:none}
+.lnP{stroke:#7c5cff;stroke-width:1.5;fill:none}
+.lnA{stroke:#34e5a0;stroke-width:2;fill:none}
+.lnG{stroke:#9b9ba7;stroke-width:1.5;fill:none}
+.lnR{stroke:#d6455d;stroke-width:1.5;fill:none}
+.life{stroke:#d8d8e0;stroke-width:1.5;stroke-dasharray:3 5}
+</style>
+<defs>
+<marker id="aI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#5f5f6b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#7c5cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#1fc886" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#9b9ba7" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#d6455d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect class="card" x="0.75" y="0.75" width="1338.5" height="1622.5" rx="18"/>
+<text x="48" y="62" class="title" text-anchor="start" >The PCA loop</text>
+<text x="48" y="88" class="sub" text-anchor="start" >Mint, attenuate, commit, act, decide, verify, anchor. Two branches: human step-up and out-of-plan reject.</text>
+<rect x="40" y="472" width="1260" height="1090" rx="12" fill="none" stroke="#9b9ba7" stroke-width="1.5" stroke-dasharray="6 5"/>
+<path d="M40 484a12 12 0 0 1 12 -12H190v26H40z" fill="#9b9ba7" opacity=".18"/>
+<text x="54" y="490" class="h2" text-anchor="start" >loop  for each action</text>
+<rect x="54" y="672" width="1232" height="358" rx="10" fill="#e5fbf1" stroke="none" opacity=".75"/>
+<rect x="54" y="1030" width="1232" height="308" rx="0" fill="#f1edff" stroke="none" opacity=".75"/>
+<rect x="54" y="1338" width="1232" height="202" rx="0" fill="#fdecef" stroke="none" opacity=".75"/>
+<rect x="54" y="672" width="1232" height="868" rx="10" fill="none" stroke="#9b9ba7" stroke-width="1.2"/>
+<text x="70" y="694" class="h2" text-anchor="start" style="fill:#0c7a52">alt  in plan, in policy, t ≤ 2</text>
+<line x1="54" y1="1030" x2="1286" y2="1030" stroke="#9b9ba7" stroke-width="1.2" stroke-dasharray="6 5"/>
+<text x="70" y="1052" class="h2" text-anchor="start" style="fill:#5a3fd6">else  t = 3, risk &gt; θ₂: STEP-UP</text>
+<line x1="54" y1="1338" x2="1286" y2="1338" stroke="#9b9ba7" stroke-width="1.2" stroke-dasharray="6 5"/>
+<text x="70" y="1360" class="h2" text-anchor="start" style="fill:#d6455d">else  action not in plan  (node ∉ Π)</text>
+<line x1="150" y1="152" x2="150" y2="1594" class="life"/>
+<rect x="45" y="104" width="210" height="50" rx="10" class="node" />
+<text x="150" y="126" class="h2" text-anchor="middle" >Principal</text>
+<text x="150" y="143" class="xs" text-anchor="middle" >root key, device</text>
+<line x1="420" y1="152" x2="420" y2="1594" class="life"/>
+<rect x="315" y="104" width="210" height="50" rx="10" class="node" />
+<text x="420" y="126" class="h2" text-anchor="middle" >Agent</text>
+<text x="420" y="143" class="xs" text-anchor="middle" >attested, holds one share</text>
+<line x1="690" y1="152" x2="690" y2="1594" class="life"/>
+<rect x="585" y="104" width="210" height="50" rx="10" class="nodeP" />
+<text x="690" y="126" class="h2" text-anchor="middle" >Policy VM / Guardian</text>
+<text x="690" y="143" class="xs" text-anchor="middle" >Atlas, holds guardian share</text>
+<line x1="960" y1="152" x2="960" y2="1594" class="life"/>
+<rect x="855" y="104" width="210" height="50" rx="10" class="node" />
+<text x="960" y="126" class="h2" text-anchor="middle" >Resource Server</text>
+<text x="960" y="143" class="xs" text-anchor="middle" >verifyPCActn + hooks</text>
+<line x1="1200" y1="152" x2="1200" y2="1594" class="life"/>
+<rect x="1095" y="104" width="210" height="50" rx="10" class="nodeA" />
+<text x="1200" y="126" class="h2" text-anchor="middle" >Transparency Ledger</text>
+<text x="1200" y="143" class="xs" text-anchor="middle" >append-only Merkle log</text>
+<path d="M150 182H184V204H156" class="ln" marker-end="url(#aI)"/>
+<text x="196" y="194" class="lbl" text-anchor="start" style="fill:#1c1c1f;font-weight:600">1  mintGrant(): sign envelope</text>
+<text x="196" y="210" class="lbls" text-anchor="start" >goal commit, predicates, caveats, risk policy</text>
+<path d="M150 248H414" class="lnP" marker-end="url(#aP)"/>
+<text x="285.0" y="239" class="lbl" text-anchor="middle" style="fill:#5a3fd6">Root Intent Grant (holder = agent key)</text>
+<path d="M420 290H454V312H426" class="ln" marker-end="url(#aI)"/>
+<text x="466" y="302" class="lbl" text-anchor="start" style="fill:#1c1c1f;font-weight:600">2  attenuate / delegate</text>
+<text x="466" y="318" class="lbls" text-anchor="start" >caveats only append, never widen</text>
+<path d="M420 348H454V370H426" class="ln" marker-end="url(#aI)"/>
+<text x="466" y="360" class="lbl" text-anchor="start" style="fill:#1c1c1f;font-weight:600">3  commitPlan()</text>
+<text x="466" y="376" class="lbls" text-anchor="start" >Merkle root Π of the plan DAG</text>
+<path d="M420 414H684" class="ln" marker-end="url(#aI)"/>
+<text x="555.0" y="405" class="lbl" text-anchor="middle" style="fill:#1c1c1f">4  commit plan root Π</text>
+<path d="M420 498H454V520H426" class="ln" marker-end="url(#aI)"/>
+<text x="466" y="510" class="lbl" text-anchor="start" style="fill:#1c1c1f;font-weight:600">5  buildPCActn()</text>
+<text x="466" y="526" class="lbls" text-anchor="start" >plan proof, chain, counter, risk claim, sig</text>
+<path d="M420 564H684" class="lnP" marker-end="url(#aP)"/>
+<text x="555.0" y="555" class="lbl" text-anchor="middle" style="fill:#5a3fd6">6  POST /v1/pca/actions  (PCActn)</text>
+<path d="M690 606H724V628H696" class="ln" marker-end="url(#aI)"/>
+<text x="736" y="618" class="lbl" text-anchor="start" style="fill:#1c1c1f;font-weight:600">7  decide()</text>
+<text x="736" y="634" class="lbls" text-anchor="start" >predicates, caveats, r(A), budget</text>
+<path d="M690 720H426" class="lnA" marker-end="url(#aA)"/>
+<text x="555.0" y="711" class="lbl" text-anchor="middle" style="fill:#0c7a52">8  guardian share released (auto)</text>
+<path d="M420 770H954" class="lnP" marker-end="url(#aP)"/>
+<text x="690.0" y="761" class="lbl" text-anchor="middle" style="fill:#5a3fd6">9  PCActn + threshold shares</text>
+<path d="M960 812H994V834H966" class="ln" marker-end="url(#aI)"/>
+<text x="1006" y="824" class="lbl" text-anchor="start" style="fill:#1c1c1f;font-weight:600">10  verifyPCActn()</text>
+<text x="1006" y="840" class="lbls" text-anchor="start" >plan, chain, threshold, revocation, counter</text>
+<path d="M960 878H1194" class="lnA" marker-end="url(#aA)"/>
+<text x="1080.0" y="869" class="lbl" text-anchor="middle" style="fill:#0c7a52">11  anchor (salted commit)</text>
+<path d="M1200 928H966" class="lnA dash" marker-end="url(#aA)"/>
+<text x="1080.0" y="919" class="lbl" text-anchor="middle" style="fill:#0c7a52">receipt + inclusion proof</text>
+<path d="M960 978H426" class="lnA" marker-end="url(#aA)"/>
+<text x="690.0" y="969" class="lbl" text-anchor="middle" style="fill:#0c7a52">12  ALLOWED + receipt</text>
+<path d="M690 1078H426" class="lnP" marker-end="url(#aP)"/>
+<text x="555.0" y="1069" class="lbl" text-anchor="middle" style="fill:#5a3fd6">202 step_up_required  (held, not anchored)</text>
+<path d="M150 1128H684" class="lnP" marker-end="url(#aP)"/>
+<text x="420.0" y="1119" class="lbl" text-anchor="middle" style="fill:#5a3fd6">device co-sign: POST /stepups/:id/cosign</text>
+<path d="M690 1170H724V1192H696" class="ln" marker-end="url(#aI)"/>
+<text x="736" y="1182" class="lbl" text-anchor="start" style="fill:#1c1c1f;font-weight:600">re-verify in full, recharge budget</text>
+<text x="736" y="1198" class="lbls" text-anchor="start" >revoked, frozen, replayed? then human touch +ρ</text>
+<path d="M690 1236H1194" class="lnA" marker-end="url(#aA)"/>
+<text x="945.0" y="1227" class="lbl" text-anchor="middle" style="fill:#0c7a52">anchor</text>
+<path d="M690 1286H426" class="lnA dash" marker-end="url(#aA)"/>
+<text x="555.0" y="1277" class="lbl" text-anchor="middle" style="fill:#0c7a52">approved + receipt  (agent polls)</text>
+<path d="M420 1386H684" class="lnR" marker-end="url(#aR)"/>
+<text x="555.0" y="1377" class="lbl" text-anchor="middle" style="fill:#d6455d">PCActn for an unplanned action</text>
+<path d="M690 1428H724V1450H696" class="lnR" marker-end="url(#aR)"/>
+<text x="736" y="1440" class="lbl" text-anchor="start" style="fill:#d6455d;font-weight:600">no plan inclusion proof</text>
+<text x="736" y="1456" class="lbls" text-anchor="start" >L1 fails: no share released</text>
+<path d="M690 1494H426" class="lnR" marker-end="url(#aR)"/>
+<text x="555.0" y="1485" class="lbl" text-anchor="middle" style="fill:#d6455d">REJECT: denied</text>
+</svg>

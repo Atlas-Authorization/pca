@@ -1,0 +1,37 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f1edff', 'primaryBorderColor': '#7c5cff', 'primaryTextColor': '#1c1c1f', 'lineColor': '#5f5f6b', 'signalColor': '#5f5f6b', 'noteBkgColor': '#e5fbf1', 'noteBorderColor': '#34e5a0', 'fontFamily': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'}}}%%
+sequenceDiagram
+  participant P as Principal
+  participant A as Agent
+  participant G as Policy VM / Guardian (Atlas)
+  participant R as Resource Server
+  participant L as Transparency Ledger
+
+  P->>P: mintGrant(): sign envelope with root key
+  P->>A: Root Intent Grant (holder = agent key)
+  A->>A: attenuate / delegate (caveats only narrow)
+  A->>A: commitPlan(): Merkle root Π
+  A->>G: commit plan root Π
+
+  loop for each action
+    A->>A: buildPCActn(): plan proof, chain, counter, risk claim, sig
+    A->>G: POST /v1/pca/actions (PCActn)
+    G->>G: decide(): predicates, caveats, r(A), budget
+    alt in plan, in policy, t ≤ 2
+      G-->>A: guardian share released (auto)
+      A->>R: PCActn + threshold shares
+      R->>R: verifyPCActn(): plan, chain, threshold, revocation, counter
+      R->>L: anchor (salted commit)
+      L-->>R: receipt + inclusion proof
+      R-->>A: ALLOWED + receipt
+    else t = 3, risk above θ₂: STEP-UP
+      G-->>A: 202 step_up_required (held, not anchored)
+      P->>G: device co-sign: POST /stepups/:id/cosign
+      G->>G: re-verify in full, recharge budget (human touch)
+      G->>L: anchor
+      G-->>A: approved + receipt (agent polls)
+    else action not in plan (node not in Π)
+      A->>G: PCActn for an unplanned action
+      G->>G: no plan inclusion proof, L1 fails
+      G-->>A: REJECT: denied, no share released
+    end
+  end

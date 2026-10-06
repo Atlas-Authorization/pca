@@ -32,6 +32,20 @@ Each verifier checks a PCActn's core clauses (capability chain, plan inclusion, 
 
 Writing your own: [Verify in your language](docs/guides/verify-in-your-language.md).
 
+### Standalone per-language repositories
+
+Each verifier above also lives in its own repository, laid out for idiomatic install and vendoring the same conformance vectors (this repo is the canonical source):
+
+| Language | Repo |
+|---|---|
+| Go | [Atlas-Authorization/pca-go](https://github.com/Atlas-Authorization/pca-go) — `go get github.com/Atlas-Authorization/pca-go` |
+| Python | [Atlas-Authorization/pca-python](https://github.com/Atlas-Authorization/pca-python) |
+| Rust | [Atlas-Authorization/pca-rust](https://github.com/Atlas-Authorization/pca-rust) |
+| Java | [Atlas-Authorization/pca-java](https://github.com/Atlas-Authorization/pca-java) |
+| PHP | [Atlas-Authorization/pca-php](https://github.com/Atlas-Authorization/pca-php) |
+| Ruby | [Atlas-Authorization/pca-ruby](https://github.com/Atlas-Authorization/pca-ruby) |
+| .NET | [Atlas-Authorization/pca-dotnet](https://github.com/Atlas-Authorization/pca-dotnet) |
+
 ## Conformance suite
 
 [`conformance/`](conformance/README.md) holds `vectors.json` (21 vectors plus canonical-JSON and Merkle primitives) and `keys.json` (fixed test keys). Every implementation must produce the same `allow` and the same per-check pass/fail results.
