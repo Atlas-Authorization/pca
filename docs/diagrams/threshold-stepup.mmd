@@ -1,0 +1,20 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f1edff', 'primaryBorderColor': '#7c5cff', 'primaryTextColor': '#1c1c1f', 'lineColor': '#5f5f6b', 'fontFamily': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'}}}%%
+flowchart LR
+  R["risk r(A)"] --> D1{"r ≤ θ₁ (0.25)?"}
+  D1 -->|"yes"| T1["t = 1, proof: claim<br/>agent signs<br/>zero friction"]
+  D1 -->|"no"| D2{"r ≤ θ₂ (0.60)?"}
+  D2 -->|"yes"| T2["t = 2, proof: standard<br/>agent + guardian (auto)<br/>Policy VM must judge compliant"]
+  D2 -->|"no"| T3["t = 3, proof: strong<br/>agent + guardian + principal device<br/>a human co-signs"]
+  T3 --> SU["202 step_up_required<br/>held 15 min, not anchored"]
+  SU --> CO["Principal device signs thresholdMessage<br/>POST /stepups/:id/cosign"]
+  CO --> RV["Re-verify in full<br/>anchor, recharge budget B"]
+  T1 --> AGG
+  T2 --> AGG
+  RV --> AGG
+  AGG["Aggregation<br/>multi-signature (default): t distinct Ed25519 signatures<br/>FROST (optional): one Ed25519 signature under a group key"]
+  classDef t1 fill:#e5fbf1,stroke:#34e5a0,stroke-width:2px,color:#1c1c1f
+  classDef t2 fill:#f1edff,stroke:#7c5cff,stroke-width:2px,color:#1c1c1f
+  classDef t3 fill:#7c5cff,stroke:#7c5cff,color:#ffffff
+  class T1 t1
+  class T2 t2
+  class T3 t3

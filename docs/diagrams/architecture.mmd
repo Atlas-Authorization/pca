@@ -1,0 +1,40 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f1edff', 'primaryBorderColor': '#7c5cff', 'primaryTextColor': '#1c1c1f', 'lineColor': '#5f5f6b', 'fontFamily': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'}}}%%
+flowchart TB
+  P["Principal<br/>root key, device share"]
+  subgraph TEE["L0: TEE-attested workload"]
+    AG["Agent<br/>holds one share, commits plan"]
+    S1["Sub-agent A<br/>sub is within parent"]
+    S2["Sub-agent B<br/>sub is within parent"]
+    AG -->|"attenuate / delegate"| S1
+    AG --> S2
+  end
+  G["Guardian (Atlas)<br/>Policy VM, guardian share, trust budget"]
+  ATT["Attestation<br/>TEE quote: model, weights, runtime"]
+  subgraph RS["Resource Server: verifyPCActn / requirePCA"]
+    V["Verifier<br/>plan, chain, signature, counter"]
+    H1["hook: attestation"]
+    H2["hook: threshold"]
+    H3["hook: revocation"]
+    H4["hook: zk"]
+    V --- H1
+    V --- H2
+    V --- H3
+    V --- H4
+  end
+  L["Transparency Ledger<br/>Merkle log, revocation set, beacons"]
+  P -->|"Root Intent Grant (capability chain)"| AG
+  P -.->|"device co-sign (t = 3)"| G
+  AG -->|"PCActn"| G
+  G -.->|"guardian share"| AG
+  AG ==>|"PCActn"| V
+  ATT -.->|"measures"| TEE
+  ATT -.->|"quote"| H1
+  V -->|"anchor"| L
+  L -.->|"revocation root + proofs"| H3
+  G -.->|"witness heads"| L
+  classDef role fill:#fff,stroke:#d8d8e0,stroke-width:1.5px,color:#1c1c1f
+  classDef guard fill:#f1edff,stroke:#7c5cff,stroke-width:2px,color:#1c1c1f
+  classDef good fill:#e5fbf1,stroke:#34e5a0,stroke-width:2px,color:#1c1c1f
+  class P,AG,S1,S2,V role
+  class G,H1,H2,H3,H4 guard
+  class ATT,L good

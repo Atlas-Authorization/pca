@@ -1,0 +1,24 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f1edff', 'primaryBorderColor': '#7c5cff', 'primaryTextColor': '#1c1c1f', 'lineColor': '#5f5f6b', 'fontFamily': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'}}}%%
+flowchart BT
+  subgraph STACK["PCA stack: each layer is one clause of the proof"]
+    direction BT
+    L0["L0 · Attestation-derived identity<br/>Is the actor the attested workload?"]
+    L1["L1 · Plan commitment<br/>Is the action a node of an authorized plan?"]
+    L2["L2 · Policy as co-signer<br/>Did the policy cryptographically take part?"]
+    L3["L3 · Risk-adaptive threshold, trust budget<br/>Is friction proportionate, is budget left?"]
+    L4["L4 · Provenance taint<br/>Is the lineage clean of untrusted influence?"]
+    L5["L5 · Ledger, revocation, beacons<br/>Unrevoked, fresh, anchored?"]
+    L0 --> L1 --> L2 --> L3 --> L4 --> L5
+  end
+  subgraph ACC["Optional accelerants"]
+    OPT["Optimistic + fraud proofs<br/>latency: bonded claim, challenge window"]
+    ZK["Zero-knowledge compliance proofs<br/>privacy: hide plan, policy, reasoning"]
+  end
+  OPT -.-> L3
+  ZK -.-> L4
+  classDef layer fill:#fff,stroke:#7c5cff,stroke-width:1.5px,color:#1c1c1f
+  classDef base fill:#f1edff,stroke:#7c5cff,stroke-width:2px,color:#1c1c1f
+  classDef acc fill:#e5fbf1,stroke:#34e5a0,stroke-width:2px,color:#1c1c1f
+  class L1,L2,L3,L4,L5 layer
+  class L0 base
+  class OPT,ZK acc

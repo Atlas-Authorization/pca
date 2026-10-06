@@ -1,0 +1,30 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f1edff', 'primaryBorderColor': '#7c5cff', 'primaryTextColor': '#1c1c1f', 'lineColor': '#5f5f6b', 'fontFamily': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'}}}%%
+flowchart LR
+  subgraph N["authN: Who are you?"]
+    direction TB
+    N1["WebAuthn / passkeys"]
+    N2["Credential: assertion<br/>signed, origin-bound challenge"]
+    N3["Proves: a human holds the device key"]
+    N1 --> N2 --> N3
+  end
+  subgraph Z["authZ: What may you do?"]
+    direction TB
+    Z1["OAuth 2.1 + PKCE + PoP"]
+    Z2["Credential: access token<br/>bearer or sender-constrained"]
+    Z3["Proves: scopes granted at time 0"]
+    Z1 --> Z2 --> Z3
+  end
+  subgraph F["authF: Is this action faithful?"]
+    direction TB
+    F1["Proof-Carrying Authority"]
+    F2["Credential: PCActn<br/>proof-carrying action"]
+    F3["Proves: plan node + policy + attenuating chain<br/>+ threshold + budget + ledger"]
+    F1 --> F2 --> F3
+  end
+  N ==>|"+"| Z ==>|"+"| F
+  BASE["PCA composes on top<br/>rung 0 = OAuth PoP, humans keep passkeys"]
+  F -.- BASE
+  classDef pca fill:#f1edff,stroke:#7c5cff,stroke-width:2px,color:#1c1c1f
+  classDef base fill:#e5fbf1,stroke:#34e5a0,stroke-width:2px,color:#1c1c1f
+  class F1,F2,F3 pca
+  class BASE base

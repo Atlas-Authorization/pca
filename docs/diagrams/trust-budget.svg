@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1256 900" width="1256" height="900" role="img" aria-labelledby="t d">
+<title id="t">The trust budget as a control system</title>
+<desc id="d">Control loop: sensor is the risk functional r(A), actuator is the required threshold t, integral state is a depleting trust budget B that leaks, is debited per admitted action and is recharged only by a human step-up. Total auto-admitted risk between recharges is bounded by bMax over kappa.</desc>
+<style>
+text{font-family:ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;fill:#1c1c1f}
+.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+.title{font-size:26px;font-weight:700;letter-spacing:-.3px}
+.sub{font-size:14px;fill:#5f5f6b}
+.h{font-size:16px;font-weight:650}
+.h2{font-size:14px;font-weight:650}
+.b{font-size:13px}
+.s{font-size:12px;fill:#5f5f6b}
+.xs{font-size:11px;fill:#9b9ba7}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;fill:#9b9ba7}
+.w{fill:#fff}
+.pd{fill:#5a3fd6}
+.ad{fill:#0c7a52}
+.rd{fill:#d6455d}
+.lbl{font-size:12.5px;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.lbls{font-size:11.5px;fill:#5f5f6b;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.card{fill:#fbfbfd;stroke:#d8d8e0;stroke-width:1.5}
+.node{fill:#fff;stroke:#d8d8e0;stroke-width:1.5}
+.nodeP{fill:#f1edff;stroke:#7c5cff;stroke-width:1.5}
+.nodeA{fill:#e5fbf1;stroke:#34e5a0;stroke-width:1.5}
+.nodeI{fill:#1c1c1f;stroke:#1c1c1f;stroke-width:1.5}
+.nodeR{fill:#fdecef;stroke:#d6455d;stroke-width:1.5}
+.fillP{fill:#7c5cff}
+.fillA{fill:#34e5a0}
+.dash{stroke-dasharray:6 5}
+.ln{stroke:#5f5f6b;stroke-width:1.5;fill:none}
+.lnP{stroke:#7c5cff;stroke-width:1.5;fill:none}
+.lnA{stroke:#34e5a0;stroke-width:2;fill:none}
+.lnG{stroke:#9b9ba7;stroke-width:1.5;fill:none}
+.lnR{stroke:#d6455d;stroke-width:1.5;fill:none}
+.life{stroke:#d8d8e0;stroke-width:1.5;stroke-dasharray:3 5}
+</style>
+<defs>
+<marker id="aI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#5f5f6b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#7c5cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#1fc886" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#9b9ba7" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#d6455d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect class="card" x="0.75" y="0.75" width="1254.5" height="898.5" rx="18"/>
+<text x="48" y="62" class="title" text-anchor="start" >Trust budget: authorization as a control system</text>
+<text x="48" y="88" class="sub" text-anchor="start" >Friction scales with risk and with how long the agent has gone without a human. The battery has no self-charge.</text>
+<rect x="48" y="128" width="200" height="104" rx="12" class="node" />
+<text x="64" y="154" class="eyebrow" text-anchor="start" >SETPOINT</text>
+<text x="64" y="178" class="h2" text-anchor="start" >Sanctioned intent</text>
+<text x="64" y="200" class="s" style="font-size:11.5px" text-anchor="start" >operate within the</text>
+<text x="64" y="215" class="s" style="font-size:11.5px" text-anchor="start" >committed plan + policy</text>
+<rect x="288" y="128" width="200" height="104" rx="12" class="nodeP" />
+<text x="304" y="154" class="eyebrow pd" text-anchor="start" >SENSOR</text>
+<text x="304" y="178" class="h2" text-anchor="start" >Risk functional r(A)</text>
+<text x="304" y="200" class="s" style="font-size:11.5px" text-anchor="start" >distance, reversibility, blast,</text>
+<text x="304" y="215" class="s" style="font-size:11.5px" text-anchor="start" >taint, confidence, age</text>
+<rect x="528" y="128" width="200" height="104" rx="12" class="node" />
+<text x="544" y="154" class="eyebrow" text-anchor="start" >CONTROLLER</text>
+<text x="544" y="178" class="h2" text-anchor="start" >t(r)  and  admit(r, B)</text>
+<text x="544" y="200" class="s" style="font-size:11.5px" text-anchor="start" >t = 1 only if B ≥ κ·r</text>
+<text x="544" y="215" class="s" style="font-size:11.5px" text-anchor="start" >else escalate</text>
+<rect x="768" y="128" width="200" height="104" rx="12" class="nodeA" />
+<text x="784" y="154" class="eyebrow ad" text-anchor="start" >ACTUATOR</text>
+<text x="784" y="178" class="h2" text-anchor="start" >Required threshold t</text>
+<text x="784" y="200" class="s" style="font-size:11.5px" text-anchor="start" >friction: 1, 2 or 3 signers</text>
+<text x="784" y="215" class="s" style="font-size:11.5px" text-anchor="start" >(agent, guardian, human)</text>
+<rect x="1008" y="128" width="200" height="104" rx="12" class="node" />
+<text x="1024" y="154" class="eyebrow" text-anchor="start" >PLANT</text>
+<text x="1024" y="178" class="h2" text-anchor="start" >The agent</text>
+<text x="1024" y="200" class="s" style="font-size:11.5px" text-anchor="start" >proposes the next action,</text>
+<text x="1024" y="215" class="s" style="font-size:11.5px" text-anchor="start" >possibly compromised</text>
+<path d="M252 180.0H283" class="ln" marker-end="url(#aI)"/>
+<path d="M492 180.0H523" class="lnP" marker-end="url(#aP)"/>
+<path d="M732 180.0H763" class="lnP" marker-end="url(#aP)"/>
+<path d="M972 180.0H1003" class="lnP" marker-end="url(#aP)"/>
+<path d="M1108.0 234V266H388.0V236" class="lnG dash" marker-end="url(#aG)"/>
+<text x="728.0" y="258" class="lbls" text-anchor="middle" >feedback: every action is measured again, from inputs the verifier vouches for</text>
+<text x="48" y="338" class="eyebrow" text-anchor="start" >INTEGRAL STATE</text>
+<rect x="288" y="354" width="200" height="96" rx="12" class="node" />
+<text x="304" y="378" class="eyebrow" text-anchor="start" >PASSIVE LEAK</text>
+<text x="304" y="400" class="h2 mono" text-anchor="start" style="font-size:13px">B ← B − λ·Δt</text>
+<text x="304" y="422" class="s" text-anchor="start" >idle authority decays;</text>
+<text x="304" y="437" class="s" text-anchor="start" >default λ = 0.0005 / s</text>
+<rect x="768" y="354" width="200" height="96" rx="12" class="node" />
+<text x="784" y="378" class="eyebrow" text-anchor="start" >DEBIT</text>
+<text x="784" y="400" class="h2 mono" text-anchor="start" style="font-size:13px">B ← B − κ·r</text>
+<text x="784" y="422" class="s" text-anchor="start" >charged per admitted action;</text>
+<text x="784" y="437" class="s" text-anchor="start" >cost grows with risk</text>
+<rect x="1008" y="354" width="200" height="96" rx="12" class="nodeA" />
+<text x="1024" y="378" class="eyebrow ad" text-anchor="start" >RECHARGE</text>
+<text x="1024" y="400" class="h2 mono" text-anchor="start" style="font-size:13px">B ← min(bMax, B + ρ)</text>
+<text x="1024" y="422" class="s" text-anchor="start" >human step-up only (t = 3</text>
+<text x="1024" y="437" class="s" text-anchor="start" >co-sign); default ρ = 0.5</text>
+<rect x="528" y="354" width="200" height="96" rx="12" class="nodeP" />
+<text x="544" y="378" class="eyebrow pd" text-anchor="start" >TRUST BUDGET B</text>
+<rect x="544" y="392" width="150" height="26" rx="6" fill="#fff" stroke="#1c1c1f" stroke-width="1.5"/>
+<rect x="694" y="399" width="6" height="12" rx="2" fill="#1c1c1f"/>
+<rect x="549.0" y="397" width="24" height="16" rx="3" fill="#34e5a0" stroke="#34e5a0" stroke-width="1.2"/>
+<rect x="577.4" y="397" width="24" height="16" rx="3" fill="#34e5a0" stroke="#34e5a0" stroke-width="1.2"/>
+<rect x="605.8" y="397" width="24" height="16" rx="3" fill="#34e5a0" stroke="#34e5a0" stroke-width="1.2"/>
+<rect x="634.2" y="397" width="24" height="16" rx="3" fill="#fff" stroke="#d8d8e0" stroke-width="1.2"/>
+<rect x="662.6" y="397" width="24" height="16" rx="3" fill="#fff" stroke="#d8d8e0" stroke-width="1.2"/>
+<text x="544" y="438" class="s" text-anchor="start" style="font-size:10.5px">range [0, bMax] per grant</text>
+<path d="M492 402H523" class="ln" marker-end="url(#aI)"/>
+<path d="M764 402H733" class="ln" marker-end="url(#aI)"/>
+<path d="M628.0 236V352" class="lnP" marker-end="url(#aP)" marker-start="url(#aP)"/>
+<text x="638.0" y="298" class="lbls" text-anchor="start" >reads B,</text>
+<text x="638.0" y="312" class="lbls" text-anchor="start" >debits κ·r</text>
+<path d="M1108.0 452V472H658.0V454" class="lnA" marker-end="url(#aA)"/>
+<text x="828.0" y="464" class="lbls" text-anchor="middle" >human step-up (principal device)</text>
+<rect x="48" y="520" width="590" height="232" rx="14" class="node" />
+<text x="72" y="552" class="h" text-anchor="start" >Budget over time</text>
+<text x="72" y="570" class="s" text-anchor="start" >leak, debits, forced check-in, recharge</text>
+<path d="M100 726L610 726" class="lnG"/>
+<path d="M100 594L100 726" class="lnG"/>
+<line x1="100" y1="602" x2="610" y2="602" stroke="#9b9ba7" stroke-dasharray="2 4"/>
+<text x="92" y="606" class="xs" text-anchor="end" >bMax</text>
+<text x="92" y="730" class="xs" text-anchor="end" >0</text>
+<text x="610" y="744" class="xs" text-anchor="end" >time</text>
+<line x1="100" y1="701.2" x2="610" y2="701.2" stroke="#d6455d" stroke-dasharray="5 4" stroke-width="1.2"/>
+<text x="108" y="695.2" class="xs" text-anchor="start" style="fill:#d6455d">κ·r of the next action</text>
+<path d="M100 602.0 L130 606.96 L130 621.84 L175 626.8 L175 641.68 L235 646.64 L235 676.4 L305 682.6 L305 704.92 L345 709.88" fill="none" stroke="#7c5cff" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M345 709.88V647.88" fill="none" stroke="#1fc886" stroke-width="2.6" marker-end="url(#aA)"/>
+<text x="357" y="668.96" class="h2 ad" text-anchor="start" >+ρ</text>
+<text x="337" y="725.88" class="xs" text-anchor="end" style="fill:#d6455d">B &lt; κ·r: forced t = 3</text>
+<path d="M345 647.88 L385 651.6 L385 664.0 L445 668.96 L445 688.8 L515 693.76 L515 704.92 L555 704.92" fill="none" stroke="#7c5cff" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="662" y="520" width="546" height="232" rx="14" class="node" />
+<text x="686" y="552" class="h" text-anchor="start" >Friction rises as the battery drains</text>
+<text x="686" y="570" class="s" text-anchor="start" >highest risk the agent may take with zero friction</text>
+<path d="M732 720L1172 720" class="lnG"/>
+<path d="M732 594L732 720" class="lnG"/>
+<path d="M732 720V646.25H1062.0L1172 720Z" fill="#e5fbf1" stroke="none"/>
+<path d="M732 646.25H1062.0L1172 720" fill="none" stroke="#1fc886" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M732 646.25H1172V594H732Z" fill="#f1edff" stroke="none" opacity="0"/>
+<line x1="732" y1="646.25" x2="1172" y2="646.25" stroke="#9b9ba7" stroke-dasharray="2 4"/>
+<text x="724" y="650.25" class="xs" text-anchor="end" >θ₁</text>
+<text x="724" y="724" class="xs" text-anchor="end" >0</text>
+<text x="724" y="606" class="xs" text-anchor="end" >r</text>
+<text x="732" y="738" class="xs" text-anchor="start" >B = bMax (full)</text>
+<text x="1172" y="738" class="xs" text-anchor="end" >B = 0 (empty): every action needs a human</text>
+<text x="752" y="688.6" class="h2 ad" text-anchor="start" >auto-admit, t = 1</text>
+<text x="752" y="704.6" class="s" text-anchor="start" >zero friction</text>
+<text x="752" y="614" class="s" text-anchor="start" >above the line: guardian co-sign (t = 2) or human step-up (t = 3)</text>
+<rect x="48" y="776" width="1160" height="94" rx="14" class="nodeI" />
+<text x="76" y="824" class="title w" text-anchor="start" style="font-size:30px;font-weight:700;fill:#fff">Σ rᵢ  ≤  bMax / κ</text>
+<text x="76" y="848" class="xs mono" text-anchor="start" style="fill:#9b9ba7">safetyBound(policy)</text>
+<text x="380" y="814" class="b" style="fill:#fff" text-anchor="start" >Between two human recharges, the total risk of auto-admitted actions is bounded, whatever the agent does,</text>
+<text x="380" y="834" class="b" style="fill:#d9d9e0" text-anchor="start" >even fully compromised. Defaults: bMax = 1, κ = 1, so Σ r ≤ 1, about ten default in-plan reversible actions (r = 0.1).</text>
+<text x="380" y="860" class="xs" text-anchor="start" style="fill:#9b9ba7">Holds while the verifier computes r itself (or from inputs it vouches for); the hosted surface lets an agent claim only raise risk.</text>
+</svg>

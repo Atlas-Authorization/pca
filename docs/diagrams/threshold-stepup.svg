@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-labelledby="t d">
+<title id="t">Threshold escalation and step-up</title>
+<desc id="d">Required signing threshold t rises with risk: t=1 agent alone, t=2 agent plus automatic guardian share, t=3 agent plus guardian plus the principal device (a human). Aggregation is multi-signature by default, FROST optionally.</desc>
+<style>
+text{font-family:ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;fill:#1c1c1f}
+.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+.title{font-size:26px;font-weight:700;letter-spacing:-.3px}
+.sub{font-size:14px;fill:#5f5f6b}
+.h{font-size:16px;font-weight:650}
+.h2{font-size:14px;font-weight:650}
+.b{font-size:13px}
+.s{font-size:12px;fill:#5f5f6b}
+.xs{font-size:11px;fill:#9b9ba7}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;fill:#9b9ba7}
+.w{fill:#fff}
+.pd{fill:#5a3fd6}
+.ad{fill:#0c7a52}
+.rd{fill:#d6455d}
+.lbl{font-size:12.5px;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.lbls{font-size:11.5px;fill:#5f5f6b;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.card{fill:#fbfbfd;stroke:#d8d8e0;stroke-width:1.5}
+.node{fill:#fff;stroke:#d8d8e0;stroke-width:1.5}
+.nodeP{fill:#f1edff;stroke:#7c5cff;stroke-width:1.5}
+.nodeA{fill:#e5fbf1;stroke:#34e5a0;stroke-width:1.5}
+.nodeI{fill:#1c1c1f;stroke:#1c1c1f;stroke-width:1.5}
+.nodeR{fill:#fdecef;stroke:#d6455d;stroke-width:1.5}
+.fillP{fill:#7c5cff}
+.fillA{fill:#34e5a0}
+.dash{stroke-dasharray:6 5}
+.ln{stroke:#5f5f6b;stroke-width:1.5;fill:none}
+.lnP{stroke:#7c5cff;stroke-width:1.5;fill:none}
+.lnA{stroke:#34e5a0;stroke-width:2;fill:none}
+.lnG{stroke:#9b9ba7;stroke-width:1.5;fill:none}
+.lnR{stroke:#d6455d;stroke-width:1.5;fill:none}
+.life{stroke:#d8d8e0;stroke-width:1.5;stroke-dasharray:3 5}
+</style>
+<defs>
+<marker id="aI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#5f5f6b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#7c5cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#1fc886" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#9b9ba7" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#d6455d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect class="card" x="0.75" y="0.75" width="1198.5" height="898.5" rx="18"/>
+<text x="48" y="62" class="title" text-anchor="start" >Threshold and step-up</text>
+<text x="48" y="88" class="sub" text-anchor="start" >Risk r(A) sets how many distinct roles must sign. A compromised agent holds one share.</text>
+<text x="48" y="120" class="eyebrow" text-anchor="start" >RISK  r(A)</text>
+<path d="M120 116H1152" class="lnG" marker-end="url(#aG)"/>
+<text x="1152" y="104" class="xs" text-anchor="end" >friction rises</text>
+<rect x="48" y="150" width="336" height="392" rx="14" class="node" />
+<rect x="48" y="150" width="336" height="84" rx="14" class="node" style="fill:#e5fbf1;stroke:#34e5a0"/>
+<rect x="49" y="210" width="334" height="24" rx="0" class="node" style="fill:#e5fbf1;stroke:none"/>
+<text x="72" y="190" class="h" text-anchor="start" style="font-size:28px;font-weight:700;fill:#0c7a52">t = 1</text>
+<text x="72" y="216" class="b" text-anchor="start" style="fill:#0c7a52;font-weight:600">r ≤ θ₁  (0.25)</text>
+<text x="360" y="190" class="eyebrow" text-anchor="end" style="fill:#0c7a52;opacity:.85">CLAIM</text>
+<text x="360" y="206" class="xs" text-anchor="end" style="fill:#0c7a52;opacity:.7">proof level</text>
+<text x="72" y="264" class="eyebrow" text-anchor="start" >WHO SIGNS</text>
+<circle cx="108" cy="310" r="22" fill="#7c5cff" stroke="#7c5cff" stroke-width="1.5"/>
+<path d="M100 311L106 317L117 304" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="108" y="350" class="h2" text-anchor="middle" >Agent</text>
+<circle cx="204" cy="310" r="22" fill="#fff" stroke="#9b9ba7" stroke-width="1.5" stroke-dasharray="4 4"/>
+<text x="204" y="350" class="s" text-anchor="middle" >Guardian</text>
+<circle cx="300" cy="310" r="22" fill="#fff" stroke="#9b9ba7" stroke-width="1.5" stroke-dasharray="4 4"/>
+<text x="300" y="350" class="s" text-anchor="middle" >Principal</text>
+<text x="72" y="386" class="eyebrow" text-anchor="start" >ZERO FRICTION</text>
+<text x="72" y="406" class="b" text-anchor="start" >Cheap, in-plan, reversible.</text>
+<text x="72" y="423" class="b" text-anchor="start" >Agent share suffices; the Policy VM</text>
+<text x="72" y="440" class="b" text-anchor="start" >still gates the action.</text>
+<text x="72" y="470" class="eyebrow" text-anchor="start" >EXAMPLE</text>
+<text x="72" y="488" class="s" text-anchor="start" >Default reversible in-plan action: r = 0.1</text>
+<text x="72" y="522" class="s" text-anchor="start" style="fill:#0c7a52;font-weight:600">Optimistic fast path allowed</text>
+<rect x="432" y="150" width="336" height="392" rx="14" class="node" />
+<rect x="432" y="150" width="336" height="84" rx="14" class="node" style="fill:#f1edff;stroke:#7c5cff"/>
+<rect x="433" y="210" width="334" height="24" rx="0" class="node" style="fill:#f1edff;stroke:none"/>
+<text x="456" y="190" class="h" text-anchor="start" style="font-size:28px;font-weight:700;fill:#5a3fd6">t = 2</text>
+<text x="456" y="216" class="b" text-anchor="start" style="fill:#5a3fd6;font-weight:600">θ₁ &lt; r ≤ θ₂  (0.60)</text>
+<text x="744" y="190" class="eyebrow" text-anchor="end" style="fill:#5a3fd6;opacity:.85">STANDARD</text>
+<text x="744" y="206" class="xs" text-anchor="end" style="fill:#5a3fd6;opacity:.7">proof level</text>
+<text x="456" y="264" class="eyebrow" text-anchor="start" >WHO SIGNS</text>
+<circle cx="492" cy="310" r="22" fill="#7c5cff" stroke="#7c5cff" stroke-width="1.5"/>
+<path d="M484 311L490 317L501 304" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="492" y="350" class="h2" text-anchor="middle" >Agent</text>
+<circle cx="588" cy="310" r="22" fill="#34e5a0" stroke="#34e5a0" stroke-width="1.5"/>
+<path d="M580 311L586 317L597 304" fill="none" stroke="#0b3d2a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="588" y="350" class="h2" text-anchor="middle" >Guardian</text>
+<circle cx="684" cy="310" r="22" fill="#fff" stroke="#9b9ba7" stroke-width="1.5" stroke-dasharray="4 4"/>
+<text x="684" y="350" class="s" text-anchor="middle" >Principal</text>
+<text x="456" y="386" class="eyebrow" text-anchor="start" >AUTOMATIC SECOND FACTOR</text>
+<text x="456" y="406" class="b" text-anchor="start" >A second factor: the guardian</text>
+<text x="456" y="423" class="b" text-anchor="start" >co-signs automatically, but only</text>
+<text x="456" y="440" class="b" text-anchor="start" >if the Policy VM judges it compliant.</text>
+<text x="456" y="470" class="eyebrow" text-anchor="start" >EXAMPLE</text>
+<text x="456" y="488" class="s" text-anchor="start" >Default irreversible in-plan action: r = 0.3</text>
+<text x="456" y="522" class="s" text-anchor="start" style="fill:#0c7a52;font-weight:600"></text>
+<rect x="816" y="150" width="336" height="392" rx="14" class="node" />
+<rect x="816" y="150" width="336" height="84" rx="14" class="node" style="fill:#7c5cff;stroke:#7c5cff"/>
+<rect x="817" y="210" width="334" height="24" rx="0" class="node" style="fill:#7c5cff;stroke:none"/>
+<text x="840" y="190" class="h" text-anchor="start" style="font-size:28px;font-weight:700;fill:#fff">t = 3</text>
+<text x="840" y="216" class="b" text-anchor="start" style="fill:#fff;font-weight:600">r &gt; θ₂</text>
+<text x="1128" y="190" class="eyebrow" text-anchor="end" style="fill:#fff;opacity:.85">STRONG</text>
+<text x="1128" y="206" class="xs" text-anchor="end" style="fill:#fff;opacity:.7">proof level</text>
+<text x="840" y="264" class="eyebrow" text-anchor="start" >WHO SIGNS</text>
+<circle cx="876" cy="310" r="22" fill="#7c5cff" stroke="#7c5cff" stroke-width="1.5"/>
+<path d="M868 311L874 317L885 304" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="876" y="350" class="h2" text-anchor="middle" >Agent</text>
+<circle cx="972" cy="310" r="22" fill="#34e5a0" stroke="#34e5a0" stroke-width="1.5"/>
+<path d="M964 311L970 317L981 304" fill="none" stroke="#0b3d2a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="972" y="350" class="h2" text-anchor="middle" >Guardian</text>
+<circle cx="1068" cy="310" r="22" fill="#1c1c1f" stroke="#1c1c1f" stroke-width="1.5"/>
+<path d="M1060 311L1066 317L1077 304" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1068" y="350" class="h2" text-anchor="middle" >Principal</text>
+<text x="840" y="386" class="eyebrow" text-anchor="start" >A HUMAN IN THE LOOP</text>
+<text x="840" y="406" class="b" text-anchor="start" >Needs the principal-device share:</text>
+<text x="840" y="423" class="b" text-anchor="start" >a human co-signature. The action</text>
+<text x="840" y="440" class="b" text-anchor="start" >is held as a pending step-up.</text>
+<text x="840" y="470" class="eyebrow" text-anchor="start" >EXAMPLE</text>
+<text x="840" y="488" class="s" text-anchor="start" >Irreversible, high blast radius</text>
+<text x="840" y="504" class="s" text-anchor="start" ></text>
+<text x="840" y="522" class="s" text-anchor="start" style="fill:#0c7a52;font-weight:600"></text>
+<path d="M390 192H426" class="lnP" marker-end="url(#aP)"/>
+<path d="M774 192H810" class="lnP" marker-end="url(#aP)"/>
+<text x="48" y="576" class="eyebrow" text-anchor="start" >STEP-UP, WHEN t = 3 (HOSTED FLOW)</text>
+<rect x="48" y="592" width="192" height="64" rx="10" class="node" />
+<text x="144.0" y="618" class="h2" text-anchor="middle" >202 step_up_required</text>
+<text x="144.0" y="638" class="xs" text-anchor="middle" style="fill:#6b6b78">held, not anchored; 15 min</text>
+<path d="M245 624H271" class="ln" marker-end="url(#aI)"/>
+<rect x="276" y="592" width="192" height="64" rx="10" class="nodeP" />
+<text x="372.0" y="618" class="h2" text-anchor="middle" >Principal device signs</text>
+<text x="372.0" y="638" class="xs" text-anchor="middle" style="fill:#6b6b78">thresholdMessage(pcactn)</text>
+<path d="M473 624H499" class="ln" marker-end="url(#aI)"/>
+<rect x="504" y="592" width="192" height="64" rx="10" class="nodeP" />
+<text x="600.0" y="618" class="h2" text-anchor="middle" >POST /stepups/:id/cosign</text>
+<text x="600.0" y="638" class="xs" text-anchor="middle" style="fill:#6b6b78">role principal, key = grant principal</text>
+<path d="M701 624H727" class="ln" marker-end="url(#aI)"/>
+<rect x="732" y="592" width="192" height="64" rx="10" class="node" />
+<text x="828.0" y="618" class="h2" text-anchor="middle" >Re-verify in full</text>
+<text x="828.0" y="638" class="xs" text-anchor="middle" style="fill:#6b6b78">revoked, frozen, replayed?</text>
+<path d="M929 624H955" class="ln" marker-end="url(#aI)"/>
+<rect x="960" y="592" width="192" height="64" rx="10" class="node" />
+<text x="1056.0" y="618" class="h2" text-anchor="middle" >Anchor + recharge</text>
+<text x="1056.0" y="638" class="xs" text-anchor="middle" style="fill:#6b6b78">receipt; human touch refills B</text>
+<text x="48" y="700" class="eyebrow" text-anchor="start" >HOW t SHARES ARE AGGREGATED</text>
+<rect x="48" y="716" width="540" height="148" rx="12" class="node" />
+<rect x="612" y="716" width="540" height="148" rx="12" class="nodeA" />
+<text x="72" y="746" class="h" text-anchor="start" >Multi-signature</text>
+<text x="200" y="746" class="s" text-anchor="start" >default, no DKG</text>
+<text x="72" y="772" class="b" text-anchor="start" >t independent Ed25519 signatures, one per distinct role,</text>
+<text x="72" y="790" class="b" text-anchor="start" >all over the same canonical bytes thresholdMessage(pcactn).</text>
+<text x="72" y="808" class="b" text-anchor="start" >The verifier counts distinct roles; a duplicate counts once.</text>
+<rect x="72" y="832" width="86" height="12" rx="6" fill="#7c5cff"/>
+<rect x="172" y="832" width="86" height="12" rx="6" fill="#34e5a0"/>
+<rect x="272" y="832" width="86" height="12" rx="6" fill="#1c1c1f"/>
+<text x="372" y="842" class="xs" text-anchor="start" >one 64-byte signature per role</text>
+<text x="636" y="746" class="h ad" text-anchor="start" >FROST aggregation</text>
+<text x="796" y="746" class="s" text-anchor="start" >optional, RFC 9591</text>
+<text x="636" y="772" class="b" text-anchor="start" >t-of-n signers run two rounds and emit ONE ordinary</text>
+<text x="636" y="790" class="b" text-anchor="start" >Ed25519 signature under a single group key. Set the leaf</text>
+<text x="636" y="808" class="b" text-anchor="start" >holder to the group key: the verifier is unchanged.</text>
+<rect x="636" y="832" width="86" height="12" rx="6" fill="#7c5cff"/>
+<text x="736" y="842" class="xs" text-anchor="start" >one 64-byte signature; optional no-dealer DKG</text>
+</svg>

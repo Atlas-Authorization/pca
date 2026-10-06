@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 850" width="1280" height="850" role="img" aria-labelledby="t d">
+<title id="t">PCA architecture: roles and components</title>
+<desc id="d">Principal with root key mints a root intent grant; the agent, optionally with attested sub-agents, holds an attenuating capability chain and emits proof-carrying actions; the guardian (Atlas) runs the policy VM and holds a threshold share; the resource server verifies with attestation, threshold, revocation and zk hooks; a transparency ledger anchors every action.</desc>
+<style>
+text{font-family:ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;fill:#1c1c1f}
+.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+.title{font-size:26px;font-weight:700;letter-spacing:-.3px}
+.sub{font-size:14px;fill:#5f5f6b}
+.h{font-size:16px;font-weight:650}
+.h2{font-size:14px;font-weight:650}
+.b{font-size:13px}
+.s{font-size:12px;fill:#5f5f6b}
+.xs{font-size:11px;fill:#9b9ba7}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;fill:#9b9ba7}
+.w{fill:#fff}
+.pd{fill:#5a3fd6}
+.ad{fill:#0c7a52}
+.rd{fill:#d6455d}
+.lbl{font-size:12.5px;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.lbls{font-size:11.5px;fill:#5f5f6b;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.card{fill:#fbfbfd;stroke:#d8d8e0;stroke-width:1.5}
+.node{fill:#fff;stroke:#d8d8e0;stroke-width:1.5}
+.nodeP{fill:#f1edff;stroke:#7c5cff;stroke-width:1.5}
+.nodeA{fill:#e5fbf1;stroke:#34e5a0;stroke-width:1.5}
+.nodeI{fill:#1c1c1f;stroke:#1c1c1f;stroke-width:1.5}
+.nodeR{fill:#fdecef;stroke:#d6455d;stroke-width:1.5}
+.fillP{fill:#7c5cff}
+.fillA{fill:#34e5a0}
+.dash{stroke-dasharray:6 5}
+.ln{stroke:#5f5f6b;stroke-width:1.5;fill:none}
+.lnP{stroke:#7c5cff;stroke-width:1.5;fill:none}
+.lnA{stroke:#34e5a0;stroke-width:2;fill:none}
+.lnG{stroke:#9b9ba7;stroke-width:1.5;fill:none}
+.lnR{stroke:#d6455d;stroke-width:1.5;fill:none}
+.life{stroke:#d8d8e0;stroke-width:1.5;stroke-dasharray:3 5}
+</style>
+<defs>
+<marker id="aI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#5f5f6b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#7c5cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#1fc886" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#9b9ba7" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#d6455d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect class="card" x="0.75" y="0.75" width="1278.5" height="848.5" rx="18"/>
+<text x="48" y="62" class="title" text-anchor="start" >Architecture</text>
+<text x="48" y="88" class="sub" text-anchor="start" >Roles, the capability chain, the PCActn, and the hooks a resource server plugs in.</text>
+<rect x="48" y="170" width="240" height="150" rx="12" class="node" />
+<text x="66" y="196" class="eyebrow " text-anchor="start" >ROLE</text>
+<text x="66" y="220" class="h" text-anchor="start" >Principal</text>
+<text x="66" y="244" class="s" text-anchor="start" >Human or organization.</text>
+<text x="66" y="261" class="s" text-anchor="start" >Holds the root key.</text>
+<text x="66" y="278" class="s" text-anchor="start" >Device share signs step-ups.</text>
+<rect x="400" y="156" width="360" height="232" rx="14" class="node" style="fill:#f1edff;stroke:#7c5cff;stroke-dasharray:6 5"/>
+<text x="418" y="180" class="eyebrow pd" text-anchor="start" >L0  TEE-ATTESTED WORKLOAD</text>
+<rect x="420" y="194" width="320" height="84" rx="10" class="nodeP" style="fill:#fff"/>
+<text x="436" y="220" class="h" text-anchor="start" >Agent</text>
+<text x="436" y="240" class="s" text-anchor="start" >holds one threshold share</text>
+<text x="436" y="258" class="s" text-anchor="start" >commits plan (L1), signs each action</text>
+<rect x="420" y="316" width="156" height="56" rx="10" class="nodeP" style="fill:#fff"/>
+<text x="434" y="340" class="h2" text-anchor="start" >Sub-agent A</text>
+<text x="434" y="358" class="xs" text-anchor="start" >sub ⊂ parent, attested</text>
+<path d="M498 280V314" class="lnP" marker-end="url(#aP)"/>
+<rect x="584" y="316" width="156" height="56" rx="10" class="nodeP" style="fill:#fff"/>
+<text x="598" y="340" class="h2" text-anchor="start" >Sub-agent B</text>
+<text x="598" y="358" class="xs" text-anchor="start" >sub ⊂ parent, attested</text>
+<path d="M662 280V314" class="lnP" marker-end="url(#aP)"/>
+<text x="580" y="303" class="lbls" text-anchor="middle" >attenuate / delegate</text>
+<rect x="900" y="170" width="332" height="218" rx="12" class="nodeP" />
+<text x="918" y="196" class="eyebrow pd" text-anchor="start" >GUARDIAN  (ATLAS)</text>
+<text x="918" y="220" class="h" text-anchor="start" >Policy VM + threshold share</text>
+<rect x="918" y="238" width="296" height="40" rx="8" class="node" />
+<text x="932" y="255" class="h2" text-anchor="start" >Policy VM</text>
+<text x="932" y="270" class="xs" text-anchor="start" >decide(): predicates, caveats, r(A)</text>
+<rect x="918" y="286" width="296" height="40" rx="8" class="node" />
+<text x="932" y="303" class="h2" text-anchor="start" >Guardian share</text>
+<text x="932" y="318" class="xs" text-anchor="start" >released only if compliant</text>
+<rect x="918" y="334" width="296" height="40" rx="8" class="node" />
+<text x="932" y="351" class="h2" text-anchor="start" >Trust budget B</text>
+<text x="932" y="366" class="xs" text-anchor="start" >leak, debit, human recharge</text>
+<rect x="48" y="520" width="240" height="150" rx="12" class="nodeA" />
+<text x="66" y="546" class="eyebrow ad" text-anchor="start" >ATTESTATION</text>
+<text x="66" y="570" class="h" text-anchor="start" >TEE quote</text>
+<text x="66" y="594" class="s" text-anchor="start" >Measures model, weights,</text>
+<text x="66" y="611" class="s" text-anchor="start" >runtime and operator.</text>
+<text x="66" y="628" class="s" text-anchor="start" >Software mode now; hardware seam.</text>
+<rect x="400" y="480" width="520" height="240" rx="14" class="node" />
+<text x="420" y="508" class="eyebrow" text-anchor="start" >RESOURCE SERVER</text>
+<text x="420" y="534" class="h" text-anchor="start" >Verifier + hooks</text>
+<text x="420" y="556" class="s" text-anchor="start" >verifyPCActn / requirePCA: offline, deterministic</text>
+<text x="420" y="574" class="s" text-anchor="start" >plan inclusion, capability chain, signature, counter</text>
+<text x="420" y="622" class="eyebrow pd" text-anchor="start" >HOOKS</text>
+<rect x="420" y="634" width="108" height="56" rx="9" class="nodeP" />
+<text x="474" y="658" class="h2 pd" text-anchor="middle" >attestation</text>
+<text x="474" y="676" class="xs" text-anchor="middle" style="font-size:10.5px">L0 quote binding</text>
+<rect x="540" y="634" width="108" height="56" rx="9" class="nodeP" />
+<text x="594" y="658" class="h2 pd" text-anchor="middle" >threshold</text>
+<text x="594" y="676" class="xs" text-anchor="middle" style="font-size:10.5px">L2 t-of-n shares</text>
+<rect x="660" y="634" width="108" height="56" rx="9" class="nodeP" />
+<text x="714" y="658" class="h2 pd" text-anchor="middle" >revocation</text>
+<text x="714" y="676" class="xs" text-anchor="middle" style="font-size:10.5px">L5 non-membership</text>
+<rect x="780" y="634" width="108" height="56" rx="9" class="nodeP" />
+<text x="834" y="658" class="h2 pd" text-anchor="middle" >zk</text>
+<text x="834" y="676" class="xs" text-anchor="middle" style="font-size:10.5px">compliance proof</text>
+<rect x="1000" y="480" width="232" height="240" rx="12" class="nodeA" />
+<text x="1018" y="506" class="eyebrow ad" text-anchor="start" >L5</text>
+<text x="1018" y="530" class="h" text-anchor="start" >Transparency Ledger</text>
+<text x="1018" y="554" class="s" text-anchor="start" >Append-only Merkle log</text>
+<text x="1018" y="571" class="s" text-anchor="start" >of salted commitments.</text>
+<text x="1018" y="588" class="s" text-anchor="start" >Revocation set, witnessed</text>
+<text x="1018" y="605" class="s" text-anchor="start" >heads, freshness beacons.</text>
+<path d="M288 232H398" class="lnP" marker-end="url(#aP)"/>
+<text x="343" y="218" class="lbls" text-anchor="middle" >Root Intent</text>
+<text x="343" y="250" class="lbls" text-anchor="middle" >Grant</text>
+<path d="M168 168V126H1066V168" class="ln dash" marker-end="url(#aI)"/>
+<text x="617" y="118" class="lbls" text-anchor="middle" >principal-device co-sign for t = 3 step-up (a human)</text>
+<path d="M762 236H898" class="lnA" marker-end="url(#aA)"/>
+<text x="830" y="226" class="lbls" text-anchor="middle" style="fill:#0c7a52">PCActn</text>
+<path d="M898 296H764" class="lnA dash" marker-end="url(#aA)"/>
+<text x="830" y="316" class="lbls" text-anchor="middle" style="fill:#0c7a52">guardian share</text>
+<path d="M580 390V478" class="lnA" style="stroke-width:3.5" marker-end="url(#aA)"/>
+<text x="596" y="424" class="h2 ad" text-anchor="start" >PCActn</text>
+<text x="596" y="442" class="lbls" text-anchor="start" >action + plan proof + capability chain</text>
+<text x="596" y="457" class="lbls" text-anchor="start" >counter, risk claim, signature</text>
+<path d="M290 585H398" class="lnG dash" marker-end="url(#aG)"/>
+<text x="344" y="574" class="lbls" text-anchor="middle" >quote</text>
+<path d="M230 518L420 392" class="lnG dash"/>
+<text x="222" y="458" class="lbls" text-anchor="start" >measures</text>
+<text x="222" y="472" class="lbls" text-anchor="start" >the workload</text>
+<path d="M922 560H998" class="lnA" marker-end="url(#aA)"/>
+<text x="960" y="550" class="lbls" text-anchor="middle" style="fill:#0c7a52">anchor</text>
+<path d="M998 640H924" class="lnG dash" marker-end="url(#aG)"/>
+<text x="960" y="630" class="lbls" text-anchor="middle" >revocation</text>
+<text x="960" y="662" class="lbls" text-anchor="middle" >root + proofs</text>
+<path d="M1066 390V478" class="lnG dash" marker-end="url(#aG)"/>
+<text x="1080" y="430" class="lbls" text-anchor="start" >witness heads</text>
+<path d="M48 766L84 766" class="lnP" marker-end="url(#aP)"/>
+<text x="92" y="770" class="s" text-anchor="start" >capability chain (attenuation only)</text>
+<path d="M340 766H376" fill="none" stroke="#1fc886" stroke-width="3.5" marker-end="url(#aA)"/>
+<text x="386" y="770" class="s" text-anchor="start" >PCActn / authority share</text>
+<path d="M580 766H616" class="lnG dash" marker-end="url(#aG)"/>
+<text x="626" y="770" class="s" text-anchor="start" >evidence and hooks</text>
+<path d="M790 766H826" class="ln dash" marker-end="url(#aI)"/>
+<text x="836" y="770" class="s" text-anchor="start" >human co-signature</text>
+<text x="48" y="806" class="s" text-anchor="start" >No bearer token anywhere: possessing a PCActn replays one action at most once. A compromised agent holds one share and is short of any threshold above t = 1.</text>
+</svg>

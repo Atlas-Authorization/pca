@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700" role="img" aria-labelledby="t d">
+<title id="t">authN, authZ and authF</title>
+<desc id="d">Three questions an agent system must answer: who are you (authN, WebAuthn assertion), what may you do (authZ, OAuth token), and is this action a faithful execution (authF, a PCA proof-carrying action). PCA composes on top of the first two.</desc>
+<style>
+text{font-family:ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;fill:#1c1c1f}
+.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+.title{font-size:26px;font-weight:700;letter-spacing:-.3px}
+.sub{font-size:14px;fill:#5f5f6b}
+.h{font-size:16px;font-weight:650}
+.h2{font-size:14px;font-weight:650}
+.b{font-size:13px}
+.s{font-size:12px;fill:#5f5f6b}
+.xs{font-size:11px;fill:#9b9ba7}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;fill:#9b9ba7}
+.w{fill:#fff}
+.pd{fill:#5a3fd6}
+.ad{fill:#0c7a52}
+.rd{fill:#d6455d}
+.lbl{font-size:12.5px;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.lbls{font-size:11.5px;fill:#5f5f6b;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.card{fill:#fbfbfd;stroke:#d8d8e0;stroke-width:1.5}
+.node{fill:#fff;stroke:#d8d8e0;stroke-width:1.5}
+.nodeP{fill:#f1edff;stroke:#7c5cff;stroke-width:1.5}
+.nodeA{fill:#e5fbf1;stroke:#34e5a0;stroke-width:1.5}
+.nodeI{fill:#1c1c1f;stroke:#1c1c1f;stroke-width:1.5}
+.nodeR{fill:#fdecef;stroke:#d6455d;stroke-width:1.5}
+.fillP{fill:#7c5cff}
+.fillA{fill:#34e5a0}
+.dash{stroke-dasharray:6 5}
+.ln{stroke:#5f5f6b;stroke-width:1.5;fill:none}
+.lnP{stroke:#7c5cff;stroke-width:1.5;fill:none}
+.lnA{stroke:#34e5a0;stroke-width:2;fill:none}
+.lnG{stroke:#9b9ba7;stroke-width:1.5;fill:none}
+.lnR{stroke:#d6455d;stroke-width:1.5;fill:none}
+.life{stroke:#d8d8e0;stroke-width:1.5;stroke-dasharray:3 5}
+</style>
+<defs>
+<marker id="aI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#5f5f6b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#7c5cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#1fc886" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#9b9ba7" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="aR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5L9 5L1 8.5" fill="none" stroke="#d6455d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect class="card" x="0.75" y="0.75" width="1198.5" height="698.5" rx="18"/>
+<text x="48" y="62" class="title" text-anchor="start" >authN  /  authZ  /  authF</text>
+<text x="48" y="88" class="sub" text-anchor="start" >Three questions, three credentials. PCA adds the third and composes on top of the first two.</text>
+<rect x="48" y="124" width="336" height="372" rx="14" class="node" />
+<rect x="72" y="148" width="78" height="28" rx="14.0" class="fillP" />
+<text x="111.0" y="167.0" class="h2 w" text-anchor="middle" >authN</text>
+<rect x="72" y="148" width="78" height="28" rx="14" class="fillP" />
+<text x="111" y="167" class="h2 w" text-anchor="middle" >authN</text>
+<text x="72" y="208" class="h" text-anchor="start" style="font-size:21px">Who are you?</text>
+<path d="M72 226L360 226" class="lnG"/>
+<text x="72" y="252" class="eyebrow" text-anchor="start" >STANDARD</text>
+<text x="72" y="271" class="h2" text-anchor="start" >WebAuthn / passkeys</text>
+<text x="72" y="312" class="eyebrow" text-anchor="start" >CREDENTIAL</text>
+<text x="72" y="331" class="b" text-anchor="start" >Assertion: a signed, origin-bound</text>
+<text x="72" y="348" class="b" text-anchor="start" >challenge from a device key</text>
+<text x="72" y="372" class="eyebrow" text-anchor="start" >PROVES</text>
+<text x="72" y="391" class="b" text-anchor="start" >A specific human holds the</text>
+<text x="72" y="408" class="b" text-anchor="start" >device key</text>
+<text x="72" y="432" class="eyebrow" text-anchor="start" >CANNOT SEE</text>
+<text x="72" y="451" class="b" text-anchor="start" >Nothing about what the caller</text>
+<text x="72" y="468" class="b" text-anchor="start" >does next</text>
+<rect x="432" y="124" width="336" height="372" rx="14" class="node" />
+<rect x="456" y="148" width="78" height="28" rx="14.0" class="fillP" />
+<text x="495.0" y="167.0" class="h2 w" text-anchor="middle" >authZ</text>
+<rect x="456" y="148" width="78" height="28" rx="14" class="fillP" />
+<text x="495" y="167" class="h2 w" text-anchor="middle" >authZ</text>
+<text x="456" y="208" class="h" text-anchor="start" style="font-size:21px">What may you do?</text>
+<path d="M456 226L744 226" class="lnG"/>
+<text x="456" y="252" class="eyebrow" text-anchor="start" >STANDARD</text>
+<text x="456" y="271" class="h2" text-anchor="start" >OAuth 2.1 + PKCE + PoP</text>
+<text x="456" y="312" class="eyebrow" text-anchor="start" >CREDENTIAL</text>
+<text x="456" y="331" class="b" text-anchor="start" >Access token: bearer, or</text>
+<text x="456" y="348" class="b" text-anchor="start" >sender-constrained (PoP)</text>
+<text x="456" y="372" class="eyebrow" text-anchor="start" >PROVES</text>
+<text x="456" y="391" class="b" text-anchor="start" >Scopes granted at time 0</text>
+<text x="456" y="432" class="eyebrow" text-anchor="start" >CANNOT SEE</text>
+<text x="456" y="451" class="b" text-anchor="start" >Intent. One scope covers thousands</text>
+<text x="456" y="468" class="b" text-anchor="start" >of future autonomous actions</text>
+<rect x="816" y="124" width="336" height="372" rx="14" class="nodeP" stroke-width="2"/>
+<rect x="840" y="148" width="78" height="28" rx="14.0" class="fillP" />
+<text x="879.0" y="167.0" class="h2 w" text-anchor="middle" >authF</text>
+<text x="840" y="208" class="h" text-anchor="start" style="font-size:21px">Is this action faithful?</text>
+<path d="M840 226L1128 226" class="lnG"/>
+<text x="840" y="252" class="eyebrow" text-anchor="start" >STANDARD</text>
+<text x="840" y="271" class="h2" text-anchor="start" >Proof-Carrying Authority</text>
+<text x="840" y="312" class="eyebrow" text-anchor="start" >CREDENTIAL</text>
+<text x="840" y="331" class="b" text-anchor="start" >PCActn: a proof-carrying action,</text>
+<text x="840" y="348" class="b" text-anchor="start" >one signed proof per action</text>
+<text x="840" y="372" class="eyebrow" text-anchor="start" >PROVES</text>
+<text x="840" y="391" class="b" text-anchor="start" >Plan node + policy + intact attenuating</text>
+<text x="840" y="408" class="b" text-anchor="start" >chain + threshold + budget + ledger</text>
+<text x="840" y="432" class="eyebrow" text-anchor="start" >VERIFIED BY</text>
+<text x="840" y="451" class="b" text-anchor="start" >Resource server, offline and</text>
+<text x="840" y="468" class="b" text-anchor="start" >deterministic (verifyPCActn)</text>
+<circle cx="408" cy="184" r="17" class="node"/>
+<text x="408" y="190" class="h pd" text-anchor="middle" style="font-size:20px">+</text>
+<circle cx="792" cy="184" r="17" class="node"/>
+<text x="792" y="190" class="h pd" text-anchor="middle" style="font-size:20px">+</text>
+<rect x="48" y="524" width="1104" height="128" rx="14" class="nodeA" />
+<text x="72" y="558" class="eyebrow ad" text-anchor="start" >PCA COMPOSES ON TOP</text>
+<path d="M72 572L1128 572" class="lnG"/>
+<text x="72" y="600" class="h2 ad" text-anchor="start" >Unchanged</text>
+<text x="72" y="620" class="s" text-anchor="start" >Humans keep passkeys. PCA is not a login</text>
+<text x="72" y="636" class="s" text-anchor="start" >replacement.</text>
+<text x="456" y="600" class="h2 ad" text-anchor="start" >Rung 0</text>
+<text x="456" y="620" class="s" text-anchor="start" >A PCActn with only scope and a PoP</text>
+<text x="456" y="636" class="s" text-anchor="start" >signature is an OAuth PoP request.</text>
+<text x="840" y="600" class="h2 ad" text-anchor="start" >Rungs 1-4</text>
+<text x="840" y="620" class="s" text-anchor="start" >Add plan commitment, policy co-signing,</text>
+<text x="840" y="636" class="s" text-anchor="start" >trust budget, ledger.</text>
+</svg>
