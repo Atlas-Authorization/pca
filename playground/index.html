@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA Playground</title>
+<style>
+:root{--bg:#0b0d12;--panel:#12151d;--panel2:#171b26;--line:#242a38;--fg:#e7eaf2;--mute:#8b93a7;--acc:#7c9cff;--ok:#3ddc97;--warn:#ffc857;--bad:#ff5d6c;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+@media (prefers-color-scheme:light){:root{--bg:#f5f6fa;--panel:#fff;--panel2:#f0f2f8;--line:#dfe3ee;--fg:#141824;--mute:#667089;--acc:#3b5bdb;--ok:#0a9f63;--warn:#b7791f;--bad:#d6293e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:28px 24px 8px;max-width:1100px;margin:auto}
+h1{margin:0;font-size:26px;letter-spacing:-.02em}h1 span{color:var(--acc)}
+header p{color:var(--mute);margin:6px 0 0;max-width:720px}
+main{max-width:1100px;margin:auto;padding:12px 24px 60px;display:grid;gap:16px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+section h2{margin:0 0 4px;font-size:15px}section h2 i{font-style:normal;color:var(--acc);font-family:var(--mono);margin-right:8px}
+.sub{color:var(--mute);margin:0 0 12px;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:7px 10px;font:inherit;min-width:0}
+input[type=range]{accent-color:var(--acc);width:100%}
+button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:600 13px inherit;cursor:pointer}
+button.ghost{background:var(--panel2);color:var(--fg);border:1px solid var(--line)}
+button.bad{background:var(--bad)}button.ok{background:var(--ok);color:#04130c}
+button:disabled{opacity:.4;cursor:not-allowed}
+.mono{font-family:var(--mono);font-size:12px;color:var(--mute);word-break:break-all}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 10px;font-size:13px}.kv b{color:var(--mute);font-weight:500}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.sl{display:grid;grid-template-columns:120px 1fr 44px;gap:8px;align-items:center;font-size:13px}.sl output{font-family:var(--mono);text-align:right}
+.chip{display:inline-flex;gap:6px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font:12px var(--mono);margin:2px}
+.chip.sel{border-color:var(--acc);color:var(--acc)}.chip button{padding:0 4px;background:none;color:var(--mute)}
+.chk{display:flex;justify-content:space-between;padding:6px 10px;border-radius:8px;margin:3px 0;font:12px var(--mono);border:1px solid var(--line)}
+.chk.pass{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.chk.fail{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.chk.not-enforced{background:var(--panel2);color:var(--mute)}
+.verdict{font-weight:700;padding:8px 12px;border-radius:8px;margin-top:8px}
+.verdict.ok{background:var(--ok);color:#04130c}.verdict.bad{background:var(--bad);color:#fff}
+/* battery */
+.bat{display:flex;align-items:center;gap:0;margin:10px 0}
+.shell{flex:1;height:64px;border:3px solid var(--fg);border-radius:12px;padding:4px;position:relative;opacity:.95}
+.cap{width:10px;height:26px;background:var(--fg);border-radius:0 4px 4px 0}
+.fill{height:100%;border-radius:7px;transition:width .6s cubic-bezier(.2,.8,.2,1),background .4s;background:var(--ok)}
+.shell .pct{position:absolute;inset:0;display:grid;place-items:center;font:700 20px var(--mono);mix-blend-mode:difference;color:#fff}
+.gauge{position:relative;height:14px;background:var(--panel2);border-radius:7px;margin:22px 0 26px;border:1px solid var(--line);overflow:visible}
+.gauge .r{height:100%;border-radius:7px;background:linear-gradient(90deg,var(--ok),var(--warn),var(--bad));transition:width .4s}
+.gauge .mk{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--fg)}
+.gauge .mk em{position:absolute;top:-17px;left:-12px;font:11px var(--mono);font-style:normal;color:var(--mute)}
+.gauge .lab{position:absolute;top:18px;font:11px var(--mono);color:var(--mute)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px}.stat small{color:var(--mute);display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em}.stat b{font:700 22px var(--mono)}
+.t1{color:var(--ok)}.t2{color:var(--warn)}.t3{color:var(--bad)}
+.banner{display:none;margin:10px 0;padding:14px;border-radius:10px;background:var(--bad);color:#fff;font-weight:800;letter-spacing:.04em;text-align:center;animation:pulse 1s infinite}
+.banner.on{display:block}.banner small{display:block;font-weight:500;letter-spacing:0;opacity:.9}
+@keyframes pulse{50%{opacity:.7}}
+.hist{display:flex;gap:4px;align-items:flex-end;height:90px;margin:10px 0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;overflow-x:auto}
+.hist div{min-width:22px;border-radius:4px 4px 0 0;position:relative}.hist div span{position:absolute;top:-16px;left:0;right:0;text-align:center;font:10px var(--mono);color:var(--mute)}
+.hist .adm{opacity:1}.hist .stp{outline:2px solid var(--bad)}
+.log{font:12px var(--mono);max-height:150px;overflow:auto;color:var(--mute)}
+.log div{padding:2px 0;border-bottom:1px dashed var(--line)}
+.nodes{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+.node{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:8px 12px;font:12px var(--mono);cursor:pointer}.node.sel{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 30%,transparent)}
+.arrow{color:var(--mute)}
+.err{color:var(--bad);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+<h1>PCA <span>Playground</span></h1>
+<p>Proof-Carrying Authority, running the real <code>@atlasauth/pca</code> library in your browser. Nothing leaves this page. Mint a grant, commit a plan, forge an action, and watch the trust budget drain like a battery.</p>
+</header>
+<main>
+
+<section id="s-keys"><h2><i>1</i>Keys</h2><p class="sub">Ed25519 keypairs generated locally. The principal (human) signs the grant; the agent holds the leaf capability.</p>
+<div class="row"><button id="b-keys">Generate keypairs</button></div>
+<div class="kv"><b>principal</b><span class="mono" id="k-p">-</span><b>agent</b><span class="mono" id="k-a">-</span></div></section>
+
+<section id="s-grant"><h2><i>2</i>Grant</h2><p class="sub">A root capability carrying the goal commitment, semantic predicates, and the risk policy.</p>
+<div class="row"><input type="text" id="goal" value="secure my account" style="flex:1;min-width:220px"></div>
+<div class="row"><span class="mono">predicates:</span><span id="preds"></span>
+<input type="text" id="pv" placeholder="verb" size="8"><input type="text" id="pr" placeholder="resource" size="14"><button class="ghost" id="b-addpred">add</button></div>
+<div class="grid2" style="margin-top:8px">
+<div id="pol1"></div><div id="pol2"></div></div>
+<div class="row"><button id="b-grant" disabled>Mint grant</button></div>
+<div class="kv" id="grant-out"></div></section>
+
+<section id="s-plan"><h2><i>3</i>Plan</h2><p class="sub">The agent commits a plan (Merkle tree of allowed nodes) before acting. Anything outside it has no inclusion proof.</p>
+<div class="row"><input type="text" id="nv" placeholder="verb" size="10"><input type="text" id="nr" placeholder="resource" size="18"><button class="ghost" id="b-addnode">add node</button><button id="b-plan" disabled>Commit plan</button></div>
+<div class="nodes" id="nodes"></div>
+<div class="kv"><b>merkle root</b><span class="mono" id="root">-</span></div></section>
+
+<section id="s-act"><h2><i>4</i>Action &amp; verify</h2><p class="sub">Select a plan node, optionally add params, build a signed PCActn, and run the verifier. Later-milestone clauses honestly report "not-enforced".</p>
+<div class="row"><span class="mono">node:</span><span id="pick"></span></div>
+<div class="row"><input type="text" id="params" placeholder='params JSON, e.g. {"scope":"mfa"}' style="flex:1;min-width:220px"><button id="b-act" disabled>Build &amp; verify</button><button class="bad" id="b-forge" disabled>Submit out-of-plan action</button></div>
+<div id="vout"></div></section>
+
+<section id="s-bat"><h2><i>5</i>The trust battery</h2><p class="sub">Every action costs <code>c = &kappa;&middot;r</code>. Auto-admit only if <code>r &le; &theta;1</code> and budget covers the cost. Anything else needs a human. Only a human recharge raises the battery.</p>
+<div class="grid2"><div id="inputs"></div>
+<div>
+<div class="bat"><div class="shell"><div class="fill" id="fill"></div><div class="pct" id="pct">100%</div></div><div class="cap"></div></div>
+<div class="stats"><div class="stat"><small>risk r</small><b id="st-r">0</b></div><div class="stat"><small>cost</small><b id="st-c">0</b></div><div class="stat"><small>required t</small><b id="st-t">1</b></div><div class="stat"><small>proof</small><b id="st-p" style="font-size:15px">claim</b></div></div>
+<div class="gauge" id="gauge"><div class="r" id="rbar" style="width:0"></div><div class="mk" id="m1"><em>&theta;1</em></div><div class="mk" id="m2"><em>&theta;2</em></div>
+<span class="lab" style="left:0">t=1 claim</span><span class="lab" id="l2">t=2 standard</span><span class="lab" style="right:0">t=3 strong</span></div>
+</div></div>
+<div class="banner" id="banner">STEP-UP REQUIRED (needs human)<small id="banner-why"></small></div>
+<div class="row"><button id="b-run">Run action</button><button class="ok" id="b-rech">Human recharge</button><button class="ghost" id="b-time">Advance 10 min (leak)</button><button class="ghost" id="b-auto">Auto-drive sequence</button><button class="ghost" id="b-reset">Reset</button></div>
+<div class="mono">threshold history (bar height = r, colour = required t; outlined = step-up)</div>
+<div class="hist" id="hist"></div><div class="log" id="log"></div>
+<div class="mono" id="bound"></div></section>
+
+<section id="s-thr" style="display:none"><h2><i>6</i>Threshold signatures</h2><p class="sub">At t&gt;1 the action also needs guardian/principal shares over the same canonical message.</p>
+<div class="row"><button id="b-thr" disabled>Sign with agent + guardian + principal</button></div><div id="thr-out" class="mono"></div></section>
+</main>
+
+<script type="module">
+import * as P from './pca.esm.js';
+const $=s=>document.querySelector(s), short=s=>s.length>26?s.slice(0,12)+'…'+s.slice(-8):s;
+const S={preds:[{verb:'read',resource:'account/*'},{verb:'update',resource:'account/mfa'}],nodes:[{id:'n1',verb:'read',resource:'account/profile'},{id:'n2',verb:'update',resource:'account/mfa'}],sel:'n1'};
+const POL={weights:{alpha:.25,beta:.2,gamma:.2,delta:.2,epsilon:.1,zeta:.05},theta1:.25,theta2:.6,kappa:1,lambda:.0005,rho:.5,bMax:1};
+const IN={semanticDistance:.1,reversibility:.9,blastRadius:.1,taint:0,confidence:.9,age:0};
+let budget={B:1,tau:0,asOf:0},now=0,hist=[],auto=null;
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const enc=P.encodeKey||P.b64u;
+function slider(host,items,get,set,after){host.innerHTML='';for(const [k,label,min,max,step] of items){const d=document.createElement('div');d.className='sl';d.innerHTML=`<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${get(k)}"><output>${get(k)}</output>`;const i=d.querySelector('input'),o=d.querySelector('output');i.oninput=()=>{set(k,+i.value);o.textContent=+i.value;after()};host.append(d)}}
+// policy sliders
+slider($('#pol1'),[['alpha','w semantic',0,1,.01],['beta','w irreversib.',0,1,.01],['gamma','w blast',0,1,.01],['delta','w taint',0,1,.01],['epsilon','w uncertain',0,1,.01],['zeta','w age',0,1,.01]],k=>POL.weights[k],(k,v)=>POL.weights[k]=v,refresh);
+slider($('#pol2'),[['theta1','θ1',0,1,.01],['theta2','θ2',0,1,.01],['kappa','κ cost scale',0,2,.05],['lambda','λ leak /s',0,.01,.0001],['rho','ρ recharge',0,1,.05],['bMax','bMax',.25,3,.05]],k=>POL[k],(k,v)=>POL[k]=v,refresh);
+slider($('#inputs'),[['semanticDistance','semantic dist.',0,1,.01],['reversibility','reversibility',0,1,.01],['blastRadius','blast radius',0,1,.01],['taint','taint',0,1,.01],['confidence','confidence',0,1,.01],['age','age since human',0,1,.01]],k=>IN[k],(k,v)=>IN[k]=v,refresh);
+function chips(){ $('#preds').innerHTML=S.preds.map((p,i)=>`<span class="chip">${esc(p.verb)} ${esc(p.resource)}<button data-i="${i}">×</button></span>`).join('');$('#preds').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.preds.splice(+b.dataset.i,1);chips()})}
+chips();
+$('#b-addpred').onclick=()=>{const v=$('#pv').value.trim(),r=$('#pr').value.trim();if(v&&r){S.preds.push({verb:v,resource:r});$('#pv').value=$('#pr').value='';chips()}};
+function nodes(){ $('#nodes').innerHTML=S.nodes.map((n,i)=>`<span class="node ${n.id===S.sel?'sel':''}" data-id="${n.id}">${n.id}<br>${esc(n.verb)} ${esc(n.resource)}</span>${i<S.nodes.length-1?'<span class="arrow">→</span>':''}`).join('');
+ $('#nodes').querySelectorAll('.node').forEach(e=>e.onclick=()=>{S.sel=e.dataset.id;nodes();pick()});pick();S.committed=null;$('#root').textContent='-';$('#b-act').disabled=true;$('#b-forge').disabled=true}
+function pick(){ $('#pick').innerHTML=S.nodes.map(n=>`<span class="chip ${n.id===S.sel?'sel':''}">${n.id}</span>`).join('')}
+$('#b-addnode').onclick=()=>{const v=$('#nv').value.trim(),r=$('#nr').value.trim();if(v&&r){S.nodes.push({id:'n'+(S.nodes.length+1),verb:v,resource:r});$('#nv').value=$('#nr').value='';nodes()}};
+nodes();
+$('#b-keys').onclick=()=>{S.pk=P.generateKeyPair();S.ak=P.generateKeyPair();$('#k-p').textContent=short(enc(S.pk.publicKey));$('#k-a').textContent=short(enc(S.ak.publicKey));$('#b-grant').disabled=false};
+$('#b-grant').onclick=()=>{const goalCommit=P.hashCanonical({goal:$('#goal').value});
+ const caveats=[{type:'goal',commit:goalCommit,text:$('#goal').value},...S.preds.map(p=>({type:'predicate',verb:p.verb,resource:p.resource})),{type:'risk_policy',policy:JSON.parse(JSON.stringify(POL))}];
+ S.grant=P.mintRoot({principalSecret:S.pk.secretKey,principalPublic:enc(S.pk.publicKey),holder:enc(S.ak.publicKey),caveats});
+ $('#grant-out').innerHTML=`<b>grant id</b><span class="mono">${short(S.grant.id)}</span><b>goal commit</b><span class="mono">${short(goalCommit)}</span><b>caveats</b><span class="mono">${S.grant.caveats.length} (goal, ${S.preds.length} predicates, risk_policy)</span><b>holder</b><span class="mono">${short(S.grant.holder)}</span>`;
+ $('#b-plan').disabled=false;budget={B:POL.bMax,tau:now,asOf:now};refresh()};
+$('#b-plan').onclick=()=>{try{S.committed=P.commitPlan(S.nodes);$('#root').textContent=S.committed.root;$('#b-act').disabled=!S.grant;$('#b-forge').disabled=!S.grant}catch(e){$('#root').innerHTML=`<span class="err">${esc(e.message)}</span>`}};
+function render(res,title){ $('#vout').innerHTML=`<div class="mono" style="margin-top:10px">${esc(title)}</div>`+Object.entries(res.checks).map(([k,v])=>`<div class="chk ${v}"><span>${k}</span><span>${v}</span></div>`).join('')+`<div class="verdict ${res.allow?'ok':'bad'}">${res.allow?'ALLOWED':'REJECTED'}${res.reason?' — '+esc(res.reason):''}</div>`}
+$('#b-act').onclick=async()=>{let params;try{const t=$('#params').value.trim();params=t?JSON.parse(t):undefined}catch{return $('#vout').innerHTML='<div class="err">params is not valid JSON</div>'}
+ try{const a=P.buildPCActn({grant:S.grant,chain:[S.grant],plan:S.nodes,nodeId:S.sel,params,counter:(S.ctr=(S.ctr||0)+1),signerSecret:S.ak.secretKey});S.last=a;render(await P.verifyPCActnCore(a,{grant:S.grant}),`PCActn ${P.pcactnDigest(a).slice(0,16)}… for ${S.sel}`);
+ $('#b-thr').disabled=false}catch(e){$('#vout').innerHTML=`<div class="err">${esc(e.message)}</div>`}};
+$('#b-forge').onclick=async()=>{ // build against a plan that includes the rogue node, then present it against the committed (honest) root
+ const rogue={id:'rogue',verb:'delete',resource:'account/*'};
+ const a=P.buildPCActn({grant:S.grant,chain:[S.grant],plan:[...S.nodes,rogue],nodeId:'rogue',counter:(S.ctr=(S.ctr||0)+1),signerSecret:S.ak.secretKey});
+ a.plan.root=S.committed.root; // claim the committed root, but the proof cannot lead there
+ render(await P.verifyPCActnCore(a,{grant:S.grant}),'FORGED: delete account/* (not in the committed plan)')};
+// ---- battery
+function derived(){const r=P.riskScore(IN,POL.weights),c=P.cost(r,POL.kappa),irr=IN.reversibility<.3;const rt=P.requiredThreshold(r,POL,{irreversible:irr});return{r,c,rt}}
+function refresh(){const {r,c,rt}=derived(),b=P.leak(budget,now,POL.lambda);
+ const pct=POL.bMax>0?Math.max(0,Math.min(1,b.B/POL.bMax)):0;
+ $('#fill').style.width=(pct*100)+'%';$('#fill').style.background=pct>.5?'var(--ok)':pct>.2?'var(--warn)':'var(--bad)';$('#pct').textContent=Math.round(pct*100)+'%  ('+b.B.toFixed(2)+')';
+ $('#st-r').textContent=r.toFixed(2);$('#st-c').textContent=c.toFixed(2);
+ const eff=(b.B<c&&rt.t===1)?3:rt.t;$('#st-t').textContent=eff;$('#st-t').className='t'+eff;$('#st-p').textContent=eff===3?'strong':rt.proof;$('#st-p').className='t'+eff;
+ $('#rbar').style.width=(r*100)+'%';$('#m1').style.left=(POL.theta1*100)+'%';$('#m2').style.left=(POL.theta2*100)+'%';$('#l2').style.left=(POL.theta1*100)+'%';
+ $('#bound').textContent=`Safety bound: total auto-admitted risk between human recharges <= bMax/κ = ${P.safetyBound?P.safetyBound(POL).toFixed(2):(POL.bMax/POL.kappa).toFixed(2)}`;
+ return{r,c,rt,b,eff}}
+function drawHist(){const col=['','var(--ok)','var(--warn)','var(--bad)'];$('#hist').innerHTML=hist.map(h=>`<div class="${h.ok?'adm':'stp'}" style="height:${Math.max(6,h.r*72)}px;background:${col[h.t]}"><span>t${h.t}</span></div>`).join('')}
+function log(m){const d=document.createElement('div');d.textContent=m;$('#log').prepend(d)}
+function run(){const x=refresh();budget=x.b;const a=P.admit(x.r,budget,POL);
+ hist.push({r:x.r,t:a.t,ok:a.admit});drawHist();
+ if(a.admit){budget=P.debit(budget,x.c);$('#banner').classList.remove('on');log(`ADMIT r=${x.r.toFixed(2)} cost=${x.c.toFixed(2)} -> budget ${budget.B.toFixed(2)}`)}
+ else{const why=x.r>POL.theta1?`r=${x.r.toFixed(2)} exceeds θ1=${POL.theta1}: t=${a.t} (${a.t===3?'strong':'standard'}) proof required`:`budget ${x.b.B.toFixed(2)} < cost ${x.c.toFixed(2)}: depleted, human recharge required`;
+  $('#banner-why').textContent=why;$('#banner').classList.add('on');log('STEP-UP '+why)}
+ refresh();return a}
+$('#b-run').onclick=run;
+$('#b-rech').onclick=()=>{budget=P.recharge(P.leak(budget,now,POL.lambda),POL.rho,POL.bMax,now);IN.age=0;$('#inputs').querySelectorAll('input')[5].value=0;$('#inputs').querySelectorAll('output')[5].textContent=0;$('#banner').classList.remove('on');log(`HUMAN RECHARGE +${POL.rho} -> ${budget.B.toFixed(2)}`);refresh()};
+$('#b-time').onclick=()=>{now+=600000;IN.age=Math.min(1,IN.age+600000/3600000);const i=$('#inputs').querySelectorAll('input')[5];i.value=IN.age;$('#inputs').querySelectorAll('output')[5].textContent=+IN.age.toFixed(2);log('+10 min: budget leaks, age rises');refresh()};
+$('#b-reset').onclick=()=>{clearInterval(auto);auto=null;now=0;budget={B:POL.bMax,tau:0,asOf:0};hist=[];$('#log').innerHTML='';$('#banner').classList.remove('on');drawHist();refresh()};
+// autodrive: agent drifts further from the goal each step
+$('#b-auto').onclick=()=>{if(auto){clearInterval(auto);auto=null;return}let i=0;const set=(k,v)=>{IN[k]=v};const keys=['semanticDistance','reversibility','blastRadius','taint','confidence','age'];
+ auto=setInterval(()=>{if(i>=14){clearInterval(auto);auto=null;return}const f=i/13;set('semanticDistance',.05+.7*f);set('reversibility',.95-.8*f);set('blastRadius',.05+.6*f);set('taint',.4*f*f);set('confidence',.95-.5*f);set('age',.05+.5*f);
+  $('#inputs').querySelectorAll('input').forEach((el,j)=>{el.value=IN[keys[j]];el.nextElementSibling.textContent=+IN[keys[j]].toFixed(2)});run();i++},900)};
+// threshold panel (only if the library exports it)
+if(P.signShare&&P.assembleThreshold){$('#s-thr').style.display='';const g=P.generateKeyPair();
+ $('#b-thr').onclick=()=>{try{const msg=P.thresholdMessage(S.last);const sh=[P.signShare('agent',S.ak.secretKey,msg),P.signShare('guardian',g.secretKey,msg),P.signShare('principal',S.pk.secretKey,msg)];const ts=P.assembleThreshold(sh);$('#thr-out').textContent=`assembled ${sh.length} shares over thresholdMessage(); roles: ${sh.map(s=>s.role).join(', ')}`}catch(e){$('#thr-out').textContent=e.message}}}
+$('#b-keys').click();$('#b-grant').click();$('#b-plan').click();refresh();
+window.__pcaReady=true;
+</script>
+</body>
+</html>
