@@ -9,6 +9,7 @@ import {
   strictParse,
   verifyInclusion,
   verifyPCActnCore,
+  verifyWithSuite,
   type Capability,
   type PCActn,
 } from './index';
@@ -21,7 +22,25 @@ const file = JSON.parse(readFileSync(join(__dirname, '..', 'conformance', 'vecto
     json_parse: { input: string; accept: boolean; canonical?: string }[];
     b64u: { input: string; valid: boolean; len?: number }[];
     merkle: { leaves: unknown[]; root: string; proofs: never[] }[];
+    threshold_share: {
+      role: string;
+      t: number;
+      valid?: boolean;
+      share_message: string;
+      share: { role: string; publicKey: string; sig: string; alg?: string; pq_sig?: string; pq_pk?: string };
+    }[];
+    pq_artifact?: {
+      artifact: string;
+      alg: string;
+      valid: boolean;
+      ed_pub: string;
+      pq_pk?: string;
+      message: string;
+      sig: string;
+      pq_sig?: string;
+    }[];
   };
+  agent_leaf_binding?: string;
   vectors: {
     name: string;
     grant: Capability;
@@ -69,6 +88,34 @@ describe('conformance vectors (wire v2)', () => {
     for (const m of file.primitives.merkle) {
       expect(merkleRoot(m.leaves)).toBe(m.root);
       m.leaves.forEach((_l, i) => expect(verifyInclusion(m.root, m.proofs[i]!, m.leaves[i])).toBe(true));
+    }
+  });
+
+  it('primitives: threshold shares verify over their role/set/t-bound share_message (incl. v2.1 agent binding)', () => {
+    for (const e of file.primitives.threshold_share) {
+      const msg = decodeB64uStrict(e.share_message);
+      expect(msg, `share_message not canonical b64u for ${e.role}/t${e.t}`).not.toBeNull();
+      const got = verifyWithSuite(
+        e.share.alg,
+        { edPub: e.share.publicKey, mlDsaPub: e.share.pq_pk },
+        msg!,
+        { sig: e.share.sig, pq_sig: e.share.pq_sig },
+      );
+      expect(got, `${e.role}/t${e.t}`).toBe(e.valid ?? true);
+    }
+  });
+
+  it('primitives: PQ artifact signatures verify over their message under every suite (shared agility seam)', () => {
+    for (const e of file.primitives.pq_artifact ?? []) {
+      const msg = decodeB64uStrict(e.message);
+      expect(msg, `message not canonical b64u for ${e.artifact}/${e.alg}`).not.toBeNull();
+      const got = verifyWithSuite(
+        e.alg,
+        { edPub: e.ed_pub, mlDsaPub: e.pq_pk, slhDsaPub: e.pq_pk, mlDsa87Pub: e.pq_pk, slhDsa256sPub: e.pq_pk },
+        msg!,
+        { sig: e.sig, pq_sig: e.pq_sig },
+      );
+      expect(got, `${e.artifact}/${e.alg}`).toBe(e.valid);
     }
   });
 });

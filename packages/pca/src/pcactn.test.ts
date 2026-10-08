@@ -3,6 +3,7 @@ import { attenuate, delegate, mintRoot } from './capability';
 import { encodeKey, generateKeyPair } from './keys';
 import { commitPlan, conditionsDigest, paramsDigest } from './merkle';
 import {
+  type Hook,
   type PCActn,
   type PCActnBody,
   PCACTN_MAX_LIFETIME_MS,
@@ -356,5 +357,62 @@ describe('verifyPCActnCore — M5 TEE attestation gate (enforce.attestation)', (
     const r = await verifyPCActnCore(attested(), { ...common, enforce: { attestation: { verifier: notEnforced, required: false } } });
     expect(r.checks.attestation).toBe('not-enforced');
     expect(r.allow).toBe(true);
+  });
+});
+
+// §9B / M6: a PRESENT zk_compliance proof must NEVER be silently accepted. The guarantee lives in the
+// CORE (verifyPCActnCore), not only in a host's `require` list, so a bare caller that supplies neither a
+// zk hook nor require:['zk_compliance'] still DENIES a present-but-unverified proof.
+describe('verifyPCActnCore zk_compliance fail-closed core', () => {
+  const pass: Hook = () => ({ enforced: true, ok: true });
+  const reject: Hook = () => ({ enforced: true, ok: false, reason: 'rejected by test hook' });
+  const withZk = (p: PCActn, secret: Uint8Array, zk: unknown): PCActn => {
+    const { sig: _sig, ...body } = p;
+    void _sig;
+    return signPCActn({ ...(body as PCActnBody), zk_compliance: zk }, secret);
+  };
+
+  it('present zk_compliance + NO hook => FAIL CLOSED (not silently accepted)', async () => {
+    const { grant, S, mk } = build();
+    const p = withZk(mk(0), S.secretKey, { system: 'something', proof: 'opaque' });
+    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1' });
+    expect(r.checks.zk_compliance).toBe('fail');
+    expect(r.allow).toBe(false);
+    expect(r.reason).toMatch(/no zk verifier enforced it/);
+  });
+
+  it('present zk_compliance + passing hook => pass (allow when all else passes)', async () => {
+    const { grant, S, mk } = build();
+    const p = withZk(mk(0), S.secretKey, { system: 'something', proof: 'opaque' });
+    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: pass } });
+    expect(r.checks.zk_compliance).toBe('pass');
+    expect(r.allow).toBe(true);
+  });
+
+  it('present zk_compliance + rejecting hook => fail', async () => {
+    const { grant, S, mk } = build();
+    const p = withZk(mk(0), S.secretKey, { system: 'something', proof: 'opaque' });
+    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: reject } });
+    expect(r.checks.zk_compliance).toBe('fail');
+    expect(r.allow).toBe(false);
+  });
+
+  it('present zk_compliance + a hook that DECLINES to enforce => STILL fail closed', async () => {
+    const { grant, S, mk } = build();
+    const p = withZk(mk(0), S.secretKey, { system: 'something', proof: 'opaque' });
+    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: notEnforced } });
+    expect(r.checks.zk_compliance).toBe('fail');
+    expect(r.allow).toBe(false);
+  });
+
+  it('BACK-COMPAT: no zk_compliance => no zk check at all, allow unaffected', async () => {
+    const { grant, mk } = build();
+    const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-1' });
+    expect(r.checks.zk_compliance).toBeUndefined();
+    expect(r.allow).toBe(true);
+    // a supplied hook is never run when no proof is present
+    const r2 = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: reject } });
+    expect(r2.checks.zk_compliance).toBeUndefined();
+    expect(r2.allow).toBe(true);
   });
 });

@@ -6,12 +6,15 @@ import { sign } from './keys';
 import {
   type MlDsaKeyPair,
   type SigAlg,
+  type SigSuite,
   type SlhDsaKeyPair,
+  type SuiteSecretKeys,
+  encodeMlDsa87PublicKey,
   encodeMlDsaPublicKey,
+  encodeSlhDsa256sPublicKey,
   encodeSlhDsaPublicKey,
-  mlDsa65Sign,
   resolveSigAlg,
-  slhDsa128fSign,
+  signWithSuite,
   verifyLeafSuite,
 } from './pq';
 import {
@@ -80,25 +83,30 @@ export interface PCActn {
   tool_binding?: string;
   /**
    * B4 crypto-agility (OPTIONAL, additive). Signature suite for the leaf signature. ABSENT means
-   * `"ed25519"` — the pre-B4 default, byte-identical on the wire. Known suites: `"ed25519"`,
-   * `"ml-dsa-65"` (pure PQ), `"hybrid-ed25519-ml-dsa-65"` (both). SIGNED (downgrade-protected). See pq.ts.
+   * `"ed25519"` — the pre-B4 default, byte-identical on the wire. The full registry (all SIGNED /
+   * downgrade-protected, see pq.ts): `"ed25519"`; the lattice PQ suites `"ml-dsa-65"`, `"ml-dsa-87"`
+   * (Cat-5) and their `"hybrid-ed25519-*"` forms; the SUF-CMA `"hybrid-nested-ed25519-ml-dsa-65"`; and the
+   * hash-based PQ suites `"slh-dsa-sha2-128f"`, `"slh-dsa-sha2-256s"` (Cat-5) and their hybrids. The leaf
+   * SIGNER (`signPCActnSuite`) and the leaf VERIFIER (`verifyLeafSuite`) both cover all of them.
    */
   alg?: SigAlg;
   /**
-   * B4: ML-DSA-65 public key (b64u, 1952 bytes) for the `ml-dsa-65` / hybrid suites. SIGNED, so the Ed25519
-   * holder signature (in hybrid) binds this key to the capability-chain leaf holder. Absent for ed25519.
+   * B4: the suite's PQ public key (b64u). ML-DSA-65 (1952 B) / ML-DSA-87 (2592 B) / SLH-DSA-SHA2-128f
+   * (32 B) / SLH-DSA-SHA2-256s (64 B), per `alg`. SIGNED, so the Ed25519 holder signature (in a hybrid)
+   * binds this key to the capability-chain leaf holder. Absent for ed25519.
    */
   pq_pk?: string;
   /**
-   * M0 / B4: the PRIMARY signature (b64u) by the leaf capability holder. For `ed25519` and `hybrid` it is a
-   * 64-byte Ed25519 signature (the AGENT-LEAF baseline, an effective t=1 threshold — §6 L2); for pure
-   * `ml-dsa-65` it is a 3309-byte ML-DSA-65 signature verified under `pq_pk`.
+   * M0 / B4: the PRIMARY signature (b64u) by the leaf capability holder. For `ed25519` and every `hybrid`
+   * it is a 64-byte Ed25519 signature (the AGENT-LEAF baseline, an effective t=1 threshold — §6 L2); for a
+   * PURE PQ suite it is the PQ signature (ML-DSA / SLH-DSA) verified under `pq_pk`.
    */
   sig: string;
   /**
-   * B4: the ML-DSA-65 signature (b64u, 3309 bytes) for the HYBRID suite, over the SAME canonical message as
-   * `sig`. UNSIGNED (a signature cannot sign itself; stripped from the signed body like `sig`/`threshold`).
-   * Present only for `hybrid-ed25519-ml-dsa-65`; hybrid verification requires BOTH `sig` and `pq_sig`.
+   * B4: the PQ signature (b64u) for a HYBRID suite, over the SAME canonical message as `sig` (the nested
+   * SUF-CMA hybrid signs `message ‖ sig_ed25519`). UNSIGNED (a signature cannot sign itself; stripped from
+   * the signed body like `sig`/`threshold`). Present only for the `hybrid-*` suites; hybrid verification
+   * requires BOTH `sig` and `pq_sig` (fail-closed).
    */
   pq_sig?: string;
   /**
@@ -153,53 +161,86 @@ export function signPCActn(body: PCActnBody, leafHolderSecret: Uint8Array): PCAc
   return { ...body, sig: b64u(sign(leafHolderSecret, thresholdMessage(body))) };
 }
 
+/** Secret-key material a leaf signer may supply — one bundle covering every registered suite family. */
+export interface LeafSuiteSecretKeys {
+  /** Ed25519 leaf-holder secret (ed25519 + every hybrid suite). */
+  edLeafSecret?: Uint8Array;
+  /** ML-DSA-65 key pair (ml-dsa-65, hybrid-ed25519-ml-dsa-65, hybrid-nested-ed25519-ml-dsa-65). */
+  mlDsa?: MlDsaKeyPair;
+  /** SLH-DSA-SHA2-128f key pair (slh-dsa-sha2-128f, hybrid-ed25519-slh-dsa-sha2-128f). */
+  slhDsa?: SlhDsaKeyPair;
+  /** ML-DSA-87 key pair (ml-dsa-87, hybrid-ed25519-ml-dsa-87 — Category-5 / CNSA 2.0). */
+  mlDsa87?: MlDsaKeyPair;
+  /** SLH-DSA-SHA2-256s key pair (slh-dsa-sha2-256s, hybrid-ed25519-slh-dsa-sha2-256s — Category-5). */
+  slhDsa256s?: SlhDsaKeyPair;
+}
+
 /**
- * B4 crypto-agility: sign a PCActn under a chosen signature suite. ADDITIVE — the `ed25519` path produces an
- * object byte-identical to {@link signPCActn} (no `alg`/`pq_*` fields), so existing consumers are unaffected.
- *
- *  - `ed25519` (default): Ed25519 under `edLeafSecret`. No `alg` field is emitted (absent == ed25519).
- *  - `ml-dsa-65`: ML-DSA-65 under `mlDsa`; emits `alg` + `pq_pk`; `sig` is the ML-DSA signature.
- *  - `hybrid-ed25519-ml-dsa-65`: both; emits `alg` + `pq_pk`; `sig` = Ed25519, `pq_sig` = ML-DSA, over the SAME
- *    canonical message.
+ * Resolve the b64u PQ public key (== `pq_pk`) a NON-ed25519 suite binds into its signed body, from whichever
+ * key-material family the suite selects. THROWS a TypeError naming the missing family's key material so a
+ * signer never silently emits a weaker/incomplete signature. The returned string is byte-identical to the
+ * value the pq.ts seam (`signSuiteArtifact`) derives for the same suite + keys.
  */
-export function signPCActnSuite(
-  body: PCActnBody,
-  opts: { alg?: SigAlg; edLeafSecret?: Uint8Array; mlDsa?: MlDsaKeyPair; slhDsa?: SlhDsaKeyPair },
-): PCActn {
+function leafPqPublicKey(suite: SigSuite, keys: LeafSuiteSecretKeys): string {
+  if (suite.hasMlDsa) {
+    if (!keys.mlDsa) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires mlDsa key material`);
+    return encodeMlDsaPublicKey(keys.mlDsa.publicKey);
+  }
+  if (suite.hasSlhDsa) {
+    if (!keys.slhDsa) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires slhDsa key material`);
+    return encodeSlhDsaPublicKey(keys.slhDsa.publicKey);
+  }
+  if (suite.hasMlDsa87) {
+    if (!keys.mlDsa87) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires mlDsa87 key material`);
+    return encodeMlDsa87PublicKey(keys.mlDsa87.publicKey);
+  }
+  if (suite.hasSlhDsa256s) {
+    if (!keys.slhDsa256s) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires slhDsa256s key material`);
+    return encodeSlhDsa256sPublicKey(keys.slhDsa256s.publicKey);
+  }
+  // Unreachable: every non-ed25519 suite in the registry sets exactly one PQ family flag + needsPqPk.
+  throw new TypeError(`signPCActnSuite: '${suite.alg}' has no PQ public key`);
+}
+
+/**
+ * B4 crypto-agility: sign a PCActn under ANY registered signature suite (the leaf-signer parity to the
+ * verify seam `verifyLeafSuite`, which already accepts all 10). ADDITIVE — the `ed25519` path produces an
+ * object byte-identical to {@link signPCActn} (no `alg`/`pq_*` fields), so existing consumers are unaffected,
+ * and the `ml-dsa-65` / `hybrid-ed25519-ml-dsa-65` / `slh-dsa-sha2-128f` paths stay byte-identical to the
+ * previous hand-rolled branches (they now route through the shared pq.ts seam {@link signWithSuite}).
+ *
+ * Every non-ed25519 suite binds `alg` + the suite's `pq_pk` into the signed body, then signs
+ * `thresholdMessage` of that body under the suite:
+ *   - `ml-dsa-65` / `ml-dsa-87`                     pure lattice PQ: `sig` is the ML-DSA signature.
+ *   - `slh-dsa-sha2-128f` / `slh-dsa-sha2-256s`     pure hash-based PQ: `sig` is the SLH-DSA signature.
+ *   - `hybrid-ed25519-*`                            `sig` = Ed25519, `pq_sig` = the PQ signature, both over
+ *                                                   the SAME canonical message (fail-closed: BOTH required).
+ *   - `hybrid-nested-ed25519-ml-dsa-65`             SUF-CMA nested hybrid: `pq_sig` signs `message ‖ sig_ed25519`.
+ *
+ * FAIL-CLOSED: an unknown `alg`, or missing key material for the chosen suite, THROWS.
+ */
+export function signPCActnSuite(body: PCActnBody, opts: { alg?: SigAlg } & LeafSuiteSecretKeys): PCActn {
   const suite = resolveSigAlg(opts.alg ?? 'ed25519');
   if (suite === null) throw new Error(`signPCActnSuite: unknown alg ${String(opts.alg)}`);
   if (suite.alg === 'ed25519') {
     if (!opts.edLeafSecret) throw new TypeError("signPCActnSuite: 'ed25519' requires edLeafSecret");
     return signPCActn(body, opts.edLeafSecret); // byte-identical to the pre-B4 path (no alg field)
   }
-
-  // --- SLH-DSA family (hash-based PQ): pq_pk/pq_sig carry the SLH-DSA material ---
-  if (suite.alg === 'slh-dsa-sha2-128f' || suite.alg === 'hybrid-ed25519-slh-dsa-sha2-128f') {
-    if (!opts.slhDsa) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires slhDsa key material`);
-    const withSuite: PCActnBody = { ...body, alg: suite.alg, pq_pk: encodeSlhDsaPublicKey(opts.slhDsa.publicKey) };
-    const msg = thresholdMessage(withSuite);
-    if (suite.alg === 'slh-dsa-sha2-128f') {
-      return { ...withSuite, sig: b64u(slhDsa128fSign(opts.slhDsa.secretKey, msg)) };
-    }
-    // hybrid-ed25519-slh-dsa-sha2-128f (classical + hash-based PQ; BOTH required)
-    if (!opts.edLeafSecret) throw new TypeError("signPCActnSuite: 'hybrid-ed25519-slh-dsa-sha2-128f' requires edLeafSecret");
-    return { ...withSuite, sig: b64u(sign(opts.edLeafSecret, msg)), pq_sig: b64u(slhDsa128fSign(opts.slhDsa.secretKey, msg)) };
-  }
-
-  // --- ML-DSA family (lattice PQ) ---
-  if (suite.needsPqPk && !opts.mlDsa) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires mlDsa key material`);
-  const withSuite: PCActnBody = { ...body, alg: suite.alg, pq_pk: encodeMlDsaPublicKey(opts.mlDsa!.publicKey) };
+  // Every hybrid suite needs the Ed25519 leaf secret; check FIRST so the error names `edLeafSecret`
+  // (the signer-facing option) rather than the seam's generic `edSecret`.
+  if (suite.hasEd25519 && !opts.edLeafSecret) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires edLeafSecret`);
+  const pqPk = leafPqPublicKey(suite, opts); // throws, naming the missing PQ family, if absent
+  const withSuite: PCActnBody = { ...body, alg: suite.alg, pq_pk: pqPk };
   const msg = thresholdMessage(withSuite);
-  if (suite.alg === 'ml-dsa-65') {
-    return { ...withSuite, sig: b64u(mlDsa65Sign(opts.mlDsa!.secretKey, msg)) };
-  }
-  // hybrid-ed25519-ml-dsa-65
-  if (!opts.edLeafSecret) throw new TypeError("signPCActnSuite: 'hybrid-ed25519-ml-dsa-65' requires edLeafSecret");
-  return {
-    ...withSuite,
-    sig: b64u(sign(opts.edLeafSecret, msg)),
-    pq_sig: b64u(mlDsa65Sign(opts.mlDsa!.secretKey, msg)),
+  const seamKeys: SuiteSecretKeys = {
+    edSecret: opts.edLeafSecret,
+    mlDsa: opts.mlDsa,
+    slhDsa: opts.slhDsa,
+    mlDsa87: opts.mlDsa87,
+    slhDsa256s: opts.slhDsa256s,
   };
+  const parts = signWithSuite(suite.alg, seamKeys, msg);
+  return parts.pq_sig !== undefined ? { ...withSuite, sig: parts.sig, pq_sig: parts.pq_sig } : { ...withSuite, sig: parts.sig };
 }
 
 export function encodePCActn(p: PCActn): string {
@@ -569,7 +610,28 @@ export async function verifyPCActnCore(
     }
     await run('threshold', opts.hooks?.threshold);
     await run('revocation', opts.hooks?.revocation);
-    await run('zk_compliance', opts.hooks?.zk, p.zk_compliance !== undefined);
+
+    // §9B / M6 zk-compliance — FAIL CLOSED AT THE CORE.
+    //
+    // A PCActn that CARRIES a `zk_compliance` proof is asserting a cryptographic compliance guarantee. If
+    // no zk verifier is available to check it, that guarantee is UNVERIFIED — and an unverified proof must
+    // NEVER be silently accepted. Previously this reported 'not-enforced' whenever `hooks.zk` was absent,
+    // so a bare `verifyPCActnCore` / `verifyPCActn` caller that supplied neither `hooks.zk` nor
+    // `require:['zk_compliance']` would silently ACCEPT an unverified (even forged) proof. The guarantee
+    // now lives in the CORE, not only in a host's `require` list: a present-but-unverifiable proof denies
+    // here, for every caller.
+    //
+    // Back-compat is exact: a PCActn that carries NO `zk_compliance` sets no `zk_compliance` check at all
+    // (byte-identical output to before). A present proof WITH a `hooks.zk` verifier runs the verifier
+    // normally (pass => 'pass', reject => 'fail'); a verifier that declines to enforce a present proof is
+    // itself a fail-closed deny (a present proof may not end up unenforced).
+    if (p.zk_compliance !== undefined) {
+      await run('zk_compliance', opts.hooks?.zk);
+      if (checks.zk_compliance !== 'pass' && checks.zk_compliance !== 'fail') {
+        fail('zk_compliance', 'PCActn carries a zk_compliance proof but no zk verifier enforced it (fail closed): configure hooks.zk or do not present a proof');
+      }
+    }
+
     if (p.bond_ref !== undefined) checks.bond = 'not-enforced';
   } catch (e) {
     reason ??= `malformed PCActn: ${(e as Error).message}`;

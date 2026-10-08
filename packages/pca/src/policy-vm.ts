@@ -1,4 +1,4 @@
-import type { Capability, CapabilityChain } from './capability';
+import { type Capability, type CapabilityChain, verifyChain } from './capability';
 import type { PCActn } from './pcactn';
 import type { PlanNode } from './merkle';
 import { readEnvelope } from './envelope';
@@ -60,6 +60,15 @@ export interface DecideInput {
    * (so the required threshold and budget cost), never lower it. Ignored unless a finite number in [0,1].
    */
   rFloor?: number;
+  /**
+   * A2h — ALREADY-VERIFIED MARKER. `decide()` fails closed on an unverified capability chain: unless this is
+   * exactly `true`, `decide()` itself runs {@link verifyChain} over `chain` (or `[grant]` when no chain is
+   * given), rooted at `grant.issuer`, and DENIES if the signatures / lineage do not verify. Set it to `true`
+   * ONLY when an upstream verifier (e.g. `verifyPCActnCore`'s `cap_chain` check) has ALREADY run `verifyChain`
+   * on this exact chain in this request, to skip the redundant re-verification. A forged/absent signature can
+   * thus never be laundered through `decide()` by an SDK that forgot to verify first.
+   */
+  chainVerified?: boolean;
 }
 
 export interface PolicyDecision {
@@ -146,6 +155,20 @@ export function decide(input: DecideInput): PolicyDecision {
     const env = readEnvelope(grant);
     if (!env) return denied('grant carries no valid envelope', budget);
     if (!Number.isFinite(now)) return denied('invalid decision time', budget);
+
+    // A2h — fail closed on an UNVERIFIED capability chain. Unless the caller passed the already-verified
+    // marker, `decide()` itself re-runs `verifyChain` (over the supplied chain, or `[grant]` as a single-hop
+    // when none is given) rooted at the grant's issuer. A grant/chain whose signatures or attenuation lineage
+    // do not verify is DENIED here — SDK misuse that skipped verification can no longer reach a release. A
+    // chain that IS present but empty/malformed is left to the existing `chainOk` handling below (so the
+    // precise "delegation chain is empty or malformed" reason is preserved); the single grant is still checked.
+    if (input.chainVerified !== true) {
+      const toVerify: CapabilityChain =
+        Array.isArray(input.chain) && input.chain.length > 0 ? input.chain : [grant];
+      const cr = verifyChain(toVerify, grant?.issuer);
+      if (!cr.ok) return denied(`capability chain unverified: ${cr.reason ?? 'invalid'}`, budget);
+    }
+
     const pol = env.risk_policy;
     const reasons: string[] = [];
 

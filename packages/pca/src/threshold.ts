@@ -6,6 +6,7 @@ import {
   type SigAlg,
   resolveSigAlg,
   signWithSuite,
+  verifyLeafSuite,
   verifyWithSuite,
 } from './pq';
 import { type PCActn, type ThresholdVerifier, type VerifyContext, thresholdMessage } from './pcactn';
@@ -127,17 +128,32 @@ function concat(...parts: Uint8Array[]): Uint8Array {
 }
 
 /**
- * The bytes a guardian / principal SHARE signs (audit security-section finding 2): role-, signer-set- and
- * t-bound, so a share cannot be replayed under another role, in a different signer set, or at a different
- * threshold:
+ * The bytes EVERY role's SHARE signs (audit security-section finding 2): role-, signer-set- and t-bound, so
+ * a share cannot be replayed under another role, in a different signer set, or at a different threshold:
  *
  *     "atlas-pca/share/<role>\0" || sha256(thresholdMessage) || signerSetHash || t   (t = ONE byte, 1..3)
  *
- * The AGENT role's share is the PCActn leaf signature `sig`, which signs `thresholdMessage` directly (the
- * leaf-signed body is unchanged); its role/set/t binding is carried by the leaf key being the single
- * registered 'agent' key in the signer set.
+ * v2.1 AGENT-LEAF BINDING (this change): the AGENT role's EXPLICIT threshold share now signs these same
+ * signerSetHash‖t-bound bytes — role `'agent'` — EXACTLY like guardian / principal. Previously the agent
+ * share signed the bare `thresholdMessage`, relying only on the implicit one-key-one-role binding; that bare
+ * form is NO LONGER accepted by {@link verifyThreshold} (a bare agent share is rejected). This is a clean
+ * break on the threshold wire (PCA is Preview; all SDKs regenerate from the conformance corpus).
+ *
+ * The one thing that stays bare is the PCActn LEAF SIGNATURE `p.sig` itself: it signs `thresholdMessage`
+ * directly because it predates knowing the signer set (the leaf-signed body is unchanged, and the
+ * `leaf_signature` verifier check is untouched). {@link createThresholdVerifier} admits that leaf signature
+ * as the agent's "effective t=1" baseline (§6 L2) via the one-key-one-role rule — it is NOT a bound share
+ * and is handled by its own code path, not by this role-bound share message.
  */
 const SHARE_SUITE_TAG = '\0atlas-pca/share-suite/v1\0';
+
+/**
+ * Version marker for the v2.1 agent-leaf share binding (GAP 2). Guardian / principal share bytes are
+ * UNCHANGED by this change; only the agent EXPLICIT share moved from the bare threshold message to the
+ * role/set/t-bound {@link shareMessage}. SDKs regenerate from the conformance corpus, which carries this
+ * marker in its `agent_leaf_binding` metadata field.
+ */
+export const AGENT_LEAF_SHARE_BINDING_VERSION = '2.1';
 
 /**
  * Domain-separated suite tag appended to a share's signed bytes for a NON-default suite, so a hybrid or
@@ -157,13 +173,16 @@ export function shareMessage(role: SignerRole, message: Uint8Array, signerSet: S
 }
 
 /**
- * Produce a role's share. For 'guardian' / 'principal' the signed bytes are {@link shareMessage}(role, message,
- * signerSet, t, suite?.alg) — `bind` (the signer set + t the share is for) is REQUIRED. The 'agent' share signs
- * `message` itself (it is the leaf signature; its PQ agility rides on the leaf/pcactn seam, not here).
+ * Produce a role's EXPLICIT threshold share. For EVERY role — `agent` (v2.1), `guardian`, `principal` — the
+ * signed bytes are {@link shareMessage}(role, message, signerSet, t, suite?.alg), so `bind` (the signer set
+ * + t the share is for) is REQUIRED for all of them. A bare agent share (no `bind`) is no longer produced:
+ * the agent's explicit share is now signerSetHash‖t-bound exactly like the others (so it cannot be replayed
+ * into a different signer-set / threshold context). The PCActn leaf signature `p.sig` is NOT produced here;
+ * it is the leaf baseline and `createThresholdVerifier` admits it on its own path.
  *
- * `suite` (default ed25519) makes a guardian/principal share post-quantum: for `ml-dsa-65`/`hybrid` it signs
- * through {@link signWithSuite} and emits `alg` + `pq_sig`; the role's `mlDsa` public key must be registered as
- * the signer set's `pq_pk` for that role. ed25519 / absent is byte-identical to the pre-agility share.
+ * `suite` (default ed25519) makes a share post-quantum: for `ml-dsa-65`/`hybrid` it signs through
+ * {@link signWithSuite} and emits `alg` + `pq_sig`; the role's `mlDsa` public key must be registered as the
+ * signer set's `pq_pk` for that role. ed25519 / absent is byte-identical to the pre-agility share.
  */
 export function signShare(
   role: SignerRole,
@@ -172,7 +191,6 @@ export function signShare(
   bind?: { signerSet: Signer[]; t: number },
   suite?: ShareSuiteOpts,
 ): ThresholdShare {
-  if (role === 'agent') return { role, publicKey: b64u(publicKeyOf(secretKey)), sig: b64u(sign(secretKey, message)) };
   if (!bind) throw new TypeError(`signShare: a '${role}' share must bind {signerSet, t}`);
   return signPreparedShare(role, secretKey, shareMessage(role, message, bind.signerSet, bind.t, suite?.alg), suite);
 }
@@ -214,20 +232,44 @@ export interface ThresholdVerdict {
 const ROLES: readonly SignerRole[] = ['agent', 'guardian', 'principal'];
 
 /**
+ * The PCActn LEAF-signature baseline, admitted as the agent's "effective t=1" share (§6 L2). It is the
+ * leaf signature `p.sig` over the BARE `message` (== `thresholdMessage`), verified under the agent's suite —
+ * NOT a signerSetHash‖t-bound share. It counts only when its `holder` equals the signer set's registered
+ * 'agent' key and that key is not already satisfied by an explicit (bound) share. Supplied by
+ * {@link createThresholdVerifier}; omitted by generic callers (whose agent shares must be bound).
+ */
+export interface AgentLeafBaseline {
+  /** The capability-chain leaf holder (b64u Ed25519) — must equal the registered 'agent' key to count. */
+  holder: string;
+  /** The PCActn's `sig` (b64u). */
+  sig: unknown;
+  /** The PCActn's `alg` (suite); absent => ed25519. */
+  alg?: unknown;
+  /** The PCActn's `pq_pk` (b64u PQ key) for a PQ / hybrid leaf. */
+  pqPk?: unknown;
+  /** The PCActn's `pq_sig` (b64u) for a hybrid leaf. */
+  pqSig?: unknown;
+}
+
+/**
  * Verify a t-of-n multi-signature over `message` (= `thresholdMessage(pcactn)`).
  *
  * The signer set is validated FIRST and the whole verification fails closed if it is malformed: every role
  * is a known role, each role has EXACTLY ONE registered key, and no public key is registered under two
  * roles (so one key can never satisfy two role slots — closes the `holder == principal` collapse). `t` must
  * be 1, 2 or 3. A share counts iff its role+key are registered and its signature verifies over that role's
- * message (`shareMessage`, or `message` itself for the agent/leaf share). The count is of DISTINCT KEYS.
- * Deterministic and TOTAL — never throws.
+ * signerSetHash‖t-bound `shareMessage` — v2.1: this now includes the `agent` role (a bare agent share, over
+ * `message` itself, is REJECTED). The count is of DISTINCT KEYS. Deterministic and TOTAL — never throws.
+ *
+ * `baseline` (optional, additive) admits the PCActn leaf signature as the agent's effective-t=1 baseline
+ * (see {@link AgentLeafBaseline}); generic callers omit it and are unaffected.
  */
 export function verifyThreshold(
   sig: ThresholdSignature,
   message: Uint8Array,
   signerSet: Signer[],
   t: number,
+  baseline?: AgentLeafBaseline,
 ): ThresholdVerdict {
   const fail = (reason: string): ThresholdVerdict => ({ ok: false, count: 0, roles: [], reason });
   if (!isValidT(t)) return fail(`invalid threshold t=${String(t)} (must be 1, 2 or 3)`);
@@ -272,9 +314,10 @@ export function verifyThreshold(
       reason ??= `share for role ${share.role} declares an unknown signature alg`;
       continue;
     }
-    // The agent share signs `message` (the leaf) directly; others sign the role/set/t/suite-bound share
-    // message. The suite tag inside `shareMessage` binds `share.alg`, so a downgraded share fails here.
-    const signed = share.role === 'agent' ? message : shareMessage(share.role, message, signerSet, t, share.alg);
+    // v2.1: EVERY role (agent included) signs the role/set/t/suite-bound share message. The suite tag inside
+    // `shareMessage` binds `share.alg`, so a downgraded share fails here, and a bare agent share (signed over
+    // `message` itself) no longer verifies — it is rejected.
+    const signed = shareMessage(share.role, message, signerSet, t, share.alg);
     const mlDsaPub = pqKeyOfRole.get(share.role);
     if (typeof share.sig !== 'string' || !verifyWithSuite(share.alg, { edPub: share.publicKey, mlDsaPub }, signed, { sig: share.sig, pq_sig: share.pq_sig })) {
       reason ??= `invalid signature for role ${share.role}`;
@@ -282,6 +325,25 @@ export function verifyThreshold(
     }
     validKeys.add(share.publicKey);
     validRoles.push(share.role);
+  }
+
+  // Agent-leaf BASELINE (§6 L2 effective t=1): admit the PCActn leaf signature `p.sig` as the agent's share
+  // when its holder is the registered 'agent' key and that key is not already satisfied by an explicit
+  // (bound) share. It verifies over the BARE `message` under the agent's suite — it is the leaf signature,
+  // not a signerSetHash‖t-bound share. The signer set was already validated above (a malformed set returned
+  // early), so this cannot bypass that fail-closed check.
+  if (baseline) {
+    const agentKey = keyOfRole.get('agent');
+    if (
+      typeof baseline.holder === 'string' &&
+      agentKey !== undefined &&
+      baseline.holder === agentKey &&
+      !validKeys.has(agentKey) &&
+      verifyLeafSuite({ alg: baseline.alg, holder: agentKey, pqPublicKey: baseline.pqPk, message, sig: baseline.sig, pqSig: baseline.pqSig })
+    ) {
+      validKeys.add(agentKey);
+      validRoles.push('agent');
+    }
   }
 
   const count = validKeys.size;
@@ -314,26 +376,27 @@ function riskDerivedT(ctx: VerifyContext): number {
  * Build a `ThresholdVerifier` hook (the L2/M4 hook interface in pcactn.ts). Given a PCActn it:
  *  1. recomputes the canonical signed message via `thresholdMessage` (the SAME bytes the agent
  *     `sig` and every share cover — one definition, no drift);
- *  2. assembles the shares to check = the agent-leaf share (role 'agent', key = the capability
- *     chain's leaf holder, sig = pcactn.sig) PLUS any shares carried in `pcactn.threshold`. This is
- *     why a t=1 action with only the baseline `sig` and no `threshold` field still passes;
- *  3. resolves the required `t` (fixed, custom, or risk-derived), and returns an ENFORCED pass/fail
- *     from `verifyThreshold`.
+ *  2. verifies the EXPLICIT (signerSetHash‖t-bound, v2.1) shares carried in `pcactn.threshold`, and
+ *     ALSO admits the PCActn's own leaf signature `pcactn.sig` as the agent's effective-t=1 BASELINE
+ *     (the `AgentLeafBaseline` passed to `verifyThreshold`) — which is why a t=1 action with only the
+ *     baseline `sig` and no `threshold` field still passes. A separately-transmitted, bound agent share
+ *     (if present) supersedes the baseline (same key, counted once);
+ *  3. resolves the required `t` (fixed, custom, or risk-derived), and returns an ENFORCED pass/fail.
  */
 export function createThresholdVerifier(opts: ThresholdVerifierOpts): ThresholdVerifier {
   const resolveT = opts.requiredT ?? (opts.t !== undefined ? () => opts.t as number : riskDerivedT);
   return (ctx: VerifyContext) => {
     const p: PCActn = ctx.pcactn;
     const message = thresholdMessage(p);
-    const shares: ThresholdShare[] = [];
+    const explicit: ThresholdShare[] = p.threshold && Array.isArray(p.threshold.shares) ? p.threshold.shares : [];
     const chain = p.cap_chain;
     const leaf = Array.isArray(chain) ? chain[chain.length - 1] : undefined;
-    if (leaf && typeof leaf.holder === 'string' && typeof p.sig === 'string') {
-      shares.push({ role: 'agent', publicKey: leaf.holder, sig: p.sig });
-    }
-    if (p.threshold && Array.isArray(p.threshold.shares)) shares.push(...p.threshold.shares);
+    const baseline: AgentLeafBaseline | undefined =
+      leaf && typeof leaf.holder === 'string' && typeof p.sig === 'string'
+        ? { holder: leaf.holder, sig: p.sig, alg: p.alg, pqPk: p.pq_pk, pqSig: p.pq_sig }
+        : undefined;
     const t = resolveT(ctx);
-    const verdict = verifyThreshold({ shares }, message, opts.signerSet, t);
+    const verdict = verifyThreshold({ shares: explicit }, message, opts.signerSet, t, baseline);
     return verdict.ok
       ? { enforced: true, ok: true }
       : { enforced: true, ok: false, reason: verdict.reason ?? 'threshold not met' };

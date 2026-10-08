@@ -110,6 +110,14 @@ export const ENFORCED_CHECKS: readonly string[] = [
 export const HARNESS_VERSION = '0.1.0';
 
 /**
+ * The stable model-identifier this harness stamps into an emitted PCActn's `attestation.model_id` when
+ * {@link HarnessOptions.attestation} is enabled. In B1 the "model" the attestation names is the AUDITABLE
+ * MEDIATOR, not an opaque LLM: a resource server that pins this id (and allowlists the measurement) is
+ * trusting the harness TCB, not the oracle. Distinct from the `'unattested'` stub `buildPCActn` defaults to.
+ */
+export const HARNESS_MODEL_ID = '@atlasauth/pca-harness';
+
+/**
  * Pure, deterministic self-measurement: a SHA-256 digest (b64u) over the harness version + the enforced-checks
  * manifest + the risk-policy identity. This is a STUB for what a real attestation would measure about the
  * mediator (B1): a hash over the harness binary / policy config rather than over model weights. Two harnesses
@@ -172,6 +180,19 @@ export interface HarnessOptions {
   measurementManifest?: readonly string[];
   /** Deterministic nonce source (for tests); default a random 16-byte hex. */
   nonce?: () => string;
+  /**
+   * When set, STAMP this harness's B1 self-measurement into every emitted PCActn's `attestation` block
+   * (`measurement = {@link Harness.harnessMeasurement}()`, `model_id = {@link HARNESS_MODEL_ID}`,
+   * `operator`), so a resource server that allowlists the mediator (see `createHarnessAttestationVerifier`)
+   * can verify the action was emitted by an attested harness — the B1 "attest the mediator" wire carrier.
+   * The whole `attestation` block is covered by the leaf signature `buildPCActn` applies, so the stamped
+   * measurement is tamper-evident and bound to the signing harness. `quote_digest` is left EMPTY: a harness
+   * carries no server-issued TEE nonce (that is the distinct TEE/software attestation path).
+   *
+   * Default OFF: absent ⇒ the `attestation` block stays the empty stub `buildPCActn` defaults to, so an
+   * emitted PCActn is byte-identical to the pre-B1-wiring prototype.
+   */
+  attestation?: { operator: string; epoch?: number };
 }
 
 const defaultNonce = (): string => {
@@ -199,6 +220,7 @@ export class Harness {
   private readonly ttlMs: number | undefined;
   private readonly manifest: readonly string[];
   private readonly nonce: () => string;
+  private readonly attest: { operator: string; epoch?: number } | undefined;
 
   private _budget: TrustBudget;
   private _counter = 0;
@@ -221,6 +243,7 @@ export class Harness {
     this.ttlMs = opts.ttlMs;
     this.manifest = opts.measurementManifest ?? ENFORCED_CHECKS;
     this.nonce = opts.nonce ?? defaultNonce;
+    this.attest = opts.attestation;
     this._budget = opts.budget;
   }
 
@@ -331,6 +354,18 @@ export class Harness {
       taint_level: taint,
       trusted_refs: trustedRefs,
     };
+    // B1 attestation stamp (opt-in): carry THIS mediator's self-measurement in the signed `attestation`
+    // block so an allowlisting resource server can verify the action came from an attested harness. Empty
+    // `quote_digest`: a harness carries no server-issued TEE nonce (the distinct TEE/software path).
+    const attestation: PCActn['attestation'] | undefined = this.attest
+      ? {
+          quote_digest: '',
+          epoch: this.attest.epoch ?? 0,
+          model_id: HARNESS_MODEL_ID,
+          measurement: this.harnessMeasurement(),
+          operator: this.attest.operator,
+        }
+      : undefined;
     let pcactn: PCActn;
     try {
       pcactn = buildPCActn({
@@ -346,6 +381,7 @@ export class Harness {
         provenance,
         riskClaim: { r, inputs: { ...riskInputs } },
         nonce: this.nonce(),
+        ...(attestation ? { attestation } : {}),
         ...(this.ttlMs !== undefined ? { ttlMs: this.ttlMs } : {}),
       });
     } catch (e) {

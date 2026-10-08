@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { attenuate, delegate } from './capability';
 import { mintGrant } from './envelope';
-import { utf8 } from './hash';
-import { encodeKey, generateKeyPair } from './keys';
+import { b64u, utf8 } from './hash';
+import { encodeKey, generateKeyPair, sign } from './keys';
 import { commitPlan, type PlanNode } from './merkle';
 import { buildPCActn, thresholdMessage, verifyPCActnCore } from './pcactn';
 import { DEFAULT_RISK_POLICY } from './risk';
@@ -26,10 +26,10 @@ function keys() {
 }
 
 describe('verifyThreshold (t-of-n multi-signature)', () => {
-  it('t=1 agent-only passes', () => {
+  it('t=1 agent-only passes (v2.1: the agent share is signerSetHash‖t-bound like every role)', () => {
     const { agent } = keys();
     const signerSet: Signer[] = [{ role: 'agent', publicKey: encodeKey(agent.publicKey) }];
-    const sig = assembleThreshold([signShare('agent', agent.secretKey, MSG)]);
+    const sig = assembleThreshold([signShare('agent', agent.secretKey, MSG, { signerSet, t: 1 })]);
     const r = verifyThreshold(sig, MSG, signerSet, 1);
     expect(r.ok).toBe(true);
     expect(r.count).toBe(1);
@@ -42,11 +42,11 @@ describe('verifyThreshold (t-of-n multi-signature)', () => {
       { role: 'agent', publicKey: encodeKey(agent.publicKey) },
       { role: 'guardian', publicKey: encodeKey(guardian.publicKey) },
     ];
-    const agentOnly = assembleThreshold([signShare('agent', agent.secretKey, MSG)]);
+    const agentOnly = assembleThreshold([signShare('agent', agent.secretKey, MSG, { signerSet, t: 2 })]);
     expect(verifyThreshold(agentOnly, MSG, signerSet, 2).ok).toBe(false);
 
     const both = assembleThreshold([
-      signShare('agent', agent.secretKey, MSG),
+      signShare('agent', agent.secretKey, MSG, { signerSet, t: 2 }),
       signShare('guardian', guardian.secretKey, MSG, { signerSet, t: 2 }),
     ]);
     const r = verifyThreshold(both, MSG, signerSet, 2);
@@ -63,7 +63,7 @@ describe('verifyThreshold (t-of-n multi-signature)', () => {
       { role: 'principal', publicKey: encodeKey(principal.publicKey) },
     ];
     const two = assembleThreshold([
-      signShare('agent', agent.secretKey, MSG),
+      signShare('agent', agent.secretKey, MSG, { signerSet, t: 3 }),
       signShare('guardian', guardian.secretKey, MSG, { signerSet, t: 3 }),
     ]);
     const r = verifyThreshold(two, MSG, signerSet, 3);
@@ -76,8 +76,8 @@ describe('verifyThreshold (t-of-n multi-signature)', () => {
     const { agent } = keys();
     const signerSet: Signer[] = [{ role: 'agent', publicKey: encodeKey(agent.publicKey) }];
     const dup = assembleThreshold([
-      signShare('agent', agent.secretKey, MSG),
-      signShare('agent', agent.secretKey, MSG),
+      signShare('agent', agent.secretKey, MSG, { signerSet, t: 2 }),
+      signShare('agent', agent.secretKey, MSG, { signerSet, t: 2 }),
     ]);
     const r = verifyThreshold(dup, MSG, signerSet, 2);
     expect(r.ok).toBe(false);
@@ -94,7 +94,7 @@ describe('verifyThreshold (t-of-n multi-signature)', () => {
     ];
     // guardian-role share, but signed by an unregistered key.
     const sig = assembleThreshold([
-      signShare('agent', agent.secretKey, MSG),
+      signShare('agent', agent.secretKey, MSG, { signerSet, t: 2 }),
       signShare('guardian', impostor.secretKey, MSG, { signerSet, t: 2 }),
     ]);
     const r = verifyThreshold(sig, MSG, signerSet, 2);
@@ -110,7 +110,7 @@ describe('verifyThreshold (t-of-n multi-signature)', () => {
       { role: 'guardian', publicKey: encodeKey(guardian.publicKey) },
     ];
     const sig = assembleThreshold([
-      signShare('agent', agent.secretKey, MSG),
+      signShare('agent', agent.secretKey, MSG, { signerSet, t: 2 }),
       // guardian signed a DIFFERENT message than the one being verified.
       signShare('guardian', guardian.secretKey, utf8('a-different-message'), { signerSet, t: 2 }),
     ]);
@@ -125,37 +125,42 @@ describe('verifyThreshold (t-of-n multi-signature)', () => {
     const { agent, guardian, principal } = keys();
     const mk = (role: 'agent' | 'guardian' | 'principal', k: { publicKey: Uint8Array }) => ({ role, publicKey: encodeKey(k.publicKey) });
     const signerSet: Signer[] = [mk('agent', agent), mk('guardian', guardian), mk('principal', principal)];
-    const agentShare = signShare('agent', agent.secretKey, MSG);
+    // v2.1: the agent share is signerSetHash‖t-bound too, so it is also t-specific.
+    const agent2 = signShare('agent', agent.secretKey, MSG, { signerSet, t: 2 });
+    const agent3 = signShare('agent', agent.secretKey, MSG, { signerSet, t: 3 });
     // same key re-labelled with another role is not registered for it
     const g3 = signShare('guardian', guardian.secretKey, MSG, { signerSet, t: 3 });
     const asPrincipal = { ...g3, role: 'principal' as const };
-    expect(verifyThreshold(assembleThreshold([agentShare, asPrincipal]), MSG, signerSet, 2).ok).toBe(false);
+    expect(verifyThreshold(assembleThreshold([agent2, asPrincipal]), MSG, signerSet, 2).ok).toBe(false);
     // a share minted for t=3 does not verify at t=2 (and vice versa)
-    expect(verifyThreshold(assembleThreshold([agentShare, g3]), MSG, signerSet, 2).ok).toBe(false);
-    expect(verifyThreshold(assembleThreshold([agentShare, g3]), MSG, signerSet, 3).count).toBe(2);
+    expect(verifyThreshold(assembleThreshold([agent2, g3]), MSG, signerSet, 2).ok).toBe(false);
+    expect(verifyThreshold(assembleThreshold([agent3, g3]), MSG, signerSet, 3).count).toBe(2);
     // a share minted for a different signer set does not verify
     const other = [...signerSet.slice(0, 2), mk('principal', generateKeyPair())];
     const gOther = signShare('guardian', guardian.secretKey, MSG, { signerSet: other, t: 2 });
-    expect(verifyThreshold(assembleThreshold([agentShare, gOther]), MSG, signerSet, 2).ok).toBe(false);
+    expect(verifyThreshold(assembleThreshold([agent2, gOther]), MSG, signerSet, 2).ok).toBe(false);
     // the signer-set hash is order-insensitive
     const gRev = signShare('guardian', guardian.secretKey, MSG, { signerSet: [...signerSet].reverse(), t: 2 });
-    expect(verifyThreshold(assembleThreshold([agentShare, gRev]), MSG, signerSet, 2).ok).toBe(true);
-    // non-agent shares require a binding
+    expect(verifyThreshold(assembleThreshold([agent2, gRev]), MSG, signerSet, 2).ok).toBe(true);
+    // v2.1: the agent share minted for t=2 does NOT verify at t=3 (binding is symmetric with the others)
+    expect(verifyThreshold(assembleThreshold([agent2, g3]), MSG, signerSet, 3).roles).not.toContain('agent');
+    // EVERY role's explicit share (agent included) requires a binding
     expect(() => signShare('guardian', guardian.secretKey, MSG)).toThrow(/bind/);
+    expect(() => signShare('agent', agent.secretKey, MSG)).toThrow(/bind/);
   });
 
   it('signer set must give each role ONE key and no key two roles (holder==principal collapse); t in {1,2,3}', () => {
     const { agent, guardian } = keys();
     const a = encodeKey(agent.publicKey);
     const collapsed: Signer[] = [{ role: 'agent', publicKey: a }, { role: 'principal', publicKey: a }];
-    const sig = assembleThreshold([signShare('agent', agent.secretKey, MSG), signShare('principal', agent.secretKey, MSG, { signerSet: collapsed, t: 2 })]);
+    const sig = assembleThreshold([signShare('agent', agent.secretKey, MSG, { signerSet: collapsed, t: 2 }), signShare('principal', agent.secretKey, MSG, { signerSet: collapsed, t: 2 })]);
     const r = verifyThreshold(sig, MSG, collapsed, 2);
     expect(r.ok).toBe(false);
     expect(r.reason).toMatch(/two roles/);
     const twoKeys: Signer[] = [{ role: 'agent', publicKey: a }, { role: 'agent', publicKey: encodeKey(guardian.publicKey) }];
     expect(verifyThreshold(assembleThreshold([]), MSG, twoKeys, 1).reason).toMatch(/more than one key/);
     const ok: Signer[] = [{ role: 'agent', publicKey: a }];
-    const one = assembleThreshold([signShare('agent', agent.secretKey, MSG)]);
+    const one = assembleThreshold([signShare('agent', agent.secretKey, MSG, { signerSet: ok, t: 1 })]);
     for (const bad of [0, 4, 1.5, NaN, Infinity, -1]) expect(verifyThreshold(one, MSG, ok, bad).ok).toBe(false);
     expect(verifyThreshold(one, MSG, ok, 1).ok).toBe(true);
   });
@@ -176,6 +181,24 @@ describe('verifyThreshold (t-of-n multi-signature)', () => {
     expect(() => verifyThreshold({ shares: undefined } as never, MSG, undefined as never, 1)).not.toThrow();
     const r = verifyThreshold({ shares: [{} as never] }, MSG, [], 1);
     expect(r.ok).toBe(false);
+  });
+
+  it('v2.1 agent-leaf binding: a bound agent share verifies; the OLD bare-message agent share is rejected', () => {
+    const { agent, guardian } = keys();
+    const signerSet: Signer[] = [
+      { role: 'agent', publicKey: encodeKey(agent.publicKey) },
+      { role: 'guardian', publicKey: encodeKey(guardian.publicKey) },
+    ];
+    // Positive: the new signerSetHash‖t-bound agent share verifies.
+    const bound = signShare('agent', agent.secretKey, MSG, { signerSet, t: 1 });
+    expect(verifyThreshold(assembleThreshold([bound]), MSG, signerSet, 1).ok).toBe(true);
+    // Negative: the OLD bare-message agent share (sig over `message` itself) is REJECTED — reconstruct the
+    // pre-v2.1 wire form by hand (signShare no longer produces it).
+    const bare = { role: 'agent' as const, publicKey: encodeKey(agent.publicKey), sig: b64u(sign(agent.secretKey, MSG)) };
+    expect(verifyThreshold(assembleThreshold([bare]), MSG, signerSet, 1).ok).toBe(false);
+    // Replay defence: a bound agent share for signer set A does not verify in signer set B.
+    const other: Signer[] = [{ role: 'agent', publicKey: encodeKey(agent.publicKey) }, { role: 'guardian', publicKey: encodeKey(generateKeyPair().publicKey) }];
+    expect(verifyThreshold(assembleThreshold([bound]), MSG, other, 1).roles).not.toContain('agent');
   });
 });
 

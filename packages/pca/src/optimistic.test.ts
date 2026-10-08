@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   IRREVERSIBLE_CLASS,
   adjudicateDispute,
+  adjudicateDisputeGame,
   challengeWindowEnd,
   claimStatus,
   fileFraudProof,
@@ -14,10 +15,11 @@ import {
   verifyFraudProof,
   withinChallengeWindow,
   type DisputableInput,
+  type DisputeGame,
   type ObjectiveOracle,
   type OracleResolution,
 } from './optimistic';
-import { commitGoal, InMemoryInverseRegistry, nativeHashEmbedder, objectiveRiskOracle, ResourceGraph, type ObjAction, type ObjectiveRiskContext } from './objective-risk';
+import { commitGoal, InMemoryInverseRegistry, nativeHashEmbedder, objectiveRiskOracle, ResourceGraph, type ObjectiveRiskContext } from './objective-risk';
 import { mintGrant } from './envelope';
 import { buildPCActn, type PCActn } from './pcactn';
 import { decide, type DecideInput } from './policy-vm';
@@ -446,5 +448,203 @@ describe('dispute game wired to the REAL objective-risk oracle (objectiveRiskOra
     const res = oracle.resolve('blastRadius', snap());
     expect(res.valid).toBe(true);
     expect(typeof res.value).toBe('number');
+  });
+
+  it('a MULTI-STEP game over the real oracle bisects to the reversibility_class step and SLASHES the agent', () => {
+    const oracle = objectiveRiskOracle(ctx());
+    const game: DisputeGame = {
+      pcactn_digest: 'd-db',
+      bond_ref: 'bond-db',
+      steps: ['blastRadius', 'reversibility_class'],
+      // Both sides agree blastRadius = 0; the challenger contests only reversibility_class.
+      defender: [{ value: 0 }, { class: 'reversible' }],
+      challenger: [{ value: 0 }, { class: 'irreversible' }],
+    };
+    const r = adjudicateDisputeGame({ claim, game, grant: DB_GRANT, openSnapshot: snap(), oracle });
+    expect(r.converged).toBe(true);
+    expect(r.contestedStep).toBe(1);
+    expect(r.contestedInput).toBe('reversibility_class');
+    expect(r.verdict.outcome).toBe('agent-fraud');
+    expect(r.verdict.fraudulent).toBe(true);
+    expect(r.verdict.slashBondRef).toBe('bond-db');
+    expect(r.verdict.oracleValue).toBe('irreversible');
+  });
+});
+
+// A stub oracle that COUNTS how many times it is consulted — to prove the game does O(1) oracle work for an
+// O(n)-step dispute (the oracle is only asked about the single converged step).
+function countingOracle(res: Partial<OracleResolution> & { valid: boolean }): { oracle: ObjectiveOracle; calls: () => number } {
+  let calls = 0;
+  return {
+    oracle: { resolve: (input: DisputableInput) => { calls += 1; return { input, ...res }; } },
+    calls: () => calls,
+  };
+}
+
+describe('interactive multi-round dispute game (refereed bisection)', () => {
+  const makeClaim = (bondRef: string, p: PCActn) =>
+    openOptimistic(p, { bondRef, claimedR: 0, serverNow: NOW }, A.secretKey);
+  const gameFor = (
+    claim: { pcactn_digest: string; bond_ref: string },
+    steps: DisputableInput[],
+    defender: DisputeGame['defender'],
+    challenger: DisputeGame['challenger'],
+  ): DisputeGame => ({ pcactn_digest: claim.pcactn_digest, bond_ref: claim.bond_ref, steps, defender, challenger });
+
+  it('bisects a 3-step dispute to the contested step and SLASHES the agent (oracle consulted ONCE)', () => {
+    const p = actn('revoke_session', 'reversible');
+    const snap = decideInputFor(p, { semanticDistance: 0, blastRadius: 0 });
+    const claim = makeClaim('bond-ms', p);
+    // Defender = agent's values (admits). Challenger agrees on the first two steps, contests ONLY the last
+    // (reversibility_class -> irreversible), so the first divergence is step index 2.
+    const game = gameFor(
+      claim,
+      ['semanticDistance', 'blastRadius', 'reversibility_class'],
+      [{ value: 0 }, { value: 0 }, { class: 'reversible' }],
+      [{ value: 0 }, { value: 0 }, { class: IRREVERSIBLE_CLASS }],
+    );
+    const { oracle, calls } = countingOracle({ valid: true, class: IRREVERSIBLE_CLASS });
+    const r = adjudicateDisputeGame({ claim, game, grant: GRANT, openSnapshot: snap, oracle });
+    expect(r.converged).toBe(true);
+    expect(r.contestedStep).toBe(2);
+    expect(r.contestedInput).toBe('reversibility_class');
+    expect(r.rounds).toBe(2);
+    expect(r.transcript.length).toBe(2);
+    expect(r.verdict.outcome).toBe('agent-fraud');
+    expect(r.verdict.fraudulent).toBe(true);
+    expect(r.verdict.slashBondRef).toBe('bond-ms');
+    expect(r.verdict.slashCounterBond).toBe(false);
+    expect(r.verdict.adjudicated.optimisticAllowed).toBe(false);
+    // Minimal oracle work: resolved exactly once, for the single converged step.
+    expect(calls()).toBe(1);
+  });
+
+  it('an HONEST defender wins a frivolous multi-step challenge -> claim-upheld + counter-bond slashed', () => {
+    const p = actn('revoke_session', 'reversible');
+    const snap = decideInputFor(p, { blastRadius: 0 });
+    const claim = makeClaim('bond-honest-ms', p);
+    // Challenger contests reversibility_class (asserts irreversible) but the oracle UPHOLDS reversible.
+    const game = gameFor(
+      claim,
+      ['blastRadius', 'reversibility_class'],
+      [{ value: 0 }, { class: 'reversible' }],
+      [{ value: 0 }, { class: IRREVERSIBLE_CLASS }],
+    );
+    const { oracle, calls } = countingOracle({ valid: true, class: 'reversible' });
+    const r = adjudicateDisputeGame({ claim, game, grant: GRANT, openSnapshot: snap, oracle });
+    expect(r.converged).toBe(true);
+    expect(r.contestedStep).toBe(1);
+    expect(r.verdict.outcome).toBe('claim-upheld');
+    expect(r.verdict.fraudulent).toBe(false);
+    expect(r.verdict.slashCounterBond).toBe(true);
+    expect(r.verdict.slashBondRef).toBeUndefined();
+    expect(calls()).toBe(1);
+  });
+
+  it('the single-step game reduces EXACTLY to the one-shot adjudicateDispute (0 rounds)', () => {
+    const p = actn('revoke_session', 'reversible');
+    const snap = decideInputFor(p);
+    const claim = makeClaim('bond-1step', p);
+    const oracle = stubOracle({ valid: true, class: IRREVERSIBLE_CLASS });
+    const game = gameFor(claim, ['reversibility_class'], [{ class: 'reversible' }], [{ class: IRREVERSIBLE_CLASS }]);
+    const r = adjudicateDisputeGame({ claim, game, grant: GRANT, openSnapshot: snap, oracle });
+    expect(r.rounds).toBe(0);
+    expect(r.transcript).toEqual([]);
+    expect(r.contestedStep).toBe(0);
+    // Identical to running the one-shot referee directly on the raw snapshot for that single input.
+    const single = adjudicateDispute({
+      claim,
+      dispute: { pcactn_digest: claim.pcactn_digest, bond_ref: claim.bond_ref, input: 'reversibility_class', asserted_class: IRREVERSIBLE_CLASS },
+      grant: GRANT,
+      openSnapshot: snap,
+      oracle,
+    });
+    expect(r.verdict).toEqual(single);
+    expect(r.verdict.outcome).toBe('agent-fraud');
+    expect(r.verdict.slashBondRef).toBe('bond-1step');
+  });
+
+  it('FAILS CLOSED (indeterminate) when the oracle cannot resolve the converged step — no slash', () => {
+    const p = actn('revoke_session', 'reversible');
+    const snap = decideInputFor(p, { blastRadius: 0 });
+    const claim = makeClaim('bond-oracledown', p);
+    const game = gameFor(
+      claim,
+      ['blastRadius', 'reversibility_class'],
+      [{ value: 0 }, { class: 'reversible' }],
+      [{ value: 0 }, { class: IRREVERSIBLE_CLASS }],
+    );
+    const oracle = stubOracle({ valid: false, reason: 'commitments unavailable' });
+    const r = adjudicateDisputeGame({ claim, game, grant: GRANT, openSnapshot: snap, oracle });
+    expect(r.verdict.outcome).toBe('indeterminate');
+    expect(r.verdict.fraudulent).toBe(false);
+    expect(r.verdict.slashCounterBond).toBe(false);
+    expect(r.verdict.slashBondRef).toBeUndefined();
+  });
+
+  it('FAILS CLOSED (non-convergence) when the parties do not disagree on admission', () => {
+    const p = actn('revoke_session', 'reversible');
+    const snap = decideInputFor(p);
+    const claim = makeClaim('bond-nodispute', p);
+    const oracle = stubOracle({ valid: true, class: IRREVERSIBLE_CLASS });
+    // Both sides assert the SAME truthful class -> identical traces -> nothing to bisect.
+    const game = gameFor(claim, ['reversibility_class'], [{ class: 'reversible' }], [{ class: 'reversible' }]);
+    const r = adjudicateDisputeGame({ claim, game, grant: GRANT, openSnapshot: snap, oracle });
+    expect(r.converged).toBe(false);
+    expect(r.contestedStep).toBe(-1);
+    expect(r.verdict.outcome).toBe('indeterminate');
+    expect(r.verdict.fraudulent).toBe(false);
+    expect(r.verdict.slashCounterBond).toBe(false);
+  });
+
+  it('FAILS CLOSED on malformed / mis-bound games (slashes no one)', () => {
+    const p = actn('revoke_session', 'reversible');
+    const snap = decideInputFor(p);
+    const claim = makeClaim('bond-bad', p);
+    const oracle = stubOracle({ valid: true, class: IRREVERSIBLE_CLASS });
+    // Binding mismatch (wrong pcactn_digest).
+    const wrongDigest = adjudicateDisputeGame({
+      claim,
+      game: { pcactn_digest: 'nope', bond_ref: 'bond-bad', steps: ['reversibility_class'], defender: [{ class: 'reversible' }], challenger: [{ class: IRREVERSIBLE_CLASS }] },
+      grant: GRANT, openSnapshot: snap, oracle,
+    });
+    expect(wrongDigest.converged).toBe(false);
+    expect(wrongDigest.verdict.outcome).toBe('indeterminate');
+    // Assertion arrays do not cover every step.
+    const shortTrace = adjudicateDisputeGame({
+      claim,
+      game: gameFor(claim, ['blastRadius', 'reversibility_class'], [{ value: 0 }], [{ value: 0 }, { class: IRREVERSIBLE_CLASS }]),
+      grant: GRANT, openSnapshot: snap, oracle,
+    });
+    expect(shortTrace.verdict.outcome).toBe('indeterminate');
+    // Empty step list.
+    const noSteps = adjudicateDisputeGame({ claim, game: gameFor(claim, [], [], []), grant: GRANT, openSnapshot: snap, oracle });
+    expect(noSteps.verdict.outcome).toBe('indeterminate');
+    // Missing snapshot.
+    const noSnap = adjudicateDisputeGame({ claim, game: gameFor(claim, ['reversibility_class'], [{ class: 'reversible' }], [{ class: IRREVERSIBLE_CLASS }]), grant: GRANT, openSnapshot: undefined as never, oracle });
+    expect(noSnap.verdict.outcome).toBe('indeterminate');
+  });
+
+  it('bisects a numeric understatement (blastRadius) in the MIDDLE of the step list', () => {
+    const p = actn('revoke_session', 'reversible');
+    const snap = decideInputFor(p, { semanticDistance: 0, blastRadius: 0, reversibility: 1 });
+    const claim = makeClaim('bond-mid', p);
+    // Steps: [reversibility(agree), blastRadius(contested), semanticDistance(agree-but-irrelevant-after)].
+    const game = gameFor(
+      claim,
+      ['reversibility', 'blastRadius', 'semanticDistance'],
+      [{ value: 1 }, { value: 0 }, { value: 0 }],
+      [{ value: 1 }, { value: 1 }, { value: 0 }], // challenger contests blastRadius (0 -> 1)
+    );
+    const { oracle, calls } = countingOracle({ valid: true, value: 1 }); // truthful blastRadius = 1 -> r > 0
+    const r = adjudicateDisputeGame({ claim, game, grant: GRANT, openSnapshot: snap, oracle });
+    expect(r.converged).toBe(true);
+    expect(r.contestedStep).toBe(1);
+    expect(r.contestedInput).toBe('blastRadius');
+    expect(r.verdict.outcome).toBe('agent-fraud');
+    expect(r.verdict.fraudulent).toBe(true);
+    expect(r.verdict.slashBondRef).toBe('bond-mid');
+    expect(r.verdict.adjudicated.r).toBeGreaterThan(claim.claimed_r);
+    expect(calls()).toBe(1);
   });
 });

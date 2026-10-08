@@ -22,26 +22,35 @@ import { describe, expect, it } from 'vitest';
 import { p384 } from '@noble/curves/p384';
 import { sha384, sha512 } from '@noble/hashes/sha512';
 import {
+  type AgileCertChain,
   type EcdsaP384PublicKey,
   type SevSnpCertChain,
   type SevSnpEvidence,
   AMD_MILAN_ARK_SPKI_SHA384,
+  SEV_SNP_SIG_ALGO_ECDSA_P384_SHA384,
+  SEV_SNP_SIG_ALGO_SYNTHETIC_ML_DSA_65,
+  SEV_SNP_SIG_ALGO_SYNTHETIC_ML_DSA_87,
   checkSevSnpPolicy,
   checkVcekReportBinding,
+  createAgileSevSnpVerifier,
   createSevSnpVerifier,
   ecdsaP384PublicKey,
   extractTbsCertificate,
   extractVcekPublicKey,
   parseSevSnpReport,
+  resolveReportSuite,
   serializeSevSnpReport,
   sevSnpSignatureToCompact,
   splitPemCertificates,
   toHex,
+  verifyAgileCertChain,
   verifyAmdCertChain,
   verifyGenuineSevSnpReport,
+  verifyReportSignatureAgile,
   verifySevSnpReportSignature,
   verifyVcekChain,
 } from './hardware-sevsnp';
+import { mlDsa65Keygen, mlDsa65Sign, mlDsa87Keygen, mlDsa87Sign } from './pq';
 import {
   attestationBinding,
   createAttestationVerifier,

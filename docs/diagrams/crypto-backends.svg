@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1348 952" width="1348" height="952" role="img" aria-labelledby="t d">
+<title id="t">The PCA cryptographic backend surface</title>
+<desc id="d">The cryptographic backends behind Proof-Carrying Authority: a crypto-agile signature suite registry (classical Ed25519, lattice and hash post-quantum, and fail-closed hybrids) covering every signed surface; four zero-knowledge backends (Groth16 on BN254/BLS12-381, transparent STARKs, a RISC Zero zkVM, and Nova folding IVC); a malicious-secure MPC Policy VM with an endemic Module-LWE base OT and a constant-time WASM core; five composable attestation roots (AMD, Intel, NVIDIA, a post-quantum software/HSM root, and a PUF); and supporting primitives including QRNG entropy mixing.</desc>
+<style>
+text{font-family:ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;fill:#1c1c1f}
+.title{font-size:26px;font-weight:700;letter-spacing:-.3px}
+.sub{font-size:14px;fill:#5f5f6b}
+.h{font-size:15.5px;font-weight:650}
+.s{font-size:12px;fill:#5f5f6b}
+.xs{font-size:11px;fill:#9b9ba7}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.1px;fill:#9b9ba7}
+.node{fill:#fff;stroke:#d8d8e0;stroke-width:1.5}
+.nodeP{fill:#f1edff;stroke:#7c5cff;stroke-width:1.5}
+.nodeA{fill:#e5fbf1;stroke:#34e5a0;stroke-width:1.5}
+.strip{fill:#fbfbfd;stroke:#d8d8e0;stroke-width:1.5}
+.pd{fill:#5a3fd6;font-weight:600}
+.ad{fill:#0c7a52;font-weight:600}
+</style>
+<rect class="strip" x="0.75" y="0.75" width="1346.5" height="950.5" rx="18"/>
+<text x="48" y="60" class="title">PCA cryptographic backend surface</text>
+<text x="48" y="86" class="sub">Every backend is real code with tests. Purple = post-quantum, white = classical, green = transparent / supporting.</text>
+
+<!-- Signatures -->
+<text x="48" y="122" class="eyebrow">SIGNATURES — CRYPTO-AGILE SUITE REGISTRY</text>
+<rect class="node"  x="48"  y="134" width="290" height="92" rx="12"/><text x="64" y="164" class="h">Ed25519</text><text x="64" y="188" class="s">classical baseline</text>
+<rect class="nodeP" x="356" y="134" width="290" height="92" rx="12"/><text x="372" y="164" class="h">ML-DSA-65 / -87</text><text x="372" y="188" class="s pd">lattice · NIST L3 / L5</text>
+<rect class="nodeP" x="664" y="134" width="290" height="92" rx="12"/><text x="680" y="164" class="h">SLH-DSA-128f / 256s</text><text x="680" y="188" class="s pd">hash-based · conservative</text>
+<rect class="nodeP" x="972" y="134" width="290" height="92" rx="12"/><text x="988" y="164" class="h">Hybrid (fail-closed)</text><text x="988" y="188" class="s pd">Ed25519+ML-DSA · +SLH · nested</text>
+<rect class="strip" x="48" y="234" width="1214" height="44" rx="10"/>
+<text x="64" y="261" class="s">surfaces: leaf PCActn · cap-chain hops · FROST group sig (+ PQ ML-DSA co-sign) · STH · C2SP witnesses · revocation · beacons · bonds · safety cert · judge verdicts · attestation</text>
+
+<!-- Zero-knowledge -->
+<text x="48" y="314" class="eyebrow">ZERO-KNOWLEDGE PROOF BACKENDS</text>
+<rect class="nodeA" x="48"  y="326" width="290" height="92" rx="12"/><text x="64" y="356" class="h">Groth16</text><text x="64" y="378" class="s">BN254 → BLS12-381</text><text x="64" y="398" class="s ad">Policy-VM circuit</text>
+<rect class="nodeP" x="356" y="326" width="290" height="92" rx="12"/><text x="372" y="356" class="h">STARK (transparent, PQ)</text><text x="372" y="378" class="s">Winterfell + Plonky3</text><text x="372" y="398" class="s pd">witness ⟂ action commitment</text>
+<rect class="nodeP" x="664" y="326" width="290" height="92" rx="12"/><text x="680" y="356" class="h">zkVM — RISC Zero</text><text x="680" y="378" class="s">full Policy VM</text><text x="680" y="398" class="s pd">canonical-JSON sha256</text>
+<rect class="nodeA" x="972" y="326" width="290" height="92" rx="12"/><text x="988" y="356" class="h">Folding IVC</text><text x="988" y="378" class="s">Nova / HyperNova</text><text x="988" y="398" class="s ad">Poseidon chain · Σcost ≤ bMax</text>
+
+<!-- MPC -->
+<text x="48" y="454" class="eyebrow">POLICY VM UNDER MPC — MALICIOUS, DISHONEST-MAJORITY</text>
+<rect class="nodeA" x="48"  y="466" width="400" height="92" rx="12"/><text x="64" y="496" class="h">MASCOT + SPDZ</text><text x="64" y="518" class="s">no-dealer offline · info-theoretic MACs</text><text x="64" y="538" class="s ad">malicious-with-abort</text>
+<rect class="nodeP" x="474" y="466" width="400" height="92" rx="12"/><text x="490" y="496" class="h">Base oblivious transfer</text><text x="490" y="518" class="s">malicious EC · ML-KEM · hybrid</text><text x="490" y="538" class="s pd">endemic Module-LWE OT (PQ-malicious)</text>
+<rect class="nodeA" x="900" y="466" width="362" height="92" rx="12"/><text x="916" y="496" class="h">Constant-time core</text><text x="916" y="518" class="s">curve25519-dalek → WASM</text><text x="916" y="538" class="s ad">default backend</text>
+
+<!-- Attestation -->
+<text x="48" y="594" class="eyebrow">ATTESTATION ROOTS — N-of-M POLICY, EACH ITS OWN SUITE</text>
+<rect class="node"  x="48"   y="606" width="230" height="92" rx="12"/><text x="64" y="636" class="h">AMD SEV-SNP</text><text x="64" y="660" class="s">classical</text>
+<rect class="node"  x="296"  y="606" width="230" height="92" rx="12"/><text x="312" y="636" class="h">Intel TDX</text><text x="312" y="660" class="s">DCAP · classical</text>
+<rect class="node"  x="544"  y="606" width="230" height="92" rx="12"/><text x="560" y="636" class="h">NVIDIA GPU-CC</text><text x="560" y="660" class="s">model runtime · classical</text>
+<rect class="nodeP" x="792"  y="606" width="230" height="92" rx="12"/><text x="808" y="636" class="h">PQ software / HSM</text><text x="808" y="660" class="s pd">ML-DSA — post-quantum</text>
+<rect class="nodeA" x="1040" y="606" width="222" height="92" rx="12"/><text x="1056" y="636" class="h">PUF</text><text x="1056" y="660" class="s ad">unclonable · fuzzy extractor</text>
+
+<!-- Primitives -->
+<text x="48" y="734" class="eyebrow">SUPPORTING PRIMITIVES</text>
+<rect class="nodeA" x="48"  y="746" width="400" height="92" rx="12"/><text x="64" y="776" class="h">Entropy</text><text x="64" y="798" class="s">QRNG mix (HKDF) + CSPRNG</text><text x="64" y="818" class="s ad">quantum is an add, never a weakener</text>
+<rect class="node"  x="474" y="746" width="400" height="92" rx="12"/><text x="490" y="776" class="h">Hashes</text><text x="490" y="798" class="s">SHA-256 / SHA-384 · Poseidon (ZK) · Blake3 (STARK)</text>
+<rect class="nodeP" x="900" y="746" width="362" height="92" rx="12"/><text x="916" y="776" class="h">KEM</text><text x="916" y="798" class="s pd">X25519 + ML-KEM-768 hybrid</text>
+
+<text x="48" y="900" class="xs">N-of-M attestation composes roots so a break (quantum or cryptanalytic) of any one scheme cannot forge the whole — the other required roots must still corroborate.</text>
+<text x="48" y="922" class="xs">Honest boundary: AMD/Intel/NVIDIA silicon roots are classical (vendor PQ roadmaps); PUF unclonability is classical manufacturing variation. The PQ-software root is the quantum-resistant one.</text>
+</svg>

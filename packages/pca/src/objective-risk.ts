@@ -263,6 +263,16 @@ export function validateVector(v: unknown, dims: number): number[] {
 
 // -- native: integer feature hashing over n-grams of the canonical action
 
+/**
+ * A2i — PARAM-STUFFING defense. How the canonical action's params contribute to the embedding:
+ *  - `leaves` (default, back-compat): every flattened `path=value` leaf emits text features, as before.
+ *  - `digest`: ALL params collapse to a SINGLE feature = the canonical-params digest, so the semantic vector
+ *    is bound to verb+resource plus ONE params token. Adding/removing junk params then moves at most that one
+ *    token's buckets instead of flooding the vector, so an agent cannot dilute or inflate the distance-to-goal
+ *    by stuffing params.
+ */
+export type ParamMode = 'leaves' | 'digest';
+
 export interface NativeEmbedderConfig {
   dims: number;
   ngramMin: number;
@@ -270,9 +280,26 @@ export interface NativeEmbedderConfig {
   seed: string;
   /** integer weights per field of the canonical action */
   fieldWeights: { verb: number; resource: number; param: number };
+  /**
+   * A2i — hard cap on the number of flattened param LEAVES the embedder will accept. More than this fails
+   * CLOSED (the embed throws → distance 1 → `objectiveRisk` r = 1), so an action cannot dilute/inflate its
+   * risk by stuffing unbounded params. Absent ⇒ the protocol default {@link DEFAULT_MAX_PARAM_LEAVES} is
+   * enforced anyway (so the default embedder is defended without a modelId change). A smaller explicit value
+   * tightens the bound (and, being committed, changes the modelId — intended).
+   */
+  maxParamLeaves?: number;
+  /** A2i — how params enter the vector. Absent ⇒ `leaves` (back-compat). See {@link ParamMode}. */
+  paramMode?: ParamMode;
 }
 
 export const NATIVE_SCHEME = 'pca-native-hash-ngram-v1';
+
+/**
+ * A2i — protocol default cap on flattened param leaves, enforced even when a config omits `maxParamLeaves`
+ * (so the stock embedder is defended without changing its committed modelId). Generous enough for every
+ * legitimate action, low enough that params cannot flood the vector. A cross-impl constant of the scheme.
+ */
+export const DEFAULT_MAX_PARAM_LEAVES = 256;
 
 export const DEFAULT_NATIVE_CONFIG: NativeEmbedderConfig = {
   dims: 256,
@@ -288,6 +315,8 @@ function validateNativeConfig(c: NativeEmbedderConfig): void {
   if (!okInt(c.ngramMin, 1, 8) || !okInt(c.ngramMax, c.ngramMin, 8)) throw new RangeError('native config: need 1 <= ngramMin <= ngramMax <= 8');
   if (typeof c.seed !== 'string' || !c.seed) throw new RangeError('native config: seed required');
   for (const k of ['verb', 'resource', 'param'] as const) if (!okInt(c.fieldWeights[k], 0, 1000)) throw new RangeError(`native config: fieldWeights.${k} must be an integer in [0, 1000]`);
+  if (c.maxParamLeaves !== undefined && !okInt(c.maxParamLeaves, 1, 1_000_000)) throw new RangeError('native config: maxParamLeaves must be an integer in [1, 1000000]');
+  if (c.paramMode !== undefined && c.paramMode !== 'leaves' && c.paramMode !== 'digest') throw new RangeError("native config: paramMode must be 'leaves' or 'digest'");
 }
 
 /** Flatten params to sorted `path=value` leaves (nested key order and array encoding are irrelevant). */
@@ -339,7 +368,17 @@ export function nativeHashEmbedder(config: NativeEmbedderConfig = DEFAULT_NATIVE
       for (const f of textFeatures('r:', a.resource, cfg.ngramMin, cfg.ngramMax)) add(f, cfg.fieldWeights.resource);
       const leaves: string[] = [];
       paramLeaves(a.params, '', leaves);
-      for (const leaf of leaves) for (const f of textFeatures('p:', leaf, cfg.ngramMin, cfg.ngramMax)) add(f, cfg.fieldWeights.param);
+      // A2i: fail CLOSED on a param-stuffed action — more leaves than the cap can never produce a (diluted)
+      // favorable embedding; the embed throws, which `objectiveRisk` turns into r = 1 (worst case).
+      const cap = cfg.maxParamLeaves ?? DEFAULT_MAX_PARAM_LEAVES;
+      if (leaves.length > cap) throw new EmbeddingError(`param leaf count ${leaves.length} exceeds cap ${cap}`);
+      if (cfg.paramMode === 'digest') {
+        // Bind the whole params object to ONE digest token: params touch a single bucket regardless of how
+        // many are present, so verb+resource dominate and stuffing cannot flood/dilute the vector.
+        add(`p#:${hashCanonical({ t: 'pca-objrisk-params-v1', params: a.params })}`, cfg.fieldWeights.param);
+      } else {
+        for (const leaf of leaves) for (const f of textFeatures('p:', leaf, cfg.ngramMin, cfg.ngramMax)) add(f, cfg.fieldWeights.param);
+      }
       return v;
     },
   };

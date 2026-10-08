@@ -3,8 +3,10 @@ import {
   applyCosign,
   approveClass,
   batchReview,
+  buildGoalLineage,
   classApprovalCovers,
   coveredByAny,
+  describeGoalLineage,
   recordDecision,
   pendingRequests,
   reviewAction,
@@ -46,6 +48,10 @@ describe('reviewAction', () => {
       expect(r.request.goalCommit).not.toBe(''); // goal-lineage present
       expect(r.request.goal).toBe('process October payouts');
       expect(r.request.id).toMatch(/^[A-Za-z0-9_-]+$/);
+      // structured goal-lineage is carried on the request
+      expect(r.request.lineage.goal).toBe('process October payouts');
+      expect(r.request.lineage.goalCommit).toBe(r.request.goalCommit);
+      expect(r.request.lineage.chain.map((n) => n.kind)).toEqual(['goal', 'authority', 'action']);
     }
   });
 
@@ -101,6 +107,43 @@ describe('decisions + budget', () => {
     expect(partial.B).toBeGreaterThan(10); // ρ recharge
     const full = applyCosign(drained, a.policy.riskPolicy, 10, { full: true });
     expect(full.B).toBe(a.policy.riskPolicy.bMax);
+  });
+});
+
+describe('goal lineage', () => {
+  it('derives a verified goal→authority→action chain when the revealed goal opens the commitment', () => {
+    const a = mkAgent();
+    const lin = buildGoalLineage(a, 'stripe.payout', 'acct:1', { amount: 80 }, { goal: 'process October payouts' });
+    expect(lin.goal).toBe('process October payouts');
+    expect(lin.goalVerified).toBe(true); // opens the signed grant commitment under the agent's salt
+    expect(lin.chain.map((n) => n.kind)).toEqual(['goal', 'authority', 'action']);
+    // the authority hop names the delegated verb + its compiled $100 limit
+    const authority = lin.chain.find((n) => n.kind === 'authority');
+    expect(authority?.label).toContain('stripe.payout');
+    expect(authority?.label).toContain('$100');
+    // the action hop names the resource and summarizes the amount param
+    const action = lin.chain.find((n) => n.kind === 'action');
+    expect(action?.label).toBe('stripe.payout acct:1');
+    expect(action?.detail).toBe('amount=80');
+    expect(lin.because).toContain('because you asked to');
+    expect(describeGoalLineage(lin)).toHaveLength(3);
+  });
+
+  it('marks the goal unverified when the revealed plaintext does not open the commitment, and never fakes it', () => {
+    const a = mkAgent();
+    const lin = buildGoalLineage(a, 'stripe.payout', 'acct:1', { amount: 80 }, { goal: 'drain the account' });
+    expect(lin.goalVerified).toBe(false);
+    expect(lin.chain.find((n) => n.kind === 'goal')?.detail).toContain('unverified');
+  });
+
+  it('falls back to the committed goal when no plaintext goal is revealed', () => {
+    const a = mkAgent();
+    const lin = buildGoalLineage(a, 'stripe.payout', 'acct:1', { amount: 80 });
+    expect(lin.goal).toBeUndefined();
+    expect(lin.goalVerified).toBe(false);
+    expect(lin.goalCommit).not.toBe('');
+    expect(lin.chain.find((n) => n.kind === 'goal')?.label).toContain('committed goal');
+    expect(lin.because).toContain('authorized under the grant');
   });
 });
 

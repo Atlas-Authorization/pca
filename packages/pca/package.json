@@ -19,6 +19,7 @@
     "example": "tsx examples/pca-loop.ts"
   },
   "dependencies": {
+    "@atlasauth/pca-fndsa-wasm": "workspace:*",
     "@noble/curves": "^1.9.1",
     "@noble/hashes": "^1.8.0",
     "@noble/post-quantum": "^0.4.1",

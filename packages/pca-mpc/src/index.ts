@@ -25,4 +25,6 @@ export * from './gf128';
 export * from './csprng';
 export * from './ot';
 export * from './kem-ot';
+export * from './hybrid-ot';
 export * from './mascot';
+export * from './endemic-ot';

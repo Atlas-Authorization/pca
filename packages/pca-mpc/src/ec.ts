@@ -20,15 +20,21 @@
  *    inject an off-curve / small-order / mixed-order point to mount a small-subgroup attack. A
  *    `schnorrProve`/`schnorrVerify` NIZK of knowledge of the sender's discrete log `y` (`S = y·B`)
  *    binds `S` to a known exponent, which — with validation — is what makes the base OT malicious-secure.
- *  - **Constant-time is NOT achieved and cannot be, in pure JS.** BigInt modular arithmetic branches on
- *    operand size and is not constant-time; this is a genuine language/runtime boundary (see docs §7.1),
- *    not a shortcut — full constant-time needs a native/WASM constant-time field, exactly as the TEE
- *    seam needs real hardware. We add what is cheap and honest (constant-time byte comparison for
- *    commitments lives in `ot.ts`), and do not pretend the field layer is constant-time.
+ *  - **Constant-time: the secret-scalar multiplications now run in a constant-time WASM core by
+ *    DEFAULT.** BigInt modular arithmetic branches on operand size and is not constant-time; rather than
+ *    pretend otherwise, the security-critical ops (every secret-scalar multiply/point-combine: `mulBase`,
+ *    `mul`, `add`, `sub`, `neg`, and the `[L]·P` cofactor ladder) are routed through `@atlasauth/pca-mpc-wasm`
+ *    (a `curve25519-dalek` core compiled to WebAssembly) whenever it loads, which is the default. The
+ *    pure-BigInt path below is retained verbatim as a graceful fallback for when the WASM core is
+ *    unavailable, and is proven byte-for-byte equivalent to it (see the backend section and
+ *    `ec-wasm.test.ts`). The remaining BigInt marshalling (point compress/decompress) operates on
+ *    public point values, never the secret scalar, and is not claimed constant-time (docs §7.1).
  *  - Discrete log in the order-`L` subgroup is the hardness the OT's receiver-choice privacy relies on.
  */
 
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
 
 /** Field prime q = 2^255 − 19. */
 export const Q = 2n ** 255n - 19n;
@@ -38,6 +44,10 @@ export const L = 2n ** 252n + 27742317777372353535851937790883648493n;
 
 // d = −121665 / 121666 (mod q).
 const D = modFq(-121665n * invFq(121666n));
+
+// √(−1) mod q = 2^((q−1)/4) (used by the point decompression that round-trips the WASM core's
+// canonical 32-byte compressed encoding back into an extended-coordinate `Point`).
+const SQRT_M1 = powFq(2n, (Q - 1n) / 4n);
 
 /** A curve point in extended twisted-Edwards coordinates (X:Y:Z:T), x=X/Z, y=Y/Z, T=XY/Z. */
 export interface Point {
@@ -89,7 +99,7 @@ function fromAffine(x: bigint, y: bigint): Point {
  * Unified complete addition (twisted Edwards a=−1, "add-2008-hwcd-3"). Works for P=Q too (so doubling
  * is just `add(P, P)`), and is complete on the prime-order subgroup — no exceptional cases.
  */
-export function add(p1: Point, p2: Point): Point {
+function addPure(p1: Point, p2: Point): Point {
   const A = (modFq(p1.Y - p1.X) * modFq(p2.Y - p2.X)) % Q;
   const B = (modFq(p1.Y + p1.X) * modFq(p2.Y + p2.X)) % Q;
   const C = (((p1.T * 2n) % Q) * D % Q) * p2.T % Q;
@@ -128,33 +138,203 @@ export function dbl(p: Point): Point {
   };
 }
 
-/** Scalar multiplication [k]P (double-and-add). k is reduced mod L; k=0 ⇒ identity. */
-export function mul(k: bigint, p: Point): Point {
+/** Scalar multiplication [k]P (double-and-add), pure-BigInt. k is reduced mod L; k=0 ⇒ identity. */
+function mulPure(k: bigint, p: Point): Point {
   let e = k % L;
   if (e < 0n) e += L;
   let acc = IDENTITY;
   let base = p;
   while (e > 0n) {
-    if (e & 1n) acc = add(acc, base);
+    if (e & 1n) acc = addPure(acc, base);
     base = dbl(base);
     e >>= 1n;
   }
   return acc;
 }
 
-/** [k]·BASE. */
-export function mulBase(k: bigint): Point {
-  return mul(k, BASE);
+/** [k]·BASE, pure-BigInt. */
+function mulBasePure(k: bigint): Point {
+  return mulPure(k, BASE);
 }
 
-/** P − Q. */
-export function sub(p1: Point, p2: Point): Point {
-  return add(p1, neg(p2));
+/** P − Q, pure-BigInt. */
+function subPure(p1: Point, p2: Point): Point {
+  return addPure(p1, negPure(p2));
 }
 
-/** −P = (−X : Y : Z : −T). */
-export function neg(p: Point): Point {
+/** −P = (−X : Y : Z : −T), pure-BigInt. */
+function negPure(p: Point): Point {
   return { X: modFq(-p.X), Y: p.Y, Z: p.Z, T: modFq(-p.T) };
+}
+
+// ==================================================================================================
+// CONSTANT-TIME CURVE BACKEND (docs §7.1 item: the JS/runtime constant-time boundary).
+//
+// The pure-BigInt group law above is correct and malicious-hardened, but BigInt modular arithmetic is
+// NOT — and in pure JS cannot be — constant-time: it branches on operand size, so a secret scalar `k`
+// multiplied into the curve (`S = y·B`, `T = y·S`, `R = x·B (+S)`, `y·R`, `x·S`) leaks through timing.
+// `@atlasauth/pca-mpc-wasm` is a small `curve25519-dalek` core compiled to WebAssembly whose field and
+// scalar multiplication ARE audited and constant-time. When it loads (the default), every SECRET-scalar
+// multiplication and point combination below runs inside it; if it is unavailable the pure-BigInt path
+// is used unchanged. The two are proven byte-for-byte equivalent (the wasm package's parity test vs.
+// `@noble/curves`, and `ec-wasm.test.ts` here vs. this pure path), so switching backends never changes
+// an observable result — only the timing profile of the secret-dependent ops.
+//
+// Marshalling boundary (honest, docs §7.1): a `Point` is bridged to the core as its canonical 32-byte
+// compressed encoding and back. Compression/decompression themselves stay in BigInt and are NOT claimed
+// constant-time — but they operate on POINTS (public wire values / the hashed OT pads), never on the
+// secret scalar, whose ladder is the timing-critical surface and now runs entirely in the core.
+// Compression is faithful ONLY for on-curve points (a compressed encoding stores `y` + a sign bit and
+// re-derives `x` on the curve); OFF-curve detection therefore necessarily stays in the pure
+// `isOnCurve`, which is why point VALIDATION keeps its BigInt on-curve test and routes only the
+// (on-curve) `[L]·P` cofactor ladder through the core.
+// ==================================================================================================
+
+/** The subset of the WASM curve core's C-ABI surface consumed here (see `@atlasauth/pca-mpc-wasm`). */
+interface WasmCurve {
+  mulBase(k: bigint): Uint8Array;
+  mul(k: bigint, p: Uint8Array): Uint8Array;
+  add(a: Uint8Array, b: Uint8Array): Uint8Array;
+  sub(a: Uint8Array, b: Uint8Array): Uint8Array;
+  neg(a: Uint8Array): Uint8Array;
+  isOnCurve(p: Uint8Array): boolean;
+  isIdentity(p: Uint8Array): boolean;
+  isInSubgroup(p: Uint8Array): boolean;
+}
+
+/** `undefined` = not yet probed; `null` = probed and unavailable (use the pure fallback). */
+let wasmBackend: WasmCurve | null | undefined;
+
+/** Narrow an opaque module to the `WasmCurve` surface without using `any` — every op must be present. */
+function asWasmCurve(mod: unknown): WasmCurve | null {
+  if (typeof mod !== 'object' || mod === null) return null;
+  const m = mod as Record<string, unknown>;
+  const needed = ['mulBase', 'mul', 'add', 'sub', 'neg', 'isOnCurve', 'isIdentity', 'isInSubgroup'];
+  for (const name of needed) {
+    if (typeof m[name] !== 'function') return null;
+  }
+  return mod as WasmCurve;
+}
+
+/**
+ * Lazily load the constant-time WASM curve core, once. Tries the resolved workspace dependency first,
+ * then the sibling package's built `dist` (the stable path whether this module runs from `src` under
+ * vitest or from `dist` after a build — `__dirname/../../pca-mpc-wasm/dist` is the same in both). Any
+ * failure (package missing, wasm cannot instantiate) is swallowed and pins the pure-BigInt fallback.
+ */
+function wasmCurve(): WasmCurve | null {
+  if (wasmBackend !== undefined) return wasmBackend;
+  wasmBackend = null;
+  try {
+    const require = createRequire(__filename);
+    const candidates = [
+      '@atlasauth/pca-mpc-wasm',
+      join(__dirname, '..', '..', 'pca-mpc-wasm', 'dist', 'index.js'),
+    ];
+    for (const spec of candidates) {
+      try {
+        const loaded = asWasmCurve(require(spec));
+        if (loaded !== null) {
+          wasmBackend = loaded;
+          break;
+        }
+      } catch {
+        // try the next candidate
+      }
+    }
+  } catch {
+    wasmBackend = null;
+  }
+  return wasmBackend;
+}
+
+/** Whether the constant-time WASM curve backend is active (else the pure-BigInt path is in use). */
+export function isWasmCurveActive(): boolean {
+  return wasmCurve() !== null;
+}
+
+/**
+ * Canonical 32-byte compressed Ed25519 encoding of a point (little-endian `y`, sign of `x` in bit 255)
+ * — the wire form the WASM core speaks. Faithful for on-curve points; the matching inverse is
+ * `decompressPoint`.
+ */
+export function compressPoint(p: Point): Uint8Array {
+  const { x, y } = toAffine(p);
+  const out = feBytes(y);
+  out[31] = (out[31]! | (Number(x & 1n) << 7)) & 0xff;
+  return out;
+}
+
+/**
+ * Decode a canonical 32-byte compressed encoding back into an extended-coordinate `Point` (RFC 8032
+ * §5.1.3 x-recovery). Used to bring a WASM-core result back into the `Point` representation so the rest
+ * of `ec.ts`/`ot.ts` (affine encoding, KDF hashing, equality) sees byte-identical values to the pure
+ * path. Throws `PointValidationError` on a non-canonical / off-curve encoding.
+ */
+export function decompressPoint(bytes: Uint8Array): Point {
+  if (bytes.length !== 32) throw new PointValidationError('decompressPoint: expected 32 bytes');
+  const sign = (bytes[31]! >> 7) & 1;
+  let y = 0n;
+  for (let i = 0; i < 32; i++) y |= BigInt(bytes[i]!) << BigInt(8 * i);
+  y &= (1n << 255n) - 1n; // clear the sign bit
+  if (y >= Q) throw new PointValidationError('decompressPoint: non-canonical y (≥ q)');
+  const y2 = modFq(y * y);
+  const u = modFq(y2 - 1n);
+  const v = modFq(D * y2 + 1n);
+  const v3 = modFq(modFq(v * v) * v);
+  const v7 = modFq(modFq(v3 * v3) * v);
+  let x = modFq(modFq(u * v3) * powFq(modFq(u * v7), (Q - 5n) / 8n));
+  const vx2 = modFq(v * modFq(x * x));
+  if (vx2 === modFq(u)) {
+    // x is correct as-is
+  } else if (vx2 === modFq(-u)) {
+    x = modFq(x * SQRT_M1);
+  } else {
+    throw new PointValidationError('decompressPoint: not on curve');
+  }
+  if (x === 0n && sign === 1) throw new PointValidationError('decompressPoint: non-canonical sign');
+  if (Number(x & 1n) !== sign) x = modFq(Q - x);
+  return fromAffine(x, y);
+}
+
+// --- Public group-op dispatchers: constant-time WASM core when loaded, pure BigInt otherwise. ---
+
+/**
+ * Unified complete addition P + Q. Routes through the constant-time WASM core when available (inputs
+ * are on-curve points everywhere the OT stack calls this), else the pure-BigInt `add-2008-hwcd-3`.
+ */
+export function add(p1: Point, p2: Point): Point {
+  const w = wasmCurve();
+  if (w !== null) return decompressPoint(w.add(compressPoint(p1), compressPoint(p2)));
+  return addPure(p1, p2);
+}
+
+/** Scalar multiplication [k]P (k reduced mod L; k=0 ⇒ identity). WASM core when available. */
+export function mul(k: bigint, p: Point): Point {
+  const w = wasmCurve();
+  if (w !== null) return decompressPoint(w.mul(k, compressPoint(p)));
+  return mulPure(k, p);
+}
+
+/** [k]·BASE. WASM core when available (the fixed-base secret-scalar multiply). */
+export function mulBase(k: bigint): Point {
+  const w = wasmCurve();
+  if (w !== null) return decompressPoint(w.mulBase(k));
+  return mulBasePure(k);
+}
+
+/** P − Q. WASM core when available. */
+export function sub(p1: Point, p2: Point): Point {
+  const w = wasmCurve();
+  if (w !== null) return decompressPoint(w.sub(compressPoint(p1), compressPoint(p2)));
+  return subPure(p1, p2);
+}
+
+/** −P. WASM core when available. */
+export function neg(p: Point): Point {
+  const w = wasmCurve();
+  if (w !== null) return decompressPoint(w.neg(compressPoint(p)));
+  return negPure(p);
 }
 
 /** Affine (x, y) of a point (one inversion). Identity ⇒ (0, 1). */
@@ -221,7 +401,7 @@ function scalarMulRaw(k: bigint, p: Point): Point {
   let acc = IDENTITY;
   let base = p;
   while (e > 0n) {
-    if (e & 1n) acc = add(acc, base);
+    if (e & 1n) acc = addPure(acc, base);
     base = dbl(base);
     e >>= 1n;
   }
@@ -259,8 +439,26 @@ export function isIdentity(p: Point): boolean {
  * (identity) or order `L`. So on-curve ∧ `hasPrimeOrder` ∧ ¬identity ⟺ a genuine prime-order point.
  * Rejects every small-order point (order | 8) and every mixed-order point (order `h·L`, `h | 8`, `h>1`).
  */
-export function hasPrimeOrder(p: Point): boolean {
+function hasPrimeOrderPure(p: Point): boolean {
   return equal(scalarMulRaw(L, p), IDENTITY);
+}
+
+/**
+ * The cofactor check `[L]·P = O`. When the constant-time WASM core is loaded, the `[L]·P` scalar work
+ * runs inside it (the point is compressed to its canonical 32-byte form — faithful for ON-curve points,
+ * which is the only case this is reached with in the validation flow — and the core's torsion check is
+ * exactly `[L]·P = O`); otherwise it falls back to the pure-BigInt raw ladder. Both agree bit-for-bit
+ * (the `[L]·P = O ⟺ torsion-free ∨ identity` equivalence), so the observable result is identical.
+ */
+export function hasPrimeOrder(p: Point): boolean {
+  const w = wasmCurve();
+  if (w !== null && isOnCurve(p)) {
+    const c = compressPoint(p);
+    // torsion-free ⟺ order 1 or L; include the identity explicitly so this matches the pure
+    // `[L]·O = O ⇒ true` semantics (the pure ladder returns true for the identity too).
+    return w.isInSubgroup(c) || w.isIdentity(c);
+  }
+  return hasPrimeOrderPure(p);
 }
 
 /** Whether `p` is a valid non-identity point of the prime-order subgroup (the OT point contract). */

@@ -215,3 +215,58 @@ flowchart LR
   class T3 t3
 ```
 
+
+## Cryptographic backends
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#f1edff', 'primaryBorderColor': '#7c5cff', 'primaryTextColor': '#1c1c1f', 'lineColor': '#5f5f6b', 'fontFamily': 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'}}}%%
+flowchart TB
+  subgraph SIG["Signatures — crypto-agile suite registry (every signed surface)"]
+    direction LR
+    S_C["Classical<br/>Ed25519"]
+    S_L["Lattice PQ<br/>ML-DSA-65 / ML-DSA-87"]
+    S_H["Hash PQ<br/>SLH-DSA-128f / 256s"]
+    S_X["Hybrid (fail-closed, both req.)<br/>Ed25519+ML-DSA · +SLH · nested"]
+  end
+  SURF["surfaces: leaf PCActn · capability-chain hops · FROST group sig (+ PQ ML-DSA co-sign)<br/>· transparency STH · C2SP witnesses · revocation epochs · beacons · bond settlements · safety cert · judge verdicts · attestation"]
+  SIG --> SURF
+
+  subgraph ZK["Zero-knowledge proof backends"]
+    direction LR
+    Z_G["Groth16<br/>BN254 → BLS12-381<br/>Policy-VM circuit"]
+    Z_S["STARK (transparent, PQ)<br/>Winterfell + Plonky3<br/>witness ⟂ action commit"]
+    Z_V["zkVM — RISC Zero<br/>full Policy-VM,<br/>canonical-JSON sha256"]
+    Z_F["Folding IVC — Nova/HyperNova<br/>Poseidon chain-digest<br/>Σcost ≤ bMax"]
+  end
+
+  subgraph MPC["Policy-VM under MPC (malicious, dishonest-majority)"]
+    direction LR
+    M_O["MASCOT no-dealer offline<br/>+ SPDZ online (IT MACs)"]
+    M_B["Base OT: malicious EC (Chou–Orlandi+Schnorr)<br/>· ML-KEM KEM-OT · hybrid<br/>· ENDEMIC Module-LWE OT (PQ-malicious)"]
+    M_W["constant-time<br/>curve25519 WASM core"]
+  end
+
+  subgraph ATT["Attestation roots — N-of-M policy, each its own suite"]
+    direction LR
+    A_AMD["AMD SEV-SNP<br/>classical"]
+    A_INT["Intel TDX/DCAP<br/>classical"]
+    A_NV["NVIDIA GPU-CC<br/>classical · model runtime"]
+    A_PQ["PQ software / HSM<br/>ML-DSA / SLH-DSA — POST-QUANTUM"]
+    A_PUF["PUF<br/>unclonable (fuzzy extractor)"]
+  end
+
+  subgraph PRIM["Primitives"]
+    direction LR
+    P_E["Entropy<br/>QRNG mix (HKDF) + CSPRNG"]
+    P_H["Hashes<br/>SHA-256/384 · Poseidon · Blake3"]
+    P_K["KEM<br/>X25519+ML-KEM-768 hybrid"]
+  end
+
+  classDef pq fill:#f1edff,stroke:#7c5cff,stroke-width:2px,color:#1c1c1f
+  classDef cl fill:#fff,stroke:#d8d8e0,stroke-width:1.5px,color:#1c1c1f
+  classDef good fill:#e5fbf1,stroke:#34e5a0,stroke-width:2px,color:#1c1c1f
+  class S_L,S_H,S_X,A_PQ,Z_S,Z_V,M_B pq
+  class S_C,A_AMD,A_INT,A_NV cl
+  class P_E,P_H,P_K,A_PUF,Z_G,Z_F,M_O,M_W good
+
+```

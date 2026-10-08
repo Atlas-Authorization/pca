@@ -1,7 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { __canonicalizeLenientServerOnly, b64u, canonicalize, canonicalizeStrict, hashCanonical, sha256, unb64u, utf8 } from './hash';
+import {
+  __canonicalizeLenientServerOnly,
+  b64u,
+  canonicalize,
+  canonicalizeStrict,
+  hashCanonical,
+  hashWithSuite,
+  isHashSuite,
+  sha256,
+  sha384,
+  unb64u,
+  utf8,
+  type HashSuite,
+} from './hash';
 import { strictParse } from './strict-json';
 
 describe('hash', () => {
@@ -36,6 +49,67 @@ describe('hash', () => {
     const x = new Uint8Array([0, 255, 128, 7]);
     expect(unb64u(b64u(x))).toEqual(x);
     expect(b64u(x)).not.toMatch(/[+/=]/);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------
+// SHA-384 hash-suite agility (P4): optional, NON-BREAKING stronger-margin variant for canonical digests.
+// SHA-256 (the default) is already PQ-adequate; SHA-384 is extra margin, NOT a fix for any SHA-256 weakness.
+describe('hashCanonical sha384 suite (P4 agility)', () => {
+  it('sha384 is a correct 48-byte FIPS 180-4 digest (known vector)', () => {
+    expect(Buffer.from(sha384(utf8('abc'))).toString('hex')).toBe(
+      'cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7',
+    );
+    expect(sha384(utf8('abc')).length).toBe(48);
+    expect(hashWithSuite(utf8('abc'))).toEqual(sha256(utf8('abc'))); // default suite == sha256
+    expect(hashWithSuite(utf8('abc'), 'sha384')).toEqual(sha384(utf8('abc')));
+  });
+
+  it('isHashSuite narrows only the two known suites; everything else fails closed', () => {
+    expect(isHashSuite('sha256')).toBe(true);
+    expect(isHashSuite('sha384')).toBe(true);
+    for (const x of ['sha512', 'SHA256', '', 0, null, undefined, {}]) expect(isHashSuite(x)).toBe(false);
+  });
+
+  it('default arg is byte-identical to the original one-argument hashCanonical (non-breaking)', () => {
+    for (const v of [{ b: 1, a: 2 }, [1, 'x', null], { n: 1.5 }, 'café']) {
+      expect(hashCanonical(v, 'sha256')).toBe(hashCanonical(v));
+    }
+  });
+
+  it('sha384 digests are distinct, reproducible, 48-byte, over suite-independent canonical bytes', () => {
+    for (const v of [{ b: 1, a: 2 }, { a: { x: 2, y: [1, 'x', null, true] }, b: 1 }, { n: [0, -1, 1.5] }]) {
+      const d384 = hashCanonical(v, 'sha384');
+      expect(d384).toBe(hashCanonical(v, 'sha384')); // reproducible
+      expect(d384).not.toBe(hashCanonical(v)); // distinct from sha256
+      expect(unb64u(d384).length).toBe(48); // SHA-384 width
+      // the canonical SERIALIZATION does not depend on the suite — only the digest does
+      expect(hashCanonical(v, 'sha384')).toBe(b64u(sha384(utf8(canonicalizeStrict(v)))));
+    }
+    // key-order independence holds under sha384 too
+    expect(hashCanonical({ b: 1, a: 2 }, 'sha384')).toBe(hashCanonical({ a: 2, b: 1 }, 'sha384'));
+  });
+});
+
+// Companion re-verification of the committed SHA-384 canonical corpus against the live reference.
+interface Sha384CanonCorpus {
+  primitives: { canonical: { value: unknown; suite: HashSuite; expect: string; hash: string; sha256_hash: string }[] };
+}
+const SHA384_CANON: Sha384CanonCorpus = JSON.parse(
+  readFileSync(join(__dirname, '..', 'conformance', 'sha384-vectors.json'), 'utf8'),
+) as Sha384CanonCorpus;
+
+describe('sha384 canonical corpus (conformance/sha384-vectors.json)', () => {
+  it('every vector: canonical bytes are suite-independent; sha384 digest matches and is distinct from sha256', () => {
+    expect(SHA384_CANON.primitives.canonical.length).toBeGreaterThan(0);
+    for (const c of SHA384_CANON.primitives.canonical) {
+      expect(c.suite).toBe('sha384');
+      expect(canonicalizeStrict(c.value)).toBe(c.expect); // serialization unchanged by the suite
+      expect(hashCanonical(c.value, 'sha384')).toBe(c.hash);
+      expect(hashCanonical(c.value)).toBe(c.sha256_hash); // sha256 default still byte-identical
+      expect(c.hash).not.toBe(c.sha256_hash);
+      expect(unb64u(c.hash).length).toBe(48);
+    }
   });
 });
 

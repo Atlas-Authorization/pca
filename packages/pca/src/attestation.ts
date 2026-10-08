@@ -54,6 +54,7 @@ import {
 } from './pq';
 import type { AgentBinding } from './envelope';
 import { readEnvelope } from './envelope';
+import { TransparencyLedger, signTreeHead, type LedgerSuiteOpts, type SignedTreeHead } from './ledger';
 import type { AttestationVerifier, HookResult, VerifyContext } from './pcactn';
 
 const DOMAIN = 'atlas-pca/attest/v1\0';
@@ -684,4 +685,292 @@ export function createAttestationVerifier(
       return fin({ ok: false, present: false, bound: false, reason: `attestation verification error (fail closed): ${e instanceof Error ? e.message : 'unknown'}` });
     }
   };
+}
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+// MULTI-ROOT N-of-M ATTESTATION POLICY — remove sole dependence on one vendor's classical root.
+//
+// ── HONEST SCOPE. ─────────────────────────────────────────────────────────────────────────────────
+// A single AMD SEV-SNP attestation is rooted ENTIRELY in AMD's classical (ECDSA-P384 / RSA-4096)
+// silicon chain, and nothing at this layer can make that one attestation post-quantum (see
+// hardware-sevsnp.ts). What this policy DOES is stop a single vendor's root being the SOLE point of
+// failure: it requires corroborating evidence from >= k INDEPENDENT attestation roots — e.g. AMD
+// SEV-SNP AND a second root such as Intel TDX or a PQ software/harness attestor. Each root carries its
+// OWN suite, so one root can be PQ while another stays classical; a quantum break (or a
+// cryptanalytic/implementation break) of ONE root's signature scheme no longer silently forges the
+// whole attestation, because the other required roots must still corroborate. Fail-closed throughout:
+// a missing or invalid REQUIRED root denies; falling below the threshold denies; roots that disagree on
+// the measured identity deny (an attacker cannot mix a good root's identity with a lying root's).
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * One independent attestation root (a distinct hardware/software trust anchor) in a multi-root policy.
+ * The `verifier` is the SAME `HardwareAttestationVerifier` seam; it resolves its OWN evidence from the
+ * action's document/ctx (so a caller carries per-root evidence and each root's resolver picks its slice).
+ */
+export interface AttestationRoot {
+  /** Stable id of the root, e.g. 'amd-sev-snp', 'intel-tdx', 'pq-harness'. Used for de-dup + audit. */
+  id: string;
+  /** The verifier for this root. */
+  verifier: HardwareAttestationVerifier;
+  /** When true, this root MUST verify (ok + bound). A required root that is missing/invalid denies. */
+  required?: boolean;
+  /** Audit-only label of the root's suite family, e.g. 'ecdsa-p384-sha384' or 'ml-dsa-65'. */
+  suite?: string;
+}
+
+/** A policy requiring corroboration from >= `threshold` of `roots` independent attestation roots. */
+export interface MultiRootAttestationPolicy {
+  /** The independent roots. Each id must be distinct. */
+  roots: AttestationRoot[];
+  /** Minimum number of roots that must verify (ok + bound + measured). 1 <= threshold <= roots.length. */
+  threshold: number;
+}
+
+/**
+ * Reconcile the measured identities of the corroborating roots into one, FAIL-CLOSED on contradiction:
+ * for each identity field, two roots asserting DIFFERENT non-empty values is a conflict (deny); a field
+ * one root asserts and others leave empty is taken as-is. `weights_measured` is true only when the
+ * chosen non-empty `weights_digest` came from a root that itself measured the weights in hardware.
+ * Returns the merged identity, or a `{ conflict }` describing the first contradiction.
+ */
+function reconcileMeasuredIdentities(
+  ids: ReadonlyArray<{ id: string; m: MeasuredIdentity }>,
+): MeasuredIdentity | { conflict: string } {
+  const pick = (field: 'model_id' | 'weights_digest' | 'runtime_measurement' | 'operator' | 'system_prompt_digest' | 'tool_manifest_digest'): string | { conflict: string } => {
+    let chosen = '';
+    let chosenBy = '';
+    for (const { id, m } of ids) {
+      const v = m[field];
+      if (typeof v !== 'string' || v.length === 0) continue;
+      if (chosen === '') {
+        chosen = v;
+        chosenBy = id;
+      } else if (chosen !== v) {
+        return { conflict: `roots '${chosenBy}' and '${id}' disagree on ${field}` };
+      }
+    }
+    return chosen;
+  };
+  const model_id = pick('model_id');
+  if (typeof model_id !== 'string') return model_id;
+  const weights_digest = pick('weights_digest');
+  if (typeof weights_digest !== 'string') return weights_digest;
+  const runtime_measurement = pick('runtime_measurement');
+  if (typeof runtime_measurement !== 'string') return runtime_measurement;
+  const operator = pick('operator');
+  if (typeof operator !== 'string') return operator;
+  const system_prompt_digest = pick('system_prompt_digest');
+  if (typeof system_prompt_digest !== 'string') return system_prompt_digest;
+  const tool_manifest_digest = pick('tool_manifest_digest');
+  if (typeof tool_manifest_digest !== 'string') return tool_manifest_digest;
+
+  const weights_measured =
+    weights_digest !== '' &&
+    ids.some(({ m }) => m.weights_measured === true && m.weights_digest === weights_digest);
+
+  return {
+    model_id,
+    weights_digest,
+    weights_measured,
+    runtime_measurement,
+    operator,
+    ...(system_prompt_digest !== '' ? { system_prompt_digest } : {}),
+    ...(tool_manifest_digest !== '' ? { tool_manifest_digest } : {}),
+  };
+}
+
+/**
+ * Build a `HardwareAttestationVerifier` that enforces a multi-root N-of-M policy. Plugs into
+ * `createAttestationVerifier({ hardwareVerifier })` exactly like a single-root verifier. On `verify` it:
+ *   1. runs EVERY root's verifier against the same action (each resolves its own evidence);
+ *   2. denies if any REQUIRED root did not verify (ok + bound + measured) — naming the root;
+ *   3. denies if fewer than `threshold` roots verified;
+ *   4. reconciles the corroborating roots' measured identities, denying on any contradiction;
+ *   5. returns `bound: true` with the reconciled identity, so the usual agent_binding match runs on it.
+ * Throws at CONSTRUCTION on an empty root set, a non-integer/out-of-range threshold, or duplicate ids.
+ */
+export function createMultiRootVerifier(policy: MultiRootAttestationPolicy): HardwareAttestationVerifier {
+  if (!policy || !Array.isArray(policy.roots) || policy.roots.length === 0) {
+    throw new TypeError('createMultiRootVerifier: at least one attestation root is required');
+  }
+  if (!Number.isInteger(policy.threshold) || policy.threshold < 1 || policy.threshold > policy.roots.length) {
+    throw new TypeError('createMultiRootVerifier: threshold must be an integer in [1, roots.length]');
+  }
+  const ids = new Set<string>();
+  for (const r of policy.roots) {
+    if (!r || typeof r.id !== 'string' || r.id.length === 0) throw new TypeError('createMultiRootVerifier: each root needs a non-empty id');
+    if (ids.has(r.id)) throw new TypeError(`createMultiRootVerifier: duplicate root id '${r.id}'`);
+    ids.add(r.id);
+  }
+
+  return {
+    async verify(input): Promise<HardwareAttestationResult> {
+      const fail = (reason: string): HardwareAttestationResult => ({ ok: false, reason });
+      try {
+        const passed: Array<{ id: string; m: MeasuredIdentity }> = [];
+        const hostAsserted: Record<string, string> = {};
+        for (const root of policy.roots) {
+          let res: HardwareAttestationResult;
+          try {
+            res = await root.verifier.verify(input);
+          } catch (e) {
+            res = { ok: false, reason: `root '${root.id}' threw (fail closed): ${e instanceof Error ? e.message : 'unknown'}` };
+          }
+          const ok = res.ok === true && res.bound === true && !!res.measured;
+          if (!ok) {
+            if (root.required === true) return fail(`required attestation root '${root.id}' failed: ${res.reason ?? 'invalid'}`);
+            continue;
+          }
+          passed.push({ id: root.id, m: res.measured! });
+          if (res.hostAsserted) {
+            for (const [k, v] of Object.entries(res.hostAsserted)) hostAsserted[`${root.id}.${k}`] = v;
+          }
+        }
+
+        if (passed.length < policy.threshold) {
+          return fail(`multi-root attestation below threshold (${passed.length}/${policy.threshold} independent roots corroborated)`);
+        }
+
+        const merged = reconcileMeasuredIdentities(passed);
+        if ('conflict' in merged) return fail(`multi-root attestation identity conflict: ${merged.conflict}`);
+
+        return { ok: true, bound: true, measured: merged, ...(Object.keys(hostAsserted).length > 0 ? { hostAsserted } : {}) };
+      } catch (e) {
+        return fail(`multi-root attestation error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
+      }
+    },
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+// PQ ACCOUNTABILITY ANCHORING — make a forged/anomalous attestation detectable + attributable.
+//
+// ── HONEST SCOPE. ─────────────────────────────────────────────────────────────────────────────────
+// Anchoring does NOT prevent a quantum forgery of an AMD SEV-SNP attestation in real time (that is
+// AMD's silicon root — see hardware-sevsnp.ts). What it adds is AFTER-THE-FACT accountability: the
+// digest of each VERIFIED attestation is appended as an append-only transparency-log commitment and the
+// resulting tree head is signed with a PQ-CAPABLE suite (ml-dsa-65 / hybrid). So if a forged or
+// anomalous attestation is ever admitted — even one produced by breaking AMD's classical root — it is
+// permanently recorded, consistency-checkable, and attributable to a point in the log that a
+// quantum-resistant signature vouches for. Detection + attribution, not prevention.
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+
+/** Domain separator for the anchored attestation-evidence digest. */
+export const ATTEST_ANCHOR_DOMAIN = 'atlas-pca/attest-anchor/v1\0';
+
+/** The verified facts that get anchored: WHAT was proven, not the raw quote bytes. */
+export interface VerifiedAttestationEvidence {
+  /** The established (hardware/multi-root) measured identity. */
+  identity: MeasuredIdentity;
+  /** The holder/grant/epoch/nonce the attestation was bound to. */
+  binding: ExpectedAttestationBinding;
+  /** Which roots corroborated it (multi-root), for audit; order-insensitive. */
+  rootIds?: string[];
+  /** Audit label of the report/attestation suite(s), e.g. 'ecdsa-p384-sha384' or 'ml-dsa-65'. */
+  suite?: string;
+  /** When the attestation was verified (epoch ms). */
+  verifiedAt: number;
+}
+
+/**
+ * The canonical, domain-separated digest of a verified attestation — the opaque commitment leaf that is
+ * appended to the transparency ledger. It binds the measured identity AND the holder/grant/epoch/nonce,
+ * so two verifications that measured different identities (or bound to different actions) anchor to
+ * different leaves, making a swap detectable.
+ */
+export function attestationEvidenceDigest(ev: VerifiedAttestationEvidence): string {
+  return hashCanonical({
+    domain: ATTEST_ANCHOR_DOMAIN,
+    holder: ev.binding.holderPub,
+    grant: ev.binding.grantRef,
+    epoch: ev.binding.epoch,
+    nonce: ev.binding.nonce,
+    model_id: ev.identity.model_id,
+    weights_digest: ev.identity.weights_digest,
+    weights_measured: ev.identity.weights_measured === true,
+    runtime_measurement: ev.identity.runtime_measurement,
+    operator: ev.identity.operator,
+    system_prompt_digest: ev.identity.system_prompt_digest ?? '',
+    tool_manifest_digest: ev.identity.tool_manifest_digest ?? '',
+    roots: [...(ev.rootIds ?? [])].sort(),
+    suite: ev.suite ?? '',
+    verified_at: ev.verifiedAt,
+  });
+}
+
+/** Options for {@link anchorAttestationEvidence}. */
+export interface AttestationAnchorOptions {
+  /** The transparency ledger to anchor into (its `appendCommitment` is PQ-capable via the STH). */
+  ledger: TransparencyLedger;
+  /**
+   * Guardian secret that signs the resulting signed tree head. Supply `suite` with an ml-dsa-65 / hybrid
+   * key to make the accountability record POST-QUANTUM. Omitted => the commitment is still appended but
+   * no STH is produced (allowed only when `required` is false).
+   */
+  guardianSecret?: Uint8Array;
+  /** STH signature suite (ml-dsa-65 / hybrid => PQ accountability; default ed25519). */
+  suite?: LedgerSuiteOpts;
+  /** Instance id recorded in the STH (audit). */
+  instanceId?: string;
+  /** Clock for the STH timestamp (default `Date.now`). */
+  now?: () => number;
+  /** When true, anchoring MUST fully succeed (ledger present, commitment appended, STH signed) or throw. */
+  required?: boolean;
+}
+
+/** The result of anchoring: the ledger index + commitment, and the PQ-capable signed tree head. */
+export interface AttestationAnchor {
+  /** The index of the appended commitment in the log. */
+  index: number;
+  /** The anchored evidence-digest commitment (the Merkle leaf). */
+  commit: string;
+  /** The signed tree head over the post-append head (present iff a guardian secret was supplied). */
+  sth?: SignedTreeHead;
+}
+
+/**
+ * Anchor a VERIFIED attestation into the transparency ledger for PQ accountability. Computes the
+ * evidence digest, appends it as an opaque commitment (`appendCommitment`), and — when a guardian secret
+ * is supplied — signs the resulting tree head with the (PQ-capable) suite so the record is vouched for
+ * by a quantum-resistant signature. FAIL-CLOSED when `required`: a missing ledger, a missing guardian
+ * secret, or a failed STH signature throws rather than silently skipping. Returns the anchor otherwise.
+ */
+export function anchorAttestationEvidence(ev: VerifiedAttestationEvidence, opts: AttestationAnchorOptions): AttestationAnchor {
+  const required = opts?.required === true;
+  const fail = (msg: string): never => {
+    throw new Error(`attestation anchoring (fail closed): ${msg}`);
+  };
+  if (!opts || !(opts.ledger instanceof TransparencyLedger)) return fail('no transparency ledger available');
+  if (required && !(opts.guardianSecret instanceof Uint8Array)) {
+    return fail('required anchoring needs a guardian secret to sign the tree head');
+  }
+  const ledger = opts.ledger;
+  const commit = attestationEvidenceDigest(ev);
+  const prevRoot = ledger.head().root;
+  const { index } = ledger.appendCommitment(commit);
+  const head = ledger.head();
+
+  let sth: SignedTreeHead | undefined;
+  if (opts.guardianSecret instanceof Uint8Array) {
+    const now = (opts.now ?? Date.now)();
+    try {
+      sth = signTreeHead(
+        opts.guardianSecret,
+        {
+          instance_id: opts.instanceId ?? '',
+          principal: ledger.principal,
+          size: head.size,
+          root: head.root,
+          prev_root: prevRoot,
+          timestamp: now,
+        },
+        opts.suite,
+      );
+    } catch (e) {
+      if (required) return fail(`tree-head signing failed: ${e instanceof Error ? e.message : 'unknown'}`);
+    }
+  }
+
+  return { index, commit, ...(sth ? { sth } : {}) };
 }

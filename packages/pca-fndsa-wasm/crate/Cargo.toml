@@ -1,0 +1,33 @@
+[package]
+name = "pca-fndsa-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "FN-DSA (Falcon, FIPS 206) signature core — verification + signing/keygen for FN-DSA-512 and FN-DSA-1024 from the vetted fn-dsa crate family (Thomas Pornin), compiled to WebAssembly for @atlasauth/pca's PQ signature-suite registry."
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# The CRYPTO CORE is NOT hand-rolled. Every FN-DSA / Falcon operation — key-pair generation
+# (ntrugen), signature generation (the Falcon `sign_dyn` sampler + FFT), and signature verification
+# (NTT over the public modulus) — runs through the vetted, pure-Rust `fn-dsa` crate family by
+# Thomas Pornin (the Falcon author): the RustSec-recommended successor to pqcrypto-falcon. The meta
+# crate re-exports fn-dsa-kgen / fn-dsa-sign / fn-dsa-vrfy / fn-dsa-comm. None of the lattice math,
+# the FFT/NTT, the Gaussian sampler or the key/signature encodings is reimplemented here. `fn-dsa`
+# is `#![no_std]` with no allocator and its only transitive deps are rand_core + zeroize, so on
+# wasm32-unknown-unknown it builds pure-Rust with no std, no allocator and no imports.
+#
+# Unlike pqc_kyber, NO `[patch.crates-io]` vendor copy is needed: the fn-dsa sub-crates declare no
+# `cdylib` crate-type, so cargo builds them std-less for wasm32 without a panic-handler conflict.
+[dependencies]
+fn-dsa = "0.4.0"
+
+# A small, dependency-free WASM: no std, no allocator, no imports — all I/O is through fixed static
+# buffers in linear memory, so the module instantiates with an empty import object (mirrors
+# @atlasauth/pca-mpc-wasm / @atlasauth/pca-mpc-lwe-ot-wasm).
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

@@ -1,6 +1,11 @@
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
 import { ml_dsa65, ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
 import { slh_dsa_sha2_128f, slh_dsa_sha2_256s } from '@noble/post-quantum/slh-dsa.js';
 import { sha512 } from '@noble/hashes/sha512';
+// Type-only import: erased at compile time, so merely importing pq.ts never pulls in (and never
+// instantiates) the FN-DSA wasm module. The runtime binding is loaded LAZILY (see `fnDsaWasm`).
+import type { FnDsaVariant } from '@atlasauth/pca-fndsa-wasm';
 import { b64u, decodeB64uStrict, utf8 } from './hash';
 import { sign, verify, verifyB64u } from './keys';
 
@@ -147,6 +152,45 @@ export const SLH_DSA_SHA2_256S_SECRET_KEY_BYTES = 128;
 export const SLH_DSA_SHA2_256S_SIGNATURE_BYTES = 29792;
 export const SLH_DSA_SHA2_256S_SEED_BYTES = 96;
 
+/**
+ * FN-DSA (Falcon, FIPS 206) SUITES — pure-PQ (non-hybrid) LATTICE signatures, opt-in registry additions.
+ *
+ * Two standardized parameter sets ride the SAME agility seam and the SAME generic `pq_pk` / `pq_sig`
+ * wire slots the ML-DSA / SLH-DSA suites already use; only the primitive and the byte lengths differ:
+ *   - `fn-dsa-512`   NIST category 1 (NTRU-lattice / Falcon-512):  vk 897 B, sk 1345 B, sig 666 B.
+ *   - `fn-dsa-1024`  NIST category 5 (NTRU-lattice / Falcon-1024): vk 1793 B, sk 2369 B, sig 1280 B.
+ *
+ * WHY FN-DSA alongside ML-DSA: both are lattice signatures, but FN-DSA (NTRU lattices, Gaussian
+ * sampling) produces MUCH smaller public keys + signatures than ML-DSA (Module-LWE) at the same
+ * category — Falcon-512 is 897/666 B vs ML-DSA-65's 1952/3309 B. For a bandwidth-bound authority leaf
+ * that is a real win. It is NOT assumption-diverse from ML-DSA (both are lattice bets); SLH-DSA remains
+ * the hash-based diversity hedge.
+ *
+ * HONEST STANDARD / SCOPE STATUS (NOT a new default; same tier as the other beyond-core suites):
+ *   - FIPS 206 is FINALIZED-PENDING: the final NIST text is not yet published, and the vetted `fn-dsa`
+ *     crate warns its key/signature ENCODINGS may still change before its 1.0. Treat these suites as a
+ *     TS-REFERENCE + CONFORMANCE target, not a frozen wire.
+ *   - Unlike `ed25519` / `ml-dsa-65` / `slh-dsa-sha2-128f`, FN-DSA is NOT yet implemented in the 9
+ *     native-verifier SDKs — exactly the status of the other beyond-core suites (ml-dsa-87, slh-dsa-256s).
+ *   - VERIFICATION is the public-key operation (no floating point) and is what the PCA verifier performs;
+ *     it routes through `@atlasauth/pca-fndsa-wasm` (the vetted pure-Rust `fn-dsa` crate compiled to wasm).
+ *     Signing/keygen (best-effort constant-time Falcon FP sampling, portable in wasm) are provided for the
+ *     reference signer + the conformance generator only.
+ *   - FAIL-CLOSED: the wasm binding is loaded LAZILY and if it is unavailable every FN-DSA verify returns
+ *     false (deny) — the rest of the registry (ed25519 and the noble-backed PQ suites) is unaffected.
+ */
+
+/** FN-DSA-512 (Falcon-512, FIPS 206, NIST category 1) encoded sizes, in bytes. */
+export const FN_DSA_512_PUBLIC_KEY_BYTES = 897;
+export const FN_DSA_512_SECRET_KEY_BYTES = 1345;
+export const FN_DSA_512_SIGNATURE_BYTES = 666;
+/** FN-DSA-1024 (Falcon-1024, FIPS 206, NIST category 5) encoded sizes, in bytes. */
+export const FN_DSA_1024_PUBLIC_KEY_BYTES = 1793;
+export const FN_DSA_1024_SECRET_KEY_BYTES = 2369;
+export const FN_DSA_1024_SIGNATURE_BYTES = 1280;
+/** FN-DSA deterministic-RNG seed length, in bytes (keygen + signing reproducibility). */
+export const FN_DSA_SEED_BYTES = 32;
+
 export type SigAlg =
   | 'ed25519'
   | 'ml-dsa-65'
@@ -157,7 +201,9 @@ export type SigAlg =
   | 'ml-dsa-87'
   | 'hybrid-ed25519-ml-dsa-87'
   | 'slh-dsa-sha2-256s'
-  | 'hybrid-ed25519-slh-dsa-sha2-256s';
+  | 'hybrid-ed25519-slh-dsa-sha2-256s'
+  | 'fn-dsa-512'
+  | 'fn-dsa-1024';
 
 /** The suite used when `alg` is absent — the pre-B4 default. MUST stay "ed25519" forever. */
 export const DEFAULT_SIG_ALG: SigAlg = 'ed25519';
@@ -176,6 +222,13 @@ export interface SigSuite {
   hasMlDsa87: boolean;
   /** Suite carries an SLH-DSA-SHA2-256s (Category-5 hash-based) component. */
   hasSlhDsa256s: boolean;
+  /**
+   * Suite carries an FN-DSA-512 (Falcon-512 / FIPS 206, category 1) component. Optional so the 10
+   * pre-existing suite descriptors stay byte-identical (absent ⇒ falsy ⇒ not an FN-DSA suite).
+   */
+  hasFnDsa512?: boolean;
+  /** Suite carries an FN-DSA-1024 (Falcon-1024 / FIPS 206, category 5) component. Optional (see above). */
+  hasFnDsa1024?: boolean;
   /** A `pq_pk` (PQ public key — ML-DSA or SLH-DSA, per the suite) field is REQUIRED (and forbidden otherwise). */
   needsPqPk: boolean;
   /** A `pq_sig` field is REQUIRED — i.e. the PQ sig is separate from `sig` (hybrid). Forbidden otherwise. */
@@ -202,6 +255,10 @@ export const SIG_SUITES: Readonly<Record<SigAlg, Readonly<SigSuite>>> = Object.f
   'hybrid-ed25519-ml-dsa-87': { alg: 'hybrid-ed25519-ml-dsa-87', sigBytes: ED25519_SIGNATURE_BYTES, hasEd25519: true, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: true, hasSlhDsa256s: false, needsPqPk: true, needsPqSig: true, pqPkBytes: ML_DSA_87_PUBLIC_KEY_BYTES, pqSigBytes: ML_DSA_87_SIGNATURE_BYTES },
   'slh-dsa-sha2-256s': { alg: 'slh-dsa-sha2-256s', sigBytes: SLH_DSA_SHA2_256S_SIGNATURE_BYTES, hasEd25519: false, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: false, hasSlhDsa256s: true, needsPqPk: true, needsPqSig: false, pqPkBytes: SLH_DSA_SHA2_256S_PUBLIC_KEY_BYTES, pqSigBytes: 0 },
   'hybrid-ed25519-slh-dsa-sha2-256s': { alg: 'hybrid-ed25519-slh-dsa-sha2-256s', sigBytes: ED25519_SIGNATURE_BYTES, hasEd25519: true, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: false, hasSlhDsa256s: true, needsPqPk: true, needsPqSig: true, pqPkBytes: SLH_DSA_SHA2_256S_PUBLIC_KEY_BYTES, pqSigBytes: SLH_DSA_SHA2_256S_SIGNATURE_BYTES },
+  // ---- FN-DSA (Falcon, FIPS 206) — pure-PQ lattice, opt-in, additive. Verify routes through pca-fndsa-wasm. ----
+  // `sig` carries the FN-DSA signature; `pq_pk` carries the FN-DSA verifying key; no `pq_sig` (non-hybrid).
+  'fn-dsa-512': { alg: 'fn-dsa-512', sigBytes: FN_DSA_512_SIGNATURE_BYTES, hasEd25519: false, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: false, hasSlhDsa256s: false, hasFnDsa512: true, needsPqPk: true, needsPqSig: false, pqPkBytes: FN_DSA_512_PUBLIC_KEY_BYTES, pqSigBytes: 0 },
+  'fn-dsa-1024': { alg: 'fn-dsa-1024', sigBytes: FN_DSA_1024_SIGNATURE_BYTES, hasEd25519: false, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: false, hasSlhDsa256s: false, hasFnDsa1024: true, needsPqPk: true, needsPqSig: false, pqPkBytes: FN_DSA_1024_PUBLIC_KEY_BYTES, pqSigBytes: 0 },
 });
 
 export function isKnownSigAlg(x: unknown): x is SigAlg {
@@ -404,6 +461,171 @@ export function encodeSlhDsa256sPublicKey(publicKey: Uint8Array): string {
   return b64u(publicKey);
 }
 
+// ---- FN-DSA (Falcon, FIPS 206) primitive wrappers — routed through @atlasauth/pca-fndsa-wasm -----
+//
+// Unlike the ML-DSA / SLH-DSA wrappers (pure-JS @noble), the FN-DSA crypto core is the vetted pure-Rust
+// `fn-dsa` crate (Thomas Pornin, the Falcon author) compiled to WebAssembly. The binding is loaded
+// LAZILY and ONCE via createRequire, mirroring the pca-mpc curve core: merely importing pq.ts never
+// instantiates the wasm; only an actual FN-DSA op pays the one-time load. If the binding is unavailable
+// (package missing, wasm cannot instantiate) every verify below returns false (FAIL-CLOSED, deny) and the
+// rest of the registry is untouched; the sign/keygen helpers throw (a signer must never silently no-op).
+
+/** FN-DSA key pair as produced by {@link fnDsa512Keygen} / {@link fnDsa1024Keygen}. */
+export interface FnDsaKeyPair {
+  /** FN-DSA verifying (public) key — becomes `pq_pk`. */
+  verifyingKey: Uint8Array;
+  /** FN-DSA signing (secret) key. */
+  signingKey: Uint8Array;
+}
+
+/** The subset of the FN-DSA wasm binding's surface consumed here (see `@atlasauth/pca-fndsa-wasm`). */
+interface FnDsaBinding {
+  verify(variant: FnDsaVariant, verifyingKey: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean;
+  sign(variant: FnDsaVariant, signingKey: Uint8Array, message: Uint8Array, seed: Uint8Array): Uint8Array;
+  keygen(variant: FnDsaVariant, seed: Uint8Array): { verifyingKey: Uint8Array; signingKey: Uint8Array };
+}
+
+/** `undefined` = not yet probed; `null` = probed and unavailable (FN-DSA verify then fails closed). */
+let fnDsaBackend: FnDsaBinding | null | undefined;
+
+/** Narrow an opaque module to {@link FnDsaBinding} without using `any` — every op must be a function. */
+function asFnDsaBinding(mod: unknown): FnDsaBinding | null {
+  if (typeof mod !== 'object' || mod === null) return null;
+  const m = mod as Record<string, unknown>;
+  for (const name of ['verify', 'sign', 'keygen']) {
+    if (typeof m[name] !== 'function') return null;
+  }
+  return mod as unknown as FnDsaBinding;
+}
+
+/**
+ * Lazily load the FN-DSA wasm binding, once. Tries the resolved workspace dependency first, then the
+ * sibling package's built `dist` (the stable path whether pq.ts runs from `src` under vitest or from
+ * `dist` after a build — `__dirname/../../pca-fndsa-wasm/dist` is the same in both). Any failure is
+ * swallowed and pins `null`, so every FN-DSA verify then fails closed.
+ */
+function fnDsaWasm(): FnDsaBinding | null {
+  if (fnDsaBackend !== undefined) return fnDsaBackend;
+  fnDsaBackend = null;
+  try {
+    const req = createRequire(__filename);
+    const candidates = [
+      '@atlasauth/pca-fndsa-wasm',
+      join(__dirname, '..', '..', 'pca-fndsa-wasm', 'dist', 'index.js'),
+    ];
+    for (const spec of candidates) {
+      try {
+        const loaded = asFnDsaBinding(req(spec));
+        if (loaded !== null) {
+          fnDsaBackend = loaded;
+          break;
+        }
+      } catch {
+        // try the next candidate
+      }
+    }
+  } catch {
+    fnDsaBackend = null;
+  }
+  return fnDsaBackend;
+}
+
+/** Whether the FN-DSA wasm backend is loadable (else every FN-DSA suite verify fails closed). */
+export function isFnDsaBackendActive(): boolean {
+  return fnDsaWasm() !== null;
+}
+
+/** Deterministic FN-DSA-512 keygen from a 32-byte seed. THROWS if the wasm backend is unavailable. */
+export function fnDsa512Keygen(seed: Uint8Array): FnDsaKeyPair {
+  const w = fnDsaWasm();
+  if (w === null) throw new Error('fnDsa512Keygen: FN-DSA wasm backend unavailable');
+  return w.keygen('fn-dsa-512', seed);
+}
+
+/** Deterministic FN-DSA-1024 keygen from a 32-byte seed. THROWS if the wasm backend is unavailable. */
+export function fnDsa1024Keygen(seed: Uint8Array): FnDsaKeyPair {
+  const w = fnDsaWasm();
+  if (w === null) throw new Error('fnDsa1024Keygen: FN-DSA wasm backend unavailable');
+  return w.keygen('fn-dsa-1024', seed);
+}
+
+/** FN-DSA-512 sign over raw `msg` (no pre-hash) with a 32-byte RNG `seed`. THROWS if the backend is unavailable. */
+export function fnDsa512Sign(signingKey: Uint8Array, msg: Uint8Array, seed: Uint8Array): Uint8Array {
+  const w = fnDsaWasm();
+  if (w === null) throw new Error('fnDsa512Sign: FN-DSA wasm backend unavailable');
+  return w.sign('fn-dsa-512', signingKey, msg, seed);
+}
+
+/** FN-DSA-1024 sign over raw `msg` (no pre-hash) with a 32-byte RNG `seed`. THROWS if the backend is unavailable. */
+export function fnDsa1024Sign(signingKey: Uint8Array, msg: Uint8Array, seed: Uint8Array): Uint8Array {
+  const w = fnDsaWasm();
+  if (w === null) throw new Error('fnDsa1024Sign: FN-DSA wasm backend unavailable');
+  return w.sign('fn-dsa-1024', signingKey, msg, seed);
+}
+
+/**
+ * FN-DSA verify over raw bytes. Never throws; a wrong length, a malformed input, or an unavailable wasm
+ * backend simply returns false (fail-closed). The length is checked BEFORE the wasm call, which itself
+ * throws on a wrongly-sized buffer (caught here).
+ */
+function fnDsaVerify(
+  variant: FnDsaVariant,
+  pkBytes: number,
+  sigBytes: number,
+  publicKey: Uint8Array,
+  msg: Uint8Array,
+  sig: Uint8Array,
+): boolean {
+  try {
+    if (!(publicKey instanceof Uint8Array) || publicKey.length !== pkBytes) return false;
+    if (!(sig instanceof Uint8Array) || sig.length !== sigBytes) return false;
+    const w = fnDsaWasm();
+    if (w === null) return false; // backend unavailable => fail-closed (deny)
+    return w.verify(variant, publicKey, msg, sig) === true;
+  } catch {
+    return false;
+  }
+}
+
+/** FN-DSA-512 verify over raw bytes (never throws). */
+export function fnDsa512Verify(publicKey: Uint8Array, msg: Uint8Array, sig: Uint8Array): boolean {
+  return fnDsaVerify('fn-dsa-512', FN_DSA_512_PUBLIC_KEY_BYTES, FN_DSA_512_SIGNATURE_BYTES, publicKey, msg, sig);
+}
+
+/** FN-DSA-1024 verify over raw bytes (never throws). */
+export function fnDsa1024Verify(publicKey: Uint8Array, msg: Uint8Array, sig: Uint8Array): boolean {
+  return fnDsaVerify('fn-dsa-1024', FN_DSA_1024_PUBLIC_KEY_BYTES, FN_DSA_1024_SIGNATURE_BYTES, publicKey, msg, sig);
+}
+
+/** fnDsa512Verify over base64url-encoded key and signature; false on any decoding error. */
+export function fnDsa512VerifyB64u(publicKeyB64u: unknown, msg: Uint8Array, sigB64u: unknown): boolean {
+  try {
+    const pk = decodeB64uStrict(publicKeyB64u, FN_DSA_512_PUBLIC_KEY_BYTES);
+    const sg = decodeB64uStrict(sigB64u, FN_DSA_512_SIGNATURE_BYTES);
+    if (!pk || !sg) return false;
+    return fnDsa512Verify(pk, msg, sg);
+  } catch {
+    return false;
+  }
+}
+
+/** fnDsa1024Verify over base64url-encoded key and signature; false on any decoding error. */
+export function fnDsa1024VerifyB64u(publicKeyB64u: unknown, msg: Uint8Array, sigB64u: unknown): boolean {
+  try {
+    const pk = decodeB64uStrict(publicKeyB64u, FN_DSA_1024_PUBLIC_KEY_BYTES);
+    const sg = decodeB64uStrict(sigB64u, FN_DSA_1024_SIGNATURE_BYTES);
+    if (!pk || !sg) return false;
+    return fnDsa1024Verify(pk, msg, sg);
+  } catch {
+    return false;
+  }
+}
+
+/** b64u of an FN-DSA verifying (public) key — convenience for building `pq_pk` (either variant). */
+export function encodeFnDsaPublicKey(publicKey: Uint8Array): string {
+  return b64u(publicKey);
+}
+
 // ---- the GENERAL signature-suite SEAM (shared by EVERY signed surface) -------------------------
 //
 // `signWithSuite` / `verifyWithSuite` are the ONE reusable agility pair. Every signed surface in the
@@ -435,6 +657,25 @@ export interface SuiteSecretKeys {
   mlDsa87?: MlDsaKeyPair;
   /** SLH-DSA-SHA2-256s (Category 5) key pair for the slh-dsa-sha2-256s suites. */
   slhDsa256s?: SlhDsaKeyPair;
+  /** FN-DSA-512 key material for the fn-dsa-512 suite. */
+  fnDsa512?: FnDsaSuiteKey;
+  /** FN-DSA-1024 key material for the fn-dsa-1024 suite. */
+  fnDsa1024?: FnDsaSuiteKey;
+}
+
+/**
+ * FN-DSA signing material for the suite seam. Carries the key pair AND a 32-byte RNG `signSeed`: unlike
+ * ML-DSA (deterministic in @noble), FN-DSA signing takes an explicit seed, which is threaded here because
+ * {@link signWithSuite} has no per-call randomness parameter. Use a CSPRNG seed in production; a fixed
+ * seed yields a reproducible signature (for tests / conformance vectors).
+ */
+export interface FnDsaSuiteKey {
+  /** FN-DSA verifying (public) key — becomes `pq_pk`. */
+  verifyingKey: Uint8Array;
+  /** FN-DSA signing (secret) key. */
+  signingKey: Uint8Array;
+  /** 32-byte RNG seed for FN-DSA signing. */
+  signSeed: Uint8Array;
 }
 
 /**
@@ -449,6 +690,10 @@ export interface SuitePublicKeys {
   mlDsa87Pub?: string;
   /** b64u SLH-DSA-SHA2-256s public key for the slh-dsa-sha2-256s suites. */
   slhDsa256sPub?: string;
+  /** b64u FN-DSA-512 verifying key for the fn-dsa-512 suite. */
+  fnDsa512Pub?: string;
+  /** b64u FN-DSA-1024 verifying key for the fn-dsa-1024 suite. */
+  fnDsa1024Pub?: string;
 }
 
 /** The signature component(s) a suite produces. `sig` is the classical Ed25519 b64u signature for ed25519/hybrid and the ML-DSA-65 signature for pure ml-dsa-65; `pq_sig` is the ML-DSA-65 signature for hybrid only. */
@@ -483,6 +728,8 @@ export function signWithSuite(alg: unknown, keys: SuiteSecretKeys, msg: Uint8Arr
   if (suite.hasSlhDsa && !(keys.slhDsa && keys.slhDsa.secretKey instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires slhDsa key material`);
   if (suite.hasMlDsa87 && !(keys.mlDsa87 && keys.mlDsa87.secretKey instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires mlDsa87 key material`);
   if (suite.hasSlhDsa256s && !(keys.slhDsa256s && keys.slhDsa256s.secretKey instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires slhDsa256s key material`);
+  if (suite.hasFnDsa512 && !(keys.fnDsa512 && keys.fnDsa512.signingKey instanceof Uint8Array && keys.fnDsa512.signSeed instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires fnDsa512 key material (signingKey + signSeed)`);
+  if (suite.hasFnDsa1024 && !(keys.fnDsa1024 && keys.fnDsa1024.signingKey instanceof Uint8Array && keys.fnDsa1024.signSeed instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires fnDsa1024 key material (signingKey + signSeed)`);
   switch (suite.alg) {
     case 'ed25519':
       return { sig: b64u(sign(keys.edSecret!, msg)) };
@@ -508,6 +755,10 @@ export function signWithSuite(alg: unknown, keys: SuiteSecretKeys, msg: Uint8Arr
       return { sig: b64u(slhDsa256sSign(keys.slhDsa256s!.secretKey, msg)) };
     case 'hybrid-ed25519-slh-dsa-sha2-256s':
       return { sig: b64u(sign(keys.edSecret!, msg)), pq_sig: b64u(slhDsa256sSign(keys.slhDsa256s!.secretKey, msg)) };
+    case 'fn-dsa-512':
+      return { sig: b64u(fnDsa512Sign(keys.fnDsa512!.signingKey, msg, keys.fnDsa512!.signSeed)) };
+    case 'fn-dsa-1024':
+      return { sig: b64u(fnDsa1024Sign(keys.fnDsa1024!.signingKey, msg, keys.fnDsa1024!.signSeed)) };
   }
 }
 
@@ -563,6 +814,10 @@ export function verifyWithSuite(alg: unknown, keys: SuitePublicKeys, msg: Uint8A
       const pqOk = typeof s?.pq_sig === 'string' && slhDsa256sVerifyB64u(keys.slhDsa256sPub, msg, s.pq_sig);
       return edOk && pqOk; // fail-closed: BOTH required
     }
+    case 'fn-dsa-512':
+      return typeof sig === 'string' && fnDsa512VerifyB64u(keys.fnDsa512Pub, msg, sig);
+    case 'fn-dsa-1024':
+      return typeof sig === 'string' && fnDsa1024VerifyB64u(keys.fnDsa1024Pub, msg, sig);
   }
 }
 
@@ -598,6 +853,8 @@ export function signSuiteArtifact(alg: unknown, keys: SuiteSecretKeys, msg: Uint
     else if (suite.hasMlDsa && keys.mlDsa) out.pq_pk = encodeMlDsaPublicKey(keys.mlDsa.publicKey);
     else if (suite.hasMlDsa87 && keys.mlDsa87) out.pq_pk = encodeMlDsa87PublicKey(keys.mlDsa87.publicKey);
     else if (suite.hasSlhDsa256s && keys.slhDsa256s) out.pq_pk = encodeSlhDsa256sPublicKey(keys.slhDsa256s.publicKey);
+    else if (suite.hasFnDsa512 && keys.fnDsa512) out.pq_pk = encodeFnDsaPublicKey(keys.fnDsa512.verifyingKey);
+    else if (suite.hasFnDsa1024 && keys.fnDsa1024) out.pq_pk = encodeFnDsaPublicKey(keys.fnDsa1024.verifyingKey);
   }
   if (parts.pq_sig !== undefined) out.pq_sig = parts.pq_sig;
   return out;
@@ -656,7 +913,7 @@ export function verifyLeafSuite(i: LeafSuiteInput): boolean {
   const pqPub = typeof i.pqPublicKey === 'string' ? i.pqPublicKey : undefined;
   return verifyWithSuite(
     i.alg,
-    { edPub: i.holder, mlDsaPub: pqPub, slhDsaPub: pqPub, mlDsa87Pub: pqPub, slhDsa256sPub: pqPub },
+    { edPub: i.holder, mlDsaPub: pqPub, slhDsaPub: pqPub, mlDsa87Pub: pqPub, slhDsa256sPub: pqPub, fnDsa512Pub: pqPub, fnDsa1024Pub: pqPub },
     i.message,
     { sig: i.sig, pq_sig: i.pqSig },
   );

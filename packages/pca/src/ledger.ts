@@ -218,6 +218,23 @@ export class TransparencyLedger {
     return { index, commit };
   }
 
+  /**
+   * Append a PRECOMPUTED opaque commitment leaf (CT-style): the caller holds the opening off-log (e.g. a
+   * guardian-signed settlement record + its salt, or a trajectory-head commitment). The leaf, root and every
+   * inclusion / consistency proof behave exactly as for {@link append}; no opening is stored here, so the
+   * entry is already shredded and {@link auditOpenings} ignores it. The log stays append-only and witnessable,
+   * so anything anchored this way is externally auditable (inclusion proof + a signed/witnessed STH) and a
+   * rollback that drops the leaf fails the consistency proof against a pinned head. Refuses a non-string /
+   * empty commit (fail closed).
+   */
+  appendCommitment(commit: string): { index: number; commit: string } {
+    if (typeof commit !== 'string' || commit.length === 0) throw new Error('appendCommitment: commit must be a non-empty string');
+    const index = this._entries.length;
+    this._entries.push({ commit });
+    this._hashes.push(leafHash(commit));
+    return { index, commit };
+  }
+
   head(): LedgerHead {
     return { size: this.size, root: b64u(mth(this._hashes)) };
   }
