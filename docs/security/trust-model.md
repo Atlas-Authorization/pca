@@ -38,15 +38,15 @@ PCA is in **preview**. The items below are the known limits of this release. Non
 ### Attestation (L0)
 
 - **Software mode is self-asserted.** It proves "a key the resource server trusts vouched for these measurements", not "this silicon is running exactly these weights".
-- **The hardware verifier is a seam.** `HardwareAttestationVerifier` defines the interface and where it plugs in; SEV-SNP, TDX or SGX quote parsing is **not implemented**. Treat hardware-rooted agent identity as not available in this release.
+- **The hardware verifier is implemented; a live attestation needs real silicon.** `HardwareAttestationVerifier` parses and checks SEV-SNP / TDX quotes and has been exercised against real-cryptography reports on an actual confidential VM. What a deployment still has to provide is the running confidential-VM fleet and the operator trust roots; without an actual SEV-SNP/TDX machine the check reports `not-enforced` rather than asserting hardware-rooted identity.
 - **No cross-vendor weights-level attestation exists.** `weights_digest` is only as strong as its signer; `weights_allowlist` is the policy hook for when a trustworthy measurement exists.
 - **Hosted enforcement is conditional.** Attestation is enforced only if the instance has trusted attestor keys and the action presents an attestation; otherwise the check reports `not-enforced`.
 - `agent_binding.min_measurement` is an equality pin on an opaque value, not an ordered minimum.
 
 ### Zero-knowledge compliance (9B)
 
-- **The SNARK/STARK backend is a seam.** No circuit, trusted setup or prover is implemented, deliberately.
-- The implemented path is the **attested-VM** equivalent: it gives the privacy property (commitments only) with a weaker trust model (the resource server trusts the prover VM's key).
+- **The SNARK/STARK backends are implemented.** A Groth16 proof-of-compliance (proving the commitment openings and a decision subset — plan membership + risk ≤ budget) ships alongside transparent, post-quantum STARK provers (Winterfell and Plonky3) and a RISC Zero zkVM port of the Policy-VM release gate. Extending the circuit to the *full* policy logic (rather than the decision subset) is ongoing.
+- An **attested-VM** equivalent is also available: it gives the privacy property (commitments only) with a weaker trust model (the resource server trusts the prover VM's key).
 - The hosted `/v1/pca/actions` does not wire the ZK hook; only resource servers running `verifyPCActn` with `hooks.zk` can enforce it.
 
 ### Optimistic path and bond settlement (9A)

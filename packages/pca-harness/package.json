@@ -1,0 +1,33 @@
+{
+  "name": "@atlasauth/pca-harness",
+  "version": "0.1.0",
+  "description": "PCA framework-evolution B1 reference prototype: an auditable orchestration harness (the attested TCB) that wraps an UNTRUSTED model/tool oracle and enforces the PCA invariants (plan-inclusion, taint, trust-budget) before any action becomes a signed PCActn.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

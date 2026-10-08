@@ -94,7 +94,7 @@ The sub-client starts at counter 0 (counters are per leaf holder) and the resour
 
 ## See it run
 
-The [playground](../../playground) walks the whole loop, including an out-of-plan rejection and trust-budget drain. See also the [playground](./playground.md).
+`pnpm --filter @atlasauth/pca example` walks the whole loop, including an out-of-plan rejection and trust-budget drain. See also the [playground](./playground.md).
 
 ## Optimistic claims, attestation and other extras
 

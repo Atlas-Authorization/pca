@@ -1,0 +1,34 @@
+{
+  "name": "@atlasauth/pca-ap2",
+  "version": "0.1.0",
+  "description": "AP2 (Agent Payments Protocol, FIDO) wire-compatibility for PCA: map the grant/budget to Intent/Cart/Payment mandate VDCs; PCA governs, x402 / Stripe Shared-Payment-Tokens settle.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-payments": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

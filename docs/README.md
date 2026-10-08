@@ -5,7 +5,7 @@ order: 0
 
 # Proof-Carrying Authority (PCA)
 
-> **Status: PREVIEW.** PCA is built and tested but not yet generally available. The hosted `/v1/pca/*` surface is gated off by default (`auth_config.pca.enabled = false`; every public route answers `404` while off). The libraries and conformance suite can be used today. See [Trust model](./security/trust-model.md) for what is and is not production-hardened.
+> **Status.** The libraries are published (TypeScript on npm under [`@atlasauth/pca*`](https://www.npmjs.com/org/atlasauth), with native verifiers in nine more languages) and the conformance suite is stable and shared across all of them. The hosted `/v1/pca/*` surface is gated off by default (`auth_config.pca.enabled = false`; every public route answers `404` while off), and PCA has not had an external security audit — see [Trust model](./security/trust-model.md) for what is and is not production-hardened before you rely on it as a sole control over high-value actions.
 
 Classic auth answers two questions. **authN**: who are you? **authZ**: what may you do? Both are enough for a human, because the human is the policy engine and their identity implies faithfulness. An autonomous agent is a stochastic, externally steerable process: what it will do is unknown when authority is granted and can be manipulated while it runs.
 
@@ -77,21 +77,23 @@ Read in this order the first time; every page links onward.
 
 | What | Where |
 |---|---|
+| Specification (protocol, deep dives, Appendix A verifier algorithm) | `docs/specs/agentic-auth-proof-carrying-authority.md` |
 | Primitives: grants, capabilities, plans, PCActn, policy VM, threshold, FROST, ledger, revocation, beacons, attestation, optimistic, zk | `@atlasauth/pca` |
 | Agent client | `@atlasauth/pca-agent` (`createAgent`) |
 | Resource-server verifier and guard | `@atlasauth/backend` (`verifyPCActn`, `requirePCA`) |
 | Hosted endpoints | `/v1/pca/*` (gated by `auth_config.pca.enabled`) |
-| Playground | See [Playground](./guides/playground.md) |
-| Conformance suite and reference verifiers (Go, Python, Rust, Java, Ruby, PHP, .NET) | [`conformance/`](../conformance), [`verifiers/`](../verifiers) |
+| Runnable end-to-end example | `pnpm --filter @atlasauth/pca example` |
+| Playground | `tools/pca-playground` |
+| Conformance suite and native verifiers (Go, Python, Rust, Java, Ruby, PHP, .NET, Swift, Kotlin) | `packages/pca/conformance`, `sdks/*-pca` |
 
 ## Adoption ladder
 
 PCA degrades to today's stack, so each rung is independently adoptable.
 
-| Rung | Adds | Status |
+| Rung | Adds | Status in this codebase |
 |---|---|---|
-| 0 | OAuth 2.1 + PKCE + PoP (a PCActn with only scope and a PoP signature is an OAuth PoP request) | available today |
+| 0 | OAuth 2.1 + PKCE + PoP (a PCActn with only scope and a PoP signature is an OAuth PoP request) | existing Atlas OAuth surface |
 | 1 | Plan commitment, Policy VM cosign, transparency ledger, risk functional, declarative taint input | built |
 | 2 | Real threshold signatures (multi-signature default, FROST optional), revocation proofs, dead-man beacons | built (hosted uses multi-signature and revocation proofs; beacons are library-level, hosted kill switch is `freeze`) |
-| 3 | Attestation (software mode hosted; hardware seam), optimistic fast-path with fraud proofs | built; hardware verifier is a seam |
-| 4 | Weights-level attestation, zero-knowledge compliance | attested-VM reference built; SNARK backend is a seam |
+| 3 | Attestation (software mode hosted; TEE-rooted agent identity), optimistic fast-path with fraud proofs | built; the SEV-SNP/TDX attestation verifier is implemented and exercised on real silicon (a live attestation needs an actual confidential-VM) |
+| 4 | Weights-level attestation, zero-knowledge compliance | built; a Groth16 proof-of-compliance plus transparent STARK (Winterfell / Plonky3) and RISC Zero zkVM backends — extending the circuit to the full policy logic is ongoing |

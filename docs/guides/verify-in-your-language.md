@@ -5,7 +5,7 @@ order: 13
 
 # Verify in your language
 
-PCA is a protocol, not a library. Any language that can do SHA-256, Ed25519 and canonical JSON can verify a PCActn. The **conformance suite** in [`conformance/`](../../conformance) gives independent implementations golden vectors to self-certify against, the way OIDC has conformance tests.
+PCA is a protocol, not a library. Any language that can do SHA-256, Ed25519 and canonical JSON can verify a PCActn. The **conformance suite** in `packages/pca/conformance` gives independent implementations golden vectors to self-certify against, the way OIDC has conformance tests.
 
 ## What the suite covers
 
@@ -17,6 +17,12 @@ Files:
 |---|---|
 | `keys.json` | Fixed test keys `{ principal, agent, subagent, rogue: { seed, public } }`, base64url without padding. `seed = sha256("atlas-pca-conformance/<label>")` is the Ed25519 private seed. |
 | `vectors.json` | `{ format, sig_domain, cap_domain, primitives, vectors }` |
+
+Regenerate deterministically:
+
+```
+pnpm --filter @atlasauth/pca build && node packages/pca/scripts/gen-conformance.mjs
+```
 
 ### `primitives`
 
@@ -54,16 +60,18 @@ Each passes every vector. They are intentionally small and take the grant and PC
 
 | Language | Location | Run (from the repo) | Entry point |
 |---|---|---|---|
-| TypeScript | `/pca` (npm) | `npm test` in the package source | `verifyPCActnCore` |
-| Go | `verifiers/go-pca` | `cd verifiers/go-pca && go test ./...` | `VerifyPCActnCore(pcactn, grant)` |
-| Python | `verifiers/python-pca` | `cd verifiers/python-pca && python3 -m unittest test_conformance` | `verify_pcactn_core(p, grant)` |
-| Rust | `verifiers/rust-pca` | `cd verifiers/rust-pca && cargo test` | `verify_pcactn_core(&pcactn, &grant)` |
-| Java | `verifiers/java-pca` | run `ConformanceTest` from `verifiers/java-pca` (JDK only, no JUnit) | `Pca.verifyPcactnCore(pcactn, grant)` |
-| Ruby | `verifiers/ruby-pca` | `ruby verifiers/ruby-pca/conformance.rb` | `AtlasPca` module |
-| PHP | `verifiers/php-pca` | `php verifiers/php-pca/conformance.php` | `Atlas\Pca\Pca` |
-| .NET | `verifiers/dotnet-pca` | `dotnet run --project verifiers/dotnet-pca/Conformance` | `AtlasPca.Pca` |
+| TypeScript | `packages/pca` | `pnpm --filter @atlasauth/pca test` | `verifyPCActnCore` |
+| Go | `sdks/go-pca` | `cd sdks/go-pca && go test ./...` | `VerifyPCActnCore(pcactn, grant)` |
+| Python | `sdks/python-pca` | `cd sdks/python-pca && python3 -m unittest test_conformance` | `verify_pcactn_core(p, grant)` |
+| Rust | `sdks/rust-pca` | `cd sdks/rust-pca && cargo test` | `verify_pcactn_core(&pcactn, &grant)` |
+| Java | `sdks/java-pca` | run `ConformanceTest` from `sdks/java-pca` (JDK only, no JUnit) | `Pca.verifyPcactnCore(pcactn, grant)` |
+| Ruby | `sdks/ruby-pca` | `ruby sdks/ruby-pca/conformance.rb` | `AtlasPca` module |
+| PHP | `sdks/php-pca` | `php sdks/php-pca/conformance.php` | `Atlas\Pca\Pca` |
+| .NET | `sdks/dotnet-pca` | `dotnet run --project sdks/dotnet-pca/Conformance` | `AtlasPca.Pca` |
+| Swift | `sdks/swift-pca` | `cd sdks/swift-pca && swift test` | `AtlasPCAVerify` (+ a step-up client) |
+| Kotlin | `sdks/kotlin-pca` | `cd sdks/kotlin-pca && ./gradlew test` | `net.atlasauth.pca.verifier` (+ a step-up client) |
 
-Go, Python, Rust and Java are conformance-exact and form the primary set; Ruby, PHP and .NET are further ports from the same vectors. The Go, Rust and Java verifiers share the same exported primitives: `canonicalize`, `hash_canonical`, `merkle_root`, `verify_inclusion`, `params_digest`, `cap_hash`, `verify_chain`, `threshold_message` and the core verifier. Python needs no dependencies (an optional `cryptography` extra gives native Ed25519; a pure-Python RFC 8032 verifier is the fallback). Ruby needs OpenSSL 3 for raw Ed25519.
+Go, Python, Rust and Java are conformance-exact and form the primary set; Ruby, PHP, .NET, Swift and Kotlin are further ports from the same vectors. The Go, Rust and Java verifiers share the same exported primitives: `canonicalize`, `hash_canonical`, `merkle_root`, `verify_inclusion`, `params_digest`, `cap_hash`, `verify_chain`, `threshold_message` and the core verifier. Python needs no dependencies (an optional `cryptography` extra gives native Ed25519; a pure-Python RFC 8032 verifier is the fallback). Ruby needs OpenSSL 3 for raw Ed25519.
 
 ## Writing your own verifier
 

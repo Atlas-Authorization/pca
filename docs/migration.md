@@ -66,4 +66,4 @@ PCA degrades gracefully, so each rung is independently adoptable and a resource 
 
 OIDC and OAuth clients that do not understand PCA still work against the Rung 0 surface; PCA-aware verifiers get authF. A resource server can start with only the core checks and add threshold, revocation, attestation and ZK hooks as they become available, checking `verdict.checks` to see exactly which clauses were `pass`, `fail` or `not-enforced`.
 
-See also: [overview](./README.md), [agent quickstart](./guides/agent-quickstart.md), [resource-server quickstart](./guides/resource-server-quickstart.md), [threat model](./security/threat-model.md), and the full documentation at https://atlasauth.net/pca.
+See also: [overview](./README.md), [agent quickstart](./guides/agent-quickstart.md), [resource-server quickstart](./guides/resource-server-quickstart.md), [threat model](./security/threat-model.md), and the spec at `docs/specs/agentic-auth-proof-carrying-authority.md`.
