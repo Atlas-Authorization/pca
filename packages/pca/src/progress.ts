@@ -27,8 +27,19 @@
  * descent can never buy an action a guard forbids, and exploration is capped by the budget, which
  * together bound how far an agent can game the potential (anti-Goodhart; see design note).
  */
-import { b64u, canonicalBytes, canonicalize, hashCanonical } from './hash';
-import { sign, verifyB64u } from './keys';
+import { randomBytes } from '@noble/hashes/utils';
+import { b64u, canonicalBytes, canonicalize, hashCanonical, utf8 } from './hash';
+import { publicKeyOf, sign, verifyB64u } from './keys';
+import {
+  type MlDsaKeyPair,
+  type SigAlg,
+  bindSuiteFields,
+  encodeMlDsaPublicKey,
+  resolveSigAlg,
+  signSuiteArtifact,
+  verifyWithSuite,
+} from './pq';
+import type { LedgerHead, TransparencyLedger } from './ledger';
 
 /** Wire/commitment format version of goals, steps and signed proofs. */
 export const PROGRESS_VERSION = 2;
@@ -344,6 +355,69 @@ export function progressStepDigest(step: ProgressStep): string {
   return step.digest;
 }
 
+// ======================================================================================
+// A2g — anchoring the trajectory head into the transparency ledger (external rollback detection)
+// ======================================================================================
+//
+// `trajectoryHead` produces a head "to publish / anchor", but computing it is not publishing it: a prover
+// could silently ROLL BACK its trajectory (drop steps to hide spent exploration, or replace the tail) and no
+// one outside would know. Appending each successive head as a salted commitment to a `TransparencyLedger`
+// makes rollback EXTERNALLY DETECTABLE: the log is append-only, witnessable and STH-signable, so once a
+// monitor pins a signed tree-head, a later log that omits an anchored head fails the RFC 9162 consistency
+// proof (and an equivocating operator must produce a signed, attributable contradiction). The anchor is
+// verifiable offline with {@link verifyTrajectoryAnchor} + the ledger's inclusion/consistency machinery.
+
+/** Domain-separated tag for a trajectory-head anchor leaf (distinct from every other commitment domain). */
+export const TRAJECTORY_ANCHOR_DOMAIN = 'atlas-pca/trajectory-anchor/v1';
+
+/** The salted commitment of a trajectory head — the opaque leaf appended to the transparency ledger. */
+export function trajectoryAnchorCommit(salt: string, head: string): string {
+  if (!isStr(salt) || salt.length === 0 || !isStr(head) || head.length === 0) {
+    throw new TypeError('trajectoryAnchorCommit: salt and head must be non-empty strings');
+  }
+  return hashCanonical({ t: TRAJECTORY_ANCHOR_DOMAIN, salt, head });
+}
+
+/** True iff `salt`+`head` reproduce the anchored `commit`. Never throws (part of external audit). */
+export function verifyTrajectoryAnchor(commit: string, salt: string, head: string): boolean {
+  try {
+    return trajectoryAnchorCommit(salt, head) === commit;
+  } catch {
+    return false;
+  }
+}
+
+export interface TrajectoryAnchor {
+  /** The anchored trajectory head (== {@link trajectoryHead} of the steps). */
+  head: string;
+  /** The salt the caller MUST retain to later open / prove inclusion of this anchor. */
+  salt: string;
+  /** The salted commitment appended (== `trajectoryAnchorCommit(salt, head)`). */
+  commit: string;
+  /** 0-based index of the leaf in the transparency ledger. */
+  index: number;
+  /** The ledger head (size, root) AFTER the anchor — sign it with `signTreeHead` to make rollback detectable. */
+  ledgerHead: LedgerHead;
+}
+
+/**
+ * Anchor the current trajectory head into `ledger` as a salted commitment. The salt defaults to 16 random
+ * bytes; pass `opts.salt` for deterministic output. The caller then signs `ledgerHead` with the ledger's
+ * `signTreeHead` (and optionally gathers witness cosignatures) and pins it; a monitor that demands a
+ * consistency proof on every poll will detect any later rollback that drops this head.
+ */
+export function anchorTrajectoryHead(
+  ledger: TransparencyLedger,
+  steps: readonly ProgressStep[],
+  opts: { salt?: string } = {},
+): TrajectoryAnchor {
+  const head = trajectoryHead(steps);
+  const salt = opts.salt ?? b64u(randomBytes(16));
+  const commit = trajectoryAnchorCommit(salt, head);
+  const { index } = ledger.appendCommitment(commit);
+  return { head, salt, commit, index, ledgerHead: ledger.head() };
+}
+
 export type StepDenial =
   | 'goal-mismatch'
   | 'unknown-potential'
@@ -483,6 +557,193 @@ export class InMemoryStateSource implements StateSource {
       evidence: { kind: 'in-memory', n: this.n++, prior: req.prior_digest, action: req.action_digest },
     };
   }
+}
+
+// ======================================================================================
+// A2k — a production-grade, ATTESTED StateSource (+ its verifier hook)
+// ======================================================================================
+//
+// `InMemoryStateSource` is a test double: its "evidence" is unsigned, so it establishes nothing about the
+// observed state's honesty. A production source must observe the REAL post-action state and ATTEST to it. The
+// `AttestedStateSource` below wraps a real-world observer (e.g. a resource-server receipt / attested executor)
+// and SIGNS, with the existing suite/signing machinery, the statement "`state_digest` is the state after
+// `action_digest` applied to `prior_digest`, for this goal, observed by me". The step commits to that signed
+// attestation through its `evidence_digest`, and the verifier hook below re-checks it against the
+// `trustedStateSources` allowlist: the source id must be trusted, the step's `evidence_digest` must reproduce
+// the attestation, and the attestation's signature must verify under the source's trusted key. Nothing is
+// faked — a real signer is required, exactly like the ledger's guardian/witness signatures.
+
+/** Domain-separated tag for a signed state attestation (distinct from every other signing domain). */
+export const STATE_ATTESTATION_DOMAIN = 'atlas-pca/progress-state-attestation/v1\0';
+
+/** A source's signed attestation that `state_digest` is the post-action state for this transition. Suite-agile. */
+export interface StateAttestation {
+  /** The attesting source's id (recorded as the step's `state_source`). */
+  source: string;
+  /** The goal commitment the observation was made under. */
+  goal_commitment: string;
+  /** The action whose effect this attests to (== the step's `action_digest`). */
+  action_digest: string;
+  /** Digest of the state BEFORE the action (== the step's `before_digest`). */
+  prior_digest: string;
+  /** Digest of the state AFTER the action (== the step's `after_digest`). */
+  state_digest: string;
+  /** b64u signature over the domain-separated statement (Ed25519 for ed25519/hybrid, PQ for pure). */
+  sig: string;
+  /** Signature suite (crypto-agility). Absent == ed25519 (byte-identical). */
+  alg?: SigAlg;
+  /** b64u PQ public key of the source — ml-dsa-65 / hybrid (bound into the signed statement). */
+  pq_pk?: string;
+  /** b64u PQ signature — hybrid only. */
+  pq_sig?: string;
+}
+
+function stateAttestationMessage(
+  a: Pick<StateAttestation, 'source' | 'goal_commitment' | 'action_digest' | 'prior_digest' | 'state_digest'>,
+  alg?: SigAlg,
+  pqPk?: string,
+): Uint8Array {
+  const body = canonicalBytes(
+    bindSuiteFields(
+      {
+        source: a.source,
+        goal_commitment: a.goal_commitment,
+        action_digest: a.action_digest,
+        prior_digest: a.prior_digest,
+        state_digest: a.state_digest,
+      },
+      alg,
+      pqPk,
+    ),
+  );
+  const p = utf8(STATE_ATTESTATION_DOMAIN);
+  const m = new Uint8Array(p.length + body.length);
+  m.set(p);
+  m.set(body, p.length);
+  return m;
+}
+
+/** Verify a state attestation's signature under a TRUSTED source public key, bound to its exact statement. Never throws. */
+export function verifyStateAttestation(att: StateAttestation, trustedPublicKey: string): boolean {
+  try {
+    if (!att || typeof att.sig !== 'string' || typeof att.source !== 'string') return false;
+    if (typeof trustedPublicKey !== 'string' || trustedPublicKey.length === 0) return false;
+    if (resolveSigAlg(att.alg) === null) return false;
+    return verifyWithSuite(
+      att.alg,
+      { edPub: trustedPublicKey, mlDsaPub: att.pq_pk },
+      stateAttestationMessage(att, att.alg, att.pq_pk),
+      { sig: att.sig, pq_sig: att.pq_sig },
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** What the caller supplies when constructing an {@link AttestedStateSource}. */
+export interface AttestedStateSourceOpts {
+  /** The source id (recorded as the step's `state_source`; must be in the verifier's `trustedStateSources`). */
+  id: string;
+  /** The source's Ed25519 secret key (signs each attestation). Its public key is {@link AttestedStateSource.publicKey}. */
+  signerSecret: Uint8Array;
+  /** Observe the REAL post-action world state for a request (e.g. read the RS receipt's state). May be async. */
+  observeState: (req: StateObservationRequest) => unknown | Promise<unknown>;
+  /** Signature suite (crypto-agility). Default ed25519. For ml-dsa-65/hybrid pass the source's ML-DSA key pair. */
+  suite?: { alg?: SigAlg; mlDsa?: MlDsaKeyPair };
+}
+
+/**
+ * A StateSource whose observations carry a VERIFIABLE SIGNED attestation. It wraps a real-world observer and,
+ * for each observation, signs the {source, goal, action, prior→state} statement with the suite/signing
+ * machinery. Pair it with {@link attestedStateVerifier} (and `trustedStateSources: [source.id]`) in
+ * `verifyProgressStep`/`verifyTrajectory` to enforce that every step's post-state was attested by a trusted
+ * source. The emitted attestations are exposed on {@link AttestedStateSource.attestations} for the verifier.
+ */
+export class AttestedStateSource implements StateSource {
+  readonly id: string;
+  /** The source's b64u Ed25519 public key — register it in the verifier's trusted-key map. */
+  readonly publicKey: string;
+  private readonly secret: Uint8Array;
+  private readonly observeState: (req: StateObservationRequest) => unknown | Promise<unknown>;
+  private readonly suite?: { alg?: SigAlg; mlDsa?: MlDsaKeyPair };
+  private readonly pqPk?: string;
+  private readonly _attestations: StateAttestation[] = [];
+
+  constructor(opts: AttestedStateSourceOpts) {
+    if (typeof opts.id !== 'string' || opts.id.length === 0) throw new Error('AttestedStateSource: id is required');
+    if (!(opts.signerSecret instanceof Uint8Array)) throw new Error('AttestedStateSource: signerSecret must be a Uint8Array');
+    if (typeof opts.observeState !== 'function') throw new Error('AttestedStateSource: observeState must be a function');
+    if (resolveSigAlg(opts.suite?.alg) === null) throw new Error(`AttestedStateSource: unknown signature alg '${String(opts.suite?.alg)}'`);
+    this.id = opts.id;
+    this.secret = opts.signerSecret;
+    this.publicKey = b64u(publicKeyOf(opts.signerSecret));
+    this.observeState = opts.observeState;
+    this.suite = opts.suite;
+    this.pqPk = opts.suite?.mlDsa ? encodeMlDsaPublicKey(opts.suite.mlDsa.publicKey) : undefined;
+  }
+
+  /** The signed attestations emitted so far (hand these to {@link attestedStateVerifier}). */
+  get attestations(): readonly StateAttestation[] {
+    return [...this._attestations];
+  }
+
+  async observe(req: StateObservationRequest): Promise<StateObservation> {
+    const state = snapshot(await this.observeState(req));
+    const state_digest = stateDigest(state);
+    const stmt = {
+      source: this.id,
+      goal_commitment: req.goal_commitment,
+      action_digest: req.action_digest,
+      prior_digest: req.prior_digest,
+      state_digest,
+    };
+    const fields = signSuiteArtifact(this.suite?.alg, { edSecret: this.secret, mlDsa: this.suite?.mlDsa }, stateAttestationMessage(stmt, this.suite?.alg, this.pqPk));
+    const attestation: StateAttestation = { ...stmt, ...fields };
+    this._attestations.push(attestation);
+    return { state, state_digest, source: this.id, evidence: attestation };
+  }
+}
+
+/** Trusted-key map + the attestations to check steps against, for {@link attestedStateVerifier}. */
+export interface AttestedStateVerifierOpts {
+  /** source id -> trusted b64u Ed25519 public key. A step whose `state_source` is absent here fails closed. */
+  trustedKeys: Readonly<Record<string, string>>;
+  /** The signed attestations (e.g. collected from one or more {@link AttestedStateSource}s) to match steps against. */
+  attestations: readonly StateAttestation[];
+}
+
+const attestationKey = (action: string, prior: string, state: string): string => `${action}\u0000${prior}\u0000${state}`;
+
+/**
+ * Build a {@link StateAttestationVerifier} for `verifyProgressStep`/`verifyTrajectory`. For each step it:
+ *   1. looks up the trusted key for `step.state_source` (fail closed if the source is not trusted);
+ *   2. finds the attestation that matches the step's {action, before→after} digests (fail closed if none);
+ *   3. recomputes the step's `evidence_digest` from that attestation and requires an exact match (fail closed
+ *      on any tamper — the step must commit to this very attestation);
+ *   4. verifies the attestation's signature under the trusted key (fail closed on a forged/mis-bound signature).
+ * Combine with `trustedStateSources: Object.keys(trustedKeys)` so a self-reported ('' ) or unknown source is
+ * rejected before this hook even runs.
+ */
+export function attestedStateVerifier(opts: AttestedStateVerifierOpts): StateAttestationVerifier {
+  const byKey = new Map<string, StateAttestation>();
+  for (const att of opts.attestations ?? []) {
+    if (att && typeof att.action_digest === 'string' && typeof att.prior_digest === 'string' && typeof att.state_digest === 'string') {
+      byKey.set(attestationKey(att.action_digest, att.prior_digest, att.state_digest), att);
+    }
+  }
+  return (step: ProgressStep): boolean => {
+    try {
+      const pub = opts.trustedKeys?.[step.state_source];
+      if (typeof pub !== 'string' || pub.length === 0) return false; // source not trusted
+      const att = byKey.get(attestationKey(step.action_digest, step.before_digest, step.after_digest));
+      if (!att || att.source !== step.state_source) return false; // no attestation for this transition
+      // The step must commit to exactly this attestation (same canonical form the tracker hashed).
+      if (hashCanonical({ t: 'pca-evidence', e: att }) !== step.evidence_digest) return false;
+      return verifyStateAttestation(att, pub);
+    } catch {
+      return false;
+    }
+  };
 }
 
 // ======================================================================================

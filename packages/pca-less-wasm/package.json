@@ -1,0 +1,33 @@
+{
+  "name": "@atlasauth/pca-less-wasm",
+  "version": "0.0.0-experimental",
+  "description": "EXPERIMENTAL code-based (syndrome-decoding / code-equivalence) signature backend for @atlasauth/pca: the official LESS reference implementation (NIST additional-signatures candidate, round 1/2) compiled to wasm32-wasi. Adds a genuine third hardness family (beyond lattice + hash). NOT standardized, NOT production-audited.",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "BUILD_NOTES.md"
+  ],
+  "scripts": {
+    "build:wasm": "echo 'wasm is cross-compiled off-box by ~/.pca-vm-state/lessbuild.sh on a Linux VM (needs wasi-sdk-25). Drop the result into wasm/less_cat1.wasm.' && exit 1",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

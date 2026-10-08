@@ -1,4 +1,5 @@
 import { sha256 as nobleSha256 } from '@noble/hashes/sha256';
+import { sha384 as nobleSha384 } from '@noble/hashes/sha512';
 import { base64urlnopad } from '@scure/base';
 
 const enc = new TextEncoder();
@@ -10,6 +11,45 @@ export function utf8(s: string): Uint8Array {
 
 export function sha256(bytes: Uint8Array): Uint8Array {
   return nobleSha256(bytes);
+}
+
+export function sha384(bytes: Uint8Array): Uint8Array {
+  return nobleSha384(bytes);
+}
+
+// ---- hash-suite agility (P4) ------------------------------------------------------------------
+//
+// HONEST RATIONALE — margin, NOT a fix. SHA-256 (the DEFAULT, and the only suite the whole existing
+// corpus uses) is ALREADY post-quantum adequate for every digest in this protocol: Grover's algorithm
+// reduces a 256-bit PREIMAGE search to ~2^128 quantum work, and the best known quantum COLLISION attack
+// (Brassard-Hoyer-Tapp) leaves ~2^128 work — both far outside any foreseeable adversary. SHA-384 is
+// offered here purely as an OPTIONAL, stronger-margin variant (a ~2^192 preimage / ~2^192 collision
+// floor under the same quantum models) for deployments that want extra headroom or a longer-dated
+// commitment. It is cryptographic AGILITY and defense-in-depth margin — it is NOT a response to any
+// vulnerability in SHA-256, which remains the recommended default. Choosing it has real costs (larger
+// 48-byte digests; cross-SDK verifiers must opt in), so it is never selected implicitly.
+//
+// NON-BREAKING by construction: `'sha256'` is the DEFAULT everywhere the suite is threaded, and the
+// ABSENCE of any `hash_suite` field MUST be read as `'sha256'`. Every pre-existing digest, Merkle root,
+// inclusion proof and signed body is therefore BYTE-IDENTICAL to before this change.
+
+/** Hash-suite selector for canonical digests and the Merkle tree. See the agility note above. */
+export type HashSuite = 'sha256' | 'sha384';
+
+/** The DEFAULT suite. Absence of an explicit `hash_suite` MUST be interpreted as this (back-compat). */
+export const DEFAULT_HASH_SUITE: HashSuite = 'sha256';
+
+/** Digest byte length per suite (SHA-256 => 32, SHA-384 => 48). */
+export const HASH_LEN: Record<HashSuite, number> = { sha256: 32, sha384: 48 };
+
+/** Narrowing guard: true iff `s` is a known {@link HashSuite}. Anything else MUST fail closed at the caller. */
+export function isHashSuite(s: unknown): s is HashSuite {
+  return s === 'sha256' || s === 'sha384';
+}
+
+/** Dispatch a raw-byte hash over the selected suite (DEFAULT sha256 => byte-identical to a bare {@link sha256}). */
+export function hashWithSuite(bytes: Uint8Array, suite: HashSuite = DEFAULT_HASH_SUITE): Uint8Array {
+  return suite === 'sha384' ? sha384(bytes) : sha256(bytes);
 }
 
 export function b64u(bytes: Uint8Array): string {
@@ -197,9 +237,13 @@ export function canonicalBytesStrict(value: unknown): Uint8Array {
   return utf8(canonicalizeStrict(value));
 }
 
-/** base64url(sha256(strictCanonical(value))). */
-export function hashCanonical(value: unknown): string {
-  return b64u(sha256(canonicalBytes(value)));
+/**
+ * base64url(H(strictCanonical(value))) under `suite`. The DEFAULT `'sha256'` is BYTE-IDENTICAL to the
+ * original one-argument form, so every existing protocol digest is unchanged; `'sha384'` is the optional
+ * stronger-margin variant (see the hash-suite agility note above — margin, not a fix).
+ */
+export function hashCanonical(value: unknown, suite: HashSuite = DEFAULT_HASH_SUITE): string {
+  return b64u(hashWithSuite(canonicalBytes(value), suite));
 }
 
 // LENIENT variants for SERVER-ONLY digests that are never recomputed by the

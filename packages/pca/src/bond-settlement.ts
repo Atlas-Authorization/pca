@@ -23,6 +23,7 @@
 // Bond settlement records + fraud-verdict evidence are server-only (guardian-signed,
 // carry amount/claimed_r floats), never recomputed by the language verifiers — lenient
 // canonical, not the strict protocol form.
+import { randomBytes } from '@noble/hashes/utils';
 import { b64u, canonicalBytesLenient as canonicalBytes, hashCanonicalLenient as hashCanonical, utf8 } from './hash';
 import { publicKeyOf } from './keys';
 import {
@@ -36,6 +37,8 @@ import {
 } from './pq';
 import type { Capability } from './capability';
 import type { DecideInput } from './policy-vm';
+import type { TransparencyLedger } from './ledger';
+import { type InsurancePricing, type PricingOptions, type Reputation, priceCoverage } from './reputation';
 import {
   type BondedClaim,
   type DisputeClaim,
@@ -176,6 +179,14 @@ export function computeSlashSplit(
 
 /** A signed, non-repudiable record of one bond transition (open / release / slash). */
 export interface SettlementRecord {
+  /**
+   * Which guardian/settlement key epoch signed this record — like the transparency ledger's
+   * {@link SignedTreeHead.guardian_epoch}, but (unlike the STH's unsigned annotation) BOUND INTO the signed
+   * body: it rides through {@link settlementMessage} and is covered by `sig`/`pq_sig`, so the epoch a record
+   * names is non-repudiable and a verifier can reject a record attributed to a rotated-out key. Absent when
+   * the ledger was not configured with an epoch (byte-identical to pre-epoch records).
+   */
+  guardian_epoch?: number;
   /** The bond/claim handle this record settles (== the optimistic claim's `bond_ref`). */
   claimId: string;
   action: SettlementAction;
@@ -287,36 +298,133 @@ export function verifySettlement(record: SettlementRecord, guardianPublicKey: st
   }
 }
 
+// ---- A3d: settlement records are anchored into the transparency ledger (externally auditable) ----------
+//
+// WHY. Settlements are the money moves of the fast-path, but until now they lived only in the settlement
+// store: a guardian could sign a slash and never expose it, and nothing tied the stream of settlements to the
+// tamper-evident, witnessed log. Anchoring each record as a salted commitment in the `TransparencyLedger`
+// makes settlement EXTERNALLY AUDITABLE — anyone with the record, its salt and an inclusion proof against a
+// signed/witnessed STH can confirm it is in the append-only log, and a guardian can no longer quietly drop or
+// rewrite a settlement without a signed, attributable contradiction (the STH + consistency-proof machinery).
+
+/** Domain-separated tag for the settlement transparency leaf (distinct from every other commitment domain). */
+export const SETTLEMENT_LEAF_DOMAIN = 'atlas-pca/settlement-leaf/v1';
+
+/**
+ * Canonical digest of a (signed) settlement record — commits to the WHOLE record, signature included, so the
+ * anchored leaf binds the exact guardian-signed artifact (not just its body).
+ */
+export function settlementRecordDigest(record: SettlementRecord): string {
+  return hashCanonical({ t: SETTLEMENT_LEAF_DOMAIN, record });
+}
+
+/** The salted commitment of a settlement record — the opaque leaf appended to the transparency ledger. */
+export function settlementCommit(salt: string, record: SettlementRecord): string {
+  if (typeof salt !== 'string' || salt.length === 0) throw new Error('settlementCommit: salt must be a non-empty string');
+  return hashCanonical({ salt, settlement_digest: settlementRecordDigest(record) });
+}
+
+/** True iff `salt`+`record` reproduce the anchored `commit`. Never throws (part of external audit). */
+export function verifySettlementCommit(commit: string, salt: string, record: SettlementRecord): boolean {
+  try {
+    return settlementCommit(salt, record) === commit;
+  } catch {
+    return false;
+  }
+}
+
+export interface SettlementAnchor {
+  /** 0-based index of the leaf in the transparency ledger. */
+  index: number;
+  /** The salted commitment that was appended (== `settlementCommit(salt, record)`). */
+  commit: string;
+  /** The salt the caller MUST retain to later prove inclusion / open the leaf. */
+  salt: string;
+}
+
+/**
+ * Append a settlement record into a {@link TransparencyLedger} as a salted commitment, returning the leaf
+ * index, commit and salt. The salt defaults to 16 random bytes; pass `opts.salt` for deterministic output.
+ * The caller retains `{record, salt}` as the (off-log) opening. VERIFIABLE PATH: a third party later confirms
+ * the settlement with `verifySettlementCommit(commit, salt, record)` + `ledger.verifyInclusion(root, proof,
+ * commit)` against a witnessed STH root, plus `verifySettlement(record, guardianPublicKey)` for the money move.
+ */
+export function appendSettlement(ledger: TransparencyLedger, record: SettlementRecord, opts: { salt?: string } = {}): SettlementAnchor {
+  const salt = opts.salt ?? b64u(randomBytes(16));
+  const commit = settlementCommit(salt, record);
+  const { index } = ledger.appendCommitment(commit);
+  return { index, commit, salt };
+}
+
 // ---- bond sizing + collateral (audit finding 1 / P3-1) ------------------------------------
+
+// ---- A3c: non-linear (convex) bond curve --------------------------------------------------
+//
+// Linear sizing makes a huge fraudulent claim only proportionally more expensive to stake; a CONVEX curve
+// makes it disproportionately expensive, so the marginal cost of a bigger lie grows with its size. `linear`
+// is the DEFAULT (back-compat: `bondAmount` is byte-identical to before when `curve` is absent). The two
+// optional shapes are both MONOTONE NON-DECREASING and CONVEX in exposure:
+//   - `power`: bond = max(floor, k · exposure^gamma),  gamma >= 1 (gamma = 1 ⇒ exactly the linear curve).
+//   - `piecewise`: a tiered marginal schedule with non-decreasing marginal rates (each tier at least as
+//     steep as the previous), which is convex and lets a deployment cap how steep the top tier gets.
+
+export type BondCurve =
+  | { kind: 'linear' }
+  | { kind: 'power'; gamma: number }
+  | { kind: 'piecewise'; tiers: readonly { upTo: number; marginalK: number }[] };
 
 /** Bond sizing + per-depositor aggregate caps. Configurable; there is no hardcoded constant bond. */
 export interface BondPolicy {
   /** Minimum bond regardless of exposure. */
   floor: number;
-  /** Multiplier on the claim's exposure. */
+  /** Multiplier on the claim's exposure (the base/marginal rate the curve scales). */
   k: number;
   /** Max simultaneously-open bonds per depositor. */
   maxOpenClaims: number;
   /** Max aggregate open bonded amount per depositor. */
   maxOpenAmount: number;
+  /** Optional non-linear (convex) sizing. Absent ⇒ `linear` (exactly `max(floor, k·exposure)`). */
+  curve?: BondCurve;
 }
 
 export const DEFAULT_BOND_POLICY: BondPolicy = { floor: 1, k: 1, maxOpenClaims: 100, maxOpenAmount: Number.POSITIVE_INFINITY };
 
+function curveComponent(curve: BondCurve | undefined, k: number, e: number): number {
+  if (!curve || curve.kind === 'linear') return k * e;
+  if (curve.kind === 'power') {
+    if (!(Number.isFinite(curve.gamma) && curve.gamma >= 1)) throw new Error('bondAmount: power curve requires finite gamma >= 1');
+    return k * Math.pow(e, curve.gamma);
+  }
+  // piecewise: integrate a non-decreasing marginal schedule (convex), scaled by k.
+  if (!Array.isArray(curve.tiers) || curve.tiers.length === 0) throw new Error('bondAmount: piecewise curve requires at least one tier');
+  let acc = 0;
+  let prevUpTo = 0;
+  let prevMarginal = 0;
+  for (const tier of curve.tiers) {
+    if (!(Number.isFinite(tier.upTo) && tier.upTo > prevUpTo) && tier.upTo !== Number.POSITIVE_INFINITY) {
+      throw new Error('bondAmount: piecewise tier `upTo` must be strictly increasing');
+    }
+    if (!(Number.isFinite(tier.marginalK) && tier.marginalK >= 0)) throw new Error('bondAmount: piecewise `marginalK` must be a finite number >= 0');
+    if (tier.marginalK < prevMarginal) throw new Error('bondAmount: piecewise marginal rates must be non-decreasing (convex)');
+    const width = Math.min(e, tier.upTo) - prevUpTo;
+    if (width > 0) acc += width * tier.marginalK;
+    prevUpTo = tier.upTo;
+    prevMarginal = tier.marginalK;
+    if (e <= tier.upTo) break;
+  }
+  if (e > prevUpTo) acc += (e - prevUpTo) * prevMarginal; // beyond the last tier: extend its marginal rate
+  return k * acc;
+}
+
 /**
- * `bondAmount(policy, exposure) = max(floor, k * exposure)` — a LINEAR bond in exposure (plus the Phase-2
- * blast-radius floor applied upstream at open time).
- *
- * SUPERLINEAR BOND NOTE (where a bond curve would plug in — NOT changed in this task): a convex curve
- * (e.g. `floor + k * exposure^gamma` with `gamma > 1`, or a tiered schedule) would make a large fraudulent
- * claim disproportionately expensive and compound the challenger/victim economics above. It plugs in HERE,
- * behind `BondPolicy` (add the curve params to the policy and apply them in this one function); nothing else
- * in the ledger assumes linearity. Deliberately deferred: Phase 2 already added the blast-radius floor, and
- * `openBond` sizing is out of scope for the economic-split work.
+ * `bondAmount(policy, exposure)` — `max(floor, curve(k, exposure))`. With no `policy.curve` (the default) the
+ * curve is LINEAR and this is exactly `max(floor, k·exposure)` as before. A `power`/`piecewise` curve is
+ * convex and monotone non-decreasing, so a bigger exposure always stakes at least as much and the marginal
+ * cost of a larger claim grows. Non-finite / non-positive exposure ⇒ `floor`.
  */
 export function bondAmount(policy: BondPolicy, exposure: number): number {
   const e = Number.isFinite(exposure) && exposure > 0 ? exposure : 0;
-  return Math.max(policy.floor, policy.k * e);
+  return Math.max(policy.floor, curveComponent(policy.curve, policy.k, e));
 }
 
 /**
@@ -365,6 +473,12 @@ export interface BondLedgerOpts {
   /** The guardian/settlement secret key that signs every record. */
   guardianSecret: Uint8Array;
   /**
+   * Optional guardian key epoch stamped into (and SIGNED into) every record this ledger produces, so a
+   * record is attributable to the exact key generation that signed it (see {@link SettlementRecord.guardian_epoch}).
+   * Must be a non-negative safe integer. Omit to produce pre-epoch records (byte-identical to before).
+   */
+  guardianEpoch?: number;
+  /**
    * Signature suite for every record this ledger signs (crypto-agility). Default ed25519 (byte-identical
    * to pre-agility). For ml-dsa-65/hybrid pass the guardian/settlement ML-DSA-65 key pair.
    */
@@ -391,6 +505,7 @@ export class BondLedger {
   /** The guardian/settlement public key (b64u) — hand this to verifiers of the signed records. */
   readonly guardianPublicKey: string;
   private readonly guardianSecret: Uint8Array;
+  private readonly guardianEpoch?: number;
   private readonly suite?: { alg?: SigAlg; mlDsa?: MlDsaKeyPair };
   private readonly pqPk?: string;
   private readonly escrow: string;
@@ -405,6 +520,10 @@ export class BondLedger {
     }
     this.guardianSecret = opts.guardianSecret;
     this.guardianPublicKey = b64u(publicKeyOf(opts.guardianSecret));
+    if (opts.guardianEpoch !== undefined && !(Number.isSafeInteger(opts.guardianEpoch) && opts.guardianEpoch >= 0)) {
+      throw new Error('BondLedger: guardianEpoch must be a non-negative safe integer');
+    }
+    this.guardianEpoch = opts.guardianEpoch;
     if (resolveSigAlg(opts.suite?.alg) === null) throw new Error(`BondLedger: unknown signature alg '${String(opts.suite?.alg)}'`);
     this.suite = opts.suite;
     this.pqPk = opts.suite?.mlDsa ? encodeMlDsaPublicKey(opts.suite.mlDsa.publicKey) : undefined;
@@ -453,8 +572,10 @@ export class BondLedger {
   }
 
   private signRecord(base: Omit<SettlementRecord, 'sig' | 'alg' | 'pq_pk' | 'pq_sig'>): SettlementRecord {
+    // Stamp + bind the guardian epoch (when configured) so it is covered by the signature; omitted => absent.
+    const withEpoch = this.guardianEpoch === undefined ? base : { ...base, guardian_epoch: this.guardianEpoch };
     // Bind the suite (alg + guardian ML-DSA key) into the signed body; ed25519 is byte-identical.
-    const signedBody = bindSuiteFields(base, this.suite?.alg, this.pqPk);
+    const signedBody = bindSuiteFields(withEpoch, this.suite?.alg, this.pqPk);
     const fields = signSuiteArtifact(this.suite?.alg, { edSecret: this.guardianSecret, mlDsa: this.suite?.mlDsa }, settlementMessage(signedBody));
     return { ...signedBody, ...fields };
   }
@@ -753,6 +874,99 @@ export class BondLedger {
       evidenceDigest: disputeEvidenceDigest(claim, verdict),
       split,
     });
+  }
+}
+
+// ---- A3c: insurance capital pool (scarce collateral) --------------------------------------
+//
+// A linear bond is just the claimant's own stake; it is not SCARCE shared collateral. An insurance pool is:
+// premiums paid by (or on behalf of) agents accumulate finite capital, and victim payouts draw it down. The
+// pool can only ever pay what it holds — coverage is CAPITAL-CONSTRAINED, fail-closed — which is what makes
+// the collateral scarce. Premiums are priced off `reputation.ts:priceCoverage` (imported, never modified):
+// a worse-reputation subject pays a higher premium for the same coverage, so the pool is funded in
+// proportion to the risk it underwrites. Pure accounting; the real custody ledger is a seam (see header).
+
+/** An immutable snapshot of the pool's accounting. Invariant: `initial + premiumsIn - payoutsOut === balance`. */
+export interface InsurancePoolState {
+  /** Opening capital the pool was seeded with. */
+  initial: number;
+  /** Total premiums collected. */
+  premiumsIn: number;
+  /** Total victim payouts made. */
+  payoutsOut: number;
+  /** Current free capital = `initial + premiumsIn - payoutsOut`. */
+  balance: number;
+}
+
+/** The result of collecting a premium: the underwriting quote plus the pool state after crediting it. */
+export interface PremiumCollection {
+  pricing: InsurancePricing;
+  state: InsurancePoolState;
+}
+
+/**
+ * A finite, fail-closed insurance capital pool. Premiums (priced via {@link priceCoverage}) are credited;
+ * victim payouts are debited and REFUSED when they exceed the pool's free capital (scarce collateral). All
+ * amounts are checked finite and non-negative. The three ledgers (`initial`, `premiumsIn`, `payoutsOut`)
+ * always reconcile to `balance` exactly — payouts never silently overdraw.
+ */
+export class InsuranceCapitalPool {
+  private readonly initial: number;
+  private _premiumsIn = 0;
+  private _payoutsOut = 0;
+
+  constructor(initial = 0) {
+    if (!Number.isFinite(initial) || initial < 0) throw new Error('InsuranceCapitalPool: initial capital must be a non-negative finite number');
+    this.initial = initial;
+  }
+
+  get balance(): number {
+    return this.initial + this._premiumsIn - this._payoutsOut;
+  }
+  get premiumsIn(): number {
+    return this._premiumsIn;
+  }
+  get payoutsOut(): number {
+    return this._payoutsOut;
+  }
+  /** Current accounting snapshot (the conservation invariant always holds over these). */
+  state(): InsurancePoolState {
+    return { initial: this.initial, premiumsIn: this._premiumsIn, payoutsOut: this._payoutsOut, balance: this.balance };
+  }
+
+  /** Price coverage of `exposure` for `rep` WITHOUT mutating the pool (delegates to {@link priceCoverage}). */
+  quote(rep: Reputation, exposure: number, opts: PricingOptions = {}): InsurancePricing {
+    return priceCoverage(rep, exposure, opts);
+  }
+
+  /**
+   * Price coverage of `exposure` for `rep` and, if not declined, credit the premium to the pool. A declined
+   * quote (reputation below the underwriting floor) credits nothing. Returns the quote + the post-credit state.
+   */
+  collectPremium(rep: Reputation, exposure: number, opts: PricingOptions = {}): PremiumCollection {
+    const pricing = this.quote(rep, exposure, opts);
+    if (!pricing.declined && pricing.premium > 0) {
+      if (!Number.isFinite(pricing.premium) || pricing.premium < 0) throw new Error('collectPremium: priced premium is not a non-negative finite number');
+      this._premiumsIn += pricing.premium;
+    }
+    return { pricing, state: this.state() };
+  }
+
+  /** True iff the pool currently holds at least `amount` of free capital. */
+  canCover(amount: number): boolean {
+    return Number.isFinite(amount) && amount >= 0 && this.balance >= amount;
+  }
+
+  /**
+   * Pay `amount` of victim compensation out of the pool. REFUSED (throws) when `amount` is non-positive /
+   * non-finite or exceeds the free capital — the pool never pays what it does not hold (fail-closed, scarce
+   * collateral). Returns the post-payout state.
+   */
+  payClaim(amount: number): InsurancePoolState {
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('payClaim: amount must be a positive finite number');
+    if (amount > this.balance) throw new Error(`payClaim: insufficient pool capital (need ${amount}, have ${this.balance})`);
+    this._payoutsOut += amount;
+    return this.state();
   }
 }
 

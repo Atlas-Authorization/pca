@@ -10,6 +10,7 @@ export * from './threshold';
 export * from './frost';
 export * from './frost-dkg';
 export * from './frost-net';
+export * from './frost-pq';
 export * from './predicates';
 export * from './risk';
 export * from './envelope';
@@ -19,6 +20,17 @@ export * from './revocation';
 export * from './beacons';
 export * from './attestation';
 export * from './hardware-sevsnp';
+// Additional pluggable attestation roots for the multi-root N-of-M policy (see './attestation'). Namespaced
+// so each root's purpose-named helpers (e.g. the per-root ECDSA-P256 key wrappers and `toHex`) compose
+// without colliding with one another or with the flat SEV-SNP exports. HONEST PQ STATUS per root:
+//   - attestIntelTdx  — Intel TDX/DCAP CPU-TEE root. CLASSICAL (ECDSA-P256).
+//   - attestNvidiaCc  — NVIDIA GPU confidential-computing root. CLASSICAL (ECDSA-P256).
+//   - attestPqSoftware — software/HSM root. POST-QUANTUM (ML-DSA / SLH-DSA, optional hybrid).
+//   - attestPuf       — PUF unclonable root. Unclonability is CLASSICAL; the derived key MAY carry a PQ suite.
+export * as attestIntelTdx from './attest-intel-tdx';
+export * as attestNvidiaCc from './attest-nvidia-cc';
+export * as attestPqSoftware from './attest-pq-software';
+export * as attestPuf from './attest-puf';
 export * from './optimistic';
 export * from './bond-settlement';
 export * from './zk';
@@ -43,6 +55,7 @@ export * as taint from './taint';
 export * from './adapters';
 export * from './policy-sim';
 export * from './approvals';
+export * from './approval-channels';
 export * from './immune';
 export * from './policy-templates';
 export * from './console';
@@ -57,3 +70,4 @@ export * from './nl';
 export * from './ha';
 export * from './kem';
 export * from './discovery';
+export * from './entropy';

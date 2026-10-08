@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-mpc-wasm": "workspace:*",
+    "@atlasauth/pca-mpc-lwe-ot-wasm": "workspace:*",
     "@noble/post-quantum": "^0.4.1"
   },
   "devDependencies": {

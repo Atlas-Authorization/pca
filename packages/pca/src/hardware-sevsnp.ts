@@ -94,6 +94,7 @@
 import { sha384, sha512 } from '@noble/hashes/sha512';
 import { p384 } from '@noble/curves/p384';
 import { b64u } from './hash';
+import { mlDsa65Verify, mlDsa87Verify } from './pq';
 import { attestationBinding } from './attestation';
 import type {
   AttestationDocument,
@@ -553,6 +554,190 @@ export function verifyVcekChain(input: { chain: SevSnpCertChain; trustAnchorArk:
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
+// POST-QUANTUM CRYPTO-AGILITY SEAM (report signature + certificate chain).
+//
+// ── HONEST SCOPE — READ THIS FIRST. ──────────────────────────────────────────────────────────────
+// This seam FUTURE-PROOFS the verifier for the day AMD ships a post-quantum report / endorsement-key
+// suite, and it lets one attestation root be PQ while another stays classical (see the multi-root
+// policy in attestation.ts). It DOES NOT, and CANNOT, make a single AMD SEV-SNP attestation
+// post-quantum. The SEV-SNP root of trust is the VCEK→ASK→ARK signature chain AMD burns around its
+// silicon, and TODAY that is ECDSA-P384 (the report) rooted in an RSA-4096-PSS (ASK/ARK) chain. A
+// quantum adversary able to forge that CLASSICAL chain can forge ANY report body — INCLUDING any PQ
+// public key an honest guest might place in report_data — so no amount of PQ wrapping at THIS layer
+// upgrades AMD's silicon root. Only AMD re-rooting SEV-SNP in a PQ signature scheme does that. What
+// this seam genuinely buys: (1) agility — when AMD publishes a PQ SIGNATURE_ALGO, mapping it into
+// `SEV_SNP_REPORT_SUITE_BY_ALGO` is a ONE-LINE change and the dispatch needs NO rework; (2) the
+// ability to combine an AMD root with an INDEPENDENT second root (one of which may be PQ), removing
+// sole dependence on one vendor's classical root; (3) PQ-signed accountability (attestation.ts) so a
+// forged/anomalous attestation is detectable and attributable after the fact.
+//
+// The `ml-dsa-*` suites below are SYNTHETIC PLACEHOLDERS — AMD does not ship a PQ SEV-SNP suite as of
+// this writing. They are verified with @noble/post-quantum and exercised ONLY by clearly-labelled
+// synthetic tests; the genuine ECDSA-P384 Milan path is unchanged and byte-identical.
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * The signature suite of a SEV-SNP report or a certificate-chain link — the crypto-agility discriminant.
+ * `ecdsa-p384-sha384` is the ONLY suite real AMD silicon produces today. The `ml-dsa-*` suites are
+ * SYNTHETIC placeholders for a future AMD PQ roadmap (see the section header's honest-scope note).
+ */
+export type SevSnpSigSuite = 'ecdsa-p384-sha384' | 'ml-dsa-65' | 'ml-dsa-87';
+
+/**
+ * SYNTHETIC placeholder SIGNATURE_ALGO ids for the PQ report suites — NOT assigned by AMD. They sit in
+ * a clearly non-AMD experimental band so a report built with them can never be mistaken for a genuine
+ * AMD report (whose `signature_algo` is {@link SEV_SNP_SIG_ALGO_ECDSA_P384_SHA384} === 1). Replace or
+ * extend with AMD's real PQ algo ids when published — a one-line registry edit, no dispatcher rework.
+ */
+export const SEV_SNP_SIG_ALGO_SYNTHETIC_ML_DSA_65 = 0xf065;
+export const SEV_SNP_SIG_ALGO_SYNTHETIC_ML_DSA_87 = 0xf087;
+
+/**
+ * The report-suite dispatch table, keyed by the report's `SIGNATURE_ALGO` u32. This is the SINGLE place
+ * the verifier learns "which algorithm signed this report". Adding AMD's real PQ algo id here is the
+ * only change needed to accept a PQ report — `resolveReportSuite`, `verifyReportSignatureAgile`, the
+ * agile verifier, the multi-root policy and the accountability anchor all dispatch through it.
+ */
+export const SEV_SNP_REPORT_SUITE_BY_ALGO: ReadonlyMap<number, SevSnpSigSuite> = new Map<number, SevSnpSigSuite>([
+  [SEV_SNP_SIG_ALGO_ECDSA_P384_SHA384, 'ecdsa-p384-sha384'],
+  [SEV_SNP_SIG_ALGO_SYNTHETIC_ML_DSA_65, 'ml-dsa-65'],
+  [SEV_SNP_SIG_ALGO_SYNTHETIC_ML_DSA_87, 'ml-dsa-87'],
+]);
+
+/** Resolve a report's declared signature suite from its `SIGNATURE_ALGO` field. `null` => fail closed. */
+export function resolveReportSuite(signatureAlgo: number): SevSnpSigSuite | null {
+  return SEV_SNP_REPORT_SUITE_BY_ALGO.get(signatureAlgo) ?? null;
+}
+
+/**
+ * A suite-tagged public key — the crypto-agility key union. For `ecdsa-p384-sha384` it carries the AMD
+ * EC-P384 point (as today); for a PQ suite it carries the raw ML-DSA public-key bytes. One shape, so the
+ * report-signature check and every chain link dispatch the same way.
+ */
+export type SevSnpSuiteKey =
+  | { readonly suite: 'ecdsa-p384-sha384'; readonly ecdsa: EcdsaP384PublicKey }
+  | { readonly suite: 'ml-dsa-65'; readonly mlDsaPub: Uint8Array }
+  | { readonly suite: 'ml-dsa-87'; readonly mlDsaPub: Uint8Array };
+
+/**
+ * A detached report signature for a NON-ECDSA suite. Absent for `ecdsa-p384-sha384`, which reads AMD's
+ * little-endian r‖s from the report's fixed signature block. A real AMD PQ report format would carry a
+ * larger signature area than today's 2×72-byte ECDSA block (ML-DSA-65 signatures are 3309 bytes), so the
+ * PQ signature is modeled as evidence-carried bytes until such a format exists.
+ */
+export interface AgileReportSignature {
+  pqSig?: Uint8Array;
+}
+
+/**
+ * Verify a report's signature under a suite-tagged key, DISPATCHING on the report's declared
+ * `SIGNATURE_ALGO`. Fail-closed: an unknown algo, a report whose declared suite does not equal the key's
+ * suite, a missing PQ signature, or any invalid signature returns false. The ECDSA branch delegates to
+ * the proven `verifySevSnpReportSignature` (byte-identical to today); the PQ branches verify the ML-DSA
+ * signature over the report's signed region [0x000, 0x2A0).
+ */
+export function verifyReportSignatureAgile(
+  report: ParsedSevSnpReport,
+  key: SevSnpSuiteKey,
+  sig: AgileReportSignature = {},
+): boolean {
+  try {
+    const declared = resolveReportSuite(report.signature_algo);
+    if (declared === null) return false; // unknown algo => fail closed
+    if (declared !== key.suite) return false; // the report must agree with the key it is checked under
+    switch (key.suite) {
+      case 'ecdsa-p384-sha384':
+        return verifySevSnpReportSignature(report, key.ecdsa);
+      case 'ml-dsa-65':
+        return sig.pqSig instanceof Uint8Array && mlDsa65Verify(key.mlDsaPub, report.signed, sig.pqSig);
+      case 'ml-dsa-87':
+        return sig.pqSig instanceof Uint8Array && mlDsa87Verify(key.mlDsaPub, report.signed, sig.pqSig);
+    }
+  } catch {
+    return false;
+  }
+}
+
+/** One endorsement-certificate link in the crypto-agile chain. */
+export interface AgileCertLink {
+  /** The subject public key this certificate endorses (for VCEK, the key that signs the report). */
+  subject: SevSnpSuiteKey;
+  /** The `tbsCertificate` bytes signed by the issuer. */
+  tbs: Uint8Array;
+  /** The issuer's signature over `tbs`, in the ISSUER's suite. */
+  sig: Uint8Array;
+}
+
+/**
+ * The AMD endorsement chain as suite-tagged links: ARK (root) → ASK (intermediate) → VCEK (leaf). Each
+ * link may carry its OWN suite, so one link can be PQ while another stays classical (e.g. a PQ VCEK
+ * endorsed by a still-classical ASK, or vice-versa, during an AMD migration). The ecdsa-only
+ * `SevSnpCertChain` / `verifyVcekChain` above remain for the classical path; this is the agile superset.
+ */
+export interface AgileCertChain {
+  /** AMD Root Key — compared (suite-aware) against the configured trust anchor; never self-asserted. */
+  ark: SevSnpSuiteKey;
+  /** ASK link (its TBS is signed by ARK; its subject key signs the VCEK TBS). */
+  ask: AgileCertLink;
+  /** VCEK link (its TBS is signed by ASK; its subject key signs the report). */
+  vcek: AgileCertLink;
+}
+
+/** Suite-aware constant-time key equality. */
+function suiteKeyEq(a: SevSnpSuiteKey, b: SevSnpSuiteKey): boolean {
+  if (a.suite !== b.suite) return false;
+  if (a.suite === 'ecdsa-p384-sha384' && b.suite === 'ecdsa-p384-sha384') return pubEq(a.ecdsa, b.ecdsa);
+  if (a.suite !== 'ecdsa-p384-sha384' && b.suite !== 'ecdsa-p384-sha384') return timingSafeEq(a.mlDsaPub, b.mlDsaPub);
+  return false;
+}
+
+/** The TBS must embed its subject key EXACTLY ONCE (ecdsa: SPKI framing; ml-dsa: the raw pub bytes). */
+function agileTbsContainsSubjectKey(tbs: Uint8Array, key: SevSnpSuiteKey): boolean {
+  if (key.suite === 'ecdsa-p384-sha384') return tbsContainsSubjectKey(tbs, key.ecdsa);
+  const first = indexOfBytes(tbs, key.mlDsaPub);
+  if (first < 0) return false;
+  return indexOfBytes(tbs, key.mlDsaPub, first + 1) < 0;
+}
+
+/** Verify a TBS signature by the issuer, dispatching on the ISSUER's suite. Never throws. */
+function verifyTbsSigAgile(tbs: Uint8Array, sig: Uint8Array, signer: SevSnpSuiteKey): boolean {
+  try {
+    switch (signer.suite) {
+      case 'ecdsa-p384-sha384':
+        return p384.verify(sig, sha384(tbs), signer.ecdsa.point, { lowS: false });
+      case 'ml-dsa-65':
+        return mlDsa65Verify(signer.mlDsaPub, tbs, sig);
+      case 'ml-dsa-87':
+        return mlDsa87Verify(signer.mlDsaPub, tbs, sig);
+    }
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Crypto-agile VCEK→ASK→ARK chain verification — the suite-dispatching analogue of `verifyVcekChain`:
+ *   1. the chain's ARK equals the configured `trustAnchorArk` (suite-aware; root never self-asserted);
+ *   2. ASK's TBS embeds `ask.subject` and is signed by ARK (dispatched on ARK's suite);
+ *   3. VCEK's TBS embeds `vcek.subject` and is signed by ASK (dispatched on ASK's suite).
+ * Each link dispatches on its signer's suite, so a classical and a PQ link can coexist. Fail-closed on
+ * the first broken link.
+ */
+export function verifyAgileCertChain(input: { chain: AgileCertChain; trustAnchorArk: SevSnpSuiteKey }): SevSnpChainResult {
+  const { chain, trustAnchorArk } = input;
+  try {
+    if (!suiteKeyEq(chain.ark, trustAnchorArk)) return { ok: false, reason: 'ARK does not match the configured trust anchor' };
+    if (!agileTbsContainsSubjectKey(chain.ask.tbs, chain.ask.subject)) return { ok: false, reason: 'ASK key is not the subject key of the ASK certificate body' };
+    if (!verifyTbsSigAgile(chain.ask.tbs, chain.ask.sig, chain.ark)) return { ok: false, reason: 'ASK is not signed by ARK' };
+    if (!agileTbsContainsSubjectKey(chain.vcek.tbs, chain.vcek.subject)) return { ok: false, reason: 'VCEK key is not the subject key of the VCEK certificate body' };
+    if (!verifyTbsSigAgile(chain.vcek.tbs, chain.vcek.sig, chain.ask.subject)) return { ok: false, reason: 'VCEK is not signed by ASK' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: `chain verification error: ${e instanceof Error ? e.message : 'unknown'}` };
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════
 // GENUINE-SILICON PATH — real X.509 decode + the AMD RSA-PSS chain + KDS fetch (the F-4 seams, closed).
 // `node:crypto` (OpenSSL) is loaded LAZILY so the portable @noble core carries no hard Node dependency.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
@@ -985,6 +1170,122 @@ export function createSevSnpVerifier(opts: SevSnpVerifierOptions): HardwareAttes
 
         // (3b) VCEK body ↔ report: CHIP_ID + reported-TCB SPLs (blocks TCB downgrade / chip swap)
         const vErr = checkVcekReportBinding(evidence.chain.vcek_tbs, report);
+        if (vErr) return fail(vErr);
+
+        // (4) report_data must equal H(domain ‖ holder ‖ grant ‖ epoch ‖ server nonce)
+        if (!input.expected) return fail('no expected attestation binding supplied');
+        let expectedData: Uint8Array;
+        try {
+          expectedData = attestationBinding(input.expected);
+        } catch (e) {
+          return fail(`binding not constructible: ${e instanceof Error ? e.message : 'invalid'}`);
+        }
+        if (!timingSafeEq(expectedData, report.report_data)) {
+          return fail('report_data does not bind holder/grant/epoch/nonce (relayed or unbound quote)');
+        }
+
+        // (5) acceptance policy
+        const polErr = checkSevSnpPolicy(report, opts.policy);
+        if (polErr) return fail(polErr);
+
+        // (6) hardware-measured identity
+        const measured = deriveIdentity(report);
+        return { ok: true, bound: true, measured, hostAsserted: { host_data: toHex(report.host_data) } };
+      } catch (e) {
+        return fail(`sev-snp verification error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
+      }
+    },
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+// CRYPTO-AGILE SEV-SNP verifier — the same `HardwareAttestationVerifier` seam, dispatching report +
+// chain verification on the DECLARED suite. For `ecdsa-p384-sha384` (the only suite AMD ships today) it
+// yields verdicts identical to `createSevSnpVerifier`; for a (synthetic, future) `ml-dsa-*` suite it
+// verifies the PQ report + PQ chain. See the honest-scope note on the agility seam above: this does NOT
+// make AMD's silicon root post-quantum — it readies the verifier for AMD's PQ roadmap with no rework.
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+
+/** Crypto-agile evidence: the raw report, a suite-tagged chain, and (PQ only) a detached report sig. */
+export interface AgileSevSnpEvidence {
+  /** The raw ATTESTATION_REPORT bytes exactly as the hardware emitted them. */
+  report: Uint8Array;
+  /** The suite-tagged VCEK/ASK/ARK chain (each link may be classical or PQ). */
+  chain: AgileCertChain;
+  /** The detached report signature for a PQ suite (absent for ecdsa — read from the report's r‖s block). */
+  reportSig?: AgileReportSignature;
+}
+
+export interface AgileSevSnpVerifierOptions {
+  /** The configured ARK trust anchor (suite-tagged). The chain's ARK must equal this; it is the root. */
+  trustAnchorArk: SevSnpSuiteKey;
+  /**
+   * Acceptance policy for the verified report. The SAME `SevSnpPolicy` as the classical verifier; for a
+   * PQ report suite set `requireEcdsaP384: false` (the report's `SIGNATURE_ALGO` is non-ECDSA by design,
+   * and suite agreement is already enforced by `resolveReportSuite` + the VCEK key suite match).
+   */
+  policy: SevSnpPolicy;
+  /** EVIDENCE SEAM — as `SevSnpVerifierOptions.resolveEvidence`, but yields {@link AgileSevSnpEvidence}. */
+  resolveEvidence?: (
+    document: AttestationDocument,
+    ctx: VerifyContext,
+  ) => AgileSevSnpEvidence | undefined | Promise<AgileSevSnpEvidence | undefined>;
+}
+
+/**
+ * Build a crypto-agile `HardwareAttestationVerifier` backed by AMD SEV-SNP. It resolves the raw report +
+ * suite-tagged chain, then:
+ *   1. parses the report and resolves its declared suite from `SIGNATURE_ALGO` (`resolveReportSuite`);
+ *   2. requires the VCEK key's suite to equal the report's declared suite (fail-closed on mismatch);
+ *   3. verifies the VCEK→ASK→ARK chain to the ARK anchor (`verifyAgileCertChain`, per-link suite);
+ *   4. verifies the report signature under the chain-trusted VCEK key (`verifyReportSignatureAgile`);
+ *   5. binds the VCEK cert body (CHIP_ID + reported-TCB SPLs) to the report (`checkVcekReportBinding`);
+ *   6. confirms report_data === attestationBinding(expected);
+ *   7. applies the acceptance policy and returns the hardware-measured identity.
+ * Fails CLOSED with a specific reason on any mismatch or error.
+ */
+export function createAgileSevSnpVerifier(opts: AgileSevSnpVerifierOptions): HardwareAttestationVerifier {
+  if (!opts?.policy || !Array.isArray(opts.policy.measurements) || opts.policy.measurements.length === 0) {
+    throw new TypeError('createAgileSevSnpVerifier: policy.measurements must be a NON-EMPTY allowlist (accept-all is not permitted)');
+  }
+  const deriveIdentity = opts.policy.deriveIdentity ?? makeDefaultDeriveIdentity(opts.policy.weightsFromHostData === true);
+
+  return {
+    async verify(input): Promise<HardwareAttestationResult> {
+      const fail = (reason: string): HardwareAttestationResult => ({ ok: false, reason });
+      try {
+        if (!opts.resolveEvidence) return fail('no SEV-SNP evidence resolver configured (fail closed)');
+        const evidence = await opts.resolveEvidence(input.document, input.ctx);
+        if (!evidence || !(evidence.report instanceof Uint8Array) || !evidence.chain) {
+          return fail('no SEV-SNP evidence for this action');
+        }
+
+        // (1) parse
+        let report: ParsedSevSnpReport;
+        try {
+          report = parseSevSnpReport(evidence.report);
+        } catch (e) {
+          return fail(`report parse failed: ${e instanceof Error ? e.message : 'unknown'}`);
+        }
+
+        // (1b) resolve the declared suite + require the VCEK key to match it (crypto-agility dispatch)
+        const declared = resolveReportSuite(report.signature_algo);
+        if (declared === null) return fail(`unknown report signature suite (signature_algo ${report.signature_algo})`);
+        if (evidence.chain.vcek.subject.suite !== declared) {
+          return fail(`report suite ${declared} does not match the VCEK key suite ${evidence.chain.vcek.subject.suite}`);
+        }
+
+        // (2) chain to the ARK trust anchor (per-link suite dispatch)
+        const chain = verifyAgileCertChain({ chain: evidence.chain, trustAnchorArk: opts.trustAnchorArk });
+        if (!chain.ok) return fail(`cert chain invalid: ${chain.reason}`);
+
+        // (3) report signature with the chain-trusted VCEK, dispatched on the declared suite
+        if (!verifyReportSignatureAgile(report, evidence.chain.vcek.subject, evidence.reportSig ?? {})) {
+          return fail('report signature does not verify under VCEK');
+        }
+
+        // (3b) VCEK body ↔ report: CHIP_ID + reported-TCB SPLs (blocks TCB downgrade / chip swap)
+        const vErr = checkVcekReportBinding(evidence.chain.vcek.tbs, report);
         if (vErr) return fail(vErr);
 
         // (4) report_data must equal H(domain ‖ holder ‖ grant ‖ epoch ‖ server nonce)

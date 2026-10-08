@@ -348,7 +348,7 @@ describe('FROST guardian cosign (threshold custody)', () => {
     const guardianMsg = shareMessage('guardian', message, signerSet, t);
     const aggregate = frostCosign(groupKey, participants.slice(0, tg), guardianMsg, { threshold: tg });
     const guardianShare: ThresholdShare = { role: 'guardian', publicKey: groupKeyB64u, sig: b64u(aggregate) };
-    const agentShare = signShare('agent', agent.secretKey, message);
+    const agentShare = signShare('agent', agent.secretKey, message, { signerSet, t }); // v2.1: agent share is signerSetHash‖t-bound too
 
     const verdict = verifyThreshold({ shares: [agentShare, guardianShare] }, message, signerSet, t);
     expect(verdict.ok).toBe(true);

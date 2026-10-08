@@ -259,13 +259,15 @@ describe('§ downgrade (suite + threshold)', () => {
       { role: 'guardian', publicKey: encodeKey(guardian.publicKey) },
     ];
     const message = new TextEncoder().encode('high-risk action');
-    const agentShare = signShare('agent', agent.secretKey, message);
+    // v2.1: the agent share is signerSetHash‖t-bound like every role, so it is t-specific.
+    const agentShare2 = signShare('agent', agent.secretKey, message, { signerSet, t: 2 });
+    const agentShare1 = signShare('agent', agent.secretKey, message, { signerSet, t: 1 });
     // only the agent signed: at t=2 this must be refused
-    const v2 = verifyThreshold(assembleThreshold([agentShare]), message, signerSet, 2);
+    const v2 = verifyThreshold(assembleThreshold([agentShare2]), message, signerSet, 2);
     expect(v2.ok).toBe(false);
     expect(v2.count).toBe(1);
     // the same evidence is sufficient only at t=1
-    expect(verifyThreshold(assembleThreshold([agentShare]), message, signerSet, 1).ok).toBe(true);
+    expect(verifyThreshold(assembleThreshold([agentShare1]), message, signerSet, 1).ok).toBe(true);
   });
   it('one key cannot fill two role slots (signer-set collapse rejected)', () => {
     const k = generateKeyPair();
@@ -274,7 +276,7 @@ describe('§ downgrade (suite + threshold)', () => {
       { role: 'guardian', publicKey: encodeKey(k.publicKey) },
     ];
     const message = new TextEncoder().encode('m');
-    const share = signShare('agent', k.secretKey, message);
+    const share = signShare('agent', k.secretKey, message, { signerSet: dup, t: 2 });
     expect(verifyThreshold(assembleThreshold([share]), message, dup, 2).ok).toBe(false);
   });
 });

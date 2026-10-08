@@ -2,8 +2,13 @@ import { canonicalBytes, hashCanonical, unb64u, utf8 } from './hash';
 import {
   type MlDsaKeyPair,
   type SigAlg,
+  type SigSuite,
+  type SlhDsaKeyPair,
   bindSuiteFields,
+  encodeMlDsa87PublicKey,
   encodeMlDsaPublicKey,
+  encodeSlhDsa256sPublicKey,
+  encodeSlhDsaPublicKey,
   resolveSigAlg,
   signWithSuite,
   verifyWithSuite,
@@ -39,22 +44,33 @@ export interface Capability {
   sig: string;
   /**
    * Signature suite (crypto-agility). Absent == `ed25519` (byte-identical to pre-agility: no suite
-   * fields appear and the signed body is unchanged). For `ml-dsa-65` / `hybrid-ed25519-ml-dsa-65` the
-   * suite + the issuer's ML-DSA public key `pq_pk` are SIGNED INTO the body (so a downgrade or key-swap
-   * breaks the signature), and `sig`/`pq_sig` carry the component signatures per the suite.
+   * fields appear and the signed body is unchanged). For ANY non-ed25519 suite (the lattice ml-dsa-65 /
+   * ml-dsa-87 and the hash-based slh-dsa-sha2-128f / slh-dsa-sha2-256s families, plain or hybrid, plus the
+   * nested SUF-CMA hybrid) the suite + the issuer's PQ public key `pq_pk` are SIGNED INTO the body (so a
+   * downgrade or key-swap breaks the signature), and `sig`/`pq_sig` carry the component signatures per the suite.
    */
   alg?: SigAlg;
-  /** b64u ML-DSA-65 public key of the hop ISSUER — present (and body-bound) for ml-dsa-65 / hybrid. */
+  /** b64u PQ public key of the hop ISSUER (ML-DSA or SLH-DSA, per `alg`) — body-bound for every non-ed25519 suite. */
   pq_pk?: string;
-  /** b64u ML-DSA-65 hop signature — present for hybrid only (alongside the Ed25519 `sig`). */
+  /** b64u PQ hop signature (ML-DSA or SLH-DSA, per `alg`) — present for the hybrid suites only (alongside the Ed25519 `sig`). */
   pq_sig?: string;
 }
 
-/** Optional per-hop signature suite material (default: ed25519, byte-identical to pre-agility). */
+/**
+ * Optional per-hop signature suite material (default: ed25519, byte-identical to pre-agility). A hop can
+ * now be signed under ANY registered suite — supply the key pair for the family `alg` selects; the issuer's
+ * PQ public key becomes the body-bound `pq_pk`.
+ */
 export interface CapSuiteOpts {
   alg?: SigAlg;
-  /** The issuer's ML-DSA-65 key pair — required for ml-dsa-65 / hybrid. */
+  /** The issuer's ML-DSA-65 key pair — ml-dsa-65 / its hybrids / the nested hybrid. */
   mlDsa?: MlDsaKeyPair;
+  /** The issuer's SLH-DSA-SHA2-128f key pair — slh-dsa-sha2-128f / its hybrid. */
+  slhDsa?: SlhDsaKeyPair;
+  /** The issuer's ML-DSA-87 key pair — ml-dsa-87 / its hybrid (Category-5 / CNSA 2.0). */
+  mlDsa87?: MlDsaKeyPair;
+  /** The issuer's SLH-DSA-SHA2-256s key pair — slh-dsa-sha2-256s / its hybrid (Category-5). */
+  slhDsa256s?: SlhDsaKeyPair;
 }
 
 export type CapabilityChain = Capability[];
@@ -211,6 +227,32 @@ function signableBody(
   return bindSuiteFields(bodyOf(body), alg, pqPk);
 }
 
+/**
+ * The b64u PQ public key a non-ed25519 hop suite binds into `pq_pk`, from whichever family `alg` selects.
+ * THROWS (naming the missing family) when the matching key pair is absent, so a hop is never sealed without
+ * the key material its suite requires. Returns `undefined` for ed25519 (no `pq_pk`).
+ */
+function capPqPublicKey(resolved: SigSuite, suite: CapSuiteOpts | undefined): string | undefined {
+  if (!resolved.needsPqPk) return undefined;
+  if (resolved.hasMlDsa) {
+    if (!(suite?.mlDsa && suite.mlDsa.secretKey instanceof Uint8Array)) throw new TypeError(`capability: '${resolved.alg}' requires an mlDsa key pair`);
+    return encodeMlDsaPublicKey(suite.mlDsa.publicKey);
+  }
+  if (resolved.hasSlhDsa) {
+    if (!(suite?.slhDsa && suite.slhDsa.secretKey instanceof Uint8Array)) throw new TypeError(`capability: '${resolved.alg}' requires an slhDsa key pair`);
+    return encodeSlhDsaPublicKey(suite.slhDsa.publicKey);
+  }
+  if (resolved.hasMlDsa87) {
+    if (!(suite?.mlDsa87 && suite.mlDsa87.secretKey instanceof Uint8Array)) throw new TypeError(`capability: '${resolved.alg}' requires an mlDsa87 key pair`);
+    return encodeMlDsa87PublicKey(suite.mlDsa87.publicKey);
+  }
+  if (resolved.hasSlhDsa256s) {
+    if (!(suite?.slhDsa256s && suite.slhDsa256s.secretKey instanceof Uint8Array)) throw new TypeError(`capability: '${resolved.alg}' requires an slhDsa256s key pair`);
+    return encodeSlhDsa256sPublicKey(suite.slhDsa256s.publicKey);
+  }
+  return undefined; // unreachable: a needsPqPk suite always sets exactly one family flag.
+}
+
 function seal(
   body: { issuer: string; holder: string; caveats: Caveat[]; parent?: string },
   signerSecret: Uint8Array,
@@ -218,12 +260,13 @@ function seal(
 ): Capability {
   const resolved = resolveSigAlg(suite?.alg);
   if (resolved === null) throw new RangeError(`capability: unknown signature alg '${String(suite?.alg)}'`);
-  if (resolved.hasMlDsa && !(suite?.mlDsa && suite.mlDsa.secretKey instanceof Uint8Array)) {
-    throw new TypeError(`capability: '${resolved.alg}' requires an mlDsa key pair`);
-  }
-  const pqPk = resolved.needsPqPk ? encodeMlDsaPublicKey(suite!.mlDsa!.publicKey) : undefined;
+  const pqPk = capPqPublicKey(resolved, suite);
   const body_digest = hashCanonical(signableBody(body, suite?.alg, pqPk));
-  const parts = signWithSuite(suite?.alg, { edSecret: signerSecret, mlDsa: suite?.mlDsa }, sigMessage(body_digest));
+  const parts = signWithSuite(
+    suite?.alg,
+    { edSecret: signerSecret, mlDsa: suite?.mlDsa, slhDsa: suite?.slhDsa, mlDsa87: suite?.mlDsa87, slhDsa256s: suite?.slhDsa256s },
+    sigMessage(body_digest),
+  );
   const cap: Capability = {
     id: body_digest,
     issuer: body.issuer,
@@ -308,10 +351,19 @@ function checkSig(c: Capability, signer: string, label: string): string | undefi
     return `${label}: malformed body`;
   }
   if (digest !== c.body_digest || c.id !== c.body_digest) return `${label}: body digest mismatch`;
-  // The signer is the EXPECTED Ed25519 key (root issuer / parent holder); `pq_pk` is the issuer's
-  // ML-DSA key, body-bound so a hybrid hop's Ed25519 signature commits to it. verifyWithSuite requires
-  // BOTH for hybrid and is byte-identical to verifyB64u(signer, …, sig) for ed25519.
-  if (!verifyWithSuite(c.alg, { edPub: signer, mlDsaPub: c.pq_pk }, sigMessage(c.body_digest), { sig: c.sig, pq_sig: c.pq_sig })) {
+  // The signer is the EXPECTED Ed25519 key (root issuer / parent holder); `pq_pk` is the issuer's PQ key
+  // (ML-DSA or SLH-DSA, per `alg`), body-bound so a hybrid hop's Ed25519 signature commits to it. A hop
+  // carries ONE suite, so the single `pq_pk` feeds every PQ slot and `verifyWithSuite` reads only the one
+  // its `alg` selects. verifyWithSuite requires BOTH for hybrid and is byte-identical to
+  // verifyB64u(signer, …, sig) for ed25519.
+  if (
+    !verifyWithSuite(
+      c.alg,
+      { edPub: signer, mlDsaPub: c.pq_pk, slhDsaPub: c.pq_pk, mlDsa87Pub: c.pq_pk, slhDsa256sPub: c.pq_pk },
+      sigMessage(c.body_digest),
+      { sig: c.sig, pq_sig: c.pq_sig },
+    )
+  ) {
     return `${label}: bad signature (not signed by expected key)`;
   }
   return undefined;

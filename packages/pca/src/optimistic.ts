@@ -664,6 +664,269 @@ export function adjudicateDispute(args: {
 }
 
 
+// ---- interactive multi-round dispute game (refereed bisection) ----------------------------
+//
+// WHY THIS EXISTS. `adjudicateDispute` above is a ONE-SHOT referee: the challenger names a SINGLE
+// disputed input, the oracle resolves it, it is substituted into the frozen snapshot, and the action is
+// re-adjudicated. That is the right primitive when the fraud is known to live in one input. But a real
+// dispute is often over a MULTI-STEP computation — a sequence of agent-supplied risk inputs folded into
+// `decide`, any one of which the agent may have understated — and we do NOT want to pay the (expensive,
+// server-authoritative) ORACLE to resolve every input just to find the one that matters.
+//
+// THE FIX (classic optimistic-rollup / refereed bisection). Model the disputed computation as an ordered
+// list of `steps` (disputable inputs). The DEFENDER (the agent's position) and the CHALLENGER each commit
+// a full trace: the value they assert is truthful for every step. Both necessarily AGREE on the empty
+// prefix (no corrections) and, for a genuine dispute, DISAGREE on the final state (defender: the fast path
+// still admits; challenger: it does not). By the discrete intermediate-value principle there is a FIRST
+// step where their asserted traces diverge. An interactive binary search ("bisection") narrows the agreed
+// range `[lo, hi)` round by round — challenger and defender alternately conceding/contesting the midpoint —
+// until it converges to that ONE contested step. ONLY THEN is the objective oracle consulted, for that
+// single step, via the existing one-shot `adjudicateDispute` run against the AGREED pre-state (the frozen
+// snapshot with every earlier, mutually-agreed correction already folded in). So the oracle does O(1) work
+// for an O(n)-input dispute, and the final verdict is the unchanged `DisputeVerdict` the settlement layer
+// (`bond-settlement.ts` `slashBondOnDispute` → `computeSlashSplit`) already consumes — the slash split is
+// preserved exactly.
+//
+// FAIL-CLOSED. The game NEVER admits on its own say-so. A malformed game, a step list that does not cover,
+// a binding mismatch, a missing snapshot, a missing oracle, parties that do NOT actually disagree on
+// admission (no genuine dispute → nothing to bisect), or any thrown error all yield `indeterminate`
+// (slashes NO one). An oracle that cannot authoritatively resolve the converged step likewise fails closed
+// to `indeterminate` via `adjudicateDispute`. Only an oracle that affirmatively refutes the agent at the
+// contested step slashes the agent; only one that upholds the agent slashes the frivolous challenger.
+//
+// LOCALIZATION NOTE. Bisection localizes to the FIRST step on which the committed traces disagree and lets
+// the oracle rule on exactly that step in its agreed context. This is the standard refereed-bisection
+// contract: the challenger is responsible for contesting a step that is itself decisive. A collusive
+// "cumulative" fraud spread across several individually-innocuous inputs is out of scope here (and fails
+// SAFE — toward `claim-upheld`/`indeterminate`, never a wrongful slash).
+
+/** A single party's asserted truthful value for ONE disputed step (numeric `value` OR a `class`). */
+export interface StepAssertion {
+  /** Asserted value for a numeric input (reversibility / blastRadius / semanticDistance). */
+  value?: number;
+  /** Asserted class for a `reversibility_class` step. */
+  class?: string;
+}
+
+/**
+ * A multi-step dispute: an ordered list of disputable `steps` and the two parties' committed traces. The
+ * game is BOUND to a claim by `pcactn_digest` + `bond_ref` (both must equal the claim's). `defender` holds
+ * the agent-side asserted value for each step (defends the fast-path admission); `challenger` holds the
+ * contesting trace (alleges the admission is fraudulent). Both arrays MUST be parallel to `steps`.
+ */
+export interface DisputeGame {
+  /** Must equal the claim's `pcactn_digest`. */
+  pcactn_digest: string;
+  /** Must equal the claim's `bond_ref`. */
+  bond_ref: string;
+  /** The ordered disputable inputs forming the multi-step computation (length >= 1). */
+  steps: DisputableInput[];
+  /** Defender's asserted truthful value per step (parallel to `steps`) — defends admission. */
+  defender: StepAssertion[];
+  /** Challenger's asserted truthful value per step (parallel to `steps`) — alleges fraud. */
+  challenger: StepAssertion[];
+}
+
+/** One narrowing round of the refereed bisection: the probed midpoint and whether the prefix still agrees. */
+export interface BisectionRound {
+  /** Boundary index the parties still AGREE on entering this round. */
+  lo: number;
+  /** Boundary index the parties still DISAGREE on entering this round. */
+  hi: number;
+  /** The probed boundary (`floor((lo+hi)/2)`). */
+  mid: number;
+  /** true iff the first `mid` steps' assertions are pairwise equal (defender yields: `lo = mid`). */
+  agreedAtMid: boolean;
+}
+
+/**
+ * The outcome of an interactive dispute game: the final one-shot `DisputeVerdict` (the UNCHANGED record the
+ * settlement layer consumes — slash split preserved), plus the bisection transcript that produced it.
+ */
+export interface DisputeGameResult {
+  /** The verdict from adjudicating the single converged step with the oracle (a plain `DisputeVerdict`). */
+  verdict: DisputeVerdict;
+  /** true iff the bisection localized exactly one contested step (the oracle then ruled on it). */
+  converged: boolean;
+  /** 0-based index into `steps` of the contested step (−1 when the game did not converge). */
+  contestedStep: number;
+  /** The disputed input at the contested step (undefined when the game did not converge). */
+  contestedInput?: DisputableInput;
+  /** The refereed binary-search transcript, one entry per narrowing round (O(log2 n)). */
+  transcript: BisectionRound[];
+  /** Number of rounds played (`=== transcript.length`). */
+  rounds: number;
+}
+
+/** Exact equality of two step assertions (NaN-safe via `Object.is`); the bisection divergence predicate. */
+function assertionEquals(a: StepAssertion, b: StepAssertion): boolean {
+  const av = a.value;
+  const bv = b.value;
+  const valueEq =
+    (av === undefined && bv === undefined) || (typeof av === 'number' && typeof bv === 'number' && Object.is(av, bv));
+  return valueEq && a.class === b.class;
+}
+
+/** Fold a party's asserted value for `input` into a COPY of `snap` (throws when the value/class is missing). */
+function applyAssertion(snap: DecideInput, input: DisputableInput, a: StepAssertion): DecideInput {
+  return substituteDisputedInput(snap, { input, valid: true, value: a.value, class: a.class });
+}
+
+/** The fast-path decision at a party's cumulative state after folding its first `j` asserted corrections. */
+function stateAfter(snap: DecideInput, steps: DisputableInput[], assertions: StepAssertion[], j: number): DecisionSummary {
+  let s = snap;
+  for (let i = 0; i < j; i++) {
+    const input = steps[i];
+    const a = assertions[i];
+    if (input === undefined || a === undefined) throw new Error('dispute game trace is shorter than its step list');
+    s = applyAssertion(s, input, a);
+  }
+  return summarizeDecision(decide(s));
+}
+
+/**
+ * Adjudicate an INTERACTIVE multi-round dispute game by refereed bisection. Narrows the two parties'
+ * committed traces to the ONE step on which they first diverge, then resolves THAT step — and only that
+ * step — with the objective oracle (by delegating to the one-shot {@link adjudicateDispute} against the
+ * mutually-agreed pre-state). Total; never throws. Fails CLOSED to `indeterminate` on any malformed input,
+ * binding mismatch, missing snapshot/oracle, absence of a genuine admission dispute, non-convergence, or
+ * error — and (via `adjudicateDispute`) on an oracle that cannot authoritatively resolve the final step.
+ *
+ * The one-shot {@link adjudicateDispute} is the 1-step special case: a `game` with a single step produces
+ * zero bisection rounds and delegates straight to it against the raw snapshot.
+ */
+export function adjudicateDisputeGame(args: {
+  claim: BondedClaim;
+  game: DisputeGame;
+  grant: Capability;
+  /** FROZEN open-time `DecideInput` (grant may be absent; it is re-added from the trusted grant). */
+  openSnapshot: DecideInput;
+  /** The objective oracle resolving the truthful value of the single converged step. */
+  oracle: ObjectiveOracle;
+  rMargin?: number;
+}): DisputeGameResult {
+  const { claim, game, grant, openSnapshot, oracle } = args;
+  const margin = Number.isFinite(args.rMargin) ? Math.max(0, args.rMargin as number) : DEFAULT_R_MARGIN;
+  const WORST: DecisionSummary = { releaseGuardianShare: false, r: 1, optimisticAllowed: false };
+  const isDisputableInput = (x: unknown): x is DisputableInput =>
+    x === 'reversibility_class' || x === 'reversibility' || x === 'blastRadius' || x === 'semanticDistance';
+  const fail = (reason: string, input?: DisputableInput): DisputeGameResult => ({
+    verdict: {
+      outcome: 'indeterminate',
+      fraudulent: false,
+      slashCounterBond: false,
+      input: input ?? (isDisputableInput(game?.steps?.[0]) ? (game.steps[0] as DisputableInput) : 'reversibility_class'),
+      agentValue: undefined,
+      oracleValue: undefined,
+      baseline: WORST,
+      adjudicated: WORST,
+      reason,
+    },
+    converged: false,
+    contestedStep: -1,
+    transcript: [],
+    rounds: 0,
+  });
+
+  try {
+    if (!game || typeof game !== 'object') return fail('malformed dispute game');
+    if (game.pcactn_digest !== claim.pcactn_digest) return fail('dispute game targets a different PCActn than the claim');
+    if (game.bond_ref !== claim.bond_ref) return fail('dispute game names a different bond than the claim');
+    const { steps, defender, challenger } = game;
+    if (!Array.isArray(steps) || steps.length < 1) return fail('dispute game has no steps');
+    for (const s of steps) if (!isDisputableInput(s)) return fail(`unknown disputed input: ${String(s)}`);
+    if (!Array.isArray(defender) || !Array.isArray(challenger) || defender.length !== steps.length || challenger.length !== steps.length) {
+      return fail('party assertions do not cover every step');
+    }
+    if (!openSnapshot || typeof openSnapshot !== 'object') return fail('no frozen open-time snapshot supplied; cannot adjudicate');
+    if (!oracle || typeof oracle.resolve !== 'function') return fail('no objective oracle supplied');
+
+    const n = steps.length;
+    const snap: DecideInput = { ...openSnapshot, grant };
+
+    // GENUINE-DISPUTE GATE. There is only something to bisect when the committed traces lead to OPPOSITE
+    // admission verdicts: the defender's full trace must still admit the fast path and the challenger's must
+    // not. (Computing these folds every asserted correction, so a malformed assertion throws → fail closed.)
+    const defenderFinal = stateAfter(snap, steps, defender, n);
+    const challengerFinal = stateAfter(snap, steps, challenger, n);
+    if (!fastPathAdmits(defenderFinal, claim.claimed_r, margin)) {
+      return fail('defender does not defend the fast-path admission; nothing to adjudicate');
+    }
+    if (fastPathAdmits(challengerFinal, claim.claimed_r, margin)) {
+      return fail('the parties do not disagree on admission; no genuine dispute to bisect');
+    }
+
+    // The divergence predicate is monotone: if the first `m` steps' assertions agree, so does any shorter
+    // prefix. prefixAgrees(0) is vacuously true; prefixAgrees(n) must be false (the traces DO differ) — the
+    // admission disagreement above guarantees it, else there is nothing to bisect.
+    const prefixAgrees = (m: number): boolean => {
+      for (let i = 0; i < m; i++) {
+        const di = defender[i];
+        const ci = challenger[i];
+        if (di === undefined || ci === undefined || !assertionEquals(di, ci)) return false;
+      }
+      return true;
+    };
+    if (prefixAgrees(n)) return fail('the parties committed identical traces; no contested step to bisect');
+
+    // INTERACTIVE BISECTION. Narrow [lo, hi) with prefixAgrees(lo)=true, prefixAgrees(hi)=false until they
+    // meet; the first contested step is `lo`. Each round is one alternation: the defender concedes the
+    // midpoint (move lo up) or the challenger holds it contested (move hi down).
+    let lo = 0;
+    let hi = n;
+    const transcript: BisectionRound[] = [];
+    while (hi - lo > 1) {
+      const mid = Math.floor((lo + hi) / 2);
+      const agreedAtMid = prefixAgrees(mid);
+      transcript.push({ lo, hi, mid, agreedAtMid });
+      if (agreedAtMid) lo = mid;
+      else hi = mid;
+    }
+    const contestedStep = lo; // prefixAgrees(lo)=true, prefixAgrees(lo+1)=false → step `lo` is the first to differ
+    const contestedInput = steps[contestedStep];
+    if (!isDisputableInput(contestedInput)) return fail('converged step is not a disputable input');
+
+    // Build the AGREED pre-state: the frozen snapshot with every earlier (mutually-agreed) correction folded
+    // in. The prefix is agreed by construction, but re-verify value equality so a search-invariant violation
+    // cannot smuggle a challenger-only correction into the pre-state (fail closed if it does).
+    let preState = snap;
+    for (let i = 0; i < contestedStep; i++) {
+      const di = defender[i];
+      const ci = challenger[i];
+      const stepInput = steps[i];
+      if (di === undefined || ci === undefined || !assertionEquals(di, ci)) {
+        return fail('agreed prefix is not actually agreed; cannot reconstruct the pre-state', contestedInput);
+      }
+      if (!isDisputableInput(stepInput)) return fail('prefix step is not a disputable input', contestedInput);
+      preState = applyAssertion(preState, stepInput, di);
+    }
+
+    // ONE oracle consultation: delegate the single contested step to the one-shot referee against the agreed
+    // pre-state. The returned verdict is an UNCHANGED `DisputeVerdict` (slash accounting preserved).
+    const chalMove = challenger[contestedStep];
+    if (chalMove === undefined) return fail('challenger has no assertion for the contested step', contestedInput);
+    const verdict = adjudicateDispute({
+      claim,
+      dispute: {
+        pcactn_digest: claim.pcactn_digest,
+        bond_ref: claim.bond_ref,
+        input: contestedInput,
+        asserted_value: chalMove.value,
+        asserted_class: chalMove.class,
+      },
+      grant,
+      openSnapshot: preState,
+      oracle,
+      rMargin: margin,
+    });
+
+    return { verdict, converged: true, contestedStep, contestedInput, transcript, rounds: transcript.length };
+  } catch (e) {
+    return fail(`dispute game adjudication error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
+  }
+}
+
+
 // ---- frozen open-time snapshot ------------------------------------------------------------
 
 /** Deep-clone + deep-freeze a `DecideInput` captured at claim open (store it with the claim). */
