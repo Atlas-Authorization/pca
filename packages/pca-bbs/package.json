@@ -1,0 +1,35 @@
+{
+  "name": "@atlasauth/pca-bbs",
+  "version": "0.1.0",
+  "description": "BBS signatures (CFRG draft) for PCA: issue a capability as a multi-message BBS credential, then present it with selective disclosure + unlinkable zero-knowledge proof-of-possession, so an agent reveals only the attributes a tool needs and uses can't be correlated.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@noble/curves": "^1.6.0",
+    "@noble/hashes": "^1.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

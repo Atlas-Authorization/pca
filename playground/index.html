@@ -119,6 +119,7 @@ const $=s=>document.querySelector(s), short=s=>s.length>26?s.slice(0,12)+'…'+s
 const S={preds:[{verb:'read',resource:'account/*'},{verb:'update',resource:'account/mfa'}],nodes:[{id:'n1',verb:'read',resource:'account/profile'},{id:'n2',verb:'update',resource:'account/mfa'}],sel:'n1'};
 const POL={weights:{alpha:.25,beta:.2,gamma:.2,delta:.2,epsilon:.1,zeta:.05},theta1:.25,theta2:.6,kappa:1,lambda:.0005,rho:.5,bMax:1};
 const IN={semanticDistance:.1,reversibility:.9,blastRadius:.1,taint:0,confidence:.9,age:0};
+const AUD='pca-playground-verifier';const WIN=5*60*1000; // demo verifier id + action validity window (iat..exp)
 let budget={B:1,tau:0,asOf:0},now=0,hist=[],auto=null;
 const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const enc=P.encodeKey||P.b64u;
@@ -144,13 +145,13 @@ $('#b-grant').onclick=()=>{const goalCommit=P.hashCanonical({goal:$('#goal').val
 $('#b-plan').onclick=()=>{try{S.committed=P.commitPlan(S.nodes);$('#root').textContent=S.committed.root;$('#b-act').disabled=!S.grant;$('#b-forge').disabled=!S.grant}catch(e){$('#root').innerHTML=`<span class="err">${esc(e.message)}</span>`}};
 function render(res,title){ $('#vout').innerHTML=`<div class="mono" style="margin-top:10px">${esc(title)}</div>`+Object.entries(res.checks).map(([k,v])=>`<div class="chk ${v}"><span>${k}</span><span>${v}</span></div>`).join('')+`<div class="verdict ${res.allow?'ok':'bad'}">${res.allow?'ALLOWED':'REJECTED'}${res.reason?' — '+esc(res.reason):''}</div>`}
 $('#b-act').onclick=async()=>{let params;try{const t=$('#params').value.trim();params=t?JSON.parse(t):undefined}catch{return $('#vout').innerHTML='<div class="err">params is not valid JSON</div>'}
- try{const a=P.buildPCActn({grant:S.grant,chain:[S.grant],plan:S.nodes,nodeId:S.sel,params,counter:(S.ctr=(S.ctr||0)+1),signerSecret:S.ak.secretKey});S.last=a;render(await P.verifyPCActnCore(a,{grant:S.grant}),`PCActn ${P.pcactnDigest(a).slice(0,16)}… for ${S.sel}`);
+ try{const a=P.buildPCActn({grant:S.grant,chain:[S.grant],plan:S.nodes,nodeId:S.sel,params,counter:(S.ctr=(S.ctr||0)+1),signerSecret:S.ak.secretKey,aud:AUD,ttlMs:WIN});S.last=a;render(await P.verifyPCActnCore(a,{grant:S.grant,audience:AUD}),`PCActn ${P.pcactnDigest(a).slice(0,16)}… for ${S.sel}`);
  $('#b-thr').disabled=false}catch(e){$('#vout').innerHTML=`<div class="err">${esc(e.message)}</div>`}};
 $('#b-forge').onclick=async()=>{ // build against a plan that includes the rogue node, then present it against the committed (honest) root
  const rogue={id:'rogue',verb:'delete',resource:'account/*'};
- const a=P.buildPCActn({grant:S.grant,chain:[S.grant],plan:[...S.nodes,rogue],nodeId:'rogue',counter:(S.ctr=(S.ctr||0)+1),signerSecret:S.ak.secretKey});
+ const a=P.buildPCActn({grant:S.grant,chain:[S.grant],plan:[...S.nodes,rogue],nodeId:'rogue',counter:(S.ctr=(S.ctr||0)+1),signerSecret:S.ak.secretKey,aud:AUD,ttlMs:WIN});
  a.plan.root=S.committed.root; // claim the committed root, but the proof cannot lead there
- render(await P.verifyPCActnCore(a,{grant:S.grant}),'FORGED: delete account/* (not in the committed plan)')};
+ render(await P.verifyPCActnCore(a,{grant:S.grant,audience:AUD}),'FORGED: delete account/* (not in the committed plan)')};
 // ---- battery
 function derived(){const r=P.riskScore(IN,POL.weights),c=P.cost(r,POL.kappa),irr=IN.reversibility<.3;const rt=P.requiredThreshold(r,POL,{irreversible:irr});return{r,c,rt}}
 function refresh(){const {r,c,rt}=derived(),b=P.leak(budget,now,POL.lambda);
@@ -179,7 +180,9 @@ $('#b-auto').onclick=()=>{if(auto){clearInterval(auto);auto=null;return}let i=0;
   $('#inputs').querySelectorAll('input').forEach((el,j)=>{el.value=IN[keys[j]];el.nextElementSibling.textContent=+IN[keys[j]].toFixed(2)});run();i++},900)};
 // threshold panel (only if the library exports it)
 if(P.signShare&&P.assembleThreshold){$('#s-thr').style.display='';const g=P.generateKeyPair();
- $('#b-thr').onclick=()=>{try{const msg=P.thresholdMessage(S.last);const sh=[P.signShare('agent',S.ak.secretKey,msg),P.signShare('guardian',g.secretKey,msg),P.signShare('principal',S.pk.secretKey,msg)];const ts=P.assembleThreshold(sh);$('#thr-out').textContent=`assembled ${sh.length} shares over thresholdMessage(); roles: ${sh.map(s=>s.role).join(', ')}`}catch(e){$('#thr-out').textContent=e.message}}}
+ $('#b-thr').onclick=()=>{try{const msg=P.thresholdMessage(S.last),t=3;const set=[{role:'agent',publicKey:enc(S.ak.publicKey)},{role:'guardian',publicKey:enc(g.publicKey)},{role:'principal',publicKey:enc(S.pk.publicKey)}],bind={signerSet:set,t};
+  const sh=[P.signShare('agent',S.ak.secretKey,msg),P.signShare('guardian',g.secretKey,msg,bind),P.signShare('principal',S.pk.secretKey,msg,bind)];const ts=P.assembleThreshold(sh);const v=P.verifyThreshold(ts,msg,set,t);
+  $('#thr-out').textContent=`assembled ${sh.length} role-bound shares (signer set + t=${t} bound into each non-agent share); verifyThreshold: ${v.ok?'OK':'FAIL'} roles=${v.roles.join(', ')}${v.reason?' — '+v.reason:''}`}catch(e){$('#thr-out').textContent=e.message}}}
 $('#b-keys').click();$('#b-grant').click();$('#b-plan').click();refresh();
 window.__pcaReady=true;
 </script>

@@ -7,6 +7,8 @@ order: 20
 
 > Preview. Every public `/v1/pca/*` route returns `404 Not found` unless the instance has `auth_config.pca.enabled = true`. The gate does not reveal that PCA exists.
 
+This page is the normative reference for the hosted `/v1/pca/*` surface (public and admin routes) and the dashboard console routes. For the model behind them, see the [README](../README.md).
+
 ## Conventions
 
 **Instance resolution.** Public and admin `/v1/pca/*` routes act on one instance. Public routes resolve it from the `Host` header (the instance's frontend API host, like JWKS). Admin routes take the instance from the secret key.

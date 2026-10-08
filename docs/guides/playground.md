@@ -7,14 +7,14 @@ order: 12
 
 The PCA playground is an interactive, client-side demo of the framework. It is to PCA what an OIDC or JWT playground is to OAuth: mint the credential, forge a presentation, and watch the verifier's per-clause verdicts. It runs the **real** `@atlasauth/pca` library in the browser (bundled to `pca.esm.js`). Nothing is reimplemented and nothing leaves the page.
 
-Location: [`playground/`](../../playground) (files: `index.html`, `pca.esm.js`, `README.md`).
+Location: `tools/pca-playground` (files: `index.html`, `pca.esm.js`, `README.md`).
 
 ## Run it
 
 ES modules need `http://`, not `file://`.
 
 ```
-cd playground
+cd tools/pca-playground
 python3 -m http.server 8080
 # open http://localhost:8080
 ```
@@ -32,8 +32,24 @@ python3 -m http.server 8080
 
 The out-of-plan rejection demo shows the first kill-chain cut: an action with no inclusion proof fails `plan_inclusion` ([threat model](../security/threat-model.md)).
 
+## Rebuild the bundle
+
+From the repository root, using the repo's existing esbuild (no new dependency):
+
+```
+npx esbuild packages/pca/src/index.ts --bundle --format=esm --platform=browser --outfile=tools/pca-playground/pca.esm.js
+```
+
+If `npx` cannot find it, call the esbuild binary under `node_modules/.pnpm/esbuild@0.24.2/node_modules/esbuild/bin/esbuild` with the same arguments.
+
 ## The narrated loop
 
-The end-to-end loop has eight steps: mint a grant, delegate to a task capability, commit a plan, emit a PCActn, let the Policy VM decide, verify offline, attempt an out-of-plan action (rejected), and drain then recharge the trust budget. In the demo, the ledger is an in-memory stub and the human co-sign is simulated with `recharge`.
+For a terminal walkthrough with assertions, run the end-to-end example instead:
+
+```
+pnpm --filter @atlasauth/pca example
+```
+
+It performs eight steps: mint a grant, delegate to a task capability, commit a plan, emit a PCActn, let the Policy VM decide, verify offline, attempt an out-of-plan action (rejected), and drain then recharge the trust budget. `src/e2e.test.ts` runs the same loop with assertions so the example cannot silently rot. In the example, the ledger is an in-memory stub and the human co-sign is simulated with `recharge`.
 
 Next: [Verify in your language](./verify-in-your-language.md).

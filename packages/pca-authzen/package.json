@@ -1,0 +1,34 @@
+{
+  "name": "@atlasauth/pca-authzen",
+  "version": "0.1.0",
+  "description": "AuthZEN PDP for PCA: expose the PCA verifier/policy engine behind the OpenID AuthZEN Authorization API (subject/action/resource/context) with the COAZ MCP-tool and AARP approval profiles, so any AuthZEN PEP can use PCA as its decision point.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-analyzer": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

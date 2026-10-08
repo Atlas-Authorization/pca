@@ -1,0 +1,33 @@
+{
+  "name": "@atlasauth/pca-explain",
+  "version": "0.1.0",
+  "description": "Plain-language proof-trace for PCA decisions: given a PCActn and its verify/decide result, explain exactly why it was allowed or denied — which capability granted it, which caveat narrowed or failed, the risk/threshold/budget path, and the first failing check with a remedy.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

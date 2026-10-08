@@ -91,7 +91,7 @@ const hooks = {
 };
 ```
 
-`signerSet` must register the agent role's key as the leaf holder. If you do not recompute risk yourself, pass an explicit `requiredT` rather than relying on the default, which reads the agent's own `risk_claim.r`. For golden test vectors to validate your own verifier, see [Verify in your language](./verify-in-your-language.md).
+`signerSet` must register the agent role's key as the leaf holder. Check the `Signer` shape in `packages/pca/src/threshold.ts` if you build it by hand. If you do not recompute risk yourself, pass an explicit `requiredT` rather than relying on the default, which reads the agent's own `risk_claim.r`. For golden test vectors to validate your own verifier, see [Verify in your language](./verify-in-your-language.md).
 
 ## Option 2: Atlas-hosted `/v1/pca/*`
 

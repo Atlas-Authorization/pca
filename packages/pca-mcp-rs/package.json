@@ -1,0 +1,33 @@
+{
+  "name": "@atlasauth/pca-mcp-rs",
+  "version": "0.1.0",
+  "description": "MCP authorization resource-server for the 2026-07-28 spec: serve RFC 9728 PRM + Client-ID Metadata Documents, enforce RFC 8707 resource indicators + RFC 9207 issuer validation + scope accumulation, and wire PCA FROST step-up into the MCP step-up challenge.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

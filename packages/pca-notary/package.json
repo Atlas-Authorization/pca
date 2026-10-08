@@ -1,0 +1,33 @@
+{
+  "name": "@atlasauth/pca-notary",
+  "version": "0.1.0",
+  "description": "External-fact attestation (zkTLS/TLSNotary direction) for PCA: a notary signs the observed response of an external request, selectively redactable, bound into a PCActn so an agent proves 'the external API returned X' as part of its proof-carrying action.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
