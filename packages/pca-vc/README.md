@@ -6,7 +6,7 @@ Message Signatures** using the **Web Bot Auth** `Signature-Agent` pattern.
 
 ## Honest framing
 
-PCA's `AgentPassport` (`@atlasauth/pca`, `passport.ts`) is the **source of truth** — a content-addressed,
+PCA's `AgentPassport` (from `@atlasauth/pca`) is the **source of truth** — a content-addressed,
 attestation-rooted statement of *which* agent is acting (model / weights / system-prompt / tool-manifest /
 operator / hardware root). This package is a **bridge, not a replacement**: it re-expresses that same
 passport in the shapes the ecosystem (Microsoft **Entra Agent ID**, Google / **AP2** agent payments, the
@@ -28,6 +28,12 @@ PCActn proof. **Compose, don't replace.**
   covered-component set (`@method`, `@target-uri`, headers) with EdDSA and carry the `Signature-Agent`
   header pointing at the signer's key directory (`tag="web-bot-auth"`).
 
+## Install
+
+```sh
+npm i @atlasauth/pca-vc @atlasauth/pca
+```
+
 ## Usage
 
 ```ts
@@ -39,7 +45,9 @@ import { issuePassport } from '@atlasauth/pca';
 import { generateKeyPairSync } from 'node:crypto';
 
 const { publicKey, privateKey } = generateKeyPairSync('ed25519');
-const issuerDid = didKeyFromEd25519(/* raw 32-byte Ed25519 public key */ rawPub);
+// raw 32-byte Ed25519 public key = last 32 bytes of the SPKI DER encoding
+const rawPub = new Uint8Array(publicKey.export({ format: 'der', type: 'spki' }).subarray(-32));
+const issuerDid = didKeyFromEd25519(rawPub);
 
 // Passport → VC (SD-JWT), then verify + reconstruct.
 const vc = await passportToVC(issuePassport({ model_id: 'm', operator: 'op', hardware_rooted: true, issued_at: 1 }), {
@@ -65,3 +73,12 @@ const ok = verifyRequestSignature({ method: 'POST', url: 'https://api.acme.com/v
 - `verifyPassportVC(vc, issuerVerifyKey): Promise<{ passport, issuerDid, subjectDid }>`
 - `signRequestMessage({ method, url, headers, key, keyid, created?, signatureAgent? }): { signatureInput, signature, signatureAgent? }`
 - `verifyRequestSignature({ method, url, headers, signatureInput, signature, signatureAgent? }, verifyKey): boolean`
+
+## Status
+
+The SD-JWT VC and Web Bot Auth specifications are drafts and may change. The cryptography in the PCA stack
+has not been independently audited.
+
+## License
+
+MIT - see LICENSE

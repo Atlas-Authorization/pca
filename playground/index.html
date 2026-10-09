@@ -181,8 +181,8 @@ $('#b-auto').onclick=()=>{if(auto){clearInterval(auto);auto=null;return}let i=0;
 // threshold panel (only if the library exports it)
 if(P.signShare&&P.assembleThreshold){$('#s-thr').style.display='';const g=P.generateKeyPair();
  $('#b-thr').onclick=()=>{try{const msg=P.thresholdMessage(S.last),t=3;const set=[{role:'agent',publicKey:enc(S.ak.publicKey)},{role:'guardian',publicKey:enc(g.publicKey)},{role:'principal',publicKey:enc(S.pk.publicKey)}],bind={signerSet:set,t};
-  const sh=[P.signShare('agent',S.ak.secretKey,msg),P.signShare('guardian',g.secretKey,msg,bind),P.signShare('principal',S.pk.secretKey,msg,bind)];const ts=P.assembleThreshold(sh);const v=P.verifyThreshold(ts,msg,set,t);
-  $('#thr-out').textContent=`assembled ${sh.length} role-bound shares (signer set + t=${t} bound into each non-agent share); verifyThreshold: ${v.ok?'OK':'FAIL'} roles=${v.roles.join(', ')}${v.reason?' — '+v.reason:''}`}catch(e){$('#thr-out').textContent=e.message}}}
+  const sh=[P.signShare('agent',S.ak.secretKey,msg,bind),P.signShare('guardian',g.secretKey,msg,bind),P.signShare('principal',S.pk.secretKey,msg,bind)];const ts=P.assembleThreshold(sh);const v=P.verifyThreshold(ts,msg,set,t);
+  $('#thr-out').textContent=`assembled ${sh.length} role-bound shares (signer set + t=${t} bound into every share); verifyThreshold: ${v.ok?'OK':'FAIL'} roles=${v.roles.join(', ')}${v.reason?' — '+v.reason:''}`}catch(e){$('#thr-out').textContent=e.message}}}
 $('#b-keys').click();$('#b-grant').click();$('#b-plan').click();refresh();
 window.__pcaReady=true;
 </script>

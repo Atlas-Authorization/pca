@@ -4,7 +4,7 @@
  * This package is a BRIDGE, not a replacement. The cryptographic authority for an agent action remains
  * the PCActn's signed, hash-linked, attenuating capability chain (`@atlasauth/pca` `capability.ts`):
  * every hop is signed by the key the parent is bound to, caveats are append-only, and widening is
- * impossible by construction. A verifier (`@atlasauth/backend` `requirePCA` / the adjudicator) checks
+ * impossible by construction. A verifier (`@atlasauth/pca` `requirePCA` / the adjudicator) checks
  * THAT, default-deny. What enterprise agent-auth infrastructure already knows how to read, however, is
  * the OAuth delegation idiom: a token whose `sub`/`act` claims spell out "who invoked whom". So we
  * PROJECT the PCA chain into that idiom — compose, don't replace. The Transaction Token minted here is

@@ -562,6 +562,230 @@ export function policyVmStructHash(fields: Array<number | string | bigint>): Dig
   return { hi: hi.toString(), lo: lo.toString() };
 }
 
+// ===============================================================================================
+// §9B — DETERMINISTIC action→quantized-struct binding (closes the proof↔action BINDING gap).
+//
+// The Policy-VM circuit hashes a FIXED, QUANTIZED struct (each field a 64-bit big-endian uint), NOT the
+// canonical-JSON `actionCommitment`/`hashCanonical`. So `policyVmStructHash` alone can only bind a proof to
+// hand-fed struct fields — nothing tied those fields to the SPECIFIC PCActn being adjudicated, which let a
+// valid proof be replayed for a DIFFERENT action. This block closes that: it deterministically derives the
+// circuit's quantized struct FROM the live canonical action (mirroring the prover's quantization), so an RS
+// can require the proof's public hash halves to equal `policyVmStructHash(quantize(action))` and thereby
+// bind proof↔action transitively (action → deterministic quantized struct → proof public input).
+//
+// HONEST SCOPE. This binds proof↔action via the deterministic quantization map below, collision-safe over
+// the bound quantized fields (verb/resource code, reversibility-class index, param scalar). It is NOT
+// sha256-over-canonical-JSON IN-CIRCUIT: the circuit proves `commitment == sha256(committed FIELDS)`, and
+// this map reproduces those FIELDS byte-identically — it does not prove the quantized fields ARE the
+// canonical-JSON preimage of `actionCommitment`. Proving that (sha256 over the full variable-length
+// canonical JSON, inside the VM) remains the heavier zkVM / RISC-Zero gold path — a future enhancement,
+// not claimed here.
+// ===============================================================================================
+
+/**
+ * The reversibility-class ordering the circuit's `reversibility` field (action struct [2]) and `revMax`
+ * caveat encode: reversible=0, rate_limited=1, irreversible=2. Mirrors predicates.ts `REVERSIBILITY_ORDER`
+ * exactly, so the index the RS quantizes equals the class index the circuit/caveat compares against.
+ */
+export const POLICYVM_REVERSIBILITY_ORDER = ['reversible', 'rate_limited', 'irreversible'] as const;
+export type PolicyVmReversibilityClass = (typeof POLICYVM_REVERSIBILITY_ORDER)[number];
+
+/** An omitted action reversibility class commits/quantizes as this default (mirrors DEFAULT_REVERSIBILITY_CLASS). */
+const QUANTIZE_DEFAULT_REVERSIBILITY: PolicyVmReversibilityClass = 'reversible';
+
+/** Exclusive upper bound of the circuit's per-field uint64 domain (each struct field is 8 big-endian bytes). */
+const POLICYVM_U64_MAX = (1n << 64n) - 1n;
+
+/** The live canonical ACTION fields the quantization reads (verb/resource strings, class, params plaintext). */
+export interface QuantizableAction {
+  verb: string;
+  resource: string;
+  reversibility_class?: string;
+  /** Action params plaintext; the numeric `where`-bound scalar is read from `paramScalarField`. */
+  params?: Record<string, unknown>;
+}
+
+/**
+ * How the RS maps the live verb/resource strings to the circuit's uint64 codes. This MUST equal the map the
+ * prover used to build the witness, or the recomputed struct hash will not match (fail-closed).
+ */
+export interface PolicyVmQuantizeOpts {
+  /** Explicit verb-string → uint64 code (the shared catalog). A verb absent here is content-addressed
+   *  unless `strictCatalog` is set. */
+  verbCodes?: Readonly<Record<string, number | bigint>>;
+  /** Explicit resource-string → uint64 code. */
+  resourceCodes?: Readonly<Record<string, number | bigint>>;
+  /** Require every verb/resource to be present in the explicit maps; a miss FAILS CLOSED (throws). Default
+   *  false: a miss is content-addressed (sha256-truncated uint64 — deterministic, needs no shared catalog). */
+  strictCatalog?: boolean;
+  /** The action param whose non-negative-integer value is the circuit `paramScalar` (the `where` subject).
+   *  Absent field → scalar 0. A present value that is not a uint64 non-negative integer FAILS CLOSED. */
+  paramScalarField?: string;
+}
+
+/** uint64 content-address of a domain-tagged string: the top 8 bytes of sha256, big-endian. Total + deterministic. */
+function contentAddressU64(domain: string, value: string): bigint {
+  const digest = sha256(utf8(`atlas-pca/policyvm-quantize/${domain}:${value}`));
+  let acc = 0n;
+  for (let i = 0; i < 8; i++) acc = (acc << 8n) | BigInt(digest[i]!);
+  return acc; // in [0, 2^64)
+}
+
+/** Coerce an explicit code / numeric field to a uint64 bigint, or FAIL CLOSED (throws) when out of domain. */
+function toU64(v: number | bigint, what: string): bigint {
+  const b = typeof v === 'bigint' ? v : Number.isInteger(v) ? BigInt(v) : undefined;
+  if (b === undefined || b < 0n || b > POLICYVM_U64_MAX) throw new Error(`policyvm quantize: ${what} is not a uint64`);
+  return b;
+}
+
+/** Map a verb/resource string to its circuit uint64 code (explicit catalog, else content-addressed). */
+function codeFor(domain: 'verb' | 'resource', value: string, map: Readonly<Record<string, number | bigint>> | undefined, strict: boolean): bigint {
+  if (typeof value !== 'string') throw new Error(`policyvm quantize: ${domain} must be a string`);
+  if (map && Object.prototype.hasOwnProperty.call(map, value)) return toU64(map[value]!, `${domain} code`);
+  if (strict) throw new Error(`policyvm quantize: ${domain} "${value}" is not in the catalog (strict)`);
+  return contentAddressU64(domain, value);
+}
+
+/** Read the uint64 param scalar from the action params (0 when the field is unset; FAIL CLOSED otherwise). */
+function paramScalarFrom(params: Record<string, unknown> | undefined, field: string | undefined): bigint {
+  if (!field) return 0n;
+  const v = params ? params[field] : undefined;
+  if (v === undefined || v === null) return 0n;
+  if (typeof v === 'bigint') return toU64(v, 'paramScalar');
+  if (typeof v === 'number') {
+    if (!Number.isInteger(v) || v < 0) throw new Error('policyvm quantize: paramScalar must be a non-negative integer');
+    return toU64(v, 'paramScalar');
+  }
+  if (typeof v === 'string' && /^\d+$/.test(v)) return toU64(BigInt(v), 'paramScalar');
+  throw new Error('policyvm quantize: paramScalar is not a non-negative integer');
+}
+
+/** Map a reversibility-class string to its circuit index, or FAIL CLOSED on an unknown class. */
+function reversibilityIndex(rc: string, what: string): bigint {
+  const idx = (POLICYVM_REVERSIBILITY_ORDER as readonly string[]).indexOf(rc);
+  if (idx < 0) throw new Error(`policyvm quantize: unknown ${what} class "${rc}"`);
+  return BigInt(idx);
+}
+
+/**
+ * Deterministically quantize the live canonical ACTION to the circuit's fixed 4-field struct:
+ *   [0] verb code  [1] resource code  [2] reversibility-class index  [3] param scalar.
+ * THROWS (fail-closed) on anything that cannot be quantized: a non-string verb/resource, an unknown
+ * reversibility class, a strict-catalog miss, or a param scalar outside the uint64 non-negative range.
+ */
+export function quantizeActionStruct(action: QuantizableAction, opts: PolicyVmQuantizeOpts = {}): [bigint, bigint, bigint, bigint] {
+  if (!action || typeof action !== 'object') throw new Error('policyvm quantize: action is missing');
+  const strict = opts.strictCatalog === true;
+  const verb = codeFor('verb', action.verb, opts.verbCodes, strict);
+  const resource = codeFor('resource', action.resource, opts.resourceCodes, strict);
+  const rev = reversibilityIndex(action.reversibility_class ?? QUANTIZE_DEFAULT_REVERSIBILITY, 'reversibility');
+  const paramScalar = paramScalarFrom(action.params, opts.paramScalarField);
+  return [verb, resource, rev, paramScalar];
+}
+
+/** The live PLAN-node fields the plan struct commits: [planVerb, planResource, semanticDist, planSalt].
+ *  `semanticDist` (quantized geodesic in [0,S]) and the hiding `planSalt` are prover-side — the RS does not
+ *  hold the salt — so plan quantization is for provers / non-hiding deployments; an RS binds the ACTION. */
+export interface QuantizablePlan {
+  verb: string;
+  resource: string;
+  semanticDist: number | bigint;
+  planSalt: number | bigint;
+}
+
+/** The POLICY fields laid out as the circuit's 20-field struct. Weights/thresholds/bounds are the policy's
+ *  OWN quantized integers (scale S); verb/resource map via the shared code map and `revMax` via the order. */
+export interface QuantizablePolicy {
+  weights: { alpha: number | bigint; beta: number | bigint; gamma: number | bigint; delta: number | bigint; epsilon: number | bigint; zeta: number | bigint };
+  theta1: number | bigint;
+  theta2: number | bigint;
+  kappa: number | bigint;
+  budgetB: number | bigint;
+  policyVerb: string;
+  policyResource: string;
+  policyParamBound: number | bigint;
+  expiresAt: number | bigint;
+  notBefore: number | bigint;
+  maxBlast: number | bigint;
+  maxDepth: number | bigint;
+  revMax: string;
+  rateMax: number | bigint;
+  allocParent: number | bigint;
+}
+
+/** The quantized struct field arrays (bigint, uint64 domain) ready for `policyVmStructHash`. */
+export interface PolicyVmQuantizedStructs {
+  action: [bigint, bigint, bigint, bigint];
+  plan?: [bigint, bigint, bigint, bigint];
+  policy?: bigint[];
+}
+
+/** Quantize the plan node to the circuit's 4-field plan struct (FAIL CLOSED on out-of-domain fields). */
+export function quantizePlanStruct(plan: QuantizablePlan, opts: PolicyVmQuantizeOpts = {}): [bigint, bigint, bigint, bigint] {
+  const strict = opts.strictCatalog === true;
+  return [
+    codeFor('verb', plan.verb, opts.verbCodes, strict),
+    codeFor('resource', plan.resource, opts.resourceCodes, strict),
+    toU64(plan.semanticDist, 'semanticDist'),
+    toU64(plan.planSalt, 'planSalt'),
+  ];
+}
+
+/** Quantize the policy to the circuit's 20-field policy struct (FAIL CLOSED on out-of-domain fields / unknown revMax). */
+export function quantizePolicyStruct(policy: QuantizablePolicy, opts: PolicyVmQuantizeOpts = {}): bigint[] {
+  const strict = opts.strictCatalog === true;
+  const w = policy.weights;
+  return [
+    toU64(w.alpha, 'wAlpha'),
+    toU64(w.beta, 'wBeta'),
+    toU64(w.gamma, 'wGamma'),
+    toU64(w.delta, 'wDelta'),
+    toU64(w.epsilon, 'wEpsilon'),
+    toU64(w.zeta, 'wZeta'),
+    toU64(policy.theta1, 'theta1'),
+    toU64(policy.theta2, 'theta2'),
+    toU64(policy.kappa, 'kappa'),
+    toU64(policy.budgetB, 'budgetB'),
+    codeFor('verb', policy.policyVerb, opts.verbCodes, strict),
+    codeFor('resource', policy.policyResource, opts.resourceCodes, strict),
+    toU64(policy.policyParamBound, 'policyParamBound'),
+    toU64(policy.expiresAt, 'expiresAt'),
+    toU64(policy.notBefore, 'notBefore'),
+    toU64(policy.maxBlast, 'maxBlast'),
+    toU64(policy.maxDepth, 'maxDepth'),
+    reversibilityIndex(policy.revMax, 'revMax'),
+    toU64(policy.rateMax, 'rateMax'),
+    toU64(policy.allocParent, 'allocParent'),
+  ];
+}
+
+/**
+ * The umbrella quantization: derive the circuit's fixed action struct (always) and, when their inputs are
+ * supplied, the plan + policy structs — the exact fixed layout `policyvm.circom`'s `Sha256Struct` hashes.
+ * Deterministic and fail-closed (throws on any field that cannot be quantized).
+ */
+export function quantizePolicyVmInputs(
+  inp: { action: QuantizableAction; plan?: QuantizablePlan; policy?: QuantizablePolicy },
+  opts: PolicyVmQuantizeOpts = {},
+): PolicyVmQuantizedStructs {
+  return {
+    action: quantizeActionStruct(inp.action, opts),
+    ...(inp.plan ? { plan: quantizePlanStruct(inp.plan, opts) } : {}),
+    ...(inp.policy ? { policy: quantizePolicyStruct(inp.policy, opts) } : {}),
+  };
+}
+
+/**
+ * The circuit's ACTION commitment (its two public hash halves `actionHi`/`actionLo`) recomputed from the
+ * LIVE canonical action: `policyVmStructHash(quantizeActionStruct(action))`. An RS binds a Policy-VM proof
+ * to THIS action by requiring the proof's `actionHi`/`actionLo` public signals to equal these halves — so a
+ * proof minted for action A, presented for action B, mismatches and is rejected. FAIL CLOSED: propagates
+ * the quantization throw when the live action cannot be deterministically quantized.
+ */
+export function policyVmCommitmentFromAction(action: QuantizableAction, opts: PolicyVmQuantizeOpts = {}): DigestHalves {
+  return policyVmStructHash(quantizeActionStruct(action, opts));
+}
+
 /** Decode the public signals into the proven statement (hashes + risk/threshold/admit + context). */
 export function decodePolicyVmPublic(publicSignals: string[]): {
   actionHash: DigestHalves; policyHash: DigestHalves; planHash: DigestHalves;

@@ -1,7 +1,28 @@
 {
   "name": "@atlasauth/pca-pq-threshold",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Post-quantum threshold step-up for PCA: a production-ready HYBRID (classical FROST quorum + an ML-DSA PQ co-signature over the same action) so a step-up is PQ-protected today, plus a documented Raccoon/Ringtail lattice-threshold research design for the trustless-PQ future.",
+  "keywords": [
+    "threshold signatures",
+    "frost",
+    "ml-dsa",
+    "step-up",
+    "post-quantum",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-pq-threshold"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -25,8 +46,12 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   }

@@ -4,7 +4,7 @@
  *   app.post('/refunds', pcaHono({ audience: 'ins_acme', resolveGrant, budgetStore, hooks, context }),
  *     (c) => { const { verdict, pcactn } = c.get('pca'); ... });
  *
- * It verifies the inbound PCActn with the framework-agnostic `requirePCA` guard from `@atlasauth/backend`
+ * It verifies the inbound PCActn with the framework-agnostic `requirePCA` guard from `@atlasauth/pca`
  * (default-deny: a required check that is unenforced DENIES) and, on success, sets the verdict + PCActn on the
  * context via `c.set(attachAs)` (default `pca`) then calls `next()`. On failure it answers 401/403 with a
  * WWW-Authenticate challenge. The client sends the PCActn as `PCA-Action: <base64url>` (see `@atlasauth/pca`
@@ -15,8 +15,8 @@
  * compatible across Hono 4 runtimes.
  */
 
-import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/backend';
-import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/backend';
+import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
+import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/pca';
 import type { PCActn } from '@atlasauth/pca';
 
 /** Structural shim of a Hono context (the subset the middleware uses). */

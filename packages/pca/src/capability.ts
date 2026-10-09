@@ -1,5 +1,6 @@
 import { canonicalBytes, hashCanonical, unb64u, utf8 } from './hash';
 import {
+  type LessSuiteKey,
   type MlDsaKeyPair,
   type SigAlg,
   type SigSuite,
@@ -7,6 +8,7 @@ import {
   bindSuiteFields,
   encodeMlDsa87PublicKey,
   encodeMlDsaPublicKey,
+  encodeLessPublicKey,
   encodeSlhDsa256sPublicKey,
   encodeSlhDsaPublicKey,
   resolveSigAlg,
@@ -71,6 +73,8 @@ export interface CapSuiteOpts {
   mlDsa87?: MlDsaKeyPair;
   /** The issuer's SLH-DSA-SHA2-256s key pair — slh-dsa-sha2-256s / its hybrid (Category-5). */
   slhDsa256s?: SlhDsaKeyPair;
+  /** The issuer's LESS (category 1) key material + signSeed — less-cat1 / its hybrid (OPTIONAL pca-less-wasm backend). */
+  lessCat1?: LessSuiteKey;
 }
 
 export type CapabilityChain = Capability[];
@@ -250,6 +254,10 @@ function capPqPublicKey(resolved: SigSuite, suite: CapSuiteOpts | undefined): st
     if (!(suite?.slhDsa256s && suite.slhDsa256s.secretKey instanceof Uint8Array)) throw new TypeError(`capability: '${resolved.alg}' requires an slhDsa256s key pair`);
     return encodeSlhDsa256sPublicKey(suite.slhDsa256s.publicKey);
   }
+  if (resolved.hasLessCat1) {
+    if (!(suite?.lessCat1 && suite.lessCat1.secretKey instanceof Uint8Array)) throw new TypeError(`capability: '${resolved.alg}' requires a lessCat1 key`);
+    return encodeLessPublicKey(suite.lessCat1.publicKey);
+  }
   return undefined; // unreachable: a needsPqPk suite always sets exactly one family flag.
 }
 
@@ -264,7 +272,7 @@ function seal(
   const body_digest = hashCanonical(signableBody(body, suite?.alg, pqPk));
   const parts = signWithSuite(
     suite?.alg,
-    { edSecret: signerSecret, mlDsa: suite?.mlDsa, slhDsa: suite?.slhDsa, mlDsa87: suite?.mlDsa87, slhDsa256s: suite?.slhDsa256s },
+    { edSecret: signerSecret, mlDsa: suite?.mlDsa, slhDsa: suite?.slhDsa, mlDsa87: suite?.mlDsa87, slhDsa256s: suite?.slhDsa256s, lessCat1: suite?.lessCat1 },
     sigMessage(body_digest),
   );
   const cap: Capability = {
@@ -359,7 +367,7 @@ function checkSig(c: Capability, signer: string, label: string): string | undefi
   if (
     !verifyWithSuite(
       c.alg,
-      { edPub: signer, mlDsaPub: c.pq_pk, slhDsaPub: c.pq_pk, mlDsa87Pub: c.pq_pk, slhDsa256sPub: c.pq_pk },
+      { edPub: signer, mlDsaPub: c.pq_pk, slhDsaPub: c.pq_pk, mlDsa87Pub: c.pq_pk, slhDsa256sPub: c.pq_pk, lessCat1Pub: c.pq_pk },
       sigMessage(c.body_digest),
       { sig: c.sig, pq_sig: c.pq_sig },
     )

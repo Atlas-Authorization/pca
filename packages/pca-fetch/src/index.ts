@@ -10,14 +10,14 @@
  *   }) };
  *
  * It verifies the inbound PCActn with the framework-agnostic `requirePCA` guard from
- * `@atlasauth/backend` (default-deny) and, on success, calls your handler with the verdict + PCActn;
+ * `@atlasauth/pca` (default-deny) and, on success, calls your handler with the verdict + PCActn;
  * otherwise it returns a 401/403 `Response` with a WWW-Authenticate challenge. The client sends the
  * PCActn as `PCA-Action: <base64url>` (see `@atlasauth/pca` `pcaHeaders`) or a JSON body `{ pcactn }`.
  * Nothing here authorizes on its own — the resource server's verifier decides.
  */
 
-import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/backend';
-import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/backend';
+import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
+import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/pca';
 import type { PCActn } from '@atlasauth/pca';
 
 /** The verdict + PCActn handed to a guarded handler on success. */

@@ -7,16 +7,16 @@ order: 11
 
 > Preview. Hosted routes are off by default; verifying in your own service has no such gate.
 
-Two options. Run the verifier yourself with `@atlasauth/backend`, or use the `/v1/pca/*` endpoints an Atlas-hosted resource server exposes.
+Two options. Run the verifier yourself with `@atlasauth/pca`, or use the `/v1/pca/*` endpoints an Atlas-hosted resource server exposes.
 
 ## Option 1: verify in your own service
 
-Both functions are exported from `@atlasauth/backend`. Verification is deterministic and offline; any internal error becomes a fail-closed deny (it never throws).
+Both functions are exported from `@atlasauth/pca`. Verification is deterministic and offline; any internal error becomes a fail-closed deny (it never throws).
 
 ### `verifyPCActn(pcactn, opts)`
 
 ```ts
-import { verifyPCActn } from '@atlasauth/backend';
+import { verifyPCActn } from '@atlasauth/pca';
 
 // verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOptions): Promise<PcaVerdict>
 const verdict = await verifyPCActn(pcactn, {
@@ -42,7 +42,7 @@ const verdict = await verifyPCActn(pcactn, {
 A framework-agnostic guard, the PCA analogue of `requireAuth()`:
 
 ```ts
-import { requirePCA, memoryPcaStore } from '@atlasauth/backend';
+import { requirePCA, memoryPcaStore } from '@atlasauth/pca';
 
 const guard = requirePCA({
   resolveGrant: async (grantRef) => grantsById.get(grantRef) ?? null,   // null = unknown grant
@@ -171,6 +171,23 @@ POST /v1/pca/stepups/:id/cosign
 ```
 
 Only `role: "principal"` is accepted, and `publicKey` must equal the grant's principal key. The action is re-verified in full at approval; if it no longer passes (revoked, frozen, replayed counter) the step-up ends `denied`.
+
+If the action requires attestation and the attestation nonce lapsed while the human decided (nonces live 2 minutes, step-ups 15), the cosign does not fail and does not burn the step-up. It answers re-attestation required, and the agent completes the held action with a fresh attestation:
+
+```http
+POST /v1/pca/stepups/:id/cosign
+202 { ...stepup view, "allow": false, "result": "reattestation_required", "reason": "attestation_nonce_expired",
+      "reattestation": { "nonce": "...", "epoch": 123, "grant_ref": "...", "holder": "...", "action_digest": "...",
+                         "issued_at": 1760000000000, "expires_at": 1760000120000, "complete": "POST /v1/pca/stepups/<id>/reattest" } }
+
+POST /v1/pca/stepups/:id/reattest
+{ "attestation": { /* document bound to {holder, grant, epoch, reattestation.nonce} */ }, "action_digest": "<stepup action_digest>" }
+200 { ...stepup view, "allow": true, "verdict": {...}, "receipt": {...} }          // admitted exactly once
+409 { "result": "reattestation_rejected", "reason": "attestation_nonce_mismatch | attestation_nonce_expired | action_digest_mismatch | no_outstanding_challenge" }
+403 { "result": "reattestation_rejected", "reason": "...", "verdict": {...} }       // evidence did not verify; step-up stays pending
+```
+
+`POST /reattest` with an empty body returns the outstanding challenge (or issues one). The held PCActn is unchanged; the cosignatures are kept; the step-up still expires at its 15 minute deadline.
 
 Ledger audit:
 

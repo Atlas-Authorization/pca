@@ -1,25 +1,39 @@
 {
   "name": "@atlasauth/pca-less-wasm",
-  "version": "0.0.0-experimental",
-  "description": "EXPERIMENTAL code-based (syndrome-decoding / code-equivalence) signature backend for @atlasauth/pca: the official LESS reference implementation (NIST additional-signatures candidate, round 1/2) compiled to wasm32-wasi. Adds a genuine third hardness family (beyond lattice + hash). NOT standardized, NOT production-audited.",
-  "private": true,
+  "version": "0.2.0",
+  "description": "LESS (code-equivalence, NIST additional-signature Round 2 candidate) signature backend for @atlasauth/pca: the official LESS reference C compiled to WebAssembly with a portable, dependency-free loader (Node >=20, browsers, Deno, Bun, edge). Verified by the official KATs, a native-vs-wasm differential, sanitizers and robustness tests; unaudited, not a standard.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": "./dist/esm/web.js",
       "default": "./dist/index.js"
     },
+    "./web": {
+      "types": "./dist/web.d.ts",
+      "import": "./dist/esm/web.js",
+      "default": "./dist/web.js"
+    },
+    "./embedded": {
+      "types": "./dist/embedded.d.ts",
+      "import": "./dist/esm/embedded.js",
+      "default": "./dist/embedded.js"
+    },
+    "./less_cat1.wasm": "./wasm/less_cat1.wasm",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "wasm",
-    "BUILD_NOTES.md"
+    "BUILD_NOTES.md",
+    "README.md",
+    "LICENSE",
+    "!dist/**/*.test.*"
   ],
   "scripts": {
-    "build:wasm": "echo 'wasm is cross-compiled off-box by ~/.pca-vm-state/lessbuild.sh on a Linux VM (needs wasi-sdk-25). Drop the result into wasm/less_cat1.wasm.' && exit 1",
-    "build": "tsc -p tsconfig.build.json",
+    "build:wasm": "echo 'wasm is cross-compiled off-box by scripts/lessbuild.sh on a Linux VM (wasi-sdk-25); drop the result into wasm/less_cat1.wasm, then run: node scripts/embed-wasm.mjs' && exit 1",
+    "build": "node scripts/embed-wasm.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.esm.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
@@ -28,6 +42,32 @@
     "vitest": "^2.1.4"
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
+  },
+  "keywords": [
+    "less",
+    "code-based signatures",
+    "code equivalence",
+    "nist additional signatures",
+    "post-quantum signatures",
+    "webassembly",
+    "wasm",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-less-wasm"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

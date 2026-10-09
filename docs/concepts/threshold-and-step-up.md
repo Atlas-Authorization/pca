@@ -20,18 +20,22 @@ L2 makes policy a **cryptographic participant**. The authority to sign an action
 ```ts
 import { signShare, assembleThreshold, thresholdMessage, createThresholdVerifier } from '@atlasauth/pca';
 
-const msg = thresholdMessage(pcactn);                       // the exact bytes every share signs
-const guardianShare = signShare('guardian', guardianSecret, msg);
+const signerSet = [
+  { role: 'agent', publicKey: leafHolder },
+  { role: 'guardian', publicKey: guardianPub },
+  { role: 'principal', publicKey: principalPub },
+];
+const t = 3;                                                // how many distinct roles must sign
+
+const msg = thresholdMessage(pcactn);                       // the action's canonical message
+// A share is bound to its role, the message, the signer set and t, so it cannot be replayed under another set or threshold.
+const guardianShare = signShare('guardian', guardianSecret, msg, { signerSet, t });
 const withShares = { ...pcactn, threshold: assembleThreshold([guardianShare]) };
 
-const hook = createThresholdVerifier({
-  signerSet: [
-    { role: 'agent', publicKey: leafHolder },
-    { role: 'guardian', publicKey: guardianPub },
-    { role: 'principal', publicKey: principalPub },
-  ],
-});
+const hook = createThresholdVerifier({ signerSet });
 ```
+
+`signShare` refuses to sign without the `{ signerSet, t }` binding: a bare signature over the message alone would be valid under any signer set and any `t`, which is exactly the confusion the binding closes.
 
 `verifyThreshold(sig, message, signerSet, t)` counts **distinct roles** whose share is signed by a key registered for that role and verifies over the message. A duplicate role counts once. `ok` iff the count is at least `t`. It is total: bad keys and signatures simply fail.
 
@@ -90,6 +94,8 @@ When `t` exceeds what the agent and the automatic guardian can supply, the actio
 5. With the principal share missing, the action is held as a **pending step-up** (not anchored) and the response is `202` with `step_up_required`, `stepup_id` and `required_t`. A pending step-up lives 15 minutes.
 6. The principal's device signs `thresholdMessage(pcactn)` and calls `POST /v1/pca/stepups/:id/cosign` with `{ role: 'principal', publicKey, sig }`. The key must equal the grant's principal key.
 7. The held action is **re-verified in full** (it may have been revoked, frozen or replayed in the meantime). If it passes it is anchored, the trust budget is recharged (a human touch), and the step-up becomes `approved` with the receipt. Otherwise it ends `denied`.
+
+8. If the action also requires attestation and its nonce lapsed meanwhile, step 7 answers `reattestation_required` with a fresh server nonce instead of denying; the agent resubmits a new attestation via `POST /v1/pca/stepups/:id/reattest` and the action is admitted once. See [Anti-replay](../reference/anti-replay.md).
 
 The agent polls `GET /v1/pca/stepups/:id` (`agent.awaitStepUp`). The dashboard lists pending step-ups with the exact bytes the principal device must sign (`threshold_message`, base64url) and lets an operator deny one; see [API reference](../reference/api.md).
 

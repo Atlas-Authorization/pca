@@ -1,7 +1,27 @@
 {
   "name": "@atlasauth/pca-policy-ci",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CI gate for PCA policies: statically flag over-broad grants, privilege-escalation in delegation chains, unused/redundant caveats, and reachability of dangerous actions — fail the build before an unsafe policy ships.",
+  "keywords": [
+    "policy",
+    "ci",
+    "static analysis",
+    "linting",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-policy-ci"
+  },
   "bin": {
     "pca-policy-ci": "./dist/cli.js"
   },
@@ -29,8 +49,12 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   }

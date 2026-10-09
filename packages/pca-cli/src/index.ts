@@ -138,7 +138,7 @@ export interface ExplainResult {
 /**
  * The "why did it (not) verify?" explainer. Decodes the PCActn, takes its `cap_chain[0]` as the root
  * grant (the capability the whole chain descends from), and runs the REAL `verifyPCActnCore` against
- * it, then formats each check as PASS / FAIL / — (not enforced at this milestone) with a final
+ * it, then formats each check as PASS / FAIL / — (not enforced by this verifier profile) with a final
  * verdict line. `--aud` supplies this verifier's audience; omit it to accept any audience.
  */
 export async function cmdExplain(
@@ -167,7 +167,7 @@ export async function cmdExplain(
   const width = Math.max(...Object.keys(checks).map((k) => k.length), 0) + 2;
   const checkLines = Object.entries(result.checks).map(([name, status]) => {
     const label = STATUS_LABEL[status] ?? status;
-    const note = status === 'not-enforced' ? ' (not enforced at this milestone)' : '';
+    const note = status === 'not-enforced' ? ' (not enforced by this verifier profile)' : '';
     return `  ${pad(name, width)}${label}${note}`;
   });
 

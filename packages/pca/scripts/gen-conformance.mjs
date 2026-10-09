@@ -53,7 +53,7 @@ const resign = (p, secret) => {
 
 const NOW = 1_800_000_000_000; // fixed verification time for every vector (epoch ms)
 const AUD = 'rs-conformance';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
 const KEYMAP = { chain: 'cap_chain' };
 
 const vectors = [];
@@ -148,7 +148,7 @@ await add('delegated-leaf-signed-by-parent-holder', 'Chain is fine but the leaf 
 }
 {
   const p = build2(); p.cap_chain = [hop1, root];
-  await add('chain-hops-reordered', 'The two hops are swapped: chain fails.', root, planNodes, p, { falseChecks: ['chain', 'leaf_signature'] });
+  await add('chain-hops-reordered', 'The two hops are swapped: chain fails, and the first hop is no longer the root that grant_ref names (grant_ref_bound fails).', root, planNodes, p, { falseChecks: ['chain', 'grant_ref_bound', 'leaf_signature'] });
 }
 {
   const other = pca.mintRoot({ principalSecret: rogue.secretKey, principalPublic: pca.b64u(rogue.publicKey), holder: pca.b64u(agent.publicKey), caveats: [caveatA, caveatB] });
@@ -355,6 +355,32 @@ const sig64 = pca.b64u(new Uint8Array(64).fill(9)); // 86 chars, 2 data bits in 
 b(sig64, true, 64); b(altTail(sig64), false, 64); b(sig64 + '==', false, 64);
 for (const e of primitives.b64u) { const got = pca.decodeB64uStrict(e.input, e.len) !== null; if (got !== e.valid) throw new Error('b64u vector disagrees with reference: ' + JSON.stringify(e)); }
 
+// ---- grant_ref binding (check `grant_ref_bound`): grant_ref MUST equal the id of the ROOT capability, cap_chain[0].id ----
+{
+  const gr = 'grant_ref_bound';
+  const withRef = (p, ref, secret = agent.secretKey) => { const q = clone(p); q.grant_ref = ref; return resign(q, secret); };
+  const fresh = pca.b64u(new Uint8Array(32).fill(0x5a)); // a canonical 32-byte value that is NOT any capability id
+  await add('grant-ref-bound-positive-1-hop', 'grant_ref equals the id of the chain root (1-hop chain): grant_ref_bound passes.', root, planNodes, build());
+  await add('grant-ref-bound-positive-2-hop', 'grant_ref equals the id of the ROOT of a 2-hop chain (not the leaf hop id): grant_ref_bound passes.', root, planNodes, build2());
+  await add('grant-ref-mismatch-resigned', 'grant_ref is a fresh canonical 32-byte value that is not the root id (validly re-signed): grant_ref_bound fails; nothing else does.', root, planNodes, withRef(build(), fresh), { falseChecks: [gr] });
+  await add('grant-ref-mismatch-not-resigned', 'grant_ref swapped to a fresh value after signing: grant_ref_bound and leaf_signature fail.', root, planNodes, (() => { const q = build(); q.grant_ref = fresh; return q; })(), { falseChecks: [gr, 'leaf_signature'] });
+  await add('grant-ref-equals-non-root-hop-id', 'grant_ref is the id of a NON-root hop of a 2-hop chain (re-signed by the leaf holder): grant_ref_bound fails.', root, planNodes, withRef(build2(), hop1.id, sub.secretKey), { falseChecks: [gr] });
+  await add('grant-ref-equals-leaf-holder-key', 'grant_ref is the leaf holder public key (a well-formed 32-byte value, re-signed): grant_ref_bound fails.', root, planNodes, withRef(build(), pca.b64u(agent.publicKey)), { falseChecks: [gr] });
+  await add('grant-ref-equals-grant-issuer-key', 'grant_ref is the grant issuer (principal) public key (re-signed): grant_ref_bound fails.', root, planNodes, withRef(build(), pca.b64u(principal.publicKey)), { falseChecks: [gr] });
+  await add('grant-ref-case-variant-of-root-id', 'grant_ref is the root id with ONE letter\'s case flipped (still canonical base64url, a different 32-byte value; re-signed): compared byte-exactly, grant_ref_bound fails.', root, planNodes,
+    withRef(build(), (() => { const i = [...root.id].findIndex((ch, k) => k < 40 && /[A-Za-z]/.test(ch)); const ch = root.id[i]; return root.id.slice(0, i) + (ch === ch.toLowerCase() ? ch.toUpperCase() : ch.toLowerCase()) + root.id.slice(i + 1); })()), { falseChecks: [gr] });
+  await add('grant-ref-empty', 'grant_ref is the empty string (re-signed): wire fails.', root, planNodes, withRef(build(), ''), { falseChecks: ['wire'] });
+  await add('grant-ref-absent', 'grant_ref is absent (re-signed body without it): wire fails (missing field).', root, planNodes, (() => { const { sig: _s, grant_ref: _g, ...body } = clone(build()); return pca.signPCActn(body, agent.secretKey); })(), { falseChecks: ['wire'] });
+  await add('grant-ref-trailing-whitespace', 'grant_ref is the root id plus a trailing space (re-signed): not canonical base64url, wire fails.', root, planNodes, withRef(build(), root.id + ' '), { falseChecks: ['wire'] });
+  await add('grant-ref-leading-whitespace', 'grant_ref is the root id with a leading TAB (re-signed): wire fails.', root, planNodes, withRef(build(), '\t' + root.id), { falseChecks: ['wire'] });
+  await add('grant-ref-unicode-lookalike', 'grant_ref is the root id with its first character replaced by U+0430 CYRILLIC SMALL A (re-signed): wire fails; never normalised.', root, planNodes, withRef(build(), 'а' + root.id.slice(1)), { falseChecks: ['wire'] });
+  await add('grant-ref-zero-width-joiner', 'grant_ref is the root id with a U+200B ZERO WIDTH SPACE appended (re-signed): wire fails.', root, planNodes, withRef(build(), root.id + '​'), { falseChecks: ['wire'] });
+  await add('grant-ref-very-long', 'grant_ref is a 4096-char string (re-signed): wire fails (must be exactly 32 bytes).', root, planNodes, withRef(build(), 'A'.repeat(4096)), { falseChecks: ['wire'] });
+  await add('grant-ref-wrong-type-number', 'grant_ref is the number 7 (re-signed): wire fails.', root, planNodes, withRef(build(), 7), { falseChecks: ['wire'] });
+  await add('grant-ref-null', 'grant_ref is null (re-signed): wire fails.', root, planNodes, withRef(build(), null), { falseChecks: ['wire'] });
+  await add('grant-ref-empty-chain', 'cap_chain is empty (re-signed) while grant_ref is the root id: chain, grant_ref_bound (fail-closed on no root) and leaf_signature fail.', root, planNodes, (() => { const q = clone(build()); q.cap_chain = []; return resign(q, agent.secretKey); })(), { falseChecks: ['chain', gr, 'leaf_signature'] });
+}
+
 { // threshold share role-binding vectors
   const guardian = mk('guardian');
   const signerSet = [
@@ -376,7 +402,7 @@ for (const e of primitives.b64u) { const got = pca.decodeB64uStrict(e.input, e.l
 }
 
 const limits = { max_chain_hops: 16, max_json_depth: 32, max_json_chars: 1 << 20, max_decimal_digits: 15, min_decimal_magnitude: 1e-6, max_lifetime_ms: 3_600_000, max_skew_ms: 60_000 };
-const checkOrder = ['wire', 'version', 'audience', 'validity', 'chain', 'plan_inclusion', 'leaf_signature', 'counter'];
+const checkOrder = ['wire', 'version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
 writeFileSync(join(outDir, 'keys.json'), JSON.stringify(keys, null, 2) + '\n');
 writeFileSync(join(outDir, 'vectors.json'), JSON.stringify({ format: 2, ver: 2, sig_domain: 'atlas-pca/actn/v2\\0', cap_domain: 'atlas-pca/cap/v1\\0', share_domain: 'atlas-pca/share/<role>\\0', check_order: checkOrder, limits, primitives, vectors }, null, 2) + '\n');
 console.log(`wrote ${vectors.length} vectors`);

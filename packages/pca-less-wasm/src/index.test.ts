@@ -11,7 +11,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { keygen, open, seedWith, sign, signDetached, sizes, verify, VARIANT } from './index';
+import { keygen, open, seedWith, sign, signDetached, sizes, verify, VARIANT } from './index.js';
 
 const WASM = join(__dirname, '..', 'wasm', 'less_cat1.wasm');
 const haveWasm = existsSync(WASM);

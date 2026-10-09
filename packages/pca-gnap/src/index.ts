@@ -988,7 +988,6 @@ export interface CompleteContinuationResult {
  */
 export function completeGnapContinuation(args: CompleteContinuationArgs): CompleteContinuationResult {
   if (!Array.isArray(args.chain) || args.chain.length === 0) throw new GnapError('completeGnapContinuation: empty chain');
-  const leaf = args.chain[args.chain.length - 1]!;
   const pcactn = buildPCActn({
     grant: args.grant,
     chain: args.chain,
@@ -1002,7 +1001,8 @@ export function completeGnapContinuation(args: CompleteContinuationArgs): Comple
     ...(args.ttlMs !== undefined ? { ttlMs: args.ttlMs } : {}),
   });
   const message = thresholdMessage(pcactn);
-  const agentShare: ThresholdShare = { role: 'agent', publicKey: leaf.holder, sig: pcactn.sig };
+  // The agent's vote is a role-bound share like every other (a bare leaf signature is valid under any signer set / t and is rejected).
+  const agentShare: ThresholdShare = signShare('agent', args.agentLeafSecret, message, { signerSet: args.signerSet, t: args.t });
   const cosignShares = args.cosignSecrets.map((cs) => signShare(cs.role, cs.secret, message, { signerSet: args.signerSet, t: args.t }));
   const threshold = assembleThreshold([agentShare, ...cosignShares]);
   const verdict = verifyThreshold(threshold, message, args.signerSet, args.t);

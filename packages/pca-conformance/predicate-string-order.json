@@ -1,0 +1,155 @@
+{
+ "_doc": "Cross-language vectors for the lt/lte/gt/gte string order. RULE: strings are compared by the byte-wise order of their UTF-8 encoding (== Unicode code point order); no normalization, no locale, no case folding. cmp is the sign of compare(a,b). Strings are well-formed Unicode (lone surrogates have no UTF-8 encoding and are TS-only fail-closed tests). Consumers: packages/pca/src/predicate-string-order.test.ts and sdks/zkvm-pca/core/tests/predicate_string_order.rs.",
+ "vectors": [
+  {
+   "name": "ascii-less",
+   "a": "a",
+   "b": "b",
+   "cmp": -1
+  },
+  {
+   "name": "ascii-greater",
+   "a": "b",
+   "b": "a",
+   "cmp": 1
+  },
+  {
+   "name": "equal",
+   "a": "abc",
+   "b": "abc",
+   "cmp": 0
+  },
+  {
+   "name": "empty-vs-nonempty",
+   "a": "",
+   "b": "a",
+   "cmp": -1
+  },
+  {
+   "name": "prefix-shorter-first",
+   "a": "ab",
+   "b": "abc",
+   "cmp": -1
+  },
+  {
+   "name": "case-upper-before-lower",
+   "a": "Z",
+   "b": "a",
+   "cmp": -1
+  },
+  {
+   "name": "embedded-nul",
+   "a": "a\u0000b",
+   "b": "a",
+   "cmp": 1
+  },
+  {
+   "name": "nul-vs-empty",
+   "a": "\u0000",
+   "b": "",
+   "cmp": 1
+  },
+  {
+   "name": "bmp-high-vs-astral-FFFF-vs-10000",
+   "a": "\uffff",
+   "b": "\ud800\udc00",
+   "cmp": -1
+  },
+  {
+   "name": "bmp-private-use-vs-emoji",
+   "a": "\ue000",
+   "b": "\ud83d\ude00",
+   "cmp": -1
+  },
+  {
+   "name": "bmp-FFFD-vs-10FFFF",
+   "a": "\ufffd",
+   "b": "\udbff\udfff",
+   "cmp": -1
+  },
+  {
+   "name": "astral-vs-astral",
+   "a": "\ud83d\ude00",
+   "b": "\ud83d\ude01",
+   "cmp": -1
+  },
+  {
+   "name": "astral-10000-vs-10FFFF",
+   "a": "\ud800\udc00",
+   "b": "\udbff\udfff",
+   "cmp": -1
+  },
+  {
+   "name": "astral-prefix-then-bmp-high",
+   "a": "\ud83d\ude00a",
+   "b": "\uffff",
+   "cmp": 1
+  },
+  {
+   "name": "latin-vs-cjk",
+   "a": "z",
+   "b": "\u4e2d",
+   "cmp": -1
+  },
+  {
+   "name": "cjk-vs-astral-cjk-ext-b",
+   "a": "\u4e2d",
+   "b": "\ud840\udc00",
+   "cmp": -1
+  },
+  {
+   "name": "nfc-vs-nfd-e-acute",
+   "a": "\u00e9",
+   "b": "e\u0301",
+   "cmp": 1
+  },
+  {
+   "name": "nfc-vs-nfd-equal-looking-unequal",
+   "a": "e\u0301",
+   "b": "\u00e9",
+   "cmp": -1
+  },
+  {
+   "name": "hangul-syllable-vs-jamo",
+   "a": "\uac00",
+   "b": "\u1100\u1161",
+   "cmp": 1
+  },
+  {
+   "name": "combining-mark-after-base",
+   "a": "a\u0301",
+   "b": "a",
+   "cmp": 1
+  },
+  {
+   "name": "combining-mark-vs-next-letter",
+   "a": "a\u0301",
+   "b": "ab",
+   "cmp": 1
+  },
+  {
+   "name": "fullwidth-vs-ascii",
+   "a": "\uff21",
+   "b": "A",
+   "cmp": 1
+  },
+  {
+   "name": "surrogate-range-neighbours",
+   "a": "\ud7ff",
+   "b": "\ue000",
+   "cmp": -1
+  },
+  {
+   "name": "astral-vs-bmp-d7ff",
+   "a": "\ud7ff",
+   "b": "\ud800\udc00",
+   "cmp": -1
+  },
+  {
+   "name": "emoji-zwj-sequence",
+   "a": "\ud83d\udc68\u200d\ud83d\udc69",
+   "b": "\ud83d\udc68",
+   "cmp": 1
+  }
+ ]
+}

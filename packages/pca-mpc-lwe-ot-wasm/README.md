@@ -2,12 +2,22 @@
 
 The **post-quantum, maliciously-secure endemic base-OT lattice core** for `@atlasauth/pca-mpc`.
 
-`@atlasauth/pca-mpc`'s `kem-ot.ts` is a *semi-honest* ML-KEM base OT: a malicious receiver can keep
+`@atlasauth/pca-mpc`'s its ML-KEM base-OT module is a *semi-honest* ML-KEM base OT: a malicious receiver can keep
 both ML-KEM secret keys and learn both messages, and an opaque KEM cannot detect it. This package
 removes that residue by exposing exactly the Kyber-768 **IND-CPA (K-PKE)** primitives the **endemic
 OT of Masny–Rindal (ePrint 2019/706)** needs, so that the non-chosen branch's public key is forced to
 be a **uniform ring element** — provably undecryptable under **decisional Module-LWE**. The full
-protocol lives in `@atlasauth/pca-mpc`'s `endemic-ot.ts`; this package is just the lattice core.
+protocol lives in `@atlasauth/pca-mpc`'s its endemic-OT module; this package is just the lattice core.
+
+## Install
+
+```sh
+npm i @atlasauth/pca-mpc-lwe-ot-wasm
+```
+
+This is the lattice core `@atlasauth/pca-mpc` uses for its post-quantum base OT; you normally get it as a dependency of `@atlasauth/pca-mpc`.
+
+Node >= 20. The `.wasm` file ships inside the package and is loaded relative to the installed `dist/` directory; no build step or Rust toolchain is needed to use it.
 
 ## The vetted boundary (no hand-rolled Kyber)
 
@@ -28,7 +38,7 @@ This crate adds only three **non-cryptographic** pieces `pqc_kyber` does not re-
 
 None of these is the Kyber PKE, its NTT, its noise sampler or its compression.
 
-> `vendor/pqc_kyber` is `pqc_kyber` 0.7.1 with a **manifest-only** change (`crate-type = ["rlib"]`,
+> `crate/vendor/pqc_kyber` is `pqc_kyber` 0.7.1 with a **manifest-only** change (`crate-type = ["rlib"]`,
 > so cargo does not try to build a std-less `cdylib` for `wasm32-unknown-unknown`). The algorithm
 > source is byte-identical to the crates.io release; the `[patch.crates-io]` in `crate/Cargo.toml`
 > wires it in. The package still pins `pqc_kyber = "0.7.1"` as the dependency of record.
@@ -67,9 +77,31 @@ ring homomorphism, the uniform-branch endemic property) live in `crate/src/lib.r
 - **Receiver choice privacy:** computational under **decisional Module-LWE**, even vs a quantum sender.
 - **Post-quantum:** rests only on Module-LWE (ML-KEM-768, NIST category 3) + a random oracle.
 
-Composed with the KOS correlation check in `@atlasauth/pca-mpc`'s `ot.ts`, `κ` endemic base OTs become
+Composed with the KOS correlation check in `@atlasauth/pca-mpc`, `κ` endemic base OTs become
 many **maliciously-secure, post-quantum** OTs.
 
 **Honest residual:** the Kyber core is a prototype and is **not** claimed constant-time (a documented
 side-channel boundary, not a break of the MLWE/ROM security); K-PKE has a negligible (~2⁻¹³⁹)
 decryption-failure probability inherited from the primitive.
+
+## Status
+
+Experimental. The Kyber core is a prototype use of a non-FO primitive and has not been independently audited.
+
+## Build provenance
+
+The shipped `wasm/pca_mpc_lwe_ot_wasm.wasm` is built from the Rust source in `crate/` (with its `Cargo.lock`) and is bit-for-bit reproducible.
+
+| | |
+| --- | --- |
+| artifact | `wasm/pca_mpc_lwe_ot_wasm.wasm` |
+| sha256 | `6f9e0dbaadc55c775eea029670ffa0bfa8ea8129f80ab90124740158f111b386` |
+| target | `wasm32-unknown-unknown`, `--release --locked` (opt-level `s`, LTO, `panic = "abort"`, stripped) |
+| toolchain | rustc 1.99.0 (b940084d7 2026-09-28), cargo 1.99.0 |
+| locked crates | pqc_kyber 0.7.1 (vendored, manifest-only change), sha3 0.10.9, rand_core 0.6.4 |
+
+Verify: `cd crate && cargo build --release --locked --target wasm32-unknown-unknown && shasum -a 256 target/wasm32-unknown-unknown/release/pca_mpc_lwe_ot_wasm.wasm` (needs `rustup target add wasm32-unknown-unknown`).
+
+## License
+
+MIT - see LICENSE.

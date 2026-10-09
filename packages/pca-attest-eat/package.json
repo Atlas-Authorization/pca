@@ -1,7 +1,28 @@
 {
   "name": "@atlasauth/pca-attest-eat",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Per-session attestation freshness + channel binding for PCA (IETF SEAT / RA-TLS), emitting EAT (RFC 9711) with a RATS appraisal-policy split — so TEE evidence can't be replayed.",
+  "keywords": [
+    "eat",
+    "rfc 9711",
+    "rats",
+    "channel binding",
+    "remote attestation",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-attest-eat"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -20,13 +41,18 @@
     "@atlasauth/pca": "workspace:*"
   },
   "devDependencies": {
+    "@noble/curves": "^1.9.1",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   }

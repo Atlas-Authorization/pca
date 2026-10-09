@@ -157,9 +157,8 @@ export async function expectDenied(pcactn: PCActn, opts?: FakeVerifyOptions): Pr
 // ---- in-memory state store ------------------------------------------------------------------------
 
 /**
- * Per-holder replay/budget state a resource server threads across actions. Defined locally (NOT imported
- * from `@atlasauth/backend`) so the kit depends only on `@atlasauth/pca`; the shape is a structural
- * drop-in for the backend's store.
+ * Per-holder replay/budget state a resource server threads across actions. A minimal local shape that is a
+ * structural drop-in for `PcaStateStore` / `PcaHolderState` exported by `@atlasauth/pca`.
  */
 export interface State {
   budget?: unknown;

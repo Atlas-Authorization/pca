@@ -5,7 +5,7 @@
  * TEE evidence (an AMD SEV-SNP `ATTESTATION_REPORT`, a TDX quote, …) captured ONCE at provisioning is a
  * static blob: nothing in a bare report ties it to the TLS connection or the request it is presented on,
  * so a captured-once report can be REPLAYED or RELAYED onto another session. PCA's silicon-root
- * verification (`@atlasauth/pca` `hardware-sevsnp.ts` → `verifyGenuineSevSnpReport` / `createSevSnpVerifier`)
+ * verification (`@atlasauth/pca` `hardware-sevsnp.ts` → `verifyGenuineSevSnpReport`, and `attest-amd-snp.ts` `createAmdSnpVerifier`)
  * proves the report is genuine and TCB-sound, and `attestation.ts` binds it to a server-issued nonce +
  * holder/grant/epoch — but that binding lives inside the PCA envelope. This package adds the complementary,
  * interoperable IETF freshness layer:
@@ -25,32 +25,25 @@
  * This package does NOT re-invent the SEV-SNP / measurement model. It reuses PCA's own types:
  *   • {@link MeasuredIdentity} (PCA `attestation.ts`) is the measured-identity carried in and appraised
  *     from the EAT (model_id / weights_digest / weights_measured / runtime_measurement / operator);
- *   • {@link ParsedSevSnpReport} + `parseSevSnpReport` / `serializeSevSnpReport` / `toHex` /
+ *   • {@link ParsedSevSnpReport} + `parseSevSnpReport` / `toHex` /
  *     `SEV_SNP_POLICY_DEBUG_BIT` (PCA `hardware-sevsnp.ts`) are reused for the report-level evidence and
  *     the version-tolerant parse. {@link evidenceFromReport} / {@link measuredFromReport} project a
  *     `ParsedSevSnpReport` into JSON-safe EAT claims.
  *
  * ── HONESTY: what this is and is NOT ───────────────────────────────────────────────────────────────
- * This is the FRESHNESS / CHANNEL-BINDING / EAT-EMISSION / APPRAISAL layer AND it now verifies the AMD
- * SEV-SNP silicon root of trust directly, with `node:crypto` only. {@link verifySevSnpSignature} checks the
- * report's real ECDSA-P384/SHA-384 signature over the signed region [0x000,0x2A0) under the VCEK public
- * key (converting AMD's little-endian r‖s to the IEEE-P1363 form node's verifier needs);
- * {@link verifyAmdCertChain} verifies the VCEK→ASK→ARK X.509 chain (VCEK signed by ASK, ASK by ARK, ARK
- * self-signed), honours each certificate's validity period, and pins the ARK to a known/injectable AMD
- * root fingerprint; {@link verifyAmdAttestation} composes the two (+ optional measurement / debug gates)
- * into one verdict. {@link appraise} and {@link verifyFreshAttestedEAT} are WIRED to this: an attestation
- * whose AMD signature + chain verify appraises to the strictly-higher `affirming-hw-rooted` tier, above the
- * `affirming` tier a software-vouched EAT can reach.
+ * This is the FRESHNESS / CHANNEL-BINDING / EAT-EMISSION / APPRAISAL layer. It holds NO AMD certificate or
+ * report-signature cryptography of its own: {@link verifyAmdAttestation} DELEGATES to `@atlasauth/pca`'s
+ * hardened `verifyGenuineSevSnpReport` (per-family ARK pins, CA-role and critical-extension checks, mandatory
+ * validity window against the verifier clock `nowMs`, exact ASK-then-ARK bundle, VCEK-to-report binding,
+ * ECDSA-P384 report signature). {@link appraise} and {@link verifyFreshAttestedEAT} are WIRED to this: an
+ * attestation whose AMD signature + chain verify appraises to the strictly-higher `affirming-hw-rooted`
+ * tier, above the `affirming` tier a software-vouched EAT can reach.
  *
  * The one honest residual: the AMD hardware root of trust (the ARK) is itself a CLASSICAL ECDSA/RSA key —
- * a hardware-vendor fact, not a gap in this code. The signature verification is REAL (no longer skipped);
- * the root's classical nature is labelled (see {@link AMD_SEV_SNP_HARDWARE_ROOT_LABEL}) and surfaced in the
- * appraisal reasons, never silently upgraded to a post-quantum guarantee this layer cannot provide. The
- * synthetic-ECDSA relationship model in `@atlasauth/pca`'s `hardware-sevsnp.ts` (`verifyVcekChain`, the
- * `@noble/curves` core, and `verifyGenuineSevSnpReport`'s offline real-silicon path) remains the library's
- * portable core; this package adds the `node:crypto`-only X.509 chain + report-signature verifier and the
- * freshness / channel-binding / appraisal wrapper around it. PCA proves the evidence is REAL; this package
- * proves it is REAL, FRESH and on THIS channel.
+ * a hardware-vendor fact, not a gap in this code. The root's classical nature is labelled (see
+ * {@link AMD_SEV_SNP_HARDWARE_ROOT_LABEL}) and surfaced in the appraisal reasons, never silently upgraded to
+ * a post-quantum guarantee this layer cannot provide. PCA proves the evidence is REAL; this package proves
+ * it is REAL, FRESH and on THIS channel.
  *
  * ── Crypto ──────────────────────────────────────────────────────────────────────────────────────────
  * EATs are emitted as a compact JWS (RFC 9711 §7.3.1 permits a JWT/CWT representation; the `typ` header is
@@ -68,21 +61,24 @@ import {
   sign as nodeSign,
   timingSafeEqual,
   verify as nodeVerify,
-  X509Certificate,
   type KeyObject,
 } from 'node:crypto';
 import {
   AMD_MILAN_ARK_SPKI_SHA384,
+  attestAmdSnp,
   type MeasuredIdentity,
   type ParsedSevSnpReport,
   SEV_SNP_POLICY_DEBUG_BIT,
-  SEV_SNP_SIG_ALGO_ECDSA_P384_SHA384,
   parseSevSnpReport,
+  splitPemCertificates,
   toHex,
+  verifyGenuineSevSnpReport,
 } from '@atlasauth/pca';
 
 // Re-export the reused PCA types so consumers of this package do not reach into @atlasauth/pca for them.
 export type { MeasuredIdentity, ParsedSevSnpReport };
+/** The AMD CPU families with a pinned KDS root (`milan` | `genoa` | `turin`). */
+export type AmdFamily = attestAmdSnp.AmdFamily;
 // Re-export the real, pinned AMD Milan ARK trust anchor (SHA-384 of its SPKI DER) so consumers can pin it.
 export { AMD_MILAN_ARK_SPKI_SHA384 };
 
@@ -128,25 +124,13 @@ export const AMD_SEV_SNP_HARDWARE_ROOT_LABEL =
   'amd-sev-snp/ecdsa-p384 (VCEK→ASK→ARK; classical hardware root, not post-quantum)';
 
 /**
- * The KNOWN AMD ARK (AMD Root Key) trust anchors, pinned as the SHA-384 of each ARK's DER
- * SubjectPublicKeyInfo — the same fingerprint {@link verifyAmdCertChain} computes from a supplied ARK and
- * compares against (so the root of trust is NEVER taken from the chain itself). `Milan` is the real,
- * published AMD EPYC Milan root (shared with `@atlasauth/pca`'s `AMD_MILAN_ARK_SPKI_SHA384`).
- *
- * Each AMD CPU generation (Genoa, Bergamo, Turin, …) has its OWN ARK with its own fingerprint, published at
- * the AMD KDS `…/cert_chain` endpoint. Those are pinned by INJECTING their fingerprint via
- * `verifyAmdCertChain`'s / {@link verifyAmdAttestation}'s `rootFingerprint` option. We deliberately do NOT
- * hard-code an UNVERIFIED Genoa/Bergamo value here: a wrong pin is a latent fail-closed/accept-wrong-root
- * bug, so only the fingerprints we can vouch for ship as constants, and the rest are injectable.
+ * The KNOWN AMD ARK (AMD Root Key) trust anchors per CPU family, pinned as the SHA-384 of each ARK's DER
+ * SubjectPublicKeyInfo, as published by the AMD KDS `…/cert_chain` endpoint. Re-exported from
+ * `@atlasauth/pca` (`attestAmdSnp.AMD_ARK_SPKI_SHA384`) so there is a single source of truth. The family is
+ * always chosen by the verifier (see {@link AmdAttestationInput.family}); the root is never inferred from the
+ * evidence. (0.2.0: was a Milan-only `{ Milan }` map; keys are now lowercase `milan | genoa | turin`.)
  */
-export const KNOWN_AMD_ARK_SPKI_SHA384: Readonly<Record<string, string>> = {
-  Milan: AMD_MILAN_ARK_SPKI_SHA384,
-};
-
-/** The order (n) of the NIST P-384 curve — used to range-check report signature scalars (fail closed). */
-const P384_ORDER = BigInt(
-  '0xffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973',
-);
+export const KNOWN_AMD_ARK_SPKI_SHA384: Readonly<Record<AmdFamily, string>> = attestAmdSnp.AMD_ARK_SPKI_SHA384;
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 // Claim model (RFC 9711 common claims).
@@ -220,8 +204,6 @@ export interface EatSevSnpEvidence {
   chip_id?: string;
   /** Whether the guest POLICY DEBUG bit (19) was set (host can inspect the guest => no confidentiality). */
   debug?: boolean;
-  /** The PCA-convention measured loaded-weights digest (hex), if the runtime reflected one (non-zero slot). */
-  weights_measurement?: string;
   /** Set when the evidence came from a best-effort (degraded) parse — a short buffer or unknown version. */
   degraded?: boolean;
 }
@@ -351,16 +333,10 @@ export function issueNonce(opts: { now?: number; bytes?: number } = {}): IssuedN
 // Evidence projection from a PCA ParsedSevSnpReport.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 
-/** True iff every byte is zero (an unmeasured / ABSENT fixed-width slot). */
-function isAllZero(b: Uint8Array): boolean {
-  for (let i = 0; i < b.length; i++) if (b[i] !== 0) return false;
-  return true;
-}
-
 /**
  * Project a PCA {@link ParsedSevSnpReport} into the JSON-safe {@link EatSevSnpEvidence} carried in an EAT.
  * Reuses PCA's `toHex` and `SEV_SNP_POLICY_DEBUG_BIT`. `reported_tcb` is rendered as a decimal string so
- * the u64 survives JSON; an all-zero weights slot is treated as ABSENT (omitted).
+ * the u64 survives JSON. SEV-SNP has no weights field, so no weights evidence is projected.
  */
 export function evidenceFromReport(report: ParsedSevSnpReport): EatSevSnpEvidence {
   const ev: EatSevSnpEvidence = {
@@ -371,23 +347,20 @@ export function evidenceFromReport(report: ParsedSevSnpReport): EatSevSnpEvidenc
     chip_id: toHex(report.chip_id),
     debug: (report.policy & SEV_SNP_POLICY_DEBUG_BIT) !== 0n,
   };
-  if (!isAllZero(report.weights_measurement)) ev.weights_measurement = toHex(report.weights_measurement);
   return ev;
 }
 
 /**
  * Derive a PCA {@link MeasuredIdentity} from a {@link ParsedSevSnpReport}, mirroring PCA's default
- * hardware identity mapping: runtime_measurement = hex(MEASUREMENT), operator = hex(CHIP_ID), and a
- * non-zero WEIGHTS_MEASUREMENT slot → a HARDWARE-MEASURED weights digest (`weights_measured: true`). An
- * absent (all-zero) slot yields `weights_digest: ''` with `weights_measured: false`. SEV-SNP carries no
- * model id, so `model_id` is '' (override at your launch convention).
+ * hardware identity mapping: runtime_measurement = hex(MEASUREMENT), operator = hex(CHIP_ID). SEV-SNP
+ * has no native weights or model-id field, so `weights_digest` is '' and `weights_measured` is always
+ * false (tie weights to the launch measurement, REPORT_DATA, or a GPU RIM instead).
  */
 export function measuredFromReport(report: ParsedSevSnpReport): MeasuredIdentity {
-  const wMeasured = !isAllZero(report.weights_measurement);
   return {
     model_id: '',
-    weights_digest: wMeasured ? toHex(report.weights_measurement) : '',
-    weights_measured: wMeasured,
+    weights_digest: '',
+    weights_measured: false,
     runtime_measurement: toHex(report.measurement),
     operator: toHex(report.chip_id),
   };
@@ -397,7 +370,7 @@ export function measuredFromReport(report: ParsedSevSnpReport): MeasuredIdentity
 // Version-tolerant SEV-SNP report parse.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 
-// AMD SEV-SNP ABI byte offsets for the version-STABLE fields (same across v2/v3). Mirrors PCA's private
+// AMD SEV-SNP ABI byte offsets for the version-STABLE fields (same across v2/v3/v5). Mirrors PCA's private
 // `OFF` table; kept here so the degraded path can read a short/odd buffer without PCA throwing.
 const OFF_VERSION = 0x000;
 const OFF_GUEST_SVN = 0x004;
@@ -405,12 +378,11 @@ const OFF_POLICY = 0x008;
 const OFF_MEASUREMENT = 0x090; // 48 B
 const OFF_REPORTED_TCB = 0x180; // u64
 const OFF_CHIP_ID = 0x1a0; // 64 B
-const OFF_WEIGHTS = 0x1e0; // 48 B (PCA convention)
 /** Buffer length PCA's `parseSevSnpReport` requires (through the r‖s signature fields). */
 const FULL_REPORT_MIN_LEN = 0x2e8 + 72;
 
 /** Report format versions this parser recognizes as a stable, fully-mapped layout. */
-export const KNOWN_REPORT_VERSIONS: readonly number[] = [2, 3];
+export const KNOWN_REPORT_VERSIONS: readonly number[] = [2, 3, 5];
 
 /** The outcome of a version-tolerant report parse. Never throws. */
 export interface TolerantParseResult {
@@ -456,7 +428,7 @@ function readSlice(b: Uint8Array, off: number, len: number): Uint8Array | undefi
  *   • a KNOWN version ({@link KNOWN_REPORT_VERSIONS}) with a complete buffer → PCA's full `parseSevSnpReport`
  *     (`report` + `evidence`, `degraded: false`);
  *   • an UNKNOWN version, or a buffer too short for the full signature block → read the VERSION-STABLE
- *     header fields (version, guest_svn, policy/debug, launch measurement, reported_tcb, chip_id, weights)
+ *     header fields (version, guest_svn, policy/debug, launch measurement, reported_tcb, chip_id)
  *     at their fixed offsets, set `degraded: true` + a note, and return what could be read. Later
  *     appraisal of degraded evidence is downgraded to a `warning` tier, not silently affirmed.
  * Never throws: an input too short to even hold the version yields `{ ok: false }`.
@@ -500,8 +472,6 @@ export function parseReportTolerant(bytes: Uint8Array): TolerantParseResult {
   if (tcb !== undefined) evidence.reported_tcb = tcb.toString();
   const chip = readSlice(bytes, OFF_CHIP_ID, 64);
   if (chip !== undefined) evidence.chip_id = toHex(chip);
-  const weights = readSlice(bytes, OFF_WEIGHTS, 48);
-  if (weights !== undefined && !isAllZero(weights)) evidence.weights_measurement = toHex(weights);
 
   return { ok: true, version, known, degraded: true, notes, evidence };
 }
@@ -704,7 +674,6 @@ function parseSevSnp(v: unknown): EatSevSnpEvidence | undefined {
   if (typeof v.guest_svn === 'number') out.guest_svn = v.guest_svn;
   if (typeof v.chip_id === 'string') out.chip_id = v.chip_id;
   if (typeof v.debug === 'boolean') out.debug = v.debug;
-  if (typeof v.weights_measurement === 'string') out.weights_measurement = v.weights_measurement;
   if (typeof v.degraded === 'boolean') out.degraded = v.degraded;
   return out;
 }
@@ -1012,12 +981,11 @@ function launchMeasurement(eat: EatClaims): string | undefined {
   return m?.value;
 }
 
-/** The measured-weights digest to appraise (the measured identity, else the sevsnp block, else a `weights` entry). */
+/** The measured-weights digest to appraise (the measured identity, else a `weights` measurement entry). */
 function weightsMeasurement(eat: EatClaims): string | undefined {
   if (eat.measured && typeof eat.measured.weights_digest === 'string' && eat.measured.weights_digest.length > 0) {
     return eat.measured.weights_digest;
   }
-  if (eat.sevsnp && typeof eat.sevsnp.weights_measurement === 'string') return eat.sevsnp.weights_measurement;
   const m = eat.measurements?.find((e) => e.type === 'weights');
   return m?.value;
 }
@@ -1148,228 +1116,35 @@ export function appraise(
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
-// AMD SEV-SNP hardware root of trust — REAL signature + certificate-chain verification (node:crypto).
+// AMD SEV-SNP hardware root of trust — DELEGATED to @atlasauth/pca.
 //
-// Closes the boundary the module header used to document ("does NOT verify the AMD signature"). This is
-// the genuine AMD "Versioned Chip Endorsement Key" chain of trust, verified with node:crypto only:
-//   report signature (ECDSA-P384/SHA-384 over [0x000,0x2A0))  ⟵ signed by ⟶  VCEK
-//                                           VCEK  ⟵ signed by ⟶  ASK  ⟵ signed by ⟶  ARK (self-signed, pinned)
-// Every function FAILS CLOSED (a structured {ok,reason}) — a parse error, a bad signature, a broken chain
-// link, an untrusted root, an out-of-validity certificate, or a thrown exception all return ok:false.
+// This package no longer carries its own copy of the VCEK→ASK→ARK chain or report-signature
+// cryptography. `verifyAmdAttestation` calls `@atlasauth/pca`'s `verifyGenuineSevSnpReport`, which
+// enforces: the ARK pinned to a per-family AMD KDS root (milan / genoa / turin), an EXACT ASK-then-ARK
+// bundle, CA-role + critical-extension checks from the real X.509 extension table, a MANDATORY validity
+// window checked against the verifier's clock (`nowMs`), the report's ECDSA-P384 signature under the
+// chain-trusted VCEK, and the VCEK CHIP_ID / reported-TCB binding to the report. Every failure is a
+// structured `{ ok:false, reason }` (fail closed); nothing throws.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 
 /** A certificate supplied either as DER bytes or as a PEM string (`-----BEGIN CERTIFICATE-----`…). */
 export type CertInput = Uint8Array | string;
 
-/** The outcome of {@link verifySevSnpSignature}: ok, or a specific reason it failed closed. */
-export interface SevSnpSignatureResult {
-  ok: boolean;
-  reason?: string;
+/** A certificate input → DER bytes. Throws on a PEM string that is not exactly one certificate. */
+function certToDer(input: CertInput): Uint8Array {
+  if (typeof input !== 'string') return input;
+  const blocks = splitPemCertificates(input);
+  if (blocks.length !== 1) throw new Error(`expected exactly one PEM certificate, found ${blocks.length}`);
+  return attestAmdSnp.pemToDer(blocks[0] as string);
 }
 
-/** Interpret a little-endian byte array as a non-negative bigint (AMD stores r/s little-endian). */
-function leBytesToBigInt(le: Uint8Array): bigint {
-  let n = 0n;
-  for (let i = le.length - 1; i >= 0; i--) n = (n << 8n) | BigInt(le[i] ?? 0);
-  return n;
+/** DER certificate → single PEM block. */
+function derToPem(der: Uint8Array): string {
+  const b64 = Buffer.from(der).toString('base64').replace(/(.{64})/g, '$1\n');
+  return `-----BEGIN CERTIFICATE-----\n${b64}\n-----END CERTIFICATE-----\n`;
 }
 
-/** Serialize a non-negative bigint to a fixed-width big-endian Buffer. Throws if it does not fit. */
-function bigIntToBe(n: bigint, size: number): Buffer {
-  const out = Buffer.alloc(size);
-  let v = n;
-  for (let i = size - 1; i >= 0; i--) {
-    out[i] = Number(v & 0xffn);
-    v >>= 8n;
-  }
-  if (v !== 0n) throw new RangeError('scalar does not fit in the target field width');
-  return out;
-}
-
-/** A certificate input → a node:crypto value its `X509Certificate` constructor accepts (PEM string or DER Buffer). */
-function toCertArg(input: CertInput): string | Buffer {
-  if (typeof input === 'string') return input;
-  return Buffer.from(input.buffer, input.byteOffset, input.byteLength);
-}
-
-/** Parse a certificate input into an `X509Certificate`. Throws on malformed input (callers fail closed). */
-function loadCert(input: CertInput): X509Certificate {
-  return new X509Certificate(toCertArg(input));
-}
-
-/** Extract + validate the EC-secp384r1 public key from a certificate. Throws if it is not P-384 EC. */
-function loadP384PublicKey(input: CertInput, label: string): KeyObject {
-  const pk = loadCert(input).publicKey;
-  if (pk.asymmetricKeyType !== 'ec') {
-    throw new Error(`${label} is not an EC key (got ${String(pk.asymmetricKeyType)})`);
-  }
-  const curve = pk.asymmetricKeyDetails?.namedCurve;
-  if (curve !== 'secp384r1') throw new Error(`${label} is not EC secp384r1 (got ${String(curve)})`);
-  return pk;
-}
-
-/** SHA-384 (hex) of a certificate's DER SubjectPublicKeyInfo — the fingerprint an ARK pin compares. */
-function spkiSha384Hex(cert: X509Certificate): string {
-  const spki = cert.publicKey.export({ type: 'spki', format: 'der' });
-  return createHash('sha384').update(spki).digest('hex');
-}
-
-/** True iff `now` lies within the certificate's [notBefore, notAfter] window. */
-function withinValidity(cert: X509Certificate, nowMs: number): boolean {
-  const nb = new Date(cert.validFrom).getTime();
-  const na = new Date(cert.validTo).getTime();
-  if (!Number.isFinite(nb) || !Number.isFinite(na)) return false;
-  return nowMs >= nb && nowMs <= na;
-}
-
-/**
- * Verify an AMD SEV-SNP `ATTESTATION_REPORT`'s ECDSA-P384/SHA-384 signature under the VCEK public key.
- *
- * The signature is over the report's signed region [0x000, 0x2A0) (see {@link AMD_SEV_SNP_SIGNED_REGION_END}).
- * AMD stores r and s as 72-byte LITTLE-ENDIAN fields (the P-384 scalars occupy the low 48 bytes); this
- * converts them to the IEEE-P1363 big-endian r‖s (48+48 = 96 bytes) form `node:crypto`'s verifier wants.
- * Reuses PCA's `parseSevSnpReport` for the report layout, so there is no parallel parser. FAILS CLOSED: a
- * parse error, an unexpected signature algorithm, a non-P384 VCEK, out-of-range scalars, or a bad signature
- * all return `{ ok:false, reason }`; never throws.
- */
-export function verifySevSnpSignature(rawReport: Uint8Array, vcekCertDerOrPem: CertInput): SevSnpSignatureResult {
-  try {
-    let report: ParsedSevSnpReport;
-    try {
-      report = parseSevSnpReport(rawReport);
-    } catch (e) {
-      return { ok: false, reason: `report parse failed: ${msg(e)}` };
-    }
-    if (report.signature_algo !== SEV_SNP_SIG_ALGO_ECDSA_P384_SHA384) {
-      return { ok: false, reason: `unexpected signature_algo ${report.signature_algo} (expected ECDSA_P384_SHA384 = ${SEV_SNP_SIG_ALGO_ECDSA_P384_SHA384})` };
-    }
-
-    let vcekKey: KeyObject;
-    try {
-      vcekKey = loadP384PublicKey(vcekCertDerOrPem, 'VCEK certificate');
-    } catch (e) {
-      return { ok: false, reason: `VCEK certificate invalid: ${msg(e)}` };
-    }
-
-    const r = leBytesToBigInt(report.signature.r);
-    const s = leBytesToBigInt(report.signature.s);
-    if (r <= 0n || r >= P384_ORDER || s <= 0n || s >= P384_ORDER) {
-      return { ok: false, reason: 'report signature r/s is zero or >= the P-384 group order (structurally invalid)' };
-    }
-
-    let sig: Buffer;
-    try {
-      sig = Buffer.concat([bigIntToBe(r, 48), bigIntToBe(s, 48)]);
-    } catch (e) {
-      return { ok: false, reason: `report signature scalar does not fit P-384: ${msg(e)}` };
-    }
-
-    const ok = nodeVerify('sha384', report.signed, { key: vcekKey, dsaEncoding: 'ieee-p1363' }, sig);
-    return ok ? { ok: true } : { ok: false, reason: 'ECDSA-P384 report signature does not verify under the VCEK public key' };
-  } catch (e) {
-    return { ok: false, reason: `sev-snp signature verification error (fail closed): ${msg(e)}` };
-  }
-}
-
-/** Options for {@link verifyAmdCertChain}. */
-export interface AmdCertChainOptions {
-  /**
-   * Pin the ARK: its SPKI SHA-384 (hex) must equal this, or be one of these. Default: the values of
-   * {@link KNOWN_AMD_ARK_SPKI_SHA384} (currently the real AMD Milan root). Inject another generation's
-   * published fingerprint (Genoa/Bergamo/Turin) here.
-   */
-  rootFingerprint?: string | readonly string[];
-  /** "Now" (epoch ms) for the validity-period checks. Default `Date.now()`. */
-  now?: number;
-}
-
-/** The outcome of {@link verifyAmdCertChain}: ok + the VCEK key, or a specific reason it failed closed. */
-export interface AmdCertChainResult {
-  ok: boolean;
-  reason?: string;
-  /** The VCEK EC-P384 public key (present iff the whole chain verified) — ready to verify the report under. */
-  vcek?: KeyObject;
-  /** The ARK SPKI SHA-384 (hex) that matched a pin (present iff the chain verified). */
-  arkFingerprint?: string;
-}
-
-/** Resolve the effective set of accepted ARK fingerprints (hex) from the option (default: the known set). */
-function resolveArkPins(fp?: string | readonly string[]): string[] {
-  if (fp === undefined) return Object.values(KNOWN_AMD_ARK_SPKI_SHA384);
-  const list = typeof fp === 'string' ? [fp] : fp;
-  const out: string[] = [];
-  for (const p of list) if (typeof p === 'string' && p.length > 0) out.push(p.toLowerCase());
-  return out;
-}
-
-/**
- * Verify the AMD "Versioned Chip Endorsement Key" certificate chain of trust, with `node:crypto` only:
- *   1. every certificate (VCEK, ASK, ARK) is WITHIN its validity period at `now`;
- *   2. the ARK is SELF-SIGNED (`ark.verify(ark.publicKey)`);
- *   3. the ARK is the KNOWN AMD root — its SPKI SHA-384 equals a pinned fingerprint (default
- *      {@link KNOWN_AMD_ARK_SPKI_SHA384}, or an injected `rootFingerprint`); the root is NEVER trusted
- *      just because it is self-signed;
- *   4. the ASK is signed by the ARK (`ask.verify(ark.publicKey)`);
- *   5. the VCEK is signed by the ASK (`vcek.verify(ask.publicKey)`).
- * Each `X509Certificate.verify` is the OpenSSL-backed check, so it covers the real AMD mix (an EC-P384 VCEK
- * leaf under RSA-PSS ASK/ARK) as well as an all-ECDSA test chain. Returns the VCEK public key on success so
- * the caller can verify the report signature under exactly the chain-trusted key. FAILS CLOSED on any
- * broken link; never throws.
- */
-export function verifyAmdCertChain(
-  vcekCert: CertInput,
-  askCert: CertInput,
-  arkCert: CertInput,
-  opts: AmdCertChainOptions = {},
-): AmdCertChainResult {
-  try {
-    const nowMs = typeof opts.now === 'number' && Number.isFinite(opts.now) ? opts.now : Date.now();
-
-    let vcek: X509Certificate;
-    let ask: X509Certificate;
-    let ark: X509Certificate;
-    try {
-      vcek = loadCert(vcekCert);
-      ask = loadCert(askCert);
-      ark = loadCert(arkCert);
-    } catch (e) {
-      return { ok: false, reason: `certificate parse failed: ${msg(e)}` };
-    }
-
-    const certs: ReadonlyArray<readonly [string, X509Certificate]> = [
-      ['VCEK', vcek],
-      ['ASK', ask],
-      ['ARK', ark],
-    ];
-    for (const [label, c] of certs) {
-      if (!withinValidity(c, nowMs)) return { ok: false, reason: `${label} certificate is outside its validity period` };
-    }
-
-    const pins = resolveArkPins(opts.rootFingerprint);
-    if (pins.length === 0) return { ok: false, reason: 'no ARK trust-anchor fingerprint configured (fail closed)' };
-    const arkFp = spkiSha384Hex(ark);
-    if (!pins.some((p) => strEq(p, arkFp))) {
-      return { ok: false, reason: 'ARK SPKI fingerprint does not match a pinned AMD root (untrusted root)' };
-    }
-
-    if (!ark.verify(ark.publicKey)) return { ok: false, reason: 'ARK is not self-signed' };
-    if (!ask.verify(ark.publicKey)) return { ok: false, reason: 'ASK is not signed by ARK (broken chain link)' };
-    if (!vcek.verify(ask.publicKey)) return { ok: false, reason: 'VCEK is not signed by ASK (broken chain link)' };
-
-    let vcekKey: KeyObject;
-    try {
-      vcekKey = loadP384PublicKey(vcekCert, 'VCEK certificate');
-    } catch (e) {
-      return { ok: false, reason: `VCEK key invalid: ${msg(e)}` };
-    }
-
-    return { ok: true, vcek: vcekKey, arkFingerprint: arkFp };
-  } catch (e) {
-    return { ok: false, reason: `AMD chain verification error (fail closed): ${msg(e)}` };
-  }
-}
-
-/** Input to {@link verifyAmdAttestation}: the raw report + its VCEK/ASK/ARK chain + optional policy gates. */
+/** Input to {@link verifyAmdAttestation}: the raw report + its VCEK/ASK/ARK chain + the verifier's clock + policy gates. */
 export interface AmdAttestationInput {
   /** The VCEK (leaf) certificate — DER or PEM. */
   vcek: CertInput;
@@ -1377,14 +1152,22 @@ export interface AmdAttestationInput {
   ask: CertInput;
   /** The ARK (root) certificate — DER or PEM. */
   ark: CertInput;
-  /** Pin the ARK fingerprint(s) (default {@link KNOWN_AMD_ARK_SPKI_SHA384}). */
-  rootFingerprint?: string | readonly string[];
-  /** "Now" (epoch ms) for certificate validity checks. Default `Date.now()`. */
-  now?: number;
+  /**
+   * The CPU family whose AMD KDS root the ARK must match (`milan` | `genoa` | `turin`, see
+   * {@link KNOWN_AMD_ARK_SPKI_SHA384}). The verifier never infers the root from the evidence. Supply this OR
+   * {@link trustAnchorArkSpkiSha384}, never both and never neither (fail closed).
+   */
+  family?: AmdFamily;
+  /** Explicit ARK SPKI SHA-384 (hex) pin, for a private / test root. Mutually exclusive with {@link family}. */
+  trustAnchorArkSpkiSha384?: string;
+  /** The verifier's clock (epoch ms). REQUIRED: every certificate's validity window is checked against it. */
+  nowMs: number;
+  /** Tolerated clock skew (ms) on both ends of each certificate validity window. Default 0. */
+  clockSkewMs?: number;
   /** If set, the report's launch MEASUREMENT (48-byte, hex) must equal this (binds the claimed identity to silicon). */
   expectedMeasurement?: string;
-  /** If true, the report's guest POLICY DEBUG bit (19) must be CLEAR (else no confidentiality). */
-  requireDebugDisabled?: boolean;
+  /** INSECURE opt-in: accept a report whose guest POLICY DEBUG bit (19) is set. Default false (debug reports are rejected). */
+  allowDebug?: boolean;
 }
 
 /** The single verdict {@link verifyAmdAttestation} returns. */
@@ -1399,55 +1182,67 @@ export interface AmdAttestationResult {
   evidence?: EatSevSnpEvidence;
   /** The hardware-measured identity (present on success). */
   measured?: MeasuredIdentity;
-  /** The matched ARK SPKI fingerprint (present on success). */
-  arkFingerprint?: string;
 }
 
 /**
- * Compose the full AMD SEV-SNP hardware root of trust into one verdict:
- *   parse report → verify the VCEK→ASK→ARK chain (ARK pinned, validity honoured) → verify the report's
- *   ECDSA-P384 signature under the chain-trusted VCEK → (optional) check the launch measurement and the
- *   DEBUG policy bit.
- * On success it returns the parsed report plus its {@link evidenceFromReport} / {@link measuredFromReport}
- * projections, so a caller can emit a channel-bound EAT whose evidence is now silicon-verified and which
- * {@link verifyFreshAttestedEAT} will appraise to the hardware-rooted tier. FAILS CLOSED on any failure.
+ * Compose the full AMD SEV-SNP hardware root of trust into one verdict by delegating to
+ * `@atlasauth/pca`'s `verifyGenuineSevSnpReport` (see the section header), then projecting the verified
+ * report into this package's {@link evidenceFromReport} / {@link measuredFromReport} so a caller can emit a
+ * channel-bound EAT whose evidence is silicon-verified and which {@link verifyFreshAttestedEAT} appraises to
+ * the hardware-rooted tier. FAILS CLOSED on any failure; never throws.
  */
-export function verifyAmdAttestation(rawReport: Uint8Array, opts: AmdAttestationInput): AmdAttestationResult {
+export async function verifyAmdAttestation(rawReport: Uint8Array, opts: AmdAttestationInput): Promise<AmdAttestationResult> {
   const hardwareRoot = AMD_SEV_SNP_HARDWARE_ROOT_LABEL;
   try {
-    let report: ParsedSevSnpReport;
+    const hasFamily = opts.family !== undefined;
+    const hasPin = opts.trustAnchorArkSpkiSha384 !== undefined;
+    if (hasFamily === hasPin) {
+      return { ok: false, reason: 'exactly one of family or trustAnchorArkSpkiSha384 must be supplied (the ARK pin is never inferred)', hardwareRoot };
+    }
+    let pin: string;
+    if (opts.family !== undefined) {
+      const fromFamily = Object.prototype.hasOwnProperty.call(KNOWN_AMD_ARK_SPKI_SHA384, opts.family) ? KNOWN_AMD_ARK_SPKI_SHA384[opts.family] : undefined;
+      if (fromFamily === undefined) return { ok: false, reason: `unknown AMD family ${String(opts.family)} (expected milan | genoa | turin)`, hardwareRoot };
+      pin = fromFamily;
+    } else {
+      pin = opts.trustAnchorArkSpkiSha384 as string;
+    }
+
+    let askArkPem: string;
+    let vcekDer: Uint8Array;
+    try {
+      vcekDer = certToDer(opts.vcek);
+      askArkPem = derToPem(certToDer(opts.ask)) + derToPem(certToDer(opts.ark));
+    } catch (e) {
+      return { ok: false, reason: `certificate parse failed: ${msg(e)}`, hardwareRoot };
+    }
+
+    let report: ParsedSevSnpReport | undefined;
     try {
       report = parseSevSnpReport(rawReport);
-    } catch (e) {
-      return { ok: false, reason: `report parse failed: ${msg(e)}`, hardwareRoot };
+    } catch {
+      report = undefined; // verifyGenuineSevSnpReport reports the parse failure with its own reason
     }
 
-    const chain = verifyAmdCertChain(opts.vcek, opts.ask, opts.ark, {
-      ...(opts.rootFingerprint !== undefined ? { rootFingerprint: opts.rootFingerprint } : {}),
-      ...(opts.now !== undefined ? { now: opts.now } : {}),
+    const measurements = typeof opts.expectedMeasurement === 'string' && opts.expectedMeasurement.length > 0 ? [opts.expectedMeasurement] : [];
+    const verdict = await verifyGenuineSevSnpReport({
+      report: rawReport,
+      vcekDer,
+      askArkPem,
+      trustAnchorArkSpkiSha384: pin,
+      nowMs: opts.nowMs,
+      ...(opts.clockSkewMs !== undefined ? { clockSkewMs: opts.clockSkewMs } : {}),
+      policy: { measurements, allowDebug: opts.allowDebug === true },
     });
-    if (!chain.ok) return { ok: false, reason: `cert chain invalid: ${chain.reason ?? 'unknown'}`, hardwareRoot, report };
-
-    const sig = verifySevSnpSignature(rawReport, opts.vcek);
-    if (!sig.ok) return { ok: false, reason: sig.reason ?? 'report signature invalid', hardwareRoot, report };
-
-    if (typeof opts.expectedMeasurement === 'string' && opts.expectedMeasurement.length > 0) {
-      const got = toHex(report.measurement);
-      if (!strEq(got, opts.expectedMeasurement.toLowerCase())) {
-        return { ok: false, reason: 'report launch measurement does not match the expected measurement', hardwareRoot, report };
-      }
+    if (!verdict.ok || verdict.report === undefined) {
+      return { ok: false, reason: verdict.reason ?? 'AMD SEV-SNP verification failed', hardwareRoot, ...(report !== undefined ? { report } : {}) };
     }
-    if (opts.requireDebugDisabled === true && (report.policy & SEV_SNP_POLICY_DEBUG_BIT) !== 0n) {
-      return { ok: false, reason: 'guest policy DEBUG bit (19) is set — host can inspect the guest (no confidentiality)', hardwareRoot, report };
-    }
-
     return {
       ok: true,
       hardwareRoot,
-      report,
-      evidence: evidenceFromReport(report),
-      measured: measuredFromReport(report),
-      ...(chain.arkFingerprint !== undefined ? { arkFingerprint: chain.arkFingerprint } : {}),
+      report: verdict.report,
+      evidence: evidenceFromReport(verdict.report),
+      measured: measuredFromReport(verdict.report),
     };
   } catch (e) {
     return { ok: false, reason: `AMD attestation verification error (fail closed): ${msg(e)}`, hardwareRoot };
@@ -1472,10 +1267,14 @@ export interface FreshAttestedAmdInput {
   ask: CertInput;
   /** The ARK (root) certificate — DER or PEM. */
   ark: CertInput;
-  /** Pin the ARK fingerprint(s) (default {@link KNOWN_AMD_ARK_SPKI_SHA384}). */
-  rootFingerprint?: string | readonly string[];
-  /** If true, require the report's guest POLICY DEBUG bit to be clear. */
-  requireDebugDisabled?: boolean;
+  /** The CPU family whose AMD KDS root the ARK must match. Exactly one of `family` / `trustAnchorArkSpkiSha384`. */
+  family?: AmdFamily;
+  /** Explicit ARK SPKI SHA-384 (hex) pin for a private / test root. */
+  trustAnchorArkSpkiSha384?: string;
+  /** Tolerated certificate-validity clock skew (ms). Default 0. The verifier clock is the call's `now`. */
+  clockSkewMs?: number;
+  /** INSECURE opt-in: accept a report with the guest POLICY DEBUG bit set. Default false (rejected). */
+  allowDebug?: boolean;
   /**
    * The launch MEASUREMENT (hex) the report must carry. Defaults to the EAT's OWN claimed launch
    * measurement, so the verified silicon report is cross-bound to the identity the EAT asserts.
@@ -1537,7 +1336,7 @@ export interface FreshAttestedVerdict {
  * pipeline and names the reason. Composes with — does not replace — PCA's hardware root verification: run
  * that to prove the evidence is genuine, then this to prove it is fresh + on-channel.
  */
-export function verifyFreshAttestedEAT(eat: string, opts: VerifyFreshAttestedEatOptions): FreshAttestedVerdict {
+export async function verifyFreshAttestedEAT(eat: string, opts: VerifyFreshAttestedEatOptions): Promise<FreshAttestedVerdict> {
   const reasons: string[] = [];
   let claims: EatClaims;
   try {
@@ -1574,13 +1373,15 @@ export function verifyFreshAttestedEAT(eat: string, opts: VerifyFreshAttestedEat
   let extras: AppraiseExtras = {};
   if (opts.amd !== undefined) {
     const expectedMeasurement = opts.amd.expectedMeasurement ?? launchMeasurement(claims);
-    const hw = verifyAmdAttestation(opts.amd.rawReport, {
+    const hw = await verifyAmdAttestation(opts.amd.rawReport, {
       vcek: opts.amd.vcek,
       ask: opts.amd.ask,
       ark: opts.amd.ark,
-      now,
-      ...(opts.amd.rootFingerprint !== undefined ? { rootFingerprint: opts.amd.rootFingerprint } : {}),
-      ...(opts.amd.requireDebugDisabled !== undefined ? { requireDebugDisabled: opts.amd.requireDebugDisabled } : {}),
+      nowMs: now,
+      ...(opts.amd.family !== undefined ? { family: opts.amd.family } : {}),
+      ...(opts.amd.trustAnchorArkSpkiSha384 !== undefined ? { trustAnchorArkSpkiSha384: opts.amd.trustAnchorArkSpkiSha384 } : {}),
+      ...(opts.amd.clockSkewMs !== undefined ? { clockSkewMs: opts.amd.clockSkewMs } : {}),
+      ...(opts.amd.allowDebug !== undefined ? { allowDebug: opts.amd.allowDebug } : {}),
       ...(expectedMeasurement !== undefined ? { expectedMeasurement } : {}),
     });
     if (!hw.ok) {

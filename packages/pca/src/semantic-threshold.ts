@@ -57,8 +57,8 @@ import type { AgentBinding } from './envelope';
  * attestation gate ADDS silicon-rooted proof of which measured judge actually produced a verdict.
  *
  * GENUINELY EXTERNAL CAVEAT: that the attested enclave is in fact running the SPECIFIC model/weights the
- * measurement names is the measurement's OWN guarantee (the launch/weights convention of
- * `hardware-sevsnp.ts`), not something this file re-proves — we bind to, and appraise, the measured
+ * measurement names is the measurement's OWN guarantee (e.g. weights covered by the SEV-SNP launch
+ * measurement, see `hardware-sevsnp.ts`), not something this file re-proves — we bind to, and appraise, the measured
  * identity the TEE reports.
  */
 
@@ -225,7 +225,7 @@ export function verifyJudgeVerdict(
 
 /**
  * A verified TEE attestation for a JUDGE — the SAME `HardwareAttestationResult` a
- * `HardwareAttestationVerifier` (e.g. `createSevSnpVerifier` in `hardware-sevsnp.ts`) produces for the
+ * `HardwareAttestationVerifier` (e.g. `createAmdSnpVerifier` in `attest-amd-snp.ts`) produces for the
  * AGENT. NOT a parallel type: `ok && bound === true` means the judge's enclave was rooted in silicon
  * (VCEK→ASK→ARK) and its report_data binding confirmed, and `measured` is the hardware-measured identity
  * whose `runtime_measurement` is the judge's real enclave measurement.
@@ -292,7 +292,7 @@ export interface SemanticAttestationOpts {
   /**
    * Resolve the verified TEE attestation for a judge verdict (key off `verdict.judge` / its measurement).
    * Returns the SAME `HardwareAttestationResult` a `HardwareAttestationVerifier` yields — a real SEV-SNP
-   * result (`createSevSnpVerifier` / `verifyGenuineSevSnpReport`) plugs straight in. undefined => this
+   * result (`createAmdSnpVerifier` / `verifyGenuineSevSnpReport`) plugs straight in. undefined => this
    * judge has no verified attestation.
    */
   resolve: (verdict: JudgeVerdict) => HardwareAttestationResult | undefined;

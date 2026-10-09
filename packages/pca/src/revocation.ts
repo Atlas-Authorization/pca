@@ -1,7 +1,7 @@
 /**
  * L5 revocation "accumulator" — v0 as a SORTED MERKLE SET (deterministic, pure, no RSA modulus).
  *
- * Leaves are the revoked ids in ascending (UTF-16 code-unit) order, in an RFC-6962-shaped Merkle
+ * Leaves are the revoked ids in ascending UTF-8 byte order (== Unicode code-point order, `compareUtf8`, the same ordering canonical JSON uses), in an RFC-6962-shaped Merkle
  * tree. The published root also binds the set size: root = H("pca-revset/v1" || size || treeRoot).
  *
  * Membership: an ordinary inclusion proof.
@@ -17,7 +17,7 @@
  * a trusted, fresh source (guardian-signed / witnessed epoch root); a stale root can't show later
  * revocations.
  */
-import { b64u, canonicalBytes, sha256, unb64u, utf8 } from './hash';
+import { b64u, canonicalBytes, compareUtf8, sha256, unb64u, utf8 } from './hash';
 import { publicKeyOf } from './keys';
 import {
   type MlDsaKeyPair,
@@ -123,7 +123,7 @@ export class RevocationSet {
     let hi = this.ids.length;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (this.ids[mid]! < id) lo = mid + 1;
+      if (compareUtf8(this.ids[mid]!, id) < 0) lo = mid + 1;
       else hi = mid;
     }
     if (this.ids[lo] === id) return false;
@@ -140,7 +140,7 @@ export class RevocationSet {
     let hi = this.ids.length;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (this.ids[mid]! < id) lo = mid + 1;
+      if (compareUtf8(this.ids[mid]!, id) < 0) lo = mid + 1;
       else hi = mid;
     }
     return this.ids[lo] === id ? lo : -1;
@@ -170,7 +170,7 @@ export class RevocationSet {
     let hi = n;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (this.ids[mid]! < id) lo = mid + 1;
+      if (compareUtf8(this.ids[mid]!, id) < 0) lo = mid + 1;
       else hi = mid;
     }
     const leaf = (i: number): LeafProof => ({ id: this.ids[i]!, proof: merkleProof(this.ids, i) });
@@ -194,11 +194,11 @@ export function verifyNonMembership(root: string, proof: NonMembershipProof, id:
     if (size === 0) return !lo && !hi && root === bindRoot(0, EMPTY_TREE);
     if (!lo && !hi) return false;
     if (lo) {
-      if (!(lo.id < id) || !leafOk(root, size, lo.id, lo.proof)) return false;
+      if (!(compareUtf8(lo.id, id) < 0) || !leafOk(root, size, lo.id, lo.proof)) return false;
       if (!hi && lo.proof.index !== size - 1) return false; // id above the maximum
     }
     if (hi) {
-      if (!(id < hi.id) || !leafOk(root, size, hi.id, hi.proof)) return false;
+      if (!(compareUtf8(id, hi.id) < 0) || !leafOk(root, size, hi.id, hi.proof)) return false;
       if (!lo && hi.proof.index !== 0) return false; // id below the minimum
     }
     if (lo && hi && hi.proof.index !== lo.proof.index + 1) return false;

@@ -1,7 +1,28 @@
 {
   "name": "@atlasauth/pca-mpc",
-  "version": "0.1.0",
-  "description": "PCA evolution B5 reference prototype: a multi-stakeholder Policy VM composed under secure multi-party computation (semi-honest additive secret sharing over a prime field), so user+org+regulator jointly decide allow/threshold without any party revealing its own policy.",
+  "version": "0.2.0",
+  "description": "Multi-stakeholder policy VM composed under secure multi-party computation (semi-honest additive secret sharing over a prime field) with a post-quantum base-OT. Experimental reference prototype.",
+  "keywords": [
+    "secure multi-party computation",
+    "mpc",
+    "oblivious transfer",
+    "policy vm",
+    "prototype",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-mpc"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -28,8 +49,12 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   }

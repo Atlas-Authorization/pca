@@ -7,6 +7,8 @@ order: 0
 
 > **Status.** The libraries are published (TypeScript on npm under [`@atlasauth/pca*`](https://www.npmjs.com/org/atlasauth), with native verifiers in nine more languages) and the conformance suite is stable and shared across all of them. The hosted `/v1/pca/*` surface is gated off by default (`auth_config.pca.enabled = false`; every public route answers `404` while off), and PCA has not had an external security audit — see [Trust model](./security/trust-model.md) for what is and is not production-hardened before you rely on it as a sole control over high-value actions.
 
+> **See it run (about a minute, no accounts, no Docker):** `npm create pca-app@latest my-demo && cd my-demo && npm install && npm start` plays an allow, a denial, a t=3 FROST step-up, a replay, three tampering attempts, budget exhaustion, a sub-agent that cannot exceed its parent, and an offline-verified receipt. See [Run the end-to-end demo](./guides/run-the-demo.md).
+
 Classic auth answers two questions. **authN**: who are you? **authZ**: what may you do? Both are enough for a human, because the human is the policy engine and their identity implies faithfulness. An autonomous agent is a stochastic, externally steerable process: what it will do is unknown when authority is granted and can be manipulated while it runs.
 
 PCA adds a third question, **authF**:
@@ -47,6 +49,7 @@ Read in this order the first time; every page links onward.
 
 | Page | What it covers |
 |---|---|
+| [Run the end-to-end demo](./guides/run-the-demo.md) | One command, no accounts: the nine-outcome story with a pass/fail exit code |
 | [Agent quickstart](./guides/agent-quickstart.md) | Mint a grant, commit a plan, act, step up, delegate |
 | [Resource-server quickstart](./guides/resource-server-quickstart.md) | `verifyPCActn`, `requirePCA`, hooks, and the hosted endpoints |
 | [Playground](./guides/playground.md) | The browser demo that runs the real library |
@@ -80,7 +83,7 @@ Read in this order the first time; every page links onward.
 | Specification (protocol, deep dives, Appendix A verifier algorithm) | `docs/specs/agentic-auth-proof-carrying-authority.md` |
 | Primitives: grants, capabilities, plans, PCActn, policy VM, threshold, FROST, ledger, revocation, beacons, attestation, optimistic, zk | `@atlasauth/pca` |
 | Agent client | `@atlasauth/pca-agent` (`createAgent`) |
-| Resource-server verifier and guard | `@atlasauth/backend` (`verifyPCActn`, `requirePCA`) |
+| Resource-server verifier and guard | `@atlasauth/pca` (`verifyPCActn`, `requirePCA`) |
 | Hosted endpoints | `/v1/pca/*` (gated by `auth_config.pca.enabled`) |
 | Runnable end-to-end example | `pnpm --filter @atlasauth/pca example` |
 | Playground | `tools/pca-playground` |

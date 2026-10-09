@@ -3,7 +3,7 @@
  * mid-run kill-switch channel.
  *
  * Honest framing (compose, don't replace):
- *   PCA's native enforcement is PASSIVE. A verifier (`@atlasauth/backend` `requirePCA`) checks a signed
+ *   PCA's native enforcement is PASSIVE. A verifier (`@atlasauth/pca` `requirePCA`) checks a signed
  *   PCActn default-deny, and the grant's own counter / budget / revocation-epoch bound how much a valid
  *   proof may do. That is a PULL model: the resource server decides from what it already holds. What it
  *   does NOT give you is a PUSH: a way for the issuer to say, mid-run, "stop — this grant is dead" to a

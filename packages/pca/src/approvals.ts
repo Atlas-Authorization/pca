@@ -16,7 +16,7 @@
 import { type Capability, attenuate } from './capability';
 import type { Agent } from './facade';
 import type { ParsedLimit } from './facade';
-import { hashCanonical } from './hash';
+import { hashCanonical, compareUtf8 } from './hash';
 import { readEnvelope, verifyGoalCommit } from './envelope';
 import { type RiskPolicy, type TrustBudget, recharge, rechargeFull } from './risk';
 
@@ -247,7 +247,7 @@ export interface ClassApproval {
 export function approveClass(verbs: string[], opts: { ttlMs: number; by: string; now?: number; resource?: string }): ClassApproval {
   const grantedAt = opts.now ?? Date.now();
   return {
-    id: hashCanonical({ d: 'atlas-pca/class-approval/v1', verbs: [...verbs].sort(), resource: opts.resource ?? null, grantedAt, by: opts.by }),
+    id: hashCanonical({ d: 'atlas-pca/class-approval/v1', verbs: [...verbs].sort(compareUtf8), resource: opts.resource ?? null, grantedAt, by: opts.by }),
     verbs: [...verbs],
     ...(opts.resource !== undefined ? { resource: opts.resource } : {}),
     grantedAt,

@@ -1,7 +1,27 @@
 {
   "name": "@atlasauth/pca-ratchet",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "PCA Capability Ratchet: puncturable forward-secure capability keys (cryptographic one-time-use — a spent action can never be re-signed) plus a homomorphic Pedersen risk accumulator for zero-knowledge proof of the Sigma-risk <= budget ceiling across a delegation chain.",
+  "keywords": [
+    "forward secrecy",
+    "puncturable keys",
+    "pedersen commitments",
+    "one-time use",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-ratchet"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -27,8 +47,12 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   }

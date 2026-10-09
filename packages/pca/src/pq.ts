@@ -6,6 +6,8 @@ import { sha512 } from '@noble/hashes/sha512';
 // Type-only import: erased at compile time, so merely importing pq.ts never pulls in (and never
 // instantiates) the FN-DSA wasm module. The runtime binding is loaded LAZILY (see `fnDsaWasm`).
 import type { FnDsaVariant } from '@atlasauth/pca-fndsa-wasm';
+// LESS (@atlasauth/pca-less-wasm) is OPTIONAL and loaded lazily by `lessWasm()` below; there is deliberately
+// NO import of it here, type or value, so @atlasauth/pca never hard-depends on it.
 import { b64u, decodeB64uStrict, utf8 } from './hash';
 import { sign, verify, verifyB64u } from './keys';
 
@@ -191,6 +193,24 @@ export const FN_DSA_1024_SIGNATURE_BYTES = 1280;
 /** FN-DSA deterministic-RNG seed length, in bytes (keygen + signing reproducibility). */
 export const FN_DSA_SEED_BYTES = 32;
 
+/**
+ * LESS (code-equivalence signature; NIST additional-signature Round 2 CANDIDATE, not a standard) —
+ * parameter set `CATEGORY=252 TARGET=45` (NIST category 1, short-signature corner), served by the OPTIONAL
+ * `@atlasauth/pca-less-wasm`. Sizes: public key 97,484 B (so a `pq_pk` is ~130 KB of base64url — the price of
+ * this parameter set), secret key a 32-byte seed. The signature is VARIABLE LENGTH (seed-tree): 1,153..1,329
+ * bytes in 16-byte steps, the trailing byte being the opened-leaf count.
+ *
+ * LESS suites are TS-reference-only: the other SDK verifiers do not implement them and reject them
+ * fail-closed (unknown `alg`). They are NOT in the shared cross-language conformance corpora.
+ */
+export const LESS_CAT1_PUBLIC_KEY_BYTES = 97484;
+export const LESS_CAT1_SECRET_KEY_BYTES = 32;
+export const LESS_CAT1_SIGNATURE_MAX_BYTES = 1329;
+export const LESS_CAT1_SIGNATURE_MIN_BYTES = 1153;
+export const LESS_CAT1_SIGNATURE_STEP_BYTES = 16;
+/** Seed length (bytes) for deterministic LESS keygen / signing through the suite seam. */
+export const LESS_SEED_BYTES = 32;
+
 export type SigAlg =
   | 'ed25519'
   | 'ml-dsa-65'
@@ -203,7 +223,9 @@ export type SigAlg =
   | 'slh-dsa-sha2-256s'
   | 'hybrid-ed25519-slh-dsa-sha2-256s'
   | 'fn-dsa-512'
-  | 'fn-dsa-1024';
+  | 'fn-dsa-1024'
+  | 'less-cat1'
+  | 'hybrid-ed25519-less-cat1';
 
 /** The suite used when `alg` is absent — the pre-B4 default. MUST stay "ed25519" forever. */
 export const DEFAULT_SIG_ALG: SigAlg = 'ed25519';
@@ -229,6 +251,13 @@ export interface SigSuite {
   hasFnDsa512?: boolean;
   /** Suite carries an FN-DSA-1024 (Falcon-1024 / FIPS 206, category 5) component. Optional (see above). */
   hasFnDsa1024?: boolean;
+  /** Suite carries a LESS (code-based, category 1) component. Optional (absent ⇒ falsy). */
+  hasLessCat1?: boolean;
+  /**
+   * The LESS component's signature is variable-length: `sigBytes` (or `pqSigBytes` for a hybrid) is its MAXIMUM,
+   * valid lengths are `max - k*step` down to `min`. Absent ⇒ the component has the exact fixed length.
+   */
+  varLen?: { min: number; step: number };
   /** A `pq_pk` (PQ public key — ML-DSA or SLH-DSA, per the suite) field is REQUIRED (and forbidden otherwise). */
   needsPqPk: boolean;
   /** A `pq_sig` field is REQUIRED — i.e. the PQ sig is separate from `sig` (hybrid). Forbidden otherwise. */
@@ -258,6 +287,9 @@ export const SIG_SUITES: Readonly<Record<SigAlg, Readonly<SigSuite>>> = Object.f
   // ---- FN-DSA (Falcon, FIPS 206) — pure-PQ lattice, opt-in, additive. Verify routes through pca-fndsa-wasm. ----
   // `sig` carries the FN-DSA signature; `pq_pk` carries the FN-DSA verifying key; no `pq_sig` (non-hybrid).
   'fn-dsa-512': { alg: 'fn-dsa-512', sigBytes: FN_DSA_512_SIGNATURE_BYTES, hasEd25519: false, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: false, hasSlhDsa256s: false, hasFnDsa512: true, needsPqPk: true, needsPqSig: false, pqPkBytes: FN_DSA_512_PUBLIC_KEY_BYTES, pqSigBytes: 0 },
+  // ---- LESS (code-based) — opt-in, additive, TS-reference-only. Verify routes through the OPTIONAL pca-less-wasm. ----
+  'less-cat1': { alg: 'less-cat1', sigBytes: LESS_CAT1_SIGNATURE_MAX_BYTES, hasEd25519: false, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: false, hasSlhDsa256s: false, hasLessCat1: true, varLen: { min: LESS_CAT1_SIGNATURE_MIN_BYTES, step: LESS_CAT1_SIGNATURE_STEP_BYTES }, needsPqPk: true, needsPqSig: false, pqPkBytes: LESS_CAT1_PUBLIC_KEY_BYTES, pqSigBytes: 0 },
+  'hybrid-ed25519-less-cat1': { alg: 'hybrid-ed25519-less-cat1', sigBytes: ED25519_SIGNATURE_BYTES, hasEd25519: true, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: false, hasSlhDsa256s: false, hasLessCat1: true, varLen: { min: LESS_CAT1_SIGNATURE_MIN_BYTES, step: LESS_CAT1_SIGNATURE_STEP_BYTES }, needsPqPk: true, needsPqSig: true, pqPkBytes: LESS_CAT1_PUBLIC_KEY_BYTES, pqSigBytes: LESS_CAT1_SIGNATURE_MAX_BYTES },
   'fn-dsa-1024': { alg: 'fn-dsa-1024', sigBytes: FN_DSA_1024_SIGNATURE_BYTES, hasEd25519: false, hasMlDsa: false, hasSlhDsa: false, hasMlDsa87: false, hasSlhDsa256s: false, hasFnDsa1024: true, needsPqPk: true, needsPqSig: false, pqPkBytes: FN_DSA_1024_PUBLIC_KEY_BYTES, pqSigBytes: 0 },
 });
 
@@ -626,6 +658,173 @@ export function encodeFnDsaPublicKey(publicKey: Uint8Array): string {
   return b64u(publicKey);
 }
 
+// ---- LESS (code-based) primitive wrappers — OPTIONAL, lazily loaded @atlasauth/pca-less-wasm --------
+//
+// Same shape as the FN-DSA backend above, with one difference that matters: `@atlasauth/pca-less-wasm` is an
+// OPTIONAL dependency. If it is not installed (or its wasm cannot instantiate) the LESS suites are reported
+// UNSUPPORTED (see {@link lessBackendStatus}): every LESS verify returns false (fail-closed, deny) with a
+// clear reason, every sign/keygen throws, and the rest of the registry is untouched.
+
+/** LESS key pair as produced by {@link lessCat1Keygen}. */
+export interface LessKeyPair {
+  /** LESS public key (97,484 B) — becomes `pq_pk`. */
+  publicKey: Uint8Array;
+  /** LESS secret key (32-byte seed). */
+  secretKey: Uint8Array;
+}
+
+/** LESS signing material for the suite seam: key pair plus the 32-byte RNG `signSeed` (like FN-DSA). */
+export interface LessSuiteKey extends LessKeyPair {
+  /** 32-byte seed for the signing RNG (CSPRNG in production; fixed ⇒ reproducible signature). */
+  signSeed: Uint8Array;
+}
+
+/** The subset of the `@atlasauth/pca-less-wasm` surface consumed here. */
+interface LessBinding {
+  keygen(): { publicKey: Uint8Array; secretKey: Uint8Array };
+  seedWith(seed: Uint8Array): void;
+  signDetached(secretKey: Uint8Array, message: Uint8Array): Uint8Array;
+  verify(publicKey: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean;
+}
+
+/** Availability of the LESS backend: `available:false` carries the human-readable reason. */
+export interface LessBackendStatus {
+  available: boolean;
+  reason?: string;
+}
+
+type LessLoader = () => unknown;
+
+/** `undefined` = not yet probed. */
+let lessBackend: { binding: LessBinding | null; reason?: string } | undefined;
+let lessLoaderOverride: LessLoader | undefined;
+
+function asLessBinding(mod: unknown): LessBinding | null {
+  if (typeof mod !== 'object' || mod === null) return null;
+  const m = mod as Record<string, unknown>;
+  for (const name of ['keygen', 'seedWith', 'signDetached', 'verify']) {
+    if (typeof m[name] !== 'function') return null;
+  }
+  return mod as unknown as LessBinding;
+}
+
+function loadLess(): { binding: LessBinding | null; reason?: string } {
+  if (lessBackend !== undefined) return lessBackend;
+  let reason = 'optional package @atlasauth/pca-less-wasm is not installed';
+  let binding: LessBinding | null = null;
+  try {
+    if (lessLoaderOverride !== undefined) {
+      binding = asLessBinding(lessLoaderOverride());
+      if (binding === null) reason = 'LESS backend loader returned an unusable module';
+    } else {
+      const req = createRequire(__filename);
+      const candidates = ['@atlasauth/pca-less-wasm', join(__dirname, '..', '..', 'pca-less-wasm', 'dist', 'index.js')];
+      for (const spec of candidates) {
+        try {
+          const loaded = asLessBinding(req(spec));
+          if (loaded !== null) {
+            binding = loaded;
+            break;
+          }
+          reason = `@atlasauth/pca-less-wasm loaded but does not expose the expected API`;
+        } catch (e) {
+          if (!/Cannot find module/.test(String((e as Error)?.message))) reason = `@atlasauth/pca-less-wasm failed to load: ${String((e as Error)?.message).slice(0, 160)}`;
+        }
+      }
+    }
+  } catch (e) {
+    reason = `LESS backend failed to load: ${String((e as Error)?.message).slice(0, 160)}`;
+  }
+  // Probe the wasm once so "installed but cannot instantiate" is reported now (not as a surprise at verify).
+  if (binding !== null) {
+    try {
+      binding.verify(new Uint8Array(LESS_CAT1_PUBLIC_KEY_BYTES), new Uint8Array(0), new Uint8Array(LESS_CAT1_SIGNATURE_MIN_BYTES));
+    } catch (e) {
+      binding = null;
+      reason = `LESS wasm could not be instantiated: ${String((e as Error)?.message).slice(0, 160)}`;
+    }
+  }
+  lessBackend = binding === null ? { binding, reason } : { binding };
+  return lessBackend;
+}
+
+/** Whether the optional LESS backend is loadable (else every LESS suite verify fails closed). */
+export function isLessBackendActive(): boolean {
+  return loadLess().binding !== null;
+}
+
+/** Availability + the reason a LESS suite would be unsupported. Never throws. */
+export function lessBackendStatus(): LessBackendStatus {
+  const b = loadLess();
+  return b.binding !== null ? { available: true } : { available: false, reason: b.reason ?? 'unavailable' };
+}
+
+/**
+ * TEST SEAM: install a loader for the LESS binding (or `undefined` to restore normal resolution) and clear the
+ * cached probe. Lets tests simulate the optional package being absent or broken without uninstalling it.
+ */
+export function setLessBackendLoaderForTests(loader: LessLoader | undefined): void {
+  lessLoaderOverride = loader;
+  lessBackend = undefined;
+}
+
+function requireLess(op: string): LessBinding {
+  const b = loadLess();
+  if (b.binding === null) throw new Error(`${op}: LESS suites are unsupported — ${b.reason ?? 'backend unavailable'}`);
+  return b.binding;
+}
+
+/** Deterministic LESS keygen from a 32-byte seed. THROWS if the optional backend is unavailable. */
+export function lessCat1Keygen(seed: Uint8Array): LessKeyPair {
+  if (!(seed instanceof Uint8Array) || seed.length !== LESS_SEED_BYTES) throw new RangeError(`lessCat1Keygen: seed must be ${LESS_SEED_BYTES} bytes`);
+  const w = requireLess('lessCat1Keygen');
+  w.seedWith(seed);
+  return w.keygen();
+}
+
+/** LESS sign (detached signature, 1153..1329 B) with an explicit 32-byte RNG seed. THROWS if unavailable. */
+export function lessCat1Sign(secretKey: Uint8Array, msg: Uint8Array, seed: Uint8Array): Uint8Array {
+  if (!(seed instanceof Uint8Array) || seed.length !== LESS_SEED_BYTES) throw new RangeError(`lessCat1Sign: seed must be ${LESS_SEED_BYTES} bytes`);
+  const w = requireLess('lessCat1Sign');
+  w.seedWith(seed);
+  return w.signDetached(secretKey, msg);
+}
+
+/** True iff `n` is a length a LESS cat-1 signature can have. */
+function lessSigLengthOk(n: number): boolean {
+  return n >= LESS_CAT1_SIGNATURE_MIN_BYTES && n <= LESS_CAT1_SIGNATURE_MAX_BYTES && (LESS_CAT1_SIGNATURE_MAX_BYTES - n) % LESS_CAT1_SIGNATURE_STEP_BYTES === 0;
+}
+
+/** LESS verify over raw bytes. Never throws; wrong length / malformed / backend unavailable ⇒ false. */
+export function lessCat1Verify(publicKey: Uint8Array, msg: Uint8Array, sig: Uint8Array): boolean {
+  try {
+    if (!(publicKey instanceof Uint8Array) || publicKey.length !== LESS_CAT1_PUBLIC_KEY_BYTES) return false;
+    if (!(sig instanceof Uint8Array) || !lessSigLengthOk(sig.length)) return false;
+    const b = loadLess();
+    if (b.binding === null) return false; // optional backend absent => fail-closed (deny)
+    return b.binding.verify(publicKey, msg, sig) === true;
+  } catch {
+    return false;
+  }
+}
+
+/** lessCat1Verify over base64url-encoded key and signature; false on any decoding error. */
+export function lessCat1VerifyB64u(publicKeyB64u: unknown, msg: Uint8Array, sigB64u: unknown): boolean {
+  try {
+    const pk = decodeB64uStrict(publicKeyB64u, LESS_CAT1_PUBLIC_KEY_BYTES);
+    const sg = decodeB64uStrict(sigB64u);
+    if (!pk || !sg || !lessSigLengthOk(sg.length)) return false;
+    return lessCat1Verify(pk, msg, sg);
+  } catch {
+    return false;
+  }
+}
+
+/** b64u of a LESS public key — convenience for building `pq_pk`. */
+export function encodeLessPublicKey(publicKey: Uint8Array): string {
+  return b64u(publicKey);
+}
+
 // ---- the GENERAL signature-suite SEAM (shared by EVERY signed surface) -------------------------
 //
 // `signWithSuite` / `verifyWithSuite` are the ONE reusable agility pair. Every signed surface in the
@@ -661,6 +860,8 @@ export interface SuiteSecretKeys {
   fnDsa512?: FnDsaSuiteKey;
   /** FN-DSA-1024 key material for the fn-dsa-1024 suite. */
   fnDsa1024?: FnDsaSuiteKey;
+  /** LESS (category 1) key material for the less-cat1 suites (OPTIONAL backend). */
+  lessCat1?: LessSuiteKey;
 }
 
 /**
@@ -694,6 +895,8 @@ export interface SuitePublicKeys {
   fnDsa512Pub?: string;
   /** b64u FN-DSA-1024 verifying key for the fn-dsa-1024 suite. */
   fnDsa1024Pub?: string;
+  /** b64u LESS (category 1) public key for the less-cat1 suites. */
+  lessCat1Pub?: string;
 }
 
 /** The signature component(s) a suite produces. `sig` is the classical Ed25519 b64u signature for ed25519/hybrid and the ML-DSA-65 signature for pure ml-dsa-65; `pq_sig` is the ML-DSA-65 signature for hybrid only. */
@@ -730,6 +933,7 @@ export function signWithSuite(alg: unknown, keys: SuiteSecretKeys, msg: Uint8Arr
   if (suite.hasSlhDsa256s && !(keys.slhDsa256s && keys.slhDsa256s.secretKey instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires slhDsa256s key material`);
   if (suite.hasFnDsa512 && !(keys.fnDsa512 && keys.fnDsa512.signingKey instanceof Uint8Array && keys.fnDsa512.signSeed instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires fnDsa512 key material (signingKey + signSeed)`);
   if (suite.hasFnDsa1024 && !(keys.fnDsa1024 && keys.fnDsa1024.signingKey instanceof Uint8Array && keys.fnDsa1024.signSeed instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires fnDsa1024 key material (signingKey + signSeed)`);
+  if (suite.hasLessCat1 && !(keys.lessCat1 && keys.lessCat1.secretKey instanceof Uint8Array && keys.lessCat1.signSeed instanceof Uint8Array)) throw new TypeError(`signWithSuite: '${suite.alg}' requires lessCat1 key material (secretKey + signSeed)`);
   switch (suite.alg) {
     case 'ed25519':
       return { sig: b64u(sign(keys.edSecret!, msg)) };
@@ -759,6 +963,10 @@ export function signWithSuite(alg: unknown, keys: SuiteSecretKeys, msg: Uint8Arr
       return { sig: b64u(fnDsa512Sign(keys.fnDsa512!.signingKey, msg, keys.fnDsa512!.signSeed)) };
     case 'fn-dsa-1024':
       return { sig: b64u(fnDsa1024Sign(keys.fnDsa1024!.signingKey, msg, keys.fnDsa1024!.signSeed)) };
+    case 'less-cat1':
+      return { sig: b64u(lessCat1Sign(keys.lessCat1!.secretKey, msg, keys.lessCat1!.signSeed)) };
+    case 'hybrid-ed25519-less-cat1':
+      return { sig: b64u(sign(keys.edSecret!, msg)), pq_sig: b64u(lessCat1Sign(keys.lessCat1!.secretKey, msg, keys.lessCat1!.signSeed)) };
   }
 }
 
@@ -818,6 +1026,13 @@ export function verifyWithSuite(alg: unknown, keys: SuitePublicKeys, msg: Uint8A
       return typeof sig === 'string' && fnDsa512VerifyB64u(keys.fnDsa512Pub, msg, sig);
     case 'fn-dsa-1024':
       return typeof sig === 'string' && fnDsa1024VerifyB64u(keys.fnDsa1024Pub, msg, sig);
+    case 'less-cat1':
+      return typeof sig === 'string' && lessCat1VerifyB64u(keys.lessCat1Pub, msg, sig);
+    case 'hybrid-ed25519-less-cat1': {
+      const edOk = typeof sig === 'string' && typeof keys.edPub === 'string' && verifyB64u(keys.edPub, msg, sig);
+      const pqOk = typeof s?.pq_sig === 'string' && lessCat1VerifyB64u(keys.lessCat1Pub, msg, s.pq_sig);
+      return edOk && pqOk; // fail-closed: BOTH required (and LESS unavailable ⇒ pqOk false ⇒ deny)
+    }
   }
 }
 
@@ -855,6 +1070,7 @@ export function signSuiteArtifact(alg: unknown, keys: SuiteSecretKeys, msg: Uint
     else if (suite.hasSlhDsa256s && keys.slhDsa256s) out.pq_pk = encodeSlhDsa256sPublicKey(keys.slhDsa256s.publicKey);
     else if (suite.hasFnDsa512 && keys.fnDsa512) out.pq_pk = encodeFnDsaPublicKey(keys.fnDsa512.verifyingKey);
     else if (suite.hasFnDsa1024 && keys.fnDsa1024) out.pq_pk = encodeFnDsaPublicKey(keys.fnDsa1024.verifyingKey);
+    else if (suite.hasLessCat1 && keys.lessCat1) out.pq_pk = encodeLessPublicKey(keys.lessCat1.publicKey);
   }
   if (parts.pq_sig !== undefined) out.pq_sig = parts.pq_sig;
   return out;
@@ -913,7 +1129,7 @@ export function verifyLeafSuite(i: LeafSuiteInput): boolean {
   const pqPub = typeof i.pqPublicKey === 'string' ? i.pqPublicKey : undefined;
   return verifyWithSuite(
     i.alg,
-    { edPub: i.holder, mlDsaPub: pqPub, slhDsaPub: pqPub, mlDsa87Pub: pqPub, slhDsa256sPub: pqPub, fnDsa512Pub: pqPub, fnDsa1024Pub: pqPub },
+    { edPub: i.holder, mlDsaPub: pqPub, slhDsaPub: pqPub, mlDsa87Pub: pqPub, slhDsa256sPub: pqPub, fnDsa512Pub: pqPub, fnDsa1024Pub: pqPub, lessCat1Pub: pqPub },
     i.message,
     { sig: i.sig, pq_sig: i.pqSig },
   );
@@ -922,6 +1138,14 @@ export function verifyLeafSuite(i: LeafSuiteInput): boolean {
 // ---- wire-shape validation of the signature fields (called from wire.ts) ----------------------
 
 type Decoder = (s: unknown, len?: number) => Uint8Array | null;
+
+/** Canonical b64u whose decoded length is `max - k*step` for some k with the result >= `min`. */
+function decodeVarLen(v: unknown, max: number, vl: { min: number; step: number }, decode: Decoder): boolean {
+  const bytes = decode(v);
+  if (bytes === null) return false;
+  const n = bytes.length;
+  return n >= vl.min && n <= max && (max - n) % vl.step === 0;
+}
 
 /**
  * Validate the signature-carrying fields (`alg`, `sig`, `pq_pk`, `pq_sig`) of a PCActn per its suite.
@@ -936,8 +1160,11 @@ export function validateSignatureWire(p: Record<string, unknown>, decode: Decode
   const suite = resolveSigAlg(alg);
   if (suite === null) return `unknown signature alg '${String(alg)}'`;
 
-  if (decode(p.sig, suite.sigBytes) === null) {
-    return `'sig' is not canonical base64url (${suite.sigBytes} bytes) for alg '${suite.alg}'`;
+  // A variable-length LESS component is the primary `sig` only for the pure suite (hybrid: it is `pq_sig`).
+  const sigVar = suite.varLen !== undefined && !suite.needsPqSig;
+  const pqSigVar = suite.varLen !== undefined && suite.needsPqSig;
+  if (sigVar ? !decodeVarLen(p.sig, suite.sigBytes, suite.varLen!, decode) : decode(p.sig, suite.sigBytes) === null) {
+    return `'sig' is not canonical base64url (${sigVar ? `${suite.varLen!.min}..${suite.sigBytes}` : suite.sigBytes} bytes) for alg '${suite.alg}'`;
   }
   // `pq_pk`/`pq_sig` lengths are per-suite (ML-DSA: 1952/3309; SLH-DSA: 32/17088), carried on the SigSuite.
   if (suite.needsPqPk) {
@@ -948,8 +1175,8 @@ export function validateSignatureWire(p: Record<string, unknown>, decode: Decode
     return `'pq_pk' must be absent for alg '${suite.alg}'`;
   }
   if (suite.needsPqSig) {
-    if (decode(p.pq_sig, suite.pqSigBytes) === null) {
-      return `'pq_sig' is not canonical base64url (${suite.pqSigBytes} bytes) for alg '${suite.alg}'`;
+    if (pqSigVar ? !decodeVarLen(p.pq_sig, suite.pqSigBytes, suite.varLen!, decode) : decode(p.pq_sig, suite.pqSigBytes) === null) {
+      return `'pq_sig' is not canonical base64url (${pqSigVar ? `${suite.varLen!.min}..${suite.pqSigBytes}` : suite.pqSigBytes} bytes) for alg '${suite.alg}'`;
     }
   } else if (p.pq_sig !== undefined) {
     return `'pq_sig' must be absent for alg '${suite.alg}'`;

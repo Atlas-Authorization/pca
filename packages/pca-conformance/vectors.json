@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "generator": "@atlasauth/pca-conformance generateVectorSet() — deterministic keys, fixed clock, real @atlasauth/pca builders",
   "sig_domain": "atlas-pca/actn/v2",
   "check_order": [
@@ -8,6 +8,7 @@
     "audience",
     "validity",
     "cap_chain",
+    "grant_ref_bound",
     "plan_inclusion",
     "plan_root_authorized",
     "leaf_signature",
@@ -105,6 +106,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -287,6 +289,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -384,6 +387,7 @@
           "audience": "fail",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -481,6 +485,7 @@
           "audience": "pass",
           "validity": "fail",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -578,6 +583,105 @@
           "audience": "pass",
           "validity": "fail",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "grant_ref_not_root_id",
+      "description": "grant_ref is a well-formed value that is NOT the id of cap_chain[0] (re-signed): only the grant_ref_bound check fails (replay namespaces are keyed on grant_ref).",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hLSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "bHD8S1gNVe3HmYK2Al4jdIj8eOvXZq3T8OdsGj7EzU97r3w13hx0PPg3kmjato4s0CIVNkF9h-lutZBd_V1mCw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "grant_ref_bound",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "fail",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -675,6 +779,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "fail",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -772,6 +877,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "fail",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -869,6 +975,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "fail",
@@ -966,6 +1073,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -1068,6 +1176,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -1172,6 +1281,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",
@@ -1275,6 +1385,7 @@
           "audience": "pass",
           "validity": "pass",
           "cap_chain": "pass",
+          "grant_ref_bound": "pass",
           "plan_inclusion": "pass",
           "plan_root_authorized": "not-enforced",
           "leaf_signature": "pass",

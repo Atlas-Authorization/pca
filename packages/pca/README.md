@@ -1,109 +1,157 @@
-# Proof-Carrying Authority (`@atlasauth/pca`)
+# @atlasauth/pca
 
-**Authorization for AI agents.** Instead of handing an agent a bearer token it waves at every
-call, PCA has the agent present a *proof* with each action — a signed, self-describing **PCActn**
-that a resource server verifies **offline**: is this action inside the authority the principal
-granted, is the signing chain intact, is it a node of the plan the agent committed to, and is there
-still trust budget left to do it without a human?
+Proof-Carrying Authority (PCA) core: authorization for AI agents where each action carries its own proof.
+Instead of handing an agent a bearer token, the principal signs a **Root Intent Grant** once. The agent then
+attaches a signed, self-describing **PCActn** to every action, and the resource server verifies it offline:
+is the action inside the granted authority, is the signing chain intact, is it a node of the committed plan,
+and is there trust budget left to do it without a human?
 
-Think of it as the OAuth dance, re-cut for autonomy: the principal signs a **Root Intent Grant**
-once; the agent then acts on its own, and every action carries its own evidence.
+This package contains canonical hashing, Ed25519 and post-quantum signatures, Merkle plan commitments,
+attenuable capability chains, hardware attestation verifiers, the PCActn verifier, and the resource-server
+guard (`requirePCA`). Source and issues: <https://github.com/Atlas-Authorization/pca>.
 
 ```
-  principal ──grant──▶ agent ──PCActn(per action)──▶ resource server
-   (signs the           (holds a          (verifies offline: chain · plan ·
-    envelope +           capability,        signature · audience · budget,
-    policy + budget)     emits proof)       then allows / steps-up / denies)
+  principal --grant--> agent --PCActn (per action)--> resource server
+   (signs envelope,     (holds a capability,         (verifies offline: chain, plan,
+    policy, budget)      emits a proof)               signature, audience, budget)
 ```
 
-## Why it's different
+## Install
 
-- **No ambient authority.** A leaked PCActn authorizes *one* action on *one* resource server in a
-  narrow time window — not "everything the token could do."
-- **Attenuation by construction.** A sub-agent's capability can only ever be *narrower* than its
-  parent's (caveats are append-only), so delegation can't widen power.
-- **A budget with a theorem.** Every autonomous (no-human) action spends `κ·r` of a trust budget;
-  the total an agent can do between two human co-signs is provably bounded by `bMax/κ` — even if the
-  agent is fully compromised.
-- **Offline, deterministic verification.** The resource server checks a PCActn with public keys and
-  a canonical form; no callback to an authorization server on the hot path.
+```sh
+npm i @atlasauth/pca
+```
 
-## Quickstart
+Node >= 20. The FN-DSA post-quantum suites use `@atlasauth/pca-fndsa-wasm`, which is installed
+automatically as a dependency. Optional dependencies (`@xmldom/xmldom`, `asn1js`, `pkijs`, `snarkjs`,
+`xml-crypto`) are used only by some attestation and zero-knowledge features.
 
-**1 — the agent side.** Compile intent into a signed grant and emit a proof per tool call:
+## Usage
+
+Agent side: mint a grant and sign a PCActn per action.
 
 ```ts
-import { agent } from '@atlasauth/pca';
+import { agent, generateKeyPair, pcaHeaders } from '@atlasauth/pca';
 
+const AUD = 'ins_acme'; // the resource server this grant is for
 const a = agent({
-  principal,                                   // the human's keypair (roots the grant)
+  principal: generateKeyPair(), // the human's key; roots the grant
   goal: 'reconcile October refunds',
-  permissions: { stripe: ['refund'], gmail: ['send'] },
+  permissions: { stripe: ['refund'] },
   limits: { refund: '$500/day' },
-  aud: 'ins_acme',                             // the resource server this is for
+  aud: AUD,
 });
 
-const { encoded } = a.act('stripe.refund', 'charge:ch_123', { amount: 42, currency: 'usd' }, { counter: 1 });
-// POST to your resource server with the proof attached:
-//   fetch(url, { method: 'POST', headers: pcaHeaders(encoded), body: ... })
+const params = { amount: 42, currency: 'usd' };
+const { encoded } = a.act('stripe.refund', 'charge:ch_123', params);
+// Send it with the request: fetch(url, { headers: pcaHeaders(encoded), ... })
 ```
 
-**2 — the resource server.** Verify every inbound action (drop-in middleware per framework):
+Resource server: verify each inbound action. `requirePCA` is framework-neutral and default-deny: a required
+check that is not enforced denies. (For Express, Fastify, Hono, Next and fetch, use the middleware packages
+`@atlasauth/pca-express`, `-fastify`, `-hono`, `-next`, `-fetch`.)
 
 ```ts
-import { pcaExpress } from '@atlasauth/pca-express';
+import { requirePCA, memoryPcaStore } from '@atlasauth/pca';
 
-app.post('/refunds',
-  pcaExpress({
-    audience: 'ins_acme',
-    resolveGrant: (grantRef) => grants.get(grantRef),   // your grant store
-    budgetStore, context,                                // replay + the action params you enforce
+const guard = requirePCA({
+  audience: AUD, // a PCActn signed for another audience is denied
+  resolveGrant: async (ref) => (ref === a.grant.id ? a.grant : null), // your grant store
+  budgetStore: memoryPcaStore(), // replay counter + trust budget (use a durable store in production)
+  hooks: { revocation: () => ({ enforced: true, ok: true }) }, // plug your revocation check
+  context: (_req, p) => ({
+    params, // the plaintext params the RS saw; must hash to action.params_digest
+    // The plan and its authorization must come from YOUR authoritative source. Echoing the plan
+    // from the proof itself, as this demo does, proves nothing about authorization.
+    plan: [{ id: 'n0', verb: p.action.verb, resource: p.action.resource,
+             params_digest: p.action.params_digest, reversibility_class: p.action.reversibility_class }],
+    planAuthorized: true,
+    risk: { reversibility: 1, blastRadius: 0.1, confidence: 1, semanticDistance: 0, taint: 0 },
+    budget: a.budget,
   }),
-  (req, res) => { const { verdict, pcactn } = req.pca!; /* ... */ });
+});
+
+const result = await guard({ headers: new Headers(pcaHeaders(encoded)) });
+if (result.ok) {
+  // result.verdict.allow === true; result.pcactn is the verified action
+} else {
+  // result.status is 401 or 403; result.wwwAuthenticate holds the challenge
+}
 ```
 
-That's the whole loop. Everything else below is depth, breadth and ergonomics on top of it.
+Sending the same PCActn again is denied as a replay (the counter must increase).
 
-## The ecosystem
+## Verification
 
-| Package | What it is |
-| --- | --- |
-| `@atlasauth/pca` | Core: canonical hashing, Ed25519, capability chains, the PCActn + offline verifier, trust budget, plan Merkle commitments, the facade, connector catalog, framework-agnostic adapters, policy simulation/linting, approvals, the behavioral immune system, policy templates, the principal console, agent passport, DLP, reputation, compliance export, receipts, budget forecaster, sessions, NL→policy, Guardian HA, and the hybrid PQ KEM. |
-| `@atlasauth/pca-agent` | Agent-side client: commit a plan, act, handle step-up, delegate, verify receipts. |
-| **Agent frameworks** | `@atlasauth/pca-ai-sdk` · `@atlasauth/pca-langchain` · `@atlasauth/pca-openai` · `@atlasauth/pca-anthropic` · `@atlasauth/pca-mcp` — wrap a tool so each call emits a PCActn. |
-| **Resource servers** | `@atlasauth/pca-express` · `@atlasauth/pca-fastify` · `@atlasauth/pca-hono` · `@atlasauth/pca-next` — `requirePCA`-style middleware that verifies the inbound PCActn. |
-| **Payments** | `@atlasauth/pca-payments` — a spending mandate (caps, auto-approve threshold, bonded refunds) as a grant. |
-| **Tooling** | `@atlasauth/pca-cli` (`pca decode`/`explain`/`keygen`/`simulate`) · `@atlasauth/pca-testing` (factories, fake verifier, assertions) · `@atlasauth/pca-events` (typed step-up events + signed webhooks) · `@atlasauth/pca-otel` (OpenTelemetry spans + metrics). |
-| **Research** | `@atlasauth/pca-mpc` (malicious-secure MPC Policy VM) · `@atlasauth/pca-harness` (conformance). |
+A resource server accepts an action only if the PCActn passes, in order: wire (strict canonical form),
+version, audience, validity window, capability chain (hash-linked, each hop signed, rooted at the grant),
+plan inclusion, leaf signature, and counter (anti-replay). Optional hooks add attestation, revocation and
+freshness, a liveness beacon, a taint gate, threshold (guardian or human) co-signs, and zero-knowledge
+compliance. Delegation can only narrow authority: caveats are append-only. Autonomous actions spend a trust
+budget, which bounds what an agent can do between human co-signs.
 
-## Security model
+## Attestation verifiers
 
-A resource server accepts an action only if the PCActn passes, in order: **wire** (strict canonical
-form) → **version** → **audience** (this server's id, so no cross-server replay) → **validity**
-(time window) → **capability chain** (hash-linked, each hop signed, rooted at the grant) → **plan
-inclusion** (the action is a committed plan node) → **leaf signature** → **counter** (anti-replay),
-then the staged hooks: **attestation** (the agent is the model/weights/operator it claims),
-**revocation / freshness** (a live beacon + unrevoked epoch), **taint gate** (DLP), **threshold**
-(risk-adaptive human/guardian co-signs), **ZK compliance**. Verification is default-deny: a required
-check that is merely *unenforced* denies.
+Hardware attestation is exposed as namespaced verifiers that plug into the attestation hook and can be
+combined in an N-of-M policy: `attestAmdSnp` (AMD SEV-SNP with Milan/Genoa/Turin root pins),
+`attestIntelDcap` and `attestIntelCollateral` (Intel TDX quotes and PCS collateral), `attestAzureMaa`
+(Azure Attestation tokens), `attestGcpConfidentialSpace`, `attestNvidiaSpdm` with `attestNvidiaRim` and
+`attestNvidiaOcsp` (NVIDIA GPU confidential computing), plus `attestPqSoftware` and `attestPuf`. Verification
+is offline against pinned roots; most hardware roots are classical (ECDSA or RSA).
 
-### Post-quantum status
+## Post-quantum suites
 
-Every **signed surface** is crypto-agile (`ed25519 | ml-dsa-65 | hybrid-ed25519-ml-dsa-65`): the leaf
-signature, the capability-chain hops, the guardian threshold cosign, the transparency tree heads +
-witnesses, revocation epochs, beacons, settlements, attestation and the safety certificate — so the
-whole authority chain can verify under a pure-PQ suite, with hybrid as the migration default. Key
-exchange / secret-wrap uses the **hybrid X25519 + ML-KEM-768 KEM** (`kem.ts`): breaking it requires
-defeating *both* the curve and the lattice. Hashes are SHA-2 (Grover-safe at these sizes); MPC MACs
-are information-theoretic.
+Signed surfaces take an `alg` from the suite registry: `ed25519` (default), `ml-dsa-65`, `ml-dsa-87`,
+`slh-dsa-sha2-128f`, `slh-dsa-sha2-256s`, `fn-dsa-512`, `fn-dsa-1024`, and hybrid Ed25519 plus ML-DSA or
+SLH-DSA combinations. Key exchange uses a hybrid X25519 + ML-KEM-768 KEM (`hybridKemKeygen`,
+`hybridEncapsulate`).
 
-## Honest boundaries
+FN-DSA (Falcon, FIPS 206) runs through `@atlasauth/pca-fndsa-wasm`, a WebAssembly build of the Rust `fn-dsa`
+crate. It is loaded lazily on first use. If it cannot be loaded, FN-DSA verification fails closed, and
+`isFnDsaBackendActive()` reports whether it is available.
 
-"No flaw / perfect" is a direction, not a claim. Cryptographic assurance is earned by **independent
-audit** and time; real security also needs **adoption**. The ZK proof system is migrating from
-BN254 toward a 128-bit / transparent PQ backend, and the one classical root PCA doesn't own is AMD's
-SEV-SNP attestation chain (their PQ roadmap). These are stated, never faked.
+```ts
+import { randomBytes } from 'node:crypto';
+import { b64u, fnDsa512Keygen, signWithSuite, verifyWithSuite } from '@atlasauth/pca';
 
----
+const msg = new TextEncoder().encode('hello');
+const k = fnDsa512Keygen(new Uint8Array(randomBytes(32)));
+const sig = signWithSuite('fn-dsa-512', {
+  fnDsa512: { verifyingKey: k.verifyingKey, signingKey: k.signingKey, signSeed: new Uint8Array(randomBytes(32)) },
+}, msg);
+verifyWithSuite('fn-dsa-512', { fnDsa512Pub: b64u(k.verifyingKey) }, msg, sig); // true
+```
 
-Part of **Proof-Carrying Authority** by Atlas.
+## Durable state (Node only)
+
+`@atlasauth/pca/durable-state` provides crash-safe, tamper-evident, multi-process-safe key/value state for
+rollback protection (for example, the highest allowlist version or revocation epoch ever accepted). It is a
+separate subpath because it imports `node:fs`.
+
+```ts
+import { openDurableState } from '@atlasauth/pca/durable-state';
+
+const state = await openDurableState({ dir: '/var/lib/myapp/pca-state', hmacKey }); // hmacKey: 32+ bytes, optional
+await state.update('epoch', (prev) => Math.max((prev as number) ?? 0, 5)); // atomic read-modify-write
+```
+
+It fails closed on corrupt or rolled-back state (`DurableStateError`). Without an `hmacKey`, replacing the
+whole directory with an older consistent copy is not detectable locally.
+
+## Related packages
+
+Agent client `@atlasauth/pca-agent`; tool wrappers `@atlasauth/pca-ai-sdk`, `-langchain`, `-openai`,
+`-anthropic`, `-mcp`; payment mandates `@atlasauth/pca-payments`; tooling `@atlasauth/pca-cli`,
+`@atlasauth/pca-testing`, `@atlasauth/pca-events`, `@atlasauth/pca-otel`.
+
+## Status
+
+Pre-1.0 (0.2.0): the API may change between minor versions. The cryptography and protocol have not been
+independently audited, and this is not a substitute for a security review before you protect anything of
+value. Some verifier checks report `not-enforced` until you supply the corresponding hook, and the default
+profile denies in that case. The zero-knowledge backend currently uses BN254 and is being moved toward a
+transparent, post-quantum backend; the AMD SEV-SNP root chain is classical.
+
+## License
+
+MIT - see LICENSE

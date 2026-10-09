@@ -34,4 +34,10 @@ const toolMessage = await dispatchToolCall(
 
 `dispatchToolCall` builds + signs a PCActn and attaches it; it does not dry-run or authorize on its own — an over-cap or out-of-policy call still produces a signed PCActn here and is rejected by the resource server's verifier.
 
-Part of Proof-Carrying Authority — see `@atlasauth/pca`.
+## Status
+
+Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca); see `@atlasauth/pca`. PCA's cryptography has not been independently audited.
+
+## License
+
+MIT - see LICENSE

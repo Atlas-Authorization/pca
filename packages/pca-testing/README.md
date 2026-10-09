@@ -5,14 +5,15 @@ Testing kit for Proof-Carrying Authority: factories for grants and PCActns, a fa
 ## Install
 
 ```sh
-npm i -D @atlasauth/pca-testing
+npm i -D @atlasauth/pca-testing @atlasauth/pca
 ```
 
-Depends on the core `@atlasauth/pca` only — no backend, network, or running resource server needed.
+Depends on the core `@atlasauth/pca` only. No network or running resource server is needed.
 
 ## Usage
 
 ```ts
+import { decodePCActn } from '@atlasauth/pca';
 import { testAgent, makePCActn, expectVerifies, expectDenied, tamper, memoryStateStore } from '@atlasauth/pca-testing';
 
 const agent = testAgent();                               // real signed grant + act/dryRun/subAgent
@@ -29,4 +30,16 @@ const store = memoryStateStore();                        // in-memory budget/rep
 
 `fakeVerify` is `verifyPCActnCore` unchanged — it stands in for the resource server but is not a weakened verifier, so a faithful round-trip verifies and tampering is caught exactly as in production. Nothing here authorizes anything.
 
-Part of Proof-Carrying Authority — see `@atlasauth/pca`.
+## API
+
+- Factories: `testAgent(overrides?)`, `makePCActn(agent, verb, resource, params?, opts?)`.
+- Verifier and assertions: `fakeVerify`, `expectVerifies`, `expectDenied` (all take `{ audience, now, grant }` options).
+- Helpers: `tamper(encoded, mutate)`, `memoryStateStore()`.
+
+## Status
+
+Test-only. These helpers generate throwaway keys and in-memory state; never use them in production.
+
+## License
+
+MIT - see LICENSE

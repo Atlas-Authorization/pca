@@ -1,7 +1,26 @@
 {
   "name": "@atlasauth/pca-invariants",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Property-based verification of PCA's core safety invariants (attenuation monotonicity, budget soundness, fail-closed) across thousands of randomly-generated capability chains and policies.",
+  "keywords": [
+    "property-based testing",
+    "fast-check",
+    "safety invariants",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-invariants"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -17,17 +36,21 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@atlasauth/pca": "workspace:*"
+    "@atlasauth/pca": "workspace:*",
+    "fast-check": "^3.23.1"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
-    "vitest": "^2.1.4",
-    "fast-check": "^3.23.1"
+    "vitest": "^2.1.4"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   }

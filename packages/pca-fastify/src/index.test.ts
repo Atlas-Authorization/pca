@@ -33,7 +33,7 @@ describe('pcaFastify', () => {
         risk: { semanticDistance: 0, reversibility: 0, blastRadius: 0.04, taint: 0, confidence: 1, age: 0 },
         planAuthorized: true,
       }),
-      insecureAllowUnenforced: true, // exercise the glue; full default-deny enforcement is tested in @atlasauth/backend
+      insecureAllowUnenforced: true, // exercise the glue; full default-deny enforcement is tested in @atlasauth/pca
     });
     // Fastify delivers header keys lowercased; send it that way.
     const req = { headers: { 'pca-action': pcaHeaders(encoded)['PCA-Action'] }, body: undefined } as Record<string, unknown> & { headers: Record<string, string | string[] | undefined> };

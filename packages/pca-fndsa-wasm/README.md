@@ -9,6 +9,16 @@ registry. It provides key generation, signing and — the operation the PCA veri
 | `fn-dsa-512`   | cat. 1   | 897 B         | 1345 B      | 666 B     |
 | `fn-dsa-1024`  | cat. 5   | 1793 B        | 2369 B      | 1280 B    |
 
+## Install
+
+```sh
+npm i @atlasauth/pca-fndsa-wasm
+```
+
+This is the backend `@atlasauth/pca` uses for its FN-DSA suites; you normally get it as a dependency of `@atlasauth/pca`.
+
+Node >= 20. The `.wasm` file ships inside the package and is loaded relative to the installed `dist/` directory; no build step or Rust toolchain is needed to use it.
+
 ## The vetted boundary (no hand-rolled crypto)
 
 Every FN-DSA / Falcon operation — ntrugen key generation, the Falcon `sign_dyn` Gaussian sampler +
@@ -80,8 +90,24 @@ crate when FIPS 206 lands.**
 - **Verification** — the PCA verifier's only use of this backend — is the **public-key operation**:
   it touches no secret and uses no floating point.
 
-## Suite-registry wiring (next pass)
+## Use with @atlasauth/pca
 
-This package is self-contained and ready for a **separate** later pass to register `fn-dsa-512` and
-`fn-dsa-1024` as signature suites in `@atlasauth/pca`'s `pq.ts` suite registry. That wiring is out of
-scope here; this crate owns only the vetted FN-DSA backend + its binding and tests.
+`@atlasauth/pca` registers `fn-dsa-512` and `fn-dsa-1024` as signature suites and loads this package as its verification and signing backend. If the backend cannot be loaded, FN-DSA verification fails closed.
+
+## Build provenance
+
+The shipped `wasm/pca_fndsa_wasm.wasm` is built from the Rust source in `crate/` (with its `Cargo.lock`) and is bit-for-bit reproducible.
+
+| | |
+| --- | --- |
+| artifact | `wasm/pca_fndsa_wasm.wasm` |
+| sha256 | `48e322e3a92be37c53f6c37b894b4cf1cab659269396b5d28c6929b67e678abe` |
+| target | `wasm32-unknown-unknown`, `--release --locked` (opt-level `s`, LTO, `panic = "abort"`, stripped) |
+| toolchain | rustc 1.99.0 (b940084d7 2026-09-28), cargo 1.99.0 |
+| locked crates | fn-dsa 0.4.0 (and its locked transitive crates) |
+
+Verify: `cd crate && cargo build --release --locked --target wasm32-unknown-unknown && shasum -a 256 target/wasm32-unknown-unknown/release/pca_fndsa_wasm.wasm` (needs `rustup target add wasm32-unknown-unknown`).
+
+## License
+
+MIT - see LICENSE.

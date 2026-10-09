@@ -7,7 +7,7 @@
  * so this package has no hard dependency on `@opentelemetry/api` (declare it as an optional peer).
  *
  * Generic over the result shape: we only read a small structural slice of the guard's verdict, so this
- * does NOT depend on `@atlasauth/backend` or any concrete verdict type.
+ * does NOT depend on the guard's concrete verdict type.
  *
  * HONEST: this observes — it never decides. With no tracer and no meter the wrapper is a transparent
  * pass-through (the guard's result is returned unchanged, no telemetry), so it is always safe to call.

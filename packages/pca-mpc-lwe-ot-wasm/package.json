@@ -1,7 +1,29 @@
 {
   "name": "@atlasauth/pca-mpc-lwe-ot-wasm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Post-quantum endemic (Masny-Rindal) base-OT lattice core for @atlasauth/pca-mpc: Kyber-768 IND-CPA (K-PKE) from the vetted pqc_kyber reference crate compiled to WebAssembly, plus the ring arithmetic + uniform-ring random oracle the additive endemic construction needs. Removes the semi-honest ML-KEM base OT's malicious-receiver residue under decisional Module-LWE.",
+  "keywords": [
+    "oblivious transfer",
+    "kyber",
+    "module-lwe",
+    "webassembly",
+    "wasm",
+    "post-quantum",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-mpc-lwe-ot-wasm"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -14,7 +36,10 @@
   "files": [
     "dist",
     "wasm",
-    "crate"
+    "crate",
+    "README.md",
+    "LICENSE",
+    "!crate/target"
   ],
   "scripts": {
     "build:wasm": "cd crate && cargo build --release --target wasm32-unknown-unknown && cp target/wasm32-unknown-unknown/release/pca_mpc_lwe_ot_wasm.wasm ../wasm/pca_mpc_lwe_ot_wasm.wasm && cargo clean",
@@ -25,6 +50,9 @@
   "devDependencies": {
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public"

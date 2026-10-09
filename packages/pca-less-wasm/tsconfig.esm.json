@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  // Browser/worker/edge build: ES modules, NO node:* imports (index.ts, the Node entry, is excluded).
+  "compilerOptions": {
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "outDir": "./dist/esm",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["src/core.ts", "src/web.ts", "src/embedded.ts"],
+  "exclude": ["**/*.test.ts"]
+}

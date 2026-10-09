@@ -7,7 +7,7 @@
  *   );
  *
  * It wraps a Route Handler so the inbound PCActn is verified with the framework-agnostic `requirePCA` guard
- * from `@atlasauth/backend` (default-deny: a required check that is unenforced DENIES) before your handler
+ * from `@atlasauth/pca` (default-deny: a required check that is unenforced DENIES) before your handler
  * runs. On success it calls your handler with `{ pca: { verdict, pcactn } }`; on failure it returns a 401/403
  * JSON response with a WWW-Authenticate challenge. The client sends the PCActn as `PCA-Action: <base64url>`
  * (see `@atlasauth/pca` `pcaHeaders`) or a JSON body `{ pcactn }`; that is exactly what the default extractor
@@ -17,8 +17,8 @@
  * a web `Response`, which is exactly what an App-Router Route Handler is.
  */
 
-import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/backend';
-import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/backend';
+import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
+import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/pca';
 import type { PCActn } from '@atlasauth/pca';
 
 /** The verdict + PCActn handed to the wrapped handler on success. */

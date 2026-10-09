@@ -21,8 +21,7 @@ npm install
 npm start
 ```
 
-That prints a live `ALLOWED` for a legit action and a `DENIED` for an over-budget one. The rest of this
-page is the same thing, by hand.
+That plays nine scripted outcomes (allow, deny, step-up, replay, tamper, budget, sub-agent, offline receipt) and exits nonzero if any deviates; see [Run the end-to-end demo](./run-the-demo.md). For the smaller two-file version (one `ALLOWED`, one `DENIED`), scaffold `--template pca-quickstart`. The rest of this page is that smaller loop, by hand.
 
 ## Step 1 — Install
 

@@ -82,7 +82,7 @@ import {
 } from '@atlasauth/pca';
 
 /** Semver of the vector set. Bump on ANY change to the bytes of `vectors.json`. */
-export const CONFORMANCE_VERSION = '1.0.0';
+export const CONFORMANCE_VERSION = '1.1.0';
 
 /** NORMATIVE order the core verifier evaluates checks in; `firstFailedCheck` is the earliest 'fail' here. */
 export const CHECK_ORDER = [
@@ -91,6 +91,7 @@ export const CHECK_ORDER = [
   'audience',
   'validity',
   'cap_chain',
+  'grant_ref_bound',
   'plan_inclusion',
   'plan_root_authorized',
   'leaf_signature',
@@ -289,6 +290,7 @@ const BASE_CHECKS: Record<string, CheckStatus> = {
   audience: 'pass',
   validity: 'pass',
   cap_chain: 'pass',
+  grant_ref_bound: 'pass',
   plan_inclusion: 'pass',
   plan_root_authorized: 'not-enforced',
   leaf_signature: 'pass',
@@ -362,6 +364,14 @@ export function generateVectorSet(): ConformanceVectorSet {
       aud: AUD,
       verifyOptions: base(),
       expect: failingBase('validity'),
+    },
+    {
+      id: 'grant_ref_not_root_id',
+      description: 'grant_ref is a well-formed value that is NOT the id of cap_chain[0] (re-signed): only the grant_ref_bound check fails (replay namespaces are keyed on grant_ref).',
+      pcactn: resign({ ...VALID, grant_ref: flipByte(VALID.grant_ref) }),
+      aud: AUD,
+      verifyOptions: base(),
+      expect: failingBase('grant_ref_bound'),
     },
     {
       id: 'broken_cap_chain_sig',
