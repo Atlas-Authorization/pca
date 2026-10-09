@@ -1,14 +1,6 @@
-<div align="center">
-
 # Proof-Carrying Authority (PCA)
 
-**An execution-authentication framework for autonomous agents — and its reference TypeScript implementation.**
-
-<img src="docs/diagrams/authn-authz-authf.svg" alt="authN, authZ, authF: who are you, what may you do, and is this action faithful" width="760">
-
-</div>
-
----
+**An execution-authentication framework for autonomous agents.**
 
 Classic auth answers two questions:
 
@@ -27,67 +19,22 @@ PCA adds a third question:
 
 PCA makes `authF` cheaply verifiable by replacing the bearer token with a **Proof-Carrying Action
 (PCActn)**: with every action the agent presents a self-contained object, and the resource server
-verifies a *proof* — not the possession of a secret. The core verifier runs **offline** with a stateless
-set of eight fail-closed checks in a fixed, normative order; every higher capability (post-quantum
-signatures, threshold step-up, zero-knowledge compliance, MPC policy evaluation, homomorphic risk gates)
-is an additive, independently-adoptable rung on top of the base wire.
-
-**This repository is the flagship.** It carries the reference **TypeScript** implementation (the
-`@atlasauth/pca` core plus 76 published `@atlasauth/pca*` packages), the full explainer
-docs and diagrams, the interactive playground, and the shared conformance corpus. The nine native
-verifiers in other languages live in their own repos and pass this same corpus — see
-[`verifiers/`](./verifiers) and [`ECOSYSTEM.md`](./ECOSYSTEM.md) for the whole map.
+verifies a *proof* — not the possession of a secret.
 
 ---
 
-## Install
+## The PCActn model
 
-```sh
-# the core verifier
-npm install @atlasauth/pca
+A PCActn is a single **strict canonical JSON** object (wire version **2**): bytewise-sorted keys, no
+insignificant whitespace, a closed top-level field set, canonical unpadded base64url for byte fields, and
+bounded numbers and nesting. It asserts, in one verifiable package:
 
-# a framework adapter (pick your server)
-npm install @atlasauth/pca-express   # or pca-fastify, pca-hono, pca-next
-```
+> *"This action is a valid opening of a pre-authorized plan, produced by the holder of an attenuated
+> capability that chains back to the principal's Root Intent Grant, fresh and bound to this resource
+> server — and here is the cryptographic evidence."*
 
-```ts
-import { verifyPCActn } from "@atlasauth/pca";
-
-const verdict = await verifyPCActn(pcactn, { audience: "https://api.example.com" });
-if (!verdict.ok) throw new Error(`authF failed: ${verdict.reason}`);
-```
-
-See each package's own `README.md` and the [docs](./docs) for the full model.
-
----
-
-## The loop
-
-<div align="center">
-<img src="docs/diagrams/pca-loop.svg" alt="The PCA loop: mint, attenuate, commit a plan, act, decide, verify, anchor" width="720">
-</div>
-
-1. **Mint a Root Intent Grant.** The principal signs an envelope (goal commitment, action predicates,
-   caveats, risk policy, agent binding) with their root key. `mintGrant()`.
-2. **Attenuate or delegate.** An agent or sub-agent receives a capability that can only be narrowed.
-   `delegate()` / `attenuate()`.
-3. **Commit a plan.** The agent commits the Merkle root of a DAG of intended actions. `commitPlan()`.
-4. **Act.** Each action is a signed PCActn carrying an inclusion proof for its plan node, the capability
-   chain, a monotonic counter and a risk claim. `buildPCActn()` / `agent.act()`.
-5. **Decide.** The Policy VM evaluates predicates, caveats, the risk functional and the trust budget, and
-   either releases the guardian signing share or refuses. `decide()`.
-6. **Verify.** The resource server checks every clause, offline and deterministically.
-   `verifyPCActn()` / `requirePCA()`.
-7. **Outcome.** `allowed` (anchored in the transparency ledger, receipt returned), `denied`, or `step_up`
-   (the risk needs a principal-device co-signature).
-
----
-
-## The eight-check core
-
-A PCActn is a single **strict canonical JSON** object (wire version **2**). A resource server verifies it
-**offline** with a stateless core of eight checks, run in a fixed, normative order and every one
-**fail-closed**:
+A resource server verifies it **offline** with a stateless core of eight checks, run in a fixed,
+normative order and every one **fail-closed**:
 
 | # | Check | What it proves |
 |---|-------|----------------|
@@ -100,27 +47,25 @@ A PCActn is a single **strict canonical JSON** object (wire version **2**). A re
 | 7 | `leaf_signature` | The capability-chain leaf holder signed the canonical body. |
 | 8 | `counter` | A monotonic anti-replay counter is present and well-formed. |
 
-Richer rungs — attestation, taint gating, threshold co-signing, revocation, zero-knowledge, bonds — are
-verifier **hooks** layered on this core; each reports *not-enforced* unless you configure it, and
-*not-enforced is never pass*, so a relying party requiring a stronger rung inspects the per-check results
-and refuses anything it needed.
+The action is allowed only if no check reports failure. Richer rungs — attestation, taint gating,
+threshold co-signing, revocation, zero-knowledge, bonds — are verifier **hooks** layered on this core;
+each reports *not-enforced* unless you configure it, and *not-enforced is never pass*, so a relying party
+requiring a stronger rung inspects the per-check results and refuses anything it needed.
 
-<div align="center">
-<img src="docs/diagrams/pca-stack.svg" alt="The PCA stack: layers L0 to L5 with one proof clause each, plus optimistic and zero-knowledge accelerants" width="720">
-</div>
+The credential is an **attenuable capability chain** rooted in a principal-signed **Root Intent Grant**:
+any holder may narrow authority (add caveats) but never widen it, and each delegation hop is signed and
+bound to its holder, so a leaked capability is inert.
 
 ---
 
 ## The verifier matrix
 
-PCA ships native, offline PCActn verifiers that all pass the **same shared conformance corpus** (in
-[`conformance/`](./conformance)) — a PCActn that verifies in one language verifies identically in every
-other. The TypeScript verifier in this repo is the reference; the other nine are indexed in
-[`verifiers/`](./verifiers).
+PCA ships native, offline PCActn verifiers that all pass the **same shared conformance corpus** — a
+PCActn that verifies in one language verifies identically in every other.
 
-| Language | Package / repo | Post-quantum |
-|----------|----------------|--------------|
-| TypeScript (reference) | [`@atlasauth/pca`](./packages/pca) | Yes |
+| Language | Package / repo | Post-quantum suites |
+|----------|----------------|---------------------|
+| TypeScript (reference) | `@atlasauth/pca` | Yes |
 | Go | [`pca-go`](https://github.com/Atlas-Authorization/pca-go) | Yes |
 | Python | [`pca-python`](https://github.com/Atlas-Authorization/pca-python) | Yes |
 | Ruby | [`pca-ruby`](https://github.com/Atlas-Authorization/pca-ruby) | Yes |
@@ -131,148 +76,84 @@ other. The TypeScript verifier in this repo is the reference; the other nine are
 | Rust | [`pca-rust`](https://github.com/Atlas-Authorization/pca-rust) | Yes |
 | Kotlin | [`pca-kotlin`](https://github.com/Atlas-Authorization/pca-kotlin) | Yes |
 
+See [`sdks.md`](./sdks.md) for the full matrix with install notes.
+
 **Signature suites:** `ed25519` (default), `ml-dsa-65` (FIPS-204, post-quantum), and
 `hybrid-ed25519-ml-dsa-65`. The suite id and post-quantum key are part of the signed body, so a downgrade
 or key swap invalidates the action. All ten verifiers implement the post-quantum suites and pass the full
 conformance corpus (including the post-quantum vectors).
 
-Beyond TypeScript, PCA also ships **Python agent-framework adapters** (LangGraph, CrewAI, Pydantic AI,
-Google ADK, Microsoft Agent Framework, Haystack, FastMCP) and **Rust proving crates** (Nova folding IVC,
-Winterfell / Plonky3 STARKs, a RISC Zero zkVM port). The complete inventory is in
-[`ECOSYSTEM.md`](./ECOSYSTEM.md).
+---
+
+## Conformance & playground
+
+- **Conformance corpus** (`conformance/`) — over a hundred golden and adversarial PCActns with their
+  expected allow/deny verdicts and per-check results, plus canonical-JSON, strict-base64url, and Merkle
+  primitive vectors. Every verifier must reproduce it exactly, so independent implementations can
+  self-certify.
+- **Playground** (`playground/`) — an interactive page to mint a grant, commit a plan, forge and verify
+  PCActns, and watch the per-check results and the trust budget respond as you push actions further from
+  the stated goal.
 
 ---
 
-## Trust budget & step-up
+## Capability surface
 
-<div align="center">
-<img src="docs/diagrams/trust-budget.svg" alt="Trust budget as a closed-loop controller: risk sensor, threshold actuator, depleting budget with human recharge" width="680">
-&nbsp;
-<img src="docs/diagrams/threshold-stepup.svg" alt="Threshold and step-up: escalation by risk, the hosted step-up flow, and multi-signature versus FROST aggregation" width="680">
-</div>
+Beyond the eight-check core, PCA defines a layered model. The capabilities below are implemented and
+tested in the reference implementation. A few carry a remaining **production requirement** — real TEE
+hardware, distributed/HSM custody, a no-dealer MPC offline phase, or a fuller policy circuit — called out
+inline; none are vaporware.
 
-Authorization is a closed-loop controller: a risk functional sets the required threshold, a depleting
-budget bounds total risk-weighted autonomous action between human check-ins, and a provable a-priori
-blast-radius bound is machine-checked. High-risk actions escalate to a `t-of-n` co-sign, up to a
-principal-device step-up.
+- **Behavioral contracts** — authority expressed as a small bounded-safety temporal-logic program of
+  invariants each action must transition validly (a strict generalization of a prohibition monitor).
+- **Verifiable semantic judgment** — a semantic threshold alongside the cryptographic one: a
+  k-of-n ensemble of allowlisted judge models signs faithfulness-to-intent verdicts, turned into
+  allow/deny by a conformal calibration that bounds the empirical false-allow rate. (Judge models are
+  trusted-key allowlisted today; measuring the judge model itself is staged.)
+- **Attestation & provenance** — the acting environment's identity derives from an attestation that
+  measures model id, runtime, operator, and — as a shippable stand-in for weights-level measurement —
+  signed system-prompt and tool-manifest digests matched against the grant's allowlists, plus a
+  hardware-measured model-weights digest. *The TEE/hardware attestation verifier is implemented and tested
+  against real-cryptography mock reports; a live attestation requires an actual SEV-SNP/TDX machine.*
+- **Transparency & witnesses** — every action anchors in a per-principal append-only Merkle log
+  (Certificate-Transparency lineage) with inclusion and consistency proofs; the log optionally accepts
+  external witness cosignatures (C2SP tlog-witness / Sigsum lineage) for anti-equivocation. *Operating a
+  multi-party witness network is a deployment step.*
+- **Trust budget** — authorization as a closed-loop controller: a risk functional sets the required
+  threshold, a depleting budget bounds the total risk-weighted autonomous action between human
+  check-ins, and the crown safety invariant (a provable a-priori blast-radius bound) is machine-checked
+  with TLA+ and a Lean proof.
+- **Optimistic bonds & dispute** — reversible actions may take a fast path on a bonded compliance claim,
+  with a challenge window and a contestable dispute game (an objective oracle catches understated-risk
+  claims, not just revocation); irreversible actions never go optimistic.
+- **Payments** — a mapping of PCA onto agentic-payment mandates (spend ceilings → predicates,
+  auto-approve threshold → risk policy, cumulative cap → trust budget, dispute → optimistic bond).
+- **Threshold / step-up co-signing** — a risk-adaptive `t-of-n` signature where high-risk actions require
+  a principal-device co-sign, and the Guardian cosignature is a real FROST threshold signature over a
+  DKG-established group key, released only on a Policy-VM allow. *The reference runs the signing round
+  in-process; true unforgeability needs each guardian share in a separate trust domain / HSM with a
+  network signing protocol.*
+- **Multi-party Policy VM** — an MPC composition of stakeholder policies that reveals no party's policy,
+  malicious-secure with abort (SPDZ-style MACs + MAC-check). *The online phase + MAC-check are maliciously
+  secure; the offline triple generation is trusted-dealer today (a no-dealer OT/HE phase is designed).*
+- **Zero-knowledge proof-of-compliance** — a real Groth16 proof that an action satisfies policy without
+  revealing the policy or plan to the resource server. *The circuit proves the commitment openings and a
+  decision subset (plan-membership + risk ≤ budget); extending it to the full policy logic is ongoing.*
 
----
-
-## Architecture
-
-<div align="center">
-<img src="docs/diagrams/architecture.svg" alt="PCA architecture: principal, agent and sub-agents, guardian, resource server with hooks, transparency ledger, and attestation" width="760">
-</div>
-
-See [`docs/`](./docs) for the full explainer: [concepts](./docs/concepts), [guides](./docs/guides),
-[reference](./docs/reference), and the [security model](./docs/security). All diagrams (SVG + Mermaid
-source) are in [`docs/diagrams`](./docs/diagrams).
-
----
-
-## Packages
-
-This repo publishes **76** TypeScript packages under the
-[`@atlasauth`](https://www.npmjs.com/org/atlasauth) scope. The core is `@atlasauth/pca`; everything else
-is a framework adapter, crypto rung, protocol bridge, or agent-framework integration that builds on it.
-
-| Package | What it does |
-|---------|--------------|
-| [`@atlasauth/pca`](packages/pca) | Proof-Carrying Authority core: canonical hashing, Ed25519 and post-quantum signatures, Merkle plan commitments, attenuable capability chains, hardware attestation verification, and the PCActn verifier. |
-| [`@atlasauth/pca-a2a`](packages/pca-a2a) | A2A (Agent2Agent) adapter for PCA: verify/attach proof-carrying actions on A2A task send/receive, validate Signed Agent Cards, and an AP2 payment-mandate profile. |
-| [`@atlasauth/pca-abe`](packages/pca-abe) | Proof-carrying encryption for PCA: attribute/policy-based encryption on BLS12-381 so a tool payload decrypts only for a holder whose capability satisfies the policy — binding confidentiality to proven authority. |
-| [`@atlasauth/pca-acp`](packages/pca-acp) | Agentic Commerce (ACP) + x402 adapter for PCA: mint an ACP delegated one-time payment token (bound to session+merchant+amount+expiry) AS a PCA proof, and an x402/HTTP-402 facilitator hook that gates settlement on a verified PCActn. |
-| [`@atlasauth/pca-agent`](packages/pca-agent) | Agent-side client for Proof-Carrying Authority: commit a plan, act with a PCActn + threshold share, handle step-up, delegate to sub-agents, verify receipts. |
-| [`@atlasauth/pca-agentcard`](packages/pca-agentcard) | Signed agent card + AgentFacts attestor for PCA: issue/host a /.well-known/agent-card.json (A2A AgentCardSignature) and an AgentFacts metadata doc where PCA is the THIRD-PARTY attestor (separating self-asserted from attested), pointing to live verifiable proof-of-authority. |
-| [`@atlasauth/pca-aggsig`](packages/pca-aggsig) | BLS signature aggregation for PCA: collapse a delegation chain per-hop signatures and transparency-ledger witness cosignatures into one compact BLS12-381 aggregate with aggregate-verify. |
-| [`@atlasauth/pca-ai-sdk`](packages/pca-ai-sdk) | Vercel AI SDK adapter for Proof-Carrying Authority: wrap an AI SDK tool so every call emits a PCActn (and attaches the proof) before execute runs. |
-| [`@atlasauth/pca-analyzer`](packages/pca-analyzer) | Static authority analyzer for Proof-Carrying Authority: a sound, bounded decision procedure over PCA's predicate/caveat policy (reachability, vacuity/totality, delegation-safety subsumption, disjointness, equivalence, and declared-intent conformance) with counterexamples. |
-| [`@atlasauth/pca-anthropic`](packages/pca-anthropic) | Anthropic (Claude) adapter for Proof-Carrying Authority: turn a tool_use block into a PCActn and build the tool_result with the proof attached. |
-| [`@atlasauth/pca-ap2`](packages/pca-ap2) | AP2-modelled Intent/Cart/Payment mandate chain for PCA (a PCA rendition, not the SD-JWT AP2 wire format): map the grant/budget to signed mandates; PCA governs, x402 / Stripe Shared-Payment-Tokens settle. |
-| [`@atlasauth/pca-attest-eat`](packages/pca-attest-eat) | Per-session attestation freshness + channel binding for PCA (IETF SEAT / RA-TLS), emitting EAT (RFC 9711) with a RATS appraisal-policy split — so TEE evidence can't be replayed. |
-| [`@atlasauth/pca-authzen`](packages/pca-authzen) | AuthZEN PDP for PCA: expose the PCA verifier/policy engine behind the OpenID AuthZEN Authorization API (subject/action/resource/context) with the COAZ MCP-tool and AARP approval profiles, so any AuthZEN PEP can use PCA as its decision point. |
-| [`@atlasauth/pca-bbs`](packages/pca-bbs) | BBS signatures (CFRG draft) for PCA: issue a capability as a multi-message BBS credential, then present it with selective disclosure + unlinkable zero-knowledge proof-of-possession, so an agent reveals only the attributes a tool needs and uses can't be correlated. |
-| [`@atlasauth/pca-ciba`](packages/pca-ciba) | CIBA (Client-Initiated Backchannel Authentication) bridge for PCA FROST step-up: turn a step-up request into a backchannel human-approval flow with risk-adaptive gating. |
-| [`@atlasauth/pca-cli`](packages/pca-cli) | The pca dev CLI: decode and explain a PCActn (why it passed or failed each check), mint a dev grant/key, and simulate a policy over actions. |
-| [`@atlasauth/pca-compliance`](packages/pca-compliance) | Compliance export for PCA: render PCA proofs + decision records (incl. delegation chain + human-override) into auditor-ready reports pre-mapped to EU AI Act Art. 12/50, ISO 42001 clauses, and SOC 2 CC6. |
-| [`@atlasauth/pca-conformance`](packages/pca-conformance) | Canonical PCActn conformance vectors + a differential harness so every PCA verifier implementation (the 9 language SDKs, the zkVM, the TS core) provably agrees on accept/reject for the same inputs. |
-| [`@atlasauth/pca-connect`](packages/pca-connect) | Outbound connection token vault for PCA agents: hold and refresh an agent's third-party OAuth tokens (Google/Slack/etc.) under a PCA capability, so a tool call presents a provably-authorized, least-privilege outbound token. |
-| [`@atlasauth/pca-connectors`](packages/pca-connectors) | Declarative outbound connector registry for PCA: provider manifests (auth URLs, scopes, refresh, token placement) for the top SaaS tools + an auto-refresh helper, so every vault connector call is a proof-carrying capability. |
-| [`@atlasauth/pca-control-evals`](packages/pca-control-evals) | Empirical adversarial control-evaluation harness for PCA: a seeded red-team/blue-team game (Redwood-style AI Control) that scores safety = P(a possibly-misaligned agent cannot cause an unacceptable outcome) + usefulness against PCA's verifier/budget/step-up/DLP/immune controls. Complements the analytic Σrisk ≤ bMax/κ bound. |
-| [`@atlasauth/pca-dataflow`](packages/pca-dataflow) | CaMeL-style capability-tagged data-flow model for PCA: provenance capabilities propagate through combinators and a policy interpreter gates value→sink flows for provable non-exfiltration — the positive complement to the heuristic DLP/taint in @atlasauth/pca. |
-| [`@atlasauth/pca-dpop`](packages/pca-dpop) | Sender-constrained proof-of-possession for PCA: RFC 9449 DPoP proofs and RFC 8705 mTLS cnf binding, tying a PCActn to the holder key/channel for OAuth PoP interop. |
-| [`@atlasauth/pca-events`](packages/pca-events) | Typed step-up lifecycle events + signed webhooks for Proof-Carrying Authority: build, HMAC-sign and verify step-up.created/approved/denied/expired events so integrators can run their own inbox, Slack bot or audit sink. |
-| [`@atlasauth/pca-explain`](packages/pca-explain) | Plain-language proof-trace for PCA decisions: given a PCActn and its verify/decide result, explain exactly why it was allowed or denied — which capability granted it, which caveat narrowed or failed, the risk/threshold/budget path, and the first failing check with a remedy. |
-| [`@atlasauth/pca-express`](packages/pca-express) | Express middleware for Proof-Carrying Authority: requirePCA() verifies the inbound PCActn and attaches the verdict, or answers 401/403 with a WWW-Authenticate challenge. |
-| [`@atlasauth/pca-fastify`](packages/pca-fastify) | Fastify plugin/preHandler for Proof-Carrying Authority: verifies the inbound PCActn, attaches the verdict, or replies 401/403 with a WWW-Authenticate challenge. |
-| [`@atlasauth/pca-fetch`](packages/pca-fetch) | Runtime-neutral Web Fetch guard for Proof-Carrying Authority: verify an inbound PCActn in any Request→Response runtime (Cloudflare Workers, Deno, Bun, Vercel Edge, Lambda). |
-| [`@atlasauth/pca-fhe`](packages/pca-fhe) | Homomorphic risk-gate evaluation for PCA: the evaluator computes the weighted risk functional + admission slack over ENCRYPTED risk inputs (node-seal / Microsoft SEAL BFV) and never sees the plaintext — only the authorized key holder decrypts the verdict. |
-| [`@atlasauth/pca-fndsa`](packages/pca-fndsa) | FN-DSA / Falcon (FIPS 206 draft) suite for PCA: register the compact PQ signature suite in the crypto-agility seam with a pluggable, vetted verify backend (a constant-time Falcon is not safely hand-rolled in TS) — wire format, suite ids, and KAT-driven integration tests. |
-| [`@atlasauth/pca-fndsa-wasm`](packages/pca-fndsa-wasm) | FN-DSA (Falcon, FIPS 206) signature backend for @atlasauth/pca: FN-DSA-512 / FN-DSA-1024 keygen, signing and verification from the vetted pure-Rust fn-dsa crate family (Thomas Pornin) compiled to WebAssembly. Verification is the PCA verifier's public-key operation. |
-| [`@atlasauth/pca-gateway`](packages/pca-gateway) | Drop-in PCA enforcement for API gateways/service meshes: a framework-agnostic ext_authz handler that verifies a proof-carrying action per request (Envoy HTTP ext_authz, Cloudflare Worker, Lambda authorizer) so unmodified services get code-free proof enforcement. |
-| [`@atlasauth/pca-gnap`](packages/pca-gnap) | GNAP (RFC 9635) bridge for PCA, defining an agent-GNAP profile: map a GNAP grant request/response + continuation to an attenuated PCA capability, with GNAP continuation mapped to FROST/CIBA step-up and key-bound (jwsd) requests. |
-| [`@atlasauth/pca-harness`](packages/pca-harness) | Reference orchestration harness for Proof-Carrying Authority: wraps an untrusted model/tool oracle and enforces the PCA invariants around it. Experimental prototype. |
-| [`@atlasauth/pca-hono`](packages/pca-hono) | Hono middleware for Proof-Carrying Authority: verifies the inbound PCActn, sets the verdict on the context, or answers 401/403 with a WWW-Authenticate challenge. |
-| [`@atlasauth/pca-idjag`](packages/pca-idjag) | ID-JAG / OAuth Cross-App-Access bridge for PCA: verify an identity-assertion authorization grant (sub=human, act=agent, scoped, single-audience) and map it to a PCA principal/capability; RFC 8693/7523 token-exchange. |
-| [`@atlasauth/pca-invariants`](packages/pca-invariants) | Property-based verification of PCA's core safety invariants (attenuation monotonicity, budget soundness, fail-closed) across thousands of randomly-generated capability chains and policies. |
-| [`@atlasauth/pca-langchain`](packages/pca-langchain) | LangChain adapter for Proof-Carrying Authority: wrap a StructuredTool so every invocation emits a PCActn (and attaches the proof) before the tool runs. |
-| [`@atlasauth/pca-less-wasm`](packages/pca-less-wasm) | LESS (code-equivalence, NIST additional-signature Round 2 candidate) signature backend for @atlasauth/pca: the official LESS reference C compiled to WebAssembly with a portable, dependency-free loader (Node >=20, browsers, Deno, Bun, edge). Verified by the official KATs, a native-vs-wasm differential, sanitizers and robustness tests; unaudited, not a standard. |
-| [`@atlasauth/pca-llamaindex`](packages/pca-llamaindex) | LlamaIndex.TS adapter for Proof-Carrying Authority: wrap a FunctionTool so each call emits a PCActn before it runs. |
-| [`@atlasauth/pca-mastra`](packages/pca-mastra) | Mastra tool guard for PCA: wrap a Mastra createTool so each execute is proof-carrying + policy-gated, with step-up on a workflow step. |
-| [`@atlasauth/pca-mcp`](packages/pca-mcp) | Model Context Protocol adapter for Proof-Carrying Authority: wrap an MCP tool handler so every call emits a PCActn (and attaches the proof) before the handler runs. |
-| [`@atlasauth/pca-mcp-rs`](packages/pca-mcp-rs) | MCP authorization resource-server for the 2026-07-28 spec: serve RFC 9728 PRM + Client-ID Metadata Documents, enforce RFC 8707 resource indicators + RFC 9207 issuer validation + scope accumulation, and wire PCA FROST step-up into the MCP step-up challenge. |
-| [`@atlasauth/pca-mpc`](packages/pca-mpc) | Multi-stakeholder policy VM composed under secure multi-party computation (semi-honest additive secret sharing over a prime field) with a post-quantum base-OT. Experimental reference prototype. |
-| [`@atlasauth/pca-mpc-lwe-ot-wasm`](packages/pca-mpc-lwe-ot-wasm) | Post-quantum endemic (Masny-Rindal) base-OT lattice core for @atlasauth/pca-mpc: Kyber-768 IND-CPA (K-PKE) from the vetted pqc_kyber reference crate compiled to WebAssembly, plus the ring arithmetic + uniform-ring random oracle the additive endemic construction needs. Removes the semi-honest ML-KEM base OT's malicious-receiver residue under decisional Module-LWE. |
-| [`@atlasauth/pca-mpc-wasm`](packages/pca-mpc-wasm) | Constant-time Ed25519 base-OT curve core (curve25519-dalek, compiled to WebAssembly): a drop-in, genuinely constant-time replacement for @atlasauth/pca-mpc's pure-BigInt ec.ts curve ops. |
-| [`@atlasauth/pca-next`](packages/pca-next) | Next.js helper for Proof-Carrying Authority: wrap a Route Handler so the inbound PCActn is verified before your handler runs, with a 401/403 response otherwise. |
-| [`@atlasauth/pca-notary`](packages/pca-notary) | External-fact attestation (zkTLS/TLSNotary direction) for PCA: a notary signs the observed response of an external request, selectively redactable, bound into a PCActn so an agent proves 'the external API returned X' as part of its proof-carrying action. |
-| [`@atlasauth/pca-oauth`](packages/pca-oauth) | OAuth 2.1 / MCP-authorization interop bridge for Proof-Carrying Authority: make a PCA resource server discoverable (RFC 9728 Protected Resource Metadata), challengeable (MCP 401 + WWW-Authenticate resource_metadata), and bindable (RFC 8707 resource indicators) over the agent-to-tool wire. PCA stays the proof layer; this is the discovery/challenge envelope. |
-| [`@atlasauth/pca-oidc`](packages/pca-oidc) | Root a PCA grant in a real OIDC-authenticated human: verify an ID token (discovery + JWKS) and map its subject/claims to the PCA principal. |
-| [`@atlasauth/pca-openai`](packages/pca-openai) | OpenAI adapter for Proof-Carrying Authority: turn a model tool_call into a PCActn and run the handler with the proof attached. |
-| [`@atlasauth/pca-openai-agents`](packages/pca-openai-agents) | OpenAI Agents SDK (@openai/agents) guard for PCA: guardrail + tool-execution hook so each agent tool call is proof-carrying + policy-gated. |
-| [`@atlasauth/pca-oprf`](packages/pca-oprf) | OPRF (RFC 9497) + PSI for PCA: private rate-limiting and private revocation checks without revealing which capability or identifier. |
-| [`@atlasauth/pca-otel`](packages/pca-otel) | OpenTelemetry instrumentation for Proof-Carrying Authority: wrap a verification guard so each decision emits a span (tier, decision, budget) and metrics, with a no-op fallback when OpenTelemetry is absent. |
-| [`@atlasauth/pca-payments`](packages/pca-payments) | Payment-mandate reference for Proof-Carrying Authority: merchant/category allowlists, per-transaction and cumulative caps, auto-approve threshold, hard ceiling and bonded refunds expressed as PCA capabilities. Experimental prototype. |
-| [`@atlasauth/pca-policy-bridge`](packages/pca-policy-bridge) | Import external authz policy into PCA: compile Cedar and OPA/Rego policies and OpenFGA/Zanzibar ReBAC models+tuples into PCA predicates/caveats, so existing enterprise policy engines drive proof-carrying authority. |
-| [`@atlasauth/pca-policy-ci`](packages/pca-policy-ci) | CI gate for PCA policies: statically flag over-broad grants, privilege-escalation in delegation chains, unused/redundant caveats, and reachability of dangerous actions — fail the build before an unsafe policy ships. |
-| [`@atlasauth/pca-pq-threshold`](packages/pca-pq-threshold) | Post-quantum threshold step-up for PCA: a production-ready HYBRID (classical FROST quorum + an ML-DSA PQ co-signature over the same action) so a step-up is PQ-protected today, plus a documented Raccoon/Ringtail lattice-threshold research design for the trustless-PQ future. |
-| [`@atlasauth/pca-rag`](packages/pca-rag) | FGA-for-RAG for PCA: retrieval-time, per-principal document filtering driven by the PCA policy engine, with the filtering decision captured in the proof trace (provable: the model only saw authorized data). |
-| [`@atlasauth/pca-ratchet`](packages/pca-ratchet) | PCA Capability Ratchet: puncturable forward-secure capability keys (cryptographic one-time-use — a spent action can never be re-signed) plus a homomorphic Pedersen risk accumulator for zero-knowledge proof of the Sigma-risk <= budget ceiling across a delegation chain. |
-| [`@atlasauth/pca-revoke`](packages/pca-revoke) | Realtime revocation + mid-run kill-switch for PCA: revoke a capability, an agent holder, or a whole delegation subtree, and deny in-flight actions against a pluggable revocation registry (Shared-Signals/CAEP consumable). |
-| [`@atlasauth/pca-rotate`](packages/pca-rotate) | Key rotation + subtree revocation for PCA: rotate an agent holder key or a principal/root key by re-issuing the chain under new keys, and revoke-and-reissue a compromised delegation subtree, emitting revocation records. |
-| [`@atlasauth/pca-schema`](packages/pca-schema) | JSON Schema (draft 2020-12) for the PCA wire types — PCActn, capability/grant, discovery doc — plus a tiny validator, so any language can codegen types and validate payloads. |
-| [`@atlasauth/pca-scim`](packages/pca-scim) | SCIM 2.0 /agents provisioning for PCA: expose the agent-passport registry as a SCIM resource (and push-provision to Entra Agent ID / Okta), so PCA agents live in the enterprise directory with lifecycle/governance. |
-| [`@atlasauth/pca-scitt`](packages/pca-scitt) | SCITT transparency receipts for PCA (RFC 9943/9942): register each verified PCActn as a COSE Signed Statement and return/verify the COSE inclusion receipt, turning PCA's decision record into standards-shaped, externally-verifiable append-only audit evidence. |
-| [`@atlasauth/pca-sdjwt`](packages/pca-sdjwt) | SD-JWT serialization of a PCActn for PCA: emit/verify a PCActn (and its capability claims) as a selectively-disclosable SD-JWT so PCA proofs drop into existing JWT/SD-JWT verifiers and align with WIMSE / AP2 mandate shape. |
-| [`@atlasauth/pca-siem`](packages/pca-siem) | SIEM export for PCA decisions: emit each verified/denied action as an OCSF Authorization event (and CEF), streamable to Splunk/Elastic/Datadog/Sentinel — the security-event feed complementing OTel traces. |
-| [`@atlasauth/pca-signals`](packages/pca-signals) | Shared Signals Framework (CAEP/SSF) for PCA: build + verify Security Event Tokens (RFC 8417) for grant revocation and mid-run kill-switch propagation to in-flight agents. |
-| [`@atlasauth/pca-spiffe`](packages/pca-spiffe) | Bridge PCA agent identity with SPIFFE/SPIRE workload identity: parse/verify JWT-SVIDs and X.509-SVID SPIFFE IDs, map a SPIFFE ID to/from a PCA agent holder. |
-| [`@atlasauth/pca-testing`](packages/pca-testing) | Testing kit for Proof-Carrying Authority: factories for grants and PCActns, a fake verifier and state store, and assertion helpers so integrators can unit-test their PCA wiring. |
-| [`@atlasauth/pca-txn-tokens`](packages/pca-txn-tokens) | Express a PCA capability chain as OAuth Token Exchange (RFC 8693) nested sub/act claims + a Transaction-Tokens-for-agents profile — standards-native chain-of-custody. |
-| [`@atlasauth/pca-vc`](packages/pca-vc) | Emit the PCA agent passport as a W3C Verifiable Credential 2.0 (SD-JWT) bound to a DID, and sign requests per RFC 9421 HTTP Message Signatures (Web Bot Auth Signature-Agent). |
-| [`@atlasauth/pca-vdf`](packages/pca-vdf) | Verifiable Delay Function timelock for PCA: a mandatory, offline-verifiable cooling-off on irreversible actions — a VDF proof that T sequential steps elapsed gates execution, with no trusted clock. Wesolowski-style proof (cheap verify). |
-| [`@atlasauth/pca-vercel-ai`](packages/pca-vercel-ai) | Vercel AI SDK tool-execution middleware for PCA: wrap a tool so each call attaches/verifies a proof-carrying action before execution, with step-up (prepareStep) on the agent loop. |
-| [`@atlasauth/pca-webauthn`](packages/pca-webauthn) | Phishing-resistant human co-sign for PCA FROST step-up via WebAuthn/FIDO2 passkeys: verify an authenticator assertion as the principal/guardian approval. |
-| [`@atlasauth/pca-webbotauth`](packages/pca-webbotauth) | Web Bot Auth for PCA (RFC 9421 HTTP Message Signatures): sign outbound agent HTTP requests with an Ed25519 key published at /.well-known/http-message-signatures-directory, optionally carrying the PCA per-action proof, so PCA agents pass Cloudflare/AWS-WAF bot verification AND carry proof-of-authority. |
+PCA degrades cleanly to today's stack: the bottom rung is ordinary OAuth 2.1 + proof-of-possession, and
+each higher rung is independently adoptable, so OAuth clients that don't understand PCA still work while
+PCA-aware verifiers get `authF`.
 
 ---
 
-## Working in this repo
+## Status
 
-```sh
-pnpm install          # install the workspace
-pnpm -r build         # build every package
-pnpm -r test          # run every package's tests
-pnpm -r typecheck     # typecheck every package
-```
-
-The packages are a pnpm workspace (`packages/*`). Each package builds with `tsc` and tests with
-`vitest`. The conformance corpus and primitive test vectors are committed alongside the packages that
-own them (and vendored at [`conformance/`](./conformance)), so every build is reproducible offline. The
-[playground](./playground) is a single page that runs the real library in the browser.
-
----
+The PCActn wire format (version 2) and the eight-check offline core are stable and conformance-covered
+across all ten verifiers (every one post-quantum-capable). The higher rungs are implemented and tested;
+where a capability carries a production requirement (real TEE hardware, distributed/HSM custody, a
+no-dealer MPC offline phase, a fuller policy circuit) it is noted inline. All rungs are additive,
+fail-closed, and backward-compatible with the base wire.
 
 ## License
 
-MIT — see [`LICENSE`](./LICENSE).
+See `LICENSE`.
