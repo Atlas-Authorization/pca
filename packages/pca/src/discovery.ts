@@ -52,7 +52,7 @@ export interface BuildDiscoveryOptions {
 }
 
 const DEFAULT_SUITES = ['ed25519', 'ml-dsa-65', 'hybrid-ed25519-ml-dsa-65'];
-const DEFAULT_REQUIRED = ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity'];
+const DEFAULT_REQUIRED = ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'];
 
 /** Build a well-formed discovery document. Throws on an empty audience. */
 export function buildDiscoveryDocument(opts: BuildDiscoveryOptions): PcaDiscoveryDocument {

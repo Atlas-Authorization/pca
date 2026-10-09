@@ -18,10 +18,10 @@
  *     vendor-specific, security-critical surface. We define the interface and the exact place it
  *     plugs in; `hardwareVerifier.verify()` returns the HARDWARE-measured identity, which then feeds
  *     the same freshness / nonce-binding / agent_binding checks as software mode. A production AMD
- *     SEV-SNP backend for this seam lives in `hardware-sevsnp.ts` (`createSevSnpVerifier`): it parses
+ *     SEV-SNP backend for this seam lives in `attest-amd-snp.ts` (`createAmdSnpVerifier`, built on `hardware-sevsnp.ts`): it parses
  *     the ATTESTATION_REPORT, verifies the ECDSA-P384 report signature + the VCEK→ASK→ARK cert chain
  *     to a configured ARK trust anchor, and binds report_data to the nonce. Wire it in via
- *     `createAttestationVerifier({ hardwareVerifier: createSevSnpVerifier(...) })`.
+ *     `createAttestationVerifier({ hardwareVerifier: createAmdSnpVerifier(...) })`.
  *
  * STANDARDIZATION GAP (spec §15 "Open problems" — "Standardizing weights-level attestation for hosted
  * models"): there is today NO cross-vendor standard for attesting a model's WEIGHTS digest from inside
@@ -334,7 +334,7 @@ export interface HardwareAttestationResult {
  * verifies the vendor cert chain to the CPU root, checks the launch/measurement registers, confirms
  * the report_data binds the expected nonce, and returns the measured identity. Intentionally not
  * implemented in THIS file (vendor-specific, security-critical). The AMD SEV-SNP implementation is in
- * `hardware-sevsnp.ts` (`createSevSnpVerifier`). Plug it in via
+ * `attest-amd-snp.ts` (`createAmdSnpVerifier`). Plug it in via
  * `createAttestationVerifier({ hardwareVerifier })`.
  */
 export interface HardwareAttestationVerifier {

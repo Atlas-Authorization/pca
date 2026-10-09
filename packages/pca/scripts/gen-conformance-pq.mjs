@@ -35,7 +35,7 @@ const vectorsPath = join(here, '..', 'conformance', 'vectors.json');
 
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
 const KEYMAP = { chain: 'cap_chain' };
 
 // ---- deterministic key material ---------------------------------------------------------------

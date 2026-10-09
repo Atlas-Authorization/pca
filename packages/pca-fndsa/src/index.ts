@@ -179,7 +179,7 @@ export interface FalconBackend {
 
 /** The clear error the default (unregistered) backend raises so misuse FAILS LOUD, not silently. */
 export const NO_FN_DSA_BACKEND_MESSAGE =
-  'no FN-DSA backend registered — install @atlasauth/pca-fndsa-node or supply a wasm backend via setFalconBackend()';
+  'no FN-DSA backend registered — install @atlasauth/pca-fndsa-wasm or supply a backend via setFalconBackend()';
 
 const DEFAULT_BACKEND: FalconBackend = Object.freeze({
   verify(): boolean {

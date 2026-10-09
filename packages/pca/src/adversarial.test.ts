@@ -63,7 +63,8 @@ import { actionCommitment, createAttestedComplianceProver, createGroth16SnarkBac
 import { actionDigest as judgeActionDigest, signJudgeVerdict, verifyJudgeVerdict, verifySemanticThreshold } from './semantic-threshold';
 import { combineCaution, combineSignedCaution, signCaution, verifyCaution } from './agent-native';
 import { attestationRegistry, createAttestationVerifier, createDevAttestor } from './attestation';
-import { SEV_SNP_POLICY_DEBUG_BIT, checkSevSnpPolicy, ecdsaP384PublicKey, parseSevSnpReport, serializeSevSnpReport, toHex, verifySevSnpReportSignature } from './hardware-sevsnp';
+import { SEV_SNP_POLICY_DEBUG_BIT, checkSevSnpPolicy, ecdsaP384PublicKey, parseSevSnpReport, toHex, verifySevSnpReportSignature } from './hardware-sevsnp';
+import { serializeSevSnpReport } from './test-support/sevsnp-report';
 
 const NOW = 1_800_000_000_000;
 

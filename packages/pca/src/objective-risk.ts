@@ -1,7 +1,7 @@
 // objective-risk digests are SERVER-ONLY (the language verifiers never recompute
 // them) and carry high-precision floats (calibration scores, graph harm weights,
 // risk inputs), so they use the LENIENT canonical hash, not the strict protocol one.
-import { canonicalize, hashCanonicalLenient as hashCanonical, sha256, utf8 } from './hash';
+import { canonicalize, hashCanonicalLenient as hashCanonical, sha256, utf8, compareUtf8 } from './hash';
 import { riskScore, type RiskInputs, type RiskWeights } from './risk';
 import type { DecideInput } from './policy-vm';
 import type { DisputableInput, ObjectiveOracle, OracleResolution } from './optimistic';
@@ -322,7 +322,7 @@ function validateNativeConfig(c: NativeEmbedderConfig): void {
 /** Flatten params to sorted `path=value` leaves (nested key order and array encoding are irrelevant). */
 function paramLeaves(v: unknown, path: string, out: string[]): void {
   if (Array.isArray(v)) v.forEach((x, i) => paramLeaves(x, `${path}[${i}]`, out));
-  else if (v !== null && typeof v === 'object') for (const k of Object.keys(v).sort()) paramLeaves((v as Record<string, unknown>)[k], path ? `${path}.${k}` : k, out);
+  else if (v !== null && typeof v === 'object') for (const k of Object.keys(v).sort(compareUtf8)) paramLeaves((v as Record<string, unknown>)[k], path ? `${path}.${k}` : k, out);
   else out.push(`${path}=${canonicalize(v)}`);
 }
 

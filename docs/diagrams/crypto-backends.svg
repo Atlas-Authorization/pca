@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1348 952" width="1348" height="952" role="img" aria-labelledby="t d">
 <title id="t">The PCA cryptographic backend surface</title>
-<desc id="d">The cryptographic backends behind Proof-Carrying Authority: a crypto-agile signature suite registry (classical Ed25519, lattice and hash post-quantum, and fail-closed hybrids) covering every signed surface; four zero-knowledge backends (Groth16 on BN254/BLS12-381, transparent STARKs, a RISC Zero zkVM, and Nova folding IVC); a malicious-secure MPC Policy VM with an endemic Module-LWE base OT and a constant-time WASM core; five composable attestation roots (AMD, Intel, NVIDIA, a post-quantum software/HSM root, and a PUF); and supporting primitives including QRNG entropy mixing.</desc>
+<desc id="d">The cryptographic backends behind Proof-Carrying Authority: a crypto-agile signature suite registry (classical Ed25519, lattice and hash post-quantum, opt-in FN-DSA and the LESS code-based NIST candidate, and fail-closed hybrids) covering every signed surface; four zero-knowledge backends (Groth16 on BN254/BLS12-381, transparent STARKs, a RISC Zero zkVM, and Nova folding IVC); a malicious-secure MPC Policy VM with an endemic Module-LWE base OT and a constant-time WASM core; five composable attestation roots (AMD, Intel, NVIDIA, a post-quantum software/HSM root, and a PUF); and supporting primitives including QRNG entropy mixing.</desc>
 <style>
 text{font-family:ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;fill:#1c1c1f}
 .title{font-size:26px;font-weight:700;letter-spacing:-.3px}
@@ -22,10 +22,11 @@ text{font-family:ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sa
 
 <!-- Signatures -->
 <text x="48" y="122" class="eyebrow">SIGNATURES — CRYPTO-AGILE SUITE REGISTRY</text>
-<rect class="node"  x="48"  y="134" width="290" height="92" rx="12"/><text x="64" y="164" class="h">Ed25519</text><text x="64" y="188" class="s">classical baseline</text>
-<rect class="nodeP" x="356" y="134" width="290" height="92" rx="12"/><text x="372" y="164" class="h">ML-DSA-65 / -87</text><text x="372" y="188" class="s pd">lattice · NIST L3 / L5</text>
-<rect class="nodeP" x="664" y="134" width="290" height="92" rx="12"/><text x="680" y="164" class="h">SLH-DSA-128f / 256s</text><text x="680" y="188" class="s pd">hash-based · conservative</text>
-<rect class="nodeP" x="972" y="134" width="290" height="92" rx="12"/><text x="988" y="164" class="h">Hybrid (fail-closed)</text><text x="988" y="188" class="s pd">Ed25519+ML-DSA · +SLH · nested</text>
+<rect class="node"  x="48"  y="134" width="230" height="92" rx="12"/><text x="64" y="164" class="h">Ed25519</text><text x="64" y="188" class="s">classical baseline</text>
+<rect class="nodeP" x="294" y="134" width="230" height="92" rx="12"/><text x="310" y="164" class="h">ML-DSA-65 / -87</text><text x="310" y="188" class="s pd">lattice · NIST L3 / L5</text>
+<rect class="nodeP" x="540" y="134" width="230" height="92" rx="12"/><text x="556" y="164" class="h">SLH-DSA-128f / 256s</text><text x="556" y="188" class="s pd">hash-based · conservative</text>
+<rect class="nodeP" x="786" y="134" width="230" height="92" rx="12"/><text x="802" y="164" class="h">Hybrid (fail-closed)</text><text x="802" y="188" class="s pd">+ML-DSA · +SLH · +LESS · nested</text>
+<rect class="nodeP" x="1032" y="134" width="230" height="92" rx="12"/><text x="1048" y="164" class="h">FN-DSA · LESS</text><text x="1048" y="188" class="s pd">opt-in · LESS is a NIST candidate</text>
 <rect class="strip" x="48" y="234" width="1214" height="44" rx="10"/>
 <text x="64" y="261" class="s">surfaces: leaf PCActn · cap-chain hops · FROST group sig (+ PQ ML-DSA co-sign) · STH · C2SP witnesses · revocation · beacons · bonds · safety cert · judge verdicts · attestation</text>
 

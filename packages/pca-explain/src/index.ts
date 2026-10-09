@@ -93,16 +93,17 @@ function whereSummary(where: Condition[] | undefined): string {
 }
 
 // =================================================================================================
-// explainVerification — walk the eight normative checks
+// explainVerification — walk the nine normative checks
 // =================================================================================================
 
-/** The eight checks the offline verifier (`verifyPCActnCore`) evaluates, in NORMATIVE order. */
+/** The nine checks the offline verifier (`verifyPCActnCore`) evaluates, in NORMATIVE order. */
 export const VERIFY_CHECK_ORDER = [
   'wire',
   'version',
   'audience',
   'validity',
   'cap_chain',
+  'grant_ref_bound',
   'plan_inclusion',
   'leaf_signature',
   'counter',
@@ -115,6 +116,7 @@ const CHECK_TITLE: Record<string, string> = {
   audience: 'audience binding',
   validity: 'freshness window',
   cap_chain: 'capability chain',
+  grant_ref_bound: 'grant reference binding',
   plan_inclusion: 'plan inclusion',
   leaf_signature: 'leaf signature',
   counter: 'counter',
@@ -230,6 +232,11 @@ function pinpoint(name: string, p: PCActn, verifyResult: VerifyResult, now: numb
       const c = capChainPinpoint(p);
       return { detail: tail ?? c.detail, ...(c.hop !== undefined ? { hop: c.hop } : {}), remedy: c.remedy };
     }
+    case 'grant_ref_bound':
+      return {
+        detail: tail ?? `grant_ref ${short(p.grant_ref)} is not the id of the root capability in cap_chain`,
+        remedy: 'set grant_ref to the id of the chain root (cap_chain[0].id); buildPCActn does this from the grant.',
+      };
     case 'plan_inclusion':
       return {
         detail: tail ?? `action (verb ${JSON.stringify(p.action?.verb)} on ${JSON.stringify(p.action?.resource)}) is not node ${JSON.stringify(p.plan?.node_id)} of committed plan ${short(p.plan?.root)}`,
@@ -265,6 +272,8 @@ function passDetail(name: string, p: PCActn): string {
       const root = Array.isArray(chain) ? chain[0] : undefined;
       return `${len}-hop chain verifies; root issuer ${short(root?.issuer)}`;
     }
+    case 'grant_ref_bound':
+      return `grant_ref ${short(p.grant_ref)} is the id of the chain root`;
     case 'plan_inclusion':
       return `action is node ${JSON.stringify(p.plan?.node_id)} of committed plan ${short(p.plan?.root)}`;
     case 'leaf_signature': {

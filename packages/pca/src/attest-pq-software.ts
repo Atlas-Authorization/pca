@@ -2,7 +2,7 @@
  * L0 SOFTWARE/HSM backend — the POST-QUANTUM attestation root.
  *
  * The genuinely post-quantum root for the multi-root N-of-M policy in `attestation.ts`. Where the AMD
- * SEV-SNP (`hardware-sevsnp.ts`), Intel TDX (`attest-intel-tdx.ts`) and NVIDIA GPU-CC (`attest-nvidia-cc.ts`)
+ * SEV-SNP (`attest-amd-snp.ts`), Intel TDX (`attest-intel-dcap.ts`) and NVIDIA GPU-CC (`attest-nvidia-spdm.ts`)
  * roots are CLASSICAL (their silicon vendors sign with ECDSA today), this root is a software/HSM attestor
  * that signs an attestation statement over the measured harness/workload with a POST-QUANTUM signature
  * scheme — ML-DSA (FIPS-204) and/or SLH-DSA (FIPS-205), optionally in a classical+PQ hybrid — using the

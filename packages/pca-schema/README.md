@@ -24,4 +24,12 @@ into `$defs`) — enough to catch obvious malformations. For full draft-2020-12 
 exported schema objects to [ajv](https://ajv.js.org) or your language's validator; `ALL_SCHEMAS` maps
 every schema by name for codegen pipelines.
 
-Part of Proof-Carrying Authority — see [`@atlasauth/pca`](../pca).
+`ALL_SCHEMAS` is keyed `PCActn`, `Capability`, `PcaDiscoveryDocument`.
+
+## Status
+
+The schemas describe structure only (fields, JSON types, required properties). They cannot express PCA's security invariants: that `sig` verifies, that the capability chain only attenuates, or that the action is a committed plan node. Passing validation means "well-formed", never "authorized"; use `verifyPCActnCore` from [`@atlasauth/pca`](https://www.npmjs.com/package/@atlasauth/pca) for that. Objects allow additional properties so future wire fields do not fail validation.
+
+## License
+
+MIT - see LICENSE

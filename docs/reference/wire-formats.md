@@ -19,8 +19,12 @@ Deterministic serialization of a JSON value:
 - **Strings**: JavaScript `JSON.stringify` escaping. Only `"` and `\` and control characters are escaped; `\b \f \n \r \t` use short forms; other controls use lowercase `\u00xx`; non-ASCII is emitted raw (UTF-8).
 - **Numbers**: `JSON.stringify` of a finite number; `-0` is emitted as `0`. Non-finite numbers are rejected. Conformance vectors use integers only; avoid floats in cross-language objects.
 - **Arrays**: `[` elements joined by `,` `]`, in order.
-- **Objects**: keys sorted by UTF-16 code units (recursively), each as `"key":value`, joined by `,`, no whitespace.
+- **Objects**: keys sorted byte-wise over their UTF-8 encoding, i.e. by Unicode code point (recursively), each as `"key":value`, joined by `,`, no whitespace.
 - Rejected (no stable encoding): `undefined`, functions, symbols, bigint, non-plain objects, cycles.
+
+### Predicate string order
+
+The `lt`/`lte`/`gt`/`gte` predicate operators order strings by the byte-wise order of their UTF-8 encoding (Unicode code point order), the same order used for object keys above. No normalisation, case folding or locale applies, and a string containing a lone surrogate is unordered (the condition is false). Shared vectors: `packages/pca-conformance/predicate-string-order.json`.
 
 ### Hash
 
@@ -107,7 +111,7 @@ A root capability whose caveats begin with:
 PCActn {
   ver: 1,
   action:      { verb, resource, params_digest, reversibility_class },
-  grant_ref:   <grant id>,
+  grant_ref:   <grant id>,               // MUST equal cap_chain[0].id (the root capability's id)
   cap_chain:   [ Capability, ... ],      // root -> leaf; root equals the grant
   plan:        { root, inclusion_proof, node_id, conditions_digest? },
   attestation: { quote_digest, epoch, model_id, measurement, operator },
@@ -125,6 +129,7 @@ PCActn {
 Notes:
 
 - `attestation`, `provenance` and `freshness` default to empty stub values (`model_id` and `operator` `"unattested"`, zero epochs, empty strings) when no attestation is in use; the corresponding checks report `not-enforced`. They are still covered by the signature.
+- `grant_ref` is bound: the verifier requires it to equal `cap_chain[0].id`. Replay state (nonces, counters, budgets) is keyed on it, so an unbound value would let a holder pick a fresh namespace for every action. Honest emitters (`buildPCActn`) already set it to the grant id.
 - `risk_claim` is the agent's claim and is advisory: a verifier recomputes risk.
 - `ver` must equal `PCACTN_VERSION` (1).
 - Transport: canonical JSON (`encodePCActn`), or base64url of it in the `PCA-Action` header.
@@ -139,7 +144,23 @@ The leaf `sig` and every threshold share sign exactly these bytes. `threshold` i
 
 ### Core checks
 
-`verifyPCActnCore` evaluates, in order: `version`; `cap_chain` (root equals grant by `capHash`, then chain rules); `plan_inclusion`; `leaf_signature`; `counter` (a non-negative integer; strict monotonicity versus stored state is the resource server's job). `plan_root_authorized`, `taint_gate`, `attestation`, `threshold`, `revocation`, `zk_compliance` and `bond` report `not-enforced` unless a hook or the layer above supplies them. `allow` is true iff no check is `fail`.
+`verifyPCActnCore` evaluates, in order: `version`; `cap_chain` (root equals grant by `capHash`, then chain rules); `grant_ref_bound` (the signed `grant_ref` must be a non-empty string byte-equal to `cap_chain[0].id`, the root capability's id; compared exactly, fails closed on an empty chain); `plan_inclusion`; `leaf_signature`; `counter` (a non-negative integer; strict monotonicity versus stored state is the resource server's job). `plan_root_authorized`, `taint_gate`, `attestation`, `threshold`, `revocation`, `zk_compliance` and `bond` report `not-enforced` unless a hook or the layer above supplies them. `allow` is true iff no check is `fail`.
+
+## Signature suites
+
+A PCActn, a capability hop and the other signed objects may carry an optional `alg` naming the signature suite. Absent `alg` means `ed25519` and the bytes are identical to the base format. A non-default suite adds `pq_pk` (the post-quantum public key, bound into the signed body so it cannot be swapped) and, for hybrids, `pq_sig`. In a hybrid, `sig` is the 64-byte Ed25519 signature and `pq_sig` the post-quantum one, both over the same message, and both must verify. An unknown `alg`, a missing or mis-sized component, or an unavailable backend is a failure, never a downgrade.
+
+| `alg` | Family | `pq_pk` | signature |
+|---|---|---|---|
+| `ed25519` (default) | classical | absent | 64 B |
+| `ml-dsa-65`, `hybrid-ed25519-ml-dsa-65`, `hybrid-nested-ed25519-ml-dsa-65` | lattice (FIPS 204) | 1,952 B | 3,309 B |
+| `ml-dsa-87`, `hybrid-ed25519-ml-dsa-87` | lattice, category 5 | 2,592 B | 4,627 B |
+| `slh-dsa-sha2-128f`, `hybrid-ed25519-slh-dsa-sha2-128f` | hash-based (FIPS 205) | 32 B | 17,088 B |
+| `slh-dsa-sha2-256s`, `hybrid-ed25519-slh-dsa-sha2-256s` | hash-based, category 5 | 64 B | 29,792 B |
+| `fn-dsa-512`, `fn-dsa-1024` | lattice (Falcon, FIPS 206 draft) | 897 B, 1,793 B | 666 B, 1,280 B |
+| `less-cat1`, `hybrid-ed25519-less-cat1` | code-based (LESS, NIST candidate) | 97,484 B | 1,153 to 1,329 B in 16-byte steps |
+
+The LESS signature is variable length (its last byte is the number of opened seed-tree leaves), so its length is checked as a range on a 16-byte grid rather than as one exact size. LESS is a NIST additional-signature Round 2 candidate, not a standard, and the suites are implemented by the TypeScript reference only: the other verifiers reject them as an unknown `alg`. They are not part of the conformance vectors.
 
 ## Threshold signature (multi-signature form)
 
@@ -159,7 +180,7 @@ Opening = `{ salt, pcactn }`. Consistency proofs follow RFC 9162 section 2.1.4.2
 
 ## Revocation set
 
-Leaves are revoked ids sorted ascending by UTF-16 code units, in the same Merkle tree. Published root:
+Leaves are revoked ids sorted ascending by UTF-8 byte order (Unicode code point order, as for canonical JSON keys), in the same Merkle tree. Published root:
 
 ```
 tree  = merkleRoot(ids)            # empty set: base64url(SHA-256(""))

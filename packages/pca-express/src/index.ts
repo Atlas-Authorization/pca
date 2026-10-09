@@ -5,7 +5,7 @@
  *     pcaExpress({ audience: 'ins_acme', resolveGrant, budgetStore, hooks, context }),
  *     (req, res) => { const { verdict, pcactn } = req.pca!; ... });
  *
- * It verifies the inbound PCActn with the framework-agnostic `requirePCA` guard from `@atlasauth/backend`
+ * It verifies the inbound PCActn with the framework-agnostic `requirePCA` guard from `@atlasauth/pca`
  * (default-deny: a required check that is unenforced DENIES) and, on success, attaches the verdict +
  * PCActn to `req[attachAs]` (default `req.pca`). On failure it answers 401/403 with a WWW-Authenticate
  * challenge. The client sends the PCActn as `PCA-Action: <base64url>` (see `@atlasauth/pca` `pcaHeaders`)
@@ -15,8 +15,8 @@
  * structural, so this stays compatible across Express 4 and 5.
  */
 
-import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/backend';
-import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/backend';
+import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
+import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/pca';
 import type { PCActn } from '@atlasauth/pca';
 
 /** Structural shim of an Express request (only `headers`/`body` are read; the rest passes through). */

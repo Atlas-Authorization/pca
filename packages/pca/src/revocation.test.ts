@@ -17,6 +17,24 @@ import { sign, verifyB64u } from './keys';
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `cap-${String(i * 2).padStart(3, '0')}`); // even only
 
 describe('revocation set', () => {
+  it('orders ids by UTF-8 bytes (code points), not UTF-16 code units: an astral id sorts AFTER U+FFFD', () => {
+    const astral = '\u{1F600}'; // UTF-16 lead surrogate 0xD83D < 0xFFFD, but code point 0x1F600 > 0xFFFD
+    const bmp = '\uFFFD';
+    const forward = new RevocationSet(['a', astral, bmp]);
+    const reverse = new RevocationSet([bmp, astral, 'a']);
+    expect(forward.list()).toEqual(['a', bmp, astral]);
+    expect(forward.list()).toEqual([...forward.list()].sort((x, y) => Buffer.compare(Buffer.from(x), Buffer.from(y))));
+    expect(forward.root).toBe(reverse.root); // order-independent: the committed root only depends on the SET
+    // membership + non-membership proofs hold across the BMP/astral boundary
+    for (const id of [astral, bmp, 'a']) expect(verifyMembership(forward.root, forward.membershipProof(id), id)).toBe(true);
+    for (const absent of ['\uFFFE', '\u{1F601}', '\u{10FFFF}', 'b']) {
+      expect(verifyNonMembership(forward.root, forward.nonMembershipProof(absent), absent)).toBe(true);
+    }
+    // a revoked astral id has no non-membership proof, and a forged bracket that uses UTF-16 order is rejected
+    expect(() => forward.nonMembershipProof(astral)).toThrow('nonMembershipProof: id is revoked');
+    const bracket = forward.nonMembershipProof('\uFFFE');
+    expect(verifyNonMembership(forward.root, bracket, astral)).toBe(false);
+  });
   it('is order-independent and idempotent', () => {
     const a = new RevocationSet(['b', 'a', 'c']);
     const b = new RevocationSet(['c', 'b', 'a', 'a']);

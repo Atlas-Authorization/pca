@@ -120,7 +120,7 @@ function coSign(k: ReturnType<typeof keys>, actn: PCActn): ThresholdSignature {
   ];
   const msg = thresholdMessage(actn);
   const t = 3;
-  const agentShare = signShare('agent', k.sub.secretKey, msg);
+  const agentShare = signShare('agent', k.sub.secretKey, msg, { signerSet, t });
   const guardianShare = signShare('guardian', k.guardian.secretKey, msg, { signerSet, t });
   const principalShare = signShare('principal', k.principal.secretKey, msg, { signerSet, t });
   return assembleThreshold([agentShare, guardianShare, principalShare]);

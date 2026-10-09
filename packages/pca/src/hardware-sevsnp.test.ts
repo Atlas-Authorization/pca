@@ -1,69 +1,55 @@
 /**
- * HONEST VALIDATION of the AMD SEV-SNP hardware attestation VERIFIER (`hardware-sevsnp.ts`).
+ * Tests for the AMD SEV-SNP report primitives (`hardware-sevsnp.ts`).
  *
- * There is NO AMD SEV-SNP hardware in CI to GENERATE a genuine ATTESTATION_REPORT, nor genuine
- * VCEK/ASK/ARK certificates. So these tests build a SYNTHETIC-but-cryptographically-real P-384 trust
- * chain: fresh ARK → ASK → VCEK P-384 keypairs, real ECDSA-P384/SHA-384 signatures binding each link,
- * and a report crafted with a known measurement + report_data and signed with the test VCEK. The
- * decisive test asserts the FULL path verifies end-to-end — report signature, VCEK→ASK→ARK chain to
- * the ARK trust anchor, report_data↔nonce binding, policy, and the hardware-measured identity flowing
- * through `createAttestationVerifier` into the agent_binding check. The negative tests exercise every
- * fail-closed branch.
- *
- * WHAT THIS DOES NOT PROVE: that AMD's real report byte-layout matches ours on a live CPU, or that a
- * genuine VCEK cert decodes to the point we check. Those are the remaining production integration — a
- * real report plus X.509 decode of the AMD certs (and/or AMD KDS fetch). What IS proven here is the
- * cryptographic machinery: parse → P-384 signature verify → chain verify → nonce bind → policy →
- * measured identity, all against real @noble/curves P-384 operations.
+ * Two kinds of evidence:
+ *   1. A GENUINE AMD SEV-SNP report + VCEK + ASK/ARK chain captured from an Azure confidential VM
+ *      (AMD EPYC Milan; testdata/sevsnp-real/): the end-to-end `verifyGenuineSevSnpReport` path, the real
+ *      RSA-PSS chain to the pinned AMD ARK, and the report-signature check.
+ *   2. Reports in the genuine layout that the tests build and sign with a LOCAL test key (see
+ *      `test-support/sevsnp-report.ts`), used only to exercise parsing, policy gates, the VCEK<->report
+ *      binding scan and the policy gates, where real silicon cannot supply the variations.
+ *      The test key stands in for the VCEK; no production code path accepts such a report.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { p384 } from '@noble/curves/p384';
-import { sha384, sha512 } from '@noble/hashes/sha512';
+import { sha384 } from '@noble/hashes/sha512';
 import {
-  type AgileCertChain,
   type EcdsaP384PublicKey,
-  type SevSnpCertChain,
-  type SevSnpEvidence,
   AMD_MILAN_ARK_SPKI_SHA384,
-  SEV_SNP_SIG_ALGO_ECDSA_P384_SHA384,
-  SEV_SNP_SIG_ALGO_SYNTHETIC_ML_DSA_65,
-  SEV_SNP_SIG_ALGO_SYNTHETIC_ML_DSA_87,
+  SEV_SNP_POLICY_DEBUG_BIT,
   checkSevSnpPolicy,
   checkVcekReportBinding,
-  createAgileSevSnpVerifier,
-  createSevSnpVerifier,
   ecdsaP384PublicKey,
   extractTbsCertificate,
   extractVcekPublicKey,
+  makeDefaultDeriveIdentity,
   parseSevSnpReport,
-  resolveReportSuite,
-  serializeSevSnpReport,
   sevSnpSignatureToCompact,
   splitPemCertificates,
   toHex,
-  verifyAgileCertChain,
   verifyAmdCertChain,
   verifyGenuineSevSnpReport,
-  verifyReportSignatureAgile,
   verifySevSnpReportSignature,
-  verifyVcekChain,
 } from './hardware-sevsnp';
-import { mlDsa65Keygen, mlDsa65Sign, mlDsa87Keygen, mlDsa87Sign } from './pq';
 import {
   attestationBinding,
   createAttestationVerifier,
   type AttestationDocument,
   type ExpectedAttestationBinding,
+  type HardwareAttestationVerifier,
 } from './attestation';
 import { mintGrant, type AgentBinding } from './envelope';
 import { buildPCActn, type PCActn } from './pcactn';
 import { encodeKey, generateKeyPair } from './keys';
 import { DEFAULT_RISK_POLICY } from './risk';
 import type { Capability } from './capability';
+import { serializeSevSnpReport } from './test-support/sevsnp-report';
+import { forgeCert, forgeKey, ext } from './test-support/forge-x509';
+import { amdVcekExtensions } from './test-support/forge-amd';
 
-// ── synthetic P-384 key material ───────────────────────────────────────────────────────────────
+// ── local P-384 test key (stands in for the VCEK) ─────────────────────────────────────────────────
 interface TestKey {
   priv: Uint8Array;
   pub: EcdsaP384PublicKey;
@@ -72,7 +58,7 @@ function genP384(): TestKey {
   const priv = p384.utils.randomPrivateKey();
   return { priv, pub: ecdsaP384PublicKey(p384.getPublicKey(priv, false)) };
 }
-/** ECDSA-P384/SHA-384 sign, returning the big-endian compact r‖s the chain/report verify expects. */
+/** ECDSA-P384/SHA-384 sign, returning the big-endian compact r||s. */
 function signP384(priv: Uint8Array, msg: Uint8Array): Uint8Array {
   return p384.sign(sha384(msg), priv, { lowS: false }).toCompactRawBytes();
 }
@@ -83,17 +69,18 @@ function toLe72(beCompactHalf: Uint8Array): Uint8Array {
   return le;
 }
 
-const ARK = genP384();
 const ASK = genP384();
 const VCEK = genP384();
 
-const MEASUREMENT = new Uint8Array(48).fill(0xab); // a known launch measurement
+const MEASUREMENT = new Uint8Array(48).fill(0xab);
 const CHIP_ID = new Uint8Array(64).fill(0x5c);
 const HOST_DATA = new Uint8Array(32).fill(0x7d);
-const WEIGHTS = new Uint8Array(48).fill(0x9e); // a known HARDWARE-MEASURED weights digest
+const WEIGHTS = new Uint8Array(48).fill(0x9e); // a known weights digest (test-double identity only)
 const WEIGHTS_HEX = toHex(WEIGHTS);
 const NONCE = 'nonce-epoch-1';
 const T = 1_000_000;
+/** A verifier clock inside the validity window of the committed real chains (VCEK issued 2026-10-06). */
+const REAL_NOW_MS = Date.parse('2026-10-08T12:00:00Z');
 const P = generateKeyPair();
 const A = generateKeyPair();
 const EXPECTED: ExpectedAttestationBinding = {
@@ -105,23 +92,7 @@ const EXPECTED: ExpectedAttestationBinding = {
 };
 const BOUND = attestationBinding(EXPECTED);
 
-// ── minimal DER fabrication (mirrors the AMD VCEK layout the verifier scans) ────────────────────
-const cat = (...a: Uint8Array[]) => {
-  const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0));
-  let off = 0;
-  for (const x of a) {
-    o.set(x, off);
-    off += x.length;
-  }
-  return o;
-};
-const OID_ARC = [0x2b, 0x06, 0x01, 0x04, 0x01, 0x9c, 0x78, 0x01]; // 1.3.6.1.4.1.3704.1
-const oidTlv = (tail: number[]) => Uint8Array.from([0x06, OID_ARC.length + tail.length, ...OID_ARC, ...tail]);
-const spki = (k: EcdsaP384PublicKey) => cat(Uint8Array.from([0x03, 0x62, 0x00]), k.point);
-const extInt = (tail: number[], v: number) => cat(oidTlv(tail), Uint8Array.from([0x04, 0x03, 0x02, 0x01, v]));
-const extHwId = (chip: Uint8Array) => cat(oidTlv([0x04]), Uint8Array.from([0x04, 0x42, 0x04, 0x40]), chip);
-const pre = (s: string) => new TextEncoder().encode(s);
-
+// ── X.509 fabrication: real certificates (forge-x509) carrying the AMD VCEK extension profile ───────
 interface VcekExt {
   chip?: Uint8Array;
   bl?: number;
@@ -129,80 +100,47 @@ interface VcekExt {
   snp?: number;
   ucode?: number;
 }
-function askTbs(k: EcdsaP384PublicKey): Uint8Array {
-  return cat(pre('ASK-tbs|'), spki(k), pre('|end'));
-}
-function vcekTbs(k: EcdsaP384PublicKey, e: VcekExt = {}): Uint8Array {
-  // defaults match the default report: reported_tcb 0x0003_0000_0000_0007 => bl 7, tee 0, snp 3, ucode 0
-  return cat(
-    pre('VCEK-tbs|'),
-    spki(k),
-    extHwId(e.chip ?? CHIP_ID),
-    extInt([0x03, 0x01], e.bl ?? 7),
-    extInt([0x03, 0x02], e.tee ?? 0),
-    extInt([0x03, 0x03], e.snp ?? 3),
-    extInt([0x03, 0x08], e.ucode ?? 0),
+const forgedTbs = (extensions: Uint8Array[]): Uint8Array =>
+  extractTbsCertificate(
+    forgeCert({
+      subject: [['CN', 'SEV-VCEK']],
+      issuer: [['CN', 'SEV-Genoa']],
+      subjectKey: forgeKey('binding-subject', 'P-384'),
+      signer: forgeKey('binding-signer', 'P-384'),
+      serial: 1n,
+      notBefore: new Date('2022-01-01Z'),
+      notAfter: new Date('2040-01-01Z'),
+      extensions,
+    }).der,
   );
+function askTbs(): Uint8Array {
+  return forgedTbs([ext.basicConstraints(true, 0)]);
+}
+function vcekTbs(e: VcekExt = {}): Uint8Array {
+  // defaults match the default report: reported_tcb 0x0003_0000_0000_0007 => bl 7, tee 0, snp 3, ucode 0
+  return forgedTbs(amdVcekExtensions({ chip: e.chip ?? CHIP_ID, bl: e.bl ?? 7, tee: e.tee ?? 0, snp: e.snp ?? 3, ucode: e.ucode ?? 0 }));
 }
 
-/** Build a VALID chain: ASK signed by ARK, VCEK signed by ASK; each TBS embeds its subject key. */
-function buildChain(over: Partial<SevSnpCertChain> = {}, ext: VcekExt = {}): SevSnpCertChain {
-  const ask_tbs = askTbs(ASK.pub);
-  const vcek_tbs = vcekTbs(VCEK.pub, ext);
-  return {
-    ark: ARK.pub,
-    ask: ASK.pub,
-    vcek: VCEK.pub,
-    ask_tbs,
-    ask_sig: signP384(ARK.priv, ask_tbs),
-    vcek_tbs,
-    vcek_sig: signP384(ASK.priv, vcek_tbs),
+/** Craft a report in the genuine layout with known fields and sign [0x000,0x2A0) with the test VCEK. */
+function buildSignedReport(over: Parameters<typeof serializeSevSnpReport>[0] = {}, signer: Uint8Array = VCEK.priv): Uint8Array {
+  const fields = {
+    version: 2,
+    guest_svn: 3,
+    vmpl: 0,
+    reported_tcb: 0x0003_0000_0000_0007n,
+    report_data: BOUND,
+    measurement: MEASUREMENT,
+    chip_id: CHIP_ID,
+    host_data: HOST_DATA,
     ...over,
   };
-}
-
-/** Craft a report with known fields and sign the signed region [0x000,0x2A0) with the test VCEK. */
-function buildSignedReport(
-  over: Partial<Parameters<typeof serializeSevSnpReport>[0]> = {},
-  signer: Uint8Array = VCEK.priv,
-): Uint8Array {
-  const base = serializeSevSnpReport({
-    version: 2,
-    guest_svn: 3,
-    vmpl: 0,
-    reported_tcb: 0x0003_0000_0000_0007n,
-    report_data: BOUND,
-    measurement: MEASUREMENT,
-    chip_id: CHIP_ID,
-    host_data: HOST_DATA,
-    ...over,
-  });
-  const parsed = parseSevSnpReport(base);
-  const compact = signP384(signer, parsed.signed); // real ECDSA-P384 over SHA-384(signed)
-  const r = compact.subarray(0, 48);
-  const s = compact.subarray(48, 96);
-  return serializeSevSnpReport({
-    version: 2,
-    guest_svn: 3,
-    vmpl: 0,
-    reported_tcb: 0x0003_0000_0000_0007n,
-    report_data: BOUND,
-    measurement: MEASUREMENT,
-    chip_id: CHIP_ID,
-    host_data: HOST_DATA,
-    ...over,
-    signature: { r: toLe72(r), s: toLe72(s) },
-  });
-}
-
-function evidence(over: { report?: Uint8Array; chain?: SevSnpCertChain } = {}): SevSnpEvidence {
-  return { report: over.report ?? buildSignedReport(), chain: over.chain ?? buildChain() };
+  const parsed = parseSevSnpReport(serializeSevSnpReport(fields));
+  const compact = signP384(signer, parsed.signed);
+  return serializeSevSnpReport({ ...fields, signature: { r: toLe72(compact.subarray(0, 48)), s: toLe72(compact.subarray(48, 96)) } });
 }
 
 // ── grant / pcactn / document plumbing (mirrors attestation.test.ts) ─────────────────────────────
 const MEASURED_BINDING: AgentBinding = {
-  // The measured identity the default deriveIdentity yields: runtime_measurement = hex(MEASUREMENT),
-  // operator = hex(CHIP_ID). weights_digest is '' (HOST_DATA is host-asserted, not identity).
   min_measurement: toHex(MEASUREMENT),
   operator: toHex(CHIP_ID),
 };
@@ -246,8 +184,8 @@ function hwDoc(nonce = NONCE): AttestationDocument {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════
-describe('parseSevSnpReport / serializeSevSnpReport', () => {
-  it('round-trips the documented field layout', () => {
+describe('parseSevSnpReport', () => {
+  it('parses the documented field layout', () => {
     const bytes = buildSignedReport();
     const r = parseSevSnpReport(bytes);
     expect(r.version).toBe(2);
@@ -271,13 +209,11 @@ describe('parseSevSnpReport / serializeSevSnpReport', () => {
 });
 
 describe('SEV-SNP primitives', () => {
-  it('verifies a real P-384 report signature and rejects a tampered signed region', () => {
+  it('verifies a P-384 report signature and rejects a tampered signed region', () => {
     const bytes = buildSignedReport();
     const report = parseSevSnpReport(bytes);
     expect(verifySevSnpReportSignature(report, VCEK.pub)).toBe(true);
-    // wrong key fails
     expect(verifySevSnpReportSignature(report, ASK.pub)).toBe(false);
-    // flip a byte inside the signed region → signature no longer covers it
     const tampered = bytes.slice();
     tampered[0x090] = (tampered[0x090]! ^ 0x01) & 0xff; // first measurement byte
     expect(verifySevSnpReportSignature(parseSevSnpReport(tampered), VCEK.pub)).toBe(false);
@@ -287,40 +223,23 @@ describe('SEV-SNP primitives', () => {
     expect(() => sevSnpSignatureToCompact({ r: new Uint8Array(72), s: new Uint8Array(72) })).toThrow(/out of range/);
   });
 
-  it('verifyVcekChain accepts a valid chain and rejects every broken link', () => {
-    expect(verifyVcekChain({ chain: buildChain(), trustAnchorArk: ARK.pub })).toEqual({ ok: true });
-    // wrong trust anchor
-    expect(verifyVcekChain({ chain: buildChain(), trustAnchorArk: genP384().pub })).toMatchObject({ ok: false });
-    // VCEK not signed by ASK (sign it with ARK instead)
-    const badVcek = buildChain({ vcek_sig: signP384(ARK.priv, buildChain().vcek_tbs) });
-    expect(verifyVcekChain({ chain: badVcek, trustAnchorArk: ARK.pub }).reason).toMatch(/VCEK is not signed by ASK/);
-    // ASK not signed by ARK
-    const badAsk = buildChain({ ask_sig: signP384(ASK.priv, buildChain().ask_tbs) });
-    expect(verifyVcekChain({ chain: badAsk, trustAnchorArk: ARK.pub }).reason).toMatch(/ASK is not signed by ARK/);
-  });
-
-  it('forged key/TBS pairing is rejected: genuine ARK-signed ASK TBS with an ATTACKER ASK key', () => {
-    // The attacker holds a genuine (ARK-signed) ASK TBS embedding the real ASK key, but supplies their
-    // own ASK key, uses it to sign a VCEK TBS they control, and claims that chain.
-    const evil = genP384();
-    const evilVcek = genP384();
-    const vcek_tbs = vcekTbs(evilVcek.pub);
-    const genuine = buildChain();
-    const forged = buildChain({ ask: evil.pub, vcek: evilVcek.pub, vcek_tbs, vcek_sig: signP384(evil.priv, vcek_tbs), ask_tbs: genuine.ask_tbs, ask_sig: genuine.ask_sig });
-    // every signature verifies — only the TBS<->key binding catches it
-    const r = verifyVcekChain({ chain: forged, trustAnchorArk: ARK.pub });
-    expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/ASK key is not the subject key/);
-    // same trick one level down: genuine VCEK TBS + attacker VCEK key
-    const g2 = buildChain();
-    const forged2 = buildChain({ vcek: evilVcek.pub, vcek_tbs: g2.vcek_tbs, vcek_sig: g2.vcek_sig });
-    expect(verifyVcekChain({ chain: forged2, trustAnchorArk: ARK.pub }).reason).toMatch(/VCEK key is not the subject key/);
-  });
-
   it('checkVcekReportBinding fails closed when the extensions are missing', () => {
     const report = parseSevSnpReport(buildSignedReport());
-    expect(checkVcekReportBinding(vcekTbs(VCEK.pub), report)).toBeNull();
-    expect(checkVcekReportBinding(askTbs(VCEK.pub), report)).toMatch(/no CHIP_ID/);
+    expect(checkVcekReportBinding(vcekTbs(), report)).toBeNull();
+    expect(checkVcekReportBinding(askTbs(), report)).toMatch(/no CHIP_ID/);
+  });
+
+  it('TCB downgrade: an old VCEK (lower SPLs) cannot vouch for a report claiming a newer TCB', () => {
+    const report = parseSevSnpReport(buildSignedReport());
+    expect(checkVcekReportBinding(vcekTbs({ bl: 2 }), report)).toMatch(/bootloader SPL 2.*downgrade/);
+    expect(checkVcekReportBinding(vcekTbs({ snp: 1 }), report)).toMatch(/snp SPL/);
+    expect(checkVcekReportBinding(vcekTbs({ tee: 9 }), report)).toMatch(/tee SPL/);
+    expect(checkVcekReportBinding(vcekTbs({ ucode: 4 }), report)).toMatch(/microcode SPL/);
+  });
+
+  it('CHIP_ID: a VCEK for a different chip cannot vouch for this report', () => {
+    const report = parseSevSnpReport(buildSignedReport());
+    expect(checkVcekReportBinding(vcekTbs({ chip: new Uint8Array(64).fill(0x11) }), report)).toMatch(/CHIP_ID does not match/);
   });
 
   it('checkSevSnpPolicy gates measurement / chip / tcb / vmpl / svn', () => {
@@ -332,103 +251,113 @@ describe('SEV-SNP primitives', () => {
     expect(checkSevSnpPolicy(r, { minReportedTcb: 0xffff_ffff_ffff_ffffn })).toMatch(/reported_tcb/);
     expect(checkSevSnpPolicy(r, { requireVmpl: 1 })).toMatch(/vmpl/);
   });
+
+  it('DEBUG policy bit is rejected unless explicitly opted in', () => {
+    const r = parseSevSnpReport(buildSignedReport({ policy: SEV_SNP_POLICY_DEBUG_BIT }));
+    expect(checkSevSnpPolicy(r, { measurements: [toHex(MEASUREMENT)] })).toMatch(/DEBUG/);
+    expect(checkSevSnpPolicy(r, { measurements: [toHex(MEASUREMENT)], allowDebug: true })).toBeNull();
+  });
+
+  it('HOST_DATA can be gated as launch config', () => {
+    const r = parseSevSnpReport(buildSignedReport());
+    expect(checkSevSnpPolicy(r, { hostData: [toHex(HOST_DATA)] })).toBeNull();
+    expect(checkSevSnpPolicy(r, { hostData: ['00'.repeat(32)] })).toMatch(/host_data/);
+  });
+
+  it('HOST_DATA is host-asserted: not mapped to weights by default', () => {
+    const r = parseSevSnpReport(buildSignedReport());
+    expect(makeDefaultDeriveIdentity(false)(r).weights_digest).toBe('');
+    const insecure = makeDefaultDeriveIdentity(true)(r);
+    expect(insecure.weights_digest).toBe(toHex(HOST_DATA));
+    expect(insecure.weights_measured).toBe(false);
+  });
+
+  it('SEV-SNP has no native weights field: the default identity is never weights_measured', () => {
+    const id = makeDefaultDeriveIdentity(false)(parseSevSnpReport(buildSignedReport()));
+    expect(id.weights_digest).toBe('');
+    expect(id.weights_measured).toBe(false);
+    expect(id.runtime_measurement).toBe(toHex(MEASUREMENT));
+    expect(id.operator).toBe(toHex(CHIP_ID));
+  });
+
+  it('minCommittedTcb / minLaunchTcb gate the AMD committed and launch TCB fields', () => {
+    const r = parseSevSnpReport(buildSignedReport({ committed_tcb: 0x581b_0000_0000_000an, launch_tcb: 5n }));
+    expect(checkSevSnpPolicy(r, { minCommittedTcb: 0x581b_0000_0000_000an })).toBeNull();
+    expect(checkSevSnpPolicy(r, { minCommittedTcb: 0x59_00_00_00_00_00_00_00n })).toMatch(/committed_tcb/);
+    expect(checkSevSnpPolicy(r, { minLaunchTcb: 5n })).toBeNull();
+    expect(checkSevSnpPolicy(r, { minLaunchTcb: 6n })).toMatch(/launch_tcb/);
+  });
 });
 
-describe('createSevSnpVerifier — decisive end-to-end path', () => {
-  const policy = { measurements: [toHex(MEASUREMENT)], chipIds: [toHex(CHIP_ID)], requireVmpl: 0, minGuestSvn: 1 };
-
-  /** Wire a full hook for `grant`; the report is bound to the PCActn-derived expected binding. */
-  function e2e(
-    grant: Capability,
-    o: { exp?: Partial<ExpectedAttestationBinding>; reportOver?: Parameters<typeof serializeSevSnpReport>[0]; reportBind?: Partial<ExpectedAttestationBinding>; chainExt?: VcekExt; policy?: typeof policy & Record<string, unknown>; now?: number; doc?: AttestationDocument } = {},
-  ) {
+// A HardwareAttestationVerifier TEST DOUBLE composed from the real primitives: it checks a locally-signed
+// report (signature under the test VCEK, report_data binding, policy) and derives the measured identity
+// with the production default mapping. It exists only to drive `createAttestationVerifier`'s
+// require_measured_weights enforcement with the SEV-SNP identity mapping.
+describe('measured weights through createAttestationVerifier (require_measured_weights)', () => {
+  const policy = { measurements: [toHex(MEASUREMENT)] };
+  // SEV-SNP cannot measure weights, so the "measured weights" identity here is a TEST-DOUBLE override of the
+  // derived identity (standing in for a root that genuinely measures weights, e.g. a GPU RIM-backed root).
+  function e2e(grant: Capability, o: { measuredWeights?: string; weightsFromHostData?: boolean } = {}) {
     const p = pcactn(grant);
     const base: ExpectedAttestationBinding = { ...EXPECTED, grantRef: p.grant_ref };
-    const report = buildSignedReport({ report_data: attestationBinding({ ...base, ...(o.reportBind ?? {}) }), ...(o.reportOver ?? {}) });
-    const hw = createSevSnpVerifier({
-      trustAnchorArk: ARK.pub,
-      policy: o.policy ?? policy,
-      resolveEvidence: () => evidence({ report, chain: buildChain({}, o.chainExt) }),
-    });
+    const report = parseSevSnpReport(buildSignedReport({ report_data: attestationBinding(base) }));
+    const hw: HardwareAttestationVerifier = {
+      verify({ expected }) {
+        if (!verifySevSnpReportSignature(report, VCEK.pub)) return { ok: false, reason: 'report signature does not verify' };
+        if (toHex(report.report_data) !== toHex(attestationBinding(expected))) return { ok: false, reason: 'report_data does not bind' };
+        const err = checkSevSnpPolicy(report, policy);
+        if (err) return { ok: false, reason: err };
+        const derived = makeDefaultDeriveIdentity(o.weightsFromHostData === true)(report);
+        const measured = o.measuredWeights === undefined ? derived : { ...derived, weights_digest: o.measuredWeights, weights_measured: true };
+        return { ok: true, bound: true, measured };
+      },
+    };
     const verify = createAttestationVerifier({
       trustedAttestorKeys: [],
       hardwareVerifier: hw,
-      resolveDocument: () => o.doc ?? hwDoc(),
-      expectedBinding: () => ({ ...base, ...(o.exp ?? {}) }),
-      now: () => o.now ?? T,
+      resolveDocument: () => hwDoc(),
+      expectedBinding: () => base,
+      now: () => T,
     });
     return verify({ pcactn: p, grant });
   }
+  const weightsBinding = (over: Partial<AgentBinding> = {}): AgentBinding => ({ ...MEASURED_BINDING, ...over });
 
-  it('FULL PATH: a correctly-bound synthetic ARK→ASK→VCEK report verifies end-to-end (present+bound)', async () => {
-    const res = await e2e(grantWith(MEASURED_BINDING));
-    expect(res).toEqual({ enforced: true, ok: true, present: true, bound: true });
+  it('a measured weights digest IN the allowlist passes under require_measured_weights (present+bound)', async () => {
+    const grant = grantWith(weightsBinding({ weights_allowlist: [WEIGHTS_HEX], require_measured_weights: true }));
+    expect(await e2e(grant, { measuredWeights: WEIGHTS_HEX })).toEqual({ enforced: true, ok: true, present: true, bound: true });
   });
 
-  it('relay: a quote bound to another holder / grant / epoch / nonce is rejected', async () => {
-    const grant = grantWith(MEASURED_BINDING);
-    for (const wrong of [{ holderPub: encodeKey(generateKeyPair().publicKey) }, { grantRef: 'other-grant' }, { epoch: 2 }, { nonce: 'other-nonce' }]) {
-      // the quote was produced for `wrong`, but the server expects the real binding
-      const res = await e2e(grant, { reportBind: wrong });
-      expect(res).toMatchObject({ enforced: true, ok: false, bound: false });
-      expect((res as { reason: string }).reason).toMatch(/report_data does not bind/);
-    }
+  it('a measured weights digest NOT in the allowlist fails (model swap / fine-tune)', async () => {
+    const grant = grantWith(weightsBinding({ weights_allowlist: ['00'.repeat(48)], require_measured_weights: true }));
+    const res = await e2e(grant, { measuredWeights: WEIGHTS_HEX });
+    expect(res).toMatchObject({ enforced: true, ok: false, bound: false });
+    expect((res as { reason: string }).reason).toMatch(/weights_digest not in weights_allowlist/);
   });
 
-  it('document-date spoof: self-asserted dates are ignored; freshness comes from the server nonce age', async () => {
-    const grant = grantWith(MEASURED_BINDING);
-    // document claims to be valid for 100 years, but the server nonce was issued 10 minutes ago
-    const spoof = { ...hwDoc(), issued_at: 0, expires_at: Number.MAX_SAFE_INTEGER };
-    const stale = await e2e(grant, { doc: spoof, exp: { nonceIssuedAt: T - 10 * 60_000 } });
-    expect(stale).toMatchObject({ ok: false });
-    expect((stale as { reason: string }).reason).toMatch(/nonce expired/);
-    // conversely an "expired" document with a fresh server nonce is accepted (dates not consulted)
-    const expiredDoc = { ...hwDoc(), issued_at: 0, expires_at: 1 };
-    expect(await e2e(grant, { doc: expiredDoc })).toMatchObject({ ok: true, bound: true });
-    // unknown nonce issue time => cannot establish freshness => fail closed
-    const unknown = await e2e(grant, { exp: { nonceIssuedAt: undefined } });
-    expect(unknown).toMatchObject({ ok: false });
-    expect((unknown as { reason: string }).reason).toMatch(/issue time unknown/);
-  });
-
-  it('DEBUG policy bit is rejected (unless explicitly opted in)', async () => {
-    const grant = grantWith(MEASURED_BINDING);
-    const res = await e2e(grant, { reportOver: { policy: 1n << 19n } });
-    expect(res).toMatchObject({ ok: false });
-    expect((res as { reason: string }).reason).toMatch(/DEBUG/);
-    expect(await e2e(grant, { reportOver: { policy: 1n << 19n }, policy: { ...policy, allowDebug: true } })).toMatchObject({ ok: true });
-  });
-
-  it('TCB downgrade: an old VCEK (lower SPLs) cannot vouch for a report claiming a newer TCB', async () => {
-    const res = await e2e(grantWith(MEASURED_BINDING), { chainExt: { bl: 2 } }); // VCEK says bl SPL 2; report says 7
-    expect(res).toMatchObject({ ok: false });
-    expect((res as { reason: string }).reason).toMatch(/bootloader SPL 2.*downgrade/);
-    const snp = await e2e(grantWith(MEASURED_BINDING), { chainExt: { snp: 1 } });
-    expect((snp as { reason: string }).reason).toMatch(/snp SPL/);
-  });
-
-  it('CHIP_ID: a VCEK for a different chip cannot vouch for this report', async () => {
-    const res = await e2e(grantWith(MEASURED_BINDING), { chainExt: { chip: new Uint8Array(64).fill(0x11) } });
-    expect(res).toMatchObject({ ok: false });
-    expect((res as { reason: string }).reason).toMatch(/CHIP_ID does not match/);
-  });
-
-  it('HOST_DATA is host-asserted: not mapped to weights by default (weights_allowlist unsatisfiable)', async () => {
-    const grant = grantWith({ ...MEASURED_BINDING, weights_allowlist: [toHex(HOST_DATA)] });
+  it('absent-when-required: identity not weights-measured + require_measured_weights => fail closed', async () => {
+    const grant = grantWith(weightsBinding({ weights_allowlist: [WEIGHTS_HEX], require_measured_weights: true }));
     const res = await e2e(grant);
-    expect(res).toMatchObject({ ok: false });
-    expect((res as { reason: string }).reason).toMatch(/weights_digest/);
-    // explicit INSECURE opt-in maps it
-    expect(await e2e(grant, { policy: { ...policy, weightsFromHostData: true } })).toMatchObject({ ok: true, bound: true });
-    // and HOST_DATA can be gated as launch config
-    const gated = await e2e(grantWith(MEASURED_BINDING), { policy: { ...policy, hostData: ['00'.repeat(32)] } });
-    expect((gated as { reason: string }).reason).toMatch(/host_data/);
+    expect(res).toMatchObject({ enforced: true, ok: false, bound: false });
+    expect((res as { reason: string }).reason).toMatch(/not hardware-measured \(require_measured_weights/);
   });
 
-  it('empty / missing measurement allowlist is rejected at construction', () => {
-    expect(() => createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy: {} })).toThrow(/NON-EMPTY/);
-    expect(() => createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy: { measurements: [] } })).toThrow(/NON-EMPTY/);
-    expect(() => createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy: { chipIds: [toHex(CHIP_ID)] } })).toThrow(/NON-EMPTY/);
+  it('host-asserted weights cannot satisfy require_measured_weights even if the VALUE is allowlisted', async () => {
+    const grant = grantWith(weightsBinding({ weights_allowlist: [toHex(HOST_DATA)], require_measured_weights: true }));
+    const res = await e2e(grant, { weightsFromHostData: true });
+    expect(res).toMatchObject({ enforced: true, ok: false, bound: false });
+    expect((res as { reason: string }).reason).toMatch(/not hardware-measured \(require_measured_weights/);
+  });
+
+  it('weights_allowlist WITHOUT require_measured_weights matches the measured identity by value', async () => {
+    const grant = grantWith(weightsBinding({ weights_allowlist: [WEIGHTS_HEX] }));
+    expect(await e2e(grant, { measuredWeights: WEIGHTS_HEX })).toEqual({ enforced: true, ok: true, present: true, bound: true });
+  });
+
+  it('a binding with NO weights requirement is unchanged by measured weights being present', async () => {
+    const grant = grantWith(MEASURED_BINDING);
+    expect(await e2e(grant, { measuredWeights: WEIGHTS_HEX })).toEqual({ enforced: true, ok: true, present: true, bound: true });
+    expect(await e2e(grant)).toEqual({ enforced: true, ok: true, present: true, bound: true });
   });
 
   it('the MEASURED identity (not the document) is matched against agent_binding', async () => {
@@ -436,149 +365,12 @@ describe('createSevSnpVerifier — decisive end-to-end path', () => {
     expect(res).toMatchObject({ enforced: true, ok: false, bound: false });
     expect((res as { reason: string }).reason).toMatch(/operator/);
   });
-
-  it('negative: a tampered report byte breaks the report signature', async () => {
-    const bad = buildSignedReport();
-    bad[0x090] = (bad[0x090]! ^ 0xff) & 0xff; // flip a measurement byte after signing
-    const hw = createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy, resolveEvidence: () => evidence({ report: bad }) });
-    const r = await hw.verify({ document: hwDoc(), ctx: {} as never, nowMs: T, expected: EXPECTED });
-    expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/report signature does not verify/);
-  });
-
-  it('negative: a VCEK not endorsed by the chain fails chain verification', async () => {
-    const rogue = genP384();
-    const report = buildSignedReport({}, rogue.priv); // signed by a rogue key
-    const chain = buildChain({ vcek: rogue.pub, vcek_tbs: vcekTbs(rogue.pub), vcek_sig: new Uint8Array(96) }); // chain cannot endorse it
-    const hw = createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy, resolveEvidence: () => evidence({ report, chain }) });
-    const r = await hw.verify({ document: hwDoc(), ctx: {} as never, nowMs: T, expected: EXPECTED });
-    expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/cert chain invalid.*VCEK is not signed by ASK/);
-  });
-
-  it('negative: wrong ARK trust anchor fails', async () => {
-    const hw = createSevSnpVerifier({ trustAnchorArk: genP384().pub, policy, resolveEvidence: () => evidence() });
-    const r = await hw.verify({ document: hwDoc(), ctx: {} as never, nowMs: T, expected: EXPECTED });
-    expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/ARK does not match the configured trust anchor/);
-  });
-
-  it('negative: report_data nonce mismatch fails', async () => {
-    // report_data binds NONCE, but the server expects a different nonce.
-    const hw = createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy, resolveEvidence: () => evidence() });
-    const r = await hw.verify({ document: hwDoc(), ctx: {} as never, nowMs: T, expected: { ...EXPECTED, nonce: 'a-different-nonce' } });
-    expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/report_data does not bind/);
-  });
-
-  it('negative: measurement not in policy fails', async () => {
-    const hw = createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy: { measurements: ['00'.repeat(48)] }, resolveEvidence: () => evidence() });
-    const r = await hw.verify({ document: hwDoc(), ctx: {} as never, nowMs: T, expected: EXPECTED });
-    expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/measurement not in policy/);
-  });
-
-  it('negative: no evidence resolver fails closed', async () => {
-    const hw = createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy });
-    const r = await hw.verify({ document: hwDoc(), ctx: {} as never, nowMs: T, expected: EXPECTED });
-    expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/no SEV-SNP evidence resolver/);
-  });
-
-  it('direct verify of a bound genuine report returns bound + measured identity + host-asserted data', async () => {
-    const hw = createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy, resolveEvidence: () => evidence() });
-    const r = await hw.verify({ document: hwDoc(), ctx: {} as never, nowMs: T, expected: EXPECTED });
-    expect(r.ok).toBe(true);
-    expect(r.bound).toBe(true);
-    expect(r.measured?.runtime_measurement).toBe(toHex(MEASUREMENT));
-    expect(r.measured?.weights_digest).toBe('');
-    expect(r.measured?.weights_measured).toBe(false); // nothing measured the weights
-    expect(r.hostAsserted?.host_data).toBe(toHex(HOST_DATA));
-  });
-
-  // ── WEIGHTS-LEVEL ATTESTATION: the measured-weights slot is hardware-rooted (signed region) ──────
-  describe('hardware-measured weights (require_measured_weights, fail-closed on self/host-asserted)', () => {
-    const weightsBinding = (over: Partial<AgentBinding> = {}): AgentBinding => ({ ...MEASURED_BINDING, ...over });
-
-    it('a measured weights digest IN the allowlist passes under require_measured_weights (present+bound)', async () => {
-      const grant = grantWith(weightsBinding({ weights_allowlist: [WEIGHTS_HEX], require_measured_weights: true }));
-      const res = await e2e(grant, { reportOver: { weights_measurement: WEIGHTS } });
-      expect(res).toEqual({ enforced: true, ok: true, present: true, bound: true });
-    });
-
-    it('a measured weights digest NOT in the allowlist fails (model swap / fine-tune)', async () => {
-      const grant = grantWith(weightsBinding({ weights_allowlist: ['00'.repeat(48)], require_measured_weights: true }));
-      const res = await e2e(grant, { reportOver: { weights_measurement: WEIGHTS } });
-      expect(res).toMatchObject({ enforced: true, ok: false, bound: false });
-      expect((res as { reason: string }).reason).toMatch(/weights_digest not in weights_allowlist/);
-    });
-
-    it('absent-when-required: no measured-weights slot + require_measured_weights => fail closed', async () => {
-      // the report carries the default all-zero slot (nothing measured the weights)
-      const grant = grantWith(weightsBinding({ weights_allowlist: [WEIGHTS_HEX], require_measured_weights: true }));
-      const res = await e2e(grant); // default report: weights_measurement is all zero
-      expect(res).toMatchObject({ enforced: true, ok: false, bound: false });
-      expect((res as { reason: string }).reason).toMatch(/not hardware-measured \(require_measured_weights/);
-    });
-
-    it('host-asserted weights (weightsFromHostData) cannot satisfy require_measured_weights even if the VALUE is allowlisted', async () => {
-      // HOST_DATA is host-asserted; map it to weights_digest and ALLOWLIST that exact value...
-      const grant = grantWith(weightsBinding({ weights_allowlist: [toHex(HOST_DATA)], require_measured_weights: true }));
-      const res = await e2e(grant, { policy: { ...policy, weightsFromHostData: true } });
-      // ...it still FAILS CLOSED: a host-asserted digest is not silicon-measured (weights_measured=false)
-      expect(res).toMatchObject({ enforced: true, ok: false, bound: false });
-      expect((res as { reason: string }).reason).toMatch(/not hardware-measured \(require_measured_weights/);
-    });
-
-    it('BACKWARD-COMPAT: weights_allowlist WITHOUT require_measured_weights matches the measured slot by value', async () => {
-      const grant = grantWith(weightsBinding({ weights_allowlist: [WEIGHTS_HEX] }));
-      const res = await e2e(grant, { reportOver: { weights_measurement: WEIGHTS } });
-      expect(res).toEqual({ enforced: true, ok: true, present: true, bound: true });
-    });
-
-    it('BACKWARD-COMPAT: a binding with NO weights requirement is unchanged by a measured slot being present', async () => {
-      // MEASURED_BINDING pins only measurement + operator; a populated weights slot must not change the verdict
-      const grant = grantWith(MEASURED_BINDING);
-      expect(await e2e(grant, { reportOver: { weights_measurement: WEIGHTS } })).toEqual({ enforced: true, ok: true, present: true, bound: true });
-      expect(await e2e(grant)).toEqual({ enforced: true, ok: true, present: true, bound: true });
-    });
-
-    it('verifier-side weightsMeasurements allowlist gates the measured slot (and rejects an absent slot)', async () => {
-      const grant = grantWith(MEASURED_BINDING);
-      // report carries WEIGHTS; verifier policy allows it
-      expect(await e2e(grant, { reportOver: { weights_measurement: WEIGHTS }, policy: { ...policy, weightsMeasurements: [WEIGHTS_HEX] } })).toMatchObject({ ok: true, bound: true });
-      // report carries a DIFFERENT measured digest => rejected at the verifier
-      const other = new Uint8Array(48).fill(0x22);
-      const wrong = await e2e(grant, { reportOver: { weights_measurement: other }, policy: { ...policy, weightsMeasurements: [WEIGHTS_HEX] } });
-      expect((wrong as { reason: string }).reason).toMatch(/measured weights digest not in policy allowlist/);
-      // no measured slot at all => rejected when the verifier requires one
-      const absent = await e2e(grant, { policy: { ...policy, weightsMeasurements: [WEIGHTS_HEX] } });
-      expect((absent as { reason: string }).reason).toMatch(/no measured weights digest in report/);
-    });
-
-    it('the measured-weights slot is HARDWARE-ROOTED: flipping it after signing breaks the report signature', async () => {
-      const bytes = buildSignedReport({ weights_measurement: WEIGHTS });
-      // sanity: it verifies before tampering
-      expect(verifySevSnpReportSignature(parseSevSnpReport(bytes), VCEK.pub)).toBe(true);
-      const tampered = bytes.slice();
-      tampered[0x1e0] = (tampered[0x1e0]! ^ 0xff) & 0xff; // flip the first measured-weights byte
-      expect(verifySevSnpReportSignature(parseSevSnpReport(tampered), VCEK.pub)).toBe(false);
-    });
-
-    it('direct verify EXPOSES the hardware-measured weights digest with weights_measured:true', async () => {
-      const hw = createSevSnpVerifier({ trustAnchorArk: ARK.pub, policy, resolveEvidence: () => evidence({ report: buildSignedReport({ weights_measurement: WEIGHTS }) }) });
-      const r = await hw.verify({ document: hwDoc(), ctx: {} as never, nowMs: T, expected: EXPECTED });
-      expect(r.ok).toBe(true);
-      expect(r.measured?.weights_digest).toBe(WEIGHTS_HEX);
-      expect(r.measured?.weights_measured).toBe(true);
-    });
-  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 // VALIDATED-AGAINST-REAL-SILICON: a GENUINE AMD SEV-SNP report captured from an Azure confidential VM
 // (AMD EPYC Milan). These are OFFLINE tests over committed fixtures (testdata/sevsnp-real/): no network,
-// no hardware needed in CI. They upgrade the suite above (synthetic-but-real-crypto) to prove our
+// no hardware needed in CI. They prove our
 // verifier accepts REAL silicon, extracts the VCEK key from the REAL vcek.der, and verifies the REAL
 // VCEK→ASK→ARK RSA-PSS chain (trailerField tolerated via OpenSSL). See the module header's AZURE nuance:
 // the Azure capture's report_data is the vTPM-AK digest, NOT a PCA binding, so the PCA report_data bind
@@ -609,7 +401,7 @@ describe('GENUINE AMD SEV-SNP report (real silicon, offline fixtures)', () => {
   });
 
   it('verifies the GENUINE VCEK→ASK→ARK chain (RSA-PSS trailerField via OpenSSL), ARK pinned', async () => {
-    const res = await verifyAmdCertChain({ vcekDer: vcekDer(), askArkPem: chainPem() });
+    const res = await verifyAmdCertChain({ vcekDer: vcekDer(), askArkPem: chainPem(), nowMs: REAL_NOW_MS });
     expect(res.ok).toBe(true);
     expect(res.vcek?.point.length).toBe(97);
     expect(res.vcekTbs).toBeInstanceOf(Uint8Array);
@@ -619,13 +411,13 @@ describe('GENUINE AMD SEV-SNP report (real silicon, offline fixtures)', () => {
 
   it('rejects the chain when the ARK pin is wrong (root of trust is NOT self-asserted)', async () => {
     const wrong = 'ab'.repeat(48);
-    const res = await verifyAmdCertChain({ vcekDer: vcekDer(), askArkPem: chainPem(), trustAnchorArkSpkiSha384: wrong });
+    const res = await verifyAmdCertChain({ vcekDer: vcekDer(), askArkPem: chainPem(), nowMs: REAL_NOW_MS, trustAnchorArkSpkiSha384: wrong });
     expect(res.ok).toBe(false);
     expect(res.reason).toMatch(/ARK does not match the pinned AMD trust anchor/);
   });
 
   it('END-TO-END: ACCEPTS the genuine report (chain + report signature + VCEK↔report binding)', async () => {
-    const res = await verifyGenuineSevSnpReport({ report: reportBin(), vcekDer: vcekDer(), askArkPem: chainPem() });
+    const res = await verifyGenuineSevSnpReport({ report: reportBin(), vcekDer: vcekDer(), askArkPem: chainPem(), nowMs: REAL_NOW_MS });
     expect(res.ok).toBe(true);
     expect(res.report?.version).toBe(3);
     // the measured identity is the hardware-authoritative launch measurement + chip operator
@@ -636,7 +428,7 @@ describe('GENUINE AMD SEV-SNP report (real silicon, offline fixtures)', () => {
   it('REJECTS a 1-bit-tampered genuine report (flip one byte in the signed region)', async () => {
     const bad = reportBin();
     bad[0x090] = (bad[0x090]! ^ 0x01) & 0xff; // flip one measurement bit — inside [0x000,0x2A0)
-    const res = await verifyGenuineSevSnpReport({ report: bad, vcekDer: vcekDer(), askArkPem: chainPem() });
+    const res = await verifyGenuineSevSnpReport({ report: bad, vcekDer: vcekDer(), askArkPem: chainPem(), nowMs: REAL_NOW_MS });
     expect(res.ok).toBe(false);
     expect(res.reason).toMatch(/report signature does not verify under VCEK/);
   });
@@ -650,7 +442,7 @@ describe('GENUINE AMD SEV-SNP report (real silicon, offline fixtures)', () => {
 
   it('the pinned AMD Milan ARK matches the fixture chain root', async () => {
     // sanity: the default pin is exactly the root of the committed genuine chain
-    const res = await verifyAmdCertChain({ vcekDer: vcekDer(), askArkPem: chainPem(), trustAnchorArkSpkiSha384: AMD_MILAN_ARK_SPKI_SHA384 });
+    const res = await verifyAmdCertChain({ vcekDer: vcekDer(), askArkPem: chainPem(), nowMs: REAL_NOW_MS, trustAnchorArkSpkiSha384: AMD_MILAN_ARK_SPKI_SHA384 });
     expect(res.ok).toBe(true);
   });
 
@@ -662,14 +454,50 @@ describe('GENUINE AMD SEV-SNP report (real silicon, offline fixtures)', () => {
   });
 });
 
-describe('parseSevSnpReport: measured-weights slot', () => {
-  it('round-trips the 48-byte weights_measurement slot inside the signed region', () => {
-    const r = parseSevSnpReport(buildSignedReport({ weights_measurement: WEIGHTS }));
-    expect(r.weights_measurement.length).toBe(48);
-    expect(toHex(r.weights_measurement)).toBe(WEIGHTS_HEX);
-    // the slot sits within [0x000, 0x2A0): it is covered by the report signature
-    expect(r.signed.length).toBe(0x2a0);
-    // default (unset) slot is all-zero => ABSENT
-    expect(toHex(parseSevSnpReport(buildSignedReport()).weights_measurement)).toBe('00'.repeat(48));
+describe('parseSevSnpReport: GENUINE Azure Genoa SEV-SNP report (v5) field values', () => {
+  const FIX = resolve(__dirname, '..', 'fixtures', 'real-azure-maa');
+  const real = () => new Uint8Array(readFileSync(resolve(FIX, 'sevsnp-hcl-report.bin'))).slice(32, 32 + 1184);
+  const claims = () => {
+    const payload = readFileSync(resolve(FIX, 'sevsnp-token.jwt'), 'utf8').trim().split('.')[1]!;
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Record<string, string | number | boolean>;
+  };
+  // AMD packs a TCB as bootloader(byte0) tee(1) reserved(2-5) snp(6) microcode(7).
+  const tcbBytes = (t: bigint) => ({ bl: Number(t & 0xffn), tee: Number((t >> 8n) & 0xffn), snp: Number((t >> 48n) & 0xffn), ucode: Number((t >> 56n) & 0xffn) });
+
+  it('parses version 5, Genoa CPUID, chip id and guest fields identical to the Azure MAA token claims', () => {
+    const r = parseSevSnpReport(real());
+    const c = claims();
+    expect(r.version).toBe(5);
+    expect([r.cpuid_fam_id, r.cpuid_mod_id, r.cpuid_step]).toEqual([0x19, 0x11, 1]); // family 19h model 11h = Genoa
+    expect(c['x-ms-sevsnpvm-chip-family']).toBe('Genoa');
+    expect(toHex(r.chip_id)).toBe(c['x-ms-sevsnpvm-chipid']);
+    expect(r.guest_svn).toBe(c['x-ms-sevsnpvm-guestsvn']);
+    expect(toHex(r.measurement)).toBe(c['x-ms-sevsnpvm-launchmeasurement']);
+    expect(toHex(r.report_id)).toBe(c['x-ms-sevsnpvm-reportid']);
+    expect(toHex(r.family_id)).toBe(c['x-ms-sevsnpvm-familyId']);
+    expect(toHex(r.image_id)).toBe(c['x-ms-sevsnpvm-imageId']);
+    expect(toHex(r.id_key_digest)).toBe(c['x-ms-sevsnpvm-idkeydigest']);
+    expect(r.vmpl).toBe(0);
+  });
+
+  it('reported, committed and launch TCB equal the token SVN claims (bl=10 snp=27 ucode=88 tee=0)', () => {
+    const r = parseSevSnpReport(real());
+    const want = { bl: 10, tee: 0, snp: 27, ucode: 88 };
+    expect(want).toEqual({ bl: claims()['x-ms-sevsnpvm-bootloader-svn'], tee: claims()['x-ms-sevsnpvm-tee-svn'], snp: claims()['x-ms-sevsnpvm-snpfw-svn'], ucode: claims()['x-ms-sevsnpvm-microcode-svn'] });
+    expect(tcbBytes(r.reported_tcb)).toEqual(want);
+    expect(tcbBytes(r.current_tcb)).toEqual(want);
+    expect(tcbBytes(r.committed_tcb)).toEqual(want);
+    expect(tcbBytes(r.launch_tcb)).toEqual(want);
+    expect(r.current_version).toEqual({ major: 1, minor: 55, build: 49 });
+    expect(r.committed_version).toEqual({ major: 1, minor: 55, build: 49 });
+    expect(r.launch_mit_vector).toBe(7n);
+    expect(r.current_mit_vector).toBe(7n);
+  });
+
+  it('the real report carries NO weights claim: derived identity is weights_measured:false with an empty digest', () => {
+    const id = makeDefaultDeriveIdentity(false)(parseSevSnpReport(real()));
+    expect(id.weights_measured).toBe(false);
+    expect(id.weights_digest).toBe('');
+    expect(id.runtime_measurement).toBe(claims()['x-ms-sevsnpvm-launchmeasurement']);
   });
 });

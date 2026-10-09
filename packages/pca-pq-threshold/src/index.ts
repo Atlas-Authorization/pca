@@ -29,7 +29,7 @@
  *      never be mistaken for the shippable path above.
  *
  * REUSE: every primitive here is imported from `@atlasauth/pca` — the FROST threshold
- * (`frostTrustedDealerKeygen` / `frostCosign`, verified via the core `verifyThreshold`) and the
+ * (`frostTrustedDealerKeygen` / `frostCosign`, verified as an Ed25519 signature under the trusted group key) and the
  * ML-DSA-65 sign/verify (`mlDsa65Sign` / `mlDsa65VerifyB64u`). Nothing cryptographic is
  * reimplemented here; this module only COMPOSES the two quorums and binds them to a PCActn step-up.
  */
@@ -55,7 +55,7 @@ import {
   sha256,
   thresholdMessage,
   verifyPCActnCore,
-  verifyThreshold,
+  verifyB64u,
 } from '@atlasauth/pca';
 
 export * as experimental from './experimental/lattice-threshold';
@@ -243,10 +243,9 @@ function normalizePqPool(pks: readonly BytesOrB64u[]): Set<string> {
 }
 
 /**
- * Verify the classical FROST t-of-n aggregate by REUSING the core `verifyThreshold`: the FROST
+ * Verify the classical FROST t-of-n aggregate as a plain Ed25519 verification: the FROST
  * aggregate is a standard Ed25519 signature under the group key, and the group key signs
- * `thresholdMessage` directly, so it slots into the core multi-signature verifier as a single
- * 'agent'-role signer whose key is the group key.
+ * `thresholdMessage` directly.
  *
  * Crucially the aggregate is checked under the VERIFIER'S trusted `trustedGroupKeyB64u` — not any
  * group key the artifact declares — so an attacker who swaps in a signature under a group key THEY
@@ -255,9 +254,13 @@ function normalizePqPool(pks: readonly BytesOrB64u[]): Set<string> {
  */
 function verifyFrostAggregate(sigB64u: unknown, message: Uint8Array, trustedGroupKeyB64u: string): boolean {
   if (typeof sigB64u !== 'string') return false;
-  const signerSet: Signer[] = [{ role: 'agent', publicKey: trustedGroupKeyB64u }];
-  const bag = assembleThreshold([{ role: 'agent', publicKey: trustedGroupKeyB64u, sig: sigB64u }]);
-  return verifyThreshold(bag, message, signerSet, 1).ok;
+  // The FROST aggregate is a plain Ed25519 signature by the group key over `thresholdMessage`, so it is
+  // checked directly under the TRUSTED group key (strict canonical encodings; never throws).
+  try {
+    return verifyB64u(trustedGroupKeyB64u, message, sigB64u);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -361,8 +364,8 @@ function findFrostShare(pcactn: PCActn, trustedGroupKeyB64u: string): ThresholdS
 
 /**
  * A `ThresholdVerifier` hook (the L2/M4 PCActn threshold seam) enforcing the HYBRID step-up: the
- * classical FROST t-of-n (folded into `pcactn.threshold`, verified under the trusted group key via the
- * core `verifyThreshold`) AND the post-quantum pqT-of-m quorum (the co-sign block, closed over per action).
+ * classical FROST t-of-n (folded into `pcactn.threshold`, verified as an Ed25519 signature under the trusted group key)
+ * AND the post-quantum pqT-of-m quorum (the co-sign block, closed over per action).
  * Returns enforced=true, ok=true only if BOTH hold — so it drops straight into `verifyPCActnCore`.
  */
 export function createHybridThresholdVerifier(opts: {

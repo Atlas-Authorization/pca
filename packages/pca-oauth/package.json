@@ -1,7 +1,27 @@
 {
   "name": "@atlasauth/pca-oauth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OAuth 2.1 / MCP-authorization interop bridge for Proof-Carrying Authority: make a PCA resource server discoverable (RFC 9728 Protected Resource Metadata), challengeable (MCP 401 + WWW-Authenticate resource_metadata), and bindable (RFC 8707 resource indicators) over the agent-to-tool wire. PCA stays the proof layer; this is the discovery/challenge envelope.",
+  "keywords": [
+    "oauth 2.1",
+    "rfc 9728",
+    "mcp authorization",
+    "protected resource metadata",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-oauth"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -25,8 +45,12 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   }

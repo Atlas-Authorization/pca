@@ -4,11 +4,17 @@ Drop-in, **code-free** Proof-Carrying Authority enforcement at the gateway / ser
 language-agnostic choke point in front of every MCP server / agent service. Add it to your gateway and
 every inbound request is proof-carrying-verified with **zero application changes**: the request only
 reaches the upstream once a valid PCActn — for this gateway's audience, carrying the capability the
-route requires — has been verified by the offline core (`verifyPCActnCore` from `@atlasauth/pca`).
+route requires — has been verified by the stateless offline core (`verifyPCActnCore` from `@atlasauth/pca`).
 
 Framework-agnostic: the only dependency is `@atlasauth/pca`. The gateway SDKs (Envoy protobufs,
-`aws-lambda`, the Workers runtime) are never imported — every event / request / response shape is a
+`aws-lambda`, the Workers runtime) are never imported; every event, request and response shape is a
 minimal structural shim.
+
+## Install
+
+```sh
+npm i @atlasauth/pca-gateway
+```
 
 ## How it works
 
@@ -17,15 +23,15 @@ gateway:
 
 1. extracts the PCActn from the header (fail closed if absent / undecodable),
 2. maps `method` + `path` → the required capability via your route map,
-3. verifies the proof offline with `verifyPCActnCore` (chain, plan inclusion, signature, counter,
-   validity window, and audience bound to **this** gateway),
+3. verifies the proof offline with `verifyPCActnCore` (chain, plan inclusion, signature, counter
+   well-formedness, validity window, and audience bound to **this** gateway),
 4. checks the verified proof carries the route's required verb (and optional resource),
 5. returns an allow / deny **Decision** mapped onto the gateway's own contract.
 
 **Deny-by-default** everywhere: no proof, an undecodable proof, a wrong-audience proof, an
 insufficient-capability proof, and (by default) an unmapped route are all rejected.
 
-## Core API
+## Usage
 
 ```ts
 import { authorize, createGateway, type GatewayOptions } from '@atlasauth/pca-gateway';
@@ -107,7 +113,10 @@ export const handler = lambdaAuthorizer(options);        // IAM Allow/Deny polic
 export const simple  = lambdaSimpleAuthorizer(options);  // { isAuthorized } (enableSimpleResponses: true)
 ```
 
-Nothing here authorizes on its own — each adapter wraps the fail-closed `verifyPCActnCore`. A bypassed
-gateway changes nothing: the resource server's own `requirePCA` is the backstop.
+## Status
 
-Part of Proof-Carrying Authority — see [`@atlasauth/pca`](../pca).
+Experimental. Each adapter wraps the fail-closed `verifyPCActnCore`, which is stateless: the gateway does not keep a replay counter, check revocation, enforce a trust budget or confirm the plan root was authorized. A captured proof can be replayed until it expires. For those checks, enforce at the resource server with `requirePCA` from `@atlasauth/pca` (or one of the framework packages such as `@atlasauth/pca-express`), which also remains the backstop if the gateway is bypassed. The cryptography is unaudited.
+
+## License
+
+MIT - see LICENSE

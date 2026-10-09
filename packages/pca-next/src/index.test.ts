@@ -32,7 +32,7 @@ describe('withPCA', () => {
           risk: { semanticDistance: 0, reversibility: 0, blastRadius: 0.04, taint: 0, confidence: 1, age: 0 },
           planAuthorized: true,
         }),
-        insecureAllowUnenforced: true, // exercise the glue; full default-deny enforcement is tested in @atlasauth/backend
+        insecureAllowUnenforced: true, // exercise the glue; full default-deny enforcement is tested in @atlasauth/pca
       },
       (_req, { pca }) => {
         seenVerb = pca.pcactn.action.verb;

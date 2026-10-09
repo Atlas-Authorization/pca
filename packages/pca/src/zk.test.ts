@@ -6,6 +6,7 @@ import {
   type PolicyVmComplianceProof,
   type SnarkBackend,
   POLICYVM_PUBLIC_SIGNAL,
+  POLICYVM_REVERSIBILITY_ORDER,
   POLICYVM_SAMPLE_PROOF_PATH,
   POLICYVM_VKEY_PATH,
   actionCommitment,
@@ -16,9 +17,15 @@ import {
   createZkVerifier,
   decodePolicyVmPublic,
   policyCommitment,
+  policyVmCommitmentFromAction,
   policyVmStructHash,
   proveGroth16Compliance,
+  quantizeActionStruct,
+  quantizePlanStruct,
+  quantizePolicyStruct,
+  quantizePolicyVmInputs,
   verifyPolicyVmProof,
+  type QuantizableAction,
 } from './zk';
 import { hashCanonical } from './hash';
 import { mintGrant, readEnvelope } from './envelope';
@@ -357,5 +364,122 @@ describe('full Policy-VM SNARK proof-of-compliance (§9B, committed fixture, REA
     // A wrong expected action struct (different verb) no longer matches the proof's bound hash halves.
     const wrong = createPolicyVmSnarkBackend({ verificationKey: vkey, expectActionHash: policyVmStructHash([9, 42, 0, 100]) });
     expect(await wrong.verify({ proof: sample, publicInputs: pub, ctx })).toBe(false);
+  });
+});
+
+// §9B — the proof↔action BINDING gap closed: the RS deterministically quantizes the LIVE canonical action
+// to the circuit's fixed struct and binds the committed proof's public hash halves to it. These run fully
+// offline against the committed sample proof + verifying key (real snarkjs Groth16, no wasm/zkey/network).
+describe('policy-VM proof↔action binding via deterministic quantization (§9B)', () => {
+  const vkey = JSON.parse(readFileSync(POLICYVM_VKEY_PATH(), 'utf8')) as object;
+  const sample = JSON.parse(readFileSync(POLICYVM_SAMPLE_PROOF_PATH(), 'utf8')) as PolicyVmComplianceProof;
+  const ctx = { pcactn: {} as PCActn, grant: {} as Capability } as unknown as VerifyContext;
+  const pub = { action_commit: '', policy_commit: '', plan_commit: '' };
+
+  // The quantization catalog the committed sample proof's prover used (codes 7 / 42, param scalar 100).
+  const QOPTS = { verbCodes: { revoke_session: 7 }, resourceCodes: { '/acct/1/s': 42 }, paramScalarField: 'amount' } as const;
+  // Action A: the live canonical action that quantizes to the sample's committed struct [7, 42, 0, 100].
+  const actionA: QuantizableAction = { verb: 'revoke_session', resource: '/acct/1/s', reversibility_class: 'reversible', params: { amount: 100 } };
+  // Action B: a DIFFERENT live action (different verb/resource/params) → a different quantized struct.
+  const actionB: QuantizableAction = { verb: 'exfiltrate', resource: '/acct/EVIL', reversibility_class: 'irreversible', params: { amount: 999 } };
+
+  it('quantizeActionStruct derives the circuit struct from the live canonical action (deterministic)', () => {
+    expect(quantizeActionStruct(actionA, QOPTS)).toEqual([7n, 42n, 0n, 100n]);
+    // Deterministic: same action → same struct, every time.
+    expect(quantizeActionStruct(actionA, QOPTS)).toEqual(quantizeActionStruct(actionA, QOPTS));
+    // The reversibility index follows the canonical order (reversible=0, rate_limited=1, irreversible=2).
+    expect(POLICYVM_REVERSIBILITY_ORDER).toEqual(['reversible', 'rate_limited', 'irreversible']);
+    expect(quantizeActionStruct({ ...actionA, reversibility_class: 'irreversible' }, QOPTS)[2]).toBe(2n);
+  });
+
+  it('policyVmCommitmentFromAction(A) EQUALS the committed proof public hash halves — the proof is bound to A', () => {
+    const d = decodePolicyVmPublic(sample.publicSignals);
+    expect(policyVmCommitmentFromAction(actionA, QOPTS)).toEqual(d.actionHash);
+    // A DIFFERENT action quantizes to a different struct → a different commitment (no collision with A).
+    expect(policyVmCommitmentFromAction(actionB, QOPTS)).not.toEqual(d.actionHash);
+  });
+
+  it('BINDING: the sample proof VERIFIES + BINDS when the RS-quantized commitment matches the live action', async () => {
+    const backend = createPolicyVmSnarkBackend({ verificationKey: vkey, expectActionHash: policyVmCommitmentFromAction(actionA, QOPTS) });
+    expect(await backend.verify({ proof: sample, publicInputs: pub, ctx })).toBe(true);
+  });
+
+  it('REPLAY DENIED: the SAME valid proof (minted for A) is REJECTED when presented for a different action B', async () => {
+    // The Groth16 proof itself is valid (it verifies with A's binding above), but when the RS recomputes the
+    // expected action commitment from action B, the proof's public halves no longer match → fail-closed deny.
+    const backend = createPolicyVmSnarkBackend({ verificationKey: vkey, expectActionHash: policyVmCommitmentFromAction(actionB, QOPTS) });
+    expect(await backend.verify({ proof: sample, publicInputs: pub, ctx })).toBe(false);
+  });
+
+  it('a single changed action param flips the binding (DENY): same verb/resource, paramScalar differs', async () => {
+    const actionAprime: QuantizableAction = { ...actionA, params: { amount: 101 } }; // 100 → 101
+    const backend = createPolicyVmSnarkBackend({ verificationKey: vkey, expectActionHash: policyVmCommitmentFromAction(actionAprime, QOPTS) });
+    expect(await backend.verify({ proof: sample, publicInputs: pub, ctx })).toBe(false);
+  });
+
+  it('content-addressed fallback (no catalog) is deterministic and distinct per string', () => {
+    const s1 = quantizeActionStruct({ verb: 'a', resource: 'x' });
+    const s2 = quantizeActionStruct({ verb: 'a', resource: 'x' });
+    const s3 = quantizeActionStruct({ verb: 'b', resource: 'x' });
+    expect(s1).toEqual(s2); // deterministic
+    expect(s1[0]).not.toBe(s3[0]); // different verb → different code
+    for (const code of [s1[0], s1[1]]) expect(code >= 0n && code < 1n << 64n).toBe(true); // uint64 domain
+  });
+
+  it('FAIL CLOSED: an unquantizable action throws (unknown class, strict-catalog miss, bad scalar, non-string)', () => {
+    // unknown reversibility class
+    expect(() => quantizeActionStruct({ verb: 'v', resource: 'r', reversibility_class: 'teleport' })).toThrow(/unknown reversibility/i);
+    // strict-catalog miss (verb not in the explicit catalog, and content-addressing disabled)
+    expect(() => quantizeActionStruct(actionA, { ...QOPTS, strictCatalog: true, verbCodes: {} })).toThrow(/catalog/i);
+    // param scalar not a non-negative integer
+    expect(() => quantizeActionStruct({ verb: 'v', resource: 'r', params: { amount: -5 } }, { paramScalarField: 'amount' })).toThrow(/paramScalar/i);
+    expect(() => quantizeActionStruct({ verb: 'v', resource: 'r', params: { amount: 1.5 } }, { paramScalarField: 'amount' })).toThrow(/paramScalar/i);
+    // non-string verb (defeats the type system at the boundary)
+    expect(() => quantizeActionStruct({ verb: 42 as unknown as string, resource: 'r' })).toThrow(/string/i);
+    // paramScalar out of uint64 range
+    expect(() => quantizeActionStruct({ verb: 'v', resource: 'r', params: { amount: 1n << 64n } }, { paramScalarField: 'amount' })).toThrow(/uint64/i);
+  });
+
+  it('the umbrella quantizePolicyVmInputs reproduces the committed sample action/plan/policy structs', () => {
+    const d = decodePolicyVmPublic(sample.publicSignals);
+    const q = quantizePolicyVmInputs(
+      {
+        action: actionA,
+        plan: { verb: 'revoke_session', resource: '/acct/1/s', semanticDist: 0, planSalt: 12345 },
+        policy: {
+          weights: { alpha: 250000, beta: 200000, gamma: 200000, delta: 200000, epsilon: 100000, zeta: 50000 },
+          theta1: 250000,
+          theta2: 600000,
+          kappa: 1000000,
+          budgetB: 1000000,
+          policyVerb: 'revoke_session',
+          policyResource: '/acct/1/s',
+          policyParamBound: 1000,
+          expiresAt: 9000000000000,
+          notBefore: 0,
+          maxBlast: 1000000,
+          maxDepth: 16,
+          revMax: 'irreversible',
+          rateMax: 100,
+          allocParent: 1000000,
+        },
+      },
+      QOPTS,
+    );
+    expect(q.action).toEqual([7n, 42n, 0n, 100n]);
+    expect(policyVmStructHash(q.action)).toEqual(d.actionHash);
+    expect(policyVmStructHash(q.plan!)).toEqual(d.planHash);
+    expect(policyVmStructHash(q.policy!)).toEqual(d.policyHash);
+    // and the standalone struct quantizers agree with the umbrella
+    expect(quantizePlanStruct({ verb: 'revoke_session', resource: '/acct/1/s', semanticDist: 0, planSalt: 12345 }, QOPTS)).toEqual(q.plan);
+    expect(quantizePolicyStruct(
+      {
+        weights: { alpha: 250000, beta: 200000, gamma: 200000, delta: 200000, epsilon: 100000, zeta: 50000 },
+        theta1: 250000, theta2: 600000, kappa: 1000000, budgetB: 1000000,
+        policyVerb: 'revoke_session', policyResource: '/acct/1/s', policyParamBound: 1000,
+        expiresAt: 9000000000000, notBefore: 0, maxBlast: 1000000, maxDepth: 16, revMax: 'irreversible', rateMax: 100, allocParent: 1000000,
+      },
+      QOPTS,
+    )).toEqual(q.policy);
   });
 });

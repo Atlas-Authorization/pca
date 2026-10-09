@@ -103,10 +103,18 @@ const PERIODS: Record<string, number> = {
   mo: 2_592_000_000, month: 2_592_000_000, months: 2_592_000_000,
 };
 
-/** Parse `"$500/day"`, `"$500"`, `"10/hour"`, `"10"`. Throws on anything malformed. */
+/** Longest limit string accepted (the grammar needs ~20 characters). Bounds the work AND the error text. */
+export const MAX_LIMIT_LENGTH = 64;
+
+/**
+ * Parse `"$500/day"`, `"$500"`, `"10/hour"`, `"10"`. Throws on anything malformed, and on anything longer than
+ * {@link MAX_LIMIT_LENGTH} characters (the previous `^\s*(\$)?\s*...` pattern backtracked quadratically on long
+ * whitespace runs). The pattern now runs on the trimmed string with a single `\s*` per gap, so it is linear.
+ */
 export function parseLimit(s: string): ParsedLimit {
   if (typeof s !== 'string' || s.trim().length === 0) throw new Error(`parseLimit: empty limit`);
-  const m = /^\s*(\$)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:\/\s*([a-zA-Z]+))?\s*$/.exec(s);
+  if (s.length > MAX_LIMIT_LENGTH) throw new Error(`parseLimit: limit is longer than ${MAX_LIMIT_LENGTH} characters`);
+  const m = /^(\$)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:\/\s*([a-zA-Z]+))?$/.exec(s.trim());
   if (!m) throw new Error(`parseLimit: cannot parse limit '${s}'`);
   const unit: 'usd' | 'count' = m[1] === '$' ? 'usd' : 'count';
   const amount = Number(m[2]);

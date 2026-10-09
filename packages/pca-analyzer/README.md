@@ -1,15 +1,36 @@
 # @atlasauth/pca-analyzer
 
-**Static analyzability of authority.** Proof-Carrying Authority can prove a quantitative trust-budget
-bound and verify one action, but on its own it cannot statically answer *"what can this whole delegated
-authority ever do?"* This package decides that over PCA's predicate/caveat policy — the conceptual gap
-the roadmap flagged — without a heavyweight SMT dependency.
+Static analyzability of authority for Proof-Carrying Authority (PCA). PCA can verify one action and prove a quantitative trust-budget bound, but on its own it cannot answer "what can this whole delegated authority ever do?". This package decides that over PCA's predicate/caveat policy (reachability, vacuity, totality, delegation-safety subsumption, disjointness, equivalence, and conformance to a declared intent) without an SMT dependency.
 
-It is a sound, **bounded** decision procedure in the spirit of AWS Cedar's symbolic compiler (SymCC,
-arXiv:2403.04651), which decides policy equivalence / subsumption / always-allow-deny with
-counterexamples. Instead of discharging to Z3, this analyzer exploits a *finite-distinguishing-value*
-property of PCA's predicate theory and decides by enumeration against the **real** `evaluatePredicates`
-from `@atlasauth/pca`.
+It is a sound, bounded decision procedure in the spirit of AWS Cedar's symbolic compiler (SymCC, arXiv:2403.04651), which decides policy equivalence, subsumption and always-allow/deny with counterexamples. Instead of discharging to Z3, it exploits a finite-distinguishing-value property of PCA's predicate theory and decides by enumeration against the real `evaluatePredicates` from `@atlasauth/pca`.
+
+## Install
+
+```sh
+npm i @atlasauth/pca-analyzer @atlasauth/pca
+```
+
+## Usage
+
+```ts
+import { compilePolicy } from '@atlasauth/pca';
+import { subsumes, intentConformance, reachable } from '@atlasauth/pca-analyzer';
+
+const parent = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$500' } });
+const child  = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$100' } });
+
+// Delegation safety: a child must not widen its parent.
+subsumes(parent, child).subsumes;   // true
+subsumes(child, parent);            // { subsumes: false, counterexample: { verb: 'stripe.refund', params: { amount: 300 }, ... } }
+
+// Can any input complete this action into an ALLOW? Returns a verified witness.
+reachable(parent, { verb: 'stripe.refund', resource: 'charge:1', params: { amount: 50 } }); // { reachable: true, witness }
+
+// Intent conformance: does the authority stay inside what was meant?
+const policy = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$20000' } });
+const r = intentConformance(policy, { verbs: ['stripe.refund'], maxAmount: 10000 });
+// r.conforms === false; r.violations[0].kinds includes 'over-amount'
+```
 
 ## Queries
 
@@ -27,21 +48,11 @@ witness.
 | `equivalent(a, b)` | Do the two admit exactly the same actions? |
 | `intentConformance(policy, intent)` | Does the policy admit **only** actions inside a declared intent envelope (verbs + resource scopes + amount ceiling)? |
 
-`intentConformance` is the safety check distinct from the runtime trust-budget. It catches the
+`intentConformance` is a safety check distinct from the runtime trust-budget. It catches the
 *"a $14k renewal under a $10k cap on an approved vendor still violates intent"* class: an action that
 passes the policy's predicates and stays under budget, yet falls outside what the principal intended,
 because the policy's own ceiling is higher than (or absent relative to) the intent cap.
 
-```ts
-import { subsumes, intentConformance } from '@atlasauth/pca-analyzer';
-
-// Delegation safety: a child capability must not widen its parent.
-const ok = subsumes(parentPolicy, childPolicy).subsumes; // false => counterexample attached
-
-// Intent conformance: does the authority stay inside what was meant?
-const r = intentConformance(policy, { verbs: ['stripe.refund'], maxAmount: 10000 });
-// r.conforms === false, r.violations[].kinds includes 'over-amount' for the $14k action
-```
 
 ## How it decides (the engine)
 
@@ -86,5 +97,14 @@ favourably chosen, and the one action-tied caveat, `reversibility_max`, becomes 
   enumeration is performed.
 
 The soundness contract: a proven verdict (`approximate` falsy) is correct for the fragment above; an
-`approximate` verdict is never a false "safe". An external Z3 / SMT-LIB backend for the regex and
-cross-field fragments is a possible future stretch; it is **not** required for the guarantees here.
+`approximate` verdict is never a false "safe". 
+
+## Status
+
+Experimental. Verdicts without `approximate: true` are exact for the fragment listed above; the cryptography in `@atlasauth/pca` is unaudited, though this package performs no cryptography itself. An external SMT backend for the regex and cross-field fragments is not included.
+
+Source and issues: https://github.com/Atlas-Authorization/pca
+
+## License
+
+MIT - see LICENSE

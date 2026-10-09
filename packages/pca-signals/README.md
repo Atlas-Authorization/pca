@@ -4,7 +4,7 @@ Shared Signals Framework (SSF / CAEP) for **Proof-Carrying Authority** — the *
 mid-run **kill-switch** channel. Build and verify **Security Event Tokens (RFC 8417)** for grant
 revocation, and fold them into the subscriber state a resource server consults alongside `requirePCA`.
 
-## Honest framing (compose, don't replace)
+## How it fits (compose, don't replace)
 
 PCA's native enforcement is **passive / pull**: a verifier checks a signed PCActn default-deny, and the
 grant's own **counter / budget / revocation-epoch** bound how much a valid proof may do. What that does
@@ -25,6 +25,14 @@ remain the passive floor. A revoked grant denies the action **even with a valid,
 - **RFC 9493** — Subject Identifiers for SETs (the structured `sub_id` / per-event `subject`).
 
 Signed with **EdDSA (Ed25519)** via [`jose`](https://github.com/panva/jose).
+
+## Install
+
+```sh
+npm i @atlasauth/pca-signals jose
+```
+
+Use it alongside `@atlasauth/pca` (`requirePCA`): consult the subscriber state before honouring a valid PCActn.
 
 ## Event types
 
@@ -96,3 +104,11 @@ or malformed `events`.
 - `streamProcessor(parsedSets, state?)` — fold a sequence, ordered by `event_timestamp`.
 - `EVENT_TYPES`, `SET_TYP`, `SET_ALG` constants; `GrantRevokedEvent`, `KillSwitchEvent`, `SetEvents`,
   `RevocationState`, `ParsedSet` types.
+
+## Status
+
+Experimental and unaudited. Only the SET build/verify and in-memory subscriber state are provided; stream management, transmitter discovery and delivery (push or poll) are left to you. Key distribution for `verifySET` is also yours to supply.
+
+## License
+
+MIT - see LICENSE

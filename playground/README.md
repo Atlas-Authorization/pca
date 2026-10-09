@@ -19,11 +19,14 @@ verifies with `audience`, so the `wire`, `audience` and `validity` checks show p
 
 ## Rebuild the bundle
 
-From the repo root, using the repo's existing esbuild (no new dependency):
+    tools/pca-playground/build.sh
 
-    npx esbuild packages/pca/src/index.ts --bundle --format=esm --platform=browser --outfile=tools/pca-playground/pca.esm.js
-
-If `npx` cannot find it: `node_modules/.pnpm/esbuild@0.24.2/node_modules/esbuild/bin/esbuild ...`.
+This bundles `entry.ts` (which re-exports only what `index.html` uses, directly from `packages/pca/src`) with the
+repo's esbuild for `--platform=browser`. The only Node builtins the reachable code touches (`node:module`,
+`node:path`, used by the lazy FN-DSA wasm loader in `pq.ts`) are aliased to tiny shims in `shims/`; the loader then
+fails closed in the browser. The script fails if the output still references any `node:` builtin. The committed
+`pca.esm.js` is generated: rebuild it after changing `packages/pca/src` (it includes the current normative checks,
+e.g. `grant_ref_bound`, which the page shows per clause).
 
 ## Mapping
 

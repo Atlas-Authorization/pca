@@ -120,7 +120,7 @@ describe('Threat class 2: ReDoS / regex built from input', () => {
     // A 100k-char input that does not match: a catastrophic-backtracking regex would stall here.
     expect(() => parseLimit('$' + '1'.repeat(100_000) + 'x')).toThrow();
     // A 100k-digit amount overflows to Infinity and is rejected (not hung, not accepted).
-    expect(() => parseLimit('$' + '9'.repeat(100_000))).toThrow(/bad amount|cannot parse/);
+    expect(() => parseLimit('$' + '9'.repeat(100_000))).toThrow('parseLimit: limit is longer than 64 characters');
     expect(Date.now() - t0).toBeLessThan(1000);
   });
 

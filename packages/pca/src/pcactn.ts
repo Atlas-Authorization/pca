@@ -4,6 +4,7 @@ import { strictParse } from './strict-json';
 import { PCACTN_WIRE_VERSION, validateWireV2 } from './wire';
 import { sign } from './keys';
 import {
+  type LessSuiteKey,
   type MlDsaKeyPair,
   type SigAlg,
   type SigSuite,
@@ -11,6 +12,7 @@ import {
   type SuiteSecretKeys,
   encodeMlDsa87PublicKey,
   encodeMlDsaPublicKey,
+  encodeLessPublicKey,
   encodeSlhDsa256sPublicKey,
   encodeSlhDsaPublicKey,
   resolveSigAlg,
@@ -173,6 +175,8 @@ export interface LeafSuiteSecretKeys {
   mlDsa87?: MlDsaKeyPair;
   /** SLH-DSA-SHA2-256s key pair (slh-dsa-sha2-256s, hybrid-ed25519-slh-dsa-sha2-256s — Category-5). */
   slhDsa256s?: SlhDsaKeyPair;
+  /** LESS (category 1) key material + signSeed (less-cat1, hybrid-ed25519-less-cat1; OPTIONAL pca-less-wasm backend). */
+  lessCat1?: LessSuiteKey;
 }
 
 /**
@@ -197,6 +201,10 @@ function leafPqPublicKey(suite: SigSuite, keys: LeafSuiteSecretKeys): string {
   if (suite.hasSlhDsa256s) {
     if (!keys.slhDsa256s) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires slhDsa256s key material`);
     return encodeSlhDsa256sPublicKey(keys.slhDsa256s.publicKey);
+  }
+  if (suite.hasLessCat1) {
+    if (!keys.lessCat1) throw new TypeError(`signPCActnSuite: '${suite.alg}' requires lessCat1 key material`);
+    return encodeLessPublicKey(keys.lessCat1.publicKey);
   }
   // Unreachable: every non-ed25519 suite in the registry sets exactly one PQ family flag + needsPqPk.
   throw new TypeError(`signPCActnSuite: '${suite.alg}' has no PQ public key`);
@@ -238,6 +246,7 @@ export function signPCActnSuite(body: PCActnBody, opts: { alg?: SigAlg } & LeafS
     slhDsa: opts.slhDsa,
     mlDsa87: opts.mlDsa87,
     slhDsa256s: opts.slhDsa256s,
+    lessCat1: opts.lessCat1,
   };
   const parts = signWithSuite(suite.alg, seamKeys, msg);
   return parts.pq_sig !== undefined ? { ...withSuite, sig: parts.sig, pq_sig: parts.pq_sig } : { ...withSuite, sig: parts.sig };
@@ -486,8 +495,8 @@ export async function verifyPCActnCore(
   const ctx: VerifyContext = { pcactn: p, grant: opts.grant, nowEpoch: now };
 
   try {
-    // NORMATIVE CHECK ORDER: wire, version, audience, validity, cap_chain, plan_inclusion, leaf_signature,
-    // counter, then hooks. A wire failure is terminal: nothing else is evaluated.
+    // NORMATIVE CHECK ORDER: wire, version, audience, validity, cap_chain, grant_ref_bound, plan_inclusion,
+    // leaf_signature, counter, then hooks. A wire failure is terminal: nothing else is evaluated.
     const wire = validateWireV2(p);
     if (wire !== null) {
       checks.wire = 'fail';
@@ -527,6 +536,18 @@ export async function verifyPCActnCore(
       const r = verifyChain(chain, opts.grant.issuer);
       if (r.ok) checks.cap_chain = 'pass';
       else fail('cap_chain', r.reason ?? 'invalid');
+    }
+
+    // 1a. grant_ref binding (normative): the signed `grant_ref` MUST be a non-empty string byte-equal to the id of
+    //     the ROOT capability of the presented chain (cap_chain[0].id). Replay state (nonce / counter / budget
+    //     namespaces) is keyed on grant_ref, so an unbound value would let a holder mint fresh namespaces.
+    //     Evaluated independently of the cap_chain verdict and FAIL-CLOSED on an empty / malformed chain.
+    const chainRoot: unknown = Array.isArray(chain) && chain.length > 0 ? chain[0] : undefined;
+    const rootId: unknown = typeof chainRoot === 'object' && chainRoot !== null ? (chainRoot as { id?: unknown }).id : undefined;
+    if (typeof p.grant_ref === 'string' && p.grant_ref.length > 0 && typeof rootId === 'string' && p.grant_ref === rootId) {
+      checks.grant_ref_bound = 'pass';
+    } else {
+      fail('grant_ref_bound', 'grant_ref is not the id of the root capability in cap_chain');
     }
 
     // 2. plan inclusion (L1): the leaf is recomputed from the action itself

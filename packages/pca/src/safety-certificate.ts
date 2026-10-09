@@ -15,6 +15,7 @@
  */
 
 import { b64u, canonicalBytesLenient, utf8, __canonicalizeLenientServerOnly } from './hash';
+import { MAX_JSON_BYTES } from './strict-json';
 import { publicKeyOf } from './keys';
 import {
   type MlDsaKeyPair,
@@ -210,9 +211,11 @@ export function encodeSafetyCertificate(cert: SafetyCertificate): string {
   return __canonicalizeLenientServerOnly(cert);
 }
 
-/** Parse a certificate from its JSON string (shape-guarded; never throws, returns null on garbage). */
+/** Parse a certificate from its JSON string (shape-guarded and size-bounded at MAX_JSON_BYTES; never throws, returns null on garbage). */
 export function decodeSafetyCertificate(s: string): SafetyCertificate | null {
   try {
+    // same input-size bound as the strict wire parser (UTF-8 bytes); oversize input is garbage, not work to do
+    if (typeof s !== 'string' || new TextEncoder().encode(s).length > MAX_JSON_BYTES) return null;
     const v = JSON.parse(s) as SafetyCertificate;
     if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
     if (v.v !== SAFETY_CERT_VERSION || typeof v.sig !== 'string' || typeof v.guardian !== 'string') return null;

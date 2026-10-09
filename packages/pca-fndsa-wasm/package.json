@@ -1,7 +1,29 @@
 {
   "name": "@atlasauth/pca-fndsa-wasm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "FN-DSA (Falcon, FIPS 206) signature backend for @atlasauth/pca: FN-DSA-512 / FN-DSA-1024 keygen, signing and verification from the vetted pure-Rust fn-dsa crate family (Thomas Pornin) compiled to WebAssembly. Verification is the PCA verifier's public-key operation.",
+  "keywords": [
+    "fn-dsa",
+    "falcon",
+    "fips 206",
+    "webassembly",
+    "wasm",
+    "post-quantum signatures",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-fndsa-wasm"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -14,7 +36,10 @@
   "files": [
     "dist",
     "wasm",
-    "crate"
+    "crate",
+    "README.md",
+    "LICENSE",
+    "!crate/target"
   ],
   "scripts": {
     "build:wasm": "cd crate && cargo build --release --target wasm32-unknown-unknown && cp target/wasm32-unknown-unknown/release/pca_fndsa_wasm.wasm ../wasm/pca_fndsa_wasm.wasm && cargo clean",
@@ -25,6 +50,9 @@
   "devDependencies": {
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public"

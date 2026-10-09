@@ -1,16 +1,5 @@
-# wasm artifact drop-in
+# wasm artifact
 
-The compiled LESS module goes here as **`less_cat1.wasm`** (NIST Category 1,
-`CATEGORY=252 TARGET=45`).
-
-It is **not** built on this Mac (no `wasi-sdk`). Produce it off-box:
-
-```bash
-# on an x86_64 Linux VM:
-~/.pca-vm-state/lessbuild.sh /tmp/less-work /tmp/less-out
-cp /tmp/less-out/less_cat1.wasm ./less_cat1.wasm
-```
-
-See `../BUILD_NOTES.md` for the full recon and `../README.md` for usage.
-Until `less_cat1.wasm` exists here, every `@atlasauth/pca-less-wasm` call throws
-a `LessError` pointing back to this step.
+`less_cat1.wasm` (NIST category 1, `CATEGORY=252 TARGET=45`) is built off-box with `scripts/lessbuild.sh`
+(wasi-sdk-25 on x86_64 Linux); see ../README.md "Build provenance". After replacing it run
+`node scripts/embed-wasm.mjs`.

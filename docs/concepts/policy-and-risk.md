@@ -53,6 +53,8 @@ Example: revoke only sessions on devices other than the current one.
   where: [{ field: 'action.params.device', op: 'ne', ref: 'env.current_device' }] }
 ```
 
+**Ordering operators.** `lt`, `lte`, `gt` and `gte` compare two finite numbers numerically, or two strings by the **byte-wise order of their UTF-8 encoding** (Unicode code point order): `"\uFFFF"` sorts before `"\u{10000}"`, unlike JavaScript's `<`, which compares UTF-16 code units. There is no Unicode normalisation (`é` as `U+00E9` and as `U+0065 U+0301` are different strings), no case folding and no locale. A string with a lone surrogate (not valid UTF-8) is unordered, so the condition is false. Any other operand pair is unordered and false.
+
 Everything fails closed: a missing field, missing operand, unknown operator, forbidden path segment (`__proto__`, `constructor`, `prototype`) or malformed predicate makes the condition false. `exists` with `value: false` means "must be absent". The pattern for `re:` is authored by the principal and signed into the grant, so it is trusted input.
 
 ## Caveats

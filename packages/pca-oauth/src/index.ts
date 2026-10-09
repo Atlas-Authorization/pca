@@ -2,7 +2,7 @@
  * OAuth 2.1 / MCP-authorization interop bridge for Proof-Carrying Authority.
  *
  * PCA is the PROOF layer: a signed PCActn whose `aud` binds one action to one resource server is the
- * credential a verifier (`@atlasauth/backend` `requirePCA`) checks default-deny. This package does NOT
+ * credential a verifier (`@atlasauth/pca` `requirePCA`) checks default-deny. This package does NOT
  * turn a PCActn into a bearer token and does NOT add an authorization server. It makes a PCA resource
  * server *compose with* the de-facto agent↔tool wire — the MCP OAuth 2.1 Resource-Server handshake —
  * so a generic OAuth / MCP client can DISCOVER the RS, be CHALLENGED by it, and BIND its request to it,
@@ -364,7 +364,7 @@ export function mcpUnauthorized(prmUrl: string, opts: WwwAuthenticateOptions = {
 /**
  * Thin helper — upgrade a `requirePCA` deny result's 401 so its `WWW-Authenticate` ALSO carries the MCP
  * `resource_metadata` pointer. Given the deny result (any object with an optional `wwwAuthenticate: string`,
- * i.e. `@atlasauth/backend`'s `PcaGuardResult` deny arm) and the PRM URL, it reuses the existing PCA
+ * i.e. `@atlasauth/pca`'s `PcaGuardResult` deny arm) and the PRM URL, it reuses the existing PCA
  * challenge verbatim and prepends the `Bearer resource_metadata="<prmUrl>"` challenge, so one 401 now
  * satisfies both a generic MCP/OAuth client and a PCA-aware client. All other fields are preserved.
  */

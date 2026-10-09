@@ -4,7 +4,7 @@
  *   app.post('/refunds', { preHandler: pcaFastify({ audience: 'ins_acme', resolveGrant, budgetStore, hooks, context }) },
  *     async (req, reply) => { const { verdict, pcactn } = (req as { pca: PcaAttachment }).pca; ... });
  *
- * It verifies the inbound PCActn with the framework-agnostic `requirePCA` guard from `@atlasauth/backend`
+ * It verifies the inbound PCActn with the framework-agnostic `requirePCA` guard from `@atlasauth/pca`
  * (default-deny: a required check that is unenforced DENIES) and, on success, attaches the verdict +
  * PCActn to `req[attachAs]` (default `req.pca`) and returns so the route handler runs. On failure it answers
  * 401/403 with a WWW-Authenticate challenge (sending from a preHandler short-circuits the route). The client
@@ -15,8 +15,8 @@
  * so this stays compatible across Fastify 4 and 5.
  */
 
-import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/backend';
-import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/backend';
+import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
+import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/pca';
 import type { PCActn } from '@atlasauth/pca';
 
 /** Structural shim of a Fastify request (only `headers`/`body` are read; the rest passes through). */

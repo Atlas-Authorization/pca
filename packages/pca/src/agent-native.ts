@@ -1,4 +1,4 @@
-import { canonicalBytes, canonicalize, hashCanonical, b64u, unb64u } from './hash';
+import { canonicalBytes, canonicalize, hashCanonical, b64u, unb64u, compareUtf8 } from './hash';
 import { sign, verifyB64u } from './keys';
 import { verifyChain, type Caveat, type CapabilityChain } from './capability';
 import { ENVELOPE_CAVEAT, readEnvelope } from './envelope';
@@ -713,9 +713,9 @@ export interface AuthorityEnvelope {
 }
 
 function intersectVerbs(a: string[], b: string[]): string[] {
-  if (a.includes('*')) return [...new Set(b)].sort();
-  if (b.includes('*')) return [...new Set(a)].sort();
-  return [...new Set(a.filter((x) => b.includes(x)))].sort();
+  if (a.includes('*')) return [...new Set(b)].sort(compareUtf8);
+  if (b.includes('*')) return [...new Set(a)].sort(compareUtf8);
+  return [...new Set(a.filter((x) => b.includes(x)))].sort(compareUtf8);
 }
 
 /** Intersect two resource patterns; null = empty; undefined = cannot decide symbolically (regex). */
@@ -750,7 +750,7 @@ function collapseResources(list: string[]): string[] | null {
       lit = r;
     }
   }
-  const out = [...(lit !== undefined && lit !== '*' ? [lit] : []), ...[...res].sort()];
+  const out = [...(lit !== undefined && lit !== '*' ? [lit] : []), ...[...res].sort(compareUtf8)];
   return out.length ? out : ['*'];
 }
 
@@ -761,7 +761,7 @@ function scopeOfPredicate(p: Predicate): Scope | null {
   if (p.resource !== undefined && !isStr(p.resource)) return null;
   const where = p.where === undefined ? [] : Array.isArray(p.where) ? (p.where as Condition[]) : null;
   if (!where) return null;
-  return { verbs: [...new Set(verbs)].sort(), resources: [p.resource ?? '*'], where };
+  return { verbs: [...new Set(verbs)].sort(compareUtf8), resources: [p.resource ?? '*'], where };
 }
 
 function intersectScopes(a: Scope[], b: Scope[]): Scope[] {
@@ -941,15 +941,15 @@ export function describeEnvelope(chain: CapabilityChain, now?: number, expectedR
           if (r.startsWith('re:')) opaque.add(r);
         });
       }
-      env.verbs = [...vs].sort();
-      env.resources = [...rs].sort();
+      env.verbs = [...vs].sort(compareUtf8);
+      env.resources = [...rs].sort(compareUtf8);
     } else {
       env.verbs = null;
       env.resources = null;
     }
-    env.opaqueResourceConstraints = [...opaque].sort();
-    env.tools = tools === null ? null : [...new Set<string>(tools)].sort();
-    env.unsatisfiable = [...bad].sort();
+    env.opaqueResourceConstraints = [...opaque].sort(compareUtf8);
+    env.tools = tools === null ? null : [...new Set<string>(tools)].sort(compareUtf8);
+    env.unsatisfiable = [...bad].sort(compareUtf8);
     if (env.unsatisfiable.length) {
       env.scopes = [];
       env.verbs = [];

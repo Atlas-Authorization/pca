@@ -53,7 +53,7 @@ On the hosted surface the entries listing reports `shredded: true` for an entry 
 
 Revocation must be checkable by the resource server **offline**, with no phone-home on the hot path. `revocation.ts` implements the revocation set as a **sorted Merkle set**, deterministic and free of RSA moduli or trusted setup.
 
-- Leaves are the revoked ids in ascending order (UTF-16 code units) in an RFC 6962 shaped tree.
+- Leaves are the revoked ids in ascending UTF-8 byte order (Unicode code point order, as for canonical JSON keys) in an RFC 6962 shaped tree.
 - The published root binds the set size: `root = SHA-256("pca-revset/v1\0" || canonical({ size, tree }))`. The empty tree is `SHA-256("")`.
 - **Membership**: an ordinary inclusion proof (`verifyMembership`).
 - **Non-membership** (`verifyNonMembership(root, proof, id)`): because leaves are sorted, `id` is absent iff two **adjacent** leaves `lo < id < hi` are both proven included at consecutive indices, or `id` is below the first leaf, above the last, or the set is empty. Leaf positions are verified from the proof path shape, with index and size bound by the root, so a prover cannot pass off non-adjacent leaves as neighbours. A revoked id has no bracketing pair and therefore no valid proof.

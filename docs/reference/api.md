@@ -35,6 +35,48 @@ PCA realm="atlas", error="<missing_pcactn|invalid_pcactn|unknown_grant>", hint="
 
 **Presenting a PCActn.** Either the header `PCA-Action: <base64url(PCActn JSON)>` or a JSON body `{ "pcactn": <object or string> }`.
 
+## Payments and mesh checks, and a breaking change
+
+The hosted surface exposes only the pure, secret-free checks for payments and the capability mesh:
+
+| Method and path | Purpose |
+|---|---|
+| `POST /v1/pca/payment-mandates/authorize` | Decide a charge against a payment mandate (auto, step-up or deny). Mutates nothing. |
+| `POST /v1/pca/mesh/proofs/verify` | Verify a MeshProof against a pinned trust set. |
+| `POST /v1/pca/mesh/ledger/consistency` | Check an RFC 9162 append-only consistency proof. |
+
+> **Breaking change.** The routes `POST /v1/pca/payment-mandates`, `POST /v1/pca/payment-mandates/pcactn`, `POST /v1/pca/mesh/proofs` and `POST /v1/pca/mesh/witness` have been removed. They accepted a signing secret key (`principal_secret`, `signer_secret`, `leaf_secret`, `witness_secret`) in the request body, which any TLS-terminating proxy, APM body capture or crash dump could observe; and a witness that hands its key to a third party is not an independent witness. They now return `404`. Sending a `*_secret` field to a remaining route returns `400` (unknown field). Do the signing on the client with `@atlasauth/pca-payments` and `@atlasauth/pca`, and use the hosted routes only to decide, verify or check consistency.
+
+```ts
+import { generateKeyPair, encodeKey, mesh } from '@atlasauth/pca';
+import { buildPaymentMandate, authorizeCharge, chargeToPCActn } from '@atlasauth/pca-payments';
+
+const principal = generateKeyPair();
+const agent = generateKeyPair();
+
+// Build and sign locally; secrets never leave your process.
+const mandate = buildPaymentMandate({
+  principalSecret: principal.secretKey,
+  principalPublic: encodeKey(principal.publicKey),
+  agentPublic: encodeKey(agent.publicKey),
+  merchants: ['m1'],
+  currency: 'USD',
+  perTransactionCap: 100,
+  autoApproveThreshold: 50,
+  cumulativeCap: 1000,
+});
+const charge = { merchant: 'm1', amount: 10 };
+authorizeCharge(mandate, charge).outcome; // 'auto' (same decision as POST /v1/pca/payment-mandates/authorize)
+
+// Sign the charge as the agent, then submit the PCActn to POST /v1/pca/actions.
+const { pcactn } = chargeToPCActn(mandate, charge, { signerSecret: agent.secretKey, aud: '<instance id>', counter: 1 });
+
+// Mesh: assemble locally (leaf key stays with you); verify locally or via POST /v1/pca/mesh/proofs/verify.
+// const proof = mesh.assembleMeshProof({ chain, hops, action, leafSecret });
+// mesh.verifyMeshProof(proof, trust);
+// Witnesses run their own `new mesh.MeshWitness(secret)` in their own process.
+```
+
 ## Route summary
 
 | Method and path | Auth | Purpose |
@@ -44,6 +86,7 @@ PCA realm="atlas", error="<missing_pcactn|invalid_pcactn|unknown_grant>", hint="
 | `POST /v1/pca/actions` | public | Verify a PCActn, anchor it, return a receipt |
 | `GET /v1/pca/stepups/:id` | public | Poll a step-up |
 | `POST /v1/pca/stepups/:id/cosign` | public (principal-signed) | Submit the principal-device share |
+| `POST /v1/pca/stepups/:id/reattest` | public (attestation-verified) | Complete a held attested step-up with a fresh attestation |
 | `POST /v1/pca/stepups/:id/deny` | `sk_` `pca:write` | Deny a pending step-up |
 | `GET /v1/pca/claims/:id` | public | Poll an optimistic claim |
 | `POST /v1/pca/claims/:id/challenge` | public | Trigger re-adjudication of an open claim |
@@ -157,6 +200,11 @@ Only `role: "principal"` is accepted, and `publicKey` must equal the grant's pri
 - `202` `{ ...stepup view, "step_up_required": true }` if still short of `required_t`.
 - `200` `{ ...stepup view, "allow": true, "verdict", "receipt" }` when the threshold is met: the action is re-verified in full, the trust budget is recharged (a human touch), the action is anchored, and the step-up becomes `approved`.
 - If the held action no longer passes (revoked, frozen, replayed counter, policy), the step-up ends `denied` and the denial response is returned.
+- `202` `{ ...stepup view, "result": "reattestation_required", "reason", "reattestation": { nonce, epoch, grant_ref, holder, action_digest, issued_at, expires_at } }` when the quorum is met but the action's attestation is no longer fresh. The step-up stays `pending` with its cosignatures; complete it with `POST /v1/pca/stepups/:id/reattest`.
+
+### `POST /v1/pca/stepups/:id/reattest`
+
+Public, self-authenticating (the attestation must verify). Request `{ "attestation"?: {...}, "action_digest"?: "..." }`. Without `attestation` it returns the outstanding fresh-nonce challenge (`202`, same shape as above; an unexpired one is reused). With `attestation` and `action_digest` (the step-up's) it admits the held action exactly once: `200` `{ ...stepup view, "allow": true, "verdict", "receipt" }`. `409` `{ "result": "reattestation_rejected", "reason" }` with `reason` one of `action_digest_mismatch`, `no_outstanding_challenge`, `attestation_nonce_mismatch`, `attestation_nonce_expired` (a fresh challenge is returned alongside); `403` `reattestation_rejected` when the evidence does not verify (step-up stays pending); `409` also when the quorum is not met, the requirement no longer applies, or the step-up is not pending. See [Anti-replay](./anti-replay.md).
 
 ### `POST /v1/pca/stepups/:id/deny`
 

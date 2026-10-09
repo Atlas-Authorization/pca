@@ -10,7 +10,7 @@ or policy engine) can see **who invoked whom** across an agent swarm over a plai
 This is a **bridge, not a replacement**. The cryptographic authority for an action remains the PCActn's
 signed, hash-linked, attenuating capability chain (`@atlasauth/pca`): every hop is signed by the key the
 parent is bound to, caveats are append-only, and widening is impossible by construction. A verifier
-(`@atlasauth/backend` `requirePCA` / the adjudicator) checks **that**, default-deny.
+(see `@atlasauth/pca`) checks **that**, default-deny.
 
 The Transaction Token minted here is the **interop envelope** around the chain of custody and the action.
 It is **not** a bearer credential and does **not** authorize anything on its own — it lets standards-native
@@ -92,3 +92,13 @@ const { chain, action, claims } = await fromTransactionToken(jwt, tts.publicKey)
 
 Signing is EdDSA (Ed25519) via [`jose`](https://github.com/panva/jose). Ed25519 key material interops
 with `@atlasauth/pca` key pairs directly (32-byte secret seed / 32-byte public key).
+
+## Status
+
+The Transaction Tokens drafts are still evolving IETF work in progress; the `tctx` shape here follows the
+PCA action (`verb`, `resource`, `aud`) and may change with the drafts. The cryptography in the PCA stack has
+not been independently audited.
+
+## License
+
+MIT - see LICENSE

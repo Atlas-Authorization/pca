@@ -32,7 +32,7 @@
  *
  * Pure and deterministic: Ed25519 signatures are deterministic, and every timestamp is explicit.
  */
-import { b64u, canonicalBytes, hashCanonical, utf8 } from './hash';
+import { b64u, canonicalBytes, hashCanonical, utf8, compareUtf8 } from './hash';
 import { type Capability, type Caveat, capHash, delegate, mintRoot, verifyChain } from './capability';
 import { encodeKey, publicKeyOf, sign, verifyB64u } from './keys';
 import { type TrustBudget, debit, debitConsolidated, safetyBound, subBudget } from './risk';
@@ -275,7 +275,7 @@ export interface EffectiveAuthority {
 const KNOWN = new Set(['scope', 'resource', 'max_amount', 'expires', 'audience', 'max_hops']);
 
 function intersect(a: string[] | undefined, b: string[]): string[] {
-  return a === undefined ? [...new Set(b)].sort() : a.filter((x) => b.includes(x));
+  return a === undefined ? [...new Set(b)].sort(compareUtf8) : a.filter((x) => b.includes(x));
 }
 function minOf(a: number | undefined, b: number): number {
   return a === undefined ? b : Math.min(a, b);

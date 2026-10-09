@@ -1,4 +1,4 @@
-import { canonicalize } from './hash';
+import { canonicalize, compareUtf8, hasLoneSurrogate } from './hash';
 import type { Caveat, CaveatEvaluator } from './capability';
 
 /**
@@ -149,11 +149,23 @@ function deepEq(a: unknown, b: unknown): boolean {
   }
 }
 
+/**
+ * NORMATIVE string order for lt/lte/gt/gte: the byte-wise order of the UTF-8 encoding, which is exactly Unicode code
+ * point order. JavaScript's `<` compares UTF-16 code units and would mis-order astral characters against
+ * U+E000..U+FFFF (U+FFFF vs U+10000); every other implementation compares code points / UTF-8 bytes. No normalisation
+ * (NFC and NFD forms of one text are different strings), no case folding, no locale. A string with a LONE surrogate
+ * has no UTF-8 encoding, so it has no order: null (the ordering operators then evaluate false — fail closed).
+ */
+function orderUtf8(a: string, b: string): number | null {
+  if (hasLoneSurrogate(a) || hasLoneSurrogate(b)) return null;
+  return Math.sign(compareUtf8(a, b));
+}
+
 function ordered(a: unknown, b: unknown): number | null {
   if (typeof a === 'number' && typeof b === 'number' && Number.isFinite(a) && Number.isFinite(b)) {
     return a < b ? -1 : a > b ? 1 : 0;
   }
-  if (typeof a === 'string' && typeof b === 'string') return a < b ? -1 : a > b ? 1 : 0;
+  if (typeof a === 'string' && typeof b === 'string') return orderUtf8(a, b);
   return null;
 }
 

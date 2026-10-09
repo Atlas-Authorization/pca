@@ -1,7 +1,27 @@
 {
   "name": "@atlasauth/pca-express",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Express middleware for Proof-Carrying Authority: requirePCA() verifies the inbound PCActn and attaches the verdict, or answers 401/403 with a WWW-Authenticate challenge.",
+  "keywords": [
+    "express",
+    "middleware",
+    "401",
+    "403",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-express"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -17,8 +37,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@atlasauth/pca": "workspace:*",
-    "@atlasauth/backend": "workspace:*"
+    "@atlasauth/pca": "workspace:*"
   },
   "peerDependencies": {
     "express": "^4 || ^5"
@@ -34,8 +53,12 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "publishConfig": {
     "access": "public"
   }
