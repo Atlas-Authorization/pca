@@ -1,0 +1,111 @@
+{
+  "retrieved": "2026-10-08",
+  "ap2Repository": "https://github.com/google-agentic-commerce/AP2",
+  "ap2Commit": "e1ea56db72a6385bce3e5c1112b3a56ce60acb43",
+  "ap2CommitDate": "2026-04-29",
+  "files": [
+    {
+      "file": "ap2-doc-encoded-tokens.json",
+      "kind": "official-documentation-examples",
+      "source": [
+        "https://github.com/google-agentic-commerce/AP2/blob/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/docs/ap2/payment_mandate.md",
+        "https://github.com/google-agentic-commerce/AP2/blob/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/docs/ap2/checkout_mandate.md"
+      ],
+      "sha256": "c12abffcd4793afadd2ce69491d31e91ef39e4117a8f73ef27b820fff8eaad7d",
+      "note": "JSON example blocks / \"Encoded Token\" blocks extracted verbatim from the AP2 documentation; blocks that are not valid JSON as published were skipped (Apache-2.0)."
+    },
+    {
+      "file": "ap2-doc-examples.json",
+      "kind": "official-documentation-examples",
+      "source": [
+        "https://github.com/google-agentic-commerce/AP2/blob/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/docs/ap2/payment_mandate.md",
+        "https://github.com/google-agentic-commerce/AP2/blob/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/docs/ap2/checkout_mandate.md"
+      ],
+      "sha256": "9ec41786e496de78673c09cf4849692d0874171561a3537379a9e23d15bfe7a1",
+      "note": "JSON example blocks / \"Encoded Token\" blocks extracted verbatim from the AP2 documentation; blocks that are not valid JSON as published were skipped (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/checkout_mandate.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/checkout_mandate.json",
+      "sha256": "10c0341edfeaa9084d3704ef8e94869de20499c8e357068d65f8d622bf79483a",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/open_checkout_mandate.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/open_checkout_mandate.json",
+      "sha256": "bd6eb1c95a5ccb967259fae49100287755251c9d1bdb48342d96dd99fcb30b41",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/open_payment_mandate.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/open_payment_mandate.json",
+      "sha256": "65394d52af4d3326ab6b4bdcc2aa38d65a918d11b90efd8518c583bf015ab568",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/payment_mandate.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/payment_mandate.json",
+      "sha256": "94c4af64ed29825cb956705ae763d42f3c04d22feb60b8d838dae2bb1eea1fb1",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/types/amount.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/types/amount.json",
+      "sha256": "15271efa8064539b8ded7c69f213ed7a1e64f8d9634b405ce926c2dcbbc41c0f",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/types/item.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/types/item.json",
+      "sha256": "48c24532f105fda096ab89a27e04e896a597fda7e308e96cc88e11ce6a6632f9",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/types/jwk.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/types/jwk.json",
+      "sha256": "4040c2b2a105cc5d66241896189cb9c59956246c9fab7dc38f9c1da98f12cacb",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/types/merchant.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/types/merchant.json",
+      "sha256": "13457334d8577230a1cce5265971cfc02f68f5d4e97f74bd2e78128105d3ab31",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/types/payment_instrument.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/types/payment_instrument.json",
+      "sha256": "b3bcea7a7b5bbf2b0aa781135ac3b6907280822aa84797161c2d3d104d0cbe8c",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "ap2-schemas/types/pisp.json",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/google-agentic-commerce/AP2/e1ea56db72a6385bce3e5c1112b3a56ce60acb43/code/sdk/schemas/ap2/types/pisp.json",
+      "sha256": "60a5c8c09236f5d1e84a25bff4fd4cff05fb3fa8e3648cbab483322f27388630",
+      "note": "AP2 JSON Schema, verbatim (Apache-2.0)."
+    },
+    {
+      "file": "x402-v1-examples.json",
+      "kind": "official-specification-examples",
+      "source": [
+        "https://github.com/coinbase/x402/blob/dd927a26cfefc98c24b3ec38b3a8f204dad0c60d/specs/transports-v1/http.md",
+        "https://github.com/coinbase/x402/blob/dd927a26cfefc98c24b3ec38b3a8f204dad0c60d/specs/x402-specification-v1.md"
+      ],
+      "sha256": "49597d55be5c68861d26e3dc536af382b2fd5e1d7979d8f94a69d8bf7b73c2e2",
+      "note": "x402 v1 HTTP transport examples (402 body, X-PAYMENT header and its decoded payload, settlement response) copied verbatim; the PaymentRequirements field table is extracted from the v1 specification (Apache-2.0)."
+    }
+  ],
+  "x402Repository": "https://github.com/coinbase/x402",
+  "x402Commit": "dd927a26cfefc98c24b3ec38b3a8f204dad0c60d",
+  "x402CommitDate": "2026-04-21"
+}

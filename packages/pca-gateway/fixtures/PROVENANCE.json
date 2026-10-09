@@ -1,0 +1,59 @@
+{
+  "retrieved": "2026-10-08",
+  "files": [
+    {
+      "file": "aws-http-api-payload-v2.json",
+      "kind": "official-documentation-example",
+      "source": "https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-lambda-authorizer.html",
+      "sourceSha256": "6bdb71a7369aacadc7d8ce25a379302772346ecab94fb32876b2d3a0cbe5a716",
+      "sha256": "0c9e3d70b256bf3cf1429a419ff2201d323de967cb6408f75a80ee8129e3dd19",
+      "retrieved": "2026-10-08",
+      "note": "Payload format 2.0 request-authorizer event, JSON reproduced verbatim from the documentation example (re-indented)."
+    },
+    {
+      "file": "aws-http-api-payload-v1.json",
+      "kind": "official-documentation-example",
+      "source": "https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-lambda-authorizer.html",
+      "sourceSha256": "6bdb71a7369aacadc7d8ce25a379302772346ecab94fb32876b2d3a0cbe5a716",
+      "sha256": "98efee65ded14a9114a70a751fa69f2ae0c0d3654d6c90d26f7f44e76ca4c6bb",
+      "retrieved": "2026-10-08",
+      "note": "Payload format 1.0 request-authorizer event for HTTP APIs, reproduced verbatim from the documentation example (re-indented)."
+    },
+    {
+      "file": "aws-rest-request-authorizer.json",
+      "kind": "official-documentation-example",
+      "source": "https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-lambda-authorizer-input.html",
+      "sourceSha256": "ccaaf41471569c5563576a0a0c96d8b642cb18f6dfe35ded92f460729778e25f",
+      "sha256": "90a9061a31c2b7ed37964dfb0002352fb7ed0fe248fc5211006b43c9ae854769",
+      "retrieved": "2026-10-08",
+      "note": "REST API REQUEST authorizer event, reproduced verbatim from the documentation example (re-indented)."
+    },
+    {
+      "file": "envoy-attribute_context.proto",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/envoyproxy/envoy/v1.39.3/api/envoy/service/auth/v3/attribute_context.proto",
+      "sourceSha256": "4d7e49959ed507b3274baea1ce5fbdf6b7afb3d762cec982c0f08a2d8898ea5c",
+      "sha256": "4d7e49959ed507b3274baea1ce5fbdf6b7afb3d762cec982c0f08a2d8898ea5c",
+      "retrieved": "2026-10-08",
+      "note": "Envoy v1.39.3 (commit 6eb0d2d97489ec1b4e1584a004f5de443d97a41b), Apache-2.0. Documents that the request path includes the query string."
+    },
+    {
+      "file": "envoy-ext_authz.proto",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/envoyproxy/envoy/v1.39.3/api/envoy/extensions/filters/http/ext_authz/v3/ext_authz.proto",
+      "sourceSha256": "3221b03ebf4ad4abed0656dcfca32e991e8124128fbe279784f504e7afd46aee",
+      "sha256": "3221b03ebf4ad4abed0656dcfca32e991e8124128fbe279784f504e7afd46aee",
+      "retrieved": "2026-10-08",
+      "note": "Envoy v1.39.3 (commit 6eb0d2d97489ec1b4e1584a004f5de443d97a41b), Apache-2.0. HttpService path_prefix / path_override."
+    },
+    {
+      "file": "envoy-http-check-request.json",
+      "kind": "constructed-by-maintainers",
+      "source": null,
+      "sourceSha256": null,
+      "sha256": "c657043d1b276e87e4422a823985e98f9a9e4ab4926f043c95b87858526b42bf",
+      "retrieved": "2026-10-08",
+      "note": "Hand-written to match the documented shape; NOT captured from Envoy, NOT an official vector."
+    }
+  ]
+}

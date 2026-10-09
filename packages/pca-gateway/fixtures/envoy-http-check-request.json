@@ -1,0 +1,11 @@
+{
+  "_label": "CONSTRUCTED by the PCA maintainers to match the documented Envoy HTTP ext_authz request shape (original method + request target including the query string, Host, forwarded headers). NOT captured from a running Envoy and NOT an official vector.",
+  "method": "POST",
+  "path": "/refunds?currency=usd&note=a%20b",
+  "headers": {
+    "host": "gw.example.com",
+    "content-length": "0",
+    "x-request-id": "6f1c0a52-0f0b-4f6a-9d0e-0c8d2e4d9b11",
+    "x-forwarded-proto": "https"
+  }
+}

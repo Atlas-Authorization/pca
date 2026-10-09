@@ -1,0 +1,37 @@
+{
+  "specExamples": {
+    "authRequestForm": "POST /bc-authorize HTTP/1.1\nHost: server.example.com\nContent-Type: application/x-www-form-urlencoded\n\nscope=openid%20email%20example-scope&\nclient_notification_token=8d67dc78-7faa-4d41-aabd-67707b374255&\nbinding_message=W4SCT&\nlogin_hint_token=eyJraWQiOiJsdGFjZXNidyIsImFsZyI6IkVTMjU2In0.ey\nJzdWJfaWQiOnsiZm9ybWF0IjoicGhvbmUiLCJwaG9uZSI6IisxMzMwMjgxODAwN\nCJ9fQ.GSqxJsFbIyojdfMBDv3MOyAplCViVkwQWzthCWuu9_gnKIqECZilwANt1\nHfIh3x3JFjaEq-5MZ_B3qeb11NAvg&\nclient_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A\nclient-assertion-type%3Ajwt-bearer&\nclient_assertion=eyJraWQiOiJsdGFjZXNidyIsImFsZyI6IkVTMjU2In0.eyJ\npc3MiOiJzNkJoZFJrcXQzIiwic3ViIjoiczZCaGRSa3F0MyIsImF1ZCI6Imh0dHB\nzOi8vc2VydmVyLmV4YW1wbGUuY29tIiwianRpIjoiYmRjLVhzX3NmLTNZTW80RlN\n6SUoyUSIsImlhdCI6MTUzNzgxOTQ4NiwiZXhwIjoxNTM3ODE5Nzc3fQ.Ybr8mg_3\nE2OptOSsA8rnelYO_y1L-yFaF_j1iemM3ntB61_GN3APe5cl_-5a6cvGlP154XAK\n7fL-GaZSdnd9kg",
+    "authResponse": "HTTP/1.1 200 OK\nContent-Type: application/json\nCache-Control: no-store\n\n{\n  \"auth_req_id\": \"1c266114-a1be-4252-8ad1-04986c5b9ac1\",\n  \"expires_in\": 120,\n  \"interval\": 2\n}",
+    "tokenRequestForm": "POST /token HTTP/1.1\nHost: server.example.com\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&\nauth_req_id=1c266114-a1be-4252-8ad1-04986c5b9ac1&\nclient_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A\nclient-assertion-type%3Ajwt-bearer&\nclient_assertion=eyJraWQiOiJsdGFjZXNidyIsImFsZyI6IkVTMjU2In0.ey\nJpc3MiOiJzNkJoZFJrcXQzIiwic3ViIjoiczZCaGRSa3F0MyIsImF1ZCI6Imh0d\nHBzOi8vc2VydmVyLmV4YW1wbGUuY29tL3Rva2VuIiwianRpIjoiLV9wMTZqNkhj\naVhvMzE3aHZaMzEyYyIsImlhdCI6MTUzNzgxOTQ5MSwiZXhwIjoxNTM3ODE5Nzg\nyfQ.BjaEoqZb-81gE5zz4UYwNpC3QVSeX5XhH176vg35zjkbq3Zmv_UpHB2ZugR\nVa344WchTQVpaSSShLbvha4yziA",
+    "tokenResponse": "HTTP/1.1 200 OK\nContent-Type: application/json\nCache-Control: no-store\n\n{\n \"access_token\": \"G5kXH2wHvUra0sHlDy1iTkDJgsgUO1bN\",\n \"token_type\": \"Bearer\",\n \"refresh_token\": \"4bwc0ESC_IAhflf-ACC_vjD_ltc11ne-8gFPfA2Kx16\",\n \"expires_in\": 120,\n \"id_token\": \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjE2NzcyNiJ9.eyJpc3MiOiJo\n   dHRwczovL3NlcnZlci5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSIs\n   ImF1ZCI6InM2QmhkUmtxdDMiLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb20i\n   LCJleHAiOjE1Mzc4MTk4MDMsImlhdCI6MTUzNzgxOTUwM30.aVq83mdy72ddIFVJ\n   LjlNBX-5JHbjmwK-Sn9Mir-blesfYMceIOw6u4GOrO_ZroDnnbJXNKWAg_dxVynv\n   MHnk3uJc46feaRIL4zfHf6Anbf5_TbgMaVO8iczD16A5gNjSD7yenT5fslrrW-NU\n   _vtmi0s1puoM4EmSaPXCR19vRJyWuStJiRHK5yc3BtBlQ2xwxH1iNP49rGAQe_LH\n   fW1G74NY5DaPv-V23JXDNEIUTY-jT-NbbtNHAxnhNPyn8kcO2WOoeIwANO9BfLF1\n   EFWtjGPPMj6kDVrikec47yK86HArGvsIIwk1uExynJIv_tgZGE0eZI7MtVb2UlCw\n   DQrVlg\"\n}",
+    "pingCallback": "POST /cb HTTP/1.1\nHost: client.example.com\nAuthorization: Bearer 8d67dc78-7faa-4d41-aabd-67707b374255\nContent-Type: application/json\n\n{\n \"auth_req_id\": \"1c266114-a1be-4252-8ad1-04986c5b9ac1\"\n}",
+    "pushCallback": "POST /cb HTTP/1.1\nHost: client.example.com\nAuthorization: Bearer 8d67dc78-7faa-4d41-aabd-67707b374255\nContent-Type: application/json\n\n{\n \"auth_req_id\": \"1c266114-a1be-4252-8ad1-04986c5b9ac1\",\n \"access_token\": \"G5kXH2wHvUra0sHlDy1iTkDJgsgUO1bN\",\n \"token_type\": \"Bearer\",\n \"refresh_token\": \"4bwc0ESC_IAhflf-ACC_vjD_ltc11ne-8gFPfA2Kx16\",\n \"expires_in\": 120,\n \"id_token\": \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjE2NzcyNiJ9.eyJpc3MiOiJ\n   odHRwczovL3NlcnZlci5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMS\n   IsImF1ZCI6InM2QmhkUmtxdDMiLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb\n   20iLCJleHAiOjE1Mzc4MTk4MDMsImlhdCI6MTUzNzgxOTUwMywiYXRfaGFzaCI6\n   Ild0MGtWRlhNYWNxdm5IZXlVMDAwMXciLCJ1cm46b3BlbmlkOnBhcmFtczpqd3Q\n   6Y2xhaW06cnRfaGFzaCI6InNIYWhDdVNwWENSZzVta0REdnZyNHciLCJ1cm46b3\n   BlbmlkOnBhcmFtczpqd3Q6Y2xhaW06YXV0aF9yZXFfaWQiOiIxYzI2NjExNC1hM\n   WJlLTQyNTItOGFkMS0wNDk4NmM1YjlhYzEifQ.SGB5_a8E7GjwtoYrkFyqOhLK6\n   L8-Wh1nLeREwWj30gNYOZW_ZB2mOeQ5yiXqeKJeNpDPssGUrNo-3N-CqNrbmVCb\n   XYTwmNB7IvwE6ZPRcfxFV22oou-NS4-3rEa2ghG44Fi9D9fVURwxrRqgyezeD3H\n   HVIFUnCxHUou3OOpj6aOgDqKI4Xl2xJ0-kKAxNR8LljUp64OHgoS-UO3qyfOwIk\n   IAR7o4OTK_3Oy78rJNT0Y0RebAWyA81UDCSf_gWVBp-EUTI5CdZ1_odYhwB9OWD\n   W1A22Sf6rmjhMHGbQW4A9Z822yiZZveuT_AFZ2hi7yNp8iFPZ8fgPQJ5pPpjA7u\n   dg\"\n}",
+    "errorResponse": "HTTP/1.1 400 Bad Request \nContent-Type: application/json\n\n{\n  \"error\": \"unauthorized_client\",\n  \"error_description\":\n    \"The client 'client.example.org' is not allowed to use CIBA.\"\n}"
+  },
+  "section7_1_requestParameters": [
+    "scope",
+    "client_notification_token",
+    "acr_values",
+    "login_hint_token",
+    "id_token_hint",
+    "login_hint",
+    "binding_message",
+    "user_code",
+    "requested_expiry"
+  ],
+  "errorCodesMentioned": [
+    "authorization_pending",
+    "slow_down",
+    "expired_token",
+    "access_denied",
+    "invalid_binding_message",
+    "invalid_user_code",
+    "missing_user_code",
+    "unknown_user_id",
+    "transaction_failed",
+    "expired_login_hint_token",
+    "invalid_request",
+    "invalid_client",
+    "unauthorized_client"
+  ]
+}

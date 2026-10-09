@@ -1,0 +1,11 @@
+{
+  "source": "Project Wycheproof (C2SP/wycheproof), testvectors_v1/ed25519_test.json (EddsaVerify)",
+  "url": "https://raw.githubusercontent.com/C2SP/wycheproof/5722833ca004983abd1a91bcb6c24596d50ac0f9/testvectors_v1/ed25519_test.json",
+  "repository": "https://github.com/C2SP/wycheproof",
+  "lastCommitTouchingFile": "5722833ca004983abd1a91bcb6c24596d50ac0f9",
+  "lastCommitDate": "2026-08-06",
+  "retrievedOn": "2026-10-08",
+  "fileSha256": "752d2ea7d7c6cf4736381b6cbacb61f8182b126ab7cd9b058f00c50084975536",
+  "numberOfTests": 151,
+  "note": "Vendored unmodified. Fetched from the main branch on the retrieval date; the pinned commit above is the last commit that modified this file."
+}

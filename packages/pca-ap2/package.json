@@ -1,0 +1,59 @@
+{
+  "name": "@atlasauth/pca-ap2",
+  "version": "0.3.0",
+  "description": "AP2-modelled Intent/Cart/Payment mandate chain for PCA (a PCA rendition, not the SD-JWT AP2 wire format): map the grant/budget to signed mandates; PCA governs, x402 / Stripe Shared-Payment-Tokens settle.",
+  "keywords": [
+    "ap2",
+    "agent payments protocol",
+    "mandates",
+    "payments",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-ap2"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-payments": "workspace:*"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
