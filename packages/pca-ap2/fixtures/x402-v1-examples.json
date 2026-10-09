@@ -1,0 +1,113 @@
+{
+  "transportHttpV1": {
+    "paymentRequiredBody": {
+      "x402Version": 1,
+      "error": "Payment required to access this resource",
+      "accepts": [
+        {
+          "scheme": "exact",
+          "network": "base-sepolia",
+          "maxAmountRequired": "10000",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+          "resource": "https://api.example.com/premium-data",
+          "description": "Access to premium market data",
+          "mimeType": "application/json",
+          "outputSchema": null,
+          "maxTimeoutSeconds": 60,
+          "extra": {
+            "name": "USDC",
+            "version": "2"
+          }
+        }
+      ]
+    },
+    "xPaymentHeader": "eyJ4NDAyVmVyc2lvbiI6MSwic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiYmFzZS1zZXBvbGlhIiwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiIweDJkNmE3NTg4ZDZhY2NhNTA1Y2JmMGQ5YTRhMjI3ZTBjNTJjNmMzNDAwOGM4ZTg5ODZhMTI4MzI1OTc2NDE3MzYwOGEyY2U2NDk2NjQyZTM3N2Q2ZGE4ZGJiZjU4MzZlOWJkMTUwOTJmOWVjYWIwNWRlZDNkNjI5M2FmMTQ4YjU3MWMiLCJhdXRob3JpemF0aW9uIjp7ImZyb20iOiIweDg1N2IwNjUxOUU5MWUzQTU0NTM4NzkxYkRiYjBFMjIzNzNlMzZiNjYiLCJ0byI6IjB4MjA5NjkzQmM2YWZjMEM1MzI4YkEzNkZhRjAzQzUxNEVGMzEyMjg3QyIsInZhbHVlIjoiMTAwMDAiLCJ2YWxpZEFmdGVyIjoiMTc0MDY3MjA4OSIsInZhbGlkQmVmb3JlIjoiMTc0MDY3MjE1NCIsIm5vbmNlIjoiMHhmMzc0NjYxM2MyZDkyMGI1ZmRhYmMwODU2ZjJhZWIyZDRmODhlZTYwMzdiOGNjNWQwNGE3MWE0NDYyZjEzNDgwIn19fQ==",
+    "paymentPayloadDecoded": {
+      "x402Version": 1,
+      "scheme": "exact",
+      "network": "base-sepolia",
+      "payload": {
+        "signature": "0x2d6a7588d6acca505cbf0d9a4a227e0c52c6c34008c8e8986a1283259764173608a2ce6496642e377d6da8dbbf5836e9bd15092f9ecab05ded3d6293af148b571c",
+        "authorization": {
+          "from": "0x857b06519E91e3A54538791bDbb0E22373e36b66",
+          "to": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+          "value": "10000",
+          "validAfter": "1740672089",
+          "validBefore": "1740672154",
+          "nonce": "0xf3746613c2d920b5fdabc0856f2aeb2d4f88ee6037b8cc5d04a71a4462f13480"
+        }
+      }
+    },
+    "settlementResponseDecoded": {
+      "success": true,
+      "transaction": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "network": "base-sepolia",
+      "payer": "0x857b06519E91e3A54538791bDbb0E22373e36b66"
+    }
+  },
+  "specificationV1": {
+    "paymentRequirementsResponseRequiredFields": [
+      "x402Version",
+      "error",
+      "accepts"
+    ],
+    "paymentRequirementsFields": [
+      {
+        "field": "scheme",
+        "type": "string",
+        "required": true
+      },
+      {
+        "field": "network",
+        "type": "string",
+        "required": true
+      },
+      {
+        "field": "maxAmountRequired",
+        "type": "string",
+        "required": true
+      },
+      {
+        "field": "asset",
+        "type": "string",
+        "required": true
+      },
+      {
+        "field": "payTo",
+        "type": "string",
+        "required": true
+      },
+      {
+        "field": "resource",
+        "type": "string",
+        "required": true
+      },
+      {
+        "field": "description",
+        "type": "string",
+        "required": true
+      },
+      {
+        "field": "mimeType",
+        "type": "string",
+        "required": false
+      },
+      {
+        "field": "outputSchema",
+        "type": "object",
+        "required": false
+      },
+      {
+        "field": "maxTimeoutSeconds",
+        "type": "number",
+        "required": true
+      },
+      {
+        "field": "extra",
+        "type": "object",
+        "required": false
+      }
+    ]
+  }
+}

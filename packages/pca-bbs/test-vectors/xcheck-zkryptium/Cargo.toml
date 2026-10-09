@@ -1,0 +1,13 @@
+[package]
+name = "pca-bbs-xcheck"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Cross-implementation reference runner: drives the independent `zkryptium` crate (draft-irtf-cfrg-bbs-signatures-12, BLS12-381-SHA-256) to produce and check BBS keys, signatures and proofs."
+
+[dependencies]
+zkryptium = { version = "=0.7.1", default-features = false, features = ["bbsplus"] }
+serde_json = "1"
+hex = "0.4"
+
+[workspace]

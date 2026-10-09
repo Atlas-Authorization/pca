@@ -1,0 +1,38 @@
+{
+  "retrieved": "2026-10-08",
+  "files": [
+    {
+      "file": "standards-vectors.json",
+      "kind": "official-rfc-examples",
+      "sha256": "2bc51a90192d5cbf450abb36a0928cb96da9f08e439f6905cdb6b4b0310d8e81",
+      "note": "Examples copied verbatim from the cited RFC texts (line-wrapping removed). RFC 7515 A.3 and RFC 8037 A.4 are signature test vectors; RFC 7519 6.1 is the unsecured-JWT example; RFC 9711 A.1.6, A.1.7 (JSON claims sets) and A.2.3 (HS256 JWT; the RFC text names the key \"xxxxxx\" but the token verifies under 8 x characters, noted in the fixture) are the EAT examples; RFC 9782 6.4 registers application/eat+jwt. RFC 9711 A.2.1 (CWT, COSE_Sign1) is not used: this package does not implement CWT.",
+      "sources": [
+        {
+          "rfc": 7515,
+          "url": "https://www.rfc-editor.org/rfc/rfc7515.txt",
+          "sha256": "ecbf84674118e62526511c1237e1deaa86aada86d25b247623a2a7e04ae62e40"
+        },
+        {
+          "rfc": 8037,
+          "url": "https://www.rfc-editor.org/rfc/rfc8037.txt",
+          "sha256": "f14347f9d8eead78ef6e7a1ea3d795d35d664033095a76a80fcd567904aaedaa"
+        },
+        {
+          "rfc": 7519,
+          "url": "https://www.rfc-editor.org/rfc/rfc7519.txt",
+          "sha256": "fecd930e9ccf2276b95c0017c6c4ff5d09352e4bc3c7629946447894e0f97248"
+        },
+        {
+          "rfc": 9711,
+          "url": "https://www.rfc-editor.org/rfc/rfc9711.txt",
+          "sha256": "20d43b5a03151e5023533e069835e5581ebcaf5a70779a216d3d0ca06f2fd2c7"
+        },
+        {
+          "rfc": 9782,
+          "url": "https://www.rfc-editor.org/rfc/rfc9782.txt",
+          "sha256": "28f8f263bb9fcabad47004365ffc99ae773fb809261e9a6b0a23d33fb182ada5"
+        }
+      ]
+    }
+  ]
+}

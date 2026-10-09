@@ -1,0 +1,1401 @@
+{
+  "version": "1.1.0",
+  "generator": "@atlasauth/pca-conformance generateVectorSet() — deterministic keys, fixed clock, real @atlasauth/pca builders",
+  "sig_domain": "atlas-pca/actn/v2",
+  "check_order": [
+    "wire",
+    "version",
+    "audience",
+    "validity",
+    "cap_chain",
+    "grant_ref_bound",
+    "plan_inclusion",
+    "plan_root_authorized",
+    "leaf_signature",
+    "counter",
+    "taint_gate",
+    "freshness",
+    "attestation",
+    "threshold",
+    "revocation"
+  ],
+  "vectors": [
+    {
+      "id": "valid",
+      "description": "Canonical well-formed action: every applicable check passes; later-milestone gates report not-enforced.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "-8nfIAsSniO4sEMUXNivMuNTc06BsgDm-_VEPqU_OescadqQqV9akNgl9D7gyDFnu8cV_zaY9Uu54fS6Qq6WAw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": true,
+        "firstFailedCheck": null,
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "bad_wire",
+      "description": "plan.root is not canonical base64url (a bad encoding): the wire check fails and is terminal (no other check is evaluated).",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "not-a-canonical-base64url-value!!",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "-8nfIAsSniO4sEMUXNivMuNTc06BsgDm-_VEPqU_OescadqQqV9akNgl9D7gyDFnu8cV_zaY9Uu54fS6Qq6WAw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "wire",
+        "perCheck": {
+          "wire": "fail"
+        }
+      }
+    },
+    {
+      "id": "wrong_version",
+      "description": "ver != 2 (re-signed): the version check fails though the signature over the mutated body is valid.",
+      "pcactn": {
+        "ver": 1,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "xnKNJ-aIp_Qev6JxfZG0Vlpaccs0cYY-pJQ-B3Fy9icSUFwGdSEjYCt2qy6Qv6zvKYTOfdgwyfxTIaVVCHigCA"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "version",
+        "perCheck": {
+          "wire": "pass",
+          "version": "fail",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "audience_mismatch",
+      "description": "Signed aud names a different resource server than the verifier: the audience binding fails.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:elsewhere",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "WleLYV9EbM_57kWymfU9uZ5c_AURAQEg_pkDow57EiZctHs-990KXydA6-xJ5sOm3Ij9euiA9Sg9qyWwDneRAg"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "audience",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "fail",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "expired",
+      "description": "now > exp (iat/exp in the past, re-signed): the validity window fails (expired).",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1699998200000,
+        "exp": 1699999400000,
+        "sig": "pjDNS2iFpFWas0oigFUKV1obDq8c_W6Dgnqx2U7PzZQcEdrJVgq8-JAcQJHnx3HZm8o4_-deodNGPslMTQp9AQ"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "validity",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "fail",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "not_yet_valid",
+      "description": "iat beyond the clock-skew allowance in the future (re-signed): the validity window fails (not yet valid).",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000300000,
+        "exp": 1700001500000,
+        "sig": "mSn_Zrh9k4cfBuLBIxR28x5UzJv8gu9eNtNC-WKmX441uxlnENod3ugSDTh58NvexBcHz5Uy-0Y2MTfIUS0gAA"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "validity",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "fail",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "grant_ref_not_root_id",
+      "description": "grant_ref is a well-formed value that is NOT the id of cap_chain[0] (re-signed): only the grant_ref_bound check fails (replay namespaces are keyed on grant_ref).",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hLSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "bHD8S1gNVe3HmYK2Al4jdIj8eOvXZq3T8OdsGj7EzU97r3w13hx0PPg3kmjato4s0CIVNkF9h-lutZBd_V1mCw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "grant_ref_bound",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "fail",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "broken_cap_chain_sig",
+      "description": "The acting leaf hop capability signature is corrupted (leaf re-signed): the cap_chain check fails.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "jkBqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "-4QBTi34D2gVSvA9iII1i83ch1KVWQUNx-fW9O0Vdq1yBWp_KbD35iGei-cPamd4KGAjuII2dJcn_FQUbO5XDQ"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "cap_chain",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "fail",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "plan_non_inclusion",
+      "description": "action.params_digest no longer matches the committed plan leaf (re-signed): plan inclusion fails.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "HcLbjGmbd-oISmiTKKiaiUOB7qwx72YqE0B1TwH3EPM",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "kE3K3qKtr5YpKL77DEU5Qgvwyp8_7wAwXXQQeEGQKX8rFF45ri_EEFUwHqE-MfsyhuRtcac-9ZFEEEuBSlPtCg"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "plan_inclusion",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "fail",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "bad_leaf_signature",
+      "description": "The leaf-holder signature bytes are corrupted (NOT re-signed): the leaf_signature check fails.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "-snfIAsSniO4sEMUXNivMuNTc06BsgDm-_VEPqU_OescadqQqV9akNgl9D7gyDFnu8cV_zaY9Uu54fS6Qq6WAw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "leaf_signature",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "fail",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "counter_invalid",
+      "description": "Counter is negative (rolled-back / replayed, re-signed): the offline counter check fails. Stateful replay detection across actions is the resource server's job.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": -1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "spUVmTZnx3-cfvQiMmo7HdoTCONMOmT2YyKIyp4HFbOWtnzjCPkl-xQR4AtkaTsFaGxMJ1XnjLJ_ICvxWbbzAg"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "counter",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "fail",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "stale_freshness",
+      "description": "GATED (enforce.freshness): the signed freshness anchor is a stub (empty beacon_ref / epoch 0), so the freshness gate fails closed.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "-8nfIAsSniO4sEMUXNivMuNTc06BsgDm-_VEPqU_OescadqQqV9akNgl9D7gyDFnu8cV_zaY9Uu54fS6Qq6WAw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000,
+        "enforce": {
+          "freshness": {
+            "maxAgeMs": 300000
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "freshness",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced",
+          "freshness": "fail"
+        }
+      }
+    },
+    {
+      "id": "taint_blocked",
+      "description": "GATED (enforce.taint): with the empty trusted-input registry the provenance taint is the fail-closed worst case, exceeding the policy max, so the taint gate fails.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "-8nfIAsSniO4sEMUXNivMuNTc06BsgDm-_VEPqU_OescadqQqV9akNgl9D7gyDFnu8cV_zaY9Uu54fS6Qq6WAw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000,
+        "enforce": {
+          "taint": {
+            "maxTaint": 0.5,
+            "registry": "empty"
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "taint_gate",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "fail",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "missing_attestation",
+      "description": "GATED (enforce.attestation, required): the verifier yields no attestation document, so the attestation gate fails closed.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+        "cap_chain": [
+          {
+            "id": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "caveats": [],
+            "body_digest": "hbSuzqZBddz141BSOojVmkhSCbycfFvZpWTaJ7I_RB0",
+            "sig": "3T01DNhx5PoZvs1g6vZgS4buM6b3er61bnrwASw8WrHLbcS0Z7hjxnEJk0LYYpJuj2-qmWJdTNMsWqp1jLChAw"
+          },
+          {
+            "id": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "issuer": "g11IDYYqDlAWTqL_WMUZjWP96LKv21vEZu9RDQdiOvM",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [],
+            "body_digest": "iMVJ9_KnCj6OrKl0icWpwyrxpjeYv7O6N8pouj5pXEw",
+            "sig": "j0BqA-tba3fyg5zYTq7c4sNsZO8MZ46HtyEZTfRI1EPzf3X4jYdVkq2BLeBq6WijfeEOF300eJypl7BsV-1RDg",
+            "parent": "6CeX7wTDvStFyxp1Y3dK7pGTyp7E5opToVED-CCE3VI"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "-8nfIAsSniO4sEMUXNivMuNTc06BsgDm-_VEPqU_OescadqQqV9akNgl9D7gyDFnu8cV_zaY9Uu54fS6Qq6WAw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000,
+        "enforce": {
+          "attestation": {
+            "required": true,
+            "mode": "not-enforced"
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "attestation",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "fail",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced"
+        }
+      }
+    }
+  ]
+}

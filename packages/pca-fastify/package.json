@@ -1,0 +1,64 @@
+{
+  "name": "@atlasauth/pca-fastify",
+  "version": "0.3.0",
+  "description": "Fastify plugin/preHandler for Proof-Carrying Authority: verifies the inbound PCActn, attaches the verdict, or replies 401/403 with a WWW-Authenticate challenge.",
+  "keywords": [
+    "fastify",
+    "plugin",
+    "middleware",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-fastify"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*"
+  },
+  "peerDependencies": {
+    "fastify": "^4 || ^5"
+  },
+  "peerDependenciesMeta": {
+    "fastify": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

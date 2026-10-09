@@ -1,0 +1,119 @@
+{
+ "generator": "openssl verify (OpenSSL 4.0.3 29 Sep 2026 (Library: OpenSSL 4.0.3 29 Sep 2026)) + python cryptography 50.0.2, crosscheck/pki_crosscheck.py",
+ "cases": [
+  {
+   "name": "leaf via inter0 to root",
+   "leaf": "leaf.pem",
+   "untrusted": [
+    "inter0.pem"
+   ],
+   "roots": [
+    "root.pem"
+   ],
+   "at": "2027-06-01T00:00:00+00:00",
+   "openssl": true,
+   "cryptography": true
+  },
+  {
+   "name": "leaf signed directly by root",
+   "leaf": "leaf-direct.pem",
+   "untrusted": [],
+   "roots": [
+    "root.pem"
+   ],
+   "at": "2027-06-01T00:00:00+00:00",
+   "openssl": true,
+   "cryptography": true
+  },
+  {
+   "name": "leaf under inter-under-inter0 (pathlen 0 exceeded)",
+   "leaf": "leaf-via-chain.pem",
+   "untrusted": [
+    "inter-under-inter0.pem",
+    "inter0.pem"
+   ],
+   "roots": [
+    "root.pem"
+   ],
+   "at": "2027-06-01T00:00:00+00:00",
+   "openssl": false,
+   "cryptography": false
+  },
+  {
+   "name": "leaf under inter without keyCertSign",
+   "leaf": "leaf-noks.pem",
+   "untrusted": [
+    "inter-noks.pem"
+   ],
+   "roots": [
+    "root.pem"
+   ],
+   "at": "2027-06-01T00:00:00+00:00",
+   "openssl": false,
+   "cryptography": false
+  },
+  {
+   "name": "leaf under inter that is not a CA",
+   "leaf": "leaf-notca.pem",
+   "untrusted": [
+    "inter-notca.pem"
+   ],
+   "roots": [
+    "root.pem"
+   ],
+   "at": "2027-06-01T00:00:00+00:00",
+   "openssl": false,
+   "cryptography": false
+  },
+  {
+   "name": "expired leaf",
+   "leaf": "leaf-expired.pem",
+   "untrusted": [
+    "inter0.pem"
+   ],
+   "roots": [
+    "root.pem"
+   ],
+   "at": "2027-06-01T00:00:00+00:00",
+   "openssl": false,
+   "cryptography": false
+  },
+  {
+   "name": "chain to an unrelated root",
+   "leaf": "leaf.pem",
+   "untrusted": [
+    "inter0.pem"
+   ],
+   "roots": [
+    "other-root.pem"
+   ],
+   "at": "2027-06-01T00:00:00+00:00",
+   "openssl": false,
+   "cryptography": false
+  },
+  {
+   "name": "missing intermediate",
+   "leaf": "leaf.pem",
+   "untrusted": [],
+   "roots": [
+    "root.pem"
+   ],
+   "at": "2027-06-01T00:00:00+00:00",
+   "openssl": false,
+   "cryptography": false
+  },
+  {
+   "name": "before validity starts",
+   "leaf": "leaf.pem",
+   "untrusted": [
+    "inter0.pem"
+   ],
+   "roots": [
+    "root.pem"
+   ],
+   "at": "2026-06-01T00:00:00+00:00",
+   "openssl": false,
+   "cryptography": false
+  }
+ ]
+}

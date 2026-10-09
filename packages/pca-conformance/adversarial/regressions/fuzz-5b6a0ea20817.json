@@ -1,0 +1,21 @@
+{
+ "name": "fuzz-min-5b6a0ea20817",
+ "kind": "verify",
+ "raw": "{\"ver\":2,\"action\":{\"verb\":\"te\",\"resource\":\"db/t1\",\"params_digest\":\"RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o\",\"reversibility_class\":\"ible\"},\"grant_ref\":\"_k_C_aw6AGExi_bNiMcN-b1MZqqm9Jn_55w8K5hiSic\",\"cap_chain\":[],\"plan\":{\"root\":\"tZ3hWrVytERA9Y9g3Gh3AbdxL4z7Dhoi4Dn7gkqHehk\",\"inclusion_proof\":{\"index\":1,\"size\":4,\"path\":[]},\"node_id\":\"n1\"},\"attestation\":{\"quote_digest\":\"\",\"epoch\":0,\"model_id\":\"unad\",\"measurement\":\"\",\"operator\":\"unat\"},\"provenance\":{\"causal_hash\":\"\",\"taint_level\":0,\"trusted_refs\":[]},\"freshness\":{\"beacon_ref\":\"\",\"epoch\":0,\"accumulator_witness\":\"\"},\"counter\":1,\"risk_claim\":{\"r\":0,\"inputs\":{}},\"aud\":\"rs-adv\",\"iat\":1799000,\"exp\":1899000,\"sig\":\"N21rqufvljOeDY_HTKW8_ssKa5DYhggzHrtMDRzNwGG0Mvz4hdwpmRspzwJTcpN-mruHs8wK9WhXjbqYamKVDA\",\"threshold\":{}}",
+ "grant": "{\"body_digest\":\"_k_C_aw6AGExi_bNiMcN-b1MZqqm9Jn_55w8K5hiSic\",\"caveats\":[{\"prefix\":\"db/\",\"type\":\"resource_prefix\"}],\"holder\":\"GLJlcvvcjbOQrdV-U2wyt4xsKXiDk3uys0WOa9mUddg\",\"id\":\"_k_C_aw6AGExi_bNiMcN-b1MZqqm9Jn_55w8K5hiSic\",\"issuer\":\"FNa902rZuuDYpFpbshIW5JYrsSzessar-cHurT-eUO4\",\"sig\":\"Z2obaKYR-KR5J4d-J7WJhwALU25fzrvrIFfQxoG0Ez5oLg6WPaP-h5lHpu2cnF1FGg6I9FY_mZM0h0zKJ1rvCg\"}",
+ "now": 1800000000000,
+ "aud": "rs-adv",
+ "found": {
+  "seed": 20261008,
+  "id": "sw-03467",
+  "types": [
+   "ACCEPT-REJECT"
+  ]
+ },
+ "verdictsAtDiscovery": {
+  "ts": "R:wire",
+  "python": "R:wire",
+  "ruby": "A"
+ },
+ "note": "Minimised by the structural sweep against sdks/ruby-pca with the threshold.shares fix reverted: ruby ACCEPTED a `threshold` container lacking `shares` while the reference + every other SDK rejected it as a wire failure. Fixed in ruby-pca; kept as a permanent regression vector."
+}

@@ -1,0 +1,76 @@
+{
+  "rfc7515_appendixA3_ES256": {
+    "jwk": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+      "y": "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"
+    },
+    "compactJws": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q"
+  },
+  "rfc8037_appendixA4_Ed25519": {
+    "jwk": {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+    },
+    "compactJws": "eyJhbGciOiJFZERTQSJ9.RXhhbXBsZSBvZiBFZDI1NTE5IHNpZ25pbmc.hgyY0il_MGCjP0JzlnLWG1PPOt7-09PGcvMg3AIbQR6dWbhijcNR4ki4iylGjg5BhVsPt9g7sVvpAr_MuM0KAg"
+  },
+  "rfc7519_section6_1_unsecuredJwt": {
+    "compactJws": "eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ."
+  },
+  "rfc9711_appendixA16_attestationResultsJson": {
+    "eat_nonce": "jkd8KL-8xQk",
+    "oemboot": true,
+    "dbgstat": "disabled-since-boot",
+    "oemid": "iUWt",
+    "ueid": "AZj1Ck_2wFhhyIYNE6Y4",
+    "swname": "Acme R-IoT-OS",
+    "swversion": [
+      "3.1.4"
+    ],
+    "measres": [
+      [
+        "Trustus Measurements",
+        [
+          [
+            "all",
+            "success"
+          ]
+        ]
+      ]
+    ]
+  },
+  "rfc9711_appendixA17_jsonTokenWithSubmodules": {
+    "eat_nonce": "lI-IYNE6Rj6O",
+    "ueid": "AJj1Ck_2wFhhyIYNE6Y46g==",
+    "secboot": true,
+    "dbgstat": "disabled-permanently",
+    "iat": 1526542894,
+    "submods": {
+      "Android App Foo": {
+        "swname": "Foo.app"
+      },
+      "Secure Element Eat": [
+        "CBOR",
+        "2D3ShEOhASagWGaoCkiUj4hg0TpGPhkBAFABmPUKT_bAWGHIhg0TpjjqGQECGfryGQEFBBkBBvUZAQcDGQEEgmMzLjEBGQEKoWNURUWCL1gg5c-V_ST6txRGdC3VjUPa4XjlX-K5QpGpKRCC_8JjWgtYQPaQywOIZ3-mJKN3X9fLxOhAnsmBa-MvpHRzOw-Ywn-67bvJljuctezAPD41s6_At7NbSV3qwJlxIuqGfwe41es="
+      ],
+      "Linux Android": {
+        "swname": "Android"
+      },
+      "Subsystem J": [
+        "JWT",
+        "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJKLUF0dGVzdGVyIiwiaWF0IjoxNjUxNzc0ODY4LCJleHAiOm51bGwsImF1ZCI6IiIsInN1YiI6IiJ9.gjw4nFMhLpJUuPXvMPzK1GMjhyJq2vWXg1416XKszwQ"
+      ]
+    }
+  },
+  "rfc9711_appendixA23_hs256Jwt": {
+    "compactJws": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlYXRfbm9uY2UiOiJ5dTc2Tk44SXVWNmUiLCJzdWJtb2RzIjp7IkF1ZGlvIFN1YnN5c3RlbSI6WyJESUdFU1QiLFsiU0hBLTI1NiIsIkZSRW4yVlR3aTk5cWNNRVFzYmxtTVFnM2I1b2ZYUG5OM1BJYW5CME5RT3MiXV0sIkdyYXBoaWNzIFN1YnN5c3RlbSI6WyJESUdFU1QiLFsiU0hBLTI1NiIsIk52M3NqUVU3Q1Z0RFRka0RTUlhWcFZDNUNMVFBCWmVQWWhTLUhoVlZWMXMiXV19fQ.FYs7R-TKhgAk85NyCOPQlbtGGjFM_3chnhBEOuM6qCo",
+    "hmacKeyAscii": "xxxxxxxx",
+    "note": "RFC 9711 A.2.3 text says the key is \"xxxxxx\" (6 characters); the published token actually verifies under 8 x characters (found by testing), so the text is imprecise. The token itself is verbatim."
+  },
+  "rfc9782_section6_4_mediaType": {
+    "type": "application",
+    "subtype": "eat+jwt"
+  }
+}

@@ -1,0 +1,249 @@
+{
+ "source": "cose-wg/Examples (sign1-tests, ecdsa-examples, eddsa-examples)",
+ "url": "https://github.com/cose-wg/Examples/tree/53c9d634333bb4f529d78f5980fffa2667ee2c12",
+ "commit": "53c9d634333bb4f529d78f5980fffa2667ee2c12",
+ "retrieved": "2026-10-08",
+ "sha256_of_files": {
+  "ecdsa-sig-01.json": "63698e613fe93501ba1d327d8f4263b4b00a22eda5f5f09e8924f32dd3d746f1",
+  "ecdsa-sig-02.json": "d97038f2a99ea16ef3cf29d7c813d0fd29f22e4c821e04e719f24f5f4ddd5a92",
+  "ecdsa-sig-03.json": "52b940c69bd274b12fbc882d3173f68813b82fd4732bf366937f6f633838a0e4",
+  "ecdsa-sig-04.json": "df4b2a5d295bdeeae3a5fd3284681ad01a0e7b43355798f5e4775903c2eca98e",
+  "eddsa-sig-01.json": "fc5129133b9c7a892f4fd68b603828552a0e94750b54ce9fd666f2a853b4d543",
+  "eddsa-sig-02.json": "da1a720b57c68ad185483b4c404facf21df3ecd3739b62d21427f739399cdbb9",
+  "sign-fail-01.json": "cb4cad0b8d68bb33e8db82bf33e0aca7d1bbfc03e486752dd87abff6850fa6d1",
+  "sign-fail-02.json": "ae40d945b904b92b856b26db3c1c81aa57169b363667283fcc822c8aa06bf069",
+  "sign-fail-03.json": "0f0f2eedaa4274bdb4934bc19df53b78d85820dee29c1dea0cf99e06daf3a5f5",
+  "sign-fail-04.json": "4cc4ce329750d723e1cd17c4d1ef92aeabe723386d045c2ca7275b0ff542153a",
+  "sign-fail-06.json": "ba93671b1fc937535dfe8d6f0051aad5a27bbd54522b5b605c24d697a12ef3f6",
+  "sign-fail-07.json": "ff887d921633c8a05737aac4312a7e074858ff848d6b06e85b27c312ebeb48a0",
+  "sign-pass-01.json": "d3b0fb02f6ef8cfa2b69f22c4467d437f58da8943af4d5439225fb67641f6fe8",
+  "sign-pass-02.json": "503690ab89d97daa2e22808f2248c4934cef0f747799625e7687dd6b14f858c3",
+  "sign-pass-03.json": "509d60bde2cba0b8ef1e4b06b85b5d00fea4e5ced2026e607fa76f99b83eb7f2"
+ },
+ "vectors": [
+  {
+   "file": "ecdsa-sig-01.json",
+   "title": "ECDSA-01: ECDSA - P-256 - sign0",
+   "cbor_hex": "d28445a201260300a10442313154546869732069732074686520636f6e74656e742e58406520bbaf2081d7e0ed0f95f76eb0733d667005f7467cec4b87b9381a6ba1ede8e00df29f32a37230f39a842a54821fdd223092819d7728efb9d3a0080b75380b",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": false
+  },
+  {
+   "file": "ecdsa-sig-02.json",
+   "title": "ECDSA-sig-02: ECDSA - P-384 - sign1",
+   "cbor_hex": "d28444a1013822a104445033383454546869732069732074686520636f6e74656e742e58605f150abd1c7d25b32065a14e05d6cb1f665d10769ff455ea9a2e0adab5de63838db257f0949c41e13330e110eba7b912f34e1546fb1366a2568faa91ec3e6c8d42f4a67a0edf731d88c9aead52258b2e2c4740ef614f02e9d91e9b7b59622a3c",
+   "key": {
+    "kty": "EC",
+    "kid": "P384",
+    "crv": "P-384",
+    "x": "kTJyP2KSsBBhnb4kjWmMF7WHVsY55xUPgb7k64rDcjatChoZ1nvjKmYmPh5STRKc",
+    "y": "mM0weMVU2DKsYDxDJkEP9hZiRZtB8fPfXbzINZj_fF7YQRynNWedHEyzAJOX2e8s",
+    "d": "ok3Nq97AXlpEusO7jIy1FZATlBP9PNReMU7DWbkLQ5dU90snHuuHVDjEPmtV0fTo"
+   },
+   "external": null,
+   "is_fail_case": false
+  },
+  {
+   "file": "ecdsa-sig-03.json",
+   "title": "ECDSA-03: ECDSA - P-512 - sign0",
+   "cbor_hex": "d28444a1013823a104581e62696c626f2e62616767696e7340686f626269746f6e2e6578616d706c6554546869732069732074686520636f6e74656e742e588401664dd6962091b5100d6e1833d503539330ec2bc8fd3e8996950ce9f70259d9a30f73794f603b0d3e7c5e9c4c2a57e10211f76e79df8ffd1b79d7ef5b9fa7da109001965fa2d37e093bb13c040399c467b3b9908c09db2b0f1f4996fe07bb02aaa121a8e1c671f3f997ade7d651081017057bd3a8a5fbf394972ea71cfdc15e6f8fe2e1",
+   "key": {
+    "kty": "EC",
+    "kid": "bilbo.baggins@hobbiton.example",
+    "use": "sig",
+    "crv": "P-521",
+    "x": "AHKZLLOsCOzz5cY97ewNUajB957y-C-U88c3v13nmGZx6sYl_oJXu9A5RkTKqjqvjyekWF-7ytDyRXYgCF5cj0Kt",
+    "y": "AdymlHvOiLxXkEhayXQnNCvDX4h9htZaCJN34kfmC6pV5OhQHiraVySsUdaQkAgDPrwQrJmbnX9cwlGfP-HqHZR1",
+    "d": "AAhRON2r9cqXX1hg-RoI6R1tX5p2rUAYdmpHZoC1XNM56KtscrX6zbKipQrCW9CGZH3T4ubpnoTKLDYJ_fF3_rJt"
+   },
+   "external": null,
+   "is_fail_case": false
+  },
+  {
+   "file": "ecdsa-sig-04.json",
+   "title": "ECDSA-sig-01: ECDSA - P-256 w/ SHA-512 - implicit",
+   "cbor_hex": "d28444a1013823a10442313154546869732069732074686520636f6e74656e742e5840eb18b84ed674284e5ed861c3943e101bed5db9f560c0f0292b34362990d1c59b10df7946cbc6ca3dcbd6c17a6dd1d711f50337baa6b4fcfae0efc70e52c1de0f",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": false
+  },
+  {
+   "file": "eddsa-sig-01.json",
+   "title": "EdDSA-01: EdDSA - 25519 - sign0",
+   "cbor_hex": "d28445a201270300a10442313154546869732069732074686520636f6e74656e742e58407142fd2ff96d56db85bee905a76ba1d0b7321a95c8c4d3607c5781932b7afb8711497dfa751bf40b58b3bcc32300b1487f3db34085eef013bf08f4a44d6fef0d",
+   "key": {
+    "kty": "OKP",
+    "kid": "11",
+    "crv": "Ed25519",
+    "x_hex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+    "d_hex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"
+   },
+   "external": null,
+   "is_fail_case": false
+  },
+  {
+   "file": "eddsa-sig-02.json",
+   "title": "EdDSA-sig-02: EdDSA - 448 - sign1",
+   "cbor_hex": "d28443a10127a10445656434343854546869732069732074686520636f6e74656e742e5872988240a3a2f189bd486de14aa77f54686c576a09f2e7ed9bae910df9139c2ac3be7c27b7e10a20fa17c9d57d3510a2cf1f634bc0345ab9be00849842171d1e9e98b2674c0e38bfcf6c557a1692b01b71015a47ac9f7748840cad1da80cbb5b349309febb912672b377c8b2072af1598b3700",
+   "key": {
+    "kty": "OKP",
+    "kid": "ed448",
+    "crv": "Ed448",
+    "x_hex": "5fd7449b59b461fd2ce787ec616ad46a1da1342485a70e1f8a0ea75d80e96778edf124769b46c7061bd6783df1e50f6cd1fa1abeafe8256180",
+    "d_hex": "6c82a562cb808d10d632be89c8513ebf6c929f34ddfa8c9f63c9960ef6e348a3528c8a3fcc2f044e39a3fc5b94492f8f032e7549a20098f95b"
+   },
+   "external": null,
+   "is_fail_case": false
+  },
+  {
+   "file": "sign-fail-01.json",
+   "title": "sign-fail-01: Wrong CBOR Tag",
+   "cbor_hex": "d903e68443a10126a10442313154546869732069732074686520636f6e74656e742e58408eb33e4ca31d1c465ab05aac34cc6b23d58fef5c083106c4d25a91aef0b0117e2af9a291aa32e14ab834dc56ed2a223444547e01f11d3b0916e5a4c345cacb36",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": true
+  },
+  {
+   "file": "sign-fail-02.json",
+   "title": "sign-fail-02: Change signature",
+   "cbor_hex": "d28443a10126a10442313154546869732069732074686520636f6e74656e742f58408eb33e4ca31d1c465ab05aac34cc6b23d58fef5c083106c4d25a91aef0b0117e2af9a291aa32e14ab834dc56ed2a223444547e01f11d3b0916e5a4c345cacb36",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": true
+  },
+  {
+   "file": "sign-fail-03.json",
+   "title": "sign-fail-03: Change Sign Algorithm",
+   "cbor_hex": "d28445a1013903e6a10442313154546869732069732074686520636f6e74656e742e58408eb33e4ca31d1c465ab05aac34cc6b23d58fef5c083106c4d25a91aef0b0117e2af9a291aa32e14ab834dc56ed2a223444547e01f11d3b0916e5a4c345cacb36",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": true
+  },
+  {
+   "file": "sign-fail-04.json",
+   "title": "sign-fail-04: Change Sign Algorithm",
+   "cbor_hex": "d2844aa10167756e6b6e6f776ea10442313154546869732069732074686520636f6e74656e742e58408eb33e4ca31d1c465ab05aac34cc6b23d58fef5c083106c4d25a91aef0b0117e2af9a291aa32e14ab834dc56ed2a223444547e01f11d3b0916e5a4c345cacb36",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": true
+  },
+  {
+   "file": "sign-fail-06.json",
+   "title": "sign-fail-06: Add protected attribute",
+   "cbor_hex": "d28445a201260300a10442313154546869732069732074686520636f6e74656e742e58408eb33e4ca31d1c465ab05aac34cc6b23d58fef5c083106c4d25a91aef0b0117e2af9a291aa32e14ab834dc56ed2a223444547e01f11d3b0916e5a4c345cacb36",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": true
+  },
+  {
+   "file": "sign-fail-07.json",
+   "title": "sign-fail-07: Remove protected attribute",
+   "cbor_hex": "d28443a10126a10442313154546869732069732074686520636f6e74656e742e58406520bbaf2081d7e0ed0f95f76eb0733d667005f7467cec4b87b9381a6ba1ede8e00df29f32a37230f39a842a54821fdd223092819d7728efb9d3a0080b75380b",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": true
+  },
+  {
+   "file": "sign-pass-01.json",
+   "title": "sign-pass-01: Redo protected",
+   "cbor_hex": "d28441a0a201260442313154546869732069732074686520636f6e74656e742e584087db0d2e5571843b78ac33ecb2830df7b6e0a4d5b7376de336b23c591c90c425317e56127fbe04370097ce347087b233bf722b64072beb4486bda4031d27244f",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": false
+  },
+  {
+   "file": "sign-pass-02.json",
+   "title": "sign-pass-02: External",
+   "cbor_hex": "d28443a10126a10442313154546869732069732074686520636f6e74656e742e584010729cd711cb3813d8d8e944a8da7111e7b258c9bdca6135f7ae1adbee9509891267837e1e33bd36c150326ae62755c6bd8e540c3e8f92d7d225e8db72b8820b",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": "11aa22bb33cc44dd55006699",
+   "is_fail_case": false
+  },
+  {
+   "file": "sign-pass-03.json",
+   "title": "sign-pass-03: Remove CBOR Tag",
+   "cbor_hex": "8443a10126a10442313154546869732069732074686520636f6e74656e742e58408eb33e4ca31d1c465ab05aac34cc6b23d58fef5c083106c4d25a91aef0b0117e2af9a291aa32e14ab834dc56ed2a223444547e01f11d3b0916e5a4c345cacb36",
+   "key": {
+    "kty": "EC",
+    "kid": "11",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
+    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+   },
+   "external": null,
+   "is_fail_case": false
+  }
+ ]
+}

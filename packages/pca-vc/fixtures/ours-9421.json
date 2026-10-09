@@ -1,0 +1,29 @@
+{
+ "generator": "@atlasauth/pca-vc signRequestMessage via crosscheck/gen-ours.mts; key = RFC 8032 test vector 1",
+ "public_key_hex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+ "cases": [
+  {
+   "method": "POST",
+   "url": "https://api.acme.com/v1/orders?x=1",
+   "headers": {
+    "content-type": "application/json"
+   },
+   "created": 1700000000,
+   "keyid": "k1",
+   "signatureInput": "sig1=(\"@method\" \"@target-uri\" \"content-type\" \"host\");created=1700000000;keyid=\"k1\";alg=\"ed25519\"",
+   "signature": "sig1=:z/4UJoiYGwu1SMGjxA/4GJlrDvaS/vfWOA7aCxbqEZpSv3nWgyX5T/qjVp2aAtRcIiuqF0F44IXPDm8mg47jDg==:"
+  },
+  {
+   "method": "GET",
+   "url": "https://bot.example/a",
+   "headers": {
+    "accept": "text/html"
+   },
+   "signatureAgent": "\"https://bots.acme.com\"",
+   "created": 1700000001,
+   "keyid": "k1",
+   "signatureInput": "sig1=(\"@method\" \"@target-uri\" \"accept\" \"host\" \"signature-agent\");created=1700000001;keyid=\"k1\";alg=\"ed25519\";tag=\"web-bot-auth\"",
+   "signature": "sig1=:oHlY9edH6KUPtLIdC6P3qF/dIaNpWXd+umuU0Mzige9FBQkfh+8Tt0Qb/oP1FV2MDB1Z3Z2SmaojxGg322TjDQ==:"
+  }
+ ]
+}
