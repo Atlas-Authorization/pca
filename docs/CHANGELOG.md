@@ -2,6 +2,34 @@
 
 All notable changes to the `@atlasauth/pca*` packages and `create-pca-app`. Every package in the family is versioned in lockstep, so a release bumps all of them together. While the version is 0.x, minor releases may contain breaking changes.
 
+## 0.4.1 - 2026-10-12
+
+Security release. Lockstep: every `@atlasauth/pca*` package and `create-pca-app` 0.4.1, the Python `atlas-pca` and its seven framework adapters 0.4.1, and the `atlas-pca`, `stark-pca` and `pca-folding-ivc` crates 0.4.1; the native verifiers (Go, Java, Kotlin, .NET, PHP, Ruby, Swift) carry the same fixes. The npm packages pin their internal dependencies exactly, so every package is republished to pull in the fixed `@atlasauth/pca` core. 0.4.0 is deprecated (npm) and yanked (PyPI, crates.io): upgrade to 0.4.1 or later.
+
+### Breaking
+
+- **Unknown root caveat types fail closed.** Caveats on the root grant (other than its first `envelope` caveat) are now evaluated, and a caveat type the evaluator does not implement is unsatisfied, so the action is denied (`policy` check, reason `root caveat(s) not satisfied: <types>`). Grants that carry free-form data as a root caveat (for example a `note`) are denied from 0.4.1: move that data out of the caveat list or into a known caveat type.
+- **The `PCA-Action` header must be strict unpadded base64url** of UTF-8 (padding, the standard alphabet and whitespace are refused with 401); see Fixed below.
+
+### Security
+
+- **Caveats on the root grant outside the envelope were not enforced.** The policy layer (`decide`, `verifyPCActn`, `requirePCA`) evaluated the caveats inside the grant's `envelope` caveat and the caveats delegation hops appended, but caveats the principal placed directly on the root grant (next to the envelope) were signed and then ignored. A grant carrying, for example, a root `max_spend` or `expires` caveat got no enforcement of it. Root caveats are now evaluated exactly like delegated caveats (attenuation applies from the root): every caveat on the grant except its first `envelope` caveat must hold, and a type the evaluator does not implement is unsatisfied (fail closed). A failure denies through the `policy` check with the reason `root caveat(s) not satisfied: <types>`. If you deploy grants that carry root caveats the evaluator does not know (for example a free-form `note`), those grants are now denied: move such data out of the caveat list or into a known type. New `rootCaveats(grant)` and `policyCaveats(grant, chain)` helpers. The Dafny model of the policy decision (`PolicyVm.dfy`) gains `RootCaveats`, `RootCaveatsEnforced` and `RootMaxSpendEnforced` (re-proved, 288 verified).
+- **New `max_spend` caveat type** `{ type: 'max_spend', usd }`: satisfied when the action's parameters carry an `amount` that is a number from 0 to `usd` inclusive and, if a `currency` is given, it is exactly `"usd"` or `"USD"`; a missing or non-numeric amount does not satisfy it. Introspection reports it as `remainingBudgetHints.maxSpendUsd` and `envelopePermits` honours it when params are given.
+
+### Fixed
+
+- **Pure post-quantum threshold shares can be carried in a PCActn.** The `wire` check required every `threshold.shares[i].sig` to be 64 bytes, so an ML-DSA-65 share (3,309 bytes) verified through `verifyThreshold` but could never travel in `threshold`. Share `alg`, `sig` and `pq_sig` are now validated per suite, like the leaf (`validateShareSignatureWire`): an unknown or non-string `alg`, a length that does not match the suite, or a missing or stray `pq_sig` fails `wire`. A share's `pq_pk` echo stays a threshold-check rule.
+- **The `PCA-Action` header is decoded strictly.** `defaultExtract` (and so `requirePCA` and the framework adapters that re-export it) and `decodePcaHeader` used lenient decoders that accepted padding, the standard base64 alphabet, surrounding or embedded whitespace and invalid characters. The value must now be strict unpadded base64url of valid UTF-8 text, the same rule as every other byte field; anything else is refused (`PcaHeaderError`, a 401 from `requirePCA`). `@atlasauth/pca-mcp-rs` uses the same decoder.
+
+### Conformance
+
+- 20 `r041-share-*` vectors (394 core vectors in all), `primitives.caveat_eval` (41 entries: root `max_spend` exceeded is DENIED, within the limit ALLOWED, plus the baseline caveat types, root/hop ordering and the envelope exclusion) and `primitives.pca_header` (27 entries). New generator stage `gen-conformance-041.mjs`. The adversarial set is unchanged.
+- Docs: the wire-format reference and the conformance README now describe wire version 2 exactly (actn/v2, `pq_sig` unsigned, eleven hop members, role-bound agent share, per-suite share lengths, root caveat evaluation, strict header).
+
+### Not yet covered
+
+- The zkVM release-gate guest still mirrors the 0.4.0 decision (no root caveats, no `max_spend`); see the TODO in `sdks/zkvm-pca/README.md`.
+
 ## 0.4.0 - 2026-10-11
 
 Lockstep release of the whole family (`@atlasauth/pca*` and `create-pca-app` 0.4.0; the Python `atlas-pca` and its seven framework adapters 0.4.0; the `atlas-pca`, `stark-pca` and `pca-folding-ivc` crates 0.4.0). 0.3.x is superseded. This release closes red-team rounds 4, 5 and 6 (core, API, aliasing/encoding, zkVM and native verifiers) and the hardening program that followed: the Dafny-proved decision core is now called from production (`@atlasauth/pca-verified-core` 0.4.0, first release), durable-state lock recovery is fenced and model-checked, the hosted API does no signature or post-quantum work before a request is matched to a stored grant and is rate-limited per source, network and instance, and every native verifier enforces the root PQ pin, the caveat caps and the 512 KiB document cap with shared conformance vectors. The detailed entries below are grouped by finding.

@@ -183,7 +183,8 @@ describe('validateWireV2: optional slots', () => {
     check((p) => (p.threshold = { shares: [5] }), 'threshold.shares[0] is malformed');
     check((p) => (p.threshold = { shares: [{ role: 5 }] }), 'threshold.shares[0] is malformed');
     check((p) => (p.threshold = { shares: [{ role: 'agent', publicKey: 'x', sig: SIG64 }] }), 'threshold.shares[0].publicKey is not canonical base64url (32 bytes)');
-    check((p) => (p.threshold = { shares: [{ role: 'agent', publicKey: B32, sig: 'x' }] }), 'threshold.shares[0].sig is not canonical base64url (64 bytes)');
+    // 0.4.1: share signature fields are validated per suite (validateShareSignatureWire), prefixed with the share index
+    check((p) => (p.threshold = { shares: [{ role: 'agent', publicKey: B32, sig: 'x' }] }), "threshold.shares[0]: 'sig' is not canonical base64url (64 bytes) for alg 'ed25519'");
     check((p) => (p.threshold = { shares: [{ role: 'agent', publicKey: B32, sig: SIG64 }] }), null);
   });
 });

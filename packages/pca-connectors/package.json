@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-connectors",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Declarative outbound connector registry for PCA: provider manifests (auth URLs, scopes, refresh, token placement) for the top SaaS tools + an auto-refresh helper, so every vault connector call is a proof-carrying capability.",
   "keywords": [
     "connectors",

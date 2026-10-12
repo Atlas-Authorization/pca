@@ -2,6 +2,7 @@ import { snapshotConfig } from '../config-snapshot';
 import { createAttestationVerifier, type AttestationVerifierOpts } from '../attestation';
 import { type LivenessBeacon } from '../beacons';
 import { type Capability } from '../capability';
+import { decodePcaHeader } from '../adapters';
 import { decodePCActn, type PCActn, type VerifyHooks } from '../pcactn';
 import type { SigAlg } from '../pq';
 import { type RevocationEpoch } from '../revocation';
@@ -170,10 +171,6 @@ function header(req: PcaRequestLike, name: string): string | undefined {
   return found;
 }
 
-function fromB64u(s: string): string {
-  const b = s.replace(/-/g, '+').replace(/_/g, '/');
-  return Buffer.from(b, 'base64').toString('utf8');
-}
 
 /**
  * Default extraction: `PCA-Action: <base64url PCActn JSON>` header, else JSON body `{ pcactn }`.
@@ -185,7 +182,9 @@ function fromB64u(s: string): string {
  */
 export function defaultExtract(req: PcaRequestLike): PCActn | string | null {
   const h = header(req, 'pca-action');
-  if (h) return fromB64u(h.trim());
+  // 0.4.1: strict unpadded base64url (decodePcaHeader). Padding, the standard alphabet, whitespace or invalid characters
+  // used to be accepted (Buffer's lenient decoder); now they throw, which requirePCA turns into a 401.
+  if (h !== undefined && h !== '') return decodePcaHeader(h);
   let b = req.body;
   if (typeof b === 'string') {
     try {

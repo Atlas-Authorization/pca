@@ -103,6 +103,9 @@ function context(r: R): any {
       setProp(a.params, 'x', scalar(r));
       setProp(a.params, 'session', value(r, 2));
       setProp(a.params, 'tags', strList(r));
+      // 0.4.1 max_spend: the spend it reads (own amount + optional own currency)
+      if (r.b(0.6)) setProp(a.params, 'amount', r.b(0.85) ? r.p([0, 1, 50, 99.5, 100, 100.5, 1e6, -1, -0, NaN, Infinity]) : scalar(r));
+      if (r.b(0.3)) setProp(a.params, 'currency', r.p(['usd', 'USD', 'Usd', 'eur', null, undefined, 5]));
     }
     if (r.b(0.3)) a.reversibility_class = r.p(['reversible', 'rate_limited', 'irreversible', 'costly', 5]);
     ctx.action = a;
@@ -363,6 +366,9 @@ function caveat(r: R, ctx: any, ps: string[]): any {
     case 'budget_alloc':
       c.limit = num();
       break;
+    case 'max_spend':
+      if (r.b(0.9)) c.usd = r.b(0.7) ? r.p([0, 1, 50, 100, 1e6, -1, NaN]) : num();
+      break;
     case 'predicates':
       c.allow = r.b(0.93) ? Array.from({ length: r.i(3) }, () => predicate(r, ctx, ps)) : r.p([null, 5, {}, 'x']);
       break;
@@ -504,7 +510,10 @@ describe('PolicyVm differential: decide() with the verified kernels', () => {
     if (r.b(0.5)) caveats.push({ type: 'expires', at: NOW + 1000 });
     const envCv: any = { type: 'envelope', goal_commit: 'g', predicates: preds, caveats, agent_binding: {}, risk_policy: policy(r) };
     if (r.b(0.01)) delete envCv.goal_commit;
-    const grant: any = { id: 'x', issuer: 'i', holder: 'h', caveats: [envCv, ...(r.b(0.3) ? [{ type: 'note' }] : [])], body_digest: '', sig: '' };
+    // 0.4.1: caveats on the root OUTSIDE the envelope (before and after it, incl. a second envelope) are evaluated like hop caveats
+    const rootPre = r.b(0.15) ? [caveat(r, a, ps)] : [];
+    const rootPost = Array.from({ length: r.b(0.4) ? 1 + r.i(2) : 0 }, () => (r.b(0.2) ? r.p([{ type: 'note' }, { ...envCv }]) : caveat(r, a, ps)));
+    const grant: any = { id: 'x', issuer: 'i', holder: 'h', caveats: [...rootPre, envCv, ...rootPost], body_digest: '', sig: '' };
     const input: any = {
       grant,
       action: a,

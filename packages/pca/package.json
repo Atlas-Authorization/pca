@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Proof-Carrying Authority core: canonical hashing, Ed25519 and post-quantum signatures, Merkle plan commitments, attenuable capability chains, hardware attestation verification, and the PCActn verifier.",
   "keywords": [
     "capability",

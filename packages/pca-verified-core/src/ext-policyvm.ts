@@ -165,6 +165,8 @@ export interface PolicyVm {
   envelopeCaveatEvaluator(caveat: unknown, ctx: unknown): boolean;
   agentNativeCaveatEvaluator(caveat: unknown, ctx: unknown): boolean;
   evaluateCaveats(caveats: unknown, ctx: unknown, evaluator?: 'envelope' | 'agent'): { ok: boolean; failed: string[] };
+  /** policy-vm.ts rootCaveats over a grant's caveat list (0.4.1): every entry but the first `envelope`; a non-array is returned as is. */
+  rootCaveats(caveats: unknown): unknown;
   /** Visited condition nodes and the verdict (the proved bound: visited <= size of the tree). */
   evaluateConditionCounted(c: unknown, ctx: unknown): { tri: Tri; visited: number };
 }
@@ -225,6 +227,17 @@ export function createPolicyVm(o: PolicyVmOracles): PolicyVm {
       const ev = evaluator === 'agent' ? (cv: any) => agentEv(cv, cx) : (cv: any) => envelopeEv(cv, cx);
       const r = F.EvalCaveatList(toValue(caveats), ev);
       return { ok: r.dtor_ok === true, failed: (Array.from(r.dtor_failed) as any[]).map(fromStr) };
+    },
+    rootCaveats(caveats) {
+      if (!Array.isArray(caveats)) return caveats;
+      // map the proved selection back to the ORIGINAL caveat objects (identity preserved for the evaluator's oracles)
+      const vs = (caveats as unknown[]).map((c) => toValue(c));
+      const kept = Array.from(F.RootCaveats(D.Seq.of(...vs)) as any[]);
+      const out: unknown[] = [];
+      let j = 0;
+      for (let i = 0; i < vs.length && j < kept.length; i++) if (vs[i] === kept[j]) { out.push((caveats as unknown[])[i]); j++; }
+      if (j !== kept.length) throw new PolicyVmUnsupported('rootCaveats: selection is not a subsequence');
+      return out;
     },
     evaluateConditionCounted(c, ctx) {
       const r = F.EvalTriC(toValue(c), toValue(ctx), rx);

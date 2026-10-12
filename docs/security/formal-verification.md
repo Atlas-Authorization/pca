@@ -75,7 +75,7 @@ One row per mechanised result that backs the 0.4.0 release: what is proved, by w
 | zkVM policy guest (RISC Zero) | receipts, not a proof of the guest source | guest image `3b1eebb56b046e737fb15009bdd065b67d7938cb8d47f3f3f0dadc801f84fdad`, reproducible docker build | re-proved receipts verify under the new id; older images are refused as `Superseded` | `sdks/zkvm-pca/CHANGELOG.md` |
 | Kani compositional decision and base64 harnesses; sharded `folding-pca` Miri (12 of 17 shards pass at the time of writing) | Kani, Miri | - | running; results go in a follow-up docs commit (not a release blocker) | `f342b878` |
 | Tamarin and TLC closure runs | Tamarin, TLC | - | done (row above) | `b63a3360`, `b04cf555` |
-| Threshold share whose `pq_pk` differs from the registered key | Dafny (`Threshold.dfy` lemma `PqPkMismatchNeverCounts`) + conformance vectors | unbounded (Dafny); 4 shared DENY vectors | core 171 verified, glue contract 174 verified; 9-language gate 12,152 vectors, 0 disagreements | `d00dba73` |
+| Threshold share whose `pq_pk` differs from the registered key | Dafny (`Threshold.dfy` lemma `PqPkMismatchNeverCounts`) + conformance vectors | unbounded (Dafny); 4 shared DENY vectors | core 171 verified, glue contract 174 verified; cross-language gate 12,152 vectors, 0 disagreements (TypeScript plus 7 native verifiers, Go, Python, Ruby, PHP, .NET, Rust and Java, in the per-vector matrix; Kotlin and Swift run natively over the same corpus) | `d00dba73` |
 
 ## Results
 

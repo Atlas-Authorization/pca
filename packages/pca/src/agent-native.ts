@@ -52,6 +52,13 @@ export const CAVEAT_DELEGATION_DEPTH = 'delegation_depth';
 export const CAVEAT_PREDICATES = 'predicates';
 /** New: tool-call authority bound to an exact tool + signature + (nested) arg schema. */
 export const CAVEAT_TOOL_SCHEMA = 'tool_schema';
+/**
+ * Per-action spend ceiling in US dollars, `{type: 'max_spend', usd}` (0.4.1). Satisfied iff `usd` is a finite number >= 0,
+ * the action's params carry an own `amount` that is a finite number with `0 <= amount <= usd`, and the params' own
+ * `currency`, when present, is exactly `"usd"` or `"USD"`. Anything else (no params, no amount, a string amount, another
+ * currency) is unsatisfied: fail closed. Like every caveat it applies wherever it sits in the chain, the root included.
+ */
+export const CAVEAT_MAX_SPEND = 'max_spend';
 
 const fin = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const isObj = (x: unknown): x is Record<string, unknown> => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -638,9 +645,30 @@ export function predicatesCaveat(allow: Predicate[]): PredicatesCaveat {
   return { type: CAVEAT_PREDICATES, allow: JSON.parse(canonicalize(allow)) as Predicate[] };
 }
 
+/** The action's spend in USD as `max_spend` reads it: own `action.action.params.amount` (finite, >= 0) with an own `currency`, when present, of "usd" / "USD". undefined = no readable spend. */
+export function actionSpendUsd(action: unknown): number | undefined {
+  if (!isObj(action)) return undefined;
+  const act = has(action, 'action') ? action.action : undefined;
+  if (!isObj(act)) return undefined;
+  const params = has(act, 'params') ? act.params : undefined;
+  if (!isObj(params) || !has(params, 'amount')) return undefined;
+  const amount = params.amount;
+  if (!fin(amount) || amount < 0) return undefined;
+  if (has(params, 'currency') && params.currency !== 'usd' && params.currency !== 'USD') return undefined;
+  return amount;
+}
+
+/** `max_spend` (see {@link CAVEAT_MAX_SPEND}): fail closed on a malformed limit or an unreadable spend. */
+function maxSpendSatisfied(caveat: Record<string, unknown>, ctx: Record<string, unknown>): boolean {
+  const lim = has(caveat, 'usd') ? caveat.usd : undefined;
+  const spend = actionSpendUsd(has(ctx, 'action') ? ctx.action : undefined);
+  // a negative limit admits nothing: every readable spend is >= 0
+  return fin(lim) && spend !== undefined && spend <= lim;
+}
+
 /**
- * Superset of the stock `envelopeCaveatEvaluator`: adds `predicates` (needs `ctx.action`) and
- * `tool_schema` (needs `ctx.toolCall`). Anything else defers to the stock evaluator (which fails
+ * Superset of the stock `envelopeCaveatEvaluator`: adds `predicates` (needs `ctx.action`),
+ * `max_spend` (needs `ctx.action`) and `tool_schema` (needs `ctx.toolCall`). Anything else defers to the stock evaluator (which fails
  * closed on unknown types). Total.
  */
 export function agentNativeCaveatEvaluator(caveat: Caveat, ctx: unknown): boolean {
@@ -652,6 +680,7 @@ export function agentNativeCaveatEvaluator(caveat: Caveat, ctx: unknown): boolea
       if (!isObj(a) || !Array.isArray(caveat.allow)) return false;
       return (caveat.allow as Predicate[]).some((p) => predicateMatches(p, a));
     }
+    if (caveat.type === CAVEAT_MAX_SPEND) return maxSpendSatisfied(caveat, ctx);
     return envelopeCaveatEvaluator(caveat, ctx);
   } catch {
     return false;
@@ -709,6 +738,8 @@ export interface AuthorityEnvelope {
     notBefore?: number;
     /** The tightest carried per-subtree trust-budget allocation (`budget_alloc`), when any hop declares one. */
     budgetAlloc?: number;
+    /** Tightest `max_spend` ceiling (USD) on the chain, root included. */
+    maxSpendUsd?: number;
   };
 }
 
@@ -808,6 +839,10 @@ function wellFormedCaveat(cv: Caveat): boolean {
       return nonEmpty(cv.tool);
     case 'budget_alloc': {
       const lim = cv.limit;
+      return fin(lim) && lim >= 0;
+    }
+    case CAVEAT_MAX_SPEND: {
+      const lim = cv.usd;
       return fin(lim) && lim >= 0;
     }
     default:
@@ -924,6 +959,11 @@ export function describeEnvelope(chain: CapabilityChain, now?: number, expectedR
           h.budgetAlloc = h.budgetAlloc === undefined ? lim : Math.min(h.budgetAlloc, lim);
           break;
         }
+        case CAVEAT_MAX_SPEND: {
+          const lim = cv.usd as number;
+          h.maxSpendUsd = h.maxSpendUsd === undefined ? lim : Math.min(h.maxSpendUsd, lim);
+          break;
+        }
       }
     };
 
@@ -981,6 +1021,10 @@ export function envelopePermits(
     if (env.scopes !== null && !env.scopes.some((s) => scopeMatches(s, verb, resource, params))) return false;
     const h = env.remainingBudgetHints;
     if (h.delegationDepthRemaining !== undefined && h.delegationDepthRemaining < 0) return false;
+    if (h.maxSpendUsd !== undefined && params !== undefined) {
+      const spend = actionSpendUsd({ action: { params } });
+      if (spend === undefined || spend > h.maxSpendUsd) return false;
+    }
     if (now !== undefined) {
       if (!fin(now)) return false;
       if (h.expiresAt !== undefined && now >= h.expiresAt) return false;

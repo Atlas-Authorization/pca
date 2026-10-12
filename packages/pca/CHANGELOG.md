@@ -2,6 +2,12 @@
 
 See the full release notes in [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
 
+## 0.4.1 - 2026-10-12
+
+Security fix: caveats placed on the root grant outside the envelope were signed but never evaluated by the policy layer (`decide`, `verifyPCActn`, `requirePCA`); they are now enforced exactly like delegated caveats, and unknown root caveat types fail closed. New `max_spend` caveat type, `rootCaveats` / `policyCaveats` helpers.
+
+Fixed: threshold share `sig` / `pq_sig` are validated per suite on the wire, so pure post-quantum shares can be carried in a PCActn (`validateShareSignatureWire`). The `PCA-Action` header (`defaultExtract`, `decodePcaHeader`) must be strict unpadded base64url of UTF-8; padding, the standard alphabet, whitespace and invalid characters are refused (`PcaHeaderError`, 401). New conformance vectors (`r041-share-*`, `caveat_eval`, `pca_header`). Details in docs/pca/CHANGELOG.md.
+
 ## 0.4.0 - 2026-10-11
 
 Lockstep release; see the 0.4.0 entry in the full release notes for the summary of breaking changes (deriveDecideInput needs ctx.grant, frostAggregate needs verificationShares, decide() no longer guesses the plan node, durable-state fence format, regex work budget). Details for this package:

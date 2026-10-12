@@ -1,5 +1,5 @@
 import { canonicalizeStrict, decodeB64uStrict } from './hash';
-import { validateSignatureWire } from './pq';
+import { validateShareSignatureWire, validateSignatureWire } from './pq';
 
 /**
  * PCActn wire format v2: the NORMATIVE structural + lexical rules a signed PCActn must satisfy BEFORE any
@@ -39,7 +39,6 @@ const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSaf
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 const B32 = 32;
-const SIG = 64;
 
 /** UTF-8 byte length (the NORMATIVE unit for all length bounds — portable across languages). */
 const u8len = (s: string): number => new TextEncoder().encode(s).length;
@@ -166,7 +165,10 @@ export function validateWireV2(p: unknown): string | null {
       for (const [i, s] of th.shares.entries()) {
         if (!isObj(s) || !isStr(s.role)) return `threshold.shares[${i}] is malformed`;
         if (decodeB64uStrict(s.publicKey, B32) === null) return `threshold.shares[${i}].publicKey is not canonical base64url (32 bytes)`;
-        if (decodeB64uStrict(s.sig, SIG) === null) return `threshold.shares[${i}].sig is not canonical base64url (64 bytes)`;
+        // 0.4.1: the share signature is validated PER SUITE (it used to be a fixed 64 bytes, so a pure post-quantum share
+        // could never be carried): `alg` absent == ed25519 (64-byte `sig`, no `pq_sig`), else a registered suite's lengths.
+        const shareErr = validateShareSignatureWire(s, decodeB64uStrict);
+        if (shareErr !== null) return `threshold.shares[${i}]: ${shareErr}`;
       }
     }
     return null;

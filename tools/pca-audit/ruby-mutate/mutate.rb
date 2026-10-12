@@ -151,6 +151,9 @@ mutants = mutants_for(SRC)
 # de-duplicate identical (line, text)
 seen = {}
 mutants = mutants.select { |m| seen[[m.line, m.text]] ? false : (seen[[m.line, m.text]] = true) }
+# --lines without --only: scope BEFORE the (slow: one full re-parse per mutant) syntax validation. Ids are then local to the
+# scoped run; mutants are matched across runs by op + orig + repl (and the site key), never by id.
+mutants = mutants.select { |m| opts[:lines].cover?(m.line) } if opts[:lines] && !opts[:only]
 # validate syntax (drop mutants that no longer parse)
 mutants = mutants.select do |m|
   begin

@@ -110,13 +110,13 @@ corpus (including the post-quantum `ml-dsa-65` and `hybrid-ed25519-ml-dsa-65` ve
 |----------|------|---------|
 | Go | [`pca-go`](https://github.com/Atlas-Authorization/pca-go) | `go get github.com/Atlas-Authorization/pca-go` |
 | Python | [`pca-python`](https://github.com/Atlas-Authorization/pca-python) | `pip install atlas-pca` |
-| Ruby | [`pca-ruby`](https://github.com/Atlas-Authorization/pca-ruby) | `gem install atlas-pca` |
-| Java | [`pca-java`](https://github.com/Atlas-Authorization/pca-java) | Maven / Gradle (`net.atlasauth.pca`; needs BouncyCastle ≥ 1.80) |
-| PHP | [`pca-php`](https://github.com/Atlas-Authorization/pca-php) | Composer (`atlas/pca`) |
+| Ruby | [`pca-ruby`](https://github.com/Atlas-Authorization/pca-ruby) | from source (not yet on RubyGems) |
+| Java | [`pca-java`](https://github.com/Atlas-Authorization/pca-java) | from source (no Maven Central artifact yet; package `net.atlasauth.pca`; needs BouncyCastle ≥ 1.80) |
+| PHP | [`pca-php`](https://github.com/Atlas-Authorization/pca-php) | Composer, from the repository (`atlas-auth/atlas-pca`; not on Packagist yet) |
 | Rust | [`pca-rust`](https://github.com/Atlas-Authorization/pca-rust) | `cargo add atlas-pca` |
-| .NET | [`pca-dotnet`](https://github.com/Atlas-Authorization/pca-dotnet) | NuGet (`AtlasPca`) |
+| .NET | [`pca-dotnet`](https://github.com/Atlas-Authorization/pca-dotnet) | from source (not on NuGet yet; assembly `AtlasPca`) |
 | Swift | [`pca-swift`](https://github.com/Atlas-Authorization/pca-swift) | Swift Package Manager (+ step-up client) |
-| Kotlin | [`pca-kotlin`](https://github.com/Atlas-Authorization/pca-kotlin) | Gradle (needs BouncyCastle ≥ 1.80; + step-up client) |
+| Kotlin | [`pca-kotlin`](https://github.com/Atlas-Authorization/pca-kotlin) | from source, Gradle (needs BouncyCastle ≥ 1.80; + step-up client) |
 
 Swift and Kotlin also ship a principal-device **step-up** client for the threshold co-sign flow.
 

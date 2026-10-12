@@ -78,9 +78,10 @@ describe('requirePCA: default extraction', () => {
     expect(defaultExtract({ headers: { 'X-Other': 'zzz', 'PCA-Action': b64u(text) } })).toBe(text);
     expect(defaultExtract({ headers: { 'pca-action': b64u(text), 'x-other': 'zzz' } })).toBe(text);
   });
-  it('differential: surrounding whitespace in the header value is ignored by the base64 decoder anyway (trim() is redundant)', () => {
+  it('0.4.1: surrounding whitespace in the header value is refused, not trimmed (strict unpadded base64url)', () => {
     const text = '{"k":1}';
-    expect(defaultExtract({ headers: { 'pca-action': `  ${b64u(text)} \n` } })).toBe(defaultExtract({ headers: { 'pca-action': b64u(text) } }));
+    expect(defaultExtract({ headers: { 'pca-action': b64u(text) } })).toBe(text);
+    expect(() => defaultExtract({ headers: { 'pca-action': `  ${b64u(text)} \n` } })).toThrow(/strict unpadded base64url/);
   });
   it('decodes the URL-safe alphabet back to the standard one ("-" -> "+", "_" -> "/")', () => {
     const text = '{"a":"???>>>~~~"}';

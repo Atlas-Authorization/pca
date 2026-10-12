@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-dpop",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Sender-constrained proof-of-possession for PCA: RFC 9449 DPoP proofs and RFC 8705 mTLS cnf binding, tying a PCActn to the holder key/channel for OAuth PoP interop.",
   "keywords": [
     "dpop",

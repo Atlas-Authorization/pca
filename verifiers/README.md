@@ -13,13 +13,13 @@ verifies in one language verifies identically in every other.
 |----------|------|---------|-------|
 | Go | [Atlas-Authorization/pca-go](https://github.com/Atlas-Authorization/pca-go) | `go get github.com/Atlas-Authorization/pca-go` | Shares the exported primitives (`canonicalize`, `merkle_root`, `verify_chain`, …). |
 | Python | [Atlas-Authorization/pca-python](https://github.com/Atlas-Authorization/pca-python) | `pip install atlas-pca` | Zero-dependency core; optional `cryptography` extra for native Ed25519, pure-Python RFC 8032 fallback. |
-| Ruby | [Atlas-Authorization/pca-ruby](https://github.com/Atlas-Authorization/pca-ruby) | `gem install atlas-pca` | Needs OpenSSL 3 for raw Ed25519. |
-| Java | [Atlas-Authorization/pca-java](https://github.com/Atlas-Authorization/pca-java) | Maven / Gradle (`net.atlasauth.pca`) | Needs BouncyCastle ≥ 1.80. |
-| PHP | [Atlas-Authorization/pca-php](https://github.com/Atlas-Authorization/pca-php) | Composer (`atlas/pca`) | Namespace `Atlas\Pca`. |
+| Ruby | [Atlas-Authorization/pca-ruby](https://github.com/Atlas-Authorization/pca-ruby) | from source (not yet on RubyGems) | Needs OpenSSL 3 for raw Ed25519. |
+| Java | [Atlas-Authorization/pca-java](https://github.com/Atlas-Authorization/pca-java) | from source (no Maven Central artifact yet; package `net.atlasauth.pca`) | Needs BouncyCastle ≥ 1.80. |
+| PHP | [Atlas-Authorization/pca-php](https://github.com/Atlas-Authorization/pca-php) | Composer, from the repository (`atlas-auth/atlas-pca`; not on Packagist yet) | Namespace `Atlas\Pca`. |
 | Rust | [Atlas-Authorization/pca-rust](https://github.com/Atlas-Authorization/pca-rust) | `cargo add atlas-pca` | Crate `atlas-pca`. |
-| .NET | [Atlas-Authorization/pca-dotnet](https://github.com/Atlas-Authorization/pca-dotnet) | NuGet (`AtlasPca`) | Walk-up conformance loader. |
+| .NET | [Atlas-Authorization/pca-dotnet](https://github.com/Atlas-Authorization/pca-dotnet) | from source (not on NuGet yet; assembly `AtlasPca`) | Walk-up conformance loader. |
 | Swift | [Atlas-Authorization/pca-swift](https://github.com/Atlas-Authorization/pca-swift) | Swift Package Manager | Also ships a principal-device step-up client. |
-| Kotlin | [Atlas-Authorization/pca-kotlin](https://github.com/Atlas-Authorization/pca-kotlin) | Gradle | Needs BouncyCastle ≥ 1.80; also ships a step-up client. |
+| Kotlin | [Atlas-Authorization/pca-kotlin](https://github.com/Atlas-Authorization/pca-kotlin) | from source (Gradle) | Needs BouncyCastle ≥ 1.80; also ships a step-up client. |
 
 ## Writing your own verifier
 

@@ -2432,10 +2432,38 @@ let PolicyVm = (function() {
           } else {
             return PolicyVm.__default.ExistsPred((_2_allow).dtor_xs, _1_a, rx);
           }
+        } else if (_dafny.areEqual(_0_ty, PolicyVm.Value.create_VStr(PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("max_spend"))))) {
+          return PolicyVm.__default.MaxSpendEv(cv, ctx);
         } else {
           return PolicyVm.__default.EnvelopeEv(cv, ctx, fl);
         }
       }
+    };
+    static HasKey(v, k) {
+      let _source0 = v;
+      {
+        if (_source0.is_VObj) {
+          let _0_es = (_source0).es;
+          return PolicyVm.__default.Has(_0_es, k);
+        }
+      }
+      {
+        return false;
+      }
+    };
+    static SpendParams(ctx) {
+      return PolicyVm.__default.Field(PolicyVm.__default.Field(PolicyVm.__default.Field(ctx, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("action"))), PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("action"))), PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("params")));
+    };
+    static CurrencyOk(ps) {
+      return ((!(PolicyVm.__default.HasKey(ps, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("currency"))))) || (_dafny.areEqual(PolicyVm.__default.Field(ps, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("currency"))), PolicyVm.Value.create_VStr(PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("usd")))))) || (_dafny.areEqual(PolicyVm.__default.Field(ps, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("currency"))), PolicyVm.Value.create_VStr(PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("USD")))));
+    };
+    static MaxSpendEv(cv, ctx) {
+      let _0_lim = PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("usd")));
+      let _1_a = PolicyVm.__default.Field(ctx, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("action")));
+      let _2_act = PolicyVm.__default.Field(_1_a, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("action")));
+      let _3_ps = PolicyVm.__default.Field(_2_act, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("params")));
+      let _4_amt = PolicyVm.__default.Field(_3_ps, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("amount")));
+      return (((((((((_0_lim).is_VNum) && ((new _dafny.BigRational(new BigNumber("0"))).isAtMost((_0_lim).dtor_r))) && (PolicyVm.__default.IsObjRec(_1_a))) && (PolicyVm.__default.IsObjRec(_2_act))) && (PolicyVm.__default.IsObjRec(_3_ps))) && ((_4_amt).is_VNum)) && ((new _dafny.BigRational(new BigNumber("0"))).isAtMost((_4_amt).dtor_r))) && (PolicyVm.__default.CurrencyOk(_3_ps))) && (((_4_amt).dtor_r).isAtMost((_0_lim).dtor_r));
     };
     static CavName(cv) {
       let _0_t = PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("type")));
@@ -2570,8 +2598,23 @@ let PolicyVm = (function() {
         return PolicyVm.__default.AgentEv(_4_cv, _0_cctx, _1_rx, _2_fl, _3_tool);
       })(cctx, rx, fl, tool);
     };
-    static ReleaseOf(preds, action, caveats, extra, cctx, chainOk, rx, fl, tool) {
-      return ((((PolicyVm.__default.EvalPredicates(preds, action, rx)).dtor_allowed) && ((PolicyVm.__default.EvalCaveatList(caveats, PolicyVm.__default.CaveatEvFor(cctx, rx, fl, tool))).dtor_ok)) && ((PolicyVm.__default.EvalCaveats(extra, PolicyVm.__default.CaveatEvFor(cctx, rx, fl, tool))).dtor_ok)) && (chainOk);
+    static RootCaveats(cs) {
+      let _0___accumulator = _dafny.Seq.of();
+      TAIL_CALL_START: while (true) {
+        if ((new BigNumber((cs).length)).isEqualTo(_dafny.ZERO)) {
+          return _dafny.Seq.Concat(_0___accumulator, _dafny.Seq.of());
+        } else if (_dafny.areEqual(PolicyVm.__default.Field((cs)[_dafny.ZERO], PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("type"))), PolicyVm.Value.create_VStr(PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("envelope"))))) {
+          return _dafny.Seq.Concat(_0___accumulator, (cs).slice(_dafny.ONE));
+        } else {
+          _0___accumulator = _dafny.Seq.Concat(_0___accumulator, _dafny.Seq.of((cs)[_dafny.ZERO]));
+          let _in0 = (cs).slice(_dafny.ONE);
+          cs = _in0;
+          continue TAIL_CALL_START;
+        }
+      }
+    };
+    static ReleaseOf(preds, action, caveats, root, extra, cctx, chainOk, rx, fl, tool) {
+      return (((((PolicyVm.__default.EvalPredicates(preds, action, rx)).dtor_allowed) && ((PolicyVm.__default.EvalCaveatList(caveats, PolicyVm.__default.CaveatEvFor(cctx, rx, fl, tool))).dtor_ok)) && ((PolicyVm.__default.EvalCaveats(root, PolicyVm.__default.CaveatEvFor(cctx, rx, fl, tool))).dtor_ok)) && ((PolicyVm.__default.EvalCaveats(extra, PolicyVm.__default.CaveatEvFor(cctx, rx, fl, tool))).dtor_ok)) && (chainOk);
     };
     static get NotFound() {
       return PolicyVm.Res.create_Res(false, PolicyVm.Value.create_VUndef());

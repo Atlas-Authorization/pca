@@ -1389,6 +1389,21 @@ function decodeVarLen(v: unknown, max: number, vl: { min: number; step: number }
  *  - per-suite exact decoded lengths for `sig`/`pq_pk`/`pq_sig`; any field not used by the suite MUST be absent.
  */
 export function validateSignatureWire(p: Record<string, unknown>, decode: Decoder = decodeB64uStrict): string | null {
+  return validateSuiteFields(p, decode, true);
+}
+
+/**
+ * The same per-suite rules for one `threshold.shares[i]` (0.4.1): `alg` absent (ed25519) or a registered suite; `sig` of
+ * that suite's length (64 bytes for ed25519 and every hybrid, 3309 for ml-dsa-65, 4627 for ml-dsa-87, 17088 / 29792 for
+ * the SLH-DSA sets, the FN-DSA / LESS lengths for those suites); `pq_sig` required with the suite's PQ length for a hybrid
+ * and absent otherwise. A share's `pq_pk` is only an optional echo of the key its role registers (checked against the
+ * signer set by `verifyThreshold`), so its presence and length are not a wire rule here.
+ */
+export function validateShareSignatureWire(s: Record<string, unknown>, decode: Decoder = decodeB64uStrict): string | null {
+  return validateSuiteFields(s, decode, false);
+}
+
+function validateSuiteFields(p: Record<string, unknown>, decode: Decoder, checkPqPk: boolean): string | null {
   const alg = p.alg;
   if (alg !== undefined && typeof alg !== 'string') return "'alg' must be a string";
   const suite = resolveSigAlg(alg);
@@ -1401,7 +1416,9 @@ export function validateSignatureWire(p: Record<string, unknown>, decode: Decode
     return `'sig' is not canonical base64url (${sigVar ? `${suite.varLen!.min}..${suite.sigBytes}` : suite.sigBytes} bytes) for alg '${suite.alg}'`;
   }
   // `pq_pk`/`pq_sig` lengths are per-suite (ML-DSA: 1952/3309; SLH-DSA: 32/17088), carried on the SigSuite.
-  if (suite.needsPqPk) {
+  if (!checkPqPk) {
+    // share: `pq_pk` is an optional echo, judged by verifyThreshold against the signer set
+  } else if (suite.needsPqPk) {
     if (decode(p.pq_pk, suite.pqPkBytes) === null) {
       return `'pq_pk' is not canonical base64url (${suite.pqPkBytes} bytes) for alg '${suite.alg}'`;
     }

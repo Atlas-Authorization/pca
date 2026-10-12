@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-hono",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Hono middleware for Proof-Carrying Authority: verifies the inbound PCActn, sets the verdict on the context, or answers 401/403 with a WWW-Authenticate challenge.",
   "keywords": [
     "hono",

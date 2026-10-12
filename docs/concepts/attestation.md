@@ -12,7 +12,7 @@ L0 answers: **is the process acting actually the workload the grant names?** The
 | Mode | What it proves | Status |
 |---|---|---|
 | **Software** | "A key the resource server trusts vouched for these measurements." Measurements are self-asserted by the signer, not rooted in hardware. | Implemented. Suitable for dev, CI and the sanctioned attested-VM equivalent. |
-| **Hardware** | A TEE (SEV-SNP, TDX, SGX) report, rooted in the CPU vendor's certificate chain, measured the loaded workload. | **Seam only.** The interface and its plug-in point exist; real quote parsing is not implemented. |
+| **Hardware** | A TEE report, rooted in the vendor's certificate chain, measured the loaded workload. | **Implemented** as `HardwareAttestationVerifier`s: AMD SEV-SNP (`createAmdSnpVerifier`), Intel TDX DCAP quotes (`createIntelDcapVerifier`), Azure Attestation tokens (`createAzureMaaVerifier`), Google Confidential Space tokens (`createGcpConfidentialSpaceVerifier`), NVIDIA confidential-computing GPU evidence (`createNvidiaSpdmVerifier`), and N-of-M corroboration across independent roots (`createMultiRootVerifier`). Tested on evidence captured from real confidential VMs and GPUs (`packages/pca/fixtures/real-*`, `testdata/sevsnp-real`). |
 
 ## The attestation document
 
@@ -75,7 +75,7 @@ interface HardwareAttestationVerifier {
 // HardwareAttestationResult: { ok, reason?, measured?: MeasuredIdentity }
 ```
 
-A production implementation parses the vendor report, verifies the certificate chain to the CPU root, checks the launch and measurement registers, confirms `report_data` binds the expected nonce, and returns the measured identity.
+Each shipped implementation (table above) parses the vendor report or token, verifies the certificate chain to the vendor root, checks the launch and measurement registers and the TCB / collateral policy, confirms that `report_data` (or the runtime data it hashes) binds the expected holder, grant, epoch and nonce, and returns the measured identity. Plug any of them in as `hardwareVerifier`, or write your own against this interface.
 
 There is also a standardization gap: no cross-vendor standard attests a model's **weights** from inside a TEE (confidential-VM attestation measures the launch image, not "these weights are loaded"). Until the model runtime measures weights into the report, `weights_digest` is only as strong as whoever produced the document, and `weights_allowlist` is the policy hook for pinning it once the measurement is trustworthy.
 

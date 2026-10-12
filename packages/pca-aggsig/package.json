@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-aggsig",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "BLS signature aggregation for PCA: collapse a delegation chain per-hop signatures and transparency-ledger witness cosignatures into one compact BLS12-381 aggregate with aggregate-verify.",
   "keywords": [
     "bls",

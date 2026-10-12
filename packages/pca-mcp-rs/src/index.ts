@@ -46,7 +46,7 @@ import {
   decodePCActn,
   createThresholdVerifier,
   requiredThreshold,
-  unb64u,
+  decodePcaHeader,
   verifyPCActnCore,
   WELL_KNOWN_PCA_PATH,
   type Capability,
@@ -573,8 +573,8 @@ function headerValue(req: McpRequestLike, name: string): string | undefined {
 export function extractPCActn(req: McpRequestLike): PCActn | null {
   const h = headerValue(req, 'pca-action');
   if (typeof h === 'string' && h.length > 0) {
-    const json = new TextDecoder().decode(unb64u(h.trim()));
-    return decodePCActn(json);
+    // strict unpadded base64url of UTF-8 text (0.4.1): padding, '+', '/', whitespace or bad UTF-8 throw (=> 401)
+    return decodePCActn(decodePcaHeader(h));
   }
   let b: unknown = req.body;
   if (typeof b === 'string' && b.length > 0) {

@@ -41,6 +41,11 @@ module Oracle
     @tests = []
     Dir[File.join(ROOT, 'test', 'kill', '*.rb')].sort.each { |f| load f }
     @tests.concat(MutationKill::TESTS) if defined?(MutationKill::TESTS)
+    # MUT_FIRST=<prefix>: run the kill tests whose name starts with <prefix> first (a scoped pass reaches its own tests without
+    # sitting through every slow earlier one per mutant). Order only: every test still has to pass, so verdicts are unchanged.
+    if (pre = ENV['MUT_FIRST']) && !pre.empty?
+      @tests = @tests.partition { |n, _| n.start_with?(pre) }.flatten(1)
+    end
     @prepared_core = Corpus.compute(Corpus.core, 'core', 0, 1)
     @adv_vectors = Corpus.adv['vectors']
   end
@@ -48,12 +53,15 @@ module Oracle
   # The mutant REPLACES the library: the loaded module is dropped first, so a deleted def / constant / module_function
   # is really gone (evaluating on top of the loaded module kept the original definition and every deletion "survived").
   # The Rack middleware (which reopens AtlasPca) is then re-evaluated against the mutated module.
+  # When the mutated FILE is the middleware itself, the library is re-evaluated unmutated and the mutated text is the middleware.
+  LIB = File.join(ROOT, 'lib', 'atlas_pca.rb')
+  MW = File.join(ROOT, 'lib', 'atlas_pca', 'rack_middleware.rb')
   def apply(text, file)
     @text = text
+    mw_mut = File.expand_path(file) == File.expand_path(MW)
     Object.send(:remove_const, :AtlasPca) if Object.const_defined?(:AtlasPca)
-    eval(text, TOPLEVEL_BINDING, file) # rubocop:disable Security/Eval
-    mw = File.join(ROOT, 'lib', 'atlas_pca', 'rack_middleware.rb')
-    eval(File.read(mw), TOPLEVEL_BINDING, mw) # rubocop:disable Security/Eval
+    eval(mw_mut ? File.read(LIB) : text, TOPLEVEL_BINDING, mw_mut ? LIB : file) # rubocop:disable Security/Eval
+    eval(mw_mut ? text : File.read(MW), TOPLEVEL_BINDING, MW) # rubocop:disable Security/Eval
   end
 
   def skip?(v)
@@ -64,6 +72,8 @@ module Oracle
     sus = case v['requires']
           when 'pq' then (a = alg.call(p); SUPPORTED.include?(a) ? nil : a)
           when 'pq-nonleaf' then (p['cap_chain'].is_a?(Array) ? p['cap_chain'] : []).map { |h| alg.call(h) }.find { |a| !SUPPORTED.include?(a) }
+          # 0.4.1 (same rule as conformance.rb): a vector naming one concrete suite (`requires: "ml-dsa-87"`) Ruby lacks
+          when String then (r = v['requires']; r.empty? || SUPPORTED.include?(r) ? nil : r)
           end
     c = v['expect']['checks']
     sus && !(c.keys == ['wire'] && c['wire'] == false)

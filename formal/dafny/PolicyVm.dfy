@@ -1319,8 +1319,40 @@ module PolicyVm {
       else if ty == VStr(S("predicates")) then
         (var a := Field(ctx, S("action")); var allow := Field(cv, S("allow"));
          if !IsObjRec(a) || !allow.VArr? then false else ExistsPred(allow.xs, a, rx))
+      else if ty == VStr(S("max_spend")) then MaxSpendEv(cv, ctx)
       else EnvelopeEv(cv, ctx, fl)
   }
+
+  // ---- max_spend (0.4.1; agent-native.ts maxSpendSatisfied / actionSpendUsd) ----------------------------------------------
+  // `{type: 'max_spend', usd}`: the limit is a finite number >= 0 and the action's OWN params carry an own `amount`, a finite number
+  // with 0 <= amount <= usd; an own `currency`, when present (even as undefined), is exactly "usd" or "USD". It does not read `now`.
+  predicate HasKey(v: Value, k: Str) { match v case VObj(es, _) => Has(es, k) case _ => false }
+  function SpendParams(ctx: Value): Value { Field(Field(Field(ctx, S("action")), S("action")), S("params")) }
+  predicate CurrencyOk(ps: Value) {
+    !HasKey(ps, S("currency")) || Field(ps, S("currency")) == VStr(S("usd")) || Field(ps, S("currency")) == VStr(S("USD"))
+  }
+  function MaxSpendEv(cv: Value, ctx: Value): bool {
+    var lim := Field(cv, S("usd"));
+    var a := Field(ctx, S("action"));
+    var act := Field(a, S("action"));
+    var ps := Field(act, S("params"));
+    var amt := Field(ps, S("amount"));
+    lim.VNum? && lim.r >= 0.0 && IsObjRec(a) && IsObjRec(act) && IsObjRec(ps) && amt.VNum? && amt.r >= 0.0 && CurrencyOk(ps) && amt.r <= lim.r
+  }
+  // soundness: a satisfied max_spend means the action's own amount is a finite number within [0, usd], in USD
+  lemma MaxSpendSound(cv: Value, ctx: Value, rx: Rx, fl: Fl, tool: ToolEv)
+    requires Field(cv, S("type")) == VStr(S("max_spend")) && AgentEv(cv, ctx, rx, fl, tool)
+    ensures Field(cv, S("usd")).VNum? && Field(SpendParams(ctx), S("amount")).VNum?
+    ensures 0.0 <= Field(SpendParams(ctx), S("amount")).r <= Field(cv, S("usd")).r
+    ensures CurrencyOk(SpendParams(ctx)) { assert S("max_spend")[0] != S("tool_schema")[0]; assert S("max_spend")[0] != S("predicates")[0]; }
+  // fail closed: no readable amount (absent, non-number, negative), a malformed limit or a foreign currency never satisfies it
+  lemma MaxSpendNoAmountUnsatisfied(cv: Value, ctx: Value, rx: Rx, fl: Fl, tool: ToolEv)
+    requires Field(cv, S("type")) == VStr(S("max_spend"))
+    requires !Field(SpendParams(ctx), S("amount")).VNum? || Field(SpendParams(ctx), S("amount")).r < 0.0 || !Field(cv, S("usd")).VNum?
+             || !CurrencyOk(SpendParams(ctx))
+    ensures !AgentEv(cv, ctx, rx, fl, tool) { assert S("max_spend")[0] != S("tool_schema")[0]; assert S("max_spend")[0] != S("predicates")[0]; }
+  // monotone in the amount: if a spend is within the ceiling, every smaller non-negative spend is too
+  lemma MaxSpendMonotone(lim: real, a1: real, a2: real) requires 0.0 <= a1 <= a2 && a2 <= lim ensures a1 <= lim {}
 
   // evaluateCaveats: ok iff every caveat is satisfied; `failed` lists the unsatisfied types in order ('<malformed>' for a non-string type)
   const MalformedName: Str := S("<malformed>")
@@ -1482,6 +1514,7 @@ module PolicyVm {
     else Adm(false, true, 3, false)
   }
   datatype Dec = Dec(release: bool, admit: bool, needStepUp: bool, thr: Thr, debit: bool)
+  // cvOk = the envelope's caveats AND (0.4.1) the root caveats outside the envelope all hold (see ReleaseOf / RootCaveats)
   function DecideCore(prOk: bool, cvOk: bool, dcvOk: bool, chainOk: bool, rt: Thr, adm: Adm): Dec {
     var release := prOk && cvOk && dcvOk && chainOk;
     Dec(release, release && adm.admit, if release then adm.needStepUp else true, Escalate(rt, adm.t), release && adm.metered)
@@ -1610,28 +1643,87 @@ module PolicyVm {
   // ---------------------------------------------------------------- end to end: what a released guardian share implies
   // release = predicates allow AND every grant caveat holds AND every delegated caveat holds AND the chain is well formed
   function CaveatEvFor(cctx: Value, rx: Rx, fl: Fl, tool: ToolEv): Value -> bool { (cv: Value) => AgentEv(cv, cctx, rx, fl, tool) }
-  function ReleaseOf(preds: Value, action: Value, caveats: Value, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv): bool {
+
+  // ---- root caveats (0.4.1 security fix; policy-vm.ts rootCaveats) ---------------------------------------------------------
+  // The caveats on the ROOT grant that are evaluated as caveats: every entry except the FIRST `envelope` caveat (the one readEnvelope
+  // reads as the policy container; its predicates and inner caveats are evaluated on their own). Before 0.4.1 these were signed but never
+  // evaluated.
+  function RootCaveats(cs: seq<Value>): seq<Value> decreases cs {
+    if |cs| == 0 then [] else if Field(cs[0], S("type")) == VStr(S("envelope")) then cs[1..] else [cs[0]] + RootCaveats(cs[1..])
+  }
+  lemma RootCaveatsSubset(cs: seq<Value>) ensures forall c :: c in RootCaveats(cs) ==> c in cs decreases cs {
+    if |cs| > 0 && Field(cs[0], S("type")) != VStr(S("envelope")) { RootCaveatsSubset(cs[1..]); }
+  }
+  // COVERAGE: every grant caveat that is not of type `envelope` is evaluated (and so is every `envelope` caveat after the first)
+  lemma RootCaveatsCover(cs: seq<Value>, i: int)
+    requires 0 <= i < |cs| && Field(cs[i], S("type")) != VStr(S("envelope"))
+    ensures cs[i] in RootCaveats(cs)
+    decreases cs
+  {
+    if Field(cs[0], S("type")) == VStr(S("envelope")) { assert cs[i] == cs[1..][i - 1]; }
+    else if i > 0 { RootCaveatsCover(cs[1..], i - 1); }
+  }
+  lemma RootCaveatsLaterEnvelopes(cs: seq<Value>, j: int, i: int)
+    requires 0 <= j < i < |cs| && Field(cs[j], S("type")) == VStr(S("envelope"))
+    ensures cs[i] in RootCaveats(cs)
+    decreases cs
+  {
+    if Field(cs[0], S("type")) == VStr(S("envelope")) { assert cs[i] == cs[1..][i - 1]; }
+    else { RootCaveatsLaterEnvelopes(cs[1..], j - 1, i - 1); }
+  }
+
+  // release = predicates allow AND every envelope caveat AND every ROOT caveat AND every delegated caveat holds AND the chain is well formed
+  function ReleaseOf(preds: Value, action: Value, caveats: Value, root: seq<Value>, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv): bool {
     EvalPredicates(preds, action, rx).allowed &&
     EvalCaveatList(caveats, CaveatEvFor(cctx, rx, fl, tool)).ok &&
+    EvalCaveats(root, CaveatEvFor(cctx, rx, fl, tool)).ok &&
     EvalCaveats(extra, CaveatEvFor(cctx, rx, fl, tool)).ok && chainOk
   }
-  lemma ReleaseSound(preds: Value, action: Value, caveats: Value, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv)
-    requires ReleaseOf(preds, action, caveats, extra, cctx, chainOk, rx, fl, tool)
+  lemma ReleaseSound(preds: Value, action: Value, caveats: Value, root: seq<Value>, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv)
+    requires ReleaseOf(preds, action, caveats, root, extra, cctx, chainOk, rx, fl, tool)
     ensures preds.VArr? && exists j :: 0 <= j < |preds.xs| && PredicateMatches(preds.xs[j], action, rx)
     ensures caveats.VArr? && forall i :: 0 <= i < |caveats.xs| ==> AgentEv(caveats.xs[i], cctx, rx, fl, tool)
+    ensures forall i :: 0 <= i < |root| ==> AgentEv(root[i], cctx, rx, fl, tool)
     ensures forall i :: 0 <= i < |extra| ==> AgentEv(extra[i], cctx, rx, fl, tool)
     ensures chainOk
   {
     PredicatesAllowedIff(preds, action, rx);
     CavOkIff(caveats.xs, CaveatEvFor(cctx, rx, fl, tool));
+    CavOkIff(root, CaveatEvFor(cctx, rx, fl, tool));
     CavOkIff(extra, CaveatEvFor(cctx, rx, fl, tool));
   }
+  // THE 0.4.1 PROPERTY: a release under a grant implies that EVERY caveat on the grant other than its envelope container holds --
+  // attenuation applies from the root exactly as it does to the caveats delegation hops append.
+  lemma RootCaveatsEnforced(preds: Value, action: Value, caveats: Value, gcs: seq<Value>, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv, i: int)
+    requires ReleaseOf(preds, action, caveats, RootCaveats(gcs), extra, cctx, chainOk, rx, fl, tool)
+    requires 0 <= i < |gcs| && Field(gcs[i], S("type")) != VStr(S("envelope"))
+    ensures AgentEv(gcs[i], cctx, rx, fl, tool)
+  {
+    ReleaseSound(preds, action, caveats, RootCaveats(gcs), extra, cctx, chainOk, rx, fl, tool);
+    RootCaveatsCover(gcs, i);
+    var k :| 0 <= k < |RootCaveats(gcs)| && RootCaveats(gcs)[k] == gcs[i];
+  }
+  // in particular a root max_spend: no release for an action whose amount exceeds the root ceiling
+  lemma RootMaxSpendEnforced(preds: Value, action: Value, caveats: Value, gcs: seq<Value>, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv, i: int)
+    requires 0 <= i < |gcs| && Field(gcs[i], S("type")) == VStr(S("max_spend"))
+    requires ReleaseOf(preds, action, caveats, RootCaveats(gcs), extra, cctx, chainOk, rx, fl, tool)
+    ensures Field(gcs[i], S("usd")).VNum? && Field(SpendParams(cctx), S("amount")).VNum?
+    ensures Field(SpendParams(cctx), S("amount")).r <= Field(gcs[i], S("usd")).r
+  {
+    assert S("max_spend")[0] != S("envelope")[0];
+    RootCaveatsEnforced(preds, action, caveats, gcs, extra, cctx, chainOk, rx, fl, tool, i);
+    MaxSpendSound(gcs[i], cctx, rx, fl, tool);
+  }
   // delegation can only narrow: adding a delegated caveat never turns a refusal into a release
-  lemma DelegationAttenuates(preds: Value, action: Value, caveats: Value, extra: seq<Value>, c: Value, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv)
-    ensures ReleaseOf(preds, action, caveats, extra + [c], cctx, chainOk, rx, fl, tool) ==> ReleaseOf(preds, action, caveats, extra, cctx, chainOk, rx, fl, tool)
+  lemma DelegationAttenuates(preds: Value, action: Value, caveats: Value, root: seq<Value>, extra: seq<Value>, c: Value, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv)
+    ensures ReleaseOf(preds, action, caveats, root, extra + [c], cctx, chainOk, rx, fl, tool) ==> ReleaseOf(preds, action, caveats, root, extra, cctx, chainOk, rx, fl, tool)
   { CavAppendAttenuates(extra, c, CaveatEvFor(cctx, rx, fl, tool)); }
-  // and so can adding a grant caveat
-  lemma GrantCaveatAttenuates(preds: Value, action: Value, cs: seq<Value>, c: Value, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv)
-    ensures ReleaseOf(preds, action, VArr(cs + [c]), extra, cctx, chainOk, rx, fl, tool) ==> ReleaseOf(preds, action, VArr(cs), extra, cctx, chainOk, rx, fl, tool)
+  // and so can adding an envelope caveat
+  lemma GrantCaveatAttenuates(preds: Value, action: Value, cs: seq<Value>, c: Value, root: seq<Value>, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv)
+    ensures ReleaseOf(preds, action, VArr(cs + [c]), root, extra, cctx, chainOk, rx, fl, tool) ==> ReleaseOf(preds, action, VArr(cs), root, extra, cctx, chainOk, rx, fl, tool)
   { CavAppendAttenuates(cs, c, CaveatEvFor(cctx, rx, fl, tool)); }
+  // and so can adding a root caveat
+  lemma RootCaveatAttenuates(preds: Value, action: Value, caveats: Value, root: seq<Value>, c: Value, extra: seq<Value>, cctx: Value, chainOk: bool, rx: Rx, fl: Fl, tool: ToolEv)
+    ensures ReleaseOf(preds, action, caveats, root + [c], extra, cctx, chainOk, rx, fl, tool) ==> ReleaseOf(preds, action, caveats, root, extra, cctx, chainOk, rx, fl, tool)
+  { CavAppendAttenuates(root, c, CaveatEvFor(cctx, rx, fl, tool)); }
 }

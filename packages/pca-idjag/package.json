@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-idjag",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "ID-JAG / OAuth Cross-App-Access bridge for PCA: verify an identity-assertion authorization grant (sub=human, act=agent, scoped, single-audience) and map it to a PCA principal/capability; RFC 8693/7523 token-exchange.",
   "keywords": [
     "id-jag",

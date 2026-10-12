@@ -26,7 +26,7 @@ repeats the "no `assume`, `{:axiom}`, `extern` in the Dafny sources" audit.
 
 Reproducibility evidence (box cloud-box-9, pinned toolchain):
 
-* `build.sh --verify-only`: **170 verified, 0 errors**. `GlueContract.dfy` (below) with the core included: 173 verified, 0 errors.
+* `build.sh --verify-only`: **171 verified, 0 errors**. `GlueContract.dfy` (below) with the core included: 174 verified, 0 errors (re-run 2026-10-12; the earlier 170 / 173 predate the `PqPkMismatchNeverCounts` lemma).
 * `build.sh --check`: the committed `packages/pca-verified-core/generated/pca_core.js` is **byte-identical** to a fresh compile.
 * `dafny translate` run twice per target is deterministic for js, go, java and python; for C# the only difference is the
   `-o` path echoed in a header comment.

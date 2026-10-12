@@ -1,7 +1,7 @@
 import { type Capability, type CapabilityChain, verifyChain } from './capability';
 import type { PCActn } from './pcactn';
 import type { PlanNode } from './merkle';
-import { readEnvelope } from './envelope';
+import { ENVELOPE_CAVEAT, readEnvelope } from './envelope';
 import { withRegexBudget } from './regex-budget';
 import { agentNativeCaveatEvaluator, type AgentCaveatContext } from './agent-native';
 import {
@@ -138,6 +138,31 @@ export function resolveReversibilityClass(action: ActionContext | undefined, pla
   return plan?.find((n) => n.id === nodeId)?.reversibility_class;
 }
 
+/**
+ * The caveats on the ROOT grant that the policy layer evaluates as caveats: every entry of `grant.caveats` except the
+ * first `envelope` caveat (the one `readEnvelope` reads; its predicates and inner caveats are evaluated separately).
+ * A non-array list is returned as is, and `evaluateCaveats` refuses it (fail closed).
+ */
+export function rootCaveats(grant: Capability): Capability['caveats'] {
+  const cs = grant?.caveats;
+  if (!Array.isArray(cs)) return cs;
+  const i = cs.findIndex((c) => c?.type === ENVELOPE_CAVEAT);
+  return i < 0 ? cs.slice() : [...cs.slice(0, i), ...cs.slice(i + 1)];
+}
+
+/**
+ * Every caveat the policy layer evaluates as a caveat for an action under `grant` delegated along `chain` (root first):
+ * {@link rootCaveats} of the grant, then the caveats the hops appended (`leaf.caveats` beyond the grant's). This is the
+ * list the conformance `caveat_eval` vectors evaluate; `decide()` / `verifyPCActn` evaluate the same two parts (and the
+ * envelope's own caveats and predicates besides).
+ */
+export function policyCaveats(grant: Capability, chain?: CapabilityChain): Capability['caveats'] {
+  const root = rootCaveats(grant);
+  const leaf = Array.isArray(chain) ? chain[chain.length - 1] : undefined; // [] -> undefined
+  const appended = leaf && Array.isArray(leaf.caveats) && Array.isArray(grant?.caveats) ? leaf.caveats.slice(grant.caveats.length) : [];
+  return Array.isArray(root) ? [...root, ...appended] : root;
+}
+
 const WORST: RiskInputs = {
   semanticDistance: 1,
   reversibility: 0,
@@ -226,8 +251,15 @@ function decideInner(input: DecideInput): PolicyDecision {
         extra = chain[chain.length - 1]!.caveats.slice(grant.caveats.length);
       }
     }
-    const cv = evaluateAgentCaveats(env.caveats, cctx, action);
-    if (!cv.ok) reasons.push(`caveat(s) not satisfied: ${cv.failed.join(', ')}`);
+    const ecv = evaluateAgentCaveats(env.caveats, cctx, action);
+    if (!ecv.ok) reasons.push(`caveat(s) not satisfied: ${ecv.failed.join(', ')}`);
+    // 0.4.1 (security): caveats placed directly on the ROOT grant, outside the envelope, are signed authority too and are
+    // enforced exactly like the caveats delegation hops append (attenuation applies from the root). Only the envelope
+    // caveat that `readEnvelope` reads is excluded (its predicates and inner caveats are evaluated above); a second
+    // `envelope` caveat, or any type this evaluator does not implement, is unsatisfied (fail closed).
+    const rcv = evaluateAgentCaveats(rootCaveats(grant), cctx, action);
+    if (!rcv.ok) reasons.push(`root caveat(s) not satisfied: ${rcv.failed.join(', ')}`);
+    const cv = { ok: ecv.ok && rcv.ok };
     const dcv = evaluateAgentCaveats(extra, cctx, action);
     if (!dcv.ok) reasons.push(`delegated caveat(s) not satisfied: ${dcv.failed.join(', ')}`);
 

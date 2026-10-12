@@ -947,17 +947,6 @@
   },
   {
    "file": "src/server/require-pca.ts",
-   "mutator": "MethodExpression",
-   "original": "h.trim()",
-   "replacement": "h",
-   "line": "if (h) return fromB64u(h.trim());",
-   "occurrence": 1,
-   "lineno": 188,
-   "reason": "Node's base64 decoder ignores surrounding whitespace, so trim() is redundant.",
-   "differential": "src/server/require-pca.mutation-kill.test.ts#differential: surrounding whitespace"
-  },
-  {
-   "file": "src/server/require-pca.ts",
    "mutator": "BlockStatement",
    "original": "<multiline>",
    "replacement": "{}",
@@ -30654,6 +30643,16 @@
    "occurrence": 1,
    "lineno": 331,
    "reason": "verifyPCActnCore has already rejected a PCActn whose plan is missing or not an object (terminal wire failure: 'plan' must be an object), so p.plan is always an object here."
+  },
+  {
+   "file": "src/agent-native.ts",
+   "mutator": "ConditionalExpression",
+   "original": "spend !== undefined",
+   "replacement": "true",
+   "line": "return fin(lim) && spend !== undefined && spend <= lim;",
+   "occurrence": 1,
+   "lineno": 666,
+   "reason": "0.4.1 max_spend: with spend undefined, 'undefined <= lim' is false, so the result is false either way."
   }
  ]
 }

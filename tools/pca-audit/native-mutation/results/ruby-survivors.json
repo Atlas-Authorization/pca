@@ -1,0 +1,4248 @@
+[
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if raw.nil? || !PQ_PK_LENGTHS.include?(raw.bytesize)",
+  "occurrence": 1,
+  "lineno": 823,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: pq.is_a?(String) => true",
+  "line": "raw = pq.is_a?(String) ? b64d(pq) : nil",
+  "occurrence": 1,
+  "lineno": 822,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: pq = nil => nil",
+  "line": "pq = nil",
+  "occurrence": 1,
+  "lineno": 819,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: pq.is_a?(String) => String",
+  "line": "raw = pq.is_a?(String) ? b64d(pq) : nil",
+  "occurrence": 1,
+  "lineno": 822,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: pq.is_a?(String) => pq",
+  "line": "raw = pq.is_a?(String) ? b64d(pq) : nil",
+  "occurrence": 1,
+  "lineno": 822,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: next => nil",
+  "line": "next",
+  "occurrence": 1,
+  "lineno": 828,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless reg[role] == [pk, pq] # two keys for one role, or a conflicting pq_pk",
+  "occurrence": 1,
+  "lineno": 826,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if role_of_key.fetch(pk, role) != role # one key under two roles",
+  "occurrence": 1,
+  "lineno": 830,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless role.is_a?(String) => nil",
+  "line": "return false unless role.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 849,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless entry.is_a?(Hash) => nil",
+  "line": "return false unless entry.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 844,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if reg.nil? => nil",
+  "line": "return false if reg.nil?",
+  "occurrence": 1,
+  "lineno": 856,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if ssh.nil? => nil",
+  "line": "return false if ssh.nil?",
+  "occurrence": 1,
+  "lineno": 859,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if tmsg.nil? => nil",
+  "line": "return false if tmsg.nil?",
+  "occurrence": 1,
+  "lineno": 853,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless reg.key?(role) => nil",
+  "line": "return false unless reg.key?(role)",
+  "occurrence": 1,
+  "lineno": 863,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if suite.nil? => nil",
+  "line": "return false if suite.nil?",
+  "occurrence": 3,
+  "lineno": 869,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: entry.is_a?(Hash) => true",
+  "line": "return false unless entry.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 844,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: t.is_a?(Float) && t.finite? => t.is_a?(Float)",
+  "line": "t = t.to_i if t.is_a?(Float) && t.finite? && t == t.to_i # JS number semantics: 1.0 == 1",
+  "occurrence": 1,
+  "lineno": 848,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: t.is_a?(Float) && t.finite? && t == t.to_i => t == t.to_i",
+  "line": "t = t.to_i if t.is_a?(Float) && t.finite? && t == t.to_i # JS number semantics: 1.0 == 1",
+  "occurrence": 1,
+  "lineno": 848,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: entry.is_a?(Hash) => entry",
+  "line": "return false unless entry.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 844,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: entry.is_a?(Hash) => Hash",
+  "line": "return false unless entry.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 844,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: t.is_a?(Float) => t",
+  "line": "t = t.to_i if t.is_a?(Float) && t.finite? && t == t.to_i # JS number semantics: 1.0 == 1",
+  "occurrence": 1,
+  "lineno": 848,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: t.is_a?(Float) && t.finite? => t.finite?",
+  "line": "t = t.to_i if t.is_a?(Float) && t.finite? && t == t.to_i # JS number semantics: 1.0 == 1",
+  "occurrence": 1,
+  "lineno": 848,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: t.is_a?(Float) => true",
+  "line": "t = t.to_i if t.is_a?(Float) && t.finite? && t == t.to_i # JS number semantics: 1.0 == 1",
+  "occurrence": 1,
+  "lineno": 848,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: t.is_a?(Float) => Float",
+  "line": "t = t.to_i if t.is_a?(Float) && t.finite? && t == t.to_i # JS number semantics: 1.0 == 1",
+  "occurrence": 1,
+  "lineno": 848,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: role.is_a?(String) => true",
+  "line": "return false unless role.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 849,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-finite?: t.finite? => true",
+  "line": "t = t.to_i if t.is_a?(Float) && t.finite? && t == t.to_i # JS number semantics: 1.0 == 1",
+  "occurrence": 1,
+  "lineno": 848,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: role.is_a?(String) => role",
+  "line": "return false unless role.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 849,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: role.is_a?(String) => String",
+  "line": "return false unless role.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 849,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: t.is_a?(Integer) => true",
+  "line": "return false unless t.is_a?(Integer) && [1, 2, 3].include?(t)",
+  "occurrence": 1,
+  "lineno": 850,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: t.is_a?(Integer) => t",
+  "line": "return false unless t.is_a?(Integer) && [1, 2, 3].include?(t)",
+  "occurrence": 1,
+  "lineno": 850,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: t.is_a?(Integer) => Integer",
+  "line": "return false unless t.is_a?(Integer) && [1, 2, 3].include?(t)",
+  "occurrence": 1,
+  "lineno": 850,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: t.is_a?(Integer) && [1, 2, 3].include?(t) => [1, 2, 3].include?(t)",
+  "line": "return false unless t.is_a?(Integer) && [1, 2, 3].include?(t)",
+  "occurrence": 1,
+  "lineno": 850,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: tmsg.nil? => false",
+  "line": "return false if tmsg.nil?",
+  "occurrence": 1,
+  "lineno": 853,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: reg.nil? => false",
+  "line": "return false if reg.nil?",
+  "occurrence": 1,
+  "lineno": 856,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: ssh.nil? => false",
+  "line": "return false if ssh.nil?",
+  "occurrence": 1,
+  "lineno": 859,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role => share['role'] == role",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: share.is_a?(Hash) && share['role'].is_a?(String) => share.is_a?(Hash)",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: share.is_a?(Hash) && share['role'].is_a?(String) => share['role'].is_a?(String)",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: share.is_a?(Hash) => true",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: share.is_a?(Hash) => share",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: share.is_a?(Hash) => Hash",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: share['role'].is_a?(String) => true",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: share['role'].is_a?(String) => share['role']",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: share['role'].is_a?(String) => String",
+  "line": "return false unless share.is_a?(Hash) && share['role'].is_a?(String) && share['role'] == role",
+  "occurrence": 1,
+  "lineno": 862,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-key?: reg.key?(role) => reg",
+  "line": "return false unless reg.key?(role)",
+  "occurrence": 1,
+  "lineno": 863,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: reg.key?(role) => true",
+  "line": "return false unless reg.key?(role)",
+  "occurrence": 1,
+  "lineno": 863,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-key?: reg.key?(role) => role",
+  "line": "return false unless reg.key?(role)",
+  "occurrence": 1,
+  "lineno": 863,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: suite.nil? => false",
+  "line": "return false if suite.nil?",
+  "occurrence": 3,
+  "lineno": 869,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: reg_pq.is_a?(String) => reg_pq",
+  "line": "return false if share.key?('pq_pk') && (!reg_pq.is_a?(String) || share['pq_pk'] != reg_pq)",
+  "occurrence": 1,
+  "lineno": 872,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: ''.b => ''",
+  "line": "tag = ''.b",
+  "occurrence": 1,
+  "lineno": 877,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless reg_pq.is_a?(String) => nil",
+  "line": "return false unless reg_pq.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 879,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: reg_pq.is_a?(String) => true",
+  "line": "return false unless reg_pq.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 879,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: reg_pq.is_a?(String) => reg_pq",
+  "line": "return false unless reg_pq.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 879,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: reg_pq.is_a?(String) => String",
+  "line": "return false unless reg_pq.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 879,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: \"\\x00atlas-pca/share-suite/v1\\x00#{suite}\".b => \"\\x00atlas-pca/share-suite/v1\\x00#{suite}\"",
+  "line": "tag = \"\\x00atlas-pca/share-suite/v1\\x00#{suite}\".b",
+  "occurrence": 1,
+  "lineno": 882,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: \"atlas-pca/share/#{role}\\x00\".b => \"atlas-pca/share/#{role}\\x00\"",
+  "line": "bound = \"atlas-pca/share/#{role}\\x00\".b + sha(tmsg) + ssh + [t].pack('C') + tag",
+  "occurrence": 1,
+  "lineno": 884,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "false",
+  "occurrence": 6,
+  "lineno": 887,
+  "fn": "verify_threshold_share"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless entry.is_a?(Hash) => nil",
+  "line": "return false unless entry.is_a?(Hash)",
+  "occurrence": 2,
+  "lineno": 894,
+  "fn": "verify_pq_artifact"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if msg.nil? => nil",
+  "line": "return false if msg.nil?",
+  "occurrence": 1,
+  "lineno": 897,
+  "fn": "verify_pq_artifact"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: entry.is_a?(Hash) => true",
+  "line": "return false unless entry.is_a?(Hash)",
+  "occurrence": 2,
+  "lineno": 894,
+  "fn": "verify_pq_artifact"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: entry.is_a?(Hash) => entry",
+  "line": "return false unless entry.is_a?(Hash)",
+  "occurrence": 2,
+  "lineno": 894,
+  "fn": "verify_pq_artifact"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: entry.is_a?(Hash) => Hash",
+  "line": "return false unless entry.is_a?(Hash)",
+  "occurrence": 2,
+  "lineno": 894,
+  "fn": "verify_pq_artifact"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: msg.nil? => false",
+  "line": "return false if msg.nil?",
+  "occurrence": 1,
+  "lineno": 897,
+  "fn": "verify_pq_artifact"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "false",
+  "occurrence": 7,
+  "lineno": 901,
+  "fn": "verify_pq_artifact"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if pk.nil? => nil",
+  "line": "return false if pk.nil?",
+  "occurrence": 1,
+  "lineno": 907,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if sg.nil? => nil",
+  "line": "return false if sg.nil?",
+  "occurrence": 1,
+  "lineno": 910,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: pub.is_a?(String) => true",
+  "line": "pk = pub.is_a?(String) ? b64d(pub, 32) : nil",
+  "occurrence": 1,
+  "lineno": 906,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: pub.is_a?(String) => pub",
+  "line": "pk = pub.is_a?(String) ? b64d(pub, 32) : nil",
+  "occurrence": 1,
+  "lineno": 906,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: pub.is_a?(String) => String",
+  "line": "pk = pub.is_a?(String) ? b64d(pub, 32) : nil",
+  "occurrence": 1,
+  "lineno": 906,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "pk = pub.is_a?(String) ? b64d(pub, 32) : nil",
+  "occurrence": 1,
+  "lineno": 906,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: sig.is_a?(String) => true",
+  "line": "sg = sig.is_a?(String) ? b64d(sig, 64) : nil",
+  "occurrence": 1,
+  "lineno": 909,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: pk.nil? => false",
+  "line": "return false if pk.nil?",
+  "occurrence": 1,
+  "lineno": 907,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: sig.is_a?(String) => String",
+  "line": "sg = sig.is_a?(String) ? b64d(sig, 64) : nil",
+  "occurrence": 1,
+  "lineno": 909,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "sg = sig.is_a?(String) ? b64d(sig, 64) : nil",
+  "occurrence": 1,
+  "lineno": 909,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: sg.nil? => false",
+  "line": "return false if sg.nil?",
+  "occurrence": 1,
+  "lineno": 910,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: sig.is_a?(String) => sig",
+  "line": "sg = sig.is_a?(String) ? b64d(sig, 64) : nil",
+  "occurrence": 1,
+  "lineno": 909,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "false",
+  "occurrence": 8,
+  "lineno": 914,
+  "fn": "verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-force_encoding: pq_pk.dup.force_encoding('UTF-8') => pq_pk.dup",
+  "line": "b64e(Digest::SHA256.digest(HOLDER_PQ_DOMAIN + pq_pk.dup.force_encoding('UTF-8').b))",
+  "occurrence": 1,
+  "lineno": 931,
+  "fn": "holder_pq_commitment"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if allowed.nil?",
+  "occurrence": 1,
+  "lineno": 936,
+  "fn": "suite_policy_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'ed25519' => ''",
+  "line": "a = alg.nil? ? 'ed25519' : alg",
+  "occurrence": 2,
+  "lineno": 946,
+  "fn": "pq_binding_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if a.is_a?(String) && allowed.include?(a)",
+  "occurrence": 1,
+  "lineno": 939,
+  "fn": "suite_policy_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: pq_pk.dup.force_encoding('UTF-8').b => pq_pk.dup.force_encoding('UTF-8')",
+  "line": "b64e(Digest::SHA256.digest(HOLDER_PQ_DOMAIN + pq_pk.dup.force_encoding('UTF-8').b))",
+  "occurrence": 1,
+  "lineno": 931,
+  "fn": "holder_pq_commitment"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: alg.nil? => false",
+  "line": "a = alg.nil? ? 'ed25519' : alg",
+  "occurrence": 2,
+  "lineno": 946,
+  "fn": "pq_binding_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: a.is_a?(String) => true",
+  "line": "return nil unless a.is_a?(String) && SIG_SUITES.key?(a) && SIG_SUITES[a][1]",
+  "occurrence": 1,
+  "lineno": 947,
+  "fn": "pq_binding_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: a.is_a?(String) && SIG_SUITES.key?(a) => SIG_SUITES.key?(a)",
+  "line": "return nil unless a.is_a?(String) && SIG_SUITES.key?(a) && SIG_SUITES[a][1]",
+  "occurrence": 1,
+  "lineno": 947,
+  "fn": "pq_binding_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: a.is_a?(String) => String",
+  "line": "return nil unless a.is_a?(String) && SIG_SUITES.key?(a) && SIG_SUITES[a][1]",
+  "occurrence": 1,
+  "lineno": 947,
+  "fn": "pq_binding_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: needs_pk && c['pq_pk'].is_a?(String) => c['pq_pk'].is_a?(String)",
+  "line": "body['pq_pk'] = c['pq_pk'] if needs_pk && c['pq_pk'].is_a?(String)",
+  "occurrence": 1,
+  "lineno": 968,
+  "fn": "signable_hop_body"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless a.is_a?(String) && SIG_SUITES.key?(a) && SIG_SUITES[a][1]",
+  "occurrence": 1,
+  "lineno": 947,
+  "fn": "pq_binding_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: a.is_a?(String) => a",
+  "line": "return nil unless a.is_a?(String) && SIG_SUITES.key?(a) && SIG_SUITES[a][1]",
+  "occurrence": 1,
+  "lineno": 947,
+  "fn": "pq_binding_error"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def check_sig(c, signer, label, pq = nil)",
+  "occurrence": 1,
+  "lineno": 973,
+  "fn": "check_sig"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: d.nil? => false",
+  "line": "return \"#{label}: bad signature (not signed by expected key)\" if d.nil?",
+  "occurrence": 1,
+  "lineno": 983,
+  "fn": "check_sig"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "cv = c.is_a?(Hash) ? c['caveats'] : nil",
+  "occurrence": 1,
+  "lineno": 998,
+  "fn": "caveat_limit_exceeded?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: trusted = nil => nil",
+  "line": "trusted = nil",
+  "occurrence": 1,
+  "lineno": 1019,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return \"#{label}: bad signature (not signed by expected key)\" if d.nil? => nil",
+  "line": "return \"#{label}: bad signature (not signed by expected key)\" if d.nil?",
+  "occurrence": 1,
+  "lineno": 983,
+  "fn": "check_sig"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return \"#{label}: bad signature (not signed by expected key)\" => return",
+  "line": "return \"#{label}: bad signature (not signed by expected key)\" if d.nil?",
+  "occurrence": 1,
+  "lineno": 983,
+  "fn": "check_sig"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return \"#{label}: bad signature (not signed by expected key)\" => return nil",
+  "line": "return \"#{label}: bad signature (not signed by expected key)\" if d.nil?",
+  "occurrence": 1,
+  "lineno": 983,
+  "fn": "check_sig"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: !trusted_root.nil? && pk.is_a?(String) => true",
+  "line": "if !trusted_root.nil? && pk.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1020,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-&&: && => ||",
+  "line": "if !trusted_root.nil? && pk.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1020,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "trusted = nil",
+  "occurrence": 1,
+  "lineno": 1019,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: !trusted_root.nil? && pk.is_a?(String) => !trusted_root.nil?",
+  "line": "if !trusted_root.nil? && pk.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1020,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: pk.is_a?(String) => pk",
+  "line": "if !trusted_root.nil? && pk.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1020,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: !trusted_root.nil? && pk.is_a?(String) => pk.is_a?(String)",
+  "line": "if !trusted_root.nil? && pk.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1020,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: pk.is_a?(String) => String",
+  "line": "if !trusted_root.nil? && pk.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1020,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "trusted = nil",
+  "occurrence": 2,
+  "lineno": 1024,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: pk.is_a?(String) => true",
+  "line": "if !trusted_root.nil? && pk.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1020,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-false-nil?: trusted_root.nil? => false",
+  "line": "if !trusted_root.nil? && pk.is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1020,
+  "fn": "resolve_root_pq"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def verify_chain(chain, expected_root_issuer, have_issuer, allowed_suites = nil, pq_pins = nil, trusted_root = nil)",
+  "occurrence": 1,
+  "lineno": 1033,
+  "fn": "verify_chain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def verify_chain(chain, expected_root_issuer, have_issuer, allowed_suites = nil, pq_pins = nil, trusted_root = nil)",
+  "occurrence": 1,
+  "lineno": 1033,
+  "fn": "verify_chain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless %w[id issuer holder body_digest sig].all? { |k| c[k].is_a?(String) }",
+  "occurrence": 1,
+  "lineno": 1045,
+  "fn": "hop_well_typed?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless %w[id issuer holder body_digest sig].all? { |k| c[k].is_a?(String) }",
+  "occurrence": 1,
+  "lineno": 1045,
+  "fn": "hop_well_typed?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless c.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1044,
+  "fn": "hop_well_typed?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless c.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1044,
+  "fn": "hop_well_typed?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: root['issuer'].is_a?(String) => root['issuer']",
+  "line": "e = check_sig(root, root['issuer'].is_a?(String) ? root['issuer'] : '', 'hop 0', root_pq)",
+  "occurrence": 1,
+  "lineno": 1069,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: root['issuer'].is_a?(String) => true",
+  "line": "e = check_sig(root, root['issuer'].is_a?(String) ? root['issuer'] : '', 'hop 0', root_pq)",
+  "occurrence": 1,
+  "lineno": 1069,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless %w[alg pq_pk pq_sig holder_pq parent].all? { |k| !c.key?(k) || c[k].is_a?(String) }",
+  "occurrence": 1,
+  "lineno": 1046,
+  "fn": "hop_well_typed?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless %w[alg pq_pk pq_sig holder_pq parent].all? { |k| !c.key?(k) || c[k].is_a?(String) }",
+  "occurrence": 1,
+  "lineno": 1046,
+  "fn": "hop_well_typed?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: root['issuer'].is_a?(String) => String",
+  "line": "e = check_sig(root, root['issuer'].is_a?(String) ? root['issuer'] : '', 'hop 0', root_pq)",
+  "occurrence": 1,
+  "lineno": 1069,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: parent['holder'].is_a?(String) => true",
+  "line": "e = check_sig(c, parent['holder'].is_a?(String) ? parent['holder'] : '', label,",
+  "occurrence": 1,
+  "lineno": 1083,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: parent['holder'].is_a?(String) => parent['holder']",
+  "line": "e = check_sig(c, parent['holder'].is_a?(String) ? parent['holder'] : '', label,",
+  "occurrence": 1,
+  "lineno": 1083,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: parent['caveats'].is_a?(Array) => Array",
+  "line": "pc = parent['caveats'].is_a?(Array) ? parent['caveats'] : []",
+  "occurrence": 1,
+  "lineno": 1087,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: c['caveats'].is_a?(Array) => true",
+  "line": "cc = c['caveats'].is_a?(Array) ? c['caveats'] : []",
+  "occurrence": 1,
+  "lineno": 1088,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: parent['caveats'].is_a?(Array) => parent['caveats']",
+  "line": "pc = parent['caveats'].is_a?(Array) ? parent['caveats'] : []",
+  "occurrence": 1,
+  "lineno": 1087,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'holder' => ''",
+  "line": "resolve_pq_key(parent['holder'], c['pq_pk'], holder_pq: parent['holder_pq']))",
+  "occurrence": 1,
+  "lineno": 1084,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: parent['holder'].is_a?(String) => String",
+  "line": "e = check_sig(c, parent['holder'].is_a?(String) ? parent['holder'] : '', label,",
+  "occurrence": 1,
+  "lineno": 1083,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: c['caveats'].is_a?(Array) => c['caveats']",
+  "line": "cc = c['caveats'].is_a?(Array) ? c['caveats'] : []",
+  "occurrence": 1,
+  "lineno": 1088,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: parent['caveats'].is_a?(Array) => true",
+  "line": "pc = parent['caveats'].is_a?(Array) ? parent['caveats'] : []",
+  "occurrence": 1,
+  "lineno": 1087,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless closed?(c, HOP_REQUIRED, HOP_OPTIONAL)",
+  "occurrence": 1,
+  "lineno": 1124,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless %w[id issuer holder body_digest].all? { |k| b32?(c[k]) }",
+  "occurrence": 1,
+  "lineno": 1125,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: c['caveats'].is_a?(Array) => Array",
+  "line": "cc = c['caveats'].is_a?(Array) ? c['caveats'] : []",
+  "occurrence": 1,
+  "lineno": 1088,
+  "fn": "verify_chain_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless validate_signature_wire(c).nil? && c['caveats'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 1128,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless closed?(c, HOP_REQUIRED, HOP_OPTIONAL)",
+  "occurrence": 1,
+  "lineno": 1124,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless %w[id issuer holder body_digest].all? { |k| b32?(c[k]) }",
+  "occurrence": 1,
+  "lineno": 1125,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless validate_signature_wire(c).nil? && c['caveats'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 1128,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless c['caveats'].all? { |cv| cv.is_a?(Hash) && cv['type'].is_a?(String) }",
+  "occurrence": 1,
+  "lineno": 1129,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless c['caveats'].all? { |cv| cv.is_a?(Hash) && cv['type'].is_a?(String) }",
+  "occurrence": 1,
+  "lineno": 1129,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false if c.key?('holder_pq') && !b32?(c['holder_pq'])",
+  "occurrence": 1,
+  "lineno": 1131,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false if c.key?('holder_pq') && !b32?(c['holder_pq'])",
+  "occurrence": 1,
+  "lineno": 1131,
+  "fn": "hop_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless closed?(plan, PLAN_REQUIRED, %w[conditions_digest])",
+  "occurrence": 1,
+  "lineno": 1137,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless closed?(plan, PLAN_REQUIRED, %w[conditions_digest])",
+  "occurrence": 1,
+  "lineno": 1137,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-%: % => *",
+  "line": "pt[0] % P == 0 && (pt[1] - pt[2]) % P == 0",
+  "occurrence": 1,
+  "lineno": 577,
+  "fn": "identity?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: sib.nil? => false",
+  "line": "return false if sib.nil?",
+  "occurrence": 1,
+  "lineno": 513,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if sib.nil? => nil",
+  "line": "return false if sib.nil?",
+  "occurrence": 1,
+  "lineno": 513,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap--: - => +",
+  "line": "SQRT_M1 = 2.pow((P - 1) / 4, P)",
+  "occurrence": 1,
+  "lineno": 546
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int-1: 1 => 0",
+  "line": "SQRT_M1 = 2.pow((P - 1) / 4, P)",
+  "occurrence": 1,
+  "lineno": 546
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: pt[0] % P == 0 && (pt[1] - pt[2]) % P == 0 => (pt[1] - pt[2]) % P == 0",
+  "line": "pt[0] % P == 0 && (pt[1] - pt[2]) % P == 0",
+  "occurrence": 1,
+  "lineno": 577,
+  "fn": "identity?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-%: % => *",
+  "line": "pt[0] % P == 0 && (pt[1] - pt[2]) % P == 0",
+  "occurrence": 1,
+  "lineno": 577,
+  "fn": "identity?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless bytes.bytesize == 32",
+  "occurrence": 1,
+  "lineno": 582,
+  "fn": "decode"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if y >= P",
+  "occurrence": 1,
+  "lineno": 587,
+  "fn": "decode"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 3 => 4",
+  "line": "x = x2.pow((P + 3) / 8, P)",
+  "occurrence": 1,
+  "lineno": 590,
+  "fn": "decode"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if x == 0 && sign == 1",
+  "occurrence": 1,
+  "lineno": 593,
+  "fn": "decode"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if pt.nil?",
+  "occurrence": 1,
+  "lineno": 602,
+  "fn": "acceptable_point"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if (x * x - x2) % P != 0",
+  "occurrence": 1,
+  "lineno": 592,
+  "fn": "decode"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 8 => 9",
+  "line": "return nil if identity?(mul(8, pt)) # small order (includes identity)",
+  "occurrence": 1,
+  "lineno": 603,
+  "fn": "acceptable_point"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int-1: 8 => 7",
+  "line": "return nil if identity?(mul(8, pt)) # small order (includes identity)",
+  "occurrence": 1,
+  "lineno": 603,
+  "fn": "acceptable_point"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if s >= L => nil",
+  "line": "return false if s >= L",
+  "occurrence": 1,
+  "lineno": 615,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if identity?(mul(8, pt)) # small order (includes identity)",
+  "occurrence": 1,
+  "lineno": 603,
+  "fn": "acceptable_point"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless identity?(mul(L, pt)) # torsion component present",
+  "occurrence": 1,
+  "lineno": 604,
+  "fn": "acceptable_point"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless pub.bytesize == 32 && sig.bytesize == 64 => nil",
+  "line": "return false unless pub.bytesize == 32 && sig.bytesize == 64",
+  "occurrence": 1,
+  "lineno": 610,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: pub.bytesize == 32 && sig.bytesize == 64 => true",
+  "line": "return false unless pub.bytesize == 32 && sig.bytesize == 64",
+  "occurrence": 1,
+  "lineno": 610,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-&&: && => ||",
+  "line": "return false unless pub.bytesize == 32 && sig.bytesize == 64",
+  "occurrence": 1,
+  "lineno": 610,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: pub.bytesize == 32 && sig.bytesize == 64 => pub.bytesize == 32",
+  "line": "return false unless pub.bytesize == 32 && sig.bytesize == 64",
+  "occurrence": 1,
+  "lineno": 610,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: pub.bytesize == 32 && sig.bytesize == 64 => sig.bytesize == 64",
+  "line": "return false unless pub.bytesize == 32 && sig.bytesize == 64",
+  "occurrence": 1,
+  "lineno": 610,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 32 => 33",
+  "line": "s = sig.byteslice(32, 32).unpack('C*').each_with_index.sum { |b, i| b << (8 * i) }",
+  "occurrence": 1,
+  "lineno": 614,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int-1: 32 => 31",
+  "line": "s = sig.byteslice(32, 32).unpack('C*').each_with_index.sum { |b, i| b << (8 * i) }",
+  "occurrence": 1,
+  "lineno": 614,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 32 => 33",
+  "line": "s = sig.byteslice(32, 32).unpack('C*').each_with_index.sum { |b, i| b << (8 * i) }",
+  "occurrence": 1,
+  "lineno": 614,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int->0: 32 => 0",
+  "line": "s = sig.byteslice(32, 32).unpack('C*').each_with_index.sum { |b, i| b << (8 * i) }",
+  "occurrence": 1,
+  "lineno": 614,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'C*' => ''",
+  "line": "s = sig.byteslice(32, 32).unpack('C*').each_with_index.sum { |b, i| b << (8 * i) }",
+  "occurrence": 1,
+  "lineno": 614,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-<<: << => >>",
+  "line": "s = sig.byteslice(32, 32).unpack('C*').each_with_index.sum { |b, i| b << (8 * i) }",
+  "occurrence": 1,
+  "lineno": 614,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int-1: 8 => 7",
+  "line": "s = sig.byteslice(32, 32).unpack('C*').each_with_index.sum { |b, i| b << (8 * i) }",
+  "occurrence": 1,
+  "lineno": 614,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int->0: 8 => 0",
+  "line": "s = sig.byteslice(32, 32).unpack('C*').each_with_index.sum { |b, i| b << (8 * i) }",
+  "occurrence": 1,
+  "lineno": 614,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap->=: >= => >",
+  "line": "return false if s >= L",
+  "occurrence": 1,
+  "lineno": 615,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: s >= L => false",
+  "line": "return false if s >= L",
+  "occurrence": 1,
+  "lineno": 615,
+  "fn": "verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE => nil",
+  "line": "return false unless pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE_BYTES",
+  "occurrence": 1,
+  "lineno": 639,
+  "fn": "mldsa65_verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE_BYTES => true",
+  "line": "return false unless pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE_BYTES",
+  "occurrence": 1,
+  "lineno": 639,
+  "fn": "mldsa65_verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-&&: && => ||",
+  "line": "return false unless pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE_BYTES",
+  "occurrence": 1,
+  "lineno": 639,
+  "fn": "mldsa65_verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE_BYTES => pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES",
+  "line": "return false unless pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE_BYTES",
+  "occurrence": 1,
+  "lineno": 639,
+  "fn": "mldsa65_verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE_BYTES => sig.bytesize == ML_DSA_65_SIGNATURE_BYTES",
+  "line": "return false unless pk.bytesize == ML_DSA_65_PUBLIC_KEY_BYTES && sig.bytesize == ML_DSA_65_SIGNATURE_BYTES",
+  "occurrence": 1,
+  "lineno": 639,
+  "fn": "mldsa65_verify"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if pk.nil? || sg.nil? => nil",
+  "line": "return false if pk.nil? || sg.nil?",
+  "occurrence": 1,
+  "lineno": 649,
+  "fn": "mldsa65_verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: pk.nil? || sg.nil? => false",
+  "line": "return false if pk.nil? || sg.nil?",
+  "occurrence": 1,
+  "lineno": 649,
+  "fn": "mldsa65_verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-||: || => &&",
+  "line": "return false if pk.nil? || sg.nil?",
+  "occurrence": 1,
+  "lineno": 649,
+  "fn": "mldsa65_verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-||: pk.nil? || sg.nil? => pk.nil?",
+  "line": "return false if pk.nil? || sg.nil?",
+  "occurrence": 1,
+  "lineno": 649,
+  "fn": "mldsa65_verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-||: pk.nil? || sg.nil? => sg.nil?",
+  "line": "return false if pk.nil? || sg.nil?",
+  "occurrence": 1,
+  "lineno": 649,
+  "fn": "mldsa65_verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-false-nil?: pk.nil? => false",
+  "line": "return false if pk.nil? || sg.nil?",
+  "occurrence": 1,
+  "lineno": 649,
+  "fn": "mldsa65_verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-false-nil?: sg.nil? => false",
+  "line": "return false if pk.nil? || sg.nil?",
+  "occurrence": 1,
+  "lineno": 649,
+  "fn": "mldsa65_verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "false",
+  "occurrence": 5,
+  "lineno": 653,
+  "fn": "mldsa65_verify_b64u"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def resolve_pq_key(identity, artifact_pk, holder_pq: nil, pq_pins: nil, trusted_pk: nil)",
+  "occurrence": 1,
+  "lineno": 712,
+  "fn": "resolve_pq_key"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def resolve_pq_key(identity, artifact_pk, holder_pq: nil, pq_pins: nil, trusted_pk: nil)",
+  "occurrence": 1,
+  "lineno": 712,
+  "fn": "resolve_pq_key"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def resolve_pq_key(identity, artifact_pk, holder_pq: nil, pq_pins: nil, trusted_pk: nil)",
+  "occurrence": 1,
+  "lineno": 712,
+  "fn": "resolve_pq_key"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless artifact_pk.is_a?(String) && !artifact_pk.empty?",
+  "occurrence": 1,
+  "lineno": 714,
+  "fn": "resolve_pq_key"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: holder_pq.is_a?(String) => true",
+  "line": "return PinnedPq.mint(artifact_pk, 'holder-commitment') if holder_pq.is_a?(String) && holder_pq_commitment(artifact_pk) == holder_pq",
+  "occurrence": 1,
+  "lineno": 719,
+  "fn": "resolve_pq_key"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: holder_pq.is_a?(String) && holder_pq_commitment(artifact_pk) == holder_pq => holder_pq_commitment(artifact_pk) == holder_pq",
+  "line": "return PinnedPq.mint(artifact_pk, 'holder-commitment') if holder_pq.is_a?(String) && holder_pq_commitment(artifact_pk) == holder_pq",
+  "occurrence": 1,
+  "lineno": 719,
+  "fn": "resolve_pq_key"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: holder_pq.is_a?(String) => holder_pq",
+  "line": "return PinnedPq.mint(artifact_pk, 'holder-commitment') if holder_pq.is_a?(String) && holder_pq_commitment(artifact_pk) == holder_pq",
+  "occurrence": 1,
+  "lineno": 719,
+  "fn": "resolve_pq_key"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: holder_pq.is_a?(String) => String",
+  "line": "return PinnedPq.mint(artifact_pk, 'holder-commitment') if holder_pq.is_a?(String) && holder_pq_commitment(artifact_pk) == holder_pq",
+  "occurrence": 1,
+  "lineno": 719,
+  "fn": "resolve_pq_key"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if suite.nil? => nil",
+  "line": "return false if suite.nil?",
+  "occurrence": 1,
+  "lineno": 733,
+  "fn": "verify_suite"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: suite.nil? => false",
+  "line": "return false if suite.nil?",
+  "occurrence": 1,
+  "lineno": 733,
+  "fn": "verify_suite"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "else false",
+  "occurrence": 2,
+  "lineno": 741,
+  "fn": "verify_suite"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'pq_pk' => ''",
+  "line": "verify_suite(p, holder, msg, resolve_pq_key(nil, p['pq_pk'], trusted_pk: p['pq_pk']))",
+  "occurrence": 1,
+  "lineno": 749,
+  "fn": "verify_leaf_suite"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless signer_set.is_a?(Array) && !signer_set.empty?",
+  "occurrence": 1,
+  "lineno": 762,
+  "fn": "signer_set_hash"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless e.is_a?(Hash) && e['publicKey'].is_a?(String) && e['role'].is_a?(String)",
+  "occurrence": 1,
+  "lineno": 765,
+  "fn": "signer_set_hash"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: e['role'].b => e['role']",
+  "line": "entries.sort_by! { |e| [e['role'].b, e['publicKey'].b] }",
+  "occurrence": 1,
+  "lineno": 771,
+  "fn": "signer_set_hash"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: e['publicKey'].b => e['publicKey']",
+  "line": "entries.sort_by! { |e| [e['role'].b, e['publicKey'].b] }",
+  "occurrence": 1,
+  "lineno": 771,
+  "fn": "signer_set_hash"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false if suite.nil? => nil",
+  "line": "return false if suite.nil?",
+  "occurrence": 2,
+  "lineno": 781,
+  "fn": "verify_share_suite"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: suite.nil? => false",
+  "line": "return false if suite.nil?",
+  "occurrence": 2,
+  "lineno": 781,
+  "fn": "verify_share_suite"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "else false",
+  "occurrence": 3,
+  "lineno": 789,
+  "fn": "verify_share_suite"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless signer_set.is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 808,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless e.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 813,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) => role.is_a?(String) && THRESHOLD_ROLES.include?(role)",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: role.is_a?(String) && THRESHOLD_ROLES.include?(role) => THRESHOLD_ROLES.include?(role)",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: role.is_a?(String) => true",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: pk.is_a?(String) => true",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: role.is_a?(String) => role",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: pk.is_a?(String) => pk",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: role.is_a?(String) => String",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: pk.is_a?(String) => String",
+  "line": "return nil unless role.is_a?(String) && THRESHOLD_ROLES.include?(role) && pk.is_a?(String) && !b64d(pk, 32).nil?",
+  "occurrence": 1,
+  "lineno": 817,
+  "fn": "signer_registry"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless b32?(plan['root']) && plan['node_id'].is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1138,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false if plan.key?('conditions_digest') && !b32?(plan['conditions_digest'])",
+  "occurrence": 1,
+  "lineno": 1139,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false if plan.key?('conditions_digest') && !b32?(plan['conditions_digest'])",
+  "occurrence": 1,
+  "lineno": 1139,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless b32?(plan['root']) && plan['node_id'].is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1138,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless closed?(pr, PROOF_KEYS)",
+  "occurrence": 1,
+  "lineno": 1142,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless closed?(pr, PROOF_KEYS)",
+  "occurrence": 1,
+  "lineno": 1142,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless safe_int?(pr['index']) && safe_int?(pr['size']) && pr['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 1143,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless safe_int?(pr['index']) && safe_int?(pr['size']) && pr['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 1143,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: s.is_a?(Hash) && closed?(s, %w[side hash]) => closed?(s, %w[side hash])",
+  "line": "pr['path'].all? { |s| s.is_a?(Hash) && closed?(s, %w[side hash]) && %w[L R].include?(s['side']) && b32?(s['hash']) }",
+  "occurrence": 1,
+  "lineno": 1145,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: s.is_a?(Hash) => true",
+  "line": "pr['path'].all? { |s| s.is_a?(Hash) && closed?(s, %w[side hash]) && %w[L R].include?(s['side']) && b32?(s['hash']) }",
+  "occurrence": 1,
+  "lineno": 1145,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: s.is_a?(Hash) => s",
+  "line": "pr['path'].all? { |s| s.is_a?(Hash) && closed?(s, %w[side hash]) && %w[L R].include?(s['side']) && b32?(s['hash']) }",
+  "occurrence": 1,
+  "lineno": 1145,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: s.is_a?(Hash) => Hash",
+  "line": "pr['path'].all? { |s| s.is_a?(Hash) && closed?(s, %w[side hash]) && %w[L R].include?(s['side']) && b32?(s['hash']) }",
+  "occurrence": 1,
+  "lineno": 1145,
+  "fn": "plan_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: (x.is_a?(Integer) || x.is_a?(Float)) && number_ok?(x) => number_ok?(x)",
+  "line": "(x.is_a?(Integer) || x.is_a?(Float)) && number_ok?(x)",
+  "occurrence": 1,
+  "lineno": 1149,
+  "fn": "number?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: x.is_a?(Integer) => true",
+  "line": "(x.is_a?(Integer) || x.is_a?(Float)) && number_ok?(x)",
+  "occurrence": 1,
+  "lineno": 1149,
+  "fn": "number?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: x.is_a?(Integer) => x",
+  "line": "(x.is_a?(Integer) || x.is_a?(Float)) && number_ok?(x)",
+  "occurrence": 1,
+  "lineno": 1149,
+  "fn": "number?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: x.is_a?(Integer) => Integer",
+  "line": "(x.is_a?(Integer) || x.is_a?(Float)) && number_ok?(x)",
+  "occurrence": 1,
+  "lineno": 1149,
+  "fn": "number?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: x.is_a?(Float) => true",
+  "line": "(x.is_a?(Integer) || x.is_a?(Float)) && number_ok?(x)",
+  "occurrence": 1,
+  "lineno": 1149,
+  "fn": "number?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: x.is_a?(Float) => Float",
+  "line": "(x.is_a?(Integer) || x.is_a?(Float)) && number_ok?(x)",
+  "occurrence": 1,
+  "lineno": 1149,
+  "fn": "number?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless th.is_a?(Hash) => nil",
+  "line": "return false unless th.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1160,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: p['nonce'].is_a?(String) && !p['nonce'].empty? => !p['nonce'].empty?",
+  "line": "return false if p.key?('nonce') && !(p['nonce'].is_a?(String) && !p['nonce'].empty? && p['nonce'].bytesize <= 128)",
+  "occurrence": 1,
+  "lineno": 1153,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: p['nonce'].is_a?(String) => true",
+  "line": "return false if p.key?('nonce') && !(p['nonce'].is_a?(String) && !p['nonce'].empty? && p['nonce'].bytesize <= 128)",
+  "occurrence": 1,
+  "lineno": 1153,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: p['nonce'].is_a?(String) => String",
+  "line": "return false if p.key?('nonce') && !(p['nonce'].is_a?(String) && !p['nonce'].empty? && p['nonce'].bytesize <= 128)",
+  "occurrence": 1,
+  "lineno": 1153,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: p['nonce'].is_a?(String) => p['nonce']",
+  "line": "return false if p.key?('nonce') && !(p['nonce'].is_a?(String) && !p['nonce'].empty? && p['nonce'].bytesize <= 128)",
+  "occurrence": 1,
+  "lineno": 1153,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false if p.key?('nonce') && !(p['nonce'].is_a?(String) && !p['nonce'].empty? && p['nonce'].bytesize <= 128)",
+  "occurrence": 1,
+  "lineno": 1153,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false if p.key?('nonce') && !(p['nonce'].is_a?(String) && !p['nonce'].empty? && p['nonce'].bytesize <= 128)",
+  "occurrence": 1,
+  "lineno": 1153,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: number?(p['caution']) && p['caution'] >= 0 => p['caution'] >= 0",
+  "line": "return false if p.key?('caution') && !(number?(p['caution']) && p['caution'] >= 0 && p['caution'] <= 1)",
+  "occurrence": 1,
+  "lineno": 1154,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false if p.key?('caution') && !(number?(p['caution']) && p['caution'] >= 0 && p['caution'] <= 1)",
+  "occurrence": 1,
+  "lineno": 1154,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false if p.key?('caution') && !(number?(p['caution']) && p['caution'] >= 0 && p['caution'] <= 1)",
+  "occurrence": 1,
+  "lineno": 1154,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false if p.key?('rationale_commitment') && !b32?(p['rationale_commitment'])",
+  "occurrence": 1,
+  "lineno": 1155,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false if p.key?('rationale_commitment') && !b32?(p['rationale_commitment'])",
+  "occurrence": 1,
+  "lineno": 1155,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false if p.key?('tool_binding') && !b32?(p['tool_binding'])",
+  "occurrence": 1,
+  "lineno": 1156,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false if p.key?('tool_binding') && !b32?(p['tool_binding'])",
+  "occurrence": 1,
+  "lineno": 1156,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: th.is_a?(Hash) => true",
+  "line": "return false unless th.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1160,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: th.is_a?(Hash) => th",
+  "line": "return false unless th.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1160,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: th.is_a?(Hash) => Hash",
+  "line": "return false unless th.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1160,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless th.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1160,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless th.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1160,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless sh.is_a?(Array) && sh.all? do |s|",
+  "occurrence": 1,
+  "lineno": 1164,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless sh.is_a?(Array) && sh.all? do |s|",
+  "occurrence": 1,
+  "lineno": 1164,
+  "fn": "optional_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: at.is_a?(Hash) && safe_int?(at['epoch']) => safe_int?(at['epoch'])",
+  "line": "return false unless at.is_a?(Hash) && safe_int?(at['epoch']) && strs?(at, %w[quote_digest model_id measurement operator])",
+  "occurrence": 1,
+  "lineno": 1180,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: at.is_a?(Hash) => true",
+  "line": "return false unless at.is_a?(Hash) && safe_int?(at['epoch']) && strs?(at, %w[quote_digest model_id measurement operator])",
+  "occurrence": 1,
+  "lineno": 1180,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: at.is_a?(Hash) => at",
+  "line": "return false unless at.is_a?(Hash) && safe_int?(at['epoch']) && strs?(at, %w[quote_digest model_id measurement operator])",
+  "occurrence": 1,
+  "lineno": 1180,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: at.is_a?(Hash) => Hash",
+  "line": "return false unless at.is_a?(Hash) && safe_int?(at['epoch']) && strs?(at, %w[quote_digest model_id measurement operator])",
+  "occurrence": 1,
+  "lineno": 1180,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless at.is_a?(Hash) && safe_int?(at['epoch']) && strs?(at, %w[quote_digest model_id measurement operator])",
+  "occurrence": 1,
+  "lineno": 1180,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless at.is_a?(Hash) && safe_int?(at['epoch']) && strs?(at, %w[quote_digest model_id measurement operator])",
+  "occurrence": 1,
+  "lineno": 1180,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: pv.is_a?(Hash) && strs?(pv, %w[causal_hash]) => strs?(pv, %w[causal_hash])",
+  "line": "return false unless pv.is_a?(Hash) && strs?(pv, %w[causal_hash]) && number?(pv['taint_level'])",
+  "occurrence": 1,
+  "lineno": 1181,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: pv.is_a?(Hash) => true",
+  "line": "return false unless pv.is_a?(Hash) && strs?(pv, %w[causal_hash]) && number?(pv['taint_level'])",
+  "occurrence": 1,
+  "lineno": 1181,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: pv.is_a?(Hash) => pv",
+  "line": "return false unless pv.is_a?(Hash) && strs?(pv, %w[causal_hash]) && number?(pv['taint_level'])",
+  "occurrence": 1,
+  "lineno": 1181,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: pv.is_a?(Hash) => Hash",
+  "line": "return false unless pv.is_a?(Hash) && strs?(pv, %w[causal_hash]) && number?(pv['taint_level'])",
+  "occurrence": 1,
+  "lineno": 1181,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless pv.is_a?(Hash) && strs?(pv, %w[causal_hash]) && number?(pv['taint_level'])",
+  "occurrence": 1,
+  "lineno": 1181,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless pv.is_a?(Hash) && strs?(pv, %w[causal_hash]) && number?(pv['taint_level'])",
+  "occurrence": 1,
+  "lineno": 1181,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless pv['trusted_refs'].is_a?(Array) && pv['trusted_refs'].all? { |x| x.is_a?(String) }",
+  "occurrence": 1,
+  "lineno": 1182,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless pv['trusted_refs'].is_a?(Array) && pv['trusted_refs'].all? { |x| x.is_a?(String) }",
+  "occurrence": 1,
+  "lineno": 1182,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: fr.is_a?(Hash) && safe_int?(fr['epoch']) => safe_int?(fr['epoch'])",
+  "line": "return false unless fr.is_a?(Hash) && safe_int?(fr['epoch']) && strs?(fr, %w[beacon_ref accumulator_witness])",
+  "occurrence": 1,
+  "lineno": 1183,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: fr.is_a?(Hash) => true",
+  "line": "return false unless fr.is_a?(Hash) && safe_int?(fr['epoch']) && strs?(fr, %w[beacon_ref accumulator_witness])",
+  "occurrence": 1,
+  "lineno": 1183,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: fr.is_a?(Hash) => fr",
+  "line": "return false unless fr.is_a?(Hash) && safe_int?(fr['epoch']) && strs?(fr, %w[beacon_ref accumulator_witness])",
+  "occurrence": 1,
+  "lineno": 1183,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: fr.is_a?(Hash) => Hash",
+  "line": "return false unless fr.is_a?(Hash) && safe_int?(fr['epoch']) && strs?(fr, %w[beacon_ref accumulator_witness])",
+  "occurrence": 1,
+  "lineno": 1183,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless fr.is_a?(Hash) && safe_int?(fr['epoch']) && strs?(fr, %w[beacon_ref accumulator_witness])",
+  "occurrence": 1,
+  "lineno": 1183,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless fr.is_a?(Hash) && safe_int?(fr['epoch']) && strs?(fr, %w[beacon_ref accumulator_witness])",
+  "occurrence": 1,
+  "lineno": 1183,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: rc.is_a?(Hash) && number?(rc['r']) => number?(rc['r'])",
+  "line": "return false unless rc.is_a?(Hash) && number?(rc['r']) && rc['inputs'].is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1184,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: rc.is_a?(Hash) => true",
+  "line": "return false unless rc.is_a?(Hash) && number?(rc['r']) && rc['inputs'].is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1184,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: rc.is_a?(Hash) => rc",
+  "line": "return false unless rc.is_a?(Hash) && number?(rc['r']) && rc['inputs'].is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1184,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: rc.is_a?(Hash) => Hash",
+  "line": "return false unless rc.is_a?(Hash) && number?(rc['r']) && rc['inputs'].is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1184,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless rc.is_a?(Hash) && number?(rc['r']) && rc['inputs'].is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1184,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless rc.is_a?(Hash) && number?(rc['r']) && rc['inputs'].is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1184,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false if p.key?('progress_step') && !p['progress_step'].is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1185,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false if p.key?('progress_step') && !p['progress_step'].is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1185,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false if p.key?('prohibition_evidence') && !(p['prohibition_evidence'].is_a?(Hash) || p['prohibition_evidence'].is_a?(Array))",
+  "occurrence": 1,
+  "lineno": 1186,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false if p.key?('prohibition_evidence') && !(p['prohibition_evidence'].is_a?(Hash) || p['prohibition_evidence'].is_a?(Array))",
+  "occurrence": 1,
+  "lineno": 1186,
+  "fn": "aux_wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: p.is_a?(Hash) && tree_ok?(p) => tree_ok?(p)",
+  "line": "return false unless p.is_a?(Hash) && tree_ok?(p)",
+  "occurrence": 1,
+  "lineno": 1193,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: p.is_a?(Hash) => true",
+  "line": "return false unless p.is_a?(Hash) && tree_ok?(p)",
+  "occurrence": 1,
+  "lineno": 1193,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: p.is_a?(Hash) => p",
+  "line": "return false unless p.is_a?(Hash) && tree_ok?(p)",
+  "occurrence": 1,
+  "lineno": 1193,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: p.is_a?(Hash) => Hash",
+  "line": "return false unless p.is_a?(Hash) && tree_ok?(p)",
+  "occurrence": 1,
+  "lineno": 1193,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless p.is_a?(Hash) && tree_ok?(p)",
+  "occurrence": 1,
+  "lineno": 1193,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless p.is_a?(Hash) && tree_ok?(p)",
+  "occurrence": 1,
+  "lineno": 1193,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless closed?(p, TOP_REQUIRED, TOP_OPTIONAL)",
+  "occurrence": 1,
+  "lineno": 1194,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless closed?(p, TOP_REQUIRED, TOP_OPTIONAL)",
+  "occurrence": 1,
+  "lineno": 1194,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: word.b => word",
+  "line": "raise Malformed, 'bad literal' unless @s.byteslice(@i, word.bytesize) == word.b",
+  "occurrence": 1,
+  "lineno": 101,
+  "fn": "literal"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: h && h.bytesize == 4 => h",
+  "line": "raise Malformed, 'bad \\\\u escape' unless h && h.bytesize == 4 && h.match?(/\\A[0-9a-fA-F]{4}\\z/n)",
+  "occurrence": 1,
+  "lineno": 161,
+  "fn": "hex4"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: h && h.bytesize == 4 && h.match?(/\\A[0-9a-fA-F]{4}\\z/n) => h.match?(/\\A[0-9a-fA-F]{4}\\z/n)",
+  "line": "raise Malformed, 'bad \\\\u escape' unless h && h.bytesize == 4 && h.match?(/\\A[0-9a-fA-F]{4}\\z/n)",
+  "occurrence": 1,
+  "lineno": 161,
+  "fn": "hex4"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: h && h.bytesize == 4 => h.bytesize == 4",
+  "line": "raise Malformed, 'bad \\\\u escape' unless h && h.bytesize == 4 && h.match?(/\\A[0-9a-fA-F]{4}\\z/n)",
+  "occurrence": 1,
+  "lineno": 161,
+  "fn": "hex4"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: if @s.getbyte(@i) == 0x22 @i += 1 return out.force_encoding('UTF-8') end => nil",
+  "line": "if @s.getbyte(@i) == 0x22",
+  "occurrence": 1,
+  "lineno": 173,
+  "fn": "parse_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: @s.getbyte(@i) == 0x22 => false",
+  "line": "if @s.getbyte(@i) == 0x22",
+  "occurrence": 1,
+  "lineno": 173,
+  "fn": "parse_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: m => false",
+  "line": "out = m ? m[0] : String.new(encoding: Encoding::BINARY)",
+  "occurrence": 1,
+  "lineno": 171,
+  "fn": "parse_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-getbyte: @s.getbyte(@i) => @s",
+  "line": "if @s.getbyte(@i) == 0x22",
+  "occurrence": 1,
+  "lineno": 173,
+  "fn": "parse_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 0x22 => 35",
+  "line": "if @s.getbyte(@i) == 0x22",
+  "occurrence": 1,
+  "lineno": 173,
+  "fn": "parse_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-<: < => <=",
+  "line": "elsif c < 0x20",
+  "occurrence": 1,
+  "lineno": 188,
+  "fn": "parse_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 0x20 => 33",
+  "line": "elsif c < 0x20",
+  "occurrence": 1,
+  "lineno": 188,
+  "fn": "parse_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: c == 0x5c => true",
+  "line": "elsif c == 0x5c",
+  "occurrence": 1,
+  "lineno": 190,
+  "fn": "parse_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: '\\\\u'.b => '\\\\u'",
+  "line": "if @s.byteslice(@i, 2) == '\\\\u'.b",
+  "occurrence": 1,
+  "lineno": 213,
+  "fn": "unicode_escape"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-force_encoding: m[0].dup.force_encoding('UTF-8') => m[0].dup",
+  "line": "lex = m[0].dup.force_encoding('UTF-8')",
+  "occurrence": 1,
+  "lineno": 240,
+  "fn": "parse_number"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 0xe0 => 225",
+  "line": "out << [0xe0 | (unit >> 12), 0x80 | ((unit >> 6) & 0x3f), 0x80 | (unit & 0x3f)].pack('C*')",
+  "occurrence": 1,
+  "lineno": 233,
+  "fn": "lone_surrogate!"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-dup: m[0].dup => m[0]",
+  "line": "lex = m[0].dup.force_encoding('UTF-8')",
+  "occurrence": 1,
+  "lineno": 240,
+  "fn": "parse_number"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return lex.to_i if lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/) => nil",
+  "line": "return lex.to_i if lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/)",
+  "occurrence": 1,
+  "lineno": 258,
+  "fn": "strict_number_lexeme"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/) => false",
+  "line": "return lex.to_i if lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/)",
+  "occurrence": 1,
+  "lineno": 258,
+  "fn": "strict_number_lexeme"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-<=: <= => <",
+  "line": "return lex.to_i if lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/)",
+  "occurrence": 1,
+  "lineno": 258,
+  "fn": "strict_number_lexeme"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int-1: 15 => 14",
+  "line": "return lex.to_i if lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/)",
+  "occurrence": 1,
+  "lineno": 258,
+  "fn": "strict_number_lexeme"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int->0: 15 => 0",
+  "line": "return lex.to_i if lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/)",
+  "occurrence": 1,
+  "lineno": 258,
+  "fn": "strict_number_lexeme"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-false-match?: lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/) => false",
+  "line": "return lex.to_i if lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/)",
+  "occurrence": 1,
+  "lineno": 258,
+  "fn": "strict_number_lexeme"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-match?: lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/) => /\\A(?:0|-?[1-9][0-9]*)\\z/",
+  "line": "return lex.to_i if lex.bytesize <= 15 && lex.match?(/\\A(?:0|-?[1-9][0-9]*)\\z/)",
+  "occurrence": 1,
+  "lineno": 258,
+  "fn": "strict_number_lexeme"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-||: n.nan? || n.infinite? || n == 0 => n.nan? || n.infinite?",
+  "line": "return false if n.nan? || n.infinite? || n == 0 || n == n.floor || n.abs < 1e-6",
+  "occurrence": 1,
+  "lineno": 293,
+  "fn": "number_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 0 => 1",
+  "line": "return false if n.nan? || n.infinite? || n == 0 || n == n.floor || n.abs < 1e-6",
+  "occurrence": 1,
+  "lineno": 293,
+  "fn": "number_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def b64d(str, len = nil)",
+  "occurrence": 1,
+  "lineno": 325,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1 => nil",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return nil unless b64e(bin) == str => nil",
+  "line": "return nil unless b64e(bin) == str",
+  "occurrence": 1,
+  "lineno": 330,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: str.is_a?(String) && str.valid_encoding? => str.is_a?(String)",
+  "line": "return nil unless str.is_a?(String) && str.valid_encoding?",
+  "occurrence": 1,
+  "lineno": 326,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-valid_encoding?: str.valid_encoding? => true",
+  "line": "return nil unless str.is_a?(String) && str.valid_encoding?",
+  "occurrence": 1,
+  "lineno": 326,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless str.is_a?(String) && str.valid_encoding?",
+  "occurrence": 1,
+  "lineno": 326,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1 => true",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-&&: && => ||",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1 => str.match?(/\\A[A-Za-z0-9_-]*\\z/)",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1 => (str.length % 4) != 1",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-match?: str.match?(/\\A[A-Za-z0-9_-]*\\z/) => true",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-match?: str.match?(/\\A[A-Za-z0-9_-]*\\z/) => str",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-%: % => *",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-length: str.length => str",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless str.match?(/\\A[A-Za-z0-9_-]*\\z/) && (str.length % 4) != 1",
+  "occurrence": 1,
+  "lineno": 327,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: b64e(bin) == str => true",
+  "line": "return nil unless b64e(bin) == str",
+  "occurrence": 1,
+  "lineno": 330,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless b64e(bin) == str",
+  "occurrence": 1,
+  "lineno": 330,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "return nil unless b64e(bin) == str",
+  "occurrence": 1,
+  "lineno": 330,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if len && bin.bytesize != len",
+  "occurrence": 1,
+  "lineno": 331,
+  "fn": "b64d"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return \"\\\"#{s}\\\"\" unless s.match?(JS_ESCAPES) => nil",
+  "line": "return \"\\\"#{s}\\\"\" unless s.match?(JS_ESCAPES)",
+  "occurrence": 1,
+  "lineno": 344,
+  "fn": "js_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: s.match?(JS_ESCAPES) => true",
+  "line": "return \"\\\"#{s}\\\"\" unless s.match?(JS_ESCAPES)",
+  "occurrence": 1,
+  "lineno": 344,
+  "fn": "js_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-match?: s.match?(JS_ESCAPES) => s",
+  "line": "return \"\\\"#{s}\\\"\" unless s.match?(JS_ESCAPES)",
+  "occurrence": 1,
+  "lineno": 344,
+  "fn": "js_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-match?: s.match?(JS_ESCAPES) => JS_ESCAPES",
+  "line": "return \"\\\"#{s}\\\"\" unless s.match?(JS_ESCAPES)",
+  "occurrence": 1,
+  "lineno": 344,
+  "fn": "js_string"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: n.is_a?(Integer) => false",
+  "line": "n.is_a?(Integer) ? n.to_s : fmt_float(n)",
+  "occurrence": 1,
+  "lineno": 366,
+  "fn": "fmt_number"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return s.sub(/\\.0\\z/, '') unless s.include?('e') => nil",
+  "line": "return s.sub(/\\.0\\z/, '') unless s.include?('e')",
+  "occurrence": 1,
+  "lineno": 373,
+  "fn": "fmt_float"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: s.include?('e') => true",
+  "line": "return s.sub(/\\.0\\z/, '') unless s.include?('e')",
+  "occurrence": 1,
+  "lineno": 373,
+  "fn": "fmt_float"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-include?: s.include?('e') => s",
+  "line": "return s.sub(/\\.0\\z/, '') unless s.include?('e')",
+  "occurrence": 1,
+  "lineno": 373,
+  "fn": "fmt_float"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-include?: s.include?('e') => 'e'",
+  "line": "return s.sub(/\\.0\\z/, '') unless s.include?('e')",
+  "occurrence": 1,
+  "lineno": 373,
+  "fn": "fmt_float"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'e' => ''",
+  "line": "return s.sub(/\\.0\\z/, '') unless s.include?('e')",
+  "occurrence": 1,
+  "lineno": 373,
+  "fn": "fmt_float"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: frac ||= '' => nil",
+  "line": "frac ||= ''",
+  "occurrence": 1,
+  "lineno": 387,
+  "fn": "plain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-<=: <= => <",
+  "line": "r = if point <= 0",
+  "occurrence": 1,
+  "lineno": 390,
+  "fn": "plain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 0 => 1",
+  "line": "r = if point <= 0",
+  "occurrence": 1,
+  "lineno": 390,
+  "fn": "plain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: point >= digits.length => true",
+  "line": "elsif point >= digits.length",
+  "occurrence": 1,
+  "lineno": 392,
+  "fn": "plain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap->=: >= => >",
+  "line": "elsif point >= digits.length",
+  "occurrence": 1,
+  "lineno": 392,
+  "fn": "plain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: 0 => 1",
+  "line": "\"#{sign}#{digits[0, point]}.#{digits[point..]}\"",
+  "occurrence": 1,
+  "lineno": 395,
+  "fn": "plain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-sub: r.sub(/0+\\z/, '').sub(/\\.\\z/, '') => r.sub(/0+\\z/, '')",
+  "line": "r.include?('.') ? r.sub(/0+\\z/, '').sub(/\\.\\z/, '') : r",
+  "occurrence": 1,
+  "lineno": 397,
+  "fn": "plain"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: k.to_s.b => k.to_s",
+  "line": "keys = v.keys.sort_by { |k| k.to_s.b }",
+  "occurrence": 1,
+  "lineno": 423,
+  "fn": "ser"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-force_encoding: canonicalize(v).dup.force_encoding('UTF-8') => canonicalize(v).dup",
+  "line": "canonicalize(v).dup.force_encoding('UTF-8').b",
+  "occurrence": 1,
+  "lineno": 446,
+  "fn": "canon_bytes"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-dup: canonicalize(v).dup => canonicalize(v)",
+  "line": "canonicalize(v).dup.force_encoding('UTF-8').b",
+  "occurrence": 1,
+  "lineno": 446,
+  "fn": "canon_bytes"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: \"\\x00\".b => \"\\x00\"",
+  "line": "sha(\"\\x00\".b + canon_bytes(leaf))",
+  "occurrence": 1,
+  "lineno": 455,
+  "fn": "leaf_hash"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-b: \"\\x01\".b => \"\\x01\"",
+  "line": "sha(\"\\x01\".b + l + r)",
+  "occurrence": 1,
+  "lineno": 459,
+  "fn": "node_hash"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array) => nil",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: proof.is_a?(Hash) && proof['path'].is_a?(Array) => true",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-&&: && => ||",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: proof.is_a?(Hash) && proof['path'].is_a?(Array) => proof.is_a?(Hash)",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: proof.is_a?(Hash) && proof['path'].is_a?(Array) => proof['path'].is_a?(Array)",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: proof.is_a?(Hash) => true",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: proof.is_a?(Hash) => proof",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: proof.is_a?(Hash) => Hash",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: proof['path'].is_a?(Array) => true",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: proof['path'].is_a?(Array) => proof['path']",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: proof['path'].is_a?(Array) => Array",
+  "line": "return false unless proof.is_a?(Hash) && proof['path'].is_a?(Array)",
+  "occurrence": 1,
+  "lineno": 495,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: safe_int?(idx) && safe_int?(size) && size >= 1 => safe_int?(idx) && safe_int?(size)",
+  "line": "return false unless safe_int?(idx) && safe_int?(size) && size >= 1 && idx >= 0 && idx < size",
+  "occurrence": 1,
+  "lineno": 499,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int-1: 1 => 0",
+  "line": "return false unless safe_int?(idx) && safe_int?(size) && size >= 1 && idx >= 0 && idx < size",
+  "occurrence": 1,
+  "lineno": 499,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: return false unless step.is_a?(Hash) => nil",
+  "line": "return false unless step.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 507,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: step.is_a?(Hash) => true",
+  "line": "return false unless step.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 507,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: step.is_a?(Hash) => step",
+  "line": "return false unless step.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 507,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: step.is_a?(Hash) => Hash",
+  "line": "return false unless step.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 507,
+  "fn": "verify_inclusion"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: p['aud'].is_a?(String) && !p['aud'].empty? => !p['aud'].empty?",
+  "line": "return false unless p['aud'].is_a?(String) && !p['aud'].empty? && p['aud'].bytesize <= 256",
+  "occurrence": 1,
+  "lineno": 1196,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless %w[ver counter iat exp].all? { |k| safe_int?(p[k]) }",
+  "occurrence": 1,
+  "lineno": 1195,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: p['aud'].is_a?(String) => String",
+  "line": "return false unless p['aud'].is_a?(String) && !p['aud'].empty? && p['aud'].bytesize <= 256",
+  "occurrence": 1,
+  "lineno": 1196,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: p['aud'].is_a?(String) => p['aud']",
+  "line": "return false unless p['aud'].is_a?(String) && !p['aud'].empty? && p['aud'].bytesize <= 256",
+  "occurrence": 1,
+  "lineno": 1196,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless %w[ver counter iat exp].all? { |k| safe_int?(p[k]) }",
+  "occurrence": 1,
+  "lineno": 1195,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: p['aud'].is_a?(String) => true",
+  "line": "return false unless p['aud'].is_a?(String) && !p['aud'].empty? && p['aud'].bytesize <= 256",
+  "occurrence": 1,
+  "lineno": 1196,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless p['aud'].is_a?(String) && !p['aud'].empty? && p['aud'].bytesize <= 256",
+  "occurrence": 1,
+  "lineno": 1196,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless p['aud'].is_a?(String) && !p['aud'].empty? && p['aud'].bytesize <= 256",
+  "occurrence": 1,
+  "lineno": 1196,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless validate_signature_wire(p).nil?",
+  "occurrence": 1,
+  "lineno": 1198,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless b32?(p['grant_ref'])",
+  "occurrence": 1,
+  "lineno": 1199,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless b32?(p['grant_ref'])",
+  "occurrence": 1,
+  "lineno": 1199,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless validate_signature_wire(p).nil?",
+  "occurrence": 1,
+  "lineno": 1198,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless a['verb'].is_a?(String) && a['resource'].is_a?(String) && a['reversibility_class'].is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1203,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless a['verb'].is_a?(String) && a['resource'].is_a?(String) && a['reversibility_class'].is_a?(String)",
+  "occurrence": 1,
+  "lineno": 1203,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless closed?(a, ACTION_KEYS)",
+  "occurrence": 1,
+  "lineno": 1202,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless b32?(a['params_digest'])",
+  "occurrence": 1,
+  "lineno": 1204,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless b32?(a['params_digest'])",
+  "occurrence": 1,
+  "lineno": 1204,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless closed?(a, ACTION_KEYS)",
+  "occurrence": 1,
+  "lineno": 1202,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless p['cap_chain'].is_a?(Array) && p['cap_chain'].all? { |c| hop_wire_ok?(c) }",
+  "occurrence": 1,
+  "lineno": 1206,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless p['cap_chain'].is_a?(Array) && p['cap_chain'].all? { |c| hop_wire_ok?(c) }",
+  "occurrence": 1,
+  "lineno": 1206,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless aux_wire_ok?(p)",
+  "occurrence": 1,
+  "lineno": 1208,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless aux_wire_ok?(p)",
+  "occurrence": 1,
+  "lineno": 1208,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return false => return",
+  "line": "return false unless plan_wire_ok?(p['plan'])",
+  "occurrence": 1,
+  "lineno": 1207,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "false",
+  "occurrence": 10,
+  "lineno": 1212,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-nil: return false => return nil",
+  "line": "return false unless plan_wire_ok?(p['plan'])",
+  "occurrence": 1,
+  "lineno": 1207,
+  "fn": "wire_ok?"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-new: Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\") => false",
+  "line": "Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\")",
+  "occurrence": 1,
+  "lineno": 1228,
+  "fn": "verify_pcactn"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\")",
+  "occurrence": 1,
+  "lineno": 1228,
+  "fn": "verify_pcactn"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-new: Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\") => Verdict",
+  "line": "Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\")",
+  "occurrence": 1,
+  "lineno": 1228,
+  "fn": "verify_pcactn"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "hash-empty: { 'wire' => false } => {}",
+  "line": "Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\")",
+  "occurrence": 1,
+  "lineno": 1228,
+  "fn": "verify_pcactn"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'wire' => ''",
+  "line": "Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\")",
+  "occurrence": 1,
+  "lineno": 1228,
+  "fn": "verify_pcactn"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "stmt-delete: CHECK_ORDER.each { |k| checks[k] = false unless checks.key?(k) } => nil",
+  "line": "CHECK_ORDER.each { |k| checks[k] = false unless checks.key?(k) }",
+  "occurrence": 1,
+  "lineno": 1306,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\")",
+  "occurrence": 1,
+  "lineno": 1228,
+  "fn": "verify_pcactn"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-class: e.class => e",
+  "line": "Verdict.new(false, { 'wire' => false }, \"wire: malformed input (#{e.class})\")",
+  "occurrence": 1,
+  "lineno": 1228,
+  "fn": "verify_pcactn"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def verify_pcactn_unchecked(pcactn, grant, now:, audience:, allowed_suites: nil)",
+  "occurrence": 1,
+  "lineno": 1231,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: chain.empty? || chain.length > MAX_CHAIN_HOPS => false",
+  "line": "if chain.empty? || chain.length > MAX_CHAIN_HOPS",
+  "occurrence": 1,
+  "lineno": 1266,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-||: || => &&",
+  "line": "if chain.empty? || chain.length > MAX_CHAIN_HOPS",
+  "occurrence": 1,
+  "lineno": 1266,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-||: chain.empty? || chain.length > MAX_CHAIN_HOPS => chain.length > MAX_CHAIN_HOPS",
+  "line": "if chain.empty? || chain.length > MAX_CHAIN_HOPS",
+  "occurrence": 1,
+  "lineno": 1266,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: caveat_limit_exceeded?(chain) => false",
+  "line": "elsif caveat_limit_exceeded?(chain)",
+  "occurrence": 1,
+  "lineno": 1268,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-||: chain.empty? || chain.length > MAX_CHAIN_HOPS => chain.empty?",
+  "line": "if chain.empty? || chain.length > MAX_CHAIN_HOPS",
+  "occurrence": 1,
+  "lineno": 1266,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: gi.is_a?(String) => true",
+  "line": "verify_chain(chain, gi, gi.is_a?(String), allowed_suites, nil, grant).last # chain[0] == grant was checked above",
+  "occurrence": 1,
+  "lineno": 1274,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-false-is_a?: gi.is_a?(String) => false",
+  "line": "verify_chain(chain, gi, gi.is_a?(String), allowed_suites, nil, grant).last # chain[0] == grant was checked above",
+  "occurrence": 1,
+  "lineno": 1274,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-false-empty?: chain.empty? => false",
+  "line": "if chain.empty? || chain.length > MAX_CHAIN_HOPS",
+  "occurrence": 1,
+  "lineno": 1266,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: gi.is_a?(String) => gi",
+  "line": "verify_chain(chain, gi, gi.is_a?(String), allowed_suites, nil, grant).last # chain[0] == grant was checked above",
+  "occurrence": 1,
+  "lineno": 1274,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'issuer' => ''",
+  "line": "gi = grant['issuer']",
+  "occurrence": 1,
+  "lineno": 1273,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: gi.is_a?(String) => String",
+  "line": "verify_chain(chain, gi, gi.is_a?(String), allowed_suites, nil, grant).last # chain[0] == grant was checked above",
+  "occurrence": 1,
+  "lineno": 1274,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: chain.is_a?(Array) && chain[0].is_a?(Hash) => true",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: chain.is_a?(Array) && chain[0].is_a?(Hash) => chain.is_a?(Array)",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: chain.is_a?(Array) && chain[0].is_a?(Hash) => chain[0].is_a?(Hash)",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: chain[0].is_a?(Hash) => true",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "swap-&&: && => ||",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: chain[0].is_a?(Hash) => chain[0]",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: chain.is_a?(Array) => true",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: chain.is_a?(Array) => chain",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: chain.is_a?(Array) => Array",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: chain[0].is_a?(Hash) => Hash",
+  "line": "root_id = chain.is_a?(Array) && chain[0].is_a?(Hash) ? chain[0]['id'] : nil",
+  "occurrence": 1,
+  "lineno": 1283,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) => root_id.is_a?(String)",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: gref.is_a?(String) && !gref.empty? => !gref.empty?",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: gref.is_a?(String) && !gref.empty? => gref.is_a?(String)",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id => gref == root_id",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: gref.is_a?(String) => true",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) => gref.is_a?(String) && !gref.empty?",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: gref.is_a?(String) => gref",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: gref.is_a?(String) => String",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-false-empty?: gref.empty? => false",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-is_a?: root_id.is_a?(String) => String",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-false: chain.empty? => false",
+  "line": "if chain.empty?",
+  "occurrence": 1,
+  "lineno": 1294,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-is_a?: root_id.is_a?(String) => root_id",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-is_a?: root_id.is_a?(String) => true",
+  "line": "gref.is_a?(String) && !gref.empty? && root_id.is_a?(String) && gref == root_id",
+  "occurrence": 1,
+  "lineno": 1284,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-||: suite_policy_error(pcactn['alg'], 'leaf', allowed_suites) || pq_binding_error(pcactn['alg'], pcactn[ => suite_policy_error(pcactn['alg'], 'leaf', allowed_suites)",
+  "line": "lerr = suite_policy_error(pcactn['alg'], 'leaf', allowed_suites) ||",
+  "occurrence": 1,
+  "lineno": 1297,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'alg' => ''",
+  "line": "pq_binding_error(pcactn['alg'], pcactn['pq_pk'], chain[-1]['holder_pq'], 'leaf')",
+  "occurrence": 1,
+  "lineno": 1298,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'leaf' => ''",
+  "line": "lerr = suite_policy_error(pcactn['alg'], 'leaf', allowed_suites) ||",
+  "occurrence": 1,
+  "lineno": 1297,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'leaf' => ''",
+  "line": "pq_binding_error(pcactn['alg'], pcactn['pq_pk'], chain[-1]['holder_pq'], 'leaf')",
+  "occurrence": 1,
+  "lineno": 1298,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "str-empty: 'holder' => ''",
+  "line": "resolve_pq_key(chain[-1]['holder'], pcactn['pq_pk'], holder_pq: chain[-1]['holder_pq']))",
+  "occurrence": 1,
+  "lineno": 1300,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "int+1: -1 => 0",
+  "line": "resolve_pq_key(chain[-1]['holder'], pcactn['pq_pk'], holder_pq: chain[-1]['holder_pq']))",
+  "occurrence": 1,
+  "lineno": 1300,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "cond-true: checks.key?(k) => true",
+  "line": "CHECK_ORDER.each { |k| checks[k] = false unless checks.key?(k) }",
+  "occurrence": 1,
+  "lineno": 1306,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-key?: checks.key?(k) => k",
+  "line": "CHECK_ORDER.each { |k| checks[k] = false unless checks.key?(k) }",
+  "occurrence": 1,
+  "lineno": 1306,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-left-&&: safe_int?(pcactn['counter']) && pcactn['counter'] >= 0 => pcactn['counter'] >= 0",
+  "line": "run.call('counter', 'not a non-negative safe integer') { safe_int?(pcactn['counter']) && pcactn['counter'] >= 0 }",
+  "occurrence": 1,
+  "lineno": 1304,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-key?: checks.key?(k) => checks",
+  "line": "CHECK_ORDER.each { |k| checks[k] = false unless checks.key?(k) }",
+  "occurrence": 1,
+  "lineno": 1306,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "false->true: false => true",
+  "line": "CHECK_ORDER.each { |k| checks[k] = false unless checks.key?(k) }",
+  "occurrence": 1,
+  "lineno": 1306,
+  "fn": "verify_pcactn_unchecked"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless value.is_a?(String) && !value.empty?",
+  "occurrence": 1,
+  "lineno": 1240,
+  "fn": "decode_pca_header"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if bin.nil?",
+  "occurrence": 1,
+  "lineno": 1243,
+  "fn": "decode_pca_header"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-dup: bin.dup => bin",
+  "line": "text = bin.dup.force_encoding(Encoding::UTF_8)",
+  "occurrence": 1,
+  "lineno": 1245,
+  "fn": "decode_pca_header"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "def policy_caveats(grant, chain = nil)",
+  "occurrence": 1,
+  "lineno": 1261,
+  "fn": "policy_caveats"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: chain.is_a?(Array) && !chain.empty? => chain.is_a?(Array)",
+  "line": "leaf = chain.is_a?(Array) && !chain.empty? ? chain[-1] : nil",
+  "occurrence": 1,
+  "lineno": 1267,
+  "fn": "policy_caveats"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-false-empty?: chain.empty? => false",
+  "line": "leaf = chain.is_a?(Array) && !chain.empty? ? chain[-1] : nil",
+  "occurrence": 1,
+  "lineno": 1267,
+  "fn": "policy_caveats"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "leaf = chain.is_a?(Array) && !chain.empty? ? chain[-1] : nil",
+  "occurrence": 1,
+  "lineno": 1267,
+  "fn": "policy_caveats"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "lc = leaf.is_a?(Hash) ? leaf['caveats'] : nil",
+  "occurrence": 1,
+  "lineno": 1268,
+  "fn": "policy_caveats"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "nil->false: nil => false",
+  "line": "t = cv.is_a?(Hash) ? cv['type'] : nil",
+  "occurrence": 1,
+  "lineno": 1297,
+  "fn": "evaluate_caveats"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless action.is_a?(Hash)",
+  "occurrence": 1,
+  "lineno": 1313,
+  "fn": "action_spend_usd"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "drop-right-&&: params.is_a?(Hash) && params.key?('amount') => params.is_a?(Hash)",
+  "line": "return nil unless params.is_a?(Hash) && params.key?('amount')",
+  "occurrence": 1,
+  "lineno": 1316,
+  "fn": "action_spend_usd"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "pred-true-key?: params.key?('amount') => true",
+  "line": "return nil unless params.is_a?(Hash) && params.key?('amount')",
+  "occurrence": 1,
+  "lineno": 1316,
+  "fn": "action_spend_usd"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->recv-key?: params.key?('amount') => params",
+  "line": "return nil unless params.is_a?(Hash) && params.key?('amount')",
+  "occurrence": 1,
+  "lineno": 1316,
+  "fn": "action_spend_usd"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "call->arg-key?: params.key?('amount') => 'amount'",
+  "line": "return nil unless params.is_a?(Hash) && params.key?('amount')",
+  "occurrence": 1,
+  "lineno": 1316,
+  "fn": "action_spend_usd"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil unless params.is_a?(Hash) && params.key?('amount')",
+  "occurrence": 1,
+  "lineno": 1316,
+  "fn": "action_spend_usd"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if amount.nil? || amount.negative?",
+  "occurrence": 1,
+  "lineno": 1319,
+  "fn": "action_spend_usd"
+ },
+ {
+  "crate": "ruby-pca",
+  "file": "lib/atlas_pca.rb",
+  "mutant": "return-drop: return nil => return",
+  "line": "return nil if params.key?('currency') && params['currency'] != 'usd' && params['currency'] != 'USD'",
+  "occurrence": 1,
+  "lineno": 1320,
+  "fn": "action_spend_usd"
+ }
+]

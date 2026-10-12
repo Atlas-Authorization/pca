@@ -31,7 +31,7 @@ Source: `formal/dafny/{Common,Chain,Caveats,Threshold,Replay,Verdict}.dfy` (abou
 | Dafny | 4.11.0 (`4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2`) |
 | Z3 (bundled with Dafny, used for all proofs) | 4.12.1 (the Dafny zip also carries 4.14.1; the default 4.12.1 is used) |
 | .NET runtime | 8.0.131 |
-| Last full verification | **170 verified, 0 errors** (`dafny verify ... --verify-included-files`) |
+| Last full verification | **171 verified, 0 errors** (`dafny verify ... --verify-included-files`, re-run 2026-10-12; `GlueContract.dfy` with the core included: 174 verified, 0 errors) |
 | `assume` statements | **0** |
 | `{:axiom}` attributes | **0** |
 | `{:extern}` / `extern` | **0** |

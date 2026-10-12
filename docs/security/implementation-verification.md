@@ -87,8 +87,8 @@ Remaining assumptions, stated: termination of the rejection-sampling loops is no
 
 | Corpus | Result |
 |---|---|
-| `vectors.json` core (290 vectors) | 216 agree, **0 disagree**, 74 skipped (their expected verdict needs a post-quantum signature check: ML-DSA/SLH-DSA and hybrids; the reference does not implement them, exactly as the Rust verifier skips registered-but-unwired suites) |
-| `vectors-adversarial.json.gz` (4209 parser-differential vectors) | 4209 agree, **0 disagree** |
+| `vectors.json` core (290 vectors at the time of the run; the current core has 374) | 216 agree, **0 disagree**, 74 skipped (their expected verdict needs a post-quantum signature check: ML-DSA/SLH-DSA and hybrids; the reference does not implement them, exactly as the Rust verifier skips registered-but-unwired suites) |
+| `vectors-adversarial.json.gz` (4209 parser-differential vectors at the time of the run; the current set has 4,358) | 4209 agree, **0 disagree** |
 | primitives: canonical 23, json_parse 125, b64u 81, Merkle proofs 15 | all agree |
 
 "Agree" means agreement with the corpus's expected verdicts. The corpus is the same one every shipped verifier is tested against, so this is evidence for the corpus's coverage and for implementation independence, not a proof of equivalence on inputs outside the corpus. This reference is a test oracle; it is not itself verified and is not linked to the Lean theorems in `formal/pca-lean`.

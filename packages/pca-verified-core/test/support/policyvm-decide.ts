@@ -79,8 +79,12 @@ export function decideVerified(input: DecideInput, vm: PolicyVm): PolicyDecision
       }
     }
     const agentCtx = agentCaveatContext(cctx, action);
-    const cv = vm.evaluateCaveats(env.caveats, agentCtx, 'agent');
-    if (!cv.ok) reasons.push(`caveat(s) not satisfied: ${cv.failed.join(', ')}`);
+    const ecv = vm.evaluateCaveats(env.caveats, agentCtx, 'agent');
+    if (!ecv.ok) reasons.push(`caveat(s) not satisfied: ${ecv.failed.join(', ')}`);
+    // 0.4.1: the root's caveats outside the envelope -- PROVED selection (RootCaveats) and evaluator
+    const rcv = vm.evaluateCaveats(vm.rootCaveats(grant.caveats), agentCtx, 'agent');
+    if (!rcv.ok) reasons.push(`root caveat(s) not satisfied: ${rcv.failed.join(', ')}`);
+    const cv = { ok: ecv.ok && rcv.ok };
     const dcv = vm.evaluateCaveats(extra, agentCtx, 'agent');
     if (!dcv.ok) reasons.push(`delegated caveat(s) not satisfied: ${dcv.failed.join(', ')}`);
 

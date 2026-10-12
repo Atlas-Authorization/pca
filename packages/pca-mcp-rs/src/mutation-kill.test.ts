@@ -353,12 +353,13 @@ describe('extractPCActn', () => {
   const grant = mkGrant();
   const p = mkAct(grant);
   const e = enc(p);
-  it('header forms: record (any case, array value, trimmed) and Headers-like', () => {
+  it('header forms: record (any case, array value) and Headers-like; whitespace is refused (0.4.1 strict decoding)', () => {
     expect(extractPCActn({ headers: { 'PCA-Action': e } })).toStrictEqual(JSON.parse(JSON.stringify(p)));
     expect(extractPCActn({ headers: { 'pca-action': e } })).toBeTruthy();
     expect(extractPCActn({ headers: { 'Pca-Action': e } })).toBeTruthy();
     expect(extractPCActn({ headers: { 'PCA-ACTION': [e, 'junk'] } })).toBeTruthy();
-    expect(extractPCActn({ headers: { 'PCA-Action': `  ${e}\n` } })).toBeTruthy();
+    expect(() => extractPCActn({ headers: { 'PCA-Action': `  ${e}\n` } })).toThrow(/strict unpadded base64url/);
+    expect(() => extractPCActn({ headers: { 'PCA-Action': e + '=' } })).toThrow(/strict unpadded base64url/);
     expect(extractPCActn({ headers: new Headers({ 'PCA-Action': e }) })).toBeTruthy();
     expect(extractPCActn({ headers: { get: (n: string) => (n === 'pca-action' ? e : null) } })).toBeTruthy();
     expect(extractPCActn({ headers: { get: (n: string) => (n === 'PCA-ACTION' ? e : null) } })).toBeNull();

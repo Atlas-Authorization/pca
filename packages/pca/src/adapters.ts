@@ -16,10 +16,11 @@
 
 import type { Agent } from './facade';
 import type { PCActn } from './pcactn';
-import { b64u, unb64u } from './hash';
+import { b64u, decodeB64uStrict } from './hash';
 
 const HDR_ENC = new TextEncoder();
-const HDR_DEC = new TextDecoder();
+/** Fatal (invalid UTF-8 throws) and BOM-preserving (a leading U+FEFF reaches the strict JSON parser, which refuses it). */
+const HDR_DEC = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 /** Thrown by `guard` when the agent's local dry-run rejects a call before dispatch. */
 export class PcaDenied extends Error {
@@ -53,9 +54,32 @@ export function pcaHeaders(encoded: string): Record<string, string> {
   return { [PCA_HEADER]: b64u(HDR_ENC.encode(encoded)) };
 }
 
-/** Reverse `pcaHeaders`: base64url header value → the encoded PCActn JSON text (pass to `decodePCActn`). */
+/** Thrown by {@link decodePcaHeader} for a `PCA-Action` value that is not strict unpadded base64url of UTF-8 text. */
+export class PcaHeaderError extends Error {
+  readonly code = 'invalid_pca_header' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'PcaHeaderError';
+  }
+}
+
+/**
+ * Reverse `pcaHeaders`: `PCA-Action` header value → the encoded PCActn JSON text (pass to `decodePCActn`).
+ *
+ * STRICT (0.4.1), exactly the profile's base64url rule: unpadded RFC 4648 §5 alphabet only (`A-Z a-z 0-9 - _`), no `=`,
+ * no `+` or `/`, no whitespace anywhere (HTTP stacks strip optional whitespace around a field value before it gets
+ * here), length mod 4 != 1, zero unused trailing bits, and the bytes must be valid UTF-8. Anything else throws
+ * {@link PcaHeaderError}. Nothing is normalized, so one PCActn has exactly one header spelling.
+ */
 export function decodePcaHeader(value: string): string {
-  return HDR_DEC.decode(unb64u(value.trim()));
+  if (typeof value !== 'string' || value.length === 0) throw new PcaHeaderError('PCA-Action header is empty');
+  const bytes = decodeB64uStrict(value);
+  if (bytes === null) throw new PcaHeaderError('PCA-Action header is not strict unpadded base64url');
+  try {
+    return HDR_DEC.decode(bytes);
+  } catch {
+    throw new PcaHeaderError('PCA-Action header does not decode to UTF-8 text');
+  }
 }
 
 export interface GuardSpec<P> {

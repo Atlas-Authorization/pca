@@ -51,7 +51,7 @@ unconditional the generator asserts the intended outcome against the reference.
 | time | 398 | `iat` / `exp` / `now` boundaries to the millisecond, including int32 and int53 magnitudes |
 | atten | 76 | the append-only caveat rule with validly signed hops: every reorder, drop, value edit, junk caveat |
 
-That is 4,209 vectors, plus 1,178 primitive vectors (425 `json_parse`, 718 `b64u`, 35 `canonical`).
+That is 4,209 vectors at the time of this audit (4,358 in the current corpus, after the size-cap, caveat-cap and weak-key families were added), plus 1,178 primitive vectors (425 `json_parse`, 718 `b64u`, 35 `canonical`).
 Before this audit the file held 172 vectors.
 
 ### Differential gate (`bash scripts/pca-conformance-all.sh --fuzz 300`)

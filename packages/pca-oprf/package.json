@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-oprf",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "OPRF (RFC 9497) + PSI for PCA: private rate-limiting and private revocation checks without revealing which capability or identifier.",
   "keywords": [
     "oprf",

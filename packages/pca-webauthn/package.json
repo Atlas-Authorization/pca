@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-webauthn",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Phishing-resistant human co-sign for PCA FROST step-up via WebAuthn/FIDO2 passkeys: verify an authenticator assertion as the principal/guardian approval.",
   "keywords": [
     "webauthn",
