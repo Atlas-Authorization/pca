@@ -1,0 +1,2 @@
+NO RESULT rc=251 (timeout/killed; NOT proved) read_before_tick
+# wall=166s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=read_before_tick --heuristic=O --oraclename=./oracle_clock.sh pca_clock_v3d.spthy +RTS -N4 -M10g

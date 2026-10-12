@@ -1,0 +1,64 @@
+/*
+  PCA -- FROST DKG with Schnorr proof of possession (PedPoP): the ROGUE-KEY attack (symbolic model, Tamarin).
+  Models packages/pca/src/frost-dkg.ts  dkgRound1 (proof of knowledge of the constant term a_i0 bound to
+  sessionId and identifier) / dkgVerifyRound1 / group key  Y = C_1 + ... + C_n  (sum of the constant-term
+  commitments C_i = g^{a_i0}).
+
+  Group-algebra abstraction (this is exactly the fact the rogue-key attack uses, nothing more):
+    pub(a)               the commitment g^a (one-way: a is not recoverable from pub(a))
+    agg(l, c)            the group key from the honest contributions l and the last contribution c
+    adv(l, T)            the adversary's "cancelling contribution": the last contribution that makes the
+                         aggregate equal the adversary's chosen key T, computable by anyone who sees l
+                         (in a group: c = T - sum(l))
+    EQUATION  agg(l, adv(l, T)) = T      (group inverse / cancellation)
+    pop(a, C, ctx)       a Schnorr proof of knowledge of a with C = pub(a), bound to ctx = <session, id>
+    chkpop(p, C, ctx)    verification; EQUATION chkpop(pop(a, pub(a), ctx), pub(a), ctx) = true.
+  An adversary that does not know a discrete log of the rogue contribution cannot build pop for it (adv(l, T) is
+  not of the form pub(x) for any x the adversary knows), which is the whole point of the proof of possession.
+
+  Participants 1 and 2 are honest; participant 3 is the adversary and speaks last (rushing: it sees C_1, C_2
+  before choosing C_3, as on the broadcast channel of the DKG).  Verifier = honest participant finishing the DKG.
+
+  Variants (-D...):
+    NO_POP       the verifier does NOT check the proof of possession of participant 3
+                 -> rogue-key attack: dkg_key_not_adversarial must break (the aggregate becomes pub(t) with t known)
+*/
+theory PCA_Frost_Dkg
+begin
+
+functions: pub/1, agg/2, adv/2, pop/3, chkpop/3, true/0
+equations: agg(l, adv(l, T)) = T,
+           chkpop(pop(a, pub(a), ctx), pub(a), ctx) = true
+
+restriction Equality: "All x y #i. Eq(x, y) @ i ==> x = y"
+
+// ---- honest participants 1 and 2: round 1 ------------------------------------------------------------------
+rule Honest_Round1:
+  [ Fr(~a), In(sid) ] --[ Contributed($i, pub(~a)), PopMade($i, sid) ]->
+  [ !PubC($i, pub(~a)), Out(<$i, pub(~a), pop(~a, pub(~a), <sid, $i>)>) ]
+
+// ---- honest participant finishes the DKG with the (adversarial) contribution of participant 3 ------------------------------
+#ifdef NO_POP
+rule Finish_DKG:
+  [ !PubC('1', C1), !PubC('2', C2), In(<C3, p3>) ]
+  --[ DKGDone(agg(<C1, C2>, C3)), DKGPopChecked('no') ]->
+  [ ]
+#else
+rule Finish_DKG:
+  [ !PubC('1', C1), !PubC('2', C2), In(<sid, C3, p3>) ]
+  --[ Eq(chkpop(p3, C3, <sid, '3'>), true), DKGDone(agg(<C1, C2>, C3)), DKGPopChecked(sid) ]->
+  [ ]
+#endif
+
+// ---- sanity ------------------------------------------------------------------------------------------------------
+// the honest all-honest-contribution DKG completes (participant 3 plays honestly with a known secret)
+lemma executable_dkg:
+  exists-trace
+  "Ex Y #i. DKGDone(Y) @ i"
+
+// ---- LEMMA: the group key is not controlled by the adversary --------------------------------------------------------------
+// no accepted group key is of the form pub(x) for an x the adversary knows
+lemma dkg_key_not_adversarial:
+  "All Y #a. DKGDone(Y) @ a ==> not (Ex x #k. K(x) @ k & Y = pub(x))"
+
+end

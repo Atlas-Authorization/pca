@@ -1,0 +1,12 @@
+[
+{
+"name": "snp-finite",
+"pkg": "pca",
+"file": "hardware-sevsnp.ts",
+"from": "      if (!Number.isFinite(from) || !Number.isFinite(to)) return { ok: false, reason: `${label} certificate validity is unparseable` };\n",
+"to": "",
+"filters": [
+"mutation-kill-sevsnp-validity-r2"
+]
+}
+]

@@ -1,0 +1,38 @@
+/*
+  PCA -- explicit clock, INSTANCE-NUMBERED thread (v3e).  One linear Clock thread over t0<t1<t2<t3 (explicit tables,
+  expiry is the rule premise !Le(now,exp); no ChkTime restriction).  Every Clock fact carries a fresh INSTANCE id n
+  created by the step that produced it: a thread step (Tick, read-only observer, Verify) consumes Clock(t,n) and
+  produces Clock(u,m) with m fresh (u = t for reads).  This is an observational refinement of v3 (the ids are
+  not used by any premise except to link a step to its predecessor).  The monotonicity of the thread is then proved
+  from three small lemmas:
+    alive_unique : no two instances of the thread are alive across the same step (induction)
+    step_order   : a later step never consumes a value smaller than the value an earlier step produced
+    no_accept_after_expiry follows from step_order and the tables.
+  -DNO_EXPIRY_CHECK: Verify has no !Le premise.
+*/
+theory PCA_Clock_V3e
+begin
+rule Tables:
+  [ ] --> [ !Succ('t0','t1'), !Succ('t1','t2'), !Succ('t2','t3'),
+            !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'), !Le('t0','t3'), !Le('t1','t1'), !Le('t1','t2'),
+            !Le('t1','t3'), !Le('t2','t2'), !Le('t2','t3'), !Le('t3','t3'),
+            !Lt('t0','t1'), !Lt('t0','t2'), !Lt('t0','t3'), !Lt('t1','t2'), !Lt('t1','t3'), !Lt('t2','t3') ]
+rule Clock_Init: [ Fr(~n) ] --[ ClockInit(), Cr(~n) ]-> [ Clock('t0', ~n) ]
+restriction ClockOnce: "All #i #j. ClockInit() @ i & ClockInit() @ j ==> #i = #j"
+rule Tick: [ Clock(t, n), !Succ(t, u), Fr(~m) ] --[ Co(n), Cr(~m), Ev(n, ~m, t, u), TickFrom(t) ]-> [ Clock(u, ~m) ]
+rule Obs_Past: [ Clock(t, n), In(e), !Lt(e, t), Fr(~m) ] --[ Co(n), Cr(~m), Ev(n, ~m, t, t), ClockPast(e) ]-> [ Clock(t, ~m) ]
+#ifdef NO_EXPIRY_CHECK
+rule Verify: [ Clock(now, n), In(exp), Fr(~m) ] --[ Co(n), Cr(~m), Ev(n, ~m, now, now), Accept(exp) ]-> [ Clock(now, ~m) ]
+#else
+rule Verify: [ Clock(now, n), In(exp), !Le(now, exp), Fr(~m) ] --[ Co(n), Cr(~m), Ev(n, ~m, now, now), Accept(exp) ]-> [ Clock(now, ~m) ]
+#endif
+lemma executable_accept: exists-trace "Ex e #i. Accept(e) @ i"
+lemma executable_after_tick: exists-trace "Ex e t #i #k. Accept(e) @ i & TickFrom(t) @ k & #k < #i"
+lemma alive_unique [use_induction, reuse]:
+  "All x y #p #i #j. Cr(x) @ p & Co(x) @ j & Co(y) @ i & #p < #i & #i < #j ==> F"
+lemma step_order [use_induction]:
+  "All n1 m1 t1 u1 n2 m2 t2 u2 #i #j. Ev(n1, m1, t1, u1) @ i & Ev(n2, m2, t2, u2) @ j & #i < #j
+      ==> not( (u1='t1' & t2='t0') | (u1='t2' & t2='t0') | (u1='t2' & t2='t1') | (u1='t3' & t2='t0') | (u1='t3' & t2='t1') | (u1='t3' & t2='t2') )"
+lemma no_accept_after_expiry:
+  "All e #i #j. Accept(e) @ i & ClockPast(e) @ j ==> #i < #j"
+end

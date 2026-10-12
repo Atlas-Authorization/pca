@@ -1,0 +1,12 @@
+[
+{
+"name": "ocsp-time",
+"pkg": "pca",
+"file": "attest-nvidia-ocsp.ts",
+"from": "  if (!allAsn1TimesWellFormed(basicAsn.result, asn1)) return fail('response carries a malformed (out-of-range) ASN.1 time');\n",
+"to": "",
+"filters": [
+"mutation-kill-ocsp-time-r2"
+]
+}
+]

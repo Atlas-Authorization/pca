@@ -1,0 +1,49 @@
+{
+ "tool": "tools/pca-audit/swift-mutate/mutate.mjs (operator mutator; oracle = swift test AtlasPCAVerifyTests incl. the full adversarial corpus via PCA_CONFORMANCE_ADV)",
+ "platform": "Linux queue boxes, Swift 6.0.3, swift-crypto for CryptoKit, liboqs 0.14.0 for ML-DSA-65 (linux-prep.sh): every ML-DSA-65 / hybrid vector runs for real (no stub)",
+ "files": [
+  "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "Sources/AtlasPCAVerify/BigUInt.swift",
+  "Sources/AtlasPCAVerify/Capability.swift",
+  "Sources/AtlasPCAVerify/Ed25519Strict.swift",
+  "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "Sources/AtlasPCAVerify/JSONValue.swift",
+  "Sources/AtlasPCAVerify/MLDSA.swift",
+  "Sources/AtlasPCAVerify/Merkle.swift",
+  "Sources/AtlasPCAVerify/PCActn.swift",
+  "Sources/AtlasPCAVerify/PQ.swift",
+  "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "Sources/AtlasPCAVerify/StrictParser.swift",
+  "Sources/AtlasPCAVerify/Threshold.swift",
+  "Sources/AtlasPCAVerify/Wire.swift"
+ ],
+ "rounds": {
+  "full (8 shards, --every=8)": {
+   "SURVIVED": 121,
+   "KILLED": 994,
+   "NONVIABLE": 52,
+   "TIMEOUT": 28
+  },
+  "retry1 (survivors vs new kill tests)": {
+   "SURVIVED": 89,
+   "KILLED": 30
+  },
+  "retry2": {
+   "SURVIVED": 83,
+   "KILLED": 5
+  }
+ },
+ "totals": {
+  "mutants": 1195,
+  "nonviable": 52,
+  "not_compiled_or_comment (masked on retry)": 3,
+  "viable": 1140,
+  "detected": 1057,
+  "survived": 83,
+  "ledgered_unique_keys": 81,
+  "killed_incl_timeouts": 1057,
+  "ledgered_survivors": 83,
+  "open": 0
+ },
+ "note": "All survivors are ledgered in tools/pca-audit/native-mutation-equivalents.json (crate swift-pca); check: node tools/pca-audit/native-check-equivalents.mjs tools/pca-audit/native-mutation/results/swift-survivors.json. Earlier runs (iso-swift-A/B/C) used a stubbed ML-DSA, so their baseline failed and survivors were unreliable; they are superseded."
+}

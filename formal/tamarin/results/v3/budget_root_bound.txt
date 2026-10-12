@@ -1,0 +1,2 @@
+OPEN (NOT proved): root_bound - tamarin heap exhausted at -M10g after 1289s, no verdict
+# wall=1289s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=root_bound --heuristic=o --oraclename=oracle_budget.sh pca_budget_v3.spthy +RTS -N4 -M10g

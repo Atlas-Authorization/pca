@@ -1,0 +1,42 @@
+[
+{
+"name": "x-gcp",
+"pkg": "pca",
+"file": "attest-gcp-confidential-space.ts",
+"from": "  return x509ValidAt(cert, nowMs, skewMs);",
+"to": "  const vf = Date.parse(cert.validFrom);\n  const vt = Date.parse(cert.validTo);\n  if (!Number.isFinite(vf) || !Number.isFinite(vt)) return false;\n  return nowMs + skewMs >= vf && nowMs - skewMs <= vt;",
+"filters": [
+"mutation-kill-x509-sites-r2"
+]
+},
+{
+"name": "x-maa",
+"pkg": "pca",
+"file": "attest-maa-keys.ts",
+"from": "  return x509ValidityMs(c);",
+"to": "  return { from: Date.parse(c.validFrom), to: Date.parse(c.validTo) };",
+"filters": [
+"mutation-kill-maa-keys-validity-r2"
+]
+},
+{
+"name": "x-ocsp",
+"pkg": "pca",
+"file": "attest-nvidia-ocsp.ts",
+"from": "      const { from: nb, to: na } = x509ValidityMs(cand);",
+"to": "      const nb = Date.parse(cand.validFrom);\n      const na = Date.parse(cand.validTo);",
+"filters": [
+"mutation-kill-ocsp-time-r2"
+]
+},
+{
+"name": "x-spiffe",
+"pkg": "pca-spiffe",
+"file": "index.ts",
+"from": "  return x509ValidAt(cert, now.getTime());",
+"to": "  return now >= new Date(cert.validFrom) && now <= new Date(cert.validTo);",
+"filters": [
+"mutation-kill-validity-r2"
+]
+}
+]

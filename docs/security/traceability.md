@@ -51,7 +51,10 @@ order: 32
 | T-007 | packages/pca/src/risk.test.ts | fully-compromised agent hammering free actions halts at the bound without a human |
 | T-007 | packages/pca/src/risk.test.ts | depletion forces step-up even for low r |
 | T-007 | packages/pca/src/budget-forecast.test.ts | sizes bMax so N autonomous actions fit under the safety bound |
-| T-008 | NO AUTOMATED TEST | - |
+| T-008 | packages/pca/src/threat-model-gaps.test.ts | 50 concurrent requests carrying the SAME PCActn: exactly one is accepted |
+| T-008 | packages/pca/src/threat-model-gaps.test.ts | two independent guard instances over ONE store also admit exactly one |
+| T-008 | packages/pca/src/threat-model-gaps.test.ts | parallel spends never exceed the budget and no debit is lost |
+| T-008 | packages/pca/src/threat-model-gaps.test.ts | a multi-node store supplies withKeyLock |
 | T-009 | packages/pca/src/adversarial.test.ts | at the full verifier: a tampered action breaks plan_inclusion |
 | T-009 | packages/pca/src/revocation.test.ts | REPLAYED PRE-REVOCATION ROOT |
 | T-009 | packages/pca/src/adversarial.test.ts | a pre-revocation PCActn (freshness.epoch < revocation epoch) is rejected |
@@ -78,7 +81,9 @@ order: 32
 | T-014 | packages/pca/src/adversarial.test.ts | a tampered signed number that cannot encode canonically is rejected on the wire |
 | T-014 | packages/pca/src/pcactn.test.ts | tampered action breaks plan inclusion (and signature) |
 | T-014 | packages/pca/src/adversarial.test.ts | an UNKNOWN top-level field is a wire failure |
-| T-015 | NO AUTOMATED TEST | - |
+| T-015 | packages/pca/src/threat-model-gaps.test.ts | the wire form is plaintext |
+| T-015 | packages/pca/src/threat-model-gaps.test.ts | commitment-only plan privacy |
+| T-015 | packages/pca/src/threat-model-gaps.test.ts | a captured PCActn is inert |
 | T-016 | packages/pca/src/adversarial.test.ts | a SUB-THRESHOLD (1-of-2) aggregate is refused |
 | T-016 | packages/pca/src/frost.test.ts | a 1-of-2 (insufficient) aggregate does NOT verify |
 | T-016 | packages/pca/src/frost-dkg.test.ts | an insufficient (1-of-2) quorum does NOT verify under a (2,n) DKG group key |
@@ -95,7 +100,10 @@ order: 32
 | T-018 | packages/pca/src/risk.test.ts | SAFETY INVARIANT |
 | T-018 | packages/pca/src/risk.test.ts | depletion forces step-up even for low r |
 | T-018 | packages/pca/src/approval-channels.test.ts | formats a well-formed Block Kit message carrying the action summary |
-| T-019 | NO AUTOMATED TEST | - |
+| T-019 | packages/pca/src/threat-model-gaps.test.ts | with the principal key an attacker mints a grant |
+| T-019 | packages/pca/src/threat-model-gaps.test.ts | mitigation: a resource server that only resolves grants IT enrolled |
+| T-019 | packages/pca/src/threat-model-gaps.test.ts | rotation: dropping the compromised grant |
+| T-019 | packages/pca/src/threat-model-gaps.test.ts | detection: what the compromised key signed is attributable |
 | T-020 | packages/pca/src/adversarial.test.ts | a document whose nonce does NOT bind this PCActn is rejected |
 | T-020 | packages/pca/src/attestation.test.ts | relay: a genuine signed quote bound to a different holder |
 | T-020 | packages/pca/src/attestation.test.ts | fails closed when the server supplies no expected binding |
@@ -222,7 +230,10 @@ order: 32
 | T-040 | packages/pca/src/ledger.test.ts | split view: two conflicting roots at the same size cannot both gather an honest-witness threshold |
 | T-040 | packages/pca/src/mesh.test.ts | refuses equivocation (same size, different log) and rollback |
 | T-040 | packages/pca/src/mesh.test.ts | rejects a head cosigned only by unpinned (attacker) witnesses |
-| T-041 | NO AUTOMATED TEST | - |
+| T-041 | packages/pca/src/threat-model-gaps.test.ts | an action WITH an inclusion proof against a guardian-signed |
+| T-041 | packages/pca/src/threat-model-gaps.test.ts | an action the operator never appended (omission) is refused |
+| T-041 | packages/pca/src/threat-model-gaps.test.ts | a proof against an UNWITNESSED or under-witnessed head is refused |
+| T-041 | packages/pca/src/threat-model-gaps.test.ts | RESIDUAL (pinned): omission is invisible |
 | T-042 | packages/pca/src/adversarial.test.ts | a revoked id has NO valid non-membership proof |
 | T-042 | packages/pca/src/adversarial.test.ts | a STALE signed epoch (now > not_after) is rejected |
 | T-042 | packages/pca/src/adversarial.test.ts | an epoch ROLLBACK (older than the pinned epoch) is rejected |
@@ -286,6 +297,7 @@ order: 32
 | T-048 | packages/pca/src/hash.test.ts | sha384 is a correct 48-byte FIPS 180-4 digest |
 | T-048 | packages/pca/src/frost.test.ts | THE decisive vector: sig shares + aggregate signature are byte-exact and verify |
 | T-049 | packages/pca/src/security-audit.test.ts | receipt chain detects a tampered body |
+| T-049 | tools/pca-audit/timing/dudect.ts | CONTROL positive: early-exit byte compare |
 | T-050 | packages/pca/src/prohibitions.test.ts | an unresolvable trigger condition counts as MATCHED |
 | T-050 | packages/pca/src/prohibitions.test.ts | forged all-clear evidence for a violating action is rejected |
 | T-050 | packages/pca/src/prohibitions.test.ts | prohibitions are independent of the plan |
@@ -339,6 +351,7 @@ order: 32
 | G-9 | packages/pca/src/pq.test.ts | unknown alg => wire fail (terminal) |
 | G-9 | packages/pca/src/pq.test.ts | valid Ed25519 but INVALID ML-DSA => fail (both required) |
 | G-9 | packages/pca/src/pq-surfaces.test.ts | (d) unknown suite + downgrade are fail-closed |
+| G-9 | packages/pca/src/pq-pinning.test.ts | R2-01: a pure-PQ artifact signed by an attacker key but naming the pinned identity is rejected on every surface; genuine pinned artifacts verify |
 | G-10 | packages/pca/src/attestation.test.ts | relay: a genuine signed quote bound to a different holder |
 | G-10 | packages/pca/src/attest-amd-snp.test.ts | the family pin matters: this Genoa chain is rejected under the Milan or Turin roots |
 | G-10 | packages/pca/src/hardware-sevsnp.test.ts | END-TO-END: ACCEPTS the genuine report |
@@ -385,16 +398,13 @@ Entries marked `NO AUTOMATED TEST` above, with the reason. Other entries listed 
 
 ### No automated test
 
-- **T-008**: No concurrent / multi-node test of the counter and budget store; only a single-node store is exercised.
-- **T-015**: By design: PCA provides no confidentiality. Nothing to test.
-- **T-019**: By design (non-goal N-1): a compromised principal cannot be detected or stopped by PCA.
-- **T-041**: No test demonstrates that a resource server rejects an action lacking a witnessed inclusion proof, and omission is undetectable from the log alone.
+None. The four IDs that previously had no test now have one each (T-008 concurrent counter and budget races, T-015, T-019, T-041). T-015 and T-019 are documented non-goals: their tests pin the stated residual (the wire form is readable, a compromised principal key is total within the grant, detection is after the fact) and the mitigations that do exist, rather than claiming prevention.
 
 ### Partial coverage
 
 These IDs have tests for the mitigation but not for the whole claim:
 
-- **T-001 / G-5**: counter monotonicity is tested against the in-memory single-node store in the resource-server middleware. The core verifier only checks that the counter is well-formed. Multi-node behaviour is untested (see T-008).
+- **T-001 / G-5**: counter monotonicity is tested against the in-memory single-node store in the resource-server middleware. The core verifier only checks that the counter is well-formed. Concurrent verifiers sharing one store are tested (T-008); a real multi-node store (Redis, Postgres) supplying `withKeyLock` is the integrator's, and is modelled but not run here.
 - **T-009**: freshness and pre-revocation rejection are tested; there is no test that re-checks authority at effect time, which is the resource server's job.
 - **T-016**: sub-threshold failure is tested for FROST, the multi-signature, and PQ quorums. Separate-trust-domain custody cannot be tested in a single process.
 - **T-028 / T-029**: failure of one root among several is tested with synthetic and real-fixture roots. No test simulates a compromised vendor signing key.
@@ -404,19 +414,19 @@ These IDs have tests for the mitigation but not for the whole claim:
 - **T-045**: tests show byte-exact handling (astral key order, lone surrogates) and that NFC/NFD, homoglyph, zero-width, bidi, fullwidth and case variants of an identifier are never treated as equal in verb, resource, condition, caveat-type, audience and digest decisions, in both the allow and deny directions. The library still does not normalize (by design), so there is no helper test for integrators who normalize before authorizing.
 - **T-046**: the nesting-depth, chain-depth, tool-argument and regex bounds are tested, and oversized and deeply nested inputs are submitted to the strict parser entry points (`strictParse`, `strictParseBytes`, `decodePCActn`) and the other decoders under a per-test time budget. `decodePcaHeader` itself has no size cap (HTTP servers bound header size); the oversize is refused one step later by `decodePCActn`. Volumetric flooding and signature-verification cost are not tested.
 - **T-048**: known-answer vectors catch wrong output only. There is no test for dependency provenance or lockfile integrity.
-- **T-049**: only the receipt-integrity comparison on the verifier surface is tested. No constant-time or timing measurement exists for the signer, the FROST scalar arithmetic or the DKG.
+- **T-049**: the receipt-integrity comparison is tested, and a dudect-style statistical timing harness measures Ed25519 and ML-DSA signing, the hybrid KEM decapsulation and FROST signing (with a leaky positive control and a constant-time negative control). A black-box timing test in a JIT runtime cannot prove constant time; the FROST scalar arithmetic is documented as not constant-time and the harness reports it as such. The DKG is not measured.
 - **T-047**: PQ and hybrid suites are tested for correctness and downgrade resistance. No test asserts that a classical-only artifact is rejected after a given date, because that is a policy decision.
 
 ### Gaps worth filling
 
 Highest value first:
 
-1. **Concurrent counter/budget race (T-008).** A test that runs N parallel `requirePCA` calls with the same counter against a shared store and asserts exactly one wins, and parallel spends never exceed the budget.
+1. ~~Concurrent counter/budget race (T-008).~~ Done.
 2. **Normalization helper (T-045).** The byte-exact behaviour is tested; what remains is a helper test for integrators who normalize before authorizing.
-3. **Resource-server inclusion-proof requirement (T-041).** A test that an action without a witnessed inclusion proof is refused when the resource server requires one.
+3. ~~Resource-server inclusion-proof requirement (T-041).~~ Done.
 4. **Effect-time re-check (T-009).** A test of a verify-then-revoke-then-execute sequence with the documented re-check hook.
 5. **Cross-SDK differential fuzzing (T-044).** An automated differential fuzzer across the language SDKs on the strict parser.
-6. **Side-channel evidence (T-049).** A timing-distribution test for the verifier and a documented constant-time review of signer arithmetic.
+6. **Side-channel evidence (T-049).** A timing-distribution harness now exists; a documented constant-time review of signer arithmetic by an independent reviewer does not.
 7. **Compromised vendor key simulation (T-028).** A test where one of several roots signs a forged token with a valid-looking chain and the N-of-M policy denies.
 
 ### Not applicable to automated testing

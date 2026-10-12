@@ -1,0 +1,9 @@
+{
+ "name": "audit-canon-5a39093554df",
+ "kind": "canon",
+ "raw": "\"plain st\u0000ing with \\\"escapes\\\" and �\\ back=slash\"",
+ "found": {
+  "by": "pca-audit structure-aware mutator",
+  "seed": 20261009
+ }
+}

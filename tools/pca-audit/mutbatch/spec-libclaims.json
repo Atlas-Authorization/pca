@@ -1,0 +1,122 @@
+[
+{
+"name": "abe-g1-av",
+"pkg": "pca-abe",
+"file": "bls.ts",
+"from": "    const p = bls12_381.G1.ProjectivePoint.fromHex(bytes);\n    p.assertValidity();",
+"to": "    const p = bls12_381.G1.ProjectivePoint.fromHex(bytes);",
+"test": ""
+},
+{
+"name": "abe-g2-av",
+"pkg": "pca-abe",
+"file": "bls.ts",
+"from": "    const p = bls12_381.G2.ProjectivePoint.fromHex(bytes);\n    p.assertValidity();",
+"to": "    const p = bls12_381.G2.ProjectivePoint.fromHex(bytes);",
+"test": ""
+},
+{
+"name": "abe-gt-len",
+"pkg": "pca-abe",
+"file": "bls.ts",
+"from": "  if (bytes.length !== 576) return null;",
+"to": "",
+"test": ""
+},
+{
+"name": "abe-beq-len",
+"pkg": "pca-abe",
+"file": "bls.ts",
+"from": "  if (a.length !== b.length) return false;",
+"to": "",
+"test": ""
+},
+{
+"name": "abe-gt-rt",
+"pkg": "pca-abe",
+"file": "bls.ts",
+"from": "    if (!bytesEqual(Fp12.toBytes(x), bytes)) return null;",
+"to": "",
+"test": ""
+},
+{
+"name": "agg-av",
+"pkg": "pca-aggsig",
+"file": "core.ts",
+"from": "    P.assertValidity();",
+"to": "",
+"test": ""
+},
+{
+"name": "agg-iscomp",
+"pkg": "pca-aggsig",
+"file": "core.ts",
+"from": "  if (!isCompressed(publicKey, PUBLIC_KEY_LENGTH)) return false;",
+"to": "",
+"test": ""
+},
+{
+"name": "agg-lens",
+"pkg": "pca-aggsig",
+"file": "core.ts",
+"from": "    if (publicKeys.length === 0 || publicKeys.length !== msgs.length) return false;",
+"to": "",
+"test": ""
+},
+{
+"name": "agg-len0",
+"pkg": "pca-aggsig",
+"file": "core.ts",
+"from": "    if (publicKeys.length === 0 || publicKeys.length !== msgs.length) return false;",
+"to": "    if (publicKeys.length !== msgs.length) return false;",
+"test": ""
+},
+{
+"name": "agg-ragged",
+"pkg": "pca-aggsig",
+"file": "core.ts",
+"from": "    if (publicKeys.length === 0 || publicKeys.length !== msgs.length) return false;",
+"to": "    if (publicKeys.length === 0) return false;",
+"test": ""
+},
+{
+"name": "agg-fast0",
+"pkg": "pca-aggsig",
+"file": "core.ts",
+"from": "    if (publicKeys.length === 0) return false;",
+"to": "",
+"test": ""
+},
+{
+"name": "agg-aggpk",
+"pkg": "pca-aggsig",
+"file": "core.ts",
+"from": "    if (!keyValidate(aggPk)) return false;",
+"to": "",
+"test": ""
+},
+{
+"name": "bbs-mu1",
+"pkg": "pca-bbs",
+"file": "bbs.ts",
+"from": "  return sc === 0n ? G1.ZERO : P.multiplyUnsafe(sc);",
+"to": "  return P.multiplyUnsafe(sc);",
+"test": ""
+},
+{
+"name": "bbs-mu2",
+"pkg": "pca-bbs",
+"file": "bbs.ts",
+"from": "  return sc === 0n ? G2.ZERO : P.multiplyUnsafe(sc);",
+"to": "  return P.multiplyUnsafe(sc);",
+"test": ""
+},
+{
+"name": "gnap-alg",
+"pkg": "pca-gnap",
+"file": "index.ts",
+"from": "    if (header.alg !== 'EdDSA') return fail('unexpected alg (not EdDSA)');",
+"to": "",
+"test": ""
+}
+]

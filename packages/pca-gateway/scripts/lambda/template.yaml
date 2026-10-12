@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: PCA gateway Lambda authorizer behind the SAM CLI local API Gateway emulation (REST REQUEST, REST TOKEN, HTTP API 1.0 and 2.0 simple).
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    CodeUri: lam/
+    Timeout: 30
+    Environment:
+      Variables:
+        PCA_AUDIENCE: ins_acme
+        PCA_TRACE_EVENT: '1'
+Resources:
+  AuthRest:
+    Type: AWS::Serverless::Function
+    Properties: { Handler: handler.rest }
+  AuthSimple:
+    Type: AWS::Serverless::Function
+    Properties: { Handler: handler.simple }
+  Backend:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.backend
+      Events:
+        RestRefunds: { Type: Api, Properties: { RestApiId: !Ref RestReq, Path: /rest/refunds, Method: post } }
+        RestPayouts: { Type: Api, Properties: { RestApiId: !Ref RestReq, Path: /rest/payouts, Method: post } }
+        TokRefunds: { Type: Api, Properties: { RestApiId: !Ref RestTok, Path: /tok/refunds, Method: post } }
+        H2Refunds: { Type: HttpApi, Properties: { ApiId: !Ref HttpV2, Path: /h2/refunds, Method: post } }
+        H1Refunds: { Type: HttpApi, Properties: { ApiId: !Ref HttpV1, Path: /h1/refunds, Method: post } }
+  RestReq:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: test
+      Auth:
+        DefaultAuthorizer: PcaRequest
+        Authorizers:
+          PcaRequest:
+            FunctionPayloadType: REQUEST
+            FunctionArn: !GetAtt AuthRest.Arn
+            Identity: { Headers: [PCA-Action], ReauthorizeEvery: 0 }
+  RestTok:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: test
+      Auth:
+        DefaultAuthorizer: PcaToken
+        Authorizers:
+          PcaToken:
+            FunctionArn: !GetAtt AuthRest.Arn
+            Identity: { Header: PCA-Action, ReauthorizeEvery: 0 }
+  HttpV2:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        DefaultAuthorizer: PcaV2
+        Authorizers:
+          PcaV2:
+            FunctionArn: !GetAtt AuthSimple.Arn
+            AuthorizerPayloadFormatVersion: '2.0'
+            EnableSimpleResponses: true
+            Identity: { Headers: [pca-action] }
+  HttpV1:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        DefaultAuthorizer: PcaV1
+        Authorizers:
+          PcaV1:
+            FunctionArn: !GetAtt AuthRest.Arn
+            AuthorizerPayloadFormatVersion: '1.0'
+            Identity: { Headers: [pca-action] }

@@ -1,0 +1,299 @@
+/*
+  PCA -- budget_alloc caveats, v3: STRUCTURAL node identities so the proofs terminate.
+
+  Changes against pca_budget.spthy (v2, whose root_bound/node_bound/spend_debits_root timed out):
+    * v2 derived "parent" and "root of" with recursive PERSISTENT facts (!Parent, !RootOf): every proof had to
+      unfold an unbounded chain of Alloc_Child instances.  Here a node IS its path: the root is a fresh atom r, a
+      child is the triple <~id, parent, r>.  Parent and root are therefore read off the term by pattern matching
+      (no recursion); the debit walk to the root is still a recursive rule (one Debit_Mid step per level), so the
+      tree depth is unbounded.
+    * Spent(s, r) is only emitted by the rule that debits the ROOT meter itself (token Debit(sid, r, r)): a spend
+      is complete exactly when the root meter was decremented.
+  Meters are linear facts Cnt(n, c) over symbolic counters c0<c1<c2<c3, decremented through the table !Dec
+  (no row for c0: a meter at zero cannot be debited, so there is no negative spend).  The countdown IS the
+  inductive "spent so far" counter: initial - remaining = spent so far.
+  The limit proved is concrete (root limit 'c2'; -DROOT3: 'c3'); Tamarin has no arithmetic in lemmas, so no
+  claim is made for an arbitrary limit n.
+
+  Switches (-D): NO_PARENT_CHECK  DEBIT_LEAF_ONLY  NONATOMIC_DEBIT  ROOT3
+*/
+theory PCA_Budget_V4
+begin
+
+rule Tables:
+  [ ] --> [ !Dec('c3', 'c2'), !Dec('c2', 'c1'), !Dec('c1', 'c0'),
+            !Le('c0','c0'), !Le('c0','c1'), !Le('c0','c2'), !Le('c0','c3'),
+            !Le('c1','c1'), !Le('c1','c2'), !Le('c1','c3'),
+            !Le('c2','c2'), !Le('c2','c3'), !Le('c3','c3') ]
+
+#ifdef ROOT3
+rule Root_Grant:
+  [ Fr(~r) ] --[ RootNode(~r, 'c3') ]-> [ !IsRoot(~r), !Lim(~r, 'c3'), RCnt(~r, 'c3') ]
+#else
+rule Root_Grant:
+  [ Fr(~r) ] --[ RootNode(~r, 'c2') ]-> [ !IsRoot(~r), !Lim(~r, 'c2'), RCnt(~r, 'c2') ]
+#endif
+
+// ---- delegation with allocation: child under the root, and child under a non-root node --------------------
+#ifdef NO_PARENT_CHECK
+rule Alloc_Child_R:
+  [ !IsRoot(p), !Lim(p, plim), In(climit), Fr(~id) ]
+  --[ Alloc(<~id, p, p>, climit, p, plim) ]->
+  [ !Lim(<~id, p, p>, climit), !Node(<~id, p, p>), Cnt(<~id, p, p>, climit) ]
+rule Alloc_Child_D:
+  [ !Lim(<pid, pp, r>, plim), In(climit), Fr(~id) ]
+  --[ Alloc(<~id, <pid, pp, r>, r>, climit, <pid, pp, r>, plim) ]->
+  [ !Lim(<~id, <pid, pp, r>, r>, climit), !Node(<~id, <pid, pp, r>, r>), Cnt(<~id, <pid, pp, r>, r>, climit) ]
+#else
+rule Alloc_Child_R:
+  [ !IsRoot(p), !Lim(p, plim), In(climit), !Le(climit, plim), Fr(~id) ]
+  --[ Alloc(<~id, p, p>, climit, p, plim) ]->
+  [ !Lim(<~id, p, p>, climit), !Node(<~id, p, p>), Cnt(<~id, p, p>, climit) ]
+rule Alloc_Child_D:
+  [ !Lim(<pid, pp, r>, plim), In(climit), !Le(climit, plim), Fr(~id) ]
+  --[ Alloc(<~id, <pid, pp, r>, r>, climit, <pid, pp, r>, plim) ]->
+  [ !Lim(<~id, <pid, pp, r>, r>, climit), !Node(<~id, <pid, pp, r>, r>), Cnt(<~id, <pid, pp, r>, r>, climit) ]
+#endif
+
+// ---- a spend of one unit by the holder of a node -------------------------------------------------------------
+#ifdef DEBIT_LEAF_ONLY
+rule Spend_Leaf_Only_Root:
+  [ !IsRoot(r), RCnt(r, c), !Dec(c, c1), Fr(~sid) ]
+  --[ Debited(~sid, r, r), Spent(~sid, r), SpendBegin(~sid, r) ]-> [ RCnt(r, c1) ]
+rule Spend_Leaf_Only_Node:
+  [ !Node(<id, p, r>), Cnt(<id, p, r>, c), !Dec(c, c1), Fr(~sid) ]
+  --[ Debited(~sid, <id, p, r>, r), Spent(~sid, r), SpendBegin(~sid, <id, p, r>) ]-> [ Cnt(<id, p, r>, c1) ]
+#else
+rule Spend_Begin_Root:
+  [ !IsRoot(r), Fr(~sid) ] --[ SpendBegin(~sid, r) ]-> [ Debit(~sid, r, r) ]
+rule Spend_Begin_Node:
+  [ !Node(<id, p, r>), Fr(~sid) ] --[ SpendBegin(~sid, <id, p, r>) ]-> [ Debit(~sid, <id, p, r>, r) ]
+#endif
+
+#ifdef NONATOMIC_DEBIT
+// read the count, later blind-write the decremented VALUE READ (lost update)
+rule Debit_Read_Root:
+  [ Debit(sid, r, r), !IsRoot(r), RCnt(r, c), !Dec(c, c1) ]
+  --[ DebitRead(sid, r), DebitReadV(sid, r, c) ]-> [ RCnt(r, c), Snap(sid, r, r, c1) ]
+rule Debit_Read_Node:
+  [ Debit(sid, <id, p, r>, r), Cnt(<id, p, r>, c), !Dec(c, c1) ]
+  --[ DebitRead(sid, <id, p, r>) ]-> [ Cnt(<id, p, r>, c), Snap(sid, <id, p, r>, r, c1) ]
+rule Debit_Write_Mid:
+  [ Snap(sid, <id, p, r>, r, c1), Cnt(<id, p, r>, cany) ]
+  --[ Debited(sid, <id, p, r>, r), DebitFrom(<id, p, r>, c1) ]-> [ Cnt(<id, p, r>, c1), Debit(sid, p, r) ]
+rule Debit_Write_Root:
+  [ Snap(sid, r, r, c1), !IsRoot(r), RCnt(r, cany) ]
+  --[ Debited(sid, r, r), Spent(sid, r), DebitWriteV(sid, r, cany, c1) ]-> [ RCnt(r, c1) ]
+#else
+rule Debit_Mid:
+  [ Debit(sid, <id, p, r>, r), Cnt(<id, p, r>, c), !Dec(c, c1) ]
+  --[ Debited(sid, <id, p, r>, r), DebitFrom(<id, p, r>, c) ]-> [ Cnt(<id, p, r>, c1), Debit(sid, p, r) ]
+rule Debit_Root:
+  [ Debit(sid, r, r), !IsRoot(r), RCnt(r, c), !Dec(c, c1) ]
+  --[ Debited(sid, r, r), DebitFrom(r, c), Spent(sid, r) ]-> [ RCnt(r, c1) ]
+#endif
+
+// ---- sanity -------------------------------------------------------------------------------------------------
+lemma executable_spend: exists-trace "Ex s r #i. Spent(s, r) @ i"
+lemma executable_two_spends: exists-trace "Ex s1 s2 r #i #j. Spent(s1, r) @ i & Spent(s2, r) @ j & not (s1 = s2)"
+#ifdef ¬NONATOMIC_DEBIT & ¬DEBIT_LEAF_ONLY
+lemma executable_deep_spend:
+  exists-trace
+  "Ex s r n1 n2 n3 #a #b #c #d #e #f #x1 #x2 #x3 #x4.
+      RootNode(r, 'c2') @ a & Alloc(n1, 'c2', r, 'c2') @ b & Alloc(n2, 'c2', n1, 'c2') @ c
+    & Alloc(n3, 'c2', n2, 'c2') @ d & SpendBegin(s, n3) @ e
+    & Debited(s, n3, r) @ x1 & Debited(s, n2, r) @ x2 & Debited(s, n1, r) @ x3 & Debited(s, r, r) @ x4
+    & Spent(s, r) @ f"
+#endif
+
+// ---- allocation monotonicity (allocationsMonotone) --------------------------------------------------------
+lemma alloc_monotone:
+  "All n cl p pl #i. Alloc(n, cl, p, pl) @ i
+     ==> not (   (cl = 'c1' & pl = 'c0')
+               | (cl = 'c2' & (pl = 'c0' | pl = 'c1'))
+               | (cl = 'c3' & (pl = 'c0' | pl = 'c1' | pl = 'c2')) )"
+
+// ---- headline bound: total consumption under a root <= the root limit ---------------------------------------
+// meter-thread uniqueness (base model; closure round 2): a meter (node Cnt or root RCnt) is debited from a given value
+// at most once.  The countdown is a single linear thread and !Dec is injective, so each value is held at most once.
+// With it every concrete bound below is a pigeonhole: k+1 debits from at most k values share a value.
+#ifdef ¬NO_PARENT_CHECK & ¬DEBIT_LEAF_ONLY & ¬NONATOMIC_DEBIT
+lemma nb_debit_from_unique [reuse, use_induction]:
+  "All s1 s2 n r1 r2 c #i #j.
+      Debited(s1, n, r1) @ i & DebitFrom(n, c) @ i & Debited(s2, n, r2) @ j & DebitFrom(n, c) @ j ==> #i = #j"
+#endif
+
+// root_bound is [reuse] in the base model only (it is false under -DDEBIT_LEAF_ONLY / -DNONATOMIC_DEBIT), so the
+// base-model attack lemmas below are refuted from it (the shipped-model non-existence checks).
+#ifdef ROOT3 & ¬NO_PARENT_CHECK & ¬DEBIT_LEAF_ONLY & ¬NONATOMIC_DEBIT
+lemma root_bound [reuse]:
+  "All r s1 s2 s3 s4 #i #j #k #l.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k & Spent(s4, r) @ l
+      ==> s1 = s2 | s1 = s3 | s1 = s4 | s2 = s3 | s2 = s4 | s3 = s4"
+#endif
+#ifdef ROOT3 & NO_PARENT_CHECK
+lemma root_bound:
+  "All r s1 s2 s3 s4 #i #j #k #l.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k & Spent(s4, r) @ l
+      ==> s1 = s2 | s1 = s3 | s1 = s4 | s2 = s3 | s2 = s4 | s3 = s4"
+#endif
+#ifdef ROOT3 & ¬NO_PARENT_CHECK & DEBIT_LEAF_ONLY
+lemma root_bound:
+  "All r s1 s2 s3 s4 #i #j #k #l.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k & Spent(s4, r) @ l
+      ==> s1 = s2 | s1 = s3 | s1 = s4 | s2 = s3 | s2 = s4 | s3 = s4"
+#endif
+#ifdef ROOT3 & ¬NO_PARENT_CHECK & ¬DEBIT_LEAF_ONLY & NONATOMIC_DEBIT
+lemma root_bound:
+  "All r s1 s2 s3 s4 #i #j #k #l.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k & Spent(s4, r) @ l
+      ==> s1 = s2 | s1 = s3 | s1 = s4 | s2 = s3 | s2 = s4 | s3 = s4"
+#endif
+#ifdef ¬ROOT3 & ¬NO_PARENT_CHECK & ¬DEBIT_LEAF_ONLY & ¬NONATOMIC_DEBIT
+lemma root_bound [reuse]:
+  "All r s1 s2 s3 #i #j #k.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+      ==> s1 = s2 | s1 = s3 | s2 = s3"
+#endif
+#ifdef ¬ROOT3 & NO_PARENT_CHECK
+lemma root_bound:
+  "All r s1 s2 s3 #i #j #k.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+      ==> s1 = s2 | s1 = s3 | s2 = s3"
+#endif
+#ifdef ¬ROOT3 & ¬NO_PARENT_CHECK & DEBIT_LEAF_ONLY
+lemma root_bound:
+  "All r s1 s2 s3 #i #j #k.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+      ==> s1 = s2 | s1 = s3 | s2 = s3"
+#endif
+#ifdef ¬ROOT3 & ¬NO_PARENT_CHECK & ¬DEBIT_LEAF_ONLY & NONATOMIC_DEBIT
+lemma root_bound:
+  "All r s1 s2 s3 #i #j #k.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+      ==> s1 = s2 | s1 = s3 | s2 = s3"
+#endif
+
+// ---- helper lemmas for node_bound (base model only; each must be proved in the same run, see results/v3) ----------
+#ifdef ¬NO_PARENT_CHECK & ¬DEBIT_LEAF_ONLY & ¬NONATOMIC_DEBIT
+// node identities carry a fresh atom: a node is allocated once
+lemma nb_alloc_unique [reuse]:
+  "All n cl cl2 p p2 pl pl2 #i #j. Alloc(n, cl, p, pl) @ i & Alloc(n, cl2, p2, pl2) @ j ==> #i = #j"
+// sources: every meter debit at a non-root node is preceded by that node's allocation
+lemma nb_debit_has_alloc [reuse]:
+  "All s n r c #i. Debited(s, n, r) @ i & DebitFrom(n, c) @ i & not (n = r)
+     ==> Ex cl p pl #a. Alloc(n, cl, p, pl) @ a & #a < #i"
+// meter invariant: a node allocated one unit is only ever debited from 'c1' (its meter only decreases, and 'c0' has no row)
+lemma nb_c1_debit_from [reuse, use_induction]:
+  "All n p pl s r c #a #i. Alloc(n, 'c1', p, pl) @ a & Debited(s, n, r) @ i & DebitFrom(n, c) @ i ==> c = 'c1'"
+#endif
+
+// node_bound proved by induction directly (-DNB_IND; v5 run "1b", the induction alternative to the focus encoding)
+#ifdef NB_IND
+lemma node_bound_ind [use_induction]:
+  "All n p pl s1 s2 r1 r2 #a #i #j.
+      Alloc(n, 'c1', p, pl) @ a & Debited(s1, n, r1) @ i & Debited(s2, n, r2) @ j ==> s1 = s2"
+#endif
+
+// a node allocated 1 unit is debited by at most ONE spend, whatever happens below it
+lemma node_bound:
+  "All n p pl s1 s2 r1 r2 #a #i #j.
+      Alloc(n, 'c1', p, pl) @ a & Debited(s1, n, r1) @ i & Debited(s2, n, r2) @ j ==> s1 = s2"
+
+// node_bound for the larger limits (closure round 2; makes the v5 focus generalisation a v4 theorem directly)
+#ifdef ¬NO_PARENT_CHECK & ¬DEBIT_LEAF_ONLY & ¬NONATOMIC_DEBIT
+lemma node_bound_c2:
+  "All n p pl s1 s2 s3 r1 r2 r3 #a #i #j #k.
+      Alloc(n, 'c2', p, pl) @ a & Debited(s1, n, r1) @ i & Debited(s2, n, r2) @ j & Debited(s3, n, r3) @ k
+      ==> s1 = s2 | s1 = s3 | s2 = s3"
+lemma node_bound_c3:
+  "All n p pl s1 s2 s3 s4 r1 r2 r3 r4 #a #i #j #k #l.
+      Alloc(n, 'c3', p, pl) @ a & Debited(s1, n, r1) @ i & Debited(s2, n, r2) @ j & Debited(s3, n, r3) @ k
+    & Debited(s4, n, r4) @ l
+      ==> s1 = s2 | s1 = s3 | s1 = s4 | s2 = s3 | s2 = s4 | s3 = s4"
+#endif
+
+// every completed spend debited the ROOT meter (consumption of the root's own counter)
+lemma spend_debits_root:
+  "All s r #i. Spent(s, r) @ i ==> Ex #d. Debited(s, r, r) @ d"
+
+// no negative spend: a meter at zero is never debited
+lemma no_negative_spend: "All n #i. DebitFrom(n, 'c0') @ i ==> F"
+
+// the root's counter is the only thing Spent consults: a spend of a node-rooted-at r is counted under r
+lemma spent_root_is_root_node:
+  "All s r #i. Spent(s, r) @ i ==> Ex lim #a. RootNode(r, lim) @ a"
+// attack witness (used with the -D variants): a completed spend count beyond the root limit 'c2'
+#ifdef ROOT3
+lemma attack_overspend:
+  exists-trace
+  "Ex r s1 s2 s3 s4 #a #i #j #k #l. RootNode(r, 'c3') @ a & Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k & Spent(s4, r) @ l
+     & not (s1 = s2) & not (s1 = s3) & not (s1 = s4) & not (s2 = s3) & not (s2 = s4) & not (s3 = s4)"
+#else
+lemma attack_overspend:
+  exists-trace
+  "Ex r s1 s2 s3 #a #i #j #k. RootNode(r, 'c2') @ a & Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+     & not (s1 = s2) & not (s1 = s3) & not (s2 = s3)"
+#endif
+// concrete attack witnesses (smaller search targets than attack_overspend)
+// DEBIT_LEAF_ONLY: the root spends once, a child allocated the full 'c2' spends twice -> 3 spends under a 'c2' root
+lemma attack_leafonly_witness:
+  exists-trace
+  "Ex r n s1 s2 s3 #a #b #i #j #k #x #y #z.
+      RootNode(r, 'c2') @ a & Alloc(n, 'c2', r, 'c2') @ b
+    & SpendBegin(s1, r) @ x & SpendBegin(s2, n) @ y & SpendBegin(s3, n) @ z
+    & Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+    & not (s1 = s2) & not (s1 = s3) & not (s2 = s3)"
+// NONATOMIC_DEBIT: three spends at the root itself (lost update on the root meter)
+lemma attack_lostupdate_witness:
+  exists-trace
+  "Ex r s1 s2 s3 #a #i #j #k #x #y #z.
+      RootNode(r, 'c2') @ a
+    & SpendBegin(s1, r) @ x & SpendBegin(s2, r) @ y & SpendBegin(s3, r) @ z
+    & Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+    & not (s1 = s2) & not (s1 = s3) & not (s2 = s3)"
+// bounded witnesses: the same attacks, with the trace restricted to the events the attack needs (one root, the named
+// spends only, no other allocations); a found trace is still a real trace of the model, the bound only prunes search
+lemma attack_leafonly_bounded:
+  exists-trace
+  "Ex r n s1 s2 s3 #a #b #i #j #k #x #y #z.
+      RootNode(r, 'c2') @ a & Alloc(n, 'c2', r, 'c2') @ b
+    & SpendBegin(s1, r) @ x & SpendBegin(s2, n) @ y & SpendBegin(s3, n) @ z
+    & Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+    & not (s1 = s2) & not (s1 = s3) & not (s2 = s3)
+    & (All r2 l #q. RootNode(r2, l) @ q ==> #q = #a)
+    & (All n2 cl p pl #q. Alloc(n2, cl, p, pl) @ q ==> #q = #b)
+    & (All s n2 #q. SpendBegin(s, n2) @ q ==> #q = #x | #q = #y | #q = #z)"
+lemma attack_lostupdate_bounded:
+  exists-trace
+  "Ex r s1 s2 s3 #a #i #j #k #x #y #z.
+      RootNode(r, 'c2') @ a
+    & SpendBegin(s1, r) @ x & SpendBegin(s2, r) @ y & SpendBegin(s3, r) @ z
+    & Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+    & not (s1 = s2) & not (s1 = s3) & not (s2 = s3)
+    & (All r2 l #q. RootNode(r2, l) @ q ==> #q = #a)
+    & (All n2 cl p pl #q. Alloc(n2, cl, p, pl) @ q ==> F)
+    & (All s n2 #q. SpendBegin(s, n2) @ q ==> #q = #x | #q = #y | #q = #z)
+    & (All s n2 #q. DebitRead(s, n2) @ q ==> s = s1 | s = s2 | s = s3)"
+// pinned lost-update witness (closure round 2): the exact interleaving TLC found (budget_nonatomic_rootbound), every
+// read/write value and the order fixed, the trace restricted to these events (no allocation, root debits and reads only:
+// this prunes the unbounded Debit_Write_Mid descent whose Cnt(child, cany) value is free).  A found trace is a real trace.
+#ifdef NONATOMIC_DEBIT
+lemma attack_lostupdate_pinned:
+  exists-trace
+  "Ex r s1 s2 s3 #a #x1 #x2 #x3 #r2 #w2 #r1 #r3 #w1 #w3.
+      RootNode(r, 'c2') @ a
+    & SpendBegin(s1, r) @ x1 & SpendBegin(s2, r) @ x2 & SpendBegin(s3, r) @ x3
+    & DebitReadV(s2, r, 'c2') @ r2 & DebitWriteV(s2, r, 'c2', 'c1') @ w2
+    & DebitReadV(s1, r, 'c1') @ r1 & DebitReadV(s3, r, 'c1') @ r3
+    & DebitWriteV(s1, r, 'c1', 'c0') @ w1 & DebitWriteV(s3, r, 'c0', 'c0') @ w3
+    & #r2 < #w2 & #w2 < #r1 & #r1 < #r3 & #r3 < #w1 & #w1 < #w3
+    & Spent(s1, r) @ w1 & Spent(s2, r) @ w2 & Spent(s3, r) @ w3
+    & not (s1 = s2) & not (s1 = s3) & not (s2 = s3)
+    & (All r9 l #q. RootNode(r9, l) @ q ==> #q = #a)
+    & (All n9 cl p pl #q. Alloc(n9, cl, p, pl) @ q ==> F)
+    & (All s9 n9 #q. SpendBegin(s9, n9) @ q ==> #q = #x1 | #q = #x2 | #q = #x3)
+    & (All s9 n9 r9 #q. Debited(s9, n9, r9) @ q ==> n9 = r9)
+    & (All s9 n9 #q. DebitRead(s9, n9) @ q ==> n9 = r)"
+#endif
+end

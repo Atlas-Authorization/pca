@@ -1,0 +1,6 @@
+1800 pca_scope_resource.spthy attack_scope_escalation scope_NOANC_SCOPE_attack -DNO_ANCESTOR_SCOPE
+1800 pca_scope_resource.spthy attack_resource_escalation scope_NOANC_RES_attack -DNO_ANCESTOR_RES
+1800 pca_budget_v4.spthy attack_leafonly_witness v4_LEAFONLY_attack -DDEBIT_LEAF_ONLY
+1800 pca_budget_v4.spthy attack_lostupdate_witness v4_NONATOMIC_attack -DNONATOMIC_DEBIT
+1800 pca_scope_resource.spthy attack_scope_escalation scope_base_scope_attack
+1800 pca_budget_v4.spthy attack_leafonly_witness v4_base_leafonly_attack

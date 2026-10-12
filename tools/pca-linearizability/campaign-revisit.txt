@@ -1,0 +1,4 @@
+# name | store | secs | procs | conns | chaos | env | expect
+pg-async-revisit-kill9 | pg-onconflict | 100 | 3 | 60 | restart | SYNC=off SLICE=2ms REVISIT=30000 CHECK_TIMEOUT=20s | fail
+pg-sync-revisit-kill9  | pg-onconflict | 100 | 3 | 60 | restart | SYNC=on SLICE=2ms REVISIT=30000 CHECK_TIMEOUT=20s | pass
+pg-async-counter-revisit-kill9 | pg-updatewhere | 100 | 3 | 60 | restart | SYNC=off SLICE=2ms REVISIT=30000 CHECK_TIMEOUT=20s | fail

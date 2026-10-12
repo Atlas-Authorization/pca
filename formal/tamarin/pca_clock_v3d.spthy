@@ -1,0 +1,38 @@
+/*
+  PCA -- explicit clock with LINEAGE TAGS (v3d).  Same model as pca_clock_v3.spthy (one linear Clock thread over
+  t0<t1<t2<t3 with explicit tables; readers consume and re-emit Clock; expiry is the premise !Le(now,exp)), but every
+  Clock fact carries an EPOCH tag ep (fresh at Init and at every Tick; readers keep it).  Tags are an
+  observational refinement (they do not change which rules can fire), and let the monotonicity of the thread be proved
+  by SMALL separate lemmas instead of one global induction:
+    A  reader_has_origin : every read of epoch ep happens after Org(t,ep) (induction along the reader chain)
+    B  read_before_tick  : every read of (t,ep) happens before the Tick leaving (t,ep)  (linear consumption)
+    C  tick_unique       : at most one Tick leaves (t,ep)
+  -DNO_EXPIRY_CHECK: Verify has no !Le premise.
+*/
+theory PCA_Clock_V3d
+begin
+rule Tables:
+  [ ] --> [ !Succ('t0','t1'), !Succ('t1','t2'), !Succ('t2','t3'),
+            !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'), !Le('t0','t3'), !Le('t1','t1'), !Le('t1','t2'),
+            !Le('t1','t3'), !Le('t2','t2'), !Le('t2','t3'), !Le('t3','t3'),
+            !Lt('t0','t1'), !Lt('t0','t2'), !Lt('t0','t3'), !Lt('t1','t2'), !Lt('t1','t3'), !Lt('t2','t3') ]
+rule Clock_Init: [ Fr(~ep) ] --[ ClockInit(), Org('t0', ~ep) ]-> [ Clock('t0', ~ep) ]
+restriction ClockOnce: "All #i #j. ClockInit() @ i & ClockInit() @ j ==> #i = #j"
+rule Tick: [ Clock(t, ep), !Succ(t, u), Fr(~ep2) ] --[ TickFrom(t), Tk(t, ep, u, ~ep2), Org(u, ~ep2) ]-> [ Clock(u, ~ep2) ]
+rule Obs_Past: [ Clock(t, ep), In(e), !Lt(e, t) ] --[ ClockPast(e), Rd(t, ep) ]-> [ Clock(t, ep) ]
+#ifdef NO_EXPIRY_CHECK
+rule Verify: [ Clock(now, ep), In(exp) ] --[ Accept(exp), Rd(now, ep) ]-> [ Clock(now, ep) ]
+#else
+rule Verify: [ Clock(now, ep), In(exp), !Le(now, exp) ] --[ Accept(exp), Rd(now, ep) ]-> [ Clock(now, ep) ]
+#endif
+lemma executable_accept: exists-trace "Ex e #i. Accept(e) @ i"
+lemma executable_after_tick: exists-trace "Ex e t #i #k. Accept(e) @ i & TickFrom(t) @ k & #k < #i"
+lemma reader_has_origin [use_induction]:
+  "All t ep #j. Rd(t, ep) @ j ==> Ex #k. Org(t, ep) @ k & #k < #j"
+lemma read_before_tick [use_induction]:
+  "All t ep u ep2 #j #k. Rd(t, ep) @ j & Tk(t, ep, u, ep2) @ k ==> #j < #k"
+lemma tick_unique [use_induction]:
+  "All t ep u ep2 u2 ep3 #k #l. Tk(t, ep, u, ep2) @ k & Tk(t, ep, u2, ep3) @ l ==> #k = #l"
+lemma no_accept_after_expiry:
+  "All e #i #j. Accept(e) @ i & ClockPast(e) @ j ==> #i < #j"
+end

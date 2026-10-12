@@ -1,0 +1,5 @@
+pg-adjudicate-210: CHECK files=3 ops=911693 (true=317807 false=593886 unknown=0 of-which-pending=0) keys=134822 checked=134822 NON-LINEARIZABLE=0 timeouts=0 torn-lines=0 pruned-trivial=181676 searched=730017 exact-fallb
+pg-updatewhere-210: CHECK files=3 ops=1518399 (true=372938 false=1145461 unknown=0 of-which-pending=0) keys=135284 checked=135284 NON-LINEARIZABLE=0 timeouts=0 torn-lines=0 pruned-trivial=569380 searched=949019 exact-fal
+pg-advisory-210: CHECK files=3 ops=1945336 (true=424108 false=1521228 unknown=0 of-which-pending=0) keys=141992 checked=141992 NON-LINEARIZABLE=0 timeouts=0 torn-lines=0 pruned-trivial=924992 searched=1020344 exact-fa
+pg-fastpath-210: CHECK files=3 ops=2181576 (true=425415 false=1756161 unknown=0 of-which-pending=0) keys=140183 checked=140183 NON-LINEARIZABLE=0 timeouts=0 torn-lines=0 pruned-trivial=976531 searched=1205045 exact-fa
+CHECK files=3 ops=5479334 (true=135791 false=5343543 unknown=0 of-which-pending=0) keys=135791 checked=135791 NON-LINEARIZABLE=0 timeouts=0 torn-lines=0

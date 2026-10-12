@@ -1,0 +1,12 @@
+[
+{
+"name": "snap-vc",
+"pkg": "pca-verified-core",
+"file": "ext-attest.ts",
+"from": "  // Freeze the configuration (as createMultiRootVerifier does): later edits by the caller must not change what this\n  // verifier enforces. Each root is copied shallowly; its verifier stays the caller's object (behaviour, not data).\n  policy = Object.freeze({\n    threshold: policy?.threshold,\n    roots: Array.isArray(policy?.roots) ? Object.freeze(policy.roots.map((r) => (r !== null && typeof r === 'object' ? Object.freeze({ ...r }) : r))) : policy?.roots,\n  }) as MultiRootAttestationPolicy;\n",
+"to": "",
+"filters": [
+"test/snapshot-r2"
+]
+}
+]

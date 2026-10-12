@@ -1,0 +1,9 @@
+name = "pca-ref"
+defaultTargets = ["pca-ref"]
+
+[[lean_lib]]
+name = "PcaRef"
+
+[[lean_exe]]
+name = "pca-ref"
+root = "Main"

@@ -1,0 +1,70 @@
+# Full check run 2026-10-11 on box cloud-box-20, EasyCrypt r2026.09-29-ge7eff05, Lean v4.34.1 + Mathlib v4.34.1; all 18 EasyCrypt files, core Lean project, Mathlib project incl. Misc2/Dkg/Abe/Nizk/Budget
+## check.sh ec + lean
+Sat Oct 10 23:35:43 UTC 2026
+== easycrypt Sig.ec ... OK
+== easycrypt MU.ec ... OK
+== easycrypt PcaCore.ec ... OK
+== easycrypt PcaMultisig.ec ... OK
+== easycrypt Hybrid.ec ... OK
+== easycrypt HybridSUF.ec ... OK
+== easycrypt PcaPedersen.ec ... OK
+== easycrypt Prime61.ec ... OK
+== easycrypt PcaSpdz.ec ... OK
+== easycrypt PcaSpdzProto.ec ... OK
+== easycrypt PcaCommitROM.ec ... OK
+== easycrypt PcaRomCollision.ec ... OK
+== easycrypt PcaCommitReveal.ec ... OK
+== easycrypt PcaSpdzROM.ec ... OK
+== easycrypt PcaSpdzSeq.ec ... OK
+== easycrypt PcaPrg.ec ... OK
+== easycrypt SigUniq.ec ... OK
+== easycrypt HybridNest.ec ... OK
+ec rc=0
+== lake build (lean/)
+Build completed successfully (6 jobs).
+'PcaComp.Chain.chain_attenuation' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaComp.Chain.no_widening_after' depends on axioms: [propext, Classical.choice, Quot.sound]
+lean rc=0
+Sat Oct 10 23:37:18 UTC 2026
+## leanmath (lake build PcaMath; lean Axioms.lean)
+Build completed successfully (8940 jobs).
+'PcaMath.Extract.schnorrSS' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Star.star_mass_ge' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Star.retry_mass_ge' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Multi.multi_knowledge_soundness' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Multi.multi_retry_soundness' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Multi.range_knowledge_soundness' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Multi.range_soundness_error' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Multi.range_glue' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Multi.or_special_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Alg.or_complete' depends on axioms: [propext, Quot.sound]
+'PcaMath.Alg.or_shvzk' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Alg.range_agg_complete' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Alg.frost_verify' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Numerics.retry_quarter' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Numerics.total_online_bounds' depends on axioms: [propext]
+'PcaMath.Numerics.seq_num_le' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Stark.winterfell_ldr_54' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Stark.winterfell_udr_30' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Stark.plonky3_ldr_70' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Stark.plonky3_udr_50' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Alg.schnorr_shvzk' depends on axioms: [propext, Quot.sound]
+'PcaMath.Alg.range_wrap' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Budget.root_bound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Budget.node_bound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Budget.no_negative_spend' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Budget.no_double_spend' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Budget.alloc_monotone' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Abe.T.reconstruction' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Abe.T.privacy' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Abe.T.no_recovery' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Nizk.rp7' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Misc.enc_injective' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Misc.shares_independent' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Misc.thermometer_monotone' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Misc2.merkle_binding' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Misc2.eight_smul_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Misc2.budget_integer' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Misc2.resolve_artifact' depends on axioms: [propext]
+'PcaMath.Dkg.verify_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Dkg.shares_interpolate' depends on axioms: [propext, Classical.choice, Quot.sound]

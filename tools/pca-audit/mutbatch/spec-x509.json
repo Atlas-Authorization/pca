@@ -1,0 +1,32 @@
+[
+{
+"name": "v-tdx",
+"pkg": "pca",
+"file": "attest-intel-tdx.ts",
+"from": "      if (!x509ValidAt(c, now)) return",
+"to": "      if (!(now >= Date.parse(c.validFrom) && now <= Date.parse(c.validTo))) return",
+"filters": [
+"x509-validity"
+]
+},
+{
+"name": "v-spdm",
+"pkg": "pca",
+"file": "attest-nvidia-spdm.ts",
+"from": "    if (!x509ValidAt(c, nowMs)) return",
+"to": "    if (new Date(nowMs) < new Date(c.validFrom) || new Date(nowMs) > new Date(c.validTo)) return",
+"filters": [
+"x509-validity"
+]
+},
+{
+"name": "v-azure",
+"pkg": "pca",
+"file": "attest-azure-maa.ts",
+"from": "  return x509ValidAt(cert, nowMs, skewMs);",
+"to": "  const vf = Date.parse(cert.validFrom);\n  const vt = Date.parse(cert.validTo);\n  if (!Number.isFinite(vf) || !Number.isFinite(vt)) return false;\n  return nowMs + skewMs >= vf && nowMs - skewMs <= vt;",
+"filters": [
+"x509-validity"
+]
+}
+]

@@ -1,0 +1,7 @@
+Kani compositional harnesses (tools/pca-implverif/kani-rust-pca/src/proofs.rs, modules compositional and b64_compositional), 2026-10-11.
+NONE OF THESE HAS A VERDICT.
+- First submission (q261011-171345-pl2v and siblings): compile error, "recursion limit reached while expanding #[kanitool::stub]"
+  (13 stub attributes on decision_logic_abstract exceed rustc's default 128). Fixed by src/kroot.rs (crate root that sets
+  recursion_limit and loads the unmodified lib.rs as a module). The fix has NOT been compiled yet.
+- Resubmissions q261011-171646-jcz0 and q261011-183314-uqnr / 183315-4gm1 / 183316-3ep0 / 183316-7gpw waited in the queue
+  (no box with free memory) and were cancelled unrun when the budget ran out.

@@ -1,0 +1,89 @@
+# Istio CUSTOM-provider test fixtures. mesh-authz.js / upstream.js are hostPath-mounted from /opt/pca-mesh/{authz,upstream}
+# (single-node cluster; images are plain node/curl, so no image build and no Docker on the developer machine).
+apiVersion: v1
+kind: Namespace
+metadata: { name: authz }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: foo, labels: { istio-injection: enabled } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: pca-authz, namespace: authz }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: pca-authz } }
+  template:
+    metadata: { labels: { app: pca-authz } }
+    spec:
+      containers:
+        - name: authz
+          image: node:22-alpine
+          command: ["node", "/app/mesh-authz.js"]
+          ports: [{ containerPort: 8000 }, { containerPort: 8001 }]
+          readinessProbe: { tcpSocket: { port: 8000 } }
+          volumeMounts: [{ name: app, mountPath: /app }]
+      volumes: [{ name: app, hostPath: { path: /opt/pca-mesh/authz, type: Directory } }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: pca-authz, namespace: authz }
+spec:
+  selector: { app: pca-authz }
+  ports:
+    - { name: http, port: 8000, targetPort: 8000 }
+    - { name: admin, port: 8001, targetPort: 8001 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: upstream, namespace: foo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: upstream } }
+  template:
+    metadata: { labels: { app: upstream } }
+    spec:
+      containers:
+        - name: app
+          image: node:22-alpine
+          command: ["node", "/app/upstream.mjs"]
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { tcpSocket: { port: 8080 } }
+          volumeMounts: [{ name: app, mountPath: /app }]
+      volumes: [{ name: app, hostPath: { path: /opt/pca-mesh/upstream, type: Directory } }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: upstream, namespace: foo }
+spec:
+  selector: { app: upstream }
+  ports: [{ name: http, port: 8080, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: client, namespace: foo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: client } }
+  template:
+    metadata: { labels: { app: client } }
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "36000"]
+---
+# The enforcement point: requests to these paths on the upstream workload are sent to the PCA check
+# service by the upstream's sidecar. Anything not listed here does NOT call the provider.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: { name: pca-custom, namespace: foo }
+spec:
+  selector: { matchLabels: { app: upstream } }
+  action: CUSTOM
+  provider: { name: pca-ext-authz }
+  rules:
+    - to:
+        - operation:
+            paths: ["/refunds", "/refunds/*", "/payouts", "/payouts/*", "/admin", "/admin/*"]

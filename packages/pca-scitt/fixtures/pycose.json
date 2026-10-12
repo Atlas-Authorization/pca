@@ -1,0 +1,24 @@
+{
+ "generator": "pycose 1.1.0 (independent), crosscheck/cose_python.py",
+ "statements": [
+  {
+   "alg": "EdDSA",
+   "statement": "0oRYGaIBJwN0YXBwbGljYXRpb24vcGNhK2pzb26gU3sidmVyZGljdCI6ImFsbG93In1YQOwiUvqdI1wOHweexnDJRfJSzfLYzznWVVvjxA1Qm2aXTp21EZHpQmufzqDuJb5KOZT33AXAjlnLAfIHsdkmqgg=",
+   "public_jwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "O1ZUXju53sby2_KnzZNEecgZ7XbJWKOepJPa1UA5keM"
+   }
+  },
+  {
+   "alg": "ES256",
+   "statement": "0oRYGaIBJgN0YXBwbGljYXRpb24vcGNhK2pzb26gU3sidmVyZGljdCI6ImFsbG93In1YQDrqA+PpeR1Xm31VsajJn4rx9hsw+/IMD7y4UwgU2kWI1LU/aE9+uDwgVv/WhiACvag8jfefy8A06uafQgCQ80U=",
+   "public_jwk": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "56aWVn5-_7tdLlGxBhV0w72PzvTMybr090dUTEgb5bw",
+    "y": "qLVAdzEp3EC5zNGtUugxWUjaNnNQPFRCGCE64FoZeTw"
+   }
+  }
+ ]
+}

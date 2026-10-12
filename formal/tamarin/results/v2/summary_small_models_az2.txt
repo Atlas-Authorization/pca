@@ -1,0 +1,32 @@
+# Tamarin 1.12.0 / Maude 3.5.1; small dedicated models + guided single-lemma runs (cloud-box-2, gcp), 300 s per lemma unless noted; a NORESULT/timeout is NOT a proof
+[pca_store_race c atomic]   attack_double_counter (exists-trace): falsified - no trace found (44 steps)
+[pca_store_race s atomic]   attack_double_counter (exists-trace): falsified - no trace found (44 steps)
+[pca_store_race c atomic]   attack_double_nonce (exists-trace): falsified - no trace found (8 steps)
+[pca_store_race c nonce]   attack_double_nonce (exists-trace): verified (14 steps)
+[pca_store_race s atomic]   attack_double_nonce (exists-trace): falsified - no trace found (8 steps)
+[pca_store_race s nonce]   attack_double_nonce (exists-trace): verified (14 steps)
+---
+pca_allowlist_rollback[]   executable_rollback_scenario (exists-trace): verified (14 steps)
+pca_allowlist_rollback[DSTATE_WIPEDANCHOR_REPLAY]   executable_rollback_scenario (exists-trace): verified (16 steps)
+pca_allowlist_rollback[DSTATE_WIPE]   executable_rollback_scenario (exists-trace): verified (14 steps)
+pca_allowlist_rollback[]   executable_attest_mB (exists-trace): verified (11 steps)
+pca_allowlist_rollback[DSTATE_WIPE]   executable_attest_mB (exists-trace): verified (11 steps)
+pca_allowlist_rollback[DSTATE_WIPEDANCHOR_REPLAY]   executable_attest_mB (exists-trace): verified (15 steps)
+pca_allowlist_rollback[DSTATE_WIPE]   no_manifest_rollback (all-traces): falsified - found trace (16 steps)
+pca_allowlist_rollback[DSTATE_WIPEDANCHOR_REPLAY]   no_manifest_rollback (all-traces): falsified - found trace (16 steps)
+pca_allowlist_rollback[DSTATE_WIPE]   revoked_never_attested (all-traces): falsified - found trace (16 steps)
+pca_allowlist_rollback[DSTATE_WIPEDANCHOR_REPLAY]   revoked_never_attested (all-traces): falsified - found trace (16 steps)
+pca_allowlist_rollback[DNO_VERSION_CHECK]   executable_rollback_scenario (exists-trace): verified (16 steps)
+pca_allowlist_rollback[DNO_VERSION_CHECK]   executable_attest_mB (exists-trace): verified (16 steps)
+pca_allowlist_rollback[DANCHORED] NORESULT-or-timeout(300s) executable_rollback_scenario
+pca_allowlist_rollback[DSTATE_WIPEDANCHORED] NORESULT-or-timeout(300s) executable_rollback_scenario
+pca_allowlist_rollback[] NORESULT-or-timeout(300s) no_manifest_rollback
+pca_allowlist_rollback[DNO_VERSION_CHECK] NORESULT-or-timeout(300s) no_manifest_rollback
+pca_allowlist_rollback[DANCHORED] NORESULT-or-timeout(300s) executable_attest_mB
+pca_allowlist_rollback[DSTATE_WIPEDANCHORED] NORESULT-or-timeout(300s) executable_attest_mB
+pca_allowlist_rollback[] NORESULT-or-timeout(300s) revoked_never_attested
+pca_allowlist_rollback[DNO_VERSION_CHECK] NORESULT-or-timeout(300s) revoked_never_attested
+pca_allowlist_rollback[DANCHORED] NORESULT-or-timeout(300s) no_manifest_rollback
+pca_allowlist_rollback[DSTATE_WIPEDANCHORED] NORESULT-or-timeout(300s) no_manifest_rollback
+pca_allowlist_rollback[DANCHORED] NORESULT-or-timeout(300s) revoked_never_attested
+pca_allowlist_rollback[DSTATE_WIPEDANCHORED] NORESULT-or-timeout(300s) revoked_never_attested

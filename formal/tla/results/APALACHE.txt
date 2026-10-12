@@ -1,0 +1,10 @@
+base_good                          expect=pass got=pass OK
+step_good                          expect=pass got=pass OK
+implies_safe_good                  expect=pass got=pass OK
+base_general                       expect=pass got=pass OK
+step_general                       expect=pass got=pass OK
+step_bad_skew                      expect=fail got=fail OK
+bmc_bad_skew                       expect=fail got=fail OK
+bmc_bad_prune                      expect=fail got=fail OK
+bmc_good_depth12                   expect=pass got=pass OK
+mismatches: 0

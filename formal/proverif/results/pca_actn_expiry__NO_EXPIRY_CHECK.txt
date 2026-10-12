@@ -1,0 +1,1 @@
+no_accept_after_expiry | 0s | RESULT event(Accept(exp_4,now_3,n,hol)) ==> exp_4 = t2 || (exp_4 = t1 && (now_3 = t0 || now_3 = t1)) || (exp_4 = t0 && now_3 = t0) is false.

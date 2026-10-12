@@ -1,0 +1,55 @@
+contract_good                      expect=pass got=pass OK           2s  54536 gen 5968 distinct 
+contract_ttl_good                  expect=pass got=pass OK           1s  99464 gen 10768 distinct 
+contract_ttl_bad_skew              expect=fail got=fail OK           1s  22555 gen 4227 distinct Error: Invariant ExactlyOnce is violated.
+contract_bad_skew                  expect=fail got=fail OK           2s  27087 gen 3724 distinct Error: Invariant ExactlyOnce is violated.
+contract_bad_prune_early           expect=fail got=fail OK           1s  8854 gen 1204 distinct Error: Invariant ExactlyOnce is violated.
+contract_bad_prune_evict           expect=fail got=fail OK           1s  1287 gen 356 distinct Error: Invariant ExactlyOnce is violated.
+contract_bad_volatile              expect=fail got=fail OK           1s  1450 gen 366 distinct Error: Invariant ExactlyOnce is violated.
+pg_update_where_consume            expect=pass got=pass OK           1s  1174 gen 182 distinct 
+pg_update_where_counter            expect=pass got=pass OK           2s  113964 gen 12996 distinct 
+pg_for_update_consume              expect=pass got=pass OK           1s  3037 gen 464 distinct 
+pg_for_update_counter              expect=pass got=pass OK           3s  261807 gen 30033 distinct 
+pg_advisory_consume                expect=pass got=pass OK           1s  3037 gen 464 distinct 
+pg_advisory_counter                expect=pass got=pass OK           3s  261807 gen 30033 distinct 
+pg_select_insert_unique_consume    expect=pass got=pass OK           1s  2443 gen 342 distinct 
+pg_replica_fastpath_consume        expect=pass got=pass OK           1s  3514 gen 504 distinct 
+pg_replica_fastpath_counter        expect=pass got=pass OK           4s  835650 gen 90045 distinct 
+pg_bad_read_then_write_consume     expect=fail got=fail OK           1s  52 gen 35 distinct Error: Invariant Safe is violated.
+pg_bad_read_then_write_counter     expect=fail got=fail OK           1s  1248 gen 787 distinct Error: Invariant Safe is violated.
+pg_bad_no_txn_for_update_counter   expect=fail got=fail OK           1s  1263 gen 794 distinct Error: Invariant Safe is violated.
+pg_bad_upsert_overwrite_consume    expect=fail got=fail OK           1s  57 gen 40 distinct Error: Invariant Safe is violated.
+pg_bad_for_update_noseed_consume   expect=fail got=fail OK           2s  681 gen 275 distinct Error: Invariant Safe is violated.
+pg_bad_replica_decide_consume      expect=fail got=fail OK           1s  63 gen 40 distinct Error: Invariant Safe is violated.
+pg_bad_async_commit_restart        expect=fail got=fail OK           1s  139 gen 40 distinct Error: Invariant Safe is violated.
+redis_set_nx_consume_always        expect=pass got=pass OK           1s  139 gen 25 distinct 
+redis_lua_counter_always           expect=pass got=pass OK           1s  9135 gen 1182 distinct 
+redis_wait1_failover               expect=pass got=pass OK           1s  925 gen 181 distinct 
+redis_wait1_counter_failover       expect=pass got=pass OK           1s  61878 gen 9282 distinct 
+redis_bad_get_then_set             expect=fail got=fail OK           1s  47 gen 35 distinct Error: Invariant Safe is violated.
+redis_bad_async_failover           expect=fail got=fail OK           1s  20 gen 14 distinct Error: Invariant Safe is violated.
+redis_bad_everysec_restart         expect=fail got=fail OK           1s  27 gen 17 distinct Error: Invariant Safe is violated.
+redis_bad_no_persistence           expect=fail got=fail OK           2s  20 gen 14 distinct Error: Invariant Safe is violated.
+redis_bad_eviction                 expect=fail got=fail OK           0s  13 gen 10 distinct Error: Invariant Safe is violated.
+redis_bad_wait1_primary_restart    expect=fail got=fail OK           1s  402 gen 107 distinct Error: Invariant Safe is violated.
+mem_one_process                    expect=pass got=pass OK           1s  128 gen 104 distinct 
+mem_bad_restart                    expect=fail got=fail OK           1s  128 gen 116 distinct Error: Invariant Safe is violated.
+mem_bad_per_process                expect=fail got=fail OK           0s  39 gen 37 distinct Error: Invariant Safe is violated.
+dl_no_stale                        expect=pass got=pass OK           0s  2062 gen 1024 distinct 
+dl_dead_only                       expect=fail got=fail OK           1s  6400 gen 2428 distinct Error: Invariant Safe is violated.
+dl_dead_only_recheck               expect=fail got=fail OK           1s  6206 gen 2298 distinct Error: Invariant Safe is violated.
+dl_hung_steal                      expect=fail got=fail OK           1s  265 gen 150 distinct Error: Invariant Safe is violated.
+dl_hung_steal_recheck              expect=fail got=fail OK           1s  261 gen 147 distinct Error: Invariant Safe is violated.
+pg_for_update_counter_4clients     expect=pass got=pass OK          85s  44217152 gen 3340916 distinct 
+pg_update_where_consume_5clients   expect=pass got=pass OK           1s  27366 gen 2542 distinct 
+redis_lua_counter_4clients         expect=pass got=pass OK           3s  497968 gen 40768 distinct 
+rp_exclusive_lock                  expect=pass got=pass OK           1s  1407 gen 1365 distinct 
+rp_lease_fenced                    expect=pass got=pass OK           1s  38721 gen 15327 distinct 
+rp_bad_lease_unfenced              expect=fail got=fail OK           2s  13981 gen 6820 distinct Error: Invariant Safe is violated.
+rp_bad_nolock_multinode            expect=fail got=fail OK           1s  5721 gen 2934 distinct Error: Invariant Safe is violated.
+dl2_gen_dead_only                  expect=pass got=pass OK           2s  13207 gen 4691 distinct 
+dl2_gen_no_crash                   expect=pass got=pass OK           1s  1852 gen 816 distinct 
+dl2_gen_4clients                   expect=pass got=pass OK           4s  467977 gen 137673 distinct 
+dl2_bad_age_break                  expect=fail got=fail OK           1s  586 gen 329 distinct Error: Invariant Safe is violated.
+dl2_gen_gc_verify                  expect=pass got=pass OK           2s  194059 gen 52805 distinct 
+dl2_bad_gc_noverify                expect=fail got=fail OK           1s  2346 gen 1084 distinct Error: Invariant Safe is violated.
+mismatches: 0

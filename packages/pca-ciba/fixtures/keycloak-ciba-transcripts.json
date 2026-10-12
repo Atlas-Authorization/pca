@@ -1,0 +1,908 @@
+{
+  "provider": "keycloak",
+  "version": "26.8.0",
+  "recordedAt": "2026-10-09T03:21:42.020Z",
+  "note": "tokens, auth_req_id and credentials redacted; a throwaway local realm",
+  "exchanges": [
+    {
+      "label": "discovery",
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:18480/realms/pca/.well-known/openid-configuration",
+        "headers": {},
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"issuer\":\"http://127.0.0.1:18480/realms/pca\",\"authorization_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/auth\",\"token_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token\",\"introspection_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token/introspect\",\"userinfo_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/userinfo\",\"end_session_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/logout\",\"frontchannel_logout_session_supported\":true,\"frontchannel_logout_supported\":true,\"jwks_uri\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/certs\",\"check_session_iframe\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/login-status-iframe.html\",\"grant_types_supported\":[\"authorization_code\",\"client_credentials\",\"implicit\",\"password\",\"refresh_token\",\"urn:ietf:params:oauth:grant-type:device_code\",\"urn:ietf:params:oauth:grant-type:jwt-bearer\",\"urn:ietf:params:oauth:grant-type:token-exchange\",\"urn:ietf:params:oauth:grant-type:uma-ticket\",\"urn:openid:params:grant-type:ciba\"],\"acr_values_supported\":[\"0\",\"1\"],\"response_types_supported\":[\"code\",\"none\",\"id_token\",\"token\",\"id_token token\",\"code id_token\",\"code token\",\"code id_token token\"],\"subject_types_supported\":[\"public\",\"pairwise\"],\"prompt_values_supported\":[\"none\",\"login\",\"consent\"],\"id_token_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"HS256\",\"HS512\",\"ES256\",\"RS256\",\"HS384\",\"ES512\",\"PS256\",\"PS512\",\"RS512\"],\"id_token_encryption_alg_values_supported\":[\"ECDH-ES+A256KW\",\"ECDH-ES+A192KW\",\"ECDH-ES+A128KW\",\"RSA-OAEP\",\"RSA-OAEP-256\",\"RSA1_5\",\"ECDH-ES\"],\"id_token_encryption_enc_values_supported\":[\"A256GCM\",\"A192GCM\",\"A128GCM\",\"A128CBC-HS256\",\"A192CBC-HS384\",\"A256CBC-HS512\"],\"userinfo_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"HS256\",\"HS512\",\"ES256\",\"RS256\",\"HS384\",\"ES512\",\"PS256\",\"PS512\",\"RS512\",\"none\"],\"userinfo_encryption_alg_values_supported\":[\"ECDH-ES+A256KW\",\"ECDH-ES+A192KW\",\"ECDH-ES+A128KW\",\"RSA-OAEP\",\"RSA-OAEP-256\",\"RSA1_5\",\"ECDH-ES\"],\"userinfo_encryption_enc_values_supported\":[\"A256GCM\",\"A192GCM\",\"A128GCM\",\"A128CBC-HS256\",\"A192CBC-HS384\",\"A256CBC-HS512\"],\"request_object_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"HS256\",\"HS512\",\"ES256\",\"RS256\",\"HS384\",\"ES512\",\"PS256\",\"PS512\",\"RS512\",\"none\"],\"request_object_encryption_alg_values_supported\":[\"ECDH-ES+A256KW\",\"ECDH-ES+A192KW\",\"ECDH-ES+A128KW\",\"RSA-OAEP\",\"RSA-OAEP-256\",\"RSA1_5\",\"ECDH-ES\"],\"request_object_encryption_enc_values_supported\":[\"A256GCM\",\"A192GCM\",\"A128GCM\",\"A128CBC-HS256\",\"A192CBC-HS384\",\"A256CBC-HS512\"],\"response_modes_supported\":[\"query\",\"fragment\",\"form_post\",\"query.jwt\",\"fragment.jwt\",\"form_post.jwt\",\"jwt\"],\"registration_endpoint\":\"http://127.0.0.1:18480/realms/pca/clients-registrations/openid-connect\",\"token_endpoint_auth_methods_supported\":[\"private_key_jwt\",\"client_secret_basic\",\"client_secret_post\",\"tls_client_auth\",\"client_secret_jwt\"],\"token_endpoint_auth_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"HS256\",\"HS512\",\"ES256\",\"RS256\",\"HS384\",\"ES512\",\"PS256\",\"PS512\",\"RS512\"],\"introspection_endpoint_auth_methods_supported\":[\"private_key_jwt\",\"client_secret_basic\",\"client_secret_post\",\"tls_client_auth\",\"client_secret_jwt\"],\"introspection_endpoint_auth_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"HS256\",\"HS512\",\"ES256\",\"RS256\",\"HS384\",\"ES512\",\"PS256\",\"PS512\",\"RS512\"],\"authorization_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"HS256\",\"HS512\",\"ES256\",\"RS256\",\"HS384\",\"ES512\",\"PS256\",\"PS512\",\"RS512\"],\"authorization_encryption_alg_values_supported\":[\"ECDH-ES+A256KW\",\"ECDH-ES+A192KW\",\"ECDH-ES+A128KW\",\"RSA-OAEP\",\"RSA-OAEP-256\",\"RSA1_5\",\"ECDH-ES\"],\"authorization_encryption_enc_values_supported\":[\"A256GCM\",\"A192GCM\",\"A128GCM\",\"A128CBC-HS256\",\"A192CBC-HS384\",\"A256CBC-HS512\"],\"claims_supported\":[\"iss\",\"sub\",\"aud\",\"exp\",\"iat\",\"auth_time\",\"name\",\"given_name\",\"family_name\",\"preferred_username\",\"email\",\"acr\",\"azp\",\"nonce\"],\"claim_types_supported\":[\"normal\"],\"claims_parameter_supported\":true,\"scopes_supported\":[\"openid\",\"web-origins\",\"phone\",\"address\",\"basic\",\"roles\",\"microprofile-jwt\",\"acr\",\"service_account\",\"email\",\"profile\",\"organization\",\"offline_access\"],\"request_parameter_supported\":true,\"request_uri_parameter_supported\":true,\"require_request_uri_registration\":true,\"code_challenge_methods_supported\":[\"plain\",\"S256\"],\"tls_client_certificate_bound_access_tokens\":true,\"dpop_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"ES256\",\"RS256\",\"ES512\",\"PS256\",\"PS512\",\"RS512\"],\"revocation_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/revoke\",\"revocation_endpoint_auth_methods_supported\":[\"private_key_jwt\",\"client_secret_basic\",\"client_secret_post\",\"tls_client_auth\",\"client_secret_jwt\"],\"revocation_endpoint_auth_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"HS256\",\"HS512\",\"ES256\",\"RS256\",\"HS384\",\"ES512\",\"PS256\",\"PS512\",\"RS512\"],\"backchannel_logout_supported\":true,\"backchannel_logout_session_supported\":true,\"device_authorization_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/auth/device\",\"backchannel_token_delivery_modes_supported\":[\"poll\",\"ping\"],\"backchannel_authentication_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth\",\"backchannel_authentication_request_signing_alg_values_supported\":[\"PS384\",\"RS384\",\"EdDSA\",\"ES384\",\"ES256\",\"RS256\",\"ES512\",\"PS256\",\"PS512\",\"RS512\"],\"require_pushed_authorization_requests\":false,\"pushed_authorization_request_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/par/request\",\"mtls_endpoint_aliases\":{\"token_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token\",\"revocation_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/revoke\",\"introspection_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token/introspect\",\"device_authorization_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/auth/device\",\"registration_endpoint\":\"http://127.0.0.1:18480/realms/pca/clients-registrations/openid-connect\",\"userinfo_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/userinfo\",\"pushed_authorization_request_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/par/request\",\"backchannel_authentication_endpoint\":\"http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth\"},\"authorization_response_iss_parameter_supported\":true}"
+      }
+    },
+    {
+      "label": "poll-approve (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD-acct-poll-approve\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "poll-approve",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-poll-approve&requested_expiry=300&login_hint=alice"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1075 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "poll-approve",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"authorization_pending\",\"error_description\":\"The authorization request is still pending as the end-user hasn't yet been authenticated.\"}"
+      }
+    },
+    {
+      "label": "poll-approve",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"slow_down\",\"error_description\":\"too early to access\"}"
+      }
+    },
+    {
+      "label": "poll-approve",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth/callback",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"status\":\"SUCCEED\"}"
+      },
+      "response": {
+        "status": 200,
+        "body": ""
+      }
+    },
+    {
+      "label": "poll-approve",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"slow_down\",\"error_description\":\"too early to access\"}"
+      }
+    },
+    {
+      "label": "poll-approve",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"access_token\":\"<redacted>\",\"expires_in\":300,\"refresh_expires_in\":1800,\"refresh_token\":\"<redacted>\",\"token_type\":\"Bearer\",\"id_token\":\"<redacted>\",\"not-before-policy\":0,\"session_state\":\"YRpDjRXK9M7aQERIqTFdc0ed\",\"scope\":\"openid email profile\"}"
+      }
+    },
+    {
+      "label": "poll-approve",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_grant\",\"error_description\":\"Invalid auth_req_id\"}"
+      }
+    },
+    {
+      "label": "deny-cancelled (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD-acct-deny-cancelled\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "deny-cancelled",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-deny-cancelled&requested_expiry=300&login_hint=alice"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1075 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "deny-cancelled",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth/callback",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"status\":\"CANCELLED\"}"
+      },
+      "response": {
+        "status": 200,
+        "body": ""
+      }
+    },
+    {
+      "label": "deny-cancelled",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"access_denied\",\"error_description\":\"not authorized\"}"
+      }
+    },
+    {
+      "label": "deny-unauthorized (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "deny-unauthorized",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD&requested_expiry=300&login_hint=alice"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1033 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "deny-unauthorized",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth/callback",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"status\":\"UNAUTHORIZED\"}"
+      },
+      "response": {
+        "status": 200,
+        "body": ""
+      }
+    },
+    {
+      "label": "deny-unauthorized",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"access_denied\",\"error_description\":\"not authorized\"}"
+      }
+    },
+    {
+      "label": "expiry (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD-acct-expiry\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "expiry",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-expiry&requested_expiry=5&login_hint=alice"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1054 chars>\",\"expires_in\":6,\"interval\":2}"
+      }
+    },
+    {
+      "label": "expiry",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"authorization_pending\",\"error_description\":\"The authorization request is still pending as the end-user hasn't yet been authenticated.\"}"
+      }
+    },
+    {
+      "label": "expiry",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"authorization_pending\",\"error_description\":\"The authorization request is still pending as the end-user hasn't yet been authenticated.\"}"
+      }
+    },
+    {
+      "label": "expiry",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"expired_token\",\"error_description\":\"authentication timed out\"}"
+      }
+    },
+    {
+      "label": "expiry",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth/callback",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"status\":\"SUCCEED\"}"
+      },
+      "response": {
+        "status": 403,
+        "body": ""
+      }
+    },
+    {
+      "label": "expiry",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"expired_token\",\"error_description\":\"authentication timed out\"}"
+      }
+    },
+    {
+      "label": "binding-message",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&login_hint=alice&binding_message=Approve+stripe.payout+%2480+on+acct%3Abm+%E2%80%94+because+you+asked+support-bot+to+%27reconcile+October+refunds%27"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_binding_message\",\"error_description\":\"the binding_message value has to be max 50 characters in length and must contain only basic plain-text characters without spaces\"}"
+      }
+    },
+    {
+      "label": "binding-message",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve+stripe.payout+%2480+on+acct%3Abm+%E2%80%94+because+you+asked+your+agent+to+%27reconcile+October+refunds%27&requested_expiry=300&login_hint=alice"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_binding_message\",\"error_description\":\"the binding_message value has to be max 50 characters in length and must contain only basic plain-text characters without spaces\"}"
+      }
+    },
+    {
+      "label": "binding-message",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid+urn%3Aatlas%3Apca%3Astepup%3Astripe.payout&binding_message=Approve-stripe.payout-80-USD-acct-bm&requested_expiry=300&login_hint=alice"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_scope\",\"error_description\":\"Invalid scopes: openid urn:atlas:pca:stepup:stripe.payout\"}"
+      }
+    },
+    {
+      "label": "binding-message (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD-acct-bm\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "binding-message",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-bm&requested_expiry=300&login_hint=alice"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1054 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "login-hint (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD-acct-hint-alice\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "login-hint",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-hint-alice&requested_expiry=300&login_hint=alice"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1054 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "login-hint (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "login-hint",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD&requested_expiry=300&login_hint=alice%40example.test"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1033 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "login-hint (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD-acct-hint-ALICE\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "login-hint",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-hint-ALICE&requested_expiry=300&login_hint=ALICE"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1054 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "login-hint",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-nobody&requested_expiry=300&login_hint=nobody-here"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_request\",\"error_description\":\"invalid_user\"}"
+      }
+    },
+    {
+      "label": "login-hint",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=x"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_request\",\"error_description\":\"missing parameter : login_hint\"}"
+      }
+    },
+    {
+      "label": "other-hints",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-id_token_hint&requested_expiry=300&id_token_hint=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_request\",\"error_description\":\"invalid_user\"}"
+      }
+    },
+    {
+      "label": "other-hints",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-login_hint_token&requested_expiry=300&login_hint_token=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_request\",\"error_description\":\"invalid_user\"}"
+      }
+    },
+    {
+      "label": "errors",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&login_hint=alice"
+      },
+      "response": {
+        "status": 401,
+        "body": "{\"error\":\"unauthorized_client\",\"error_description\":\"Invalid client or Invalid client credentials\"}"
+      }
+    },
+    {
+      "label": "errors (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"profile roles profile email\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "errors",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=profile&login_hint=alice"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:947 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "errors",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid+urn%3Aunregistered%3Ascope&login_hint=alice"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_scope\",\"error_description\":\"Invalid scopes: openid urn:unregistered:scope\"}"
+      }
+    },
+    {
+      "label": "errors",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&login_hint=alice&user_code=1234"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_request\",\"error_description\":\"User code not supported\"}"
+      }
+    },
+    {
+      "label": "errors",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&login_hint=alice&requested_expiry=abc"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_request\",\"error_description\":\"For input string: \\\"abc\\\"\"}"
+      }
+    },
+    {
+      "label": "errors",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 400,
+        "body": "{\"error\":\"invalid_grant\",\"error_description\":\"Invalid Auth Req ID\"}"
+      }
+    },
+    {
+      "label": "errors",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=client_credentials"
+      },
+      "response": {
+        "status": 401,
+        "body": "{\"error\":\"unauthorized_client\",\"error_description\":\"Client not enabled to retrieve service account\"}"
+      }
+    },
+    {
+      "label": "errors",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-badsecret&requested_expiry=300&login_hint=alice"
+      },
+      "response": {
+        "status": 401,
+        "body": "{\"error\":\"unauthorized_client\",\"error_description\":\"Invalid client or Invalid client credentials\"}"
+      }
+    },
+    {
+      "label": "requested-expiry (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD-acct-req-exp\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "requested-expiry",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-req-exp&requested_expiry=30&login_hint=alice"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1054 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "ping (provider -> device)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18481/ciba-channel",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"scope\":\"openid roles profile email\",\"binding_message\":\"Approve-stripe.payout-80-USD-acct-ping\",\"login_hint\":\"alice\",\"is_consent_required\":false}"
+      },
+      "response": {
+        "status": 201,
+        "body": ""
+      }
+    },
+    {
+      "label": "ping",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "scope=openid&binding_message=Approve-stripe.payout-80-USD-acct-ping&requested_expiry=300&login_hint=alice&client_notification_token=<redacted>"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"auth_req_id\":\"<redacted:1054 chars>\",\"expires_in\":120,\"interval\":2}"
+      }
+    },
+    {
+      "label": "ping (provider -> client ping)",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18482/ciba-ping",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"auth_req_id\":\"<redacted:1054 chars>\"}"
+      },
+      "response": {
+        "status": 204,
+        "body": ""
+      }
+    },
+    {
+      "label": "ping",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/ext/ciba/auth/callback",
+        "headers": {
+          "authorization": "Bearer <redacted>",
+          "content-type": "application/json"
+        },
+        "body": "{\"status\":\"SUCCEED\"}"
+      },
+      "response": {
+        "status": 200,
+        "body": ""
+      }
+    },
+    {
+      "label": "ping",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18480/realms/pca/protocol/openid-connect/token",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic <redacted>",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "body": "grant_type=urn%3Aopenid%3Aparams%3Agrant-type%3Aciba&auth_req_id=<redacted>"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"access_token\":\"<redacted>\",\"expires_in\":300,\"refresh_expires_in\":1800,\"refresh_token\":\"<redacted>\",\"token_type\":\"Bearer\",\"id_token\":\"<redacted>\",\"not-before-policy\":0,\"session_state\":\"PyiKri6w0j3CT_gkfMBglFjE\",\"scope\":\"openid email profile\"}"
+      }
+    }
+  ]
+}

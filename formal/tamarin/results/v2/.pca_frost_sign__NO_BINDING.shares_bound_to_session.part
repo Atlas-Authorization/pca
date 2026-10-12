@@ -1,0 +1,2 @@
+no-result rc=0 after 900s budget (NOT proved): shares_bound_to_session
+# wall=0s heuristic=s tamarin-prover 1.12.0

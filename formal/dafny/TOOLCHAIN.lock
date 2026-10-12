@@ -1,0 +1,60 @@
+# TOOLCHAIN.lock - pinned proof toolchain for the PCA verified core (shell-sourceable KEY=VALUE).
+# Consumed by verify-toolchain.sh. Update ONLY together with a full re-verification (build.sh --verify-only) and a
+# regenerated packages/pca-verified-core/generated/pca_core.js (build.sh --check) and an updated docs/pca/security/trusted-base.md.
+#
+# Provenance of the hashes: ZIP_SHA256 was computed from the downloaded asset AND matches the digest GitHub's release API
+# publishes for the asset (two independent sources, checked 2026-10-09). DAFNY_TREE_SHA256 / Z3_* / DLL_* were computed
+# from the unpacked ubuntu zip on a clean cloud box.
+
+DAFNY_VERSION=4.11.0
+DAFNY_RELEASE_TAG=v4.11.0
+DAFNY_TAG_OBJECT_SHA=a04eea4dab324219e438f94ccc5ff0abcad11d86      # annotated tag object (git/tags API)
+DAFNY_COMMIT=fcb2042d6d043a2634f0854338c08feeaaaf4ae2               # what `dafny --version` prints after the +
+DAFNY_VERSION_STRING=4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2
+DAFNY_RELEASE_URL_BASE=https://github.com/dafny-lang/dafny/releases/download/v4.11.0
+
+# Release assets (SHA-256 of the zip as published). Only the ubuntu asset is used by the cloud boxes that run proofs.
+DAFNY_ZIP_ubuntu_22_04_x64=dafny-4.11.0-x64-ubuntu-22.04.zip
+DAFNY_ZIP_ubuntu_22_04_x64_SHA256=a46a9ff7cdd720f7955854c78e95df13f4cfe6b80691b05f8654fe19e8267179
+DAFNY_ZIP_macos_13_arm64_SHA256=c90c75e7d5db9c6ccbb7127840dfe43f0ac938b039a7ebed146d8ead383a572f
+DAFNY_ZIP_macos_13_x64_SHA256=5fc0de946c5b2fad33f16bd22a5b06f4fd0dfa7f6d770284237e3f1f3ca9f73d
+DAFNY_ZIP_windows_2022_x64_SHA256=3653f05a111ca21e234709ea7b25ce96083fd6c6f10484256ba54110dbc0654d
+
+# Whole unpacked tree of the ubuntu zip (290 files): sha256 over `find . -type f | LC_ALL=C sort | xargs sha256sum`.
+DAFNY_TREE_SHA256=c58e71fb311b05963bbb72b5e86fcc83adae84771756ce97a3cdc220c569ccf8
+DAFNY_TREE_FILES=290
+
+# Bundled Z3 (the default `dafny verify` uses 4.12.1; 4.14.1 is shipped but NOT used for the proofs).
+Z3_DEFAULT_VERSION=4.12.1
+Z3_4_12_1_SHA256=22214e518eed9eec867d18b485e7b2570d09cbf1d94a47c8eec6ec4de0287eff
+Z3_4_14_1_SHA256=5a4f295b2e64abd2e2463a321d33f8054585083230203a55fa57982a1843d559
+
+# Boogie (bundled; version from Dafny.deps.json) and the key proof-path assemblies.
+BOOGIE_VERSION=3.5.5
+DLL_Dafny_SHA256=3551e32edc4ad7669e2af48e2985bbfd988d20ef75ab4f1f254a16414e43b957
+DLL_DafnyDriver_SHA256=19dcdd685b3c4a4651422e780fd5160945255ff46ae6559b86b724a8eefc53fe
+DLL_DafnyPipeline_SHA256=e010dd0eb2d07d6927965f44b5e7a64cf3a90da35542f05ad10f69b1713207eb
+DLL_DafnyCore_SHA256=6911a615966a3cfbcf81a43c3b8e9706cc1509fe64880dd5ba24307492d5c2ea
+DLL_DafnyRuntime_SHA256=546b5a55d1c60b2c3bf5774b14a985b20f1800e0f16169913c47fab9fb307267
+DLL_BoogieCore_SHA256=51b260f8f0b8983d258dbb339eadc367b81014b764f4b52e8c910caecec9239b
+DLL_BoogieExecutionEngine_SHA256=9a9ad82d4e5a7a1052a11e549a6a721d9e9b7cab683c813650e87e04d8f48ab0
+DLL_BoogieVCGeneration_SHA256=b57b403519b3305b3208d97ea4e267c2f522ef08443895a4115ab0e142df557a
+DLL_BoogieProversSMTLib_SHA256=20a832feeee8146afe7379b00c64c9e153bd287c175176059d45ce9a28993877
+FILE_DafnyPrelude_bpl_SHA256=0b3f30afee36c213f667a9e4a9d1bc7c09116eaceb3ad789565870e90ed8395f
+FILE_DafnyRuntime_jar_SHA256=d45b08b29e5699642aa85fd20f263c0af85dd121045ee374149d2a26c86665f0
+
+# Host runtime the proofs/compiles were produced on (not byte-pinned: distro packages; recorded for reproducibility reports).
+DOTNET_RUNTIME_MAJOR=8
+DOTNET_RUNTIME_RECORDED=8.0.31
+DOTNET_SDK_RECORDED=8.0.131
+DOTNET_PKG_RECORDED=dotnet-runtime-8.0=8.0.31-0ubuntu1~24.04.1
+HOST_OS_RECORDED="Ubuntu 24.04.4 LTS x86_64 (Azure cloud VM)"
+
+# Runtimes used only by the diverse-compilation participants (formal/dafny/difftargets); recorded, majors enforced.
+NODE_RECORDED=v24.21.0
+GO_RECORDED=go1.22.2
+JAVA_RECORDED=21.0.12.1
+PYTHON_RECORDED=3.12.3
+
+# JS runtime dependency baked into the shipped artifact path (Dafny BigNumber)
+BIGNUMBER_JS_VERSION=9.3.1

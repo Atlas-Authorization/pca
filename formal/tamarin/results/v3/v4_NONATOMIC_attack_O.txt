@@ -1,0 +1,3 @@
+OPEN (NOT found): heap exhausted at +RTS -M24g after 4614s, no verdict (raw log: 'Heap exhausted'; not committed, size)
+# wall=4614s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_lostupdate_witness --heuristic=o --oraclename=oracle_budget.sh -DNONATOMIC_DEBIT pca_budget_v4.spthy +RTS -N4 -M24g
+# pcaq job q261011-043052-nvac

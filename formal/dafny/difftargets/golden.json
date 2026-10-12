@@ -1,0 +1,6 @@
+{
+  "comment": "Pinned digests of the cross-target campaign smoke corpus. Produced 2026-10-09 by cs, go, java, py, js (Dafny 4.11.0) AND the production bridge; all six agreed byte-for-byte. Regenerate only with a deliberate core change.",
+  "gen": { "script": "packages/pca-verified-core/test/diverse/gen-cases.mjs", "n": 60000, "seed": 42, "big": 1 },
+  "casesSha256": "db2a49897b4f75b7dc679381930e6aefeb448b46d0756bfa1a1cbdffd715eb54",
+  "transcriptSha256": "73685ca77c5d606a4733bdea450bb477b18d1184746c4807a52afbf490e95c51"
+}

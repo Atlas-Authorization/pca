@@ -71,7 +71,7 @@ A hook returns `{ enforced: false }` (reported `not-enforced`) or `{ enforced: t
 
 | Hook | Purpose | Helper in `@atlasauth/pca` |
 |---|---|---|
-| `threshold` | verify co-signers at the risk-derived `t` | `createThresholdVerifier({ signerSet, t?, requiredT? })` |
+| `threshold` | verify co-signers at the server-decided `t` | `createThresholdVerifier({ signerSet, t \| requiredT })` (one is mandatory) |
 | `revocation` | non-membership of every capability id in the chain | `createRevocationChecker({ root, proofFor, ids? })` (fails closed) |
 | `attestation` | agent runtime attestation (L0) | bring your own `AttestationVerifier` |
 | `zk` | zero-knowledge proof of compliance | bring your own `ZkVerifier` |
@@ -86,12 +86,13 @@ const hooks = {
       { role: 'guardian', publicKey: guardianPub },
       { role: 'principal', publicKey: principalPub },
     ],
+    t: 3, // or requiredT: (ctx) => ... computed from YOUR OWN risk inputs. Never from risk_claim.r.
   }),
   revocation: createRevocationChecker({ root: () => trustedRevocationRoot, proofFor: (id) => proofs.get(id) }),
 };
 ```
 
-`signerSet` must register the agent role's key as the leaf holder. Check the `Signer` shape in `packages/pca/src/threshold.ts` if you build it by hand. If you do not recompute risk yourself, pass an explicit `requiredT` rather than relying on the default, which reads the agent's own `risk_claim.r`. For golden test vectors to validate your own verifier, see [Verify in your language](./verify-in-your-language.md).
+`signerSet` must register the agent role's key as the leaf holder. Check the `Signer` shape in `packages/pca/src/threshold.ts` if you build it by hand. `t` / `requiredT` is mandatory (there is no default: the agent's own `risk_claim.r` must never decide `t`), and `verifyPCActn` denies a hook that enforced less than the `t` it derived from your server-held risk inputs. For golden test vectors to validate your own verifier, see [Verify in your language](./verify-in-your-language.md).
 
 ## Option 2: Atlas-hosted `/v1/pca/*`
 

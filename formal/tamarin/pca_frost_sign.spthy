@@ -1,0 +1,159 @@
+/*
+  PCA -- FROST two-round threshold signing: commitments, binding factors, nonce discipline, t-of-n
+  (symbolic model, Tamarin).  Models packages/pca/src/frost.ts  (RFC 9591: frostCommit / frostSign /
+  computeBindingFactors / frostAggregate) and the way threshold.ts uses it.
+
+  Symbolic abstraction (this is NOT a computational proof of Schnorr/FROST unforgeability):
+    group secret ~g, t = 2 of n = 3; Shamir share of participant i is  sh(~g, i);  group key  pubk(~g).
+    Round 1: participant i draws fresh nonces ~d (hiding), ~e (binding) and publishes the commitment
+             <'cmt', i, cm(~d), cm(~e)>   (cm is one-way);
+    Round 2: given (msg, L) where L = the signing-commitment LIST (pair of commitments), participant i checks
+             its OWN commitment is in L, computes the binding factor  rho_i = H(i, msg, L)  and the challenge
+             c = H(Y, R(L, rho), msg) and answers with the share
+                  z_i = d + e*rho_i + lambda_i * s_i * c
+             which is represented by the term  zs(s_i, d, e, msg, L)  -- rho_i and c are functions of (i, msg, L),
+             so the share is bound to exactly that message and that signer set.
+    Aggregation (public): two shares of DISTINCT participants for the same (msg, L) combine to the group
+             signature  tsig(Y, msg, L).  `tsig` is a PRIVATE function: it can only be produced by Aggregate.
+    Verification: a signature is accepted iff it is  tsig(Y, msg, L).
+    ALGEBRAIC key recovery (the adversary's equation-level capability, a rule so that its side condition
+    is explicit): every signing answer is ONE linear equation in the unknowns (d, e, s_i); THREE answers under the
+    SAME nonce pair (d, e) for three different (msg, L) determine all three unknowns.  Rule Extract encodes
+    exactly that (3 answers, pairwise different (msg, L)).  [Two answers leave a one-parameter family; the model
+    therefore needs three, which is honest about the algebra; frost.ts's SPENT_NONCES / SPENT_COMMITMENTS guards
+    refuse even the second use.]
+
+  Modelling choices: honest participants sign ANY (msg, L) the adversary hands them provided their own
+  commitment is in L (worst case: a prompt-injected signer).  Shares of up to t-1 .. n participants can be
+  compromised (Reveal_Share); lemmas count a revealed share as that participant's contribution.
+
+  Variants (-D...):
+    NONCE_REUSE  nonces are NOT one-shot: a persistent !Nonce lets a signer answer several (msg, L) with the
+                 same (d, e)  -> Extract recovers the key share: share_secrecy and sig_needs_t_signers must break
+    NO_BINDING   the answer does NOT bind the commitment list (no binding factor over L): shares of different
+                 signer sets mix -> shares_bound_to_session must break
+*/
+theory PCA_Frost_Sign
+begin
+
+functions: sh/2, pubk/1, cm/1, zs/5
+functions: tsig/3 [private]
+
+// ---- setup: group secret and shares ------------------------------------------------------------------
+rule Setup:
+  [ Fr(~g) ]
+  --[ Setup(pubk(~g)), ShareOf('1', sh(~g, '1')), ShareOf('2', sh(~g, '2')), ShareOf('3', sh(~g, '3')) ]->
+  [ !Share('1', sh(~g, '1')), !Share('2', sh(~g, '2')), !Share('3', sh(~g, '3')),
+    !GroupPub(pubk(~g)), Out(pubk(~g)) ]
+
+restriction SetupOnce: "All Y1 Y2 #i #j. Setup(Y1) @ i & Setup(Y2) @ j ==> #i = #j"
+
+rule Reveal_Share:
+  [ !Share(i, sk) ] --[ RevealShare(i) ]-> [ Out(sk) ]
+
+// ---- round 1 --------------------------------------------------------------------------------------------
+#ifdef NONCE_REUSE
+rule Commit:
+  [ !Share(i, sk), Fr(~d), Fr(~e) ]
+  --[ Committed(i, ~d, ~e) ]->
+  [ !Nonce(i, ~d, ~e), Out(<'cmt', i, cm(~d), cm(~e)>) ]
+#else
+rule Commit:
+  [ !Share(i, sk), Fr(~d), Fr(~e) ]
+  --[ Committed(i, ~d, ~e) ]->
+  [ Nonce(i, ~d, ~e), Out(<'cmt', i, cm(~d), cm(~e)>) ]
+#endif
+
+// ---- round 2 --------------------------------------------------------------------------------------------
+// the commitment list is a pair; the signer's own commitment is one of the two entries
+#ifdef NONCE_REUSE
+rule Sign_First:
+  [ !Nonce(i, d, e), !Share(i, sk), In(<msg, <<'cmt', i, cm(d), cm(e)>, other>>) ]
+  --[ Signed(i, msg, <<'cmt', i, cm(d), cm(e)>, other>), Used(i, d, e, msg) ]->
+  [ Out(zs(sk, d, e, msg, <<'cmt', i, cm(d), cm(e)>, other>)) ]
+rule Sign_Second:
+  [ !Nonce(i, d, e), !Share(i, sk), In(<msg, <other, <'cmt', i, cm(d), cm(e)>>>) ]
+  --[ Signed(i, msg, <other, <'cmt', i, cm(d), cm(e)>>), Used(i, d, e, msg) ]->
+  [ Out(zs(sk, d, e, msg, <other, <'cmt', i, cm(d), cm(e)>>)) ]
+#endif
+
+#ifdef ¬NONCE_REUSE & ¬NO_BINDING
+rule Sign_First:
+  [ Nonce(i, d, e), !Share(i, sk), In(<msg, <<'cmt', i, cm(d), cm(e)>, other>>) ]
+  --[ Signed(i, msg, <<'cmt', i, cm(d), cm(e)>, other>), Used(i, d, e, msg) ]->
+  [ Out(zs(sk, d, e, msg, <<'cmt', i, cm(d), cm(e)>, other>)) ]
+rule Sign_Second:
+  [ Nonce(i, d, e), !Share(i, sk), In(<msg, <other, <'cmt', i, cm(d), cm(e)>>>) ]
+  --[ Signed(i, msg, <other, <'cmt', i, cm(d), cm(e)>>), Used(i, d, e, msg) ]->
+  [ Out(zs(sk, d, e, msg, <other, <'cmt', i, cm(d), cm(e)>>)) ]
+#endif
+
+// no binding factor over the list: the answer carries only the message, the list is not committed
+#ifdef NO_BINDING
+rule Sign_First:
+  [ Nonce(i, d, e), !Share(i, sk), In(<msg, <<'cmt', i, cm(d), cm(e)>, other>>) ]
+  --[ Signed(i, msg, <<'cmt', i, cm(d), cm(e)>, other>), Used(i, d, e, msg) ]->
+  [ Out(zs(sk, d, e, msg, 'nolist')) ]
+rule Sign_Second:
+  [ Nonce(i, d, e), !Share(i, sk), In(<msg, <other, <'cmt', i, cm(d), cm(e)>>>) ]
+  --[ Signed(i, msg, <other, <'cmt', i, cm(d), cm(e)>>), Used(i, d, e, msg) ]->
+  [ Out(zs(sk, d, e, msg, 'nolist')) ]
+#endif
+
+// ---- adversary / aggregator algebra --------------------------------------------------------------------------
+#ifdef NO_BINDING
+rule Aggregate:
+  [ In(zs(sh(g, i), d1, e1, msg, 'nolist')), In(zs(sh(g, j), d2, e2, msg, 'nolist')), In(L) ]
+  --[ Neq(i, j), Aggregated(i, j, msg, L) ]->
+  [ Out(tsig(pubk(g), msg, L)) ]
+#else
+rule Aggregate:
+  [ In(zs(sh(g, i), d1, e1, msg, L)), In(zs(sh(g, j), d2, e2, msg, L)) ]
+  --[ Neq(i, j), Aggregated(i, j, msg, L) ]->
+  [ Out(tsig(pubk(g), msg, L)) ]
+#endif
+
+// three answers under one nonce pair => the share (and nothing else needs to be known)
+rule Extract:
+  [ In(zs(sk, d, e, m1, L1)), In(zs(sk, d, e, m2, L2)), In(zs(sk, d, e, m3, L3)) ]
+  --[ Neq(<m1, L1>, <m2, L2>), Neq(<m1, L1>, <m3, L3>), Neq(<m2, L2>, <m3, L3>), Extracted(sk) ]->
+  [ Out(sk) ]
+
+restriction NeqR: "All x y #i. Neq(x, y) @ i ==> not (x = y)"
+
+// ---- verifier ------------------------------------------------------------------------------------------------
+rule Verify:
+  [ !GroupPub(Y), In(<msg, L, tsig(Y, msg, L)>) ]
+  --[ Accepted(Y, msg, L) ]->
+  [ ]
+
+// ---- sanity -------------------------------------------------------------------------------------------------------
+lemma executable_threshold_signature:
+  exists-trace
+  "Ex Y msg L i j #a #p #q. Accepted(Y, msg, L) @ a & Signed(i, msg, L) @ p & Signed(j, msg, L) @ q
+     & not (i = j) & (All x #r. RevealShare(x) @ r ==> F)"
+
+// two different messages signed by the same honest participant (fresh nonces each time)
+lemma executable_two_sessions:
+  exists-trace
+  "Ex i m1 m2 L1 L2 #p #q. Signed(i, m1, L1) @ p & Signed(i, m2, L2) @ q & not (m1 = m2)
+     & (All x #r. RevealShare(x) @ r ==> F)"
+
+// ---- LEMMAS --------------------------------------------------------------------------------------------------------
+// share secrecy: a participant's Shamir share is known to the adversary only if it was revealed
+lemma share_secrecy:
+  "All i sk #k #j. ShareOf(i, sk) @ k & K(sk) @ j ==> (Ex #r. RevealShare(i) @ r)"
+
+// (t = 2) a group signature on msg under signer set L is the aggregation of two DISTINCT participants' answers
+// for exactly THIS msg and THIS L, each of which is an honest signing event for (msg, L) or a revealed share
+lemma sig_needs_t_signers:
+  "All Y msg L #a. Accepted(Y, msg, L) @ a
+     ==> Ex i j #g. Aggregated(i, j, msg, L) @ g & not (i = j)
+          & ((Ex #s. Signed(i, msg, L) @ s) | (Ex #r. RevealShare(i) @ r))
+          & ((Ex #s. Signed(j, msg, L) @ s) | (Ex #r. RevealShare(j) @ r))"
+
+// a fresh nonce pair is used for at most one signing answer
+lemma nonce_one_shot:
+  "All i d e m1 m2 #p #q. Used(i, d, e, m1) @ p & Used(i, d, e, m2) @ q ==> #p = #q"
+
+end

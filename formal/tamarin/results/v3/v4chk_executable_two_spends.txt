@@ -1,0 +1,2 @@
+  executable_two_spends (exists-trace): verified (15 steps)
+# wall=7s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=executable_two_spends --heuristic=o --oraclename=oracle_budget.sh pca_budget_v4.spthy +RTS -N2 -M6g

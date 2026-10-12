@@ -1,0 +1,4 @@
+no-result rc=0 after 600s budget (NOT proved): shares_bound_to_session
+# wall=1s heuristic=s tamarin-prover 1.12.0
+  sig_needs_t_signers (all-traces): falsified - found trace (11 steps)
+# wall=127s heuristic=c tamarin-prover 1.12.0

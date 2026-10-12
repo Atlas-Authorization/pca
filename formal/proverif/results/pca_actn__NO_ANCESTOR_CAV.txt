@@ -1,0 +1,8 @@
+authorization | 0s | RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> event(Granted(iss,pkH_2,cv_3,rid)) || event(Reveal(iss)) is true.
+leaf_signature_authenticity | 1s | RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) && event(KeyGen(lhol)) ==> event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol)) is true.
+attenuation_root | 0s | RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) && event(Granted(iss,pkH_2,cv0,rid)) ==> cv0 = v || cv0 = anyc || event(Reveal(iss)) is false.
+attenuation_hop | 1s | RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) && event(HonestDelegated(hp,hc,cv1_3)) && event(HopWalk(hc,v)) ==> cv1_3 = v || cv1_3 = anyc is false.
+audience_binding | 0s | RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> vaud_1 = aaud_3 is true.
+replay_freedom_nonce | 0s | RESULT event(AcceptS(vaud_1,rid,lhol,n,c1_3,s1)) && event(AcceptS(vaud_1,rid,lhol,n,c2_2,s2)) ==> s1 = s2 is true.
+replay_freedom_counter | 0s | RESULT event(AcceptS(vaud_1,rid,lhol,n1,c_1,s1)) && event(AcceptS(vaud_1,rid,lhol,n2,c_1,s2)) ==> s1 = s2 is true.
+replay_inj | 1s | RESULT inj-event(AcceptH(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> inj-event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol)) is true.

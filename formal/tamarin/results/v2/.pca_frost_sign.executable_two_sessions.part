@@ -1,0 +1,2 @@
+  executable_two_sessions (exists-trace): verified (12 steps)
+# wall=2s heuristic=c tamarin-prover 1.12.0

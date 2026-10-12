@@ -1,0 +1,2 @@
+OPEN (NOT proved): node_bound - tamarin heap exhausted at +RTS -M12g after 2850s on cloud-box-13, no verdict (runner of that time labelled it TIMEOUT). Re-run on cloud-box with helper lemmas.
+# wall=2850s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=node_bound --heuristic=o --oraclename=oracle_budget.sh pca_budget_v4.spthy +RTS -N4 -M12g

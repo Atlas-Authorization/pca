@@ -1,0 +1,13 @@
+# Whole-theory audit of pca_frost_sign_v3.spthy (tamarin-prover --prove, no lemma filter), exclusive box cloud-box-10, +RTS -N4 -M10g.
+# Purpose: confirm no verified lemma relied on an unproved [reuse] helper (only helper: nonce_secret [reuse, use_induction], itself verified in every variant).
+# 1 wellformedness warning (unused-fact style, pre-existing) in every run.
+variant[default] wall=14s
+  executable_threshold_signature verified (16) | executable_two_sessions verified (12) | nonce_secret verified (6)
+  nonce_one_shot verified (68) | shares_bound_to_session verified (455) | share_secrecy verified (35) | sig_needs_t_signers verified (456)
+variant[NONCE_REUSE] wall=12s
+  nonce_secret verified (6) | nonce_one_shot falsified (11) | shares_bound_to_session falsified (14) | share_secrecy falsified (9) | sig_needs_t_signers falsified (15)
+variant[NO_BINDING] wall=177s
+  nonce_secret verified (6) | nonce_one_shot verified (68) | share_secrecy verified (35) | shares_bound_to_session falsified (10) | sig_needs_t_signers falsified (11)
+variant[AGG_ANY_GROUP] wall=11s
+  nonce_secret verified (6) | nonce_one_shot verified (68) | share_secrecy verified (35) | sig_needs_t_signers verified (456) | shares_bound_to_session falsified (7)
+# NOTE: -DUNTYPED_EXTRACT (untyped Extract) attempts ended with tamarin ERROR/no-result (127-522s); NOT proved, no claim made.

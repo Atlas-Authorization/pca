@@ -1,0 +1,4 @@
+stepup3_requires_principal | 0s | RESULT event(Accept(m_7,ss_7,three,a,g,p_1)) ==> event(Issued(principalR,p_1,m_7,ss_7,three)) || event(Reveal(p_1)) is false.
+stepup3_requires_guardian | 0s | RESULT event(Accept(m_7,ss_7,three,a,g,p_1)) ==> event(Issued(guardianR,g,m_7,ss_7,three)) || event(Reveal(g)) is false.
+stepup2_compromised_agent_insufficient | 0s | RESULT event(Accept(m_7,ss_7,two,a,g,p_1)) ==> event(Issued(guardianR,g,m_7,ss_7,two)) || event(Issued(principalR,p_1,m_7,ss_7,two)) || event(Reveal(g)) || event(Reveal(p_1)) is false.
+stepup2_one_compromised_key_insufficient | 0s | RESULT event(Accept(m_7,ss_7,two,a,g,p_1)) ==> event(Issued(agentR,a,m_7,ss_7,two)) || event(AgentLeafSigned(a,m_7)) || event(Issued(guardianR,g,m_7,ss_7,two)) || event(Issued(principalR,p_1,m_7,ss_7,two)) || (event(Reveal(a)) && event(Reveal(g)) && a ≠ g) || (event(Reveal(a)) && event(Reveal(p_1)) && a ≠ p_1) || (event(Reveal(g)) && event(Reveal(p_1)) && g ≠ p_1) is false.

@@ -1,0 +1,46 @@
+/*
+  STATUS (honest): NO lemma of this file about time is proved.  An earlier run reported no_accept_after_expiry
+  "verified", but that run used the helper `clock_mono [reuse]` below as an assumption, and clock_mono itself was never
+  proved (heap exhausted / killed).  Deleting the helper (pca_clock_v3_nohelper.spthy) leaves
+  no_accept_after_expiry unproved (heap exhausted at 215s, -M10g).
+  Difference from pca_clock.spthy: the ONLY changes are the Rd(t) annotations on every Clock-thread rule and the
+  clock_mono helper; the transition system is identical, so adding Rd/the helper is sound iff the helper is true, which
+  it is semantically (one linear thread, Tick only increases) but is not mechanically proved here.  pca_clock.spthy is
+  open for the same reason (read-and-re-emit rules give an unbounded backward chain Clock <- Reader <- Clock ...).
+  Tried and failed (heap exhausted, see results/v3/clock_az11): bounded step index (v3b), per-pair mono lemmas (v3c),
+  epoch tags (v3d: reader_has_origin proved, read_before_tick/tick_unique not), instance ids (v3e: alive_unique not).
+*/
+/*
+  PCA -- time from REWRITING SEMANTICS (small dedicated model).  One linear fact Clock(t) over the totally ordered
+  timepoints t0 < t1 < t2 < t3 (explicit tables !Succ, !Le, !Lt; the builtin natural-numbers theory made Tamarin
+  time out even on this tiny model, see pca_actn_time_store.spthy).  Tick consumes Clock(t) and produces
+  Clock(succ t).  The verifier rule consumes Clock(now) and re-emits it (a read) and checks expiry in its PREMISE:
+  !Le(now, exp)  (now <= exp).  There is NO ChkTime restriction.  Obs_Past reads the clock when it is strictly
+  greater than e (ordinary member of the Clock thread).
+  -DNO_EXPIRY_CHECK: the Verify premise has no !Le(now, exp).
+  no_accept_after_expiry: if the clock was observed past e at j, every Accept(e) at i is before j.
+*/
+theory PCA_Clock_V3
+begin
+rule Tables:
+  [ ] --> [ !Succ('t0','t1'), !Succ('t1','t2'), !Succ('t2','t3'),
+            !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'), !Le('t0','t3'), !Le('t1','t1'), !Le('t1','t2'),
+            !Le('t1','t3'), !Le('t2','t2'), !Le('t2','t3'), !Le('t3','t3'),
+            !Lt('t0','t1'), !Lt('t0','t2'), !Lt('t0','t3'), !Lt('t1','t2'), !Lt('t1','t3'), !Lt('t2','t3') ]
+rule Clock_Init: [ ] --[ ClockInit(), Rd('t0') ]-> [ Clock('t0') ]
+restriction ClockOnce: "All #i #j. ClockInit() @ i & ClockInit() @ j ==> #i = #j"
+rule Tick: [ Clock(t), !Succ(t, u) ] --[ TickFrom(t), Rd(u) ]-> [ Clock(u) ]
+rule Obs_Past: [ Clock(t), In(e), !Lt(e, t) ] --[ ClockPast(e), Rd(t) ]-> [ Clock(t) ]
+#ifdef NO_EXPIRY_CHECK
+rule Verify: [ Clock(now), In(exp) ] --[ Accept(exp), Rd(now) ]-> [ Clock(now) ]
+#else
+rule Verify: [ Clock(now), In(exp), !Le(now, exp) ] --[ Accept(exp), Rd(now) ]-> [ Clock(now) ]
+#endif
+lemma executable_accept: exists-trace "Ex e #i. Accept(e) @ i"
+lemma executable_after_tick: exists-trace "Ex e t #i #k. Accept(e) @ i & TickFrom(t) @ k & #k < #i"
+// helper: clock reads never go backwards along the single Clock thread (induction over the thread)
+lemma clock_mono [use_induction, reuse]:
+  "All a b #i #j. Rd(a) @ i & Rd(b) @ j & #i < #j ==> not((  (a='t1' & b='t0') | (a='t2' & b='t0') | (a='t2' & b='t1') | (a='t3' & b='t0') | (a='t3' & b='t1') | (a='t3' & b='t2') ))"
+lemma no_accept_after_expiry:
+  "All e #i #j. Accept(e) @ i & ClockPast(e) @ j ==> #i < #j"
+end

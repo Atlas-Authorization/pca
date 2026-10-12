@@ -1,0 +1,12 @@
+  executable_threshold_signature (exists-trace): verified (16 steps)
+# wall=11s heuristic=c tamarin-prover 1.12.0
+  executable_two_sessions (exists-trace): verified (12 steps)
+# wall=3s heuristic=c tamarin-prover 1.12.0
+TIMEOUT after 600s budget (NOT proved): share_secrecy
+# wall=603s heuristic=s tamarin-prover 1.12.0
+TIMEOUT after 600s budget (NOT proved): sig_needs_t_signers
+# wall=602s heuristic=s tamarin-prover 1.12.0
+no-result rc=0 after 600s budget (NOT proved): shares_bound_to_session
+# wall=0s heuristic=s tamarin-prover 1.12.0
+  nonce_one_shot (all-traces): verified (76 steps)
+# wall=1s heuristic=c tamarin-prover 1.12.0

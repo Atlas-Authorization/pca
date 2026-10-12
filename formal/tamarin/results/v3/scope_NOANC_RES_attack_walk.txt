@@ -1,0 +1,3 @@
+OPEN (NOT found): heap exhausted at +RTS -M12g after 4958s, no verdict (raw log: 'Heap exhausted'; not committed, size)
+# wall=4958s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_resource_escalation --heuristic=o --oraclename=oracle_walk.sh -DNO_ANCESTOR_RES pca_scope_resource.spthy +RTS -N4 -M12g
+# pcaq job q261011-034425-35je

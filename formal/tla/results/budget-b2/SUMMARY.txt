@@ -1,0 +1,2 @@
+budget_shipped_b2                  expect=pass got=pass OK         110s  35869481 gen 8552602 distinct 
+mismatches: 0

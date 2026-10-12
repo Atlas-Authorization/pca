@@ -1,0 +1,6 @@
+  nb_debit_from_unique (all-traces): verified (543 steps)
+  root_bound (all-traces): verified (108 steps)
+  attack_leafonly_bounded (exists-trace): falsified - no trace found (108 steps)
+  attack_lostupdate_bounded (exists-trace): falsified - no trace found (81 steps)
+# wall=8s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=root_bound --prove=nb_debit_from_unique --prove=attack_leafonly_bounded --prove=attack_lostupdate_bounded --heuristic=o --oraclename=oracle_root.sh pca_budget_v4.spthy +RTS -N2 -M6g
+# closure round 3; '/* All wellformedness checks were successful. */'

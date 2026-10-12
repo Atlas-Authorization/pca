@@ -1,0 +1,7 @@
+  nb_debit_from_unique (all-traces): verified (264 steps)
+  nb_alloc_unique (all-traces): verified (6 steps)
+  nb_debit_has_alloc (all-traces): verified (119 steps)
+  nb_c1_debit_from (all-traces): verified (23 steps)
+  node_bound_c3 (all-traces): verified (242 steps)
+# wall=5s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=node_bound_c3 --prove=nb_alloc_unique --prove=nb_debit_has_alloc --prove=nb_c1_debit_from --prove=nb_debit_from_unique --heuristic=o --oraclename=oracle_nodebound.sh pca_budget_v4.spthy +RTS -N2 -M12g
+# closure round 2, oracle_root.sh (root lemmas) / oracle_nodebound.sh (node_bound_c2/c3), 12g cap

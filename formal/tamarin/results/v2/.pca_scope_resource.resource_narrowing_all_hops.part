@@ -1,0 +1,2 @@
+  resource_narrowing_all_hops (all-traces): verified (1660 steps)
+# wall=59s heuristic=c tamarin-prover 1.12.0

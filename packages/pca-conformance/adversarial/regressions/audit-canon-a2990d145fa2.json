@@ -1,0 +1,9 @@
+{
+ "name": "audit-canon-a2990d145fa2",
+ "kind": "canon",
+ "raw": "{\"ver\":2,\"x\\uZZZZ\":{\"y\":[true,false,null,0,-0,1e2,1.5]",
+ "found": {
+  "by": "pca-audit structure-aware mutator",
+  "seed": 20261009
+ }
+}

@@ -1,0 +1,1 @@
+{"mode":"rand","args":["700000","308","8/22"],"seconds":658.345,"cases":31819,"agree":31819,"disagree":0,"modelAccepted":11842,"hist":{"t0:rej:0":3970,"t2:rej:0":1778,"t1:rej:0":1775,"t3:rej:1":1954,"t4:rej:0":4037,"t2:rej:1":1959,"t3:rej:2":2680,"t3:rej:0":1824,"t1:acc:1":1983,"t2:acc:2":2751,"t2:acc:3":1454,"t1:acc:2":2750,"t1:acc:3":1460,"t3:acc:3":1444},"examples":[]}

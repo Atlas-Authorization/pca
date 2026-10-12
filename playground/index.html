@@ -109,8 +109,11 @@ button:disabled{opacity:.4;cursor:not-allowed}
 <div class="hist" id="hist"></div><div class="log" id="log"></div>
 <div class="mono" id="bound"></div></section>
 
-<section id="s-thr" style="display:none"><h2><i>6</i>Threshold signatures</h2><p class="sub">At t&gt;1 the action also needs guardian/principal shares over the same canonical message.</p>
+<section id="s-thr" style="display:none"><h2><i>6</i>Threshold signatures</h2><p class="sub">The required t is decided by the risk policy (panel 5), not by the signer. Every share binds its role, the signer set and t, so a share cannot be re-labelled.</p>
 <div class="row"><button id="b-thr" disabled>Sign with agent + guardian + principal</button></div><div id="thr-out" class="mono"></div></section>
+
+<section id="s-pq"><h2><i>7</i>Post-quantum root needs a pin</h2><p class="sub">An ML-DSA root signed with a PQ key that the artifact itself carries proves nothing about who issued it. The verifier must pin the issuer's PQ key; without a pin the root is refused.</p>
+<div class="row"><button class="bad" id="b-pq">Mint pure-PQ root and verify</button></div><div id="pq-out"></div></section>
 </main>
 
 <script type="module">
@@ -145,12 +148,14 @@ $('#b-grant').onclick=()=>{const goalCommit=P.hashCanonical({goal:$('#goal').val
 $('#b-plan').onclick=()=>{try{S.committed=P.commitPlan(S.nodes);$('#root').textContent=S.committed.root;$('#b-act').disabled=!S.grant;$('#b-forge').disabled=!S.grant}catch(e){$('#root').innerHTML=`<span class="err">${esc(e.message)}</span>`}};
 function render(res,title){ $('#vout').innerHTML=`<div class="mono" style="margin-top:10px">${esc(title)}</div>`+Object.entries(res.checks).map(([k,v])=>`<div class="chk ${v}"><span>${k}</span><span>${v}</span></div>`).join('')+`<div class="verdict ${res.allow?'ok':'bad'}">${res.allow?'ALLOWED':'REJECTED'}${res.reason?' — '+esc(res.reason):''}</div>`}
 $('#b-act').onclick=async()=>{let params;try{const t=$('#params').value.trim();params=t?JSON.parse(t):undefined}catch{return $('#vout').innerHTML='<div class="err">params is not valid JSON</div>'}
+ // pca-core-verify: allow the playground renders the structural per-clause checks (later clauses show not-enforced); it authorizes nothing
  try{const a=P.buildPCActn({grant:S.grant,chain:[S.grant],plan:S.nodes,nodeId:S.sel,params,counter:(S.ctr=(S.ctr||0)+1),signerSecret:S.ak.secretKey,aud:AUD,ttlMs:WIN});S.last=a;render(await P.verifyPCActnCore(a,{grant:S.grant,audience:AUD}),`PCActn ${P.pcactnDigest(a).slice(0,16)}… for ${S.sel}`);
  $('#b-thr').disabled=false}catch(e){$('#vout').innerHTML=`<div class="err">${esc(e.message)}</div>`}};
 $('#b-forge').onclick=async()=>{ // build against a plan that includes the rogue node, then present it against the committed (honest) root
  const rogue={id:'rogue',verb:'delete',resource:'account/*'};
  const a=P.buildPCActn({grant:S.grant,chain:[S.grant],plan:[...S.nodes,rogue],nodeId:'rogue',counter:(S.ctr=(S.ctr||0)+1),signerSecret:S.ak.secretKey,aud:AUD,ttlMs:WIN});
  a.plan.root=S.committed.root; // claim the committed root, but the proof cannot lead there
+ // pca-core-verify: allow the playground renders the structural per-clause checks of a forged proof; it authorizes nothing
  render(await P.verifyPCActnCore(a,{grant:S.grant,audience:AUD}),'FORGED: delete account/* (not in the committed plan)')};
 // ---- battery
 function derived(){const r=P.riskScore(IN,POL.weights),c=P.cost(r,POL.kappa),irr=IN.reversibility<.3;const rt=P.requiredThreshold(r,POL,{irreversible:irr});return{r,c,rt}}
@@ -178,11 +183,17 @@ $('#b-reset').onclick=()=>{clearInterval(auto);auto=null;now=0;budget={B:POL.bMa
 $('#b-auto').onclick=()=>{if(auto){clearInterval(auto);auto=null;return}let i=0;const set=(k,v)=>{IN[k]=v};const keys=['semanticDistance','reversibility','blastRadius','taint','confidence','age'];
  auto=setInterval(()=>{if(i>=14){clearInterval(auto);auto=null;return}const f=i/13;set('semanticDistance',.05+.7*f);set('reversibility',.95-.8*f);set('blastRadius',.05+.6*f);set('taint',.4*f*f);set('confidence',.95-.5*f);set('age',.05+.5*f);
   $('#inputs').querySelectorAll('input').forEach((el,j)=>{el.value=IN[keys[j]];el.nextElementSibling.textContent=+IN[keys[j]].toFixed(2)});run();i++},900)};
-// threshold panel (only if the library exports it)
+// threshold panel: t is DECIDED by the policy engine (requiredThreshold), never chosen by the signer; shares are role-bound
 if(P.signShare&&P.assembleThreshold){$('#s-thr').style.display='';const g=P.generateKeyPair();
- $('#b-thr').onclick=()=>{try{const msg=P.thresholdMessage(S.last),t=3;const set=[{role:'agent',publicKey:enc(S.ak.publicKey)},{role:'guardian',publicKey:enc(g.publicKey)},{role:'principal',publicKey:enc(S.pk.publicKey)}],bind={signerSet:set,t};
-  const sh=[P.signShare('agent',S.ak.secretKey,msg,bind),P.signShare('guardian',g.secretKey,msg,bind),P.signShare('principal',S.pk.secretKey,msg,bind)];const ts=P.assembleThreshold(sh);const v=P.verifyThreshold(ts,msg,set,t);
-  $('#thr-out').textContent=`assembled ${sh.length} role-bound shares (signer set + t=${t} bound into every share); verifyThreshold: ${v.ok?'OK':'FAIL'} roles=${v.roles.join(', ')}${v.reason?' — '+v.reason:''}`}catch(e){$('#thr-out').textContent=e.message}}}
+ $('#b-thr').onclick=()=>{try{const msg=P.thresholdMessage(S.last),t=refresh().eff;const set=[{role:'agent',publicKey:enc(S.ak.publicKey)},{role:'guardian',publicKey:enc(g.publicKey)},{role:'principal',publicKey:enc(S.pk.publicKey)}],bind={signerSet:set,t};
+  const all=[P.signShare('agent',S.ak.secretKey,msg,bind),P.signShare('guardian',g.secretKey,msg,bind),P.signShare('principal',S.pk.secretKey,msg,bind)];const sh=all.slice(0,t);const ts=P.assembleThreshold(sh);const v=P.verifyThreshold(ts,msg,set,t);
+  let swap='n/a (t=1)';if(t>=2){const bad=all.slice(0,t).map((x,i)=>i===t-1?{...x,role:'principal'===x.role?'guardian':'principal'}:x);try{const bv=P.verifyThreshold(P.assembleThreshold(bad),msg,set,t);swap=bv.ok?'ACCEPTED (BUG)':'rejected'}catch(e){swap='rejected ('+e.message+')'}}
+  $('#thr-out').textContent=`server-decided t=${t} (from the policy engine); ${sh.length} role-bound shares (signer set + t bound into every share); verifyThreshold: ${v.ok?'OK':'FAIL'} roles=${v.roles.join(', ')}${v.reason?' — '+v.reason:''}; share re-labelled to another role: ${swap}`}catch(e){$('#thr-out').textContent=e.message}}}
+// pure post-quantum root: a PQ key supplied by the artifact itself proves nothing; it must be pinned by the verifier (R3-01)
+$('#b-pq').onclick=()=>{try{const k=P.generateKeyPair(),h=P.generateKeyPair(),pq=P.mlDsa65Keygen(new Uint8Array(32).fill(7));
+ const root=P.mintRoot({principalSecret:k.secretKey,principalPublic:enc(k.publicKey),holder:enc(h.publicKey),caveats:[{type:'goal',commit:P.hashCanonical({goal:'x'}),text:'x'}],suite:{alg:'ml-dsa-65',mlDsa:pq}});
+ const r1=P.verifyChain([root],root.issuer,{}),r2=P.verifyChain([root],root.issuer,{pqPins:{[root.issuer]:root.pq_pk}});
+ $('#pq-out').innerHTML=`<div class="chk ${r1.ok?'pass':'fail'}"><span>forged pure-PQ root, NO pin</span><span>${r1.ok?'ACCEPTED (BUG)':'REJECTED'}</span></div><div class="mono">${esc(r1.reason||'')}</div><div class="chk ${r2.ok?'pass':'fail'}"><span>same root, verifier pins the issuer's PQ key</span><span>${r2.ok?'accepted':'REJECTED'}</span></div>`;window.__pq={noPin:r1.ok,pinned:r2.ok}}catch(e){$('#pq-out').textContent=e.message}};
 $('#b-keys').click();$('#b-grant').click();$('#b-plan').click();refresh();
 window.__pcaReady=true;
 </script>

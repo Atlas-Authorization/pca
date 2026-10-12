@@ -1,0 +1,12 @@
+# Mathlib-based companion (forking lemma, primality of 2^61-1).  Needs Mathlib at tag v4.34.1.
+name = "pca-math"
+defaultTargets = ["PcaMath"]
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.34.1"
+
+[[lean_lib]]
+name = "PcaMath"

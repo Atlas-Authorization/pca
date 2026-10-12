@@ -1,0 +1,2 @@
+  alloc_monotone (all-traces): verified (24 steps)
+# wall=1s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=alloc_monotone --heuristic=o --oraclename=oracle_budget.sh pca_budget_v4.spthy +RTS -N2 -M6g

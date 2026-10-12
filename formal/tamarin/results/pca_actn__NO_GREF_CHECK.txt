@@ -1,0 +1,2 @@
+  replay_freedom_nonce (all-traces): falsified - found trace (14 steps)
+  replay_freedom_counter (all-traces): falsified - found trace (14 steps)

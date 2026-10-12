@@ -1,0 +1,2 @@
+  executable_attest_v1 (exists-trace): verified (16 steps)
+# wall=399s heuristic=s tamarin-prover 1.12.0

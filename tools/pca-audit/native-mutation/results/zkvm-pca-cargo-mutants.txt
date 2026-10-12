@@ -1,0 +1,116 @@
+# zkvm-pca cargo-mutants (-p pca-zkvm-core -p pca-zkvm-verify), tree at 9bf64d8b (R6-ZK), shards k/4, debug profile.
+# Survivors NOT yet triaged (kill or ledger). Shard 3/4 not collected.
+## shard zkvm-pca-0of4
+MISSED   core/src/lib.rs:345:14: replace < with == in envelope_well_formed
+MISSED   core/src/lib.rs:345:14: replace < with <= in envelope_well_formed
+MISSED   core/src/lib.rs:357:23: replace || with && in scale
+MISSED   core/src/lib.rs:357:28: replace < with == in scale
+MISSED   core/src/lib.rs:357:28: replace < with <= in scale
+MISSED   core/src/lib.rs:509:20: replace match guard !v.is_null() with false in decide_inner
+MISSED   core/src/canonical.rs:71:14: replace <= with > in ser_number
+MISSED   core/src/canonical.rs:77:29: replace <= with > in ser_number
+MISSED   core/src/canonical.rs:91:10: replace < with <= in js_number_to_string
+MISSED   core/src/canonical.rs:104:18: replace < with <= in js_number_to_string
+MISSED   core/src/canonical.rs:107:29: replace < with == in js_number_to_string
+MISSED   core/src/canonical.rs:107:29: replace < with > in js_number_to_string
+MISSED   core/src/canonical.rs:107:29: replace < with <= in js_number_to_string
+MISSED   core/src/canonical.rs:107:25: replace - with + in js_number_to_string
+MISSED   core/src/canonical.rs:107:25: replace - with / in js_number_to_string
+MISSED   core/src/canonical.rs:108:21: replace - with + in js_number_to_string
+MISSED   core/src/canonical.rs:108:21: replace - with / in js_number_to_string
+MISSED   core/src/canonical.rs:109:14: replace == with != in js_number_to_string
+MISSED   core/src/canonical.rs:126:55: replace <= with > in js_string
+MISSED   core/src/canonical.rs:129:69: replace <= with > in js_string
+MISSED   core/src/caveats.rs:248:14: replace > with == in object_schema_error
+MISSED   core/src/caveats.rs:248:14: replace > with >= in object_schema_error
+MISSED   core/src/caveats.rs:252:15: replace > with == in object_schema_error
+MISSED   core/src/caveats.rs:252:15: replace > with >= in object_schema_error
+MISSED   core/src/caveats.rs:339:52: replace + with * in spec_error
+368 mutants tested in 2h: 25 missed, 334 caught, 9 unviable
+## shard zkvm-pca-1of4
+MISSED   core/src/caveats.rs:482:53: replace + with * in check_object
+MISSED   core/src/caveats.rs:490:14: replace > with == in check_value
+MISSED   core/src/caveats.rs:490:14: replace > with >= in check_value
+MISSED   core/src/caveats.rs:490:33: replace + with * in check_value
+MISSED   core/src/caveats.rs:544:65: replace + with * in check_value
+MISSED   core/src/chain.rs:70:16: replace % with / in decode_b64u_strict
+MISSED   core/src/chain.rs:70:16: replace % with + in decode_b64u_strict
+MISSED   core/src/chain.rs:231:24: replace > with >= in allocations_monotone_err
+TIMEOUT  core/src/commit.rs:80:11: replace *= with /= in split
+MISSED   core/src/context.rs:298:24: replace < with > in check_context
+MISSED   core/src/predicates.rs:89:9: replace Ctx<'a>::poisoned -> bool with false
+MISSED   core/src/predicates.rs:94:29: replace || with && in Ctx<'a>::deep_eq
+MISSED   core/src/predicates.rs:119:9: delete match arm (Value::Bool(x), Value::Bool(y)) in js_canonical_eq
+MISSED   core/src/predicates.rs:119:47: replace == with != in js_canonical_eq
+MISSED   core/src/predicates.rs:137:26: replace && with || in ordered
+MISSED   core/src/predicates.rs:186:30: replace + with - in parse_glob
+MISSED   core/src/predicates.rs:186:30: replace + with * in parse_glob
+MISSED   core/src/predicates.rs:188:15: replace += with -= in parse_glob
+MISSED   core/src/predicates.rs:188:15: replace += with *= in parse_glob
+TIMEOUT  core/src/predicates.rs:198:11: replace += with *= in parse_glob
+MISSED   core/src/predicates.rs:216:13: delete match arm Some(GlobTok::One) in glob_match
+MISSED   core/src/predicates.rs:217:20: replace += with -= in glob_match
+MISSED   core/src/predicates.rs:217:20: replace += with *= in glob_match
+MISSED   core/src/predicates.rs:218:20: replace += with -= in glob_match
+MISSED   core/src/predicates.rs:218:20: replace += with *= in glob_match
+TIMEOUT  core/src/predicates.rs:212:20: replace += with *= in glob_match
+368 mutants tested in 2h: 23 missed, 332 caught, 10 unviable, 3 timeouts
+## shard zkvm-pca-2of4
+TIMEOUT  core/src/predicates.rs:227:29: replace += with *= in glob_match
+TIMEOUT  core/src/predicates.rs:234:24: replace == with != in glob_match
+MISSED   core/src/predicates.rs:235:12: replace += with -= in glob_match
+MISSED   core/src/predicates.rs:235:12: replace += with *= in glob_match
+MISSED   core/src/predicates.rs:287:19: replace < with <= in member_closure
+MISSED   core/src/predicates.rs:292:17: replace += with *= in member_closure
+MISSED   core/src/predicates.rs:338:35: replace match guard !s.is_empty() with true in tri_leaf
+MISSED   core/src/predicates.rs:369:39: replace match guard !s.is_empty() with true in tri_leaf
+MISSED   core/src/predicates.rs:381:13: delete match arm Value::Array(a) in tri_leaf
+MISSED   core/src/predicates.rs:428:51: replace || with && in tri_leaf
+MISSED   core/src/predicates.rs:428:28: replace > with == in tri_leaf
+MISSED   core/src/predicates.rs:428:28: replace > with >= in tri_leaf
+MISSED   core/src/predicates.rs:428:62: replace > with == in tri_leaf
+MISSED   core/src/predicates.rs:428:62: replace > with >= in tri_leaf
+MISSED   core/src/predicates.rs:453:33: replace match guard !t.is_empty() with true in tri_leaf
+MISSED   core/src/predicates.rs:499:36: replace match guard !a.is_empty() with true in evaluate_condition_tri_inner
+MISSED   core/src/risk.rs:47:12: replace > with >= in risk_raw
+TIMEOUT  core/src/safe_regex.rs:74:26: replace - with + in CharSet::has
+TIMEOUT  core/src/safe_regex.rs:74:26: replace - with / in CharSet::has
+TIMEOUT  core/src/safe_regex.rs:76:26: replace + with * in CharSet::has
+MISSED   core/src/safe_regex.rs:92:27: replace match guard r.0 <= last.1 + 1 with false in normalize
+MISSED   core/src/safe_regex.rs:92:41: replace + with - in normalize
+MISSED   core/src/safe_regex.rs:92:41: replace + with * in normalize
+MISSED   core/src/safe_regex.rs:103:14: replace > with >= in complement
+MISSED   core/src/safe_regex.rs:134:32: replace || with && in is_ascii_alnum
+MISSED   core/src/safe_regex.rs:145:9: delete match arm 0x41..= 0x46 in hexval
+MISSED   core/src/safe_regex.rs:145:34: replace + with - in hexval
+MISSED   core/src/safe_regex.rs:145:34: replace + with * in hexval
+MISSED   core/src/safe_regex.rs:145:27: replace - with + in hexval
+MISSED   core/src/safe_regex.rs:145:27: replace - with / in hexval
+TIMEOUT  core/src/safe_regex.rs:152:9: replace Parser<'a>::at -> Option<u16> with Some(0)
+TIMEOUT  core/src/safe_regex.rs:152:9: replace Parser<'a>::at -> Option<u16> with Some(1)
+MISSED   core/src/safe_regex.rs:157:19: replace < with > in Parser<'a>::parse
+TIMEOUT  core/src/safe_regex.rs:165:31: replace == with != in Parser<'a>::alt
+TIMEOUT  core/src/safe_regex.rs:166:20: replace += with -= in Parser<'a>::alt
+TIMEOUT  core/src/safe_regex.rs:166:20: replace += with *= in Parser<'a>::alt
+MISSED   core/src/safe_regex.rs:191:17: replace < with <= in Parser<'a>::brace_quantifier
+MISSED   core/src/safe_regex.rs:191:42: replace < with <= in Parser<'a>::brace_quantifier
+MISSED   core/src/safe_regex.rs:191:37: replace - with / in Parser<'a>::brace_quantifier
+TIMEOUT  core/src/safe_regex.rs:192:15: replace += with *= in Parser<'a>::brace_quantifier
+MISSED   core/src/safe_regex.rs:203:21: replace < with <= in Parser<'a>::brace_quantifier
+MISSED   core/src/safe_regex.rs:203:46: replace < with <= in Parser<'a>::brace_quantifier
+MISSED   core/src/safe_regex.rs:203:41: replace - with / in Parser<'a>::brace_quantifier
+TIMEOUT  core/src/safe_regex.rs:204:19: replace += with *= in Parser<'a>::brace_quantifier
+TIMEOUT  core/src/safe_regex.rs:223:24: replace += with -= in Parser<'a>::quantified
+TIMEOUT  core/src/safe_regex.rs:228:24: replace += with -= in Parser<'a>::quantified
+TIMEOUT  core/src/safe_regex.rs:233:24: replace += with -= in Parser<'a>::quantified
+MISSED   core/src/safe_regex.rs:251:53: replace || with && in Parser<'a>::quantified
+MISSED   core/src/safe_regex.rs:301:13: delete match arm 0x2a | 0x2b | 0x3f | 0x7b in Parser<'a>::atom
+MISSED   core/src/safe_regex.rs:273:31: replace > with == in Parser<'a>::atom
+MISSED   core/src/safe_regex.rs:273:31: replace > with >= in Parser<'a>::atom
+MISSED   core/src/safe_regex.rs:277:28: replace -= with += in Parser<'a>::atom
+MISSED   core/src/safe_regex.rs:277:28: replace -= with /= in Parser<'a>::atom
+TIMEOUT  core/src/safe_regex.rs:281:24: replace += with -= in Parser<'a>::atom
+TIMEOUT  core/src/safe_regex.rs:286:24: replace += with -= in Parser<'a>::atom
+TIMEOUT  core/src/safe_regex.rs:286:24: replace += with *= in Parser<'a>::atom
+TIMEOUT  core/src/safe_regex.rs:290:24: replace += with -= in Parser<'a>::atom
+368 mutants tested in 2h: 38 missed, 280 caught, 31 unviable, 19 timeouts

@@ -1,0 +1,2 @@
+  nonce_one_shot (all-traces): verified (76 steps)
+# wall=1s heuristic=c tamarin-prover 1.12.0

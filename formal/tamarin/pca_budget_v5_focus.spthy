@@ -1,0 +1,118 @@
+/*
+  PCA -- budget_alloc, v5: node_bound by FOCUS encoding ("any node is the root of its own meter").
+
+  Why: in pca_budget_v4.spthy root_bound terminates (67480 steps) because the root meter is its own fact symbol
+  (RCnt), so a debit of the root can only be matched against RCnt-producing rules.  node_bound did not terminate
+  (12g/24g heap, 100g/6h) because every node meter is the same symbol Cnt(n, c): solving a Cnt premise of node n
+  unifies with the Cnt conclusion of EVERY allocation and EVERY Debit_Mid in the tree.
+
+  Encoding: this theory is pca_budget_v4.spthy (base model, no -D switches; rules copied verbatim) plus ONE extra
+  copy of the allocation and mid-debit rules in which the meter is a distinct fact symbol FCnt.  The rules that
+  allocate with FCnt emit Focus(n).  Fact symbols in Tamarin are not parametric, so "a distinct fact per node id" is
+  realised as "a distinct fact for the focused node, and any node may be the focused one".
+
+  Meta-argument (simulation, both directions on events):
+    (a) every trace of v4 is a trace of v5 (do not use the _F rules);
+    (b) for every trace t of v4 and every node n allocated in t, rename in t the allocation instance of n to its _F
+        copy and every Debit_Mid instance that debits n to Debit_Mid_F.  Cnt(n, .) is produced and consumed ONLY by
+        n's own allocation and n's own Debit_Mid instances (n = <~id, p, r> contains a fresh ~id), so replacing
+        Cnt(n, .) by FCnt(n, .) in exactly those instances gives a valid v5 trace t' with the SAME events as t plus
+        Focus(n) at n's allocation.  At most one Focus occurs in t' (restriction single_focus below is satisfied).
+    Hence a v5 lemma "for every Focus(n) node allocated 'c1' ... at most one debit" implies v4 node_bound for EVERY
+    node n.  (The renaming touches no other node, so lemmas mentioning only n and its events transfer.)
+  The proof object is node_bound_focus below; v4 node_bound is the instance obtained by (b).
+*/
+theory PCA_Budget_V5_Focus
+begin
+
+rule Tables:
+  [ ] --> [ !Dec('c3', 'c2'), !Dec('c2', 'c1'), !Dec('c1', 'c0'),
+            !Le('c0','c0'), !Le('c0','c1'), !Le('c0','c2'), !Le('c0','c3'),
+            !Le('c1','c1'), !Le('c1','c2'), !Le('c1','c3'),
+            !Le('c2','c2'), !Le('c2','c3'), !Le('c3','c3') ]
+
+rule Root_Grant:
+  [ Fr(~r) ] --[ RootNode(~r, 'c2') ]-> [ !IsRoot(~r), !Lim(~r, 'c2'), RCnt(~r, 'c2') ]
+
+// ---- delegation with allocation (v4 base, verbatim) ---------------------------------------------------------
+rule Alloc_Child_R:
+  [ !IsRoot(p), !Lim(p, plim), In(climit), !Le(climit, plim), Fr(~id) ]
+  --[ Alloc(<~id, p, p>, climit, p, plim) ]->
+  [ !Lim(<~id, p, p>, climit), !Node(<~id, p, p>), Cnt(<~id, p, p>, climit) ]
+rule Alloc_Child_D:
+  [ !Lim(<pid, pp, r>, plim), In(climit), !Le(climit, plim), Fr(~id) ]
+  --[ Alloc(<~id, <pid, pp, r>, r>, climit, <pid, pp, r>, plim) ]->
+  [ !Lim(<~id, <pid, pp, r>, r>, climit), !Node(<~id, <pid, pp, r>, r>), Cnt(<~id, <pid, pp, r>, r>, climit) ]
+
+// ---- the same two allocation rules for the FOCUSED node: its meter is FCnt ------------------------------------
+rule Alloc_Child_R_F:
+  [ !IsRoot(p), !Lim(p, plim), In(climit), !Le(climit, plim), Fr(~id) ]
+  --[ Alloc(<~id, p, p>, climit, p, plim), Focus(<~id, p, p>) ]->
+  [ !Lim(<~id, p, p>, climit), !Node(<~id, p, p>), FCnt(<~id, p, p>, climit) ]
+rule Alloc_Child_D_F:
+  [ !Lim(<pid, pp, r>, plim), In(climit), !Le(climit, plim), Fr(~id) ]
+  --[ Alloc(<~id, <pid, pp, r>, r>, climit, <pid, pp, r>, plim), Focus(<~id, <pid, pp, r>, r>) ]->
+  [ !Lim(<~id, <pid, pp, r>, r>, climit), !Node(<~id, <pid, pp, r>, r>), FCnt(<~id, <pid, pp, r>, r>, climit) ]
+
+// ---- spends (v4 base, verbatim) -------------------------------------------------------------------------------
+rule Spend_Begin_Root:
+  [ !IsRoot(r), Fr(~sid) ] --[ SpendBegin(~sid, r) ]-> [ Debit(~sid, r, r) ]
+rule Spend_Begin_Node:
+  [ !Node(<id, p, r>), Fr(~sid) ] --[ SpendBegin(~sid, <id, p, r>) ]-> [ Debit(~sid, <id, p, r>, r) ]
+
+rule Debit_Mid:
+  [ Debit(sid, <id, p, r>, r), Cnt(<id, p, r>, c), !Dec(c, c1) ]
+  --[ Debited(sid, <id, p, r>, r), DebitFrom(<id, p, r>, c) ]-> [ Cnt(<id, p, r>, c1), Debit(sid, p, r) ]
+// the focused node's mid debit: identical except for the meter symbol
+rule Debit_Mid_F:
+  [ Debit(sid, <id, p, r>, r), FCnt(<id, p, r>, c), !Dec(c, c1) ]
+  --[ Debited(sid, <id, p, r>, r), DebitFrom(<id, p, r>, c), FDebited(sid, <id, p, r>) ]->
+  [ FCnt(<id, p, r>, c1), Debit(sid, p, r) ]
+rule Debit_Root:
+  [ Debit(sid, r, r), !IsRoot(r), RCnt(r, c), !Dec(c, c1) ]
+  --[ Debited(sid, r, r), DebitFrom(r, c), Spent(sid, r) ]-> [ RCnt(r, c1) ]
+
+// the simulation in the header uses at most one focus per trace
+restriction single_focus: "All a b #i #j. Focus(a) @ i & Focus(b) @ j ==> #i = #j"
+
+// ---- sanity: the focused node is usable, and a deep spend passes through it ------------------------------------
+lemma executable_focus_spend:
+  exists-trace
+  "Ex r n s #a #b #f #d #e. RootNode(r, 'c2') @ a & Alloc(n, 'c1', r, 'c2') @ b & Focus(n) @ f
+     & FDebited(s, n) @ d & Spent(s, r) @ e"
+lemma executable_focus_mid:
+  exists-trace
+  "Ex r n1 n2 s #a #b #c #f #d #e. RootNode(r, 'c2') @ a & Alloc(n1, 'c2', r, 'c2') @ b & Alloc(n2, 'c1', n1, 'c2') @ c
+     & Focus(n1) @ f & SpendBegin(s, n2) @ d & FDebited(s, n1) @ e"
+
+// bounded non-vacuity witness (the trace is restricted to the events it needs; a found trace is a real trace):
+// a focused child of the root, allocated 'c1', is debited by a spend that then completes at the root
+lemma executable_focus_bounded:
+  exists-trace
+  "Ex r n s #a #b #f #x #d #e. RootNode(r, 'c2') @ a & Alloc(n, 'c1', r, 'c2') @ b & Focus(n) @ f
+     & SpendBegin(s, n) @ x & FDebited(s, n) @ d & Spent(s, r) @ e
+     & (All r2 l #q. RootNode(r2, l) @ q ==> #q = #a)
+     & (All n2 cl p pl #q. Alloc(n2, cl, p, pl) @ q ==> #q = #b)
+     & (All s2 n2 #q. SpendBegin(s2, n2) @ q ==> #q = #x)"
+
+// ---- helpers (all about the focused meter only) ----------------------------------------------------------------
+// the focused node's debits are exactly the FDebited ones: a Debited event of a focused node comes from Debit_Mid_F
+lemma f_debit_is_fdebit [reuse]:
+  "All s n r #f #i. Focus(n) @ f & Debited(s, n, r) @ i ==> Ex #k. FDebited(s, n) @ k & #k = #i"
+// focused meter invariant (induction over the FCnt thread): a focused node allocated 'c1' is debited from 'c1' only
+lemma f_c1_debit_from [reuse, use_induction]:
+  "All n p pl s c #a #f #i. Alloc(n, 'c1', p, pl) @ a & Focus(n) @ f & FDebited(s, n) @ i & DebitFrom(n, c) @ i
+     ==> c = 'c1'"
+
+// ---- the bound for the focused node (= node_bound of v4 for any node, by the simulation in the header) ---------
+lemma node_bound_focus:
+  "All n p pl s1 s2 r1 r2 #a #f #i #j.
+      Alloc(n, 'c1', p, pl) @ a & Focus(n) @ f & Debited(s1, n, r1) @ i & Debited(s2, n, r2) @ j ==> s1 = s2"
+
+// generalisation: a focused node allocated 'c2' is debited by at most TWO distinct spends
+lemma node_bound_focus_c2:
+  "All n p pl s1 s2 s3 r1 r2 r3 #a #f #i #j #k.
+      Alloc(n, 'c2', p, pl) @ a & Focus(n) @ f
+    & Debited(s1, n, r1) @ i & Debited(s2, n, r2) @ j & Debited(s3, n, r3) @ k
+      ==> s1 = s2 | s1 = s3 | s2 = s3"
+end

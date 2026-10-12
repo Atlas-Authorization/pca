@@ -1,0 +1,57 @@
+(* VARIANT of pca_replay.cv: the nonce is CHOSEN by the (prompt-injected) caller instead of drawn at random.  CryptoVerif still proves the injective query, WITHOUT the birthday term: replay SAFETY comes from the store (one acceptance per key), random nonces only bound spurious rejections of distinct honest actions (a liveness cost). *)
+(* PCA -- computational REPLAY freedom (CryptoVerif 2.13, channels front-end).
+   The honest agent signs actions  act = (aud, verb, res, grant_ref, ctr, nonce, exp)  and draws the nonce uniformly
+   from a large space (the implementation's random nonce).  The verifier checks the leaf signature and then CONSUMES the
+   one-time key (aud, grant_ref, holder, nonce): an atomic put-if-absent on the store (table get/insert with no
+   interleaving, the contract of replay.ts consumeOnce).
+   Proved (auto):  inj-event(Accept(act)) ==> inj-event(Signed(act))  -- every acceptance is paired with its OWN
+   honest signing (no signed action is accepted twice: replay freedom), up to
+   Psign (UF-CMA of the signature) + the birthday term  N^2/|nonce_t|  for two honest actions drawing the same nonce.
+   Plain-correspondence companion: Accept(act) ==> Signed(act) (leaf authenticity).
+   Assumption: keys not corrupted; the agent's nonce is random (an implementation that lets the prompt choose the nonce
+   is the symbolic NO-hygiene case handled in ProVerif/Tamarin, not here).  The NEGATIVE control drops the store check:
+   the injective query must then be unprovable. *)
+param N, N2.
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type nonce_t [large, fixed].
+type audience. type verb_t. type res_t. type gref_t. type ctr_t. type exp_t.
+proba Psign.
+proba Psigncoll.
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+fun mkact(audience, verb_t, res_t, gref_t, ctr_t, nonce_t, exp_t): message [data].
+
+table seen(audience, gref_t, nonce_t).
+
+event Signed(message).
+event Accept(message).
+query a: message; event(Accept(a)) ==> event(Signed(a)).
+query a: message; inj-event(Accept(a)) ==> inj-event(Signed(a)).
+
+channel c0, cA, cA2, cV, cV2.
+
+let Agent(skH: skey) =
+  ! N
+  in(cA, (aud: audience, vb: verb_t, rs: res_t, gref: gref_t, ctr: ctr_t, ex: exp_t, nonce: nonce_t));
+  let act = mkact(aud, vb, rs, gref, ctr, nonce, ex) in
+  event Signed(act);
+  out(cA2, (act, sign(act, skH))).
+
+let Verifier(pkH: pkey) =
+  ! N
+  in(cV, (aud: audience, vb: verb_t, rs: res_t, gref: gref_t, ctr: ctr_t, nonce: nonce_t, ex: exp_t, asg: signature));
+  let act = mkact(aud, vb, rs, gref, ctr, nonce, ex) in
+  if check(act, pkH, asg) then
+  get seen(=aud, =gref, =nonce) in yield else    (*-NO_STORE*)
+  insert seen(aud, gref, nonce);                 (*-NO_STORE*)
+  event Accept(act);
+  out(cV2, ()).
+
+process
+  in(c0, ());
+  new rkH: keyseed; let pkH = pkgen(rkH) in let skH = skgen(rkH) in
+  out(c0, pkH);
+  ( Agent(skH) | Verifier(pkH) )

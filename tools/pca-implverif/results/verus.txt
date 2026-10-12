@@ -1,0 +1,8 @@
+== core_checks
+verification results:: 17 verified, 0 errors
+== b64u_strict
+verification results:: 32 verified, 0 errors
+== bounded_reader
+verification results:: 7 verified, 0 errors
+Verus
+  Version: 0.2026.10.04.426d8b0

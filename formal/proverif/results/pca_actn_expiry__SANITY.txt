@@ -1,0 +1,3 @@
+sanity1 | 0s | RESULT not event(Accept(exp_4,t0,n,hol)) is false.
+sanity2 | 0s | RESULT not event(Accept(exp_4,t1,n,hol)) is false.
+sanity3 | 0s | RESULT not event(Accept(t2,t2,n,hol)) is false.

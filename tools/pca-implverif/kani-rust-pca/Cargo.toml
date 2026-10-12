@@ -1,0 +1,19 @@
+[package]
+name = "atlas-pca-kani"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/kroot.rs"
+
+[dependencies]
+ed25519-dalek = "2"
+curve25519-dalek = "4"
+sha2 = "0.10"
+serde_json = { version = "1", features = ["float_roundtrip"] }
+base64 = "0.22"
+fips204 = "0.4"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow" }

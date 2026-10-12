@@ -1,0 +1,2 @@
+sanity1 | 0s | RESULT not event(Accepted(m,l_4)) is false.
+sanity2 | 0s | RESULT not (event(Accepted(m,l_4)) && event(Signed(c1,m,l_4)) && event(Signed(c2,m,l_4))) is false.

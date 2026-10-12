@@ -1,0 +1,23 @@
+df_fence_2c                        expect=pass got=pass OK           2s  2689 gen 1242 distinct 
+df_fence_3c_2rec                   expect=pass got=pass OK           7s  471829 gen 152114 distinct 
+df_fence_3c_no_headcheck           expect=pass got=pass OK          10s  615913 gen 201932 distinct 
+df_fence_3c_3rec                   expect=pass got=pass OK          30s  2878375 gen 771056 distinct 
+df_fence_4c_1rec                   expect=pass got=pass OK           6s  254153 gen 97904 distinct 
+df_bad_no_fence                    expect=fail got=fail OK           1s  326 gen 237 distinct Error: Invariant NoStaleAccepted is violated.
+df_bad_no_fence_safe               expect=fail got=fail OK           0s  219 gen 163 distinct Error: Invariant Safe is violated.
+df_bad_no_head_repair              expect=fail got=fail OK           2s  5852 gen 3744 distinct Error: Invariant ReadableUnlessStale is violated.
+df_bad_naive_order                 expect=fail got=fail OK           0s  146 gen 109 distinct Error: Invariant Safe is violated.
+df_bad_no_pin                      expect=fail got=fail OK           0s  318 gen 233 distinct Error: Invariant Safe is violated.
+df_rcrash_takeover_3c              expect=pass got=pass OK          18s  1119079 gen 461048 distinct 
+df_rcrash_takeover_3c_2x           expect=pass got=pass OK          64s  4194487 gen 1652702 distinct 
+df_rcrash_rerun_3c                 expect=pass got=pass OK           6s  285769 gen 113888 distinct 
+df_rcrash_both_3c_2rec             expect=pass got=pass OK        1133s  86395087 gen 27109250 distinct 
+df_live_takeover_2c                expect=pass got=pass OK           7s  33329 gen 17507 distinct 
+df_live_rerun_2c                   expect=pass got=pass OK           6s  11151 gen 6619 distinct 
+df_live_takeover_3c                expect=pass got=pass OK          23s  75937 gen 41230 distinct 
+df_live_bad_no_rerun               expect=fail got=fail OK           2s  3441 gen 2077 distinct Error: Temporal property NoWedge was violated.
+df_bad_takeover_nofence            expect=fail got=fail OK           1s  624 gen 433 distinct Error: Invariant NoStaleAccepted is violated.
+df_bad_takeover_nofence_safe       expect=fail got=fail OK           1s  687 gen 474 distinct Error: Invariant Safe is violated.
+df_bad_no_inherit                  expect=fail got=fail OK           2s  16066 gen 7834 distinct Error: Invariant Safe is violated.
+df_bad_fence_rmw                   expect=fail got=fail OK           6s  330966 gen 141545 distinct Error: Invariant Safe is violated.
+mismatches: 0

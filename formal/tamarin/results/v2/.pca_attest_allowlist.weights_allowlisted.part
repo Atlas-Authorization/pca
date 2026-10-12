@@ -1,0 +1,2 @@
+  weights_allowlisted (all-traces): verified (4 steps)
+# wall=1s heuristic=c tamarin-prover 1.12.0

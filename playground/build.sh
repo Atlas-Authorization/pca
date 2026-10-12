@@ -12,7 +12,9 @@ cd "$ROOT"
 "$ES" tools/pca-playground/entry.ts --bundle --format=esm --platform=browser --target=es2022 \
   --alias:node:module=./tools/pca-playground/shims/node-module.js \
   --alias:node:path=./tools/pca-playground/shims/node-path.js \
-  --outfile="$HERE/pca.esm.js"
+  --alias:node:crypto=./tools/pca-playground/shims/node-crypto.js \
+  --outfile="${PLAYGROUND_OUT:-$HERE/pca.esm.js}"
+OUTF="${PLAYGROUND_OUT:-$HERE/pca.esm.js}"
 # the bundle must not reference any Node builtin
-if grep -nE "from ['\"]node:|require\(['\"]node:" "$HERE/pca.esm.js"; then echo "bundle still references node: builtins" >&2; exit 1; fi
-echo "built $HERE/pca.esm.js"
+if grep -nE "from ['\"]node:|require\(['\"]node:" "$OUTF"; then echo "bundle still references node: builtins" >&2; exit 1; fi
+echo "built $OUTF"

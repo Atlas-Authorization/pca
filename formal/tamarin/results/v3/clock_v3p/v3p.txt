@@ -1,0 +1,5 @@
+  executable_accept (exists-trace): verified (4 steps)
+  executable_after_tick (exists-trace): verified (6 steps)
+  stale_accept_exists (exists-trace): verified (7 steps)
+  snapshot_expiry (all-traces): verified (59 steps)
+  no_accept_after_expiry_realtime (all-traces): falsified - found trace (7 steps)

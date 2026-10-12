@@ -1,0 +1,492 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 75 and seed -3286717488143285614 with 4 workers on 4 cores with 2731MB heap and 64MB offheap memory [pid: 1368784] (Linux 6.17.0-1022-azure amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/jobs/q261011-054636-jy2u/ws/formal/tla/DurableFence.tla
+Parsing file /tmp/tlc-5450286049557783390/Integers.tla (jar:file:/work/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-5450286049557783390/FiniteSets.tla (jar:file:/work/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-5450286049557783390/Sequences.tla (jar:file:/work/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-5450286049557783390/_TLCTrace.tla (jar:file:/work/tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-5450286049557783390/Naturals.tla (jar:file:/work/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-5450286049557783390/TLC.tla (jar:file:/work/tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-5450286049557783390/TLCExt.tla (jar:file:/work/tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module DurableFence
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module DurableFence
+Starting... (2026-10-11 06:40:17)
+Implied-temporal checking--satisfiability problem has 2 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-11 06:40:17.
+Progress(27) at 2026-10-11 06:40:19: 3,441 states generated, 2,077 distinct states found, 0 states left on queue.
+Checking 2 branches of temporal properties for the complete state space with 4154 total distinct states at (2026-10-11 06:40:19)
+Error: Temporal property NoWedge was violated.
+
+Error: The following behavior constitutes a counter-example:
+
+State 1: <Initial predicate>
+/\ robbed = {}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  1 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "acq")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "idle"
+/\ rdgen = {}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> -1)
+/\ rS = <<>>
+/\ rg = -1
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 0
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 2: <Acq(c2) line 165, col 11 to line 168, col 134 of module DurableFence>
+/\ robbed = {}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "rd")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "idle"
+/\ rdgen = {}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<>>
+/\ rg = -1
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 0
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 3: <Rd(c2) line 188, col 10 to line 193, col 133 of module DurableFence>
+/\ robbed = {}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "chk1")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "idle"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<>>
+/\ rg = -1
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 0
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 4: <Chk1(c2) line 199, col 12 to line 200, col 146 of module DurableFence>
+/\ robbed = {}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "jren")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "idle"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<>>
+/\ rg = -1
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 0
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 5: <JRen(c2) line 206, col 12 to line 211, col 124 of module DurableFence>
+/\ robbed = {}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "chk2")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "idle"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<>>
+/\ rg = -1
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 0
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 6: <RTop line 233, col 9 to line 238, col 124 of module DurableFence>
+/\ robbed = {}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "chk2")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "lockop"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<>>
+/\ rg = 0
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 1
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 7: <Chk2(c2) line 212, col 12 to line 213, col 146 of module DurableFence>
+/\ robbed = {}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "hren")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "lockop"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<>>
+/\ rg = 0
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 1
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 8: <RLockOp line 239, col 12 to line 244, col 133 of module DurableFence>
+/\ robbed = {c2}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "held", o |-> "op", rc |-> TRUE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "hren")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "readS"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<>>
+/\ rg = 0
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 1
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 9: <RReadS line 245, col 11 to line 247, col 130 of module DurableFence>
+/\ robbed = {c2}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "held", o |-> "op", rc |-> TRUE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "hren")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "fence"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<[g |-> 0, w |-> c2]>>
+/\ rg = 0
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 1
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 0, h |-> <<>>, g |-> 0]
+
+State 10: <HRen(c2) line 214, col 12 to line 218, col 133 of module DurableFence>
+/\ robbed = {c2}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "held", o |-> "op", rc |-> TRUE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {}
+/\ pc = (c1 :> "acq" @@ c2 :> "rel")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "fence"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<[g |-> 0, w |-> c2]>>
+/\ rg = 0
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 1
+/\ stale = {}
+/\ cutG = -1
+/\ acked = {c2}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 1, h |-> <<[g |-> 0, w |-> c2]>>, g |-> 0]
+
+State 11: <RFence line 248, col 11 to line 252, col 117 of module DurableFence>
+/\ robbed = {c2}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "held", o |-> "op", rc |-> TRUE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {[h |-> <<[g |-> 0, w |-> c2]>>, g |-> 1, s |-> 1]}
+/\ pc = (c1 :> "acq" @@ c2 :> "rel")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "link"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<[g |-> 0, w |-> c2]>>
+/\ rg = 0
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 1
+/\ stale = {}
+/\ cutG = 1
+/\ acked = {c2}
+/\ ncrash = 0
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 1, h |-> <<[g |-> 0, w |-> c2]>>, g |-> 0]
+
+State 12: <ROpCrash line 260, col 13 to line 263, col 128 of module DurableFence>
+/\ robbed = {c2}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "held", o |-> "opdead", rc |-> TRUE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {[h |-> <<[g |-> 0, w |-> c2]>>, g |-> 1, s |-> 1]}
+/\ pc = (c1 :> "acq" @@ c2 :> "rel")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "idle"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<[g |-> 0, w |-> c2]>>
+/\ rg = 0
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 1
+/\ stale = {}
+/\ cutG = 1
+/\ acked = {c2}
+/\ ncrash = 1
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 1, h |-> <<[g |-> 0, w |-> c2]>>, g |-> 0]
+
+State 13: <Rel(c2) line 219, col 11 to line 223, col 141 of module DurableFence>
+/\ robbed = {c2}
+/\ lj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ lk = ( 0 :> [st |-> "held", o |-> c2, rc |-> FALSE] @@
+  1 :> [st |-> "held", o |-> "opdead", rc |-> TRUE] @@
+  2 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  3 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  4 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  5 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  6 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  7 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  8 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  9 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  10 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  11 :> [st |-> "absent", o |-> "-", rc |-> FALSE] @@
+  12 :> [st |-> "absent", o |-> "-", rc |-> FALSE] )
+/\ journal = <<[g |-> 0, w |-> c2]>>
+/\ fences = {[h |-> <<[g |-> 0, w |-> c2]>>, g |-> 1, s |-> 1]}
+/\ pc = (c1 :> "acq" @@ c2 :> "done")
+/\ tcj = (c1 :> <<>> @@ c2 :> <<>>)
+/\ rpc = "idle"
+/\ rdgen = {0}
+/\ rF = {}
+/\ mygen = (c1 :> -1 @@ c2 :> 0)
+/\ rS = <<[g |-> 0, w |-> c2]>>
+/\ rg = 0
+/\ tfs = (c1 :> {} @@ c2 :> {})
+/\ nrec = 1
+/\ stale = {}
+/\ cutG = 1
+/\ acked = {c2}
+/\ ncrash = 1
+/\ seen = (c1 :> {} @@ c2 :> {} @@ "op" :> {})
+/\ head = [seq |-> 1, h |-> <<[g |-> 0, w |-> c2]>>, g |-> 0]
+
+State 14: Stuttering
+Finished checking temporal properties in 00s at 2026-10-11 06:40:19
+3441 states generated, 2077 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 27.
+Finished in 01s at (2026-10-11 06:40:19)
+Trace exploration spec path: ./DurableFence_TTrace_1791700817.tla

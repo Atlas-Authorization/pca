@@ -1,0 +1,165 @@
+/*
+  PCA -- risk-adaptive threshold step-up (symbolic Dolev-Yao model, Tamarin).
+
+  Models packages/pca/src/threshold.ts (signerSetHash, shareMessage, verifyThreshold) and the step-up
+  flow of approvals.ts.  A signer set registers ONE key per role (agent, guardian, principal); a share is a
+  signature by the role's key over
+
+        shareMessage = <'share', role, h(message), signerSetHash, t>              (v2.1: every role)
+
+  and the verifier accepts when >= t DISTINCT role keys supplied valid shares.  The agent's leaf signature
+  over the bare message is admitted as the agent's effective-t=1 baseline (AgentLeafBaseline).
+
+  The adversary is Dolev-Yao and may Reveal any subset of keys (a compromised agent is the normal case).
+  Several signer sets (deployments) may share the same principal key -- that is what makes cross-context
+  replay of a share meaningful.
+
+  Attack-variant switches (pass with  -D=NAME ):
+    UNBOUND_SHARE   share message = <'share', h(message)> only (no role / signer set / t binding)
+    NO_DISTINCT     the verifier counts duplicate shares of one key twice (no distinct-key accounting)
+    NO_SET_DISTINCT signer-set validation is dropped (one key may be registered under two roles)
+  With no switch the model is the shipped verifier.
+*/
+theory PCA_Threshold
+begin
+
+builtins: signing, hashing
+
+rule Gen_Key:
+  [ Fr(~ltk) ] --[ KeyGen(pk(~ltk)) ]-> [ !Ltk(pk(~ltk), ~ltk), Out(pk(~ltk)) ]
+
+rule Reveal:
+  [ !Ltk(pkx, ltk) ] --[ Reveal(pkx) ]-> [ Out(ltk) ]
+
+// ---- signer set registration (operator configuration, signerSetHash binds role+key triples) ----
+rule Register_Set:
+  [ !Ltk(pkA, la), !Ltk(pkG, lg), !Ltk(pkP, lp) ]
+  --[ SetReg(h(<'ss', pkA, pkG, pkP>)), SetDistinct(pkA, pkG, pkP) ]->
+  [ !Set(h(<'ss', pkA, pkG, pkP>), pkA, pkG, pkP) ]
+
+#ifdef NO_SET_DISTINCT
+#else
+restriction set_keys_distinct:
+  "All a g p #i. SetDistinct(a, g, p) @ i ==> not (a = g) & not (a = p) & not (g = p)"
+#endif
+
+// ---- share message: role / signer-set / t bound (shareMessage) or unbound (variant) -------------
+#ifdef UNBOUND_SHARE
+rule Sign_Share:   // honest key owner signs the (unbound) share
+  [ !Ltk(pkR, ltkR), !Set(ss, pkA, pkG, pkP), In(<role, m, t>) ]
+  --[ KeyRole(role, pkR, ss, pkA, pkG, pkP), Issued(role, pkR, m, ss, t) ]->
+  [ Out(sign(<'share', h(m)>, ltkR)) ]
+#else
+rule Sign_Share:
+  [ !Ltk(pkR, ltkR), !Set(ss, pkA, pkG, pkP), In(<role, m, t>) ]
+  --[ KeyRole(role, pkR, ss, pkA, pkG, pkP), Issued(role, pkR, m, ss, t) ]->
+  [ Out(sign(<'share', role, h(m), ss, t>, ltkR)) ]
+#endif
+
+// the agent's leaf signature over the BARE message (the effective t=1 baseline). It is DOMAIN-SEPARATED from
+// share messages ('atlas-pca/actn/v2' prefix vs 'atlas-pca/share/<role>'): modelled by the 'leafmsg' tag.
+rule Agent_Leaf_Sign:
+  [ !Ltk(pkR, ltkR), In(m) ] --[ AgentLeafSigned(pkR, m) ]-> [ Out(sign(<'leafmsg', m>, ltkR)) ]
+
+restriction key_role:
+  "All role pkR ss a g p #i. KeyRole(role, pkR, ss, a, g, p) @ i
+     ==> ((role = 'agent') & (pkR = a)) | ((role = 'guardian') & (pkR = g)) | ((role = 'principal') & (pkR = p))"
+
+// ---- verifier: per-role slot checks produce a slot token, accept rules count slot tokens --------
+#ifdef UNBOUND_SHARE
+rule Slot_Agent:
+  [ !Set(ss, pkA, pkG, pkP), In(<m, t, sg>) ]
+  --[ Eq(verify(sg, <'share', h(m)>, pkA), true) ]-> [ SlotA(m, ss, t) ]
+rule Slot_Guardian:
+  [ !Set(ss, pkA, pkG, pkP), In(<m, t, sg>) ]
+  --[ Eq(verify(sg, <'share', h(m)>, pkG), true) ]-> [ SlotG(m, ss, t) ]
+rule Slot_Principal:
+  [ !Set(ss, pkA, pkG, pkP), In(<m, t, sg>) ]
+  --[ Eq(verify(sg, <'share', h(m)>, pkP), true) ]-> [ SlotP(m, ss, t) ]
+#else
+rule Slot_Agent:
+  [ !Set(ss, pkA, pkG, pkP), In(<m, t, sg>) ]
+  --[ Eq(verify(sg, <'share', 'agent', h(m), ss, t>, pkA), true) ]-> [ SlotA(m, ss, t) ]
+rule Slot_Guardian:
+  [ !Set(ss, pkA, pkG, pkP), In(<m, t, sg>) ]
+  --[ Eq(verify(sg, <'share', 'guardian', h(m), ss, t>, pkG), true) ]-> [ SlotG(m, ss, t) ]
+rule Slot_Principal:
+  [ !Set(ss, pkA, pkG, pkP), In(<m, t, sg>) ]
+  --[ Eq(verify(sg, <'share', 'principal', h(m), ss, t>, pkP), true) ]-> [ SlotP(m, ss, t) ]
+#endif
+// agent slot may ALSO be filled by the leaf-signature baseline (verifyThreshold's `baseline`)
+rule Slot_Agent_Baseline:
+  [ !Set(ss, pkA, pkG, pkP), In(<m, t, sg>) ]
+  --[ Eq(verify(sg, <'leafmsg', m>, pkA), true) ]-> [ SlotA(m, ss, t) ]
+
+restriction Equality: "All x y #i. Eq(x, y) @ i ==> x = y"
+
+// ---- accept rules: t = 1 (agent leaf baseline), t = 2 (any two DISTINCT roles), t = 3 (all) -------
+rule Accept_T1:
+  [ !Set(ss, pkA, pkG, pkP), In(<m, sg>) ]
+  --[ Eq(verify(sg, <'leafmsg', m>, pkA), true), Accept(m, ss, '1', pkA, pkG, pkP) ]-> [ ]
+
+rule Accept_T2_AG:
+  [ SlotA(m, ss, '2'), SlotG(m, ss, '2'), !Set(ss, pkA, pkG, pkP) ]
+  --[ Accept(m, ss, '2', pkA, pkG, pkP) ]-> [ ]
+rule Accept_T2_AP:
+  [ SlotA(m, ss, '2'), SlotP(m, ss, '2'), !Set(ss, pkA, pkG, pkP) ]
+  --[ Accept(m, ss, '2', pkA, pkG, pkP) ]-> [ ]
+rule Accept_T2_GP:
+  [ SlotG(m, ss, '2'), SlotP(m, ss, '2'), !Set(ss, pkA, pkG, pkP) ]
+  --[ Accept(m, ss, '2', pkA, pkG, pkP) ]-> [ ]
+rule Accept_T3:
+  [ SlotA(m, ss, '3'), SlotG(m, ss, '3'), SlotP(m, ss, '3'), !Set(ss, pkA, pkG, pkP) ]
+  --[ Accept(m, ss, '3', pkA, pkG, pkP) ]-> [ ]
+
+#ifdef NO_DISTINCT
+// variant: the same role's share is counted twice (no distinct-key accounting)
+rule Accept_T2_AA:
+  [ SlotA(m, ss, '2'), SlotA(m, ss, '2'), !Set(ss, pkA, pkG, pkP) ]
+  --[ Accept(m, ss, '2', pkA, pkG, pkP) ]-> [ ]
+rule Accept_T2_GG:
+  [ SlotG(m, ss, '2'), SlotG(m, ss, '2'), !Set(ss, pkA, pkG, pkP) ]
+  --[ Accept(m, ss, '2', pkA, pkG, pkP) ]-> [ ]
+rule Accept_T3_AAA:
+  [ SlotA(m, ss, '3'), SlotA(m, ss, '3'), SlotA(m, ss, '3'), !Set(ss, pkA, pkG, pkP) ]
+  --[ Accept(m, ss, '3', pkA, pkG, pkP) ]-> [ ]
+#endif
+
+// ---- sanity: honest step-up is executable --------------------------------------------------------
+lemma executable_t3:
+  exists-trace
+  "Ex m ss a g p #i #s. Accept(m, ss, '3', a, g, p) @ i & Issued('principal', p, m, ss, '3') @ s
+     & (All x #r. Reveal(x) @ r ==> F)"
+
+lemma executable_t2:
+  exists-trace
+  "Ex m ss a g p #i. Accept(m, ss, '2', a, g, p) @ i & (All x #r. Reveal(x) @ r ==> F)"
+
+// ---- LEMMA: step-up integrity ------------------------------------------------------------------
+// t = 3: the principal's (human's) share bound to THIS message, THIS signer set and t = 3 was issued,
+// unless the principal key itself was compromised.
+lemma stepup3_requires_principal:
+  "All m ss a g p #i. Accept(m, ss, '3', a, g, p) @ i
+     ==> (Ex #s. Issued('principal', p, m, ss, '3') @ s) | (Ex #r. Reveal(p) @ r)"
+
+// ... and likewise the guardian's (policy-VM-released) share.
+lemma stepup3_requires_guardian:
+  "All m ss a g p #i. Accept(m, ss, '3', a, g, p) @ i
+     ==> (Ex #s. Issued('guardian', g, m, ss, '3') @ s) | (Ex #r. Reveal(g) @ r)"
+
+// t = 2 with a compromised agent: the agent is t-1 short -- a guardian OR principal share bound to
+// (message, signer set, t = 2) must have been honestly issued.
+lemma stepup2_compromised_agent_insufficient:
+  "All m ss a g p #i. Accept(m, ss, '2', a, g, p) @ i
+     & (not (Ex #r. Reveal(g) @ r)) & (not (Ex #r. Reveal(p) @ r))
+     ==> (Ex #s. Issued('guardian', g, m, ss, '2') @ s) | (Ex #s. Issued('principal', p, m, ss, '2') @ s)"
+
+// t = 2 with ANY single compromised key (not only the agent): an honest share from a role whose
+// key was not revealed must exist (so t distinct keys really are required).
+lemma stepup2_one_compromised_key_insufficient:
+  "All m ss a g p #i. Accept(m, ss, '2', a, g, p) @ i
+     & (All x y #r1 #r2. Reveal(x) @ r1 & Reveal(y) @ r2 ==> x = y)
+     ==> (Ex #s. Issued('agent', a, m, ss, '2') @ s) | (Ex #s. AgentLeafSigned(a, m) @ s)
+       | (Ex #s. Issued('guardian', g, m, ss, '2') @ s) | (Ex #s. Issued('principal', p, m, ss, '2') @ s)"
+
+end

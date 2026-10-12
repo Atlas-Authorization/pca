@@ -1,0 +1,4 @@
+TIMEOUT-or-error after 900s (NOT proved): root_bound
+# wall=901s tamarin-prover 1.12.0
+TIMEOUT-or-error after 900s (NOT proved): node_bound
+# wall=901s tamarin-prover 1.12.0

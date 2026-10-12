@@ -1,0 +1,3 @@
+OPEN (NOT found): heap exhausted at +RTS -M16g after 957s: attack_lostupdate_bounded
+# wall=957s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_lostupdate_bounded --prove=nb_alloc_unique --prove=nb_debit_has_alloc --prove=nb_c1_debit_from pca_budget_v4.spthy +RTS -N4 -M16g
+# pcaq job q261011-074142-b4t6

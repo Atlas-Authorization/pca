@@ -1,0 +1,22 @@
+[
+{
+"name": "snap-gateway",
+"pkg": "pca-gateway",
+"file": "index.ts",
+"from": "  const frozen = snapshotConfig(opts, { keep: ['replayGuard', 'hooks'] });\n",
+"to": "  const frozen = opts;\n",
+"filters": [
+"mutation-kill-snapshot-r2"
+]
+},
+{
+"name": "snap-pqthr",
+"pkg": "pca-pq-threshold",
+"file": "index.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"mutation-kill-snapshot-r2"
+]
+}
+]

@@ -1,0 +1,168 @@
+# PCA implementation verification
+
+This page records what has been mechanically checked about the **shipping code** (not models) of the PCA verifiers, with which tool, at what scope, and what is **not** covered. Each result carries one of three scope labels:
+
+- **unbounded**: holds for all inputs of the stated type (no unwinding or length bound).
+- **full-size**: holds for every input up to the maximum the code itself accepts (the constant is stated).
+- **bounded-N**: holds for inputs up to a stated bound N only.
+
+Anything not listed here was not verified. Tool versions: Kani 0.68.0 (CBMC 6.11.0, nightly-2026-08-21), CBMC 6.11.0, Verus 0.2026.10.04.426d8b0 (rustc 1.98.1), Miri nightly (cargo-miri 0.1.0, 2026-10-08), Lean 4.34.1, valgrind (Ubuntu 24.04). All heavy runs were on cloud Linux x86_64 boxes. Drivers and proofs: `tools/pca-implverif/`; LESS harnesses: `tests/formal/` of the LESS fork.
+
+## 1. `sdks/rust-pca` (atlas-pca)
+
+Kani proofs run on a byte-identical copy of `src/lib.rs` plus one appended line that declares a child proof module (`tools/pca-implverif/kani-rust-pca/build.sh`). The library is not modified.
+
+| Property | Tool | Scope | Result |
+|---|---|---|---|
+| `split()` (RFC 6962 split point): result is a power of two with k < n <= 2k, no overflow/panic | Kani | **unbounded** over all n in [2, 2^53-1] (the full range `verify_inclusion` can pass; sizes come from `safe_int`) | verified |
+| `path_shape(index,size)`: no panic/overflow/OOB, path length <= 53, only `L`/`R`, for every index < size <= 2^53-1 | Kani | **unbounded** over that range | verified (581 s) |
+| `safe_int` / `number_error` on every i64 and every u64 JSON integer: returns the value iff \|x\| <= 2^53-1, otherwise rejects | Kani | **unbounded** (all 2^64 values each) | verified (i64 21 s, u64 8 s) |
+| `decode_b64u_strict` length check for any `usize` n | Kani | **unbounded** | the original unchecked `n * 4` overflowed for n > usize::MAX/4 (found by Kani); fixed with `checked_mul`; the guarded arithmetic is verified for every n |
+| `decode_b64u_strict` on arbitrary strings: no panic; accepted output re-encodes to the input | Kani | **bounded-4** bytes (bounded-6 exhausted 24 GB inside the `base64` crate; the unbounded algorithmic statement is `verus/b64u_strict.rs`) | see Run status |
+| `verify_pcactn_core_policy` aggregation (stubs follow the current oracles `verify_suite`, 5-argument `verify_chain_policy`; `format!` stubbed by a fixed non-empty string): Allow iff all nine named checks are present and true; each check's exact meaning for `ver`, `iat`/`exp`/`now` (validity), `aud`, `counter`, `grant_ref_bound`; 16-hop cap and non-empty chain enforced before the chain verifier is consulted; Allow implies every oracle succeeded; Deny always carries a reason | Kani with `stub` oracles | integers: **unbounded** (any i64); chain length: lengths {0,1,16,17} (the boundary classes of the cap); crypto/structure oracles (wire validation, Merkle, signatures, chain walk) are **nondeterministic stubs**, so this proves the aggregation logic only | **not concluded** (out of memory at 24 and 28 GB; see Run status) |
+
+The Verus files prove, for **all inputs**, Verus-subset transliterations of fragments of the shipping code. The link from the transliteration to the shipping source is by line correspondence, not a machine-checked refinement.
+
+| File | Proved (unbounded) | Verus result |
+|---|---|---|
+| `verus/core_checks.rs` | validity time comparisons (`exp>iat`, lifetime cap, saturating skew, expiry) exactly equal the spec predicate for all i64 `now` and safe-range iat/exp; verify_chain caveat-prefix loop is exactly "parent caveats are a prefix of child caveats"; **attenuation**: for any chain length and any (uninterpreted) caveat semantics, an action allowed by the leaf is allowed by every ancestor including the root; **distinct-role counting**: the threshold counter (share counts iff key not already counted, role registered, key equals the registered key, signature ok) equals the number of distinct valid roles, is at most 3, and cannot be inflated by duplicates or replays, given the registry injectivity that `verifyThreshold` enforces | 17 verified, 0 errors |
+| `verus/b64u_strict.rs` | strict base64url: decode(encode(b)) = b for all byte strings; a string is accepted iff it is the canonical encoding of some byte string (zero trailing bits, length mod 4 != 1, 64-char alphabet); therefore each byte string has exactly one accepted encoding | 32 verified, 0 errors |
+| `verus/bounded_reader.rs` | `BoundedReader` index arithmetic of `sdks/stark-pca` (the code that once wrapped on `pos+len`): `check_eor`, `read_slice`, `read_u8`, and the `checked_mul(32)` digest step are exact and cannot overflow for **any usize** | 7 verified, 0 errors |
+
+No `admit`/`assume` is used in any Verus file. Not proved: that the `base64` crate, `serde_json`, `sha2`, `ed25519-dalek`, `curve25519-dalek` and `fips204` are themselves correct; these are trusted dependencies.
+
+### Miri and unsafe
+
+`cargo miri test` over the whole conformance suite (290 vectors, primitives, threshold shares, JSON parse table, base64url table, keys): **no undefined behaviour** (Run status). `cargo geiger`/`cargo audit` output for the four Rust crates is in `tools/pca-implverif/results/`; `atlas-pca`, `stark-pca`, `folding-pca` and `stark-pca-plonky3` contain no `unsafe` of their own in the files in this repository (grep: zero matches in `src/`); unsafe in dependencies is outside the claim.
+
+## 2. `sdks/stark-pca` proof-byte reader
+
+| Property | Tool | Scope |
+|---|---|---|
+| `BoundedReader::read_slice(len)` with **any usize** len: succeeds iff len <= remaining, position never exceeds the buffer, no wrap | Kani on the real code | length argument unbounded; buffer <= 12 bytes (bounded-12); arithmetic proved for all sizes by Verus above |
+| `read_u8` / `read_array` / `read_u32` keep `pos <= len` | Kani | bounded-12 |
+| `read_many` allocation guard: a count larger than the remaining bytes is refused before `Vec::with_capacity` | Kani | count unbounded, buffer bounded-12 |
+| `check_batch_opening` never panics/overflows/indexes out of bounds on arbitrary bytes | Kani | bounded-12 bytes |
+
+Kani on the other crates (crate-owned code on the untrusted-input path; the proof-byte decoders themselves are `postcard` / `bincode` / `nova-snark`, i.e. dependencies):
+
+| Property | Tool | Scope |
+|---|---|---|
+| zkvm-pca/core `risk_raw` equals its specification for every u64 input/weight/floor and is <= S^2; tier ladder exact and monotone; budget gate and auto-admit exact for any kappa/budget; `scale()` total on any f64 | Kani | **unbounded** |
+| stark-pca-plonky3 `validate_bounds` accepts iff the five documented bounds hold (every u64 field, no u128 overflow, validated values below the Goldilocks order); `g_from_u128` reduction | Kani | **unbounded** |
+| stark-pca-plonky3 `hex256_limbs`: (lemma) the real `u32::from_str_radix(_, 16)` returns the big-endian value on every 8-hex-digit string; (gate) on every string of length <= 70, no panic and Ok iff exactly 64 lowercase hex digits; (values) on every 64-lowercase-hex string every limb is the big-endian word of its 8 digits | Kani | lemma and values **full-size** (all 16^8 / 16^64 inputs); gate **bounded-70** in length (the length check is the first statement, so longer strings are rejected identically) |
+| folding-pca `within_budget` equals the exact u128 sum test | Kani | any u64 costs, history length bounded-3 |
+
+Miri over the decoder drivers of these crates (`tools/pca-implverif/miri/`): genuine proof, truncations, boundary bytes at the first/last 8 and 8 sampled offsets, hostile length prefixes, garbage, and one honest verify: see Run status.
+
+## 3. LESS verifier (C, category 252)
+
+CBMC 6.11.0 on the patched fork (branch `atlas-verifier-hardening`, harnesses in `tests/formal/`). The only source transformation is `static const` to `const` in `fq_arith.h` function-local constants, which CBMC's front end rejects (`overlay.sh`, diff printed on every run). Every run has all memory and arithmetic checks on (bounds, pointer, pointer-overflow, signed/unsigned overflow, conversion, undefined shift, division by zero) and unwinding assertions on for every loop that is unrolled. Results: `tools/pca-implverif/results/less-cbmc-compositional.txt`.
+
+The monolithic runs (whole functions unrolled with symbolic data) did not finish at TARGET 192: RebuildGGM exhausted the SAT solver (MiniSat and CaDiCaL, 128 GB box), and crypto_sign_open / SampleChallenge ran for more than 5 hours without a verdict. The results below are instead **compositional**: each loop is proved by a base case and an inductive step (one verbatim iteration of the real loop body, executed from an arbitrary state that satisfies the loop invariant, must re-establish the invariant), and each caller is proved against the proved contracts of its callees. The loop bodies are extracted verbatim from the source by `gen-walk-step.py` / `gen-sc-step.py`, so the step obligations check the shipping code text, not a model. Because every iteration of a loop starts in some state satisfying the invariant, the step proofs cover every iteration without unrolling: the results are **unbounded** in the loop length (and in the number of rejection-sampling retries), and **full-size** in the data (every published-index array, every digest, every smlen up to 2^40).
+
+| Obligation | What is proved | TARGET 45 / 68 / 192 |
+|---|---|---|
+| RebuildGGM walk, base + step (`run-cbmc-rebuild-contract.sh`, `base`, `step_rebuild`) | Invariant: `nodes_used == S[1] - S[current]`, where the ghost `S[j]` counts the nodes at or after `j` (walk order) whose flag is "publish" and whose father's is not. From any invariant state, for any flag tree and any seed-tree contents, one real iteration is memory safe (every `stored_seeds` read lies inside an object of exactly `S[1]` seeds) and re-establishes the invariant; at exit exactly `S[1]` seeds were read. | verified (0 of 1346 failed) at all three |
+| CountPublishedSeeds walk, base + step (`step_count`) | Same invariant for `count`; at exit `count == S[1]`. | verified at all three |
+| Link (`link`) | CountPublishedSeeds and RebuildGGM build the same flag tree from the same indices on every node and father either walk reads (they initialise their arrays differently: `{NOT_TO_PUBLISH}` vs `{0}`); `label_leaves` / `compute_seeds_to_publish` are memory safe for every index array (constant-index loops, fully unrolled). | verified at all three |
+| Controls | `-DNEG_CONTROL` (stored-seed object one byte short): fails exactly at the stored-seed `memcpy`. `-DREACH_CONTROL`: the post-step state is reachable (assumptions are not vacuous). | both fail as required (TARGET 192) |
+| SampleChallenge base (`sc_base`) | The real function up to the shuffle loop establishes the shuffle invariant IB: exactly W non-zero entries, each in [1, NUM_KEYPAIRS-1], and `c <= 64`. Both rejection-sampling loops are handled by the loop-invariant rule (invariant `c <= 64`, asserted on entry and after one arbitrary iteration). | verified at all three |
+| SampleChallenge shuffle step | One real shuffle iteration preserves IB. TARGET 45 and 68: proved directly (`sc_step`). TARGET 192: the direct step (popcount over 192 entries after a symbolic swap) did not finish in 5 h, so it is decomposed: `sc_frame` proves one real iteration exchanges exactly the entries at `p` and `pos` (`pos <= p`) and changes nothing else; `verus/swap_count.rs` proves (Verus, unbounded) that exchanging two entries preserves the non-zero count and the entry range. The link from the Verus `cnt` to the C counting loop is by inspection (both count indices with a non-zero entry). | 45, 68: direct step verified; frame verified at all three; Verus 4 verified, 0 errors; reachability controls fail as required |
+| crypto_sign_open over proved contracts (`run-cbmc-open-contract.sh`) | For every smlen up to 2^40 and every byte content: memory safe, with SampleChallenge replaced by its proved contract, CountPublishedSeeds by a pure function (its safety and its equality with the number of seeds RebuildGGM reads are the walk results above), LESS_verify by its memory precondition (header plus exactly CountPublishedSeeds seeds lie inside the signature), hashing by extent-checking stubs. | **patched: verified (0 of 539 failed) at 45, 68, 192**; **unpatched control at 192: FAILED 19 of 528**, finding the read of `sm[smlen-1]` at smlen 0, the `smlen - sig_len` underflow with the resulting memcpy failures, and the seed-count precondition (RebuildGGM would read past the signature) |
+| CheckCanonicalAction then UnpackCosetRep (`harness_unpack.c`) | Memory safe for every N8-byte row (2^(8*N8) rows). | TARGET 192: 0 of 278 failed (full-size, 252 coordinates fully unrolled; the inner K-iteration column-copy loop is replaced by assertions on its two column indices, and the cardinality lemmas L1/L2 are asserted then assumed) |
+
+Remaining assumptions, stated: termination of the rejection-sampling loops is not proved (it holds with probability 1 over the SHAKE stream, not for every stream); SHAKE and the matrix/code layer are stubs that check the exact read/write extents and havoc outputs, so their own memory safety and functional correctness are outside these results; LESS_verify itself is represented only by its memory precondition (its body is not verified here); other parameter sets than category 252 are not covered. The earlier bounded monolithic results (crypto_sign_open patched at TARGET 45 and 68, 0 of 1163; unpatched control at 45, 19 of 1152) remain as supplementary checks.
+
+## 4. Side channels
+
+- `atlas-pca` verifies signatures, hashes and Merkle paths over **public** data (public keys, messages, signatures). No operation in the verifier handles a secret key, so no secret-dependent timing exists to test; verification timing depends only on public inputs. This is a statement about what the code takes as input, not a measurement.
+- The LESS signing path takes a secret key. valgrind memcheck with the secret key marked undefined (ctgrind, `tests/formal/ct_sign.c`, TARGET=45) reported 58 distinct error contexts (4.9 million events), at 40 distinct source sites: SHAKE absorb of key-derived seeds, rejection sampling (`fq_star_rnd_state_elements`, `SampleChallenge`), sorting (`sort.c` hoare partition and compare), canonical-form code (`canonical.c`), `GGMPath`/`compute_seeds_to_publish`, `CosetRep`, non-constant-time inversion (`fq_inv_non_ct`), and two sites in `LESS_sign` (`LESS.c:174`, `:231`). List in `tools/pca-implverif/results/less-ctgrind-sites.txt`. Memcheck taint over-approximates (values derived from the secret that are later published, such as the challenge, are flagged), so this is not a list of exploitable leaks; it is a list of places where control flow or addressing depends on key-derived data and must be argued individually. Several (`monomial_sample_prikey` rejection sampling, `CosetRep`, `fq_inv_non_ct`) are marked non-constant-time in the upstream source. The reference implementation is not a constant-time implementation.
+- Timing tests: see the Side channels section of Run status (component-level dudect, 10M samples each).
+- Assembly of the flagged functions was reviewed: see Run status.
+
+## 5. Independent reference cross-check (Lean 4)
+
+`tools/pca-implverif/lean-ref/` is an independent implementation, written from the RFCs and the conformance README and not from any verifier's source, of: SHA-256, SHA-512, strict base64url, the strict JSON profile, canonical JSON, RFC 6962 Merkle inclusion, strict Ed25519 verification (canonical encodings, small-order and torsion rejection, S < L), the wire-v2 validator and the nine-check decision procedure. It is compiled (Lean 4.34.1) and run on the conformance corpora:
+
+| Corpus | Result |
+|---|---|
+| `vectors.json` core (290 vectors) | 216 agree, **0 disagree**, 74 skipped (their expected verdict needs a post-quantum signature check: ML-DSA/SLH-DSA and hybrids; the reference does not implement them, exactly as the Rust verifier skips registered-but-unwired suites) |
+| `vectors-adversarial.json.gz` (4209 parser-differential vectors) | 4209 agree, **0 disagree** |
+| primitives: canonical 23, json_parse 125, b64u 81, Merkle proofs 15 | all agree |
+
+"Agree" means agreement with the corpus's expected verdicts. The corpus is the same one every shipped verifier is tested against, so this is evidence for the corpus's coverage and for implementation independence, not a proof of equivalence on inputs outside the corpus. This reference is a test oracle; it is not itself verified and is not linked to the Lean theorems in `formal/pca-lean`.
+
+## Run status (updated 2026-10-11, evening)
+
+Scope labels as above. Heavy runs were on the cloud farm (8 vCPU / 31 GB boxes, and one 128 GB box for the abandoned monolithic LESS runs), latterly as capped queue jobs (`cloud-box tooling/q`, owner `implverif`). Raw outputs: `tools/pca-implverif/results/`.
+
+### Concluded
+
+| Result | Scope | Outcome |
+|---|---|---|
+| **Miri**, full `sdks/rust-pca` conformance suite: all 290 vectors (29 shards), primitives, threshold shares, JSON-parse table, base64url table, keys | whole corpus; Miri nightly 2026-10-08, strict provenance, overflow checks on; interpreted execution of exactly these inputs | **no undefined behaviour**, 34 of 34 runs pass (`results/miri-rust-pca.txt`). `-Zmiri-symbolic-alignment-check` was dropped: it reports a false positive inside the `memchr` dependency (SSE2 aligned load) |
+| **Miri**, decoder drivers: `stark-pca` (winterfell proof decoder: genuine, truncations, boundary bytes, hostile 9-byte counts, garbage, honest verify) | the listed inputs | **no UB**, 6 of 6 tests pass |
+| **Miri**, `zkvm-pca/core` (`decide_from_str` on the sample input, truncations, byte mutants, garbage; strict base64url / Ed25519 decoders) | the listed inputs | **no UB**, 5 of 5 tests pass |
+| **Miri**, `stark-pca-plonky3` (postcard decoder: genuine, truncations, boundary bytes, hostile varints, trailing/empty) | the listed inputs | **no UB**, 5 of 5 decoder tests pass; the honest-verify test cannot run under Miri (inline assembly in a dependency's field arithmetic) |
+| **Miri**, `folding-pca` (bincode + nova-snark, aarch64 target), sharded by test name | the listed inputs, none reduced: the looping tests are split into parts `_pK` that take the inputs with index K mod N of the same full list (4 truncation, 8 boundary-byte, 2 hostile-prefix parts); `shards_cover_inputs` checks the partition; fixture embedded, so Miri isolation stays on; no `#[cfg(miri)]` reduction was needed (one full decode takes 650 s) | **partly concluded**: 12 of 17 tests pass, no UB (genuine, all 4 truncation parts, both hostile-prefix parts, boundary-byte parts 0, 1, 4, helpers, partition check). Boundary-byte parts 2, 3, 5, 6, 7 were still running when this was written (each takes about 55 to 65 min). `results/miri-folding-sharded.txt` |
+| Kani `split_full_range`, `path_shape_full_range` | unbounded (n, size <= 2^53-1) | verified (31 s, 581 s) |
+| Kani `safe_int_i64_full_range`, `safe_int_u64_full_range` | unbounded (all 2^64 values each) | verified (21 s, 8 s). The i64 harness previously exhausted CBMC memory: the cost was the `format!`/f64 `Display` path of `number_error`, which is unreachable for integer inputs; with `format!` stubbed (fixed non-empty string, faithful for every asserted property) it verifies |
+| Kani `decode_b64u_len_arith_guarded`; `decode_b64u_real_fn_any_n` | any usize n | guarded arithmetic verified; the real function **failed** before the fix (unchecked `n * 4`), see Bugs found |
+| Kani `decode_b64u_no_panic_bounded` / `_bounded4` | bounded-6 / bounded-4 | **not concluded**: bounded-6 exceeded 24 GB inside the `base64` crate; bounded-4 was cancelled unfinished. The algorithm is proved unbounded in Verus (`b64u_strict.rs`, transliteration) and the 81-row base64url table passes under Miri |
+| Kani `b64u_wrapper_contract_full` (written, not run): the real `decode_b64u_strict` with the `base64` decoder, `b64_encode`, `<slice::Iter<u8>>::all` and `<str>::eq` replaced by contracts (crate decode: Err or Ok with any contents of length <= n; encode: any string; `all` and `eq`: exact, encoded by an arbitrary-index / witness-index pair, no loop), on strings of any length < 2^40 and any `len`; asserts no panic and an exact characterisation of `Some` (alphabet at every index, n mod 4 != 1, length relation without overflow, crate decode Ok, re-encoding equal, decoded length = `len`) | would be full-size (every length the verifier can receive) | **not concluded**: never compiled or run (see the decision row below). Whether Kani 0.68 accepts the qualified trait-method stub paths is untested |
+| Kani `b64u_spec_vs_crate_le4` / `_le5` / `_le6` (written, not run): a spec strict base64url decoder equals `URL_SAFE_NO_PAD.decode(..).ok()` on every byte string (all 256 byte values) of length <= 4 / 5 / 6, unwind 9, CaDiCaL | bounded-4 / 5 / 6 | **not concluded**: never run |
+| Kani `decision_aggregation` (`verify_pcactn_core_policy` with crypto/structure oracles as nondeterministic stubs) | integers unbounded, chain length in {0, 1, 16, 17} | **not concluded**: the combined harness exceeded 24 GB; the split integer harness (`_ints`) exceeded 28 GB; the chain-cap split was cancelled unfinished. The cost is `serde_json::Value` maps and `BTreeMap` construction, not the decision logic. The time comparisons and the attenuation/threshold logic are proved unbounded in Verus (`core_checks.rs`) |
+| Kani compositional decision proof (written, not run): `decision_logic_abstract` runs the real `verify_pcactn_core_policy` with every serde_json map empty and `serde_json::Map::get` stubbed by a lookup in an abstract store (contract: returns the stored value or None), integer fields any i64 / any u64 / string / absent, cap_chain absent / non-array / array of any length < 2^32, every leaf oracle recorded; asserts the exact meaning of each of the nine checks, the order of the cap / caveat / root / chain-walk gates, and allow iff all checks pass. `json_abs_pcactn_shape` (7 fields, symbolic values) and `json_abs_map_get_k3` (up to 3 inserts over a 4-key universe) would prove that contract for the real `Map::get` / `Value::get` | integers unbounded, chain length < 2^32 (Layer 1); bounded maps (Layer 2) | **not concluded**: the first build failed (13 `#[kani::stub]` attributes exceed rustc's macro recursion limit). This is fixed by a crate root `src/kroot.rs` that sets the limit and loads the unmodified `lib.rs` as a module, but the fixed build never ran: the resubmitted jobs waited in a full queue and were cancelled when the budget ran out. `results/kani-compositional.txt` |
+| Kani zkvm-pca/core arithmetic (4 harnesses); `zk_decode_b64u_strict_bounded6` | unbounded; bounded-6 | 4 verified; `zk_decode_b64u_strict_bounded6` **not concluded** (exceeded 12 GB, then the 6 h limit at 28 GB) |
+| Kani stark-pca-plonky3 `validate_bounds`, `g_from_u128`, `hex256_limbs` lemma + gate + values | see section 2 | all verified (7 s, 1 s, 80 s, 1262 s, 980 s). The first monolithic `hex256_limbs` harness ran out of memory (CBMC exit 6 = `bad_alloc` under the cap; the cost was 8 real `from_str_radix` unrollings over 70 symbolic bytes); it was split into the std lemma plus a composition that stubs `from_str_radix` by exactly what the lemma proves. A later run failed on uppercase input: the source had meanwhile been tightened to lowercase-only hex (R6-ALIAS-06); the harnesses now state that spec |
+| Kani folding-pca `within_budget` | u64 costs, length bounded-3 | verified (34 s) |
+| Kani `BoundedReader` read_slice / read_u8+read_array / read_many guard / `check_batch_opening` (stark-pca) | any usize length, buffer bounded-12 | verified |
+| Verus `core_checks`, `b64u_strict`, `bounded_reader`, `swap_count` | unbounded | 17, 32, 7, 4 verified, 0 errors |
+| CBMC LESS: RebuildGGM + CountPublishedSeeds (base, link, inductive steps), SampleChallenge (base, step / frame + Verus lemma), crypto_sign_open over the proved contracts, unpatched control | TARGET 45, 68, 192; unbounded in loop length and retries; full-size in data | all verified; controls fail as required (section 3, `results/less-cbmc-compositional.txt`) |
+| CBMC `UnpackCosetRep` after `CheckCanonicalAction`, TARGET 192 | all 2^(8*N8) rows | 0 of 278 failed |
+| Lean reference verifier vs corpora | corpus | 216/216 core (74 PQ skipped), 4209/4209 adversarial |
+| cargo-audit / `unsafe` grep | four crates | only an "unmaintained" advisory; 0 `unsafe` in `src/` |
+
+### Side channels (LESS signing, cat 252 TARGET 45)
+
+**ctgrind (valgrind memcheck, secret key undefined).** Whole-key run: 58 contexts at 40 sites. The second run declassifies exactly what a signature publishes (the public-code seed `G_0_seed`, which is derived from the secret seed but is the first thing the public key fixes, and the digest, which is output) with a patched copy of `LESS.c`: **47 contexts remain, 32 distinct source lines** (`results/less-ctgrind-declass.raw.txt`; `tools/pca-implverif/ctsites.py` prints them). Site by site:
+
+| Sites | Secret-dependent? | Verdict |
+|---|---|---|
+| `SampleChallenge` utils.c:132/153/155; `rand_range_q_state_elements` in `generator_sample`; `compute_seeds_to_publish`, `GGMPath` seedtree.c:170/211; `LESS.c:231`; absorb of `G_0_seed`/digest | No after declassification: they branch on the public digest / public seed / challenge. They disappear in the declassified run. | false positives of taint over-approximation |
+| `fq_star_rnd_state_elements` fq_arith.h:84 (4 sites: `monomial_sample_salt`, `monomial_sample_prikey`, `blind` x2) | Branch is rejection sampling (`rnd_value <= SPAN`) on PRNG output seeded from a secret; the branch outcome reveals which candidate bytes were rejected. Rejected bytes are discarded and the accepted values are uniform, but the count of retries is a function of the secret seed. | **real, timing-visible**; confirmed by dudect (below); the upstream code marks it non-CT |
+| `fq_cond_sub` :95/:97, `fq_mul` :132 (reported as "use of uninitialised value of size 8") | The arithmetic is branch-free (mask from `sub_q >> NUM_BITS_Q`). The report is an address use: the value is only an index into later tables or copies. Assembly of `generator_monomial_mul` (`results/less-asm-review.s`): fully branch-free multiply-reduce loop (`mulb`, shift, `sarb`, mask) with the monomial permutation as the store index. | the arithmetic is CT; the permutation-indexed store (`tmp2[perm*K+j]`, codes.c:79/83, canonical.c:426) is a **secret-dependent address** (cache-line granularity), reported as :132/:175 |
+| `LESS.c:175` (`permuted_pivot_flags[mu_tilde.permutation[t]] = ...`) | Index is the ephemeral monomial permutation (secret per signature, not the long-term key). | real address dependence; cache-timing only |
+| `generator_RREF_pivot_reuse_ct` codes.c:186 (`swap_rows` with data-chosen row) and :195/:196 (pivot search loops) | Row index and loop trip counts depend on the matrix (which is derived from secrets). The `_ct` suffix holds only when pivots are reused (probability documented in `parameters.h` as non-CT with probability < 2^-64); the search loops still branch on zero tests. | real; confirmed by dudect (`rref`) |
+| `ImprovedCF`, `ScaleCF`, `ScaleCFSubPreprocess` (canonical.c:71,75,146,150,333,337,344) | Branch on zero counts / scaling-sum zero of matrix rows. Marked "NOTE: non-constant time" in the source. | real, timing-visible; confirmed by dudect (`blindcf`) |
+| `row_inv2`, `fq_inv_non_ct`, `row_acc_inv` (table `fq_inv_table[x]` with x secret) | Table lookup indexed by secret field elements (128-byte table, 2 cache lines). | real, cache-timing only |
+| `sort`, `SortRows` (sort.c:220, histogram `out[in[i]]++`), `SortCols_internal*` (hoare partition and compare, sort.c:352-417), `pointer_swap` | Histogram index and quicksort comparison/branches on matrix rows. | real, timing-visible |
+| `CosetRep` monomial.c:170 (`b[perm/8] ^= 1 << (perm%8)`) | Store address and shift amount from the secret action permutation (assembly: variable `sall %cl`, `xorb %dl,(%rdi,%rax)` with the loaded permutation as index). The output is the published signature component itself, but the timing/cache pattern reflects the pre-image order. | address dependence, bounded leakage; confirmed by dudect |
+
+Assembly was reviewed (gcc 13.3 -O2) for `generator_monomial_mul`, `CosetRep`, `sort`, `generator_RREF_pivot_reuse_ct`, `ScaleCF`, `ImprovedCF` (`results/less-asm-review.s`): the compiler keeps `fq_cond_sub`/`fq_red` branch-free; every flagged site in codes/sort/canonical is a conditional jump or indexed memory access on data that descends from the secret. The reference implementation is not constant time, as upstream states.
+
+**dudect-style timing tests**, fixed-vs-random input, cycle counter, one core pinned, interleaved random classes, Welch t at 8 percentile crops plus a second-order test, threshold |t| > 4.5. Every component also has a random-vs-random NULL control (same code path, both classes random) to establish the false-positive floor, and a deliberately leaky early-exit compare as positive control (`results/dudect-components.txt`):
+
+| Component (N = 10,000,000 each) | fixed vs random max \|t\| | NULL control |
+|---|---|---|
+| control (leaky compare) | 57187 (detected, as it must) | 2.8 |
+| `monomial_sample_prikey` | 750.7 **leak** | 0.93 |
+| `monomial_sample_salt` | 152.6 **leak** | 1.81 |
+| `generator_monomial_mul` | 99.7 **leak** (permutation-indexed stores) | 1.46 |
+| `CosetRep` | 68.8 **leak** | 1.43 |
+| `blind` + `CF` | 1669.6 **leak** | 1.66 |
+| `generator_RREF_pivot_reuse_ct` (N = 1,000,000) | 32.5 **leak** (pivot search and data-chosen row swaps) | 1.49 |
+
+Whole-signature test (`LESS_sign`, about 260 ms per call), 50,000 samples per class pair on a pinned core: fixed vs random max |t| = 1.36, random vs random NULL 1.90, i.e. **not detected at signature level**: the microsecond-scale component differences are buried in the 260 ms total at this sample count (10 million whole signatures would take about 30 core-days). The component tests above detect them with overwhelming significance. **Conclusion: LESS signing in this reference implementation has secret-dependent timing; it must not be deployed where an attacker can time signing.** This does not affect `atlas-pca` verification, which handles only public data.
+
+
+> **Warning: LESS signing (`less-cat1`, `hybrid-ed25519-less-cat1`).** The TypeScript path signs through `@atlasauth/pca-less-wasm`, which compiles this same reference C. Its signing is measurably not constant time (table above). Use LESS signing only where no untrusted party can time or repeatedly trigger it (offline or air-gapped issuance, or a single trusted process with no attacker-observable latency). Do not expose it as an online signing oracle. Verification is unaffected (public data). Call-site check (grep of the server and `packages/`): the reference server contains no LESS signing call; it only verifies and stores LESS-suite cosignatures. Signing is reachable only through the library entry points `lessCat1Sign` / the suite signer in `packages/pca/src/pq.ts` and `sign`/`keygen` exported by `packages/pca-less-wasm`, i.e. in whatever process the integrator embeds them.
+
+### Not verified at all
+
+JavaScript/TypeScript verifier behaviour; the Go, Python, Java, .NET, PHP, Ruby, Swift and Kotlin verifiers; the `base64`, `serde_json`, RustCrypto, dalek, `fips204`, `postcard`, `bincode` and `nova-snark` dependencies; compiled-code behaviour of anything except the LESS assembly review above; LESS_verify directly; other LESS parameter sets than category 252; constant-time behaviour of signing beyond the measurements above.
+
+### Bugs found
+
+None in the shipping Rust verifier. `decode_b64u_strict` multiplied an unchecked caller-supplied `len` by 4 (see Kani row); fixed with `checked_mul` (fails closed), with a regression test that panics on the old code under overflow checks. The LESS positive control reproduces the already-fixed upstream defects; LESS signing is measurably not constant time (above).

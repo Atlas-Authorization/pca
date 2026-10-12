@@ -1,0 +1,2 @@
+NO RESULT rc=251 (timeout/killed; NOT proved) alive_unique
+# wall=294s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=alive_unique --heuristic=O --oraclename=./oracle_clock.sh pca_clock_v3e.spthy +RTS -N4 -M10g

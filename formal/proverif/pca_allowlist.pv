@@ -1,0 +1,52 @@
+(* PCA -- allowlist manifest ROLLBACK and the transparency-ANCHOR fix.  ProVerif 2.05 port of the stateless content of
+   formal/tamarin/pca_allowlist_rollback.spthy.  Versions v0<v1<v2.  The operator signs manifest(v1) (allows mA, mB) in
+   phase 0 and manifest(v2) (revokes mB) in phase 1; verifiers are created in phase 2, i.e. AFTER v2 was published, and
+   the attacker delivers any manifest it has seen (it saw both).
+   ProVerif cannot express the verifier's local "last seen version" cell (its tables/private channels are
+   monotone sets, so a stale cell is always re-readable and 'rollback' would be a spurious artefact); the Tamarin
+   linear-fact model covers that.  What IS expressible, and is the point of the anchor, is the stateless check:
+   the verifier is created fresh (STATE_WIPE: no local memory), challenges the log head service with a fresh nonce n,
+   and accepts manifest version ver only if  ver >= head  where head = log-signed (head, n).
+   Variants (gen.sh):  STATE_WIPE (no anchor check at all: local memory lost) -> rollback attack
+                       ANCHOR_REPLAY (head signature NOT bound to the verifier nonce: an old head is replayable) -> attack
+                       (default = ANCHORED with fresh head) -> rollback impossible
+                       SANITY *)
+free c: channel.
+const v0, v1, v2, mA, mB: bitstring [data].
+fun pk(bitstring): bitstring.
+fun sign(bitstring, bitstring): bitstring.
+fun mfk(bitstring): bitstring [data].
+fun chk(bitstring, bitstring): bitstring
+  reduc forall m: bitstring, k: bitstring; chk(sign(m, k), pk(k)) = m.
+
+event Acc(bitstring).
+event AttOk(bitstring, bitstring).
+(*Q:no_manifest_rollback*) query event(Acc(v1)).
+(*Q:no_manifest_rollback_v0*) query event(Acc(v0)).
+(*Q:revoked_never_attested_v2*) query event(AttOk(mB, v2)).
+(*Q:revoked_never_attested_v1*) query event(AttOk(mB, v1)).
+(*+SANITY*) (*Q:sanity1*) query event(Acc(v2)).
+(*+SANITY*) (*Q:sanity2*) query event(AttOk(mA, v2)).
+
+let HeadSvc(hv: bitstring, ksl: bitstring) =
+  !( in(c, n: bitstring); out(c, sign((hv, n), ksl)) ) .                            (*-ANCHOR_REPLAY*)
+(*+ANCHOR_REPLAY*) out(c, sign(hv, ksl)).
+
+let Verifier(pkop: bitstring, pklog: bitstring) =
+  new n: bitstring;
+  out(c, n);
+  in(c, (mf: bitstring, hs: bitstring));
+  let mfk(ver) = chk(mf, pkop) in
+  let (hv: bitstring, =n) = chk(hs, pklog) in                                       (*-ANCHOR_REPLAY,STATE_WIPE*)
+(*+ANCHOR_REPLAY*) let hv = chk(hs, pklog) in
+  if hv = v0 || (hv = v1 && (ver = v1 || ver = v2)) || (hv = v2 && ver = v2) then                                                       (*-STATE_WIPE*)
+  event Acc(ver);
+  in(c, m: bitstring);
+  if (ver = v1 && (m = mA || m = mB)) || (ver = v2 && m = mA) then event AttOk(m, ver).
+
+process
+  new kop: bitstring; new kl: bitstring;
+  out(c, (pk(kop), pk(kl)));
+  ( out(c, sign(mfk(v1), kop)) | HeadSvc(v1, kl)
+  | phase 1; ( out(c, sign(mfk(v2), kop)) | HeadSvc(v2, kl)
+  | phase 2; ( HeadSvc(v2, kl) | !Verifier(pk(kop), pk(kl)) ) ) )

@@ -1,0 +1,514 @@
+==638635== Memcheck, a memory error detector
+==638635== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==638635== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==638635== Command: /tmp/tmp.Pp5rBhu8DC/ct memcheck
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10C889: fq_star_rnd_state_elements (fq_arith.h:84)
+==638635==    by 0x10C889: monomial_sample_salt (monomial.c:48)
+==638635==    by 0x10BE80: LESS_sign (LESS_declass.c:166)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x1095F5: fq_cond_sub (fq_arith.h:97)
+==638635==    by 0x1095F5: fq_red (fq_arith.h:105)
+==638635==    by 0x1095F5: fq_mul (fq_arith.h:132)
+==638635==    by 0x1095F5: generator_monomial_mul (codes.c:82)
+==638635==    by 0x10BE95: LESS_sign (LESS_declass.c:170)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10BEBC: LESS_sign (LESS_declass.c:175)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x109393: memcpy (string_fortified.h:29)
+==638635==    by 0x109393: swap_rows (codes.c:44)
+==638635==    by 0x1096A0: generator_RREF_pivot_reuse_ct (codes.c:186)
+==638635==    by 0x10BEE8: LESS_sign (LESS_declass.c:177)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x109415: memcpy (string_fortified.h:29)
+==638635==    by 0x109415: swap_rows (codes.c:44)
+==638635==    by 0x1096A0: generator_RREF_pivot_reuse_ct (codes.c:186)
+==638635==    by 0x10BEE8: LESS_sign (LESS_declass.c:177)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x109728: generator_RREF_pivot_reuse_ct (codes.c:195)
+==638635==    by 0x10BEE8: LESS_sign (LESS_declass.c:177)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10973E: generator_RREF_pivot_reuse_ct (codes.c:196)
+==638635==    by 0x10BEE8: LESS_sign (LESS_declass.c:177)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10F559: fq_star_rnd_state_elements (fq_arith.h:84)
+==638635==    by 0x10F559: blind (canonical.c:412)
+==638635==    by 0x10BF38: LESS_sign (LESS_declass.c:189)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10F68E: fq_star_rnd_state_elements (fq_arith.h:84)
+==638635==    by 0x10F68E: blind (canonical.c:415)
+==638635==    by 0x10BF38: LESS_sign (LESS_declass.c:189)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10A259: fq_cond_sub (fq_arith.h:97)
+==638635==    by 0x10A259: fq_red (fq_arith.h:105)
+==638635==    by 0x10A259: fq_mul (fq_arith.h:132)
+==638635==    by 0x10A259: normalized_monomial_right (codes.c:642)
+==638635==    by 0x10F5E4: blind (canonical.c:419)
+==638635==    by 0x10BF38: LESS_sign (LESS_declass.c:189)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10F61E: fq_mul (fq_arith.h:132)
+==638635==    by 0x10F61E: row_mul2 (fq_arith.h:238)
+==638635==    by 0x10F61E: blind (canonical.c:426)
+==638635==    by 0x10BF38: LESS_sign (LESS_declass.c:189)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10EEE6: ImprovedCF (canonical.c:333)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10EEF3: ImprovedCF (canonical.c:337)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10EEB6: ImprovedCF (canonical.c:344)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10F251: row_inv2 (fq_arith.h:260)
+==638635==    by 0x10F251: ImprovedCF (canonical.c:364)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10F1BD: ScaleCFSubPreprocess (canonical.c:146)
+==638635==    by 0x10F1BD: ImprovedCF (canonical.c:369)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10F1C6: fq_inv_non_ct (fq_arith.h:155)
+==638635==    by 0x10F1C6: ScaleCFSubPreprocess (canonical.c:147)
+==638635==    by 0x10F1C6: ImprovedCF (canonical.c:369)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10DD63: sort (sort.c:220)
+==638635==    by 0x10F160: ScaleCFSubPreprocess (canonical.c:155)
+==638635==    by 0x10F160: ImprovedCF (canonical.c:369)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10F0FC: fq_cond_sub (fq_arith.h:95)
+==638635==    by 0x10F0FC: fq_add (fq_arith.h:123)
+==638635==    by 0x10F0FC: row_acc_inv (fq_arith.h:213)
+==638635==    by 0x10F0FC: ScaleCFSubPreprocess (canonical.c:149)
+==638635==    by 0x10F0FC: ImprovedCF (canonical.c:369)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10F11C: ScaleCFSubPreprocess (canonical.c:150)
+==638635==    by 0x10F11C: ImprovedCF (canonical.c:369)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10F40A: row_inv2 (fq_arith.h:260)
+==638635==    by 0x10F40A: ImprovedCF (canonical.c:375)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E40A: row_all_same (fq_arith.h:271)
+==638635==    by 0x10E40A: ScaleCF (canonical.c:68)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E3AD: ScaleCF (canonical.c:71)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E3B7: fq_inv_non_ct (fq_arith.h:155)
+==638635==    by 0x10E3B7: ScaleCF (canonical.c:72)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10DD63: sort (sort.c:220)
+==638635==    by 0x10DDF8: SortRows (sort.c:323)
+==638635==    by 0x10E35A: SortCF (canonical.c:47)
+==638635==    by 0x10E35A: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E164: SortCols_internal_compare (sort.c:352)
+==638635==    by 0x10E164: SortCols_internal_hoare_partition (sort.c:375)
+==638635==    by 0x10E164: SortCols_internal (sort.c:412)
+==638635==    by 0x10E164: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E103: SortCols_internal_hoare_partition (sort.c:375)
+==638635==    by 0x10E103: SortCols_internal (sort.c:412)
+==638635==    by 0x10E103: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E10C: SortCols_internal_hoare_partition (sort.c:377)
+==638635==    by 0x10E10C: SortCols_internal (sort.c:412)
+==638635==    by 0x10E10C: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E115: SortCols_internal_hoare_partition (sort.c:378)
+==638635==    by 0x10E115: SortCols_internal (sort.c:412)
+==638635==    by 0x10E115: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E128: pointer_swap (sort.c:39)
+==638635==    by 0x10E128: SortCols_internal_hoare_partition (sort.c:379)
+==638635==    by 0x10E128: SortCols_internal (sort.c:412)
+==638635==    by 0x10E128: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E18C: SortCols_internal_hoare_partition (sort.c:382)
+==638635==    by 0x10E18C: SortCols_internal (sort.c:412)
+==638635==    by 0x10E18C: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E19D: SortCols_internal_hoare_partition (sort.c:383)
+==638635==    by 0x10E19D: SortCols_internal (sort.c:412)
+==638635==    by 0x10E19D: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E1B0: pointer_swap (sort.c:39)
+==638635==    by 0x10E1B0: SortCols_internal_hoare_partition (sort.c:384)
+==638635==    by 0x10E1B0: SortCols_internal (sort.c:412)
+==638635==    by 0x10E1B0: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E1BF: SortCols_internal (sort.c:413)
+==638635==    by 0x10E1BF: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E1D5: SortCols_internal (sort.c:417)
+==638635==    by 0x10E1D5: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E219: SortCols_internal_hoare_partition (sort.c:374)
+==638635==    by 0x10E219: SortCols_internal (sort.c:412)
+==638635==    by 0x10E219: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E149: SortCols_internal_compare (sort.c:352)
+==638635==    by 0x10E149: SortCols_internal_hoare_partition (sort.c:375)
+==638635==    by 0x10E149: SortCols_internal (sort.c:412)
+==638635==    by 0x10E149: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E143: SortCols_internal_hoare_partition (sort.c:374)
+==638635==    by 0x10E143: SortCols_internal (sort.c:412)
+==638635==    by 0x10E143: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E117: SortCols_internal_hoare_partition (sort.c:378)
+==638635==    by 0x10E117: SortCols_internal (sort.c:412)
+==638635==    by 0x10E117: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E12B: pointer_swap (sort.c:39)
+==638635==    by 0x10E12B: SortCols_internal_hoare_partition (sort.c:379)
+==638635==    by 0x10E12B: SortCols_internal (sort.c:412)
+==638635==    by 0x10E12B: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E1F3: SortCols_internal_hoare_partition (sort.c:370)
+==638635==    by 0x10E1F3: SortCols_internal (sort.c:412)
+==638635==    by 0x10E1F3: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E19F: SortCols_internal_hoare_partition (sort.c:383)
+==638635==    by 0x10E19F: SortCols_internal (sort.c:412)
+==638635==    by 0x10E19F: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E1B3: pointer_swap (sort.c:39)
+==638635==    by 0x10E1B3: SortCols_internal_hoare_partition (sort.c:384)
+==638635==    by 0x10E1B3: SortCols_internal (sort.c:412)
+==638635==    by 0x10E1B3: SortCols (sort.c:445)
+==638635==    by 0x10E36B: SortCF (canonical.c:50)
+==638635==    by 0x10E36B: ScaleCF (canonical.c:83)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10E31E: fq_cond_sub (fq_arith.h:95)
+==638635==    by 0x10E31E: fq_add (fq_arith.h:123)
+==638635==    by 0x10E31E: row_acc_inv (fq_arith.h:213)
+==638635==    by 0x10E31E: ScaleCF (canonical.c:74)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10E33D: ScaleCF (canonical.c:75)
+==638635==    by 0x10F48B: ImprovedCF (canonical.c:380)
+==638635==    by 0x10F6BB: CF (canonical.c:436)
+==638635==    by 0x10BF40: LESS_sign (LESS_declass.c:190)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Conditional jump or move depends on uninitialised value(s)
+==638635==    at 0x10C976: fq_star_rnd_state_elements (fq_arith.h:84)
+==638635==    by 0x10C976: monomial_sample_prikey (monomial.c:64)
+==638635==    by 0x10C128: LESS_sign (LESS_declass.c:235)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a client request
+==638635==    at 0x10FC26: main (ct_sign.c:35)
+==638635== 
+==638635== Use of uninitialised value of size 8
+==638635==    at 0x10CB80: CosetRep (monomial.c:170)
+==638635==    by 0x10C15C: LESS_sign (LESS_declass.c:238)
+==638635==    by 0x10FC4B: main (ct_sign.c:36)
+==638635==  Uninitialised value was created by a stack allocation
+==638635==    at 0x10C9F9: monomial_compose_action (monomial.c:94)
+==638635== 
+sign done, opened=9
+==638635== 
+==638635== HEAP SUMMARY:
+==638635==     in use at exit: 0 bytes in 0 blocks
+==638635==   total heap usage: 0 allocs, 0 frees, 0 bytes allocated
+==638635== 
+==638635== All heap blocks were freed -- no leaks are possible
+==638635== 
+==638635== For lists of detected and suppressed errors, rerun with: -s
+==638635== ERROR SUMMARY: 4929004 errors from 47 contexts (suppressed: 0 from 0)

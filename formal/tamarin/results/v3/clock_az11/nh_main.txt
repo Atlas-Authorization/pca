@@ -1,0 +1,2 @@
+NO RESULT rc=251 (timeout/killed; NOT proved) no_accept_after_expiry
+# wall=215s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=no_accept_after_expiry --heuristic=O --oraclename=./oracle_clock.sh pca_clock_v3_nohelper.spthy +RTS -N4 -M10g

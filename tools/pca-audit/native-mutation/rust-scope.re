@@ -1,0 +1,1 @@
+(replace|in) (deeper_than_cap|body_too_deep|hash_canonical_strict|same_strict_hash|leaf_hash|merkle_root|verify_inclusion|check_sig|resolve_root_pq|verify_chain_policy|verify_pcactn_core_policy|strict_parse_envelope|strict_parse_depth|signer_set_hash|validate_signer_set|verify_threshold_share|signer_set_hash_b64u|hop_well_typed|verify_request|extract_pcactn|extract)( |$)

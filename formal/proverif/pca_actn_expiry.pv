@@ -1,0 +1,73 @@
+(* PCA -- expiry / validity-window check of the PCActn verifier (ProVerif port of Tamarin lemma no_accept_after_expiry).
+   ProVerif has no clock: time is modelled with PHASES.  Three epochs t0 < t1 < t2; the verifier replica running in
+   phase i has now = t_i.  The honest environment (keys, grants, agent) runs in phase 0 only (ProVerif drops
+   earlier-phase processes at a phase change); the attacker keeps everything it learned and talks to the verifier
+   replicas of every phase.  Chain depth 1 only (expiry is orthogonal to chain depth).
+   The validity check is leq(now, exp) = yes with leq the total order on {t0,t1,t2}.
+   Variant (gen.sh): NO_EXPIRY_CHECK drops the check. *)
+
+fun pk(bitstring): bitstring.
+fun sign(bitstring, bitstring): bitstring.
+fun verify(bitstring, bitstring, bitstring): bool
+  reduc forall m: bitstring, k: bitstring; verify(sign(m, k), m, pk(k)) = true.
+fun h(bitstring): bitstring.
+const capT, actT, none, endm, anyc, t0, t1, t2, yes: bitstring [data].
+fun leq(bitstring, bitstring): bitstring
+  reduc leq(t0, t0) = yes
+  otherwise leq(t0, t1) = yes
+  otherwise leq(t0, t2) = yes
+  otherwise leq(t1, t1) = yes
+  otherwise leq(t1, t2) = yes
+  otherwise leq(t2, t2) = yes.
+
+free c: channel.
+table keys(bitstring, bitstring).
+table nonces(bitstring).
+
+event Reveal(bitstring).
+event Granted(bitstring, bitstring, bitstring, bitstring).
+event Accept(bitstring, bitstring, bitstring, bitstring).    (* exp, now, nonce, holder *)
+
+(* no_accept_after_expiry: the exp signed into the action is not before the verifier's current epoch *)
+(*Q:no_accept_after_expiry*) query exp, now, n, hol: bitstring; event(Accept(exp, now, n, hol)) ==> (exp = t2 || (exp = t1 && (now = t0 || now = t1)) || (exp = t0 && now = t0)).
+(*+SANITY*) (*Q:sanity1*) query exp, n, hol: bitstring; event(Accept(exp, t0, n, hol)).
+(*+SANITY*) (*Q:sanity2*) query exp, n, hol: bitstring; event(Accept(exp, t1, n, hol)).
+(*+SANITY*) (*Q:sanity3*) query n, hol: bitstring; event(Accept(t2, t2, n, hol)).
+
+let KeyGenP() = new k: bitstring; insert keys(pk(k), k); out(c, pk(k)).
+let RevealP() = in(c, p: bitstring); get keys(=p, k) in event Reveal(p); out(c, k).
+let PrincipalGrant() =
+  in(c, (pkP: bitstring, pkH: bitstring, cv: bitstring));
+  get keys(=pkP, ltkP) in
+  let body = (capT, none, pkP, pkH, cv) in
+  let cap = (body, sign(body, ltkP)) in
+  event Granted(pkP, pkH, cv, h(cap));
+  out(c, cap).
+let AgentAct() =
+  in(c, (pkH: bitstring, aud: bitstring, verb: bitstring, res: bitstring, gref: bitstring, ctr: bitstring, nonce: bitstring, exp: bitstring));
+  get keys(=pkH, ltkH) in
+  out(c, sign((actT, aud, verb, res, gref, ctr, nonce, exp), ltkH)).
+
+let Verify1(now: bitstring) =
+  in(c, (vaud: bitstring, pkT: bitstring));
+  get keys(=pkT, ltkT) in
+  in(c, ((c1: bitstring, =endm), (=actT, aaud: bitstring, verb: bitstring, res: bitstring, gref: bitstring, ctr: bitstring, nonce: bitstring, exp: bitstring), asig: bitstring));
+  let ((=capT, par1: bitstring, iss1: bitstring, hol1: bitstring, cv1: bitstring), sg1: bitstring) = c1 in
+  let act = (actT, aaud, verb, res, gref, ctr, nonce, exp) in
+  if aaud = vaud then
+  if leq(now, exp) = yes then                                              (*-NO_EXPIRY_CHECK*)
+  if verify(sg1, (capT, par1, iss1, hol1, cv1), iss1) = true then
+  if cv1 = verb || cv1 = anyc then
+  if par1 = none then
+  if iss1 = pkT then
+  if gref = h(c1) then
+  if verify(asig, act, hol1) = true then
+  get nonces(=(vaud, gref, hol1, nonce)) in 0 else
+  insert nonces((vaud, gref, hol1, nonce));
+  event Accept(exp, now, nonce, hol1).
+
+process
+  !KeyGenP() | !PrincipalGrant() | !AgentAct()
+  | !RevealP()                                                             (*-SANITY*)
+  | !Verify1(t0)
+  | ( phase 1; ( !Verify1(t1) | ( phase 2; !Verify1(t2) ) ) )

@@ -1,0 +1,2 @@
+TIMEOUT after 900s budget (NOT proved): sig_needs_t_signers
+# wall=902s heuristic=s tamarin-prover 1.12.0

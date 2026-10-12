@@ -1,0 +1,2 @@
+TIMEOUT-or-error after 900s (NOT proved): attack_overspend 
+# wall=769s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_overspend --heuristic=o --oraclename=oracle_budget.sh -DDEBIT_LEAF_ONLY pca_budget_v3.spthy +RTS -N4 -M10g

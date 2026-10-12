@@ -1,0 +1,4 @@
+no_manifest_rollback | 0s | RESULT not event(Acc(v1)) is true.
+no_manifest_rollback_v0 | 0s | RESULT not event(Acc(v0)) is true.
+revoked_never_attested_v1 | 0s | RESULT not event(AttOk(mB,v1)) is true.
+revoked_never_attested_v2 | 0s | RESULT not event(AttOk(mB,v2)) is true.

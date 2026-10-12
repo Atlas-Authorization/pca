@@ -1,0 +1,3 @@
+  attack_lostupdate_pinned (exists-trace): verified (34 steps)
+# wall=2s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_lostupdate_pinned --heuristic=s -DNONATOMIC_DEBIT pca_budget_v4.spthy +RTS -N2 -M12g
+# closure round 3; '/* All wellformedness checks were successful. */'

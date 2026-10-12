@@ -1,0 +1,2392 @@
+[
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "if (text.length.toLong() * 3 <= MAX_ARTIFACT_BYTES) return false",
+  "occurrence": 1,
+  "lineno": 46,
+  "fn": "artifactTooLarge",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 524288 with 524289",
+  "line": "if (text.length > MAX_ARTIFACT_BYTES) return true",
+  "occurrence": 1,
+  "lineno": 45,
+  "fn": "artifactTooLarge",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 3 with 4",
+  "line": "if (text.length.toLong() * 3 <= MAX_ARTIFACT_BYTES) return false",
+  "occurrence": 1,
+  "lineno": 46,
+  "fn": "artifactTooLarge",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/String::length",
+  "line": "if (text.length > MAX_ARTIFACT_BYTES) return true",
+  "occurrence": 1,
+  "lineno": 45,
+  "fn": "artifactTooLarge",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_ELSE: removed conditional - replaced comparison check with false",
+  "line": "if (text.length > MAX_ARTIFACT_BYTES) return true",
+  "occurrence": 1,
+  "lineno": 45,
+  "fn": "artifactTooLarge",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_ELSE: removed conditional - replaced comparison check with false",
+  "line": "if (text.length.toLong() * 3 <= MAX_ARTIFACT_BYTES) return false",
+  "occurrence": 1,
+  "lineno": 46,
+  "fn": "artifactTooLarge",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val raw = decodeB64uStrict(bd, 32) ?: return \"$label: bad signature (not signed by expected key)\"",
+  "occurrence": 1,
+  "lineno": 346,
+  "fn": "checkSig",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "EmptyObjectReturnValsMutator: replaced return value with \"\" for net/atlasauth/pca/verifier/Pca::checkSig",
+  "line": "val raw = decodeB64uStrict(bd, 32) ?: return \"$label: bad signature (not signed by expected key)\"",
+  "occurrence": 1,
+  "lineno": 346,
+  "fn": "checkSig",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "if (len >= 0 && o.length != (len * 4 + 2) / 3) return null",
+  "occurrence": 1,
+  "lineno": 101,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "if (len >= 0 && b.size != len) return null",
+  "occurrence": 1,
+  "lineno": 108,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "for (c in o) {",
+  "occurrence": 1,
+  "lineno": 96,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 91 with 92",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 123 with 124",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 58 with 59",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "MathMutator: Replaced integer modulus with multiplication",
+  "line": "if (o.length % 4 == 1) return null",
+  "occurrence": 1,
+  "lineno": 100,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/String::length",
+  "line": "for (c in o) {",
+  "occurrence": 1,
+  "lineno": 96,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/String::length",
+  "line": "if (o.length % 4 == 1) return null",
+  "occurrence": 1,
+  "lineno": 100,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (!ok) return null",
+  "occurrence": 1,
+  "lineno": 98,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (o.length % 4 == 1) return null",
+  "occurrence": 1,
+  "lineno": 100,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (len >= 0 && o.length != (len * 4 + 2) / 3) return null",
+  "occurrence": 1,
+  "lineno": 101,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (len >= 0 && b.size != len) return null",
+  "occurrence": 1,
+  "lineno": 108,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_ELSE: removed conditional - replaced comparison check with false",
+  "line": "for (c in o) {",
+  "occurrence": 1,
+  "lineno": 96,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_ELSE: removed conditional - replaced comparison check with false",
+  "line": "if (len >= 0 && o.length != (len * 4 + 2) / 3) return null",
+  "occurrence": 1,
+  "lineno": 101,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_ELSE: removed conditional - replaced comparison check with false",
+  "line": "if (len >= 0 && b.size != len) return null",
+  "occurrence": 1,
+  "lineno": 108,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "val ok = (c in 'A'..'Z') || (c in 'a'..'z') || (c in '0'..'9') || c == '-' || c == '_'",
+  "occurrence": 1,
+  "lineno": 97,
+  "fn": "decodeB64uStrict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "if (leInt(sig, 32, 32, false).compareTo(L) >= 0) return false",
+  "occurrence": 1,
+  "lineno": 268,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (badPointEncoding(pk, 0) || badPointEncoding(sig, 0)) return false",
+  "occurrence": 1,
+  "lineno": 267,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (leInt(sig, 32, 32, false).compareTo(L) >= 0) return false",
+  "occurrence": 1,
+  "lineno": 268,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "false",
+  "occurrence": 2,
+  "lineno": 273,
+  "fn": "ed25519Strict",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to net/atlasauth/pca/verifier/Pca::badPointEncoding",
+  "line": "if (badPointEncoding(pk, 0) || badPointEncoding(sig, 0)) return false",
+  "occurrence": 1,
+  "lineno": 267,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to net/atlasauth/pca/verifier/Pca::badPointEncoding",
+  "line": "if (badPointEncoding(pk, 0) || badPointEncoding(sig, 0)) return false",
+  "occurrence": 1,
+  "lineno": 267,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (badPointEncoding(pk, 0) || badPointEncoding(sig, 0)) return false",
+  "occurrence": 1,
+  "lineno": 267,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (pk == null || sig == null || pk.size != 32 || sig.size != 64) return false",
+  "occurrence": 1,
+  "lineno": 266,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (pk == null || sig == null || pk.size != 32 || sig.size != 64) return false",
+  "occurrence": 1,
+  "lineno": 266,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (badPointEncoding(pk, 0) || badPointEncoding(sig, 0)) return false",
+  "occurrence": 1,
+  "lineno": 267,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_ELSE: removed conditional - replaced comparison check with false",
+  "line": "if (leInt(sig, 32, 32, false).compareTo(L) >= 0) return false",
+  "occurrence": 1,
+  "lineno": 268,
+  "fn": "ed25519Strict",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (clearTopBit) be[0] = (be[0].toInt() and 0x7f).toByte()",
+  "occurrence": 1,
+  "lineno": 248,
+  "fn": "leInt",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 4 with 5",
+  "line": "val key = PinnedPq.resolve(issuer, pk, pqPins = pqPins, trustedPk = trusted)",
+  "occurrence": 1,
+  "lineno": 374,
+  "fn": "resolveRootPq",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val trusted: String? = if (trustedRoot != null && pk is String) {",
+  "occurrence": 1,
+  "lineno": 370,
+  "fn": "resolveRootPq",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val trusted: String? = if (trustedRoot != null && pk is String) {",
+  "occurrence": 1,
+  "lineno": 370,
+  "fn": "resolveRootPq",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val issuer = root[\"issuer\"] as? String",
+  "occurrence": 1,
+  "lineno": 373,
+  "fn": "resolveRootPq",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (suite.needsPqPk && c[\"pq_pk\"] is String) body[\"pq_pk\"] = c[\"pq_pk\"]",
+  "occurrence": 1,
+  "lineno": 307,
+  "fn": "signableHopBody",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "return if (a != null && allowed.contains(a)) null else \"$label: signature suite is not allowed by this verifier's suite policy\"",
+  "occurrence": 1,
+  "lineno": 332,
+  "fn": "suitePolicyError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 4 with 5",
+  "line": "var e = closedKeys(a, \"action\", \"verb\", \"resource\", \"params_digest\", \"reversibility_class\")",
+  "occurrence": 1,
+  "lineno": 529,
+  "fn": "validateWireV2",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 4 with 5",
+  "line": "e = closedKeys(pl, \"plan\", \"root\", \"inclusion_proof\", \"node_id\", \"conditions_digest\")",
+  "occurrence": 1,
+  "lineno": 537,
+  "fn": "validateWireV2",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 3 with 4",
+  "line": "e = closedKeys(ip, \"plan.inclusion_proof\", \"index\", \"size\", \"path\")",
+  "occurrence": 1,
+  "lineno": 545,
+  "fn": "validateWireV2",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (pk == null || sg == null) return false",
+  "occurrence": 1,
+  "lineno": 280,
+  "fn": "verifyB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (pk == null || sg == null) return false",
+  "occurrence": 1,
+  "lineno": 280,
+  "fn": "verifyB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "private fun verifyChainUnchecked(",
+  "occurrence": 1,
+  "lineno": 410,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "private fun verifyChainUnchecked(",
+  "occurrence": 1,
+  "lineno": 410,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "private fun verifyChainUnchecked(",
+  "occurrence": 1,
+  "lineno": 410,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 24 with 25",
+  "line": "e = checkSig(c, asStr(parent[\"holder\"]), label, PinnedPq.resolve(parent[\"holder\"] as? String, c[\"pq_pk\"], holderPq = parent[\"holder_pq\"]))",
+  "occurrence": 1,
+  "lineno": 445,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "false",
+  "occurrence": 3,
+  "lineno": 454,
+  "fn": "verifyChainUnchecked",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NegateConditionalsMutator: negated conditional",
+  "line": "e = checkSig(c, asStr(parent[\"holder\"]), label, PinnedPq.resolve(parent[\"holder\"] as? String, c[\"pq_pk\"], holderPq = parent[\"holder_pq\"]))",
+  "occurrence": 1,
+  "lineno": 445,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Map::get",
+  "line": "e = checkSig(c, asStr(parent[\"holder\"]), label, PinnedPq.resolve(parent[\"holder\"] as? String, c[\"pq_pk\"], holderPq = parent[\"holder_pq\"]))",
+  "occurrence": 1,
+  "lineno": 445,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "e = checkSig(c, asStr(parent[\"holder\"]), label, PinnedPq.resolve(parent[\"holder\"] as? String, c[\"pq_pk\"], holderPq = parent[\"holder_pq\"]))",
+  "occurrence": 1,
+  "lineno": 445,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "e = checkSig(c, asStr(parent[\"holder\"]), label, PinnedPq.resolve(parent[\"holder\"] as? String, c[\"pq_pk\"], holderPq = parent[\"holder_pq\"]))",
+  "occurrence": 1,
+  "lineno": 445,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ArgumentPropagationMutator: replaced call to java/util/Map::get with argument",
+  "line": "e = checkSig(c, asStr(parent[\"holder\"]), label, PinnedPq.resolve(parent[\"holder\"] as? String, c[\"pq_pk\"], holderPq = parent[\"holder_pq\"]))",
+  "occurrence": 1,
+  "lineno": 445,
+  "fn": "verifyChainUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (proof == null || proof[\"path\"] !is List<*>) return false",
+  "occurrence": 1,
+  "lineno": 185,
+  "fn": "verifyInclusion",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (!Json.isSafeInt(proof[\"index\"]) || !Json.isSafeInt(proof[\"size\"])) return false",
+  "occurrence": 1,
+  "lineno": 186,
+  "fn": "verifyInclusion",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (path[i] !is Map<*, *>) return false",
+  "occurrence": 1,
+  "lineno": 195,
+  "fn": "verifyInclusion",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val sib = decodeB64uStrict(step[\"hash\"], 32) ?: return false",
+  "occurrence": 1,
+  "lineno": 198,
+  "fn": "verifyInclusion",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (proof == null || proof[\"path\"] !is List<*>) return false",
+  "occurrence": 1,
+  "lineno": 185,
+  "fn": "verifyInclusion",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (!Json.isSafeInt(proof[\"index\"]) || !Json.isSafeInt(proof[\"size\"])) return false",
+  "occurrence": 1,
+  "lineno": 186,
+  "fn": "verifyInclusion",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "if (size < 1 || index < 0 || index >= size) return false",
+  "occurrence": 1,
+  "lineno": 189,
+  "fn": "verifyInclusion",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConstructorCallMutator: removed call to net/atlasauth/pca/verifier/Pca$Verdict::<init>",
+  "line": "Verdict().also { it.fail(\"wire\", \"malformed input (${ex.javaClass.simpleName})\") }",
+  "occurrence": 1,
+  "lineno": 665,
+  "fn": "verifyPcactn",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "fun verifyPcactn(pcactn: Any?, grant: Map<String, Any?>, now: Long, audience: Audience, allowedSuites: List<String>? = null): Verdict =",
+  "occurrence": 1,
+  "lineno": 660,
+  "fn": "verifyPcactn",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/Object::getClass",
+  "line": "Verdict().also { it.fail(\"wire\", \"malformed input (${ex.javaClass.simpleName})\") }",
+  "occurrence": 1,
+  "lineno": 665,
+  "fn": "verifyPcactn",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/Class::getSimpleName",
+  "line": "Verdict().also { it.fail(\"wire\", \"malformed input (${ex.javaClass.simpleName})\") }",
+  "occurrence": 1,
+  "lineno": 665,
+  "fn": "verifyPcactn",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "VoidMethodCallMutator: removed call to net/atlasauth/pca/verifier/Pca$Verdict::fail$pca_kotlin_mutation",
+  "line": "Verdict().also { it.fail(\"wire\", \"malformed input (${ex.javaClass.simpleName})\") }",
+  "occurrence": 1,
+  "lineno": 665,
+  "fn": "verifyPcactn",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ConstructorCallMutator: removed call to kotlin/NoWhenBranchMatchedException::<init>",
+  "line": "when (audience) {",
+  "occurrence": 1,
+  "lineno": 684,
+  "fn": "verifyPcactnUnchecked",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 1 with 0",
+  "line": "is Audience.Unset -> if (hasAud) v.fail(\"audience\", \"PCActn carries a signed aud but this verifier supplied no audience\") else v.checks[\"audience\"] = true",
+  "occurrence": 1,
+  "lineno": 686,
+  "fn": "verifyPcactnUnchecked",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 16 with 17",
+  "line": "chain.size > MAX_CHAIN_HOPS -> \"chain too long (max $MAX_CHAIN_HOPS hops)\"",
+  "occurrence": 1,
+  "lineno": 703,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "false",
+  "occurrence": 4,
+  "lineno": 725,
+  "fn": "verifyPcactnUnchecked",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 24 with 25",
+  "line": "PinnedPq.resolve(leafCap[\"holder\"] as? String, p[\"pq_pk\"], holderPq = leafCap[\"holder_pq\"]),",
+  "occurrence": 1,
+  "lineno": 740,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NegateConditionalsMutator: negated conditional",
+  "line": "PinnedPq.resolve(leafCap[\"holder\"] as? String, p[\"pq_pk\"], holderPq = leafCap[\"holder_pq\"]),",
+  "occurrence": 1,
+  "lineno": 740,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to net/atlasauth/pca/verifier/Pca$Verdict::getChecks",
+  "line": "is Audience.Unset -> if (hasAud) v.fail(\"audience\", \"PCActn carries a signed aud but this verifier supplied no audience\") else v.checks[\"audience\"] = true",
+  "occurrence": 1,
+  "lineno": 686,
+  "fn": "verifyPcactnUnchecked",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/Boolean::valueOf",
+  "line": "is Audience.Unset -> if (hasAud) v.fail(\"audience\", \"PCActn carries a signed aud but this verifier supplied no audience\") else v.checks[\"audience\"] = true",
+  "occurrence": 1,
+  "lineno": 686,
+  "fn": "verifyPcactnUnchecked",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Map::put",
+  "line": "is Audience.Unset -> if (hasAud) v.fail(\"audience\", \"PCActn carries a signed aud but this verifier supplied no audience\") else v.checks[\"audience\"] = true",
+  "occurrence": 1,
+  "lineno": 686,
+  "fn": "verifyPcactnUnchecked",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/List::size",
+  "line": "chain.size > MAX_CHAIN_HOPS -> \"chain too long (max $MAX_CHAIN_HOPS hops)\"",
+  "occurrence": 1,
+  "lineno": 703,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Map::get",
+  "line": "else -> verifyChain(chain, asStr(grant[\"issuer\"]), grant[\"issuer\"] is String, allowedSuites, null, grant) // chain[0] == grant was checked above",
+  "occurrence": 1,
+  "lineno": 706,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Map::get",
+  "line": "?: pqBindingError(p[\"alg\"], p.containsKey(\"alg\"), p[\"pq_pk\"], leafCap[\"holder_pq\"], \"leaf\")",
+  "occurrence": 1,
+  "lineno": 737,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Map::containsKey",
+  "line": "?: pqBindingError(p[\"alg\"], p.containsKey(\"alg\"), p[\"pq_pk\"], leafCap[\"holder_pq\"], \"leaf\")",
+  "occurrence": 1,
+  "lineno": 737,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to net/atlasauth/pca/verifier/Pca::pqBindingError",
+  "line": "?: pqBindingError(p[\"alg\"], p.containsKey(\"alg\"), p[\"pq_pk\"], leafCap[\"holder_pq\"], \"leaf\")",
+  "occurrence": 1,
+  "lineno": 737,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Map::get",
+  "line": "PinnedPq.resolve(leafCap[\"holder\"] as? String, p[\"pq_pk\"], holderPq = leafCap[\"holder_pq\"]),",
+  "occurrence": 1,
+  "lineno": 740,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val lerr = suitePolicyError(p[\"alg\"], p.containsKey(\"alg\"), \"leaf\", allowedSuites)",
+  "occurrence": 1,
+  "lineno": 736,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "PinnedPq.resolve(leafCap[\"holder\"] as? String, p[\"pq_pk\"], holderPq = leafCap[\"holder_pq\"]),",
+  "occurrence": 1,
+  "lineno": 740,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "is Audience.Unset -> if (hasAud) v.fail(\"audience\", \"PCActn carries a signed aud but this verifier supplied no audience\") else v.checks[\"audience\"] = true",
+  "occurrence": 1,
+  "lineno": 686,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val rootId = (chain.firstOrNull() as? Map<*, *>)?.get(\"id\")",
+  "occurrence": 1,
+  "lineno": 714,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "PinnedPq.resolve(leafCap[\"holder\"] as? String, p[\"pq_pk\"], holderPq = leafCap[\"holder_pq\"]),",
+  "occurrence": 1,
+  "lineno": 740,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (Json.isSafeInt(p[\"counter\"]) && Json.asLong(p[\"counter\"]) >= 0) v.checks[\"counter\"] = true",
+  "occurrence": 1,
+  "lineno": 748,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_ELSE: removed conditional - replaced comparison check with false",
+  "line": "chain.size > MAX_CHAIN_HOPS -> \"chain too long (max $MAX_CHAIN_HOPS hops)\"",
+  "occurrence": 1,
+  "lineno": 703,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "VoidMethodCallMutator: removed call to java/util/LinkedHashMap::clear",
+  "line": "v.checks.clear()",
+  "occurrence": 1,
+  "lineno": 757,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ArgumentPropagationMutator: replaced call to java/util/Map::put with argument",
+  "line": "is Audience.Unset -> if (hasAud) v.fail(\"audience\", \"PCActn carries a signed aud but this verifier supplied no audience\") else v.checks[\"audience\"] = true",
+  "occurrence": 1,
+  "lineno": 686,
+  "fn": "verifyPcactnUnchecked",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ArgumentPropagationMutator: replaced call to java/util/Map::get with argument",
+  "line": "else -> verifyChain(chain, asStr(grant[\"issuer\"]), grant[\"issuer\"] is String, allowedSuites, null, grant) // chain[0] == grant was checked above",
+  "occurrence": 1,
+  "lineno": 706,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ArgumentPropagationMutator: replaced call to java/util/Map::get with argument",
+  "line": "?: pqBindingError(p[\"alg\"], p.containsKey(\"alg\"), p[\"pq_pk\"], leafCap[\"holder_pq\"], \"leaf\")",
+  "occurrence": 1,
+  "lineno": 737,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "ArgumentPropagationMutator: replaced call to java/util/Map::get with argument",
+  "line": "PinnedPq.resolve(leafCap[\"holder\"] as? String, p[\"pq_pk\"], holderPq = leafCap[\"holder_pq\"]),",
+  "occurrence": 1,
+  "lineno": 740,
+  "fn": "verifyPcactnUnchecked",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 5 with 6",
+  "line": "for (k in listOf(\"alg\", \"pq_pk\", \"pq_sig\", \"holder_pq\", \"parent\")) if (o.containsKey(k) && o[k] !is String) return false",
+  "occurrence": 1,
+  "lineno": 405,
+  "fn": "wellTyped$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "return cv.all { it is Map<*, *> && it[\"type\"] is String }",
+  "occurrence": 1,
+  "lineno": 407,
+  "fn": "wellTyped$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "internal fun wellTyped(o: Any?): Boolean {",
+  "occurrence": 1,
+  "lineno": 402,
+  "fn": "wellTyped$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NegateConditionalsMutator: negated conditional",
+  "line": "internal fun wellTyped(o: Any?): Boolean {",
+  "occurrence": 1,
+  "lineno": 402,
+  "fn": "wellTyped$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Collection::isEmpty",
+  "line": "internal fun wellTyped(o: Any?): Boolean {",
+  "occurrence": 1,
+  "lineno": 402,
+  "fn": "wellTyped$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "internal fun wellTyped(o: Any?): Boolean {",
+  "occurrence": 1,
+  "lineno": 402,
+  "fn": "wellTyped$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "internal fun wellTyped(o: Any?): Boolean {",
+  "occurrence": 1,
+  "lineno": 402,
+  "fn": "wellTyped$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "internal fun wellTyped(o: Any?): Boolean {",
+  "occurrence": 1,
+  "lineno": 402,
+  "fn": "wellTyped$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 1 with 0",
+  "line": "if (f == 0.0) return \"0\"",
+  "occurrence": 1,
+  "lineno": 341,
+  "fn": "fmtNumber",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/Double::isNaN",
+  "line": "if (f.isInfinite() || f.isNaN()) throw IllegalArgumentException(\"canonicalize: non-finite number\")",
+  "occurrence": 1,
+  "lineno": 340,
+  "fn": "fmtNumber",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (numberError(raw) == null) return raw",
+  "occurrence": 1,
+  "lineno": 334,
+  "fn": "fmtNumber",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (f.isInfinite() || f.isNaN()) throw IllegalArgumentException(\"canonicalize: non-finite number\")",
+  "occurrence": 1,
+  "lineno": 340,
+  "fn": "fmtNumber",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (f == 0.0) return \"0\"",
+  "occurrence": 1,
+  "lineno": 341,
+  "fn": "fmtNumber",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (f == 0.0) return \"0\"",
+  "occurrence": 1,
+  "lineno": 341,
+  "fn": "fmtNumber",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "ArgumentPropagationMutator: replaced call to net/atlasauth/pca/verifier/Json::numberError with argument",
+  "line": "if (numberError(raw) == null) return raw",
+  "occurrence": 1,
+  "lineno": 334,
+  "fn": "fmtNumber",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "return numberError(r) == null && r.indexOf('.') < 0",
+  "occurrence": 1,
+  "lineno": 73,
+  "fn": "isSafeInt",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "return numberError(r) == null && r.indexOf('.') < 0",
+  "occurrence": 1,
+  "lineno": 73,
+  "fn": "isSafeInt",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "return numberError(r) == null && r.indexOf('.') < 0",
+  "occurrence": 1,
+  "lineno": 73,
+  "fn": "isSafeInt",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 6 with 7",
+  "line": "return numberError(r) == null && r.indexOf('.') < 0",
+  "occurrence": 1,
+  "lineno": 73,
+  "fn": "isSafeInt",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "if (raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0) return \"exponent form is not allowed\"",
+  "occurrence": 1,
+  "lineno": 52,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "if (raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0) return \"exponent form is not allowed\"",
+  "occurrence": 1,
+  "lineno": 52,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "if (raw.indexOf('.') >= 0) {",
+  "occurrence": 1,
+  "lineno": 54,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "while (z < digits.length && digits[z] == '0') z++",
+  "occurrence": 1,
+  "lineno": 58,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0) return \"exponent form is not allowed\"",
+  "occurrence": 1,
+  "lineno": 52,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0) return \"exponent form is not allowed\"",
+  "occurrence": 1,
+  "lineno": 52,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 6 with 7",
+  "line": "if (raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0) return \"exponent form is not allowed\"",
+  "occurrence": 1,
+  "lineno": 52,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0) return \"exponent form is not allowed\"",
+  "occurrence": 1,
+  "lineno": 52,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0) return \"exponent form is not allowed\"",
+  "occurrence": 1,
+  "lineno": 52,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 6 with 7",
+  "line": "if (raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0) return \"exponent form is not allowed\"",
+  "occurrence": 1,
+  "lineno": 52,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (raw.indexOf('.') >= 0) {",
+  "occurrence": 1,
+  "lineno": 54,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (raw.indexOf('.') >= 0) {",
+  "occurrence": 1,
+  "lineno": 54,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 6 with 7",
+  "line": "if (raw.indexOf('.') >= 0) {",
+  "occurrence": 1,
+  "lineno": 54,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (raw.endsWith(\"0\")) return \"trailing fractional zero is not canonical\"",
+  "occurrence": 1,
+  "lineno": 55,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 2 with 3",
+  "line": "if (raw.endsWith(\"0\")) return \"trailing fractional zero is not canonical\"",
+  "occurrence": 1,
+  "lineno": 55,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val digits = raw.replace(\"-\", \"\").replace(\".\", \"\")",
+  "occurrence": 1,
+  "lineno": 56,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 4 with 5",
+  "line": "val digits = raw.replace(\"-\", \"\").replace(\".\", \"\")",
+  "occurrence": 1,
+  "lineno": 56,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val digits = raw.replace(\"-\", \"\").replace(\".\", \"\")",
+  "occurrence": 1,
+  "lineno": 56,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 4 with 5",
+  "line": "val digits = raw.replace(\"-\", \"\").replace(\".\", \"\")",
+  "occurrence": 1,
+  "lineno": 56,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 16 with 17",
+  "line": "if (abs.length > 16 || BigInteger(abs).compareTo(MAX_SAFE) > 0) return \"integer outside the safe range\"",
+  "occurrence": 1,
+  "lineno": 65,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/String::length",
+  "line": "if (abs.length > 16 || BigInteger(abs).compareTo(MAX_SAFE) > 0) return \"integer outside the safe range\"",
+  "occurrence": 1,
+  "lineno": 65,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (v.signum() != 0 && v.compareTo(MIN_DECIMAL) < 0) return \"non-integer magnitude below 1e-6\"",
+  "occurrence": 1,
+  "lineno": 61,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "while (z < digits.length && digits[z] == '0') z++",
+  "occurrence": 1,
+  "lineno": 58,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "if (abs.length > 16 || BigInteger(abs).compareTo(MAX_SAFE) > 0) return \"integer outside the safe range\"",
+  "occurrence": 1,
+  "lineno": 65,
+  "fn": "numberError",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/lang/Object::getClass",
+  "line": "else -> throw IllegalArgumentException(\"canonicalize: unsupported type ${v.javaClass}\")",
+  "occurrence": 1,
+  "lineno": 390,
+  "fn": "ser",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "PrimitiveReturnsMutator: replaced int return with 0 for net/atlasauth/pca/verifier/Json$Parser::getI",
+  "line": "var i = 0",
+  "occurrence": 2,
+  "lineno": 121,
+  "fn": "getI",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "EmptyObjectReturnValsMutator: replaced return value with \"\" for net/atlasauth/pca/verifier/Json$Parser::getS",
+  "line": "private class Parser(val s: String?, val strict: Boolean) {",
+  "occurrence": 1,
+  "lineno": 120,
+  "fn": "getS",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "BooleanFalseReturnValsMutator: replaced boolean return with false for net/atlasauth/pca/verifier/Json$Parser::getStrict",
+  "line": "private class Parser(val s: String?, val strict: Boolean) {",
+  "occurrence": 1,
+  "lineno": 120,
+  "fn": "getStrict",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "BooleanTrueReturnValsMutator: replaced boolean return with true for net/atlasauth/pca/verifier/Json$Parser::getStrict",
+  "line": "private class Parser(val s: String?, val strict: Boolean) {",
+  "occurrence": 1,
+  "lineno": 120,
+  "fn": "getStrict",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "val ascii = (ch in '0'..'9') || (ch in 'a'..'f') || (ch in 'A'..'F')",
+  "occurrence": 1,
+  "lineno": 204,
+  "fn": "hex4",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "var v = 0",
+  "occurrence": 1,
+  "lineno": 201,
+  "fn": "hex4",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 58 with 59",
+  "line": "val ascii = (ch in '0'..'9') || (ch in 'a'..'f') || (ch in 'A'..'F')",
+  "occurrence": 1,
+  "lineno": 204,
+  "fn": "hex4",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val ascii = (ch in '0'..'9') || (ch in 'a'..'f') || (ch in 'A'..'F')",
+  "occurrence": 1,
+  "lineno": 204,
+  "fn": "hex4",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "InlineConstantMutator: Substituted 16 with 17",
+  "line": "val d = Character.digit(ch, 16)",
+  "occurrence": 1,
+  "lineno": 205,
+  "fn": "hex4",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
+  "mutant": "MemberVariableMutator: Removed assignment to member variable i",
+  "line": "var i = 0",
+  "occurrence": 2,
+  "lineno": 121,
+  "fn": "setI",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "return (1..3).firstOrNull { d.compareTo(java.math.BigDecimal.valueOf(it.toLong())) == 0 }",
+  "occurrence": 1,
+  "lineno": 148,
+  "fn": "exactT$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "internal fun exactT(o: Any?): Int? {",
+  "occurrence": 1,
+  "lineno": 137,
+  "fn": "exactT$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "is Boolean -> return null",
+  "occurrence": 1,
+  "lineno": 141,
+  "fn": "exactT$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "is Number -> java.math.BigDecimal(o.toString())",
+  "occurrence": 1,
+  "lineno": 142,
+  "fn": "exactT$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "fun shareMessage(role: String, thresholdMessage: ByteArray, signerSet: List<Any?>, t: Int, alg: Any?, algPresent: Boolean): ByteArray {",
+  "occurrence": 1,
+  "lineno": 62,
+  "fn": "shareMessage",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "val rows = signerSet.map { o ->",
+  "occurrence": 1,
+  "lineno": 40,
+  "fn": "signerSetHash",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 10 with 11",
+  "line": "fun signerSetHash(signerSet: List<Any?>): ByteArray {",
+  "occurrence": 1,
+  "lineno": 39,
+  "fn": "signerSetHash",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "fun signerSetHash(signerSet: List<Any?>): ByteArray {",
+  "occurrence": 1,
+  "lineno": 39,
+  "fn": "signerSetHash",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "fun signerSetHash(signerSet: List<Any?>): ByteArray {",
+  "occurrence": 1,
+  "lineno": 39,
+  "fn": "signerSetHash",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to kotlin/collections/CollectionsKt::collectionSizeOrDefault",
+  "line": "fun signerSetHash(signerSet: List<Any?>): ByteArray {",
+  "occurrence": 1,
+  "lineno": 39,
+  "fn": "signerSetHash",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "ArgumentPropagationMutator: replaced call to kotlin/collections/CollectionsKt::collectionSizeOrDefault with argument",
+  "line": "fun signerSetHash(signerSet: List<Any?>): ByteArray {",
+  "occurrence": 1,
+  "lineno": 39,
+  "fn": "signerSetHash",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (signerSet !is List<*> || signerSet.any { it !is Map<*, *> || it[\"role\"] !is String || it[\"publicKey\"] !is String }) null",
+  "occurrence": 1,
+  "lineno": 112,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "fun signerSetHashB64u(signerSet: Any?): String? = try {",
+  "occurrence": 1,
+  "lineno": 111,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "NegateConditionalsMutator: negated conditional",
+  "line": "fun signerSetHashB64u(signerSet: Any?): String? = try {",
+  "occurrence": 1,
+  "lineno": 111,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Collection::isEmpty",
+  "line": "fun signerSetHashB64u(signerSet: Any?): String? = try {",
+  "occurrence": 1,
+  "lineno": 111,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "fun signerSetHashB64u(signerSet: Any?): String? = try {",
+  "occurrence": 1,
+  "lineno": 111,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "fun signerSetHashB64u(signerSet: Any?): String? = try {",
+  "occurrence": 1,
+  "lineno": 111,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (signerSet !is List<*> || signerSet.any { it !is Map<*, *> || it[\"role\"] !is String || it[\"publicKey\"] !is String }) null",
+  "occurrence": 1,
+  "lineno": 112,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "fun signerSetHashB64u(signerSet: Any?): String? = try {",
+  "occurrence": 1,
+  "lineno": 111,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (signerSet !is List<*> || signerSet.any { it !is Map<*, *> || it[\"role\"] !is String || it[\"publicKey\"] !is String }) null",
+  "occurrence": 1,
+  "lineno": 112,
+  "fn": "signerSetHashB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "internal fun validatedRegistry(signerSet: List<Any?>): Map<String, Pair<String, String?>>? {",
+  "occurrence": 1,
+  "lineno": 83,
+  "fn": "validatedRegistry$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Collection::isEmpty",
+  "line": "internal fun validatedRegistry(signerSet: List<Any?>): Map<String, Pair<String, String?>>? {",
+  "occurrence": 1,
+  "lineno": 83,
+  "fn": "validatedRegistry$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val role = o[\"role\"] as? String ?: return null",
+  "occurrence": 1,
+  "lineno": 87,
+  "fn": "validatedRegistry$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val pk = o[\"publicKey\"] as? String ?: return null",
+  "occurrence": 1,
+  "lineno": 89,
+  "fn": "validatedRegistry$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val ps = o[\"pq_pk\"] as? String ?: return null",
+  "occurrence": 1,
+  "lineno": 93,
+  "fn": "validatedRegistry$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "internal fun validatedRegistry(signerSet: List<Any?>): Map<String, Pair<String, String?>>? {",
+  "occurrence": 1,
+  "lineno": 83,
+  "fn": "validatedRegistry$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "ConditionalsBoundaryMutator: changed conditional boundary",
+  "line": "if (t !in 1..3) return false // R6-04: exactly 1, 2 or 3",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 1 with 0",
+  "line": "if (t !in 1..3) return false // R6-04: exactly 1, 2 or 3",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 4 with 5",
+  "line": "if (t !in 1..3) return false // R6-04: exactly 1, 2 or 3",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (t !in 1..3) return false // R6-04: exactly 1, 2 or 3",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "if (t !in 1..3) return false // R6-04: exactly 1, 2 or 3",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "false // fail-closed: a malformed share never counts as a valid one",
+  "occurrence": 1,
+  "lineno": 191,
+  "fn": "verifyShare",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "NonVoidMethodCallMutator: removed call to java/util/Map::get",
+  "line": "var pqPk: Any? = share[\"pq_pk\"]",
+  "occurrence": 1,
+  "lineno": 181,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (t !in 1..3) return false // R6-04: exactly 1, 2 or 3",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val reg = validatedRegistry(signerSet) ?: return false",
+  "occurrence": 1,
+  "lineno": 166,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val r = reg[role] ?: return false",
+  "occurrence": 1,
+  "lineno": 172,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (regPq == null) return false",
+  "occurrence": 1,
+  "lineno": 184,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "if (t !in 1..3) return false // R6-04: exactly 1, 2 or 3",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_ORDER_IF: removed conditional - replaced comparison check with true",
+  "line": "if (t !in 1..3) return false // R6-04: exactly 1, 2 or 3",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "ArgumentPropagationMutator: replaced call to java/util/Map::get with argument",
+  "line": "var pqPk: Any? = share[\"pq_pk\"]",
+  "occurrence": 1,
+  "lineno": 181,
+  "fn": "verifyShare",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "false",
+  "occurrence": 1,
+  "lineno": 133,
+  "fn": "verifyShareEntry",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "val tm = if (e == null) null else Pca.decodeB64uStrict(e[\"threshold_message\"], -1)",
+  "occurrence": 1,
+  "lineno": 128,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (role == null || t == null || set == null || tm == null || share == null) false",
+  "occurrence": 1,
+  "lineno": 130,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val e = entry as? Map<String, Any?>",
+  "occurrence": 1,
+  "lineno": 124,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val role = e?.get(\"role\") as? String",
+  "occurrence": 1,
+  "lineno": 125,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val role = e?.get(\"role\") as? String",
+  "occurrence": 1,
+  "lineno": 125,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val t = exactT(e?.get(\"t\"))",
+  "occurrence": 1,
+  "lineno": 126,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val set = e?.get(\"signer_set\") as? List<Any?>",
+  "occurrence": 1,
+  "lineno": 127,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val set = e?.get(\"signer_set\") as? List<Any?>",
+  "occurrence": 1,
+  "lineno": 127,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val share = e?.get(\"share\") as? Map<String, Any?>",
+  "occurrence": 1,
+  "lineno": 129,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "val share = e?.get(\"share\") as? Map<String, Any?>",
+  "occurrence": 1,
+  "lineno": 129,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (role == null || t == null || set == null || tm == null || share == null) false",
+  "occurrence": 1,
+  "lineno": 130,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (role == null || t == null || set == null || tm == null || share == null) false",
+  "occurrence": 1,
+  "lineno": 130,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (role == null || t == null || set == null || tm == null || share == null) false",
+  "occurrence": 1,
+  "lineno": 130,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Threshold.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (role == null || t == null || set == null || tm == null || share == null) false",
+  "occurrence": 1,
+  "lineno": 130,
+  "fn": "verifyShareEntry",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "false",
+  "occurrence": 1,
+  "lineno": 82,
+  "fn": "mlDsa65Verify",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (pk == null || sig == null || pk.size != ML_DSA_65_PUBLIC_KEY_BYTES || sig.size != ML_DSA_65_SIGNATURE_BYTES)",
+  "occurrence": 1,
+  "lineno": 73,
+  "fn": "mlDsa65Verify",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (pk == null || sig == null || pk.size != ML_DSA_65_PUBLIC_KEY_BYTES || sig.size != ML_DSA_65_SIGNATURE_BYTES)",
+  "occurrence": 1,
+  "lineno": 73,
+  "fn": "mlDsa65Verify",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (pk == null || sg == null) return false",
+  "occurrence": 1,
+  "lineno": 90,
+  "fn": "mlDsa65VerifyB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (pk == null || sg == null) return false",
+  "occurrence": 1,
+  "lineno": 90,
+  "fn": "mlDsa65VerifyB64u",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (alg !is String) return null",
+  "occurrence": 1,
+  "lineno": 65,
+  "fn": "resolveSigAlg",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "InlineConstantMutator: Substituted 12 with 13",
+  "line": "): Boolean = verifySuite(alg, algPresent, holder, PinnedPq.resolve(null, pqPk, trustedPk = pqPk as? String), msg, sig, pqSig)",
+  "occurrence": 1,
+  "lineno": 147,
+  "fn": "verifyLeafSuite",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "InlineConstantMutator: Substituted 0 with 1",
+  "line": "else -> false",
+  "occurrence": 1,
+  "lineno": 171,
+  "fn": "verifySuite$pca_kotlin_mutation",
+  "status": "NO_COVERAGE"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "return when (suite.alg) {",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifySuite$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "return when (suite.alg) {",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifySuite$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "return when (suite.alg) {",
+  "occurrence": 1,
+  "lineno": 164,
+  "fn": "verifySuite$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_ELSE: removed conditional - replaced equality check with false",
+  "line": "if (pqSig !is String) return false",
+  "occurrence": 1,
+  "lineno": 168,
+  "fn": "verifySuite$pca_kotlin_mutation",
+  "status": "SURVIVED"
+ },
+ {
+  "crate": "kotlin-pca",
+  "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pq.kt",
+  "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
+  "line": "if (pqPins != null && identity != null && pqPins.containsKey(identity)) {",
+  "occurrence": 1,
+  "lineno": 209,
+  "fn": "resolve",
+  "status": "SURVIVED"
+ }
+]

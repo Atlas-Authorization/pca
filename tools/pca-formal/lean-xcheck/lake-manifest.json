@@ -1,0 +1,13 @@
+{"version": "1.2.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"type": "path",
+   "scope": "",
+   "name": "«pca-proof»",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "../../../formal/pca-lean",
+   "configFile": "lakefile.toml"}],
+ "name": "«pca-xcheck»",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

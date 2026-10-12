@@ -1,0 +1,8 @@
+# Self-contained Lean 4 project — NO mathlib dependency.
+# Core Lean (Int, List) + the `omega` decision procedure are all that is used,
+# so `lake build` works offline once the pinned toolchain is fetched.
+name = "pca-proof"
+defaultTargets = ["PcaProof"]
+
+[[lean_lib]]
+name = "PcaProof"

@@ -1,0 +1,5 @@
+  f_debit_is_fdebit (all-traces): verified (28 steps)
+  f_c1_debit_from (all-traces): verified (47 steps)
+  node_bound_focus_c2 (all-traces): verified (612 steps)
+# wall=9s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=node_bound_focus_c2 --prove=f_debit_is_fdebit --prove=f_c1_debit_from --heuristic=o --oraclename=oracle_nodebound.sh pca_budget_v5_focus.spthy +RTS -N2 -M12g
+# pcaq job q261011-175843-3e3w (sp8); generalisation: a focused node allocated 'c2' is debited by at most 2 distinct spends

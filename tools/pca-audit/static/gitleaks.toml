@@ -1,0 +1,48 @@
+# gitleaks configuration for the PCA lineup. Default ruleset + a tracked, reasoned allowlist.
+# Every entry below was reviewed by hand on 2026-10-09 (194 raw hits across the PCA paths, 0 real secrets).
+title = "pca-audit gitleaks"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Public standards / third-party test vectors (RFC 8032, RFC 9449, RFC 9901, CIBA examples, BBS draft, Ethereum BLS tests, FN-DSA cross-checks, did:key corpora, SPIFFE/SD-JWT interop captures). Keys here are published KATs."
+paths = [
+  '''packages/pca-abe/src/audit/vectors/.*''',
+  '''packages/pca-aggsig/test-vectors/.*''',
+  '''packages/pca-bbs/test-vectors/.*''',
+  '''packages/pca-fndsa-wasm/test-vectors/.*''',
+  '''packages/pca-mpc-wasm/crate/test-vectors/.*''',
+  '''packages/pca-[a-z0-9-]+/fixtures/.*''',
+  '''sdks/zkvm-pca/fixtures/.*''',
+]
+
+[[allowlists]]
+description = "Real hardware-attestation captures (Azure MAA, GCP Confidential Space). Short-lived signed attestation tokens issued to throwaway VMs; they carry measurements and public certificates, no credentials."
+paths = ['''packages/pca/fixtures/real-.*''']
+
+[[allowlists]]
+description = "Test sources that embed published vectors (RFC 9591 FROST, did:key, CIBA, AP2 official examples)."
+paths = [
+  '''packages/pca/src/frost\.test\.ts''',
+  '''packages/pca-vc/src/(index|vectors)\.test\.ts''',
+  '''packages/pca-ciba/src/conformance\.test\.ts''',
+  '''packages/pca-ap2/src/official-examples\.test\.ts''',
+]
+
+[[allowlists]]
+description = "Domain-separation label string (pca.frost.*), not a credential."
+paths = ['''packages/pca/src/frost-net\.ts''']
+
+[[allowlists]]
+description = "Fuzz crasher regression inputs (random base64url signature bytes of throwaway test keys)."
+paths = ['''tools/pca-audit/fuzz/crashers/.*''']
+
+[[allowlists]]
+description = "Build output and local tool sandboxes (derived from the files above; never published from here)."
+paths = [
+  '''.*/dist/.*''',
+  '''.*/\.stryker-tmp/.*''',
+  '''.*/node_modules/.*''',
+  '''sdks/[a-z0-9-]+/target/.*''',
+]

@@ -1,0 +1,93 @@
+// HAND-TRIMMED SUBSET of the official Envoy v1.39.3 ext_authz gRPC API, used only by the test harness
+// (test-support/envoy-grpc-server.ts) so it can speak the real wire protocol without pulling Envoy's
+// full import closure (validate, udpa, xds, cel, googleapis).
+//
+// Package names, message names, field numbers and types are copied from the vendored official files
+// (envoy-external_auth.proto, envoy-attribute_context.proto, envoy-base.proto, envoy-http_status.proto);
+// src/envoy.fixtures.test.ts re-derives every (message, field, number) from those vendored files and
+// fails if this subset drifts. Fields the harness does not need are omitted (unknown fields are skipped
+// by protobuf decoders), so this decodes real Envoy CheckRequests and encodes valid CheckResponses.
+syntax = "proto3";
+
+package envoy.service.auth.v3;
+
+message CheckRequest {
+  AttributeContext attributes = 1;
+}
+
+message AttributeContext {
+  message Peer {
+    Address address = 1;
+    string service = 2;
+    map<string, string> labels = 3;
+    string principal = 4;
+    string certificate = 5;
+  }
+  message Request {
+    HttpRequest http = 2;
+  }
+  message HttpRequest {
+    string id = 1;
+    string method = 2;
+    map<string, string> headers = 3;
+    string path = 4;
+    string host = 5;
+    string scheme = 6;
+    string query = 7;
+    string fragment = 8;
+    int64 size = 9;
+    string protocol = 10;
+    string body = 11;
+    bytes raw_body = 12;
+  }
+  Peer source = 1;
+  Peer destination = 2;
+  Request request = 4;
+  map<string, string> context_extensions = 10;
+}
+
+message Address {
+  SocketAddress socket_address = 1;
+}
+
+message SocketAddress {
+  string address = 2;
+  uint32 port_value = 3;
+}
+
+message HeaderValue {
+  string key = 1;
+  string value = 2;
+}
+
+message HeaderValueOption {
+  HeaderValue header = 1;
+  int32 append_action = 3;
+  bool keep_empty_value = 4;
+}
+
+message HttpStatus {
+  int32 code = 1;
+}
+
+message DeniedHttpResponse {
+  HttpStatus status = 1;
+  repeated HeaderValueOption headers = 2;
+  string body = 3;
+}
+
+message OkHttpResponse {
+  repeated HeaderValueOption headers = 2;
+  repeated string headers_to_remove = 5;
+}
+
+message RpcStatus {
+  int32 code = 1;
+  string message = 2;
+}
+
+message CheckResponse {
+  RpcStatus status = 1;
+  DeniedHttpResponse denied_response = 2;
+  OkHttpResponse ok_response = 3;
+}

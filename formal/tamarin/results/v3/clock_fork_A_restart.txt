@@ -1,0 +1,23 @@
+Clock-model runs on cloud-box-2 (exclusive lease), tamarin-prover 1.12.0. Transcribed from the box's out/*.txt (box unreachable afterwards).
+pca_clock_v3.spthy  no_accept_after_expiry  --heuristic=O --oraclename=./oracle_clock.sh : verified (22 steps), wall 1s
+pca_clock_v3.spthy  no_accept_after_expiry  --heuristic=s                                  : verified (896 steps), wall 2s
+  (model: explicit !Succ/!Le/!Lt tables; expiry is a rule premise; clock_mono helper lemma NOT needed for this proof)
+pca_clock_v3.spthy  clock_mono (reuse helper)  O / s : NOT PROVED (killed at 235s / 296s; no result)
+pca_clock.spthy (v2 builtin-style)  no_accept_after_expiry  O (96s) / s (586s) : NOT PROVED (killed rc=137, OOM/-M; no result)
+pca_clock_v3b.spthy (bounded step index, 10 steps)  no_accept_after_expiry  O : killed, no result; s : rc=251 heap limit at 1009s, NOT PROVED
+pca_clock_v3c.spthy (per-pair mono_* lemmas): launched 6 jobs, box became unreachable (SSH banner timeout, health DOWN); NO RESULT.
+pca_actn_time_store.spthy: not started.
+
+CORRECTION (2026-10-10, later): the "verified" results for pca_clock_v3.spthy above are INVALID as a proof of
+no_accept_after_expiry on its own. The file contains `lemma clock_mono [use_induction, reuse]`, which was never proved
+(killed at 235s/296s); with --prove=no_accept_after_expiry Tamarin used it as an unproved reuse lemma.
+pca_clock_v3_nohelper.spthy (same model, helper lemma deleted), --heuristic=O --oraclename=./oracle_clock.sh, -N4 -M10g:
+  NO RESULT, heap limit hit (rc=251) at 215s on cloud-box-11. NOT proved.
+So no_accept_after_expiry is OPEN on the clock models. Do not cite the 22-step / 896-step runs as proofs.
+
+Later runs on cloud-box-11 (exclusive lease), -N4 -M10g, logs in results/v3/clock_az11/:
+ v3d reader_has_origin (epoch tags): verified (103 steps), 0s.  read_before_tick, tick_unique: heap exhausted (NOT proved).
+ v3b (bounded index, K=10) no_accept_after_expiry, oracle (fixed for !Nx): heap exhausted at 362s (NOT proved).
+ v3c mono_t1_t0, t2_t0, t2_t1, t3_t0, t3_t1, t3_t2: all heap exhausted (165-395s) (NOT proved).
+ v3e (instance ids) alive_unique: O heap exhausted 294s; heuristics s and S: 900s timeout (NOT proved).
+ pca_actn_time_store port: not done (same read-and-re-emit blocker).

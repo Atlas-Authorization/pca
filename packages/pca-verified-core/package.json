@@ -1,0 +1,63 @@
+{
+  "name": "@atlasauth/pca-verified-core",
+  "version": "0.4.0",
+  "description": "The decision logic of the PCA verifier (capability-chain walk and attenuation, threshold distinct-role count, replay guard, check/verdict combinator, suite and PQ-pin binding rules), written and machine-proved in Dafny and compiled to JavaScript.",
+  "keywords": [
+    "formal verification",
+    "dafny",
+    "proof-carrying authority",
+    "pca",
+    "capability",
+    "attenuation",
+    "threshold",
+    "replay protection",
+    "agent authorization"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-verified-core"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "verify": "bash ../../formal/dafny/build.sh --verify-only",
+    "check:generated": "bash ../../formal/dafny/build.sh --check"
+  },
+  "dependencies": {
+    "bignumber.js": "9.3.1"
+  },
+  "devDependencies": {
+    "fast-check": "^3.23.1",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "generated",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

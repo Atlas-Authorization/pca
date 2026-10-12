@@ -1,0 +1,3 @@
+RESULT Proved forall a: message; inj-event(Accept(a)) ==> inj-event(Signed(a)) up to probability Psign(time_1, N, maxlength(game 5: act))
+RESULT Proved forall a: message; event(Accept(a)) ==> event(Signed(a)) up to probability Psign(time_1, N, maxlength(game 5: act))
+All queries proved.

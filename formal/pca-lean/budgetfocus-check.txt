@@ -1,0 +1,11 @@
+# lake build PcaProof.BudgetFocus on cloud-box, Sun Oct 11 18:41:33 UTC 2026
+info: downloading https://releases.lean-lang.org/lean4/v4.34.1/lean-4.34.1-linux.tar.zst
+info: installing ~/.elan/toolchains/leanprover--lean4---v4.34.1
+✔ [2/2] Built PcaProof.BudgetFocus (348ms)
+Build completed successfully (2 jobs).
+rc=0
+'PcaProof.BudgetFocus.simulation' depends on axioms: [Quot.sound]
+'PcaProof.BudgetFocus.simulation_from_empty' depends on axioms: [Quot.sound]
+'PcaProof.BudgetFocus.swap_swap' depends on axioms: [propext]
+1
+# pcaq job q261011-184129-sj9z; the trailing count is grep -c sorry = the docstring line 'no `sorry`', not a proof hole

@@ -1,0 +1,90 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 106 and seed -9107829645986781737 with 3 workers on 12 cores with 2731MB heap and 64MB offheap memory [pid: 1455334] (Linux 7.0.0-1011-gcp amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/replay-tla/tla/PgStore.tla
+Parsing file /tmp/tlc-7101603025042790701/Integers.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-7101603025042790701/FiniteSets.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-7101603025042790701/Sequences.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-7101603025042790701/_TLCTrace.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-7101603025042790701/Naturals.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-7101603025042790701/TLC.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-7101603025042790701/TLCExt.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module PgStore
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module PgStore
+Starting... (2026-10-10 21:23:03)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-10 21:23:03.
+Error: Invariant Safe is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ val = 0
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ lock = "none"
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ pend = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ pc = (c1 :> "start" @@ c2 :> "start" @@ c3 :> "start")
+/\ replica = 0
+/\ wlog = <<>>
+/\ maxEver = 0
+
+State 2: <Next line 149, col 9 to line 152, col 25 of module PgStore>
+/\ val = 0
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ lock = "none"
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ pend = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ pc = (c1 :> "start" @@ c2 :> "wr" @@ c3 :> "start")
+/\ replica = 0
+/\ wlog = <<>>
+/\ maxEver = 0
+
+State 3: <Next line 149, col 9 to line 152, col 25 of module PgStore>
+/\ val = 1
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ lock = "none"
+/\ res = (c1 :> "none" @@ c2 :> "T" @@ c3 :> "none")
+/\ pend = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ pc = (c1 :> "start" @@ c2 :> "done" @@ c3 :> "start")
+/\ replica = 0
+/\ wlog = <<<<1, c2>>>>
+/\ maxEver = 1
+
+State 4: <Next line 149, col 9 to line 152, col 25 of module PgStore>
+/\ val = 1
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ lock = "none"
+/\ res = (c1 :> "none" @@ c2 :> "T" @@ c3 :> "none")
+/\ pend = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ pc = (c1 :> "wr" @@ c2 :> "done" @@ c3 :> "start")
+/\ replica = 0
+/\ wlog = <<<<1, c2>>>>
+/\ maxEver = 1
+
+State 5: <Next line 149, col 9 to line 152, col 25 of module PgStore>
+/\ val = 1
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ lock = "none"
+/\ res = (c1 :> "T" @@ c2 :> "T" @@ c3 :> "none")
+/\ pend = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ pc = (c1 :> "done" @@ c2 :> "done" @@ c3 :> "start")
+/\ replica = 0
+/\ wlog = <<<<1, c2>>, <<1, c1>>>>
+/\ maxEver = 1
+
+63 states generated, 40 distinct states found, 20 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 00s at (2026-10-10 21:23:04)
+Trace exploration spec path: ./PgStore_TTrace_1791667383.tla

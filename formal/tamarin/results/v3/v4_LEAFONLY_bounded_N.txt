@@ -1,0 +1,3 @@
+  attack_leafonly_bounded (exists-trace): verified (18 steps)
+# wall=11s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_leafonly_bounded --heuristic=o --oraclename=oracle_nodebound.sh -DDEBIT_LEAF_ONLY pca_budget_v4.spthy +RTS -N2 -M12g
+# pcaq job q261011-175932-m9m6 (sp2); DEBIT_LEAF_ONLY witness FOUND by Tamarin (exists-trace verified = trace exists)

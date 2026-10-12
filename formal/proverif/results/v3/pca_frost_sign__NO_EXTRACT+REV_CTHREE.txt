@@ -1,0 +1,2 @@
+share_secrecy_1 | 0s | RESULT not attacker(sh(g[],c1)) is true.
+share_secrecy_2 | 0s | RESULT not attacker(sh(g[],c2)) is true.

@@ -100,6 +100,8 @@ Run it **after** the signature verified; consuming a nonce for an unauthenticate
 3. **Fail closed.** If the store cannot decide, reject (throw). The guard turns that into a `store_unavailable` denial and never treats a failure as "unseen".
 4. **Bounded.** If a store is full of live entries it must reject rather than evict a live one.
 
+**File-backed state (`@atlasauth/pca/durable-state`) as a store.** If you back a replay or counter store with the durable-state module, its lock is correct only for processes on **one host** and only on a **local filesystem with working hard links** (ext4, xfs, btrfs, tmpfs, APFS). On NFS, SMB, FUSE or some overlay mounts exclusion is not guaranteed; opening such a directory fails closed with `link-unsupported` when hard links are unusable. A holder that stalls keeps the lock and **blocks the others until it dies** (they fail with `lock-timeout`, which the guard turns into a denial); nobody takes a live holder's lock. For several hosts use Postgres or Redis as above.
+
 `InMemoryReplayStore` is the reference implementation. It is correct only for a single process whose lifetime covers the action lifetime. A restart empties it, which is a violation of rule 2, so use it for tests and single-process tools only.
 
 ## What is not guaranteed

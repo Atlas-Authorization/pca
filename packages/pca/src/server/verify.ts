@@ -1,0 +1,381 @@
+import { hookTInt } from '../verified-decision';
+import { requiresAttestation } from '../attestation';
+import { VerdictState, beaconDecision, enforceRequired as enforceRequiredVerified, planDecision, reversibilityDecision, useDeclaredClass, withDeniedFallback } from '@atlasauth/pca-verified-core';
+import { beaconRef, verifyLivenessBeacon, type LivenessBeacon } from '../beacons';
+import { type Capability } from '../capability';
+import { readEnvelope } from '../envelope';
+import { hashCanonical } from '../hash';
+import { merkleRoot, planNodeLeaf, type PlanNode } from '../merkle';
+import { decodePCActn, verifyPCActnCore, type CheckStatus, type PCActn, type VerifyHooks } from '../pcactn';
+import { decide, evaluateAgentCaveats, resolveReversibilityClass } from '../policy-vm';
+import type { SigAlg } from '../pq';
+import { checkRevocationEpoch, type RevocationEpoch } from '../revocation';
+import { type RequiredThreshold, type RiskInputs, type TrustBudget } from '../risk';
+
+
+/**
+ * Resource-server side Proof-Carrying Authority verifier (spec §4, §7, Appendix A).
+ * Deterministic and offline; never throws (any internal error becomes a fail-closed verdict).
+ */
+
+export interface PcaContext {
+  /** Plaintext action params. If given they MUST hash to `action.params_digest`; needed by predicates. */
+  params?: Record<string, unknown>;
+  subject?: Record<string, unknown>;
+  env?: Record<string, unknown>;
+  /** The committed plan, if the RS knows it. Its Merkle root must equal `plan.root`. */
+  plan?: PlanNode[];
+  /**
+   * Whether the RS's copy of the plan root has been AUTHORIZED by the principal (App. A step 2).
+   * `true` -> `plan_root_authorized` passes; `false` -> it FAILS; absent -> `not-enforced`.
+   */
+  planAuthorized?: boolean;
+  /**
+   * The RS's authoritative reversibility class for this action (from the principal-authorized plan node or
+   * a verb->class catalog). The agent's self-declared `action.reversibility_class` can only make it STRICTER;
+   * declaring a less-restrictive class than this is a hard failure (`reversibility`).
+   */
+  reversibilityClass?: string;
+  /**
+   * Risk inputs the RS can vouch for. Missing ones fail closed (worst case), INCLUDING `taint`: the agent's
+   * own `provenance.taint_level` is never used as an input (it could only ever lower risk).
+   */
+  risk?: Partial<RiskInputs>;
+  /**
+   * Current trust budget for the leaf holder. Absent fails CLOSED to a DENY-METERED budget (B=0): any
+   * machine-only (t<3) action with cost κ·r > 0 is forced to step-up / recharge (a zero-risk action is
+   * still admitted). The `budget` check reports not-enforced when absent (visibility is preserved).
+   */
+  budget?: TrustBudget;
+  recentActionTimes?: number[];
+  /**
+   * The guardian-signed revocation epoch for the grant (P2-3). When present the verifier REQUIRES it to
+   * be genuine (signature by `guardianPublic`), unexpired (`now <= not_after`), not older than
+   * `lastAcceptedEpoch`, and bound to the PCActn's signed `freshness.epoch` (an action that predates the
+   * epoch is rejected). Reported as the `freshness` check; absent = `not-enforced`.
+   */
+  revocationEpoch?: { epoch: RevocationEpoch; guardianPublic: string; lastAcceptedEpoch?: number };
+  /**
+   * The dead-man liveness beacon for the grant (P2-4). When present the verifier REQUIRES it to be genuine
+   * (signed by one of the pinned `issuers`: the grant principal and/or operator), for this `instance`, covering
+   * the grant, within its validity (hard-max enforced), not rolled back past `lastAcceptedSeq`, and bound by the
+   * PCActn's signed `freshness.beacon_ref`. Reported as the `beacon` check; absent = `not-enforced`.
+   */
+  beacon?: { beacon: LivenessBeacon; issuers: string[]; instance: string; lastAcceptedSeq?: number; /** R2-01: PQ pins by issuer identity; a pure-PQ / hybrid beacon verifies only under these. */ pqPins?: Readonly<Record<string, string>> };
+}
+
+export interface VerifyPCActnOptions {
+  grant: Capability;
+  /**
+   * THIS verifier's audience id (resource server / Atlas instance id). The PCActn's signed `aud` must equal
+   * it (audit P0-5: kills cross-server / cross-instance replay). FAIL-CLOSED: if the PCActn carries a signed
+   * `aud` but no audience is supplied here, the `audience` check FAILS (a verifier must not silently lose its
+   * cross-instance binding). Pass `null` to deliberately accept any audience (reported 'not-enforced'); an
+   * absent audience is only 'not-enforced' when the PCActn itself carries no `aud`.
+   */
+  audience?: string | null;
+  hooks?: VerifyHooks;
+  /** epoch ms (default Date.now()) */
+  now?: number;
+  context?: PcaContext;
+  /**
+   * Minimum enforcement rung: every named check MUST be 'pass'; one that is 'not-enforced' (or absent)
+   * is treated as a failure (default-deny). Default: none (the library verifier reports, the caller
+   * decides) - `requirePCA` defaults this to {@link DEFAULT_REQUIRED_CHECKS}.
+   */
+  require?: string[];
+  /**
+   * Suite policy (F-4): the only signature suites accepted for the PCActn leaf and every delegation hop
+   * (absent `alg` == `'ed25519'`). Unset: every registered suite, with the PQ key of any hybrid / pure-PQ signer
+   * required to be bound to its holder (`holder_pq`, F-2).
+   */
+  allowedSuites?: readonly SigAlg[];
+  /** LEGACY: accept PQ keys read from the artifact (no `holder_pq` binding). Voids the hybrid's PQ protection (F-2). Default false. */
+  allowUnboundPq?: boolean;
+  /**
+   * Server-side PQ pins `issuer -> pq_pk` (b64u). When set, a grant whose root suite is not Ed25519 must carry a `pq_pk`
+   * byte-equal to `pqPins[grant.issuer]`; a missing or different pin FAILS the `pq_pin` check (fail closed). An Ed25519
+   * grant has no PQ key to pin and passes. Unset: `pq_pin` is not reported (the stored grant alone roots the key).
+   */
+  pqPins?: Readonly<Record<string, string>>;
+}
+
+/** The minimum enforcement profile a resource server should demand (see `requirePCA`). */
+export const DEFAULT_REQUIRED_CHECKS = ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'] as const;
+
+/** Who the verdict says authorized this: the registry-resolved principal behind the grant. */
+export interface PcaPrincipalInfo {
+  pub: string;
+  subject_type: 'user' | 'org' | 'machine' | 'unverified';
+  subject_id: string | null;
+  /** true only when the key is an active, authenticated, enrolled principal. */
+  verified: boolean;
+}
+
+const CLASS_RANK: Record<string, number> = { reversible: 0, costly: 1, irreversible: 2 };
+/** Unknown class strings are the most restrictive (fail closed). */
+const classRank = (c: unknown): number => (typeof c === 'string' && Object.prototype.hasOwnProperty.call(CLASS_RANK, c) ? CLASS_RANK[c]! : 2);
+
+/**
+ * Default-deny: turn every required check that is not 'pass' into a failure. Mutates + returns the verdict.
+ * Exported so framework adapters that finish checks after `verifyPCActn` (e.g. the replay counter) can apply it last.
+ */
+export function enforceRequired(v: PcaVerdict, required: readonly string[]): PcaVerdict {
+  const r = enforceRequiredVerified<string, string>(v.allow, Object.entries(v.checks) as [string, CheckStatus][], v.reasons, required, (name, was) => `${name}: required check is ${was ?? 'absent'} (default-deny: not enforced by this resource server)`);
+  v.allow = r.allow;
+  for (const [k, c] of r.checks) v.checks[k] = c;
+  v.reasons.splice(0, v.reasons.length, ...r.reasons);
+  return v;
+}
+
+export interface PcaVerdict {
+  allow: boolean;
+  /** Recomputed risk score in [0,1]. */
+  r: number;
+  requiredThreshold: RequiredThreshold;
+  checks: Record<string, CheckStatus>;
+  reasons: string[];
+  /** Budget after the decision (leaked, and debited when auto-admitted). Persist it on allow. */
+  budget?: TrustBudget;
+  /** Registry-resolved principal behind the grant (attached by the server / `requirePCA({ resolvePrincipal })`). */
+  principal?: PcaPrincipalInfo;
+}
+
+const WORST_THRESHOLD: RequiredThreshold = { t: 3, proof: 'strong', optimisticAllowed: false };
+
+function failClosed(reason: string, checks: Record<string, CheckStatus> = {}): PcaVerdict {
+  return {
+    allow: false,
+    r: 1,
+    requiredThreshold: WORST_THRESHOLD,
+    checks: { ...checks, malformed: 'fail' },
+    reasons: [reason],
+  };
+}
+
+export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOptions): Promise<PcaVerdict> {
+  try {
+    let p: PCActn;
+    try {
+      p = typeof pcactn === 'string' ? decodePCActn(pcactn) : pcactn;
+    } catch (e) {
+      return failClosed(`undecodable PCActn: ${(e as Error).message}`);
+    }
+    if (p === null || typeof p !== 'object') return failClosed('PCActn is not an object');
+
+    const now = opts.now ?? Date.now();
+    const ctx = opts.context ?? {};
+    // F-1: remember the threshold the hook says it enforced, so it can be compared with the SERVER-derived t below.
+    let hookT: number | undefined;
+    const userThreshold = opts.hooks?.threshold;
+    const hooks = userThreshold
+      ? {
+          ...opts.hooks,
+          threshold: async (hctx: Parameters<typeof userThreshold>[0]) => {
+            const r = await userThreshold(hctx);
+            if (r.enforced) hookT = r.t;
+            return r;
+          },
+        }
+      : opts.hooks;
+    // pca-unsafe-root: allow the full verifier's own grant parameter; callers pass their stored grant (pca-a2a's pinned-issuer root is admitted only with pqPins)
+    const core = await verifyPCActnCore(p, { grant: opts.grant, nowEpoch: now, audience: opts.audience, hooks, allowedSuites: opts.allowedSuites, allowUnboundPq: opts.allowUnboundPq });
+    // A wire-form failure is terminal (normative): nothing else is evaluated on a malformed object.
+    if (core.checks.wire === 'fail') return failClosed(core.reason ?? 'wire: malformed PCActn', { wire: 'fail' });
+    let vs = VerdictState.init<string, string>(Object.entries(core.checks) as [string, CheckStatus][], !core.allow && core.reason ? [core.reason] : []);
+    const fail = (name: string, why: string) => {
+      vs = vs.fail(name, () => `${name}: ${why}`);
+    };
+    const mark = (name: string, s: CheckStatus) => {
+      vs = vs.set(name, s);
+    };
+
+    // server-side PQ pin for a non-Ed25519 grant (fail closed: no pin for the issuer, or a different key, denies)
+    if (opts.pqPins !== undefined) {
+      const alg = opts.grant.alg ?? 'ed25519';
+      const pin = Object.prototype.hasOwnProperty.call(opts.pqPins, opts.grant.issuer) ? opts.pqPins[opts.grant.issuer] : undefined;
+      if (alg === 'ed25519') mark('pq_pin', 'pass');
+      else if (typeof pin === 'string' && typeof opts.grant.pq_pk === 'string' && pin === opts.grant.pq_pk) mark('pq_pin', 'pass');
+      else fail('pq_pin', pin === undefined ? `no server-side PQ pin for the grant issuer (suite ${alg})` : 'the grant pq_pk does not match the server-side pin');
+    }
+
+    // grant_ref binds the object to this grant
+    if (p.grant_ref === opts.grant.id) mark('grant_ref', 'pass');
+    else fail('grant_ref', 'does not reference the supplied grant');
+
+    // params plaintext must open the committed digest
+    if (ctx.params !== undefined) {
+      if (hashCanonical(ctx.params) === p.action?.params_digest) mark('params_digest', 'pass');
+      else fail('params_digest', 'supplied params do not hash to action.params_digest');
+    } else mark('params_digest', 'not-enforced');
+
+    // the RS's own copy of the plan must be the committed one
+    switch (planDecision(!!ctx.plan, ctx.plan ? merkleRoot(ctx.plan.map(planNodeLeaf)) === p.plan?.root : false, ctx.planAuthorized)) {
+      case 'mismatch':
+        fail('plan_root_authorized', 'known plan does not match plan.root');
+        break;
+      case 'unauthorized':
+        fail('plan_root_authorized', 'the plan root has not been authorized by the principal');
+        break;
+      case 'pass':
+        mark('plan_root_authorized', 'pass');
+        break;
+      case 'not-enforced':
+        mark('plan_root_authorized', 'not-enforced');
+        break;
+    }
+
+    if (ctx.revocationEpoch) {
+      const r = checkRevocationEpoch(ctx.revocationEpoch.epoch, {
+        guardianPublic: ctx.revocationEpoch.guardianPublic,
+        now,
+        grantRef: opts.grant.id,
+        lastAcceptedEpoch: ctx.revocationEpoch.lastAcceptedEpoch,
+        pcactnEpoch: p.freshness?.epoch,
+      });
+      if (r.ok) mark('freshness', 'pass');
+      else fail('freshness', r.reason ?? 'revocation epoch rejected');
+    } else mark('freshness', 'not-enforced');
+
+    {
+      const bc = ctx.beacon;
+      const r = bc ? verifyLivenessBeacon(bc.beacon, { issuers: bc.issuers, now, instance: bc.instance, scope: opts.grant.id, ...(bc.pqPins ? { pqPins: bc.pqPins } : {}) }) : undefined;
+      const replayed = !!bc && !!r?.ok && bc.lastAcceptedSeq !== undefined && bc.beacon.seq < bc.lastAcceptedSeq;
+      const refBinds = !!bc && !!r?.ok && !replayed && p.freshness?.beacon_ref === beaconRef(bc.beacon);
+      switch (beaconDecision(!!bc, !!r?.ok, replayed, refBinds)) {
+        case 'rejected':
+          fail('beacon', r?.reason ?? 'beacon rejected');
+          break;
+        case 'replayed':
+          fail('beacon', `beacon seq ${bc!.beacon.seq} is older than the last accepted ${bc!.lastAcceptedSeq} (replay)`);
+          break;
+        case 'unbound':
+          fail('beacon', 'PCActn freshness.beacon_ref does not bind the presented beacon');
+          break;
+        case 'pass':
+          mark('beacon', 'pass');
+          break;
+        case 'not-enforced':
+          mark('beacon', 'not-enforced');
+          break;
+      }
+    }
+
+    // Require-when-bound (audit finding 3): a grant whose agent_binding constrains the model / measurement /
+    // operator / weights REQUIRES a bound attestation. Absent, unbound or unenforced => DENY, never skipped.
+    if (vs.attestationRequiredFails(requiresAttestation(readEnvelope(opts.grant)?.agent_binding), 'attestation')) {
+      fail('attestation', 'the grant binds the agent (agent_binding) so a valid, bound attestation is REQUIRED');
+    }
+
+    const chain = Array.isArray(p.cap_chain) ? p.cap_chain : [];
+    const leaf = chain[chain.length - 1];
+    const depth = Math.max(0, chain.length - 1);
+    const now0 = now;
+    // Fail-closed default: an ABSENT budget becomes a DENY-METERED budget (B=0) in `decideBudget`,
+    // so a caller that forgets `ctx.budget` cannot silently get unlimited machine-only authority.
+    const budgetIn: TrustBudget = ctx.budget ?? { B: 0, tau: now0, asOf: now0 };
+    mark('budget', ctx.budget ? 'pass' : 'not-enforced');
+    if (ctx.budget === undefined) {
+      vs = vs.push(
+        'budget: no budget supplied — fail-closed default (B=0, DENY-METERED): any machine-only (t<3) action must step-up / recharge',
+      );
+    }
+
+    // Taint: ONLY an RS-supplied value counts. The agent's `provenance.taint_level` is untrusted (it can only
+    // lower risk), so a missing RS taint fails closed to the worst case in the Policy VM.
+    const risk: Partial<RiskInputs> = { ...ctx.risk };
+
+    // Reversibility: the RS's authoritative class wins; the agent may only be STRICTER.
+    const declared = p.action?.reversibility_class;
+    let reversibility = declared;
+    if (ctx.reversibilityClass !== undefined) {
+      const dr = classRank(declared);
+      const sr = classRank(ctx.reversibilityClass);
+      if (reversibilityDecision(dr, sr) === 'less-restrictive') {
+        fail('reversibility', `declared class '${String(declared)}' is less restrictive than the authoritative '${ctx.reversibilityClass}'`);
+      } else mark('reversibility', 'pass');
+      reversibility = useDeclaredClass(dr, sr) ? declared : ctx.reversibilityClass;
+    }
+    const budgetForDecide = decideBudget(budgetIn, ctx.budget === undefined);
+    const actionCtx = {
+      action: { verb: p.action?.verb, resource: p.action?.resource, params: ctx.params, reversibility_class: reversibility },
+      subject: ctx.subject,
+      env: ctx.env,
+      // Signed `tool_binding` (D): binds the semantic firewall (`tool_schema` caveats) to the tool the agent signed.
+      ...(typeof p.tool_binding === 'string' ? { toolBinding: p.tool_binding } : {}),
+    };
+    const d = decide({
+      // pca-unsafe-root: allow decide() runs under the same grant parameter as the core verifier above
+      grant: opts.grant,
+      action: actionCtx,
+      plan: ctx.plan,
+      nodeId: p.plan?.node_id,
+      risk,
+      budget: budgetForDecide,
+      now,
+      caveatContext: { delegationDepth: depth, recentActionTimes: ctx.recentActionTimes },
+      // Signed `caution` (D): monotone uncertainty attestation, combined with the server r via max.
+      rFloor: typeof p.caution === 'number' ? p.caution : undefined,
+    });
+
+    // Caveats added by delegation hops (beyond the root's) are conjunctive too.
+    if (leaf) {
+      const extra = leaf.caveats.slice(opts.grant.caveats.length);
+      // Agent-native evaluator: delegated `predicates` / `tool_schema` caveats are ENFORCED against the signed action.
+      const cv = evaluateAgentCaveats(
+        extra,
+        {
+          now,
+          blastRadius: risk.blastRadius,
+          // the SAME class decide() used for the envelope caveats: the action's own, else the signed plan node's
+          reversibilityClass: resolveReversibilityClass(actionCtx, ctx.plan, p.plan?.node_id),
+          delegationDepth: depth,
+          recentActionTimes: ctx.recentActionTimes,
+        },
+        actionCtx,
+      );
+      if (cv.ok) mark('delegated_caveats', 'pass');
+      else fail('delegated_caveats', `delegation caveat(s) not satisfied: ${cv.failed.join(', ')}`);
+    }
+
+    // policy: the check mirrors the Policy VM's release decision; its reasons (also the informational step-up /
+    // assumed-worst-case ones when released) are kept in order.
+    mark('policy', d.releaseGuardianShare ? 'pass' : 'fail');
+    vs = vs.pushAll(d.reasons.map((x) => `policy: ${x}`));
+
+    // Threshold: t > 1 needs a proof we can only get from an enforced threshold hook (F-1: the hook must report
+    // having enforced at least the SERVER-derived t; below it, or silent, the check fails).
+    vs = vs.applyThreshold('threshold', d.requiredThreshold.t, d.releaseGuardianShare, vs.get('threshold'), hookTInt(hookT), (r) => {
+      const t = d.requiredThreshold.t;
+      if (r === 'below') {
+        return `threshold: threshold hook enforced t=${hookT === undefined ? 'unreported' : String(hookT)} but the server requires t=${t} (below the server-derived threshold; derive t from server-held data)`;
+      }
+      if (r === 'rejected') return `threshold: t=${t} required and the threshold proof was rejected`;
+      return `threshold: t=${t} (${d.requiredThreshold.proof}) required but no threshold verifier is enforced`;
+    });
+
+    const allow = vs.finalAllow(d.releaseGuardianShare, core.allow);
+    const checks = Object.fromEntries(vs.checks) as Record<string, CheckStatus>;
+    const reasons = vs.reasons;
+    const out: PcaVerdict = allow
+      ? { allow, r: d.r, requiredThreshold: d.requiredThreshold, checks, reasons, budget: ctx.budget ? d.budget : undefined }
+      : { allow: false, r: d.r, requiredThreshold: d.requiredThreshold, checks, reasons };
+    if (opts.require?.length) enforceRequired(out, opts.require);
+    out.reasons = withDeniedFallback(out.allow, out.reasons, 'denied');
+    return out;
+  } catch (e) {
+    return failClosed(`verifier error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
+  }
+}
+
+/**
+ * An ABSENT budget fails CLOSED. A caller that omits `ctx.budget` would otherwise be handed unlimited
+ * machine-only authority, so the safe default is a DENY-METERED budget (B=0): any machine-only (t<3)
+ * cost `κ·r > 0` cannot be afforded and the action is forced to human step-up / recharge. The hosted
+ * Atlas server path always supplies `ctx.budget` (seeded from the budget store / context), so it is
+ * unaffected; only the omitted-budget default changes. A zero-risk (r=0 ⇒ cost 0) action is still
+ * admitted at B=0, which keeps it backward-compatible for genuinely free machine actions.
+ */
+function decideBudget(b: TrustBudget, absent: boolean): TrustBudget {
+  return absent ? { ...b, B: 0 } : b;
+}

@@ -1,0 +1,1 @@
+replay_inj | 2s | RESULT inj-event(AcceptH(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> inj-event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol)) is false.

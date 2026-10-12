@@ -1,0 +1,2 @@
+  resource_narrowing_all_hops (all-traces): verified (4088 steps)
+# wall=128s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=resource_narrowing_all_hops --heuristic=o --oraclename=oracle_walk.sh pca_scope_resource.spthy +RTS -N4 -M10g

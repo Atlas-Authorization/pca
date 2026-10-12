@@ -1,0 +1,2 @@
+  root_scope_bounds_action (all-traces): verified (206 steps)
+# wall=9s heuristic=c tamarin-prover 1.12.0

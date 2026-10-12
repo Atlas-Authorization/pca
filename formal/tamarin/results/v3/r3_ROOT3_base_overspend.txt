@@ -1,0 +1,5 @@
+  nb_debit_from_unique (all-traces): verified (2449 steps)
+  root_bound (all-traces): verified (50 steps)
+  attack_overspend (exists-trace): falsified - no trace found (50 steps)
+# wall=34s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=root_bound --prove=nb_debit_from_unique --prove=attack_overspend --heuristic=o --oraclename=oracle_root.sh -DROOT3 pca_budget_v4.spthy +RTS -N2 -M6g
+# closure round 3; '/* All wellformedness checks were successful. */'

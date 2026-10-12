@@ -1,0 +1,13 @@
+{
+  "retrieved": "2026-10-09",
+  "kind": "NIST PQC round-3 submission KAT for ORIGINAL Falcon (not FN-DSA / FIPS 206)",
+  "archive": {
+    "url": "https://csrc.nist.gov/CSRC/media/Projects/post-quantum-cryptography/documents/round-3/submissions/Falcon-Round3.zip",
+    "sha256": "fd58f0454f6bfb4713734e60b2d2d75d96fbae62d5180fceeef1039df5362f44"
+  },
+  "files": [
+    { "file": "falcon512-KAT.rsp", "archivePath": "Falcon/falcon-round3/KAT/falcon512-KAT.rsp", "sha256": "dd75c946fdedef4ec46a2bee7e10c65c9126f1a839b9ced6921fd45f7354b5cd", "entries": 100 },
+    { "file": "falcon1024-KAT.rsp", "archivePath": "Falcon/falcon-round3/KAT/falcon1024-KAT.rsp", "sha256": "036a0bf5260573cec44977284dfef756cd1143db9961b981bd1fb55828acb20d", "entries": 100 }
+  ],
+  "note": "Files are byte-identical to the archive contents. Used only for the checks that are algorithmically valid for FN-DSA; see src/falcon-round3-kat.test.ts."
+}

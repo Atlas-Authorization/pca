@@ -1,0 +1,3 @@
+OPEN (NOT found): heap exhausted at +RTS -M24g after 4366s, no verdict (raw log: 'Heap exhausted'; not committed, size)
+# wall=4366s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_leafonly_witness --heuristic=S -DDEBIT_LEAF_ONLY pca_budget_v4.spthy +RTS -N4 -M24g
+# pcaq job q261011-043052-97qk

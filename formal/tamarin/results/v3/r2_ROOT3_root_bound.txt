@@ -1,0 +1,4 @@
+  nb_debit_from_unique (all-traces): verified (2449 steps)
+  root_bound (all-traces): verified (50 steps)
+# wall=32s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=root_bound --prove=nb_debit_from_unique --heuristic=o --oraclename=oracle_root.sh -DROOT3 pca_budget_v4.spthy +RTS -N2 -M12g
+# closure round 2, oracle_root.sh (root lemmas) / oracle_nodebound.sh (node_bound_c2/c3), 12g cap

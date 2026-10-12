@@ -1,0 +1,2 @@
+TIMEOUT after 900s budget (NOT proved): attenuation_root
+# wall=901s heuristic=O tamarin-prover 1.12.0

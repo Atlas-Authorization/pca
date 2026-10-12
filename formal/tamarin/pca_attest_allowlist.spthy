@@ -1,0 +1,226 @@
+/*
+  PCA -- software attestation path: measured model / weights / operator ALLOWLIST binding and allowlist
+  ROLLBACK (symbolic Dolev-Yao model, Tamarin).
+
+  Models   packages/pca/src/attest-pq-software.ts   (an HSM root signs a statement
+           <measurement, weights_digest, operator, ...> over software-measured values),
+           packages/pca/src/attest-allowlist.ts      (signed, versioned manifests; `version` must not be older
+           than `lastSeenVersion`; revoked entries are tombstones that are never projected),
+           packages/pca/src/attest-allowlist-anchor.ts (the high-water version is anchored in an append-only
+           log; the verifier rejects any manifest older than the highest anchored version, with NO local state).
+
+  Entities
+    * Operator O (key kO): publishes manifest v1 = <'mf','v1','mA','mB'> (both measurements allowlisted) and
+      later v2 = <'mf','v2','mA','revoked'> (mB tombstoned).  Manifests are signed by kO.
+    * HSM H (key kH): signs the statement <'stmt', m, w, op> for whatever the (untrusted) harness measured
+      (software measurement: H vouches for what it was told; it is not silicon-rooted).
+    * Verifier V (instance id ~vid): holds Seen(V, ver, <e1,e2>) = the highest manifest version it accepted and
+      the entries of that manifest (the projection).  It accepts a statement iff the signature verifies under kH,
+      the measurement is an entry of the CURRENT projection, the weights digest is 'wGood' and the operator is
+      'opGood'.
+    * Log L (key kL, only with -DANCHORED): the anchor register Anchor(hv) holds the highest published version
+      (linear fact, only ever advanced by the operator's publishes).  A verifier queries it with a fresh
+      challenge qn and receives the signed head  <'head', hv, qn>.
+
+  Versions are the symbolic constants v0 < v1 < v2 with an order table !Le (no arithmetic in lemmas).  The
+  monotone check is the premise !Le(last, ver) [lastSeen] and, with the anchor, !Le(hv, ver).
+
+  Switches (-D...):
+    (none)             shipped single-process verifier: lastSeen monotone check, local state intact
+    NO_VERSION_CHECK   no version comparison at all                      -> ROLLBACK (stale manifest accepted)
+    STATE_WIPE         adversary deletes the verifier's local state (attest-allowlist.ts layer 1/2 residual:
+                       "deleting the state directory resets it")        -> ROLLBACK
+    STATE_WIPE + ANCHORED          local state may be wiped but the verifier also checks the anchored head
+                       (fresh, challenge-bound)                          -> ROLLBACK IMPOSSIBLE (fix, verified)
+    STATE_WIPE + ANCHOR_REPLAY   (anchored, but) the head is NOT bound to the verifier's challenge, so the adversary
+                       replays an old head (the documented "old head within maxHeadAgeMs" residual)  -> ROLLBACK
+    NO_WEIGHTS_CHECK / NO_OPERATOR_CHECK   the statement's weights / operator fields are not compared
+                       against the allowlist.
+
+  What the anchor assumption means: "head bound to the verifier's challenge" models the effect of
+  witness cosignatures + a persisted cached head (a head the log cannot show out of date to this verifier).
+  It is an ASSUMPTION of the model, not proved here; ANCHOR_REPLAY shows what happens without it.
+*/
+theory PCA_Attest_Allowlist
+begin
+
+builtins: signing
+
+rule Tables:
+  [ ] --> [ !Le('v0','v0'), !Le('v0','v1'), !Le('v0','v2'), !Le('v1','v1'), !Le('v1','v2'), !Le('v2','v2') ]
+
+// ---- keys -------------------------------------------------------------------------------------------------
+rule Op_Init:
+  [ Fr(~k), Fr(~kl) ] --[ OpInit() ]->
+  [ !OpKey(pk(~k), ~k), !LogKey(pk(~kl), ~kl), OpState('start'), Anchor('v0'), Out(<pk(~k), pk(~kl)>) ]
+
+rule Hsm_Init:
+  [ Fr(~k) ] --[ HsmInit() ]-> [ !HsmKey(pk(~k), ~k), Out(pk(~k)) ]
+
+restriction OpInitOnce:  "All #i #j. OpInit() @ i & OpInit() @ j ==> #i = #j"
+restriction HsmInitOnce: "All #i #j. HsmInit() @ i & HsmInit() @ j ==> #i = #j"
+
+rule Reveal_Op:   [ !OpKey(p, k) ]  --[ RevealOp(p) ]->  [ Out(k) ]
+rule Reveal_Hsm:  [ !HsmKey(p, k) ] --[ RevealHsm(p) ]-> [ Out(k) ]
+rule Reveal_Log:  [ !LogKey(p, k) ] --[ RevealLog(p) ]-> [ Out(k) ]
+
+// ---- operator publishes manifests (and advances the anchor) ----------------------------------------------------
+rule Publish_V1:
+  let mf = <'mf', 'v1', 'mA', 'mB'>
+  in
+  [ !OpKey(pk, k), OpState('start'), Anchor(a) ]
+  --[ Published('v1') ]->
+  [ OpState('v1'), Anchor('v1'), Out(<mf, sign(mf, k)>) ]
+
+rule Publish_V2:
+  let mf = <'mf', 'v2', 'mA', 'revoked'>
+  in
+  [ !OpKey(pk, k), OpState('v1'), Anchor(a) ]
+  --[ Published('v2'), Revoked('mB') ]->
+  [ OpState('v2'), Anchor('v2'), Out(<mf, sign(mf, k)>) ]
+
+// ---- the log answers a challenge with its current head -----------------------------------------------------------
+#ifdef ANCHOR_REPLAY
+// the signed head is NOT bound to the challenge: every head it ever signed stays replayable
+rule Anchor_Head:
+  let head = <'head', hv>
+  in
+  [ !LogKey(pk, k), Anchor(hv) ] --[ HeadIssued(hv) ]-> [ Anchor(hv), Out(<head, sign(head, k)>) ]
+#else
+rule Anchor_Head:
+  let head = <'head', hv, qn>
+  in
+  [ !LogKey(pk, k), Anchor(hv), In(qn) ] --[ HeadIssued(hv) ]-> [ Anchor(hv), Out(<head, sign(head, k)>) ]
+#endif
+
+// ---- verifier -------------------------------------------------------------------------------------------------
+rule Verifier_Init:
+  [ Fr(~vid), !OpKey(pkO, kO), !LogKey(pkL, kL), !HsmKey(pkH, kH) ]
+  --[ VInit(~vid) ]->
+  [ Seen(~vid, 'v0', <'none', 'none'>), !VCfg(~vid, pkO, pkL, pkH) ]
+
+rule Verifier_Query:
+  [ Fr(~qn), !VCfg(v, pkO, pkL, pkH) ] --[ Queried(v, ~qn) ]-> [ Query(v, ~qn), Out(~qn) ]
+
+#ifdef STATE_WIPE
+rule Wipe_State:
+  [ Seen(v, l, o) ] --[ Wiped(v) ]-> [ Seen(v, 'v0', <'none', 'none'>) ]
+#endif
+
+// fresh, challenge-bound anchored head (witness-cosigned + cached head, modelled as a challenge)
+#ifdef ANCHORED
+rule Accept_Manifest:
+  let mf = <'mf', ver, e1, e2>
+      head = <'head', hv, qn>
+  in
+  [ In(<mf, sg>), In(<head, hsg>), Seen(v, last, o), !VCfg(v, pkO, pkL, pkH), Query(v, qn), !Le(last, ver), !Le(hv, ver) ]
+  --[ Eq(verify(sg, mf, pkO), true), Eq(verify(hsg, head, pkL), true), AcceptMf(v, ver, e1, e2) ]->
+  [ Seen(v, ver, <e1, e2>) ]
+#endif
+
+// anchored head NOT bound to the verifier's challenge: an old head can be replayed
+#ifdef ANCHOR_REPLAY
+rule Accept_Manifest:
+  let mf = <'mf', ver, e1, e2>
+      head = <'head', hv>
+  in
+  [ In(<mf, sg>), In(<head, hsg>), Seen(v, last, o), !VCfg(v, pkO, pkL, pkH), !Le(last, ver), !Le(hv, ver) ]
+  --[ Eq(verify(sg, mf, pkO), true), Eq(verify(hsg, head, pkL), true), AcceptMf(v, ver, e1, e2) ]->
+  [ Seen(v, ver, <e1, e2>) ]
+#endif
+
+// no version comparison whatsoever
+#ifdef NO_VERSION_CHECK
+rule Accept_Manifest:
+  let mf = <'mf', ver, e1, e2>
+  in
+  [ In(<mf, sg>), Seen(v, last, o), !VCfg(v, pkO, pkL, pkH) ]
+  --[ Eq(verify(sg, mf, pkO), true), AcceptMf(v, ver, e1, e2) ]->
+  [ Seen(v, ver, <e1, e2>) ]
+#endif
+
+// shipped local lastSeen check (attest-allowlist.ts verifyAllowlistManifest)
+#ifdef ¬ANCHORED & ¬ANCHOR_REPLAY & ¬NO_VERSION_CHECK
+rule Accept_Manifest:
+  let mf = <'mf', ver, e1, e2>
+  in
+  [ In(<mf, sg>), Seen(v, last, o), !VCfg(v, pkO, pkL, pkH), !Le(last, ver) ]
+  --[ Eq(verify(sg, mf, pkO), true), AcceptMf(v, ver, e1, e2) ]->
+  [ Seen(v, ver, <e1, e2>) ]
+#endif
+
+// ---- attestation verification against the current projection -----------------------------------------------------
+// HSM signs the statement for whatever the harness measured
+rule Hsm_Sign:
+  let st = <'stmt', m, w, op>
+  in
+  [ !HsmKey(pk, k), In(<m, w, op>) ] --[ HsmSigned(m, w, op) ]-> [ Out(<st, sign(st, k)>) ]
+
+rule Verify_Att_E1:
+  let st = <'stmt', e1, w, op>
+  in
+  [ In(<st, sg>), Seen(v, ver, <e1, e2>), !VCfg(v, pkO, pkL, pkH) ]
+  --[ Eq(verify(sg, st, pkH), true), Neq(e1, 'revoked'), Neq(e1, 'none'),
+      ChkW(w), ChkOp(op), AttOk(v, e1, w, op, ver) ]->
+  [ Seen(v, ver, <e1, e2>) ]
+
+rule Verify_Att_E2:
+  let st = <'stmt', e2, w, op>
+  in
+  [ In(<st, sg>), Seen(v, ver, <e1, e2>), !VCfg(v, pkO, pkL, pkH) ]
+  --[ Eq(verify(sg, st, pkH), true), Neq(e2, 'revoked'), Neq(e2, 'none'),
+      ChkW(w), ChkOp(op), AttOk(v, e2, w, op, ver) ]->
+  [ Seen(v, ver, <e1, e2>) ]
+
+restriction Equality: "All x y #i. Eq(x, y) @ i ==> x = y"
+restriction NeqR:     "All x y #i. Neq(x, y) @ i ==> not (x = y)"
+#ifdef NO_WEIGHTS_CHECK
+#else
+restriction ChkW_R:   "All w #i. ChkW(w) @ i ==> w = 'wGood'"
+#endif
+#ifdef NO_OPERATOR_CHECK
+#else
+restriction ChkOp_R:  "All o #i. ChkOp(o) @ i ==> o = 'opGood'"
+#endif
+
+// ---- sanity ----------------------------------------------------------------------------------------------------------
+lemma executable_attest_v1:
+  exists-trace
+  "Ex v w op #pu #a #h #j. Published('v1') @ pu & AcceptMf(v, 'v1', 'mA', 'mB') @ a & HsmSigned('mB', w, op) @ h
+     & AttOk(v, 'mB', w, op, 'v1') @ j & #pu < #a & #a < #j
+     & (not (Ex p #r. RevealOp(p) @ r)) & (not (Ex p #r. RevealHsm(p) @ r))"
+
+lemma executable_attest_after_revocation:
+  exists-trace
+  "Ex v w op #p1 #p2 #a #h #j. Published('v1') @ p1 & Published('v2') @ p2 & AcceptMf(v, 'v2', 'mA', 'revoked') @ a
+     & HsmSigned('mA', w, op) @ h & AttOk(v, 'mA', w, op, 'v2') @ j & #a < #j
+     & (not (Ex p #r. RevealOp(p) @ r)) & (not (Ex p #r. RevealHsm(p) @ r))"
+
+// ---- LEMMAS: binding of measured model / weights / operator to the allowlist ---------------------------------------
+// an accepted attestation was signed by the HSM root (or the HSM key is compromised)
+lemma attestation_authentic:
+  "All v m w op ver #j. AttOk(v, m, w, op, ver) @ j
+     ==> (Ex #s. HsmSigned(m, w, op) @ s & #s < #j) | (Ex p #r. RevealHsm(p) @ r)"
+
+// weights and operator of an accepted attestation are the allowlisted ones
+lemma weights_allowlisted:
+  "All v m w op ver #j. AttOk(v, m, w, op, ver) @ j ==> w = 'wGood'"
+
+lemma operator_allowlisted:
+  "All v m w op ver #j. AttOk(v, m, w, op, ver) @ j ==> op = 'opGood'"
+
+// the measurement is an entry of the manifest version this verifier is CURRENTLY holding: mA in v1/v2, mB only in v1
+lemma measurement_in_projection:
+  "All v m w op ver #j. AttOk(v, m, w, op, ver) @ j
+     ==> (m = 'mA' & (ver = 'v1' | ver = 'v2')) | (m = 'mB' & ver = 'v1') | (Ex p #r. RevealOp(p) @ r)"
+
+// ---- LEMMA: rollback ------------------------------------------------------------------------------------------------
+// a verifier that accepted the revoking manifest v2 never afterwards accepts the older v1
+lemma no_manifest_rollback:
+  "All v a b c d #i #j. AcceptMf(v, 'v2', a, b) @ i & AcceptMf(v, 'v1', c, d) @ j & #i < #j ==> F"
+
+// consequence: a revoked measurement is never attested after the verifier has seen the tombstone
+lemma revoked_never_attested:
+  "All v a b w op ver #i #j. AcceptMf(v, 'v2', a, b) @ i & AttOk(v, 'mB', w, op, ver) @ j & #i < #j ==> F"
+
+end

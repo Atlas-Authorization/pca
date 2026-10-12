@@ -32,7 +32,8 @@ const msg = thresholdMessage(pcactn);                       // the action's cano
 const guardianShare = signShare('guardian', guardianSecret, msg, { signerSet, t });
 const withShares = { ...pcactn, threshold: assembleThreshold([guardianShare]) };
 
-const hook = createThresholdVerifier({ signerSet });
+// `t` (or `requiredT`) is MANDATORY and must come from SERVER-held data, never from the agent's risk_claim.
+const hook = createThresholdVerifier({ signerSet, t });
 ```
 
 `signShare` refuses to sign without the `{ signerSet, t }` binding: a bare signature over the message alone would be valid under any signer set and any `t`, which is exactly the confusion the binding closes.
@@ -43,10 +44,10 @@ const hook = createThresholdVerifier({ signerSet });
 
 1. recompute `thresholdMessage(pcactn)`;
 2. assemble the shares: the **agent-leaf share** (role `agent`, key = the chain's leaf holder, signature = `pcactn.sig`) plus any in `pcactn.threshold.shares`. This is why a `t = 1` action with only `sig` still passes;
-3. resolve required `t`: a fixed `t`, a custom `requiredT(ctx)`, or by default `requiredThreshold(risk_claim.r, grant.risk_policy).t`;
-4. return an enforced pass or fail.
+3. resolve required `t`: a fixed `t` or a custom `requiredT(ctx)`. One of the two is mandatory: `createThresholdVerifier` throws without it, because the former default (`requiredThreshold(risk_claim.r, ...)`) read the agent's own claim, so a compromised agent claiming `r = 0` was held to `t = 1`;
+4. return an enforced pass or fail, together with the `t` it enforced. `verifyPCActn` denies the action if that `t` is lower than the threshold it derived itself from server-held risk inputs, or if a custom hook does not report one.
 
-The `signerSet` must register the agent role's key as the leaf holder. The default (risk-derived) resolver reads `risk_claim.r`, which is the agent's own claim; a resource server that does not recompute risk itself should pass an explicit `requiredT`. The hosted surface does so (below).
+The `signerSet` must register the agent role's key as the leaf holder. `risk_claim.r` is the agent's own claim and is never a valid source for `t`: pass a fixed `t`, or a `requiredT` that uses your own recomputed risk. The hosted surface does so (below).
 
 Because `threshold` is excluded from the signed message, shares can be added after the message is fixed, and the leaf `sig` and every share are provably over the same bytes.
 
@@ -64,7 +65,7 @@ Signing flow (`frost.ts`):
 | Round 1 (commit) | `frostCommit(participantShare)` returns `{ hidingNonce, bindingNonce, commitment }` |
 | Round 2 (sign) | `frostSign(identifier, share, groupPublicKey, nonces, message, signingCommitments)` returns a `FrostSignatureShare` |
 | Share check | `frostVerifySigShare({ identifier, publicKey, commitment, sigShare, signingCommitments, groupPublicKey, message })` |
-| Aggregate | `frostAggregate(message, signingCommitments, sigShares, groupPublicKey)` returns the 64-byte signature |
+| Aggregate | `frostAggregate(message, signingCommitments, sigShares, groupPublicKey, { verificationShares })` verifies every share against its verification share (required), then returns the 64-byte signature |
 
 The signing math is validated byte-exactly against the RFC 9591 Appendix test vectors (hiding and binding nonces, commitments, binding factors, group commitment, per-participant shares and the aggregate).
 

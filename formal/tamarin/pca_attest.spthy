@@ -1,0 +1,117 @@
+/*
+  PCA -- attestation binding (symbolic Dolev-Yao model, Tamarin).
+
+  Models packages/pca/src/attestation.ts attestationBinding / verifyAttestation (hardware path):
+
+      report_data = SHA-512( domain || lp(holderPub) || lp(grantRef) || u64be(epoch) || lp(nonce) )
+
+  The verifier issues a fresh server nonce for an expected (holder, grant, epoch) session, then accepts a
+  TEE quote only if (a) the quote verifies under the hardware vendor root key, (b) its report_data equals
+  the binding it recomputes from ITS expected (holder, grant, epoch, nonce) and (c) the measured identity
+  is the approved one (agent_binding).
+
+  Honest approved enclave E(holder, grant, epoch): given ANY nonce an adversary hands it, it returns a
+  quote whose report_data binds ITS OWN holder / grant / epoch and that nonce (the adversary controls
+  only the nonce -- this is the quote-oracle / relayed-evidence setting).  A rogue enclave is a genuine
+  TEE running DIFFERENT software: it can put any report_data in a quote but its measurement is not the
+  approved one.
+
+  Attack-variant switches (pass with  -D=NAME ):  the named field is NOT bound into report_data, on the
+  enclave side and on the verifier side alike:
+    NOBIND_HOLDER   NOBIND_GRANT   NOBIND_EPOCH   NOBIND_NONCE
+  With no switch the model is the shipped binding.
+
+  The binding projection is a public function table (!ProjH/!ProjG/!ProjE/!ProjN): identity in the
+  shipped model, constant for a dropped field.
+*/
+theory PCA_Attest
+begin
+
+builtins: signing, hashing
+
+rule Gen_Key:
+  [ Fr(~ltk) ] --[ KeyGen(pk(~ltk)) ]-> [ !Ltk(pk(~ltk), ~ltk), Out(pk(~ltk)) ]
+
+rule Reveal:
+  [ !Ltk(pkx, ltk) ] --[ Reveal(pkx) ]-> [ Out(ltk) ]
+
+// hardware vendor root key (the TEE's attestation key); Dolev-Yao may reveal it (model of a root break)
+rule Setup_TEE:
+  [ Fr(~lt) ] --[ TEEKey(pk(~lt)), OnlyOnce() ]-> [ !TEEKey(pk(~lt), ~lt), Out(pk(~lt)) ]
+restriction only_once_tee: "All #i #j. OnlyOnce() @ i & OnlyOnce() @ j ==> #i = #j"
+
+rule Reveal_TEE:
+  [ !TEEKey(p, l) ] --[ RevealTEE(p) ]-> [ Out(l) ]
+
+// ---- binding projections ---------------------------------------------------------------------
+#ifdef NOBIND_HOLDER
+rule ProjH: [ In(x) ] --> [ !ProjH(x, 'dropped') ]
+#else
+rule ProjH: [ In(x) ] --> [ !ProjH(x, x) ]
+#endif
+#ifdef NOBIND_GRANT
+rule ProjG: [ In(x) ] --> [ !ProjG(x, 'dropped') ]
+#else
+rule ProjG: [ In(x) ] --> [ !ProjG(x, x) ]
+#endif
+#ifdef NOBIND_EPOCH
+rule ProjE: [ In(x) ] --> [ !ProjE(x, 'dropped') ]
+#else
+rule ProjE: [ In(x) ] --> [ !ProjE(x, x) ]
+#endif
+#ifdef NOBIND_NONCE
+rule ProjN: [ In(x) ] --> [ !ProjN(x, 'dropped') ]
+#else
+rule ProjN: [ In(x) ] --> [ !ProjN(x, x) ]
+#endif
+
+// ---- honest approved enclave for (holder, grant, epoch) ------------------------------------------
+rule Enclave_Provision:
+  [ !Ltk(pkH, lH), !TEEKey(pt, lt) ] --[ Provision(pkH, $g, $e) ]-> [ !Enclave(pkH, $g, $e, lt) ]
+
+rule Enclave_Quote:
+  let rd   = h(<'bind', ph, pg, pe, pn>)
+      body = <'quote', 'mApproved', rd>
+  in
+  [ !Enclave(pkH, g, e, lt), In(n), !ProjH(pkH, ph), !ProjG(g, pg), !ProjE(e, pe), !ProjN(n, pn) ]
+  --[ QuoteIssued(pkH, g, e, n) ]->
+  [ Out(<body, sign(body, lt)>) ]
+
+// ---- rogue enclave: genuine TEE, arbitrary software => arbitrary report_data, NON-approved measurement --
+rule Rogue_Quote:
+  [ !TEEKey(pt, lt), In(<m, rd>) ]
+  --[ Neq(m, 'mApproved'), RogueQuote(m, rd) ]->
+  [ Out(<<'quote', m, rd>, sign(<'quote', m, rd>, lt)>) ]
+restriction neq: "All x y #i. Neq(x, y) @ i ==> not (x = y)"
+
+// ---- verifier: issue nonce for an expected session, then check the quote -------------------------
+rule Issue_Nonce:
+  [ Fr(~n), In(<pkH, g, e>) ]
+  --[ NonceIssued(pkH, g, e, ~n) ]->
+  [ !Expect(pkH, g, e, ~n), Out(~n) ]
+
+rule Accept_Attestation:
+  let rd   = h(<'bind', ph, pg, pe, pn>)
+      body = <'quote', m, rd>
+  in
+  [ !Expect(pkH, g, e, n), In(<body, sg>), !TEEKey(pt, lt),
+    !ProjH(pkH, ph), !ProjG(g, pg), !ProjE(e, pe), !ProjN(n, pn) ]
+  --[ Eq(verify(sg, body, pt), true), Eq(m, 'mApproved'), Accepted(pkH, g, e, n, m) ]->
+  [ ]
+
+restriction Equality: "All x y #i. Eq(x, y) @ i ==> x = y"
+
+// ---- sanity -------------------------------------------------------------------------------------
+lemma executable_attestation:
+  exists-trace
+  "Ex pkH g e n m #i #q. Accepted(pkH, g, e, n, m) @ i & QuoteIssued(pkH, g, e, n) @ q
+     & (not (Ex p #r. RevealTEE(p) @ r))"
+
+// ---- LEMMA: attestation binding / no relayed evidence ---------------------------------------------
+// An accepted attestation for expected (holder, grant, epoch, nonce) was produced by an approved enclave
+// of exactly THAT holder, grant and epoch, for exactly THAT nonce -- unless the hardware root is broken.
+lemma attestation_binding:
+  "All pkH g e n m #i. Accepted(pkH, g, e, n, m) @ i
+     ==> (Ex #q. QuoteIssued(pkH, g, e, n) @ q) | (Ex p #r. RevealTEE(p) @ r)"
+
+end

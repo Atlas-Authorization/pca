@@ -1,0 +1,43 @@
+/*
+  PCA -- time from REWRITING SEMANTICS (small dedicated model).  One linear fact Clock(t) over the totally ordered
+  timepoints t0 < t1 < t2 < t3 (explicit tables !Succ, !Le, !Lt; the builtin natural-numbers theory made Tamarin
+  time out even on this tiny model, see pca_actn_time_store.spthy).  Tick consumes Clock(t) and produces
+  Clock(succ t).  The verifier rule consumes Clock(now) and re-emits it (a read) and checks expiry in its PREMISE:
+  !Le(now, exp)  (now <= exp).  There is NO ChkTime restriction.  Obs_Past reads the clock when it is strictly
+  greater than e (ordinary member of the Clock thread).
+  -DNO_EXPIRY_CHECK: the Verify premise has no !Le(now, exp).
+  no_accept_after_expiry: if the clock was observed past e at j, every Accept(e) at i is before j.
+*/
+theory PCA_Clock_V3
+begin
+rule Tables:
+  [ ] --> [ !Succ('t0','t1'), !Succ('t1','t2'), !Succ('t2','t3'),
+            !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'), !Le('t0','t3'), !Le('t1','t1'), !Le('t1','t2'),
+            !Le('t1','t3'), !Le('t2','t2'), !Le('t2','t3'), !Le('t3','t3'),
+            !Lt('t0','t1'), !Lt('t0','t2'), !Lt('t0','t3'), !Lt('t1','t2'), !Lt('t1','t3'), !Lt('t2','t3') ]
+rule Clock_Init: [ ] --[ ClockInit(), Rd('t0') ]-> [ Clock('t0') ]
+restriction ClockOnce: "All #i #j. ClockInit() @ i & ClockInit() @ j ==> #i = #j"
+rule Tick: [ Clock(t), !Succ(t, u) ] --[ TickFrom(t), Rd(u) ]-> [ Clock(u) ]
+rule Obs_Past: [ Clock(t), In(e), !Lt(e, t) ] --[ ClockPast(e), Rd(t) ]-> [ Clock(t) ]
+#ifdef NO_EXPIRY_CHECK
+rule Verify: [ Clock(now), In(exp) ] --[ Accept(exp), Rd(now) ]-> [ Clock(now) ]
+#else
+rule Verify: [ Clock(now), In(exp), !Le(now, exp) ] --[ Accept(exp), Rd(now) ]-> [ Clock(now) ]
+#endif
+lemma executable_accept: exists-trace "Ex e #i. Accept(e) @ i"
+lemma executable_after_tick: exists-trace "Ex e t #i #k. Accept(e) @ i & TickFrom(t) @ k & #k < #i"
+lemma mono_t1_t0 [use_induction]:
+  "All #i #j. Rd('t1') @ i & Rd('t0') @ j ==> not(#i < #j)"
+lemma mono_t2_t0 [use_induction]:
+  "All #i #j. Rd('t2') @ i & Rd('t0') @ j ==> not(#i < #j)"
+lemma mono_t2_t1 [use_induction]:
+  "All #i #j. Rd('t2') @ i & Rd('t1') @ j ==> not(#i < #j)"
+lemma mono_t3_t0 [use_induction]:
+  "All #i #j. Rd('t3') @ i & Rd('t0') @ j ==> not(#i < #j)"
+lemma mono_t3_t1 [use_induction]:
+  "All #i #j. Rd('t3') @ i & Rd('t1') @ j ==> not(#i < #j)"
+lemma mono_t3_t2 [use_induction]:
+  "All #i #j. Rd('t3') @ i & Rd('t2') @ j ==> not(#i < #j)"
+lemma no_accept_after_expiry:
+  "All e #i #j. Accept(e) @ i & ClockPast(e) @ j ==> #i < #j"
+end

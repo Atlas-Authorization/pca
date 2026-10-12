@@ -1,0 +1,85 @@
+/*
+  PCA -- allowlist manifest ROLLBACK, v3: register-by-restriction model (terminating, UNBOUNDED number of steps).
+  Models attest-allowlist.ts (lastSeenVersion monotone check) and attest-allowlist-anchor.ts (anchored high-water head).
+  v1 allowlists {mA,mB}; v2 allowlists {mA} (mB tombstoned).  Versions v0<v1<v2 via the !Le table.
+  Instead of a linear Seen(...) fact (whose Accept/Attest read-and-re-emit chain Tamarin unrolls forever), the verifier's
+  lastSeen register is not a fact: every read of it is an action Read(v,last)@i, and restriction RegPin forces `last` to be
+  exactly the value the register holds at time i: the version of the latest earlier Acc(v,..) unless a later Wipe(v), 'v0'
+  if none.  This is the literal semantics of a register; it admits all interleavings (no step bound).
+  Anchor: the log head at time i is the latest Published version (restriction HeadPin); ANCHOR_REPLAY lets the verifier use
+  any head ever issued (restriction HeadOld) = unbound/replayed head.
+  Switches: (none) shipped lastSeen check | STATE_WIPE | ANCHORED | ANCHOR_REPLAY | NO_VERSION_CHECK.
+  Anchor freshness (head bound to the verifier's challenge) is an ASSUMPTION encoded by HeadPin, not proved.
+*/
+theory PCA_Allowlist_V3
+begin
+
+rule Tables:
+  [ ] --> [ !Le('v0','v0'), !Le('v0','v1'), !Le('v0','v2'), !Le('v1','v1'), !Le('v1','v2'), !Le('v2','v2'),
+            !Allowed('v1','mA'), !Allowed('v1','mB'), !Allowed('v2','mA') ]
+
+rule Op_Init: [ ] --[ OpInit() ]-> [ OpState('s0') ]
+restriction OpOnce: "All #i #j. OpInit() @ i & OpInit() @ j ==> #i = #j"
+rule Publish_V1: [ OpState('s0') ] --[ Published('v1') ]-> [ !Manifest('v1'), OpState('s1') ]
+rule Publish_V2: [ OpState('s1') ] --[ Published('v2') ]-> [ !Manifest('v2'), OpState('s2') ]
+
+rule Verifier_Init: [ Fr(~vid) ] --[ VInit(~vid) ]-> [ !Verifier(~vid) ]
+
+#ifdef STATE_WIPE
+rule Wipe: [ !Verifier(v) ] --[ Wiped(v) ]-> [ ]
+#endif
+
+#ifdef NO_VERSION_CHECK
+rule Accept_Manifest: [ !Manifest(ver), !Verifier(v), In(last) ] --[ Read(v, last), AcceptMf(v, last, ver) ]-> [ ]
+#endif
+#ifdef ANCHORED
+rule Accept_Manifest: [ !Manifest(ver), !Verifier(v), In(last), In(hv), !Le(last, ver), !Le(hv, ver) ]
+  --[ Read(v, last), AcceptMf(v, last, ver), HeadCur(hv) ]-> [ ]
+#endif
+#ifdef ANCHOR_REPLAY
+rule Accept_Manifest: [ !Manifest(ver), !Verifier(v), In(last), In(hv), !Le(last, ver), !Le(hv, ver) ]
+  --[ Read(v, last), AcceptMf(v, last, ver), HeadOld(hv) ]-> [ ]
+#endif
+#ifdef ¬NO_VERSION_CHECK & ¬ANCHORED & ¬ANCHOR_REPLAY
+rule Accept_Manifest: [ !Manifest(ver), !Verifier(v), In(last), !Le(last, ver) ]
+  --[ Read(v, last), AcceptMf(v, last, ver) ]-> [ ]
+#endif
+
+#ifdef ¬NO_ATTEST
+rule Attest: [ !Verifier(v), In(last), In(m), !Allowed(last, m) ] --[ Read(v, last), AttOk(v, m, last) ]-> [ ]
+#endif
+
+// register semantics: the value read at i is the version of the latest earlier accept of v, 'v0' if none or wiped since
+restriction RegPin:
+  "All v last #i. Read(v, last) @ i ==>
+      ( (last = 'v0' & not (Ex x y #j. AcceptMf(v, x, y) @ j & #j < #i) )
+      | (Ex x #j. AcceptMf(v, x, last) @ j & #j < #i
+           & not (Ex y z #k. AcceptMf(v, y, z) @ k & #j < #k & #k < #i)
+           & not (Ex #w. Wiped(v) @ w & #j < #w & #w < #i))
+      | (last = 'v0' & Ex #w. Wiped(v) @ w & #w < #i
+           & not (Ex y z #k. AcceptMf(v, y, z) @ k & #w < #k & #k < #i)
+           & not (Ex #w2. Wiped(v) @ w2 & #w < #w2 & #w2 < #i)) )"
+// (a wipe with no accept before it, followed by nothing, is covered by the third disjunct)
+
+restriction HeadPin:  "All hv #i. HeadCur(hv) @ i ==>
+      ((hv = 'v0' & not (Ex p #j. Published(p) @ j & #j < #i))
+     | (Ex #j. Published(hv) @ j & #j < #i & not (Ex p #k. Published(p) @ k & #j < #k & #k < #i)))"
+restriction HeadOld:  "All hv #i. HeadOld(hv) @ i ==> (hv = 'v0' | (Ex #j. Published(hv) @ j & #j < #i))"
+
+// ---- sanity -------------------------------------------------------------------------------------------------------
+#ifdef ¬NO_ATTEST
+lemma executable_attest_mB:
+  exists-trace
+  "Ex v #p #a #t. Published('v1') @ p & AcceptMf(v, 'v0', 'v1') @ a & AttOk(v, 'mB', 'v1') @ t & #p < #a & #a < #t"
+lemma executable_revocation:
+  exists-trace
+  "Ex v #p1 #p2 #a1 #t. Published('v1') @ p1 & Published('v2') @ p2 & AcceptMf(v, 'v1', 'v2') @ a1 & AttOk(v, 'mA', 'v2') @ t & #a1 < #t"
+#endif
+// ---- safety --------------------------------------------------------------------------------------------------------
+lemma no_manifest_rollback:
+  "All v a c #i #j. AcceptMf(v, a, 'v2') @ i & AcceptMf(v, c, 'v1') @ j & #i < #j ==> F"
+#ifdef ¬NO_ATTEST
+lemma revoked_never_attested:
+  "All v a ver #i #j. AcceptMf(v, a, 'v2') @ i & AttOk(v, 'mB', ver) @ j & #i < #j ==> F"
+#endif
+end

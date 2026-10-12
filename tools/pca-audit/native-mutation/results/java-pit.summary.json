@@ -1,0 +1,962 @@
+{
+ "source": "java-pit.json",
+ "counts": {
+  "killed": 3802,
+  "survived": 158,
+  "no_coverage": 12,
+  "timed_out": 17,
+  "memory_error": 4
+ },
+ "survivors": [
+  {
+   "file": "Json.java",
+   "line": 55,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 55,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 57,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 61,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 61,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 64,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 68,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 68,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 68,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.java",
+   "line": 76,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "isSafeInt"
+  },
+  {
+   "file": "Json.java",
+   "line": 124,
+   "mutator": "MemberVariableMutator",
+   "method": "<init>"
+  },
+  {
+   "file": "Json.java",
+   "line": 129,
+   "mutator": "InlineConstantMutator",
+   "method": "top"
+  },
+  {
+   "file": "Json.java",
+   "line": 129,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "top"
+  },
+  {
+   "file": "Json.java",
+   "line": 129,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "top"
+  },
+  {
+   "file": "Json.java",
+   "line": 205,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 207,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 209,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 209,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 209,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 209,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 209,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 209,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 210,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.java",
+   "line": 248,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "number"
+  },
+  {
+   "file": "Json.java",
+   "line": 248,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "number"
+  },
+  {
+   "file": "Json.java",
+   "line": 329,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.java",
+   "line": 329,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.java",
+   "line": 334,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.java",
+   "line": 334,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.java",
+   "line": 335,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Pca.java",
+   "line": 35,
+   "mutator": "InlineConstantMutator",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.java",
+   "line": 35,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.java",
+   "line": 35,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.java",
+   "line": 36,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.java",
+   "line": 36,
+   "mutator": "InlineConstantMutator",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.java",
+   "line": 36,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.java",
+   "line": 87,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 87,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 87,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 90,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 92,
+   "mutator": "MathMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 92,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 92,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 93,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 93,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 93,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 97,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 106,
+   "mutator": "ConstructorCallMutator",
+   "method": "sha"
+  },
+  {
+   "file": "Pca.java",
+   "line": 180,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.java",
+   "line": 180,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.java",
+   "line": 181,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.java",
+   "line": 183,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.java",
+   "line": 189,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.java",
+   "line": 193,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.java",
+   "line": 244,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "leInt"
+  },
+  {
+   "file": "Pca.java",
+   "line": 262,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 262,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 263,
+   "mutator": "InlineConstantMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 263,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 263,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 263,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 263,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 264,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 264,
+   "mutator": "InlineConstantMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 264,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.java",
+   "line": 276,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyB64u"
+  },
+  {
+   "file": "Pca.java",
+   "line": 276,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyB64u"
+  },
+  {
+   "file": "Pca.java",
+   "line": 305,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "signableHopBody"
+  },
+  {
+   "file": "Pca.java",
+   "line": 346,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "checkSig"
+  },
+  {
+   "file": "Pca.java",
+   "line": 361,
+   "mutator": "InlineConstantMutator",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 361,
+   "mutator": "InlineConstantMutator",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 361,
+   "mutator": "InlineConstantMutator",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 364,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 364,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 368,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 369,
+   "mutator": "InlineConstantMutator",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 369,
+   "mutator": "InlineConstantMutator",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 370,
+   "mutator": "InlineConstantMutator",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.java",
+   "line": 401,
+   "mutator": "InlineConstantMutator",
+   "method": "wellTyped"
+  },
+  {
+   "file": "Pca.java",
+   "line": 437,
+   "mutator": "NegateConditionalsMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 437,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 437,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 437,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 437,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 437,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 437,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 512,
+   "mutator": "InlineConstantMutator",
+   "method": "validateWireV2"
+  },
+  {
+   "file": "Pca.java",
+   "line": 520,
+   "mutator": "InlineConstantMutator",
+   "method": "validateWireV2"
+  },
+  {
+   "file": "Pca.java",
+   "line": 528,
+   "mutator": "InlineConstantMutator",
+   "method": "validateWireV2"
+  },
+  {
+   "file": "Pca.java",
+   "line": 697,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 697,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 697,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 700,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 700,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 707,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 708,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 708,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 708,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 708,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 734,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 734,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 734,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 734,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 734,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 742,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.java",
+   "line": 751,
+   "mutator": "VoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "PcaFilter.java",
+   "line": 111,
+   "mutator": "MemberVariableMutator",
+   "method": "<init>"
+  },
+  {
+   "file": "PcaFilter.java",
+   "line": 124,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "getReader"
+  },
+  {
+   "file": "PcaResult.java",
+   "line": 85,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "jsonBody"
+  },
+  {
+   "file": "PcaResult.java",
+   "line": 92,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "description"
+  },
+  {
+   "file": "PcaResult.java",
+   "line": 101,
+   "mutator": "InlineConstantMutator",
+   "method": "jsonEscape"
+  },
+  {
+   "file": "PcaResult.java",
+   "line": 101,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "jsonEscape"
+  },
+  {
+   "file": "Pq.java",
+   "line": 80,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "resolveSigAlg"
+  },
+  {
+   "file": "Pq.java",
+   "line": 88,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "mlDsa65Verify"
+  },
+  {
+   "file": "Pq.java",
+   "line": 88,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "mlDsa65Verify"
+  },
+  {
+   "file": "Pq.java",
+   "line": 105,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "mlDsa65VerifyB64u"
+  },
+  {
+   "file": "Pq.java",
+   "line": 105,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "mlDsa65VerifyB64u"
+  },
+  {
+   "file": "Pq.java",
+   "line": 187,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolvePqKey"
+  },
+  {
+   "file": "Pq.java",
+   "line": 189,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolvePqKey"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 92,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "validatedRegistry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 96,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "validatedRegistry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 116,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 118,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 136,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 138,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 138,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 140,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 141,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 143,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 144,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 153,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "exactT"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 153,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "exactT"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 156,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "exactT"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 178,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 178,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 178,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 178,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 181,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 183,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 183,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 188,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 196,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 198,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.java",
+   "line": 200,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShare"
+  }
+ ],
+ "tool": "pit",
+ "score": 95.22
+}

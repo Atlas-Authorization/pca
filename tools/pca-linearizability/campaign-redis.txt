@@ -1,0 +1,10 @@
+# name | store | secs | procs | conns | chaos | env | expect
+redis-lua-210          | redis-lua   | 90 | 3 | 70 | none | REDIS_MODE=always SPREAD=60 CHECK_TIMEOUT=10s | pass
+redis-setnx-chaos-aof-always | redis-setnx | 120 | 3 | 60 | all | REDIS_MODE=always   | pass
+redis-lua-chaos-aof-always   | redis-lua   | 90 | 3 | 60 | all | REDIS_MODE=always SPREAD=60 CHECK_TIMEOUT=10s | pass
+redis-setnx-chaos-aof-everysec | redis-setnx | 120 | 3 | 60 | all | REDIS_MODE=everysec | pass
+redis-lua-chaos-aof-everysec   | redis-lua   | 90 | 3 | 60 | all | REDIS_MODE=everysec SPREAD=60 CHECK_TIMEOUT=10s | pass
+redis-bad-getset      | redis-bad-getset         | 45 | 3 | 60 | none | REDIS_MODE=always SPREAD=60 CHECK_TIMEOUT=10s | fail
+redis-bad-getset-consume | redis-bad-getset-consume | 45 | 3 | 60 | none | REDIS_MODE=always | fail
+redis-setnx-nopersist-restart | redis-setnx | 90 | 3 | 60 | restart | REDIS_MODE=none | fail
+redis-lua-nopersist-restart   | redis-lua   | 90 | 3 | 60 | restart | REDIS_MODE=none SPREAD=60 CHECK_TIMEOUT=10s | fail

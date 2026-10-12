@@ -1,0 +1,2 @@
+  reader_has_origin (all-traces): verified (103 steps)
+# wall=0s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=reader_has_origin --heuristic=O --oraclename=./oracle_clock.sh pca_clock_v3d.spthy +RTS -N4 -M10g

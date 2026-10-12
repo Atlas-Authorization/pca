@@ -1,0 +1,34 @@
+[
+{
+"name": "pb-annot",
+"pkg": "pca-policy-bridge",
+"file": "cedar.ts",
+"from": "/^\\s*(@[A-Za-z_][\\w]*\\s*\\([^)]*\\)\\s*)+/.exec(body)",
+"to": "/^\\S*(@[A-Za-z_][\\w]*\\s*\\([^)]*\\)\\s*)+/.exec(body)",
+"test": "mutation-kill-cedar-r2"
+},
+{
+"name": "pb-head",
+"pkg": "pca-policy-bridge",
+"file": "cedar.ts",
+"from": "/^\\s*(permit|forbid)\\s*\\(/i.exec(body)",
+"to": "/^\\S*(permit|forbid)\\s*\\(/i.exec(body)",
+"test": "mutation-kill-cedar-r2"
+},
+{
+"name": "pb-ent1",
+"pkg": "pca-policy-bridge",
+"file": "cedar.ts",
+"from": "/^.+::\"([^\"]*)\"$/.exec(expr.trim())",
+"to": "/.+::\"([^\"]*)\"$/.exec(expr.trim())",
+"test": "mutation-kill-cedar-r2"
+},
+{
+"name": "pb-ent2",
+"pkg": "pca-policy-bridge",
+"file": "cedar.ts",
+"from": "/^(.+)::\"([^\"]*)\"$/.exec(expr.trim())",
+"to": "/(.+)::\"([^\"]*)\"$/.exec(expr.trim())",
+"test": "mutation-kill-cedar-r2"
+}
+]

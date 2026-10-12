@@ -1,0 +1,9 @@
+{
+ "name": "audit-canon-eb10fb3d2e03",
+ "kind": "canon",
+ "raw": "{\"__prot\":{\"p\":1},\"constructor\":{\"prototype\":{}},¾z\":\"\\ud800\"}",
+ "found": {
+  "by": "pca-audit structure-aware mutator",
+  "seed": 20261009
+ }
+}

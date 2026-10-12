@@ -1,0 +1,210 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 83 and seed 6751366434322047672 with 3 workers on 12 cores with 2731MB heap and 64MB offheap memory [pid: 1457423] (Linux 7.0.0-1011-gcp amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/replay-tla/tla/DurableLockGen.tla
+Parsing file /tmp/tlc-713497757839883746/Integers.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-713497757839883746/FiniteSets.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-713497757839883746/Sequences.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-713497757839883746/_TLCTrace.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-713497757839883746/Naturals.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-713497757839883746/TLC.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-713497757839883746/TLCExt.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module DurableLockGen
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module DurableLockGen
+Starting... (2026-10-10 21:25:05)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-10 21:25:05.
+Error: Invariant Safe is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "absent", o |-> "-"] @@
+  1 :> [st |-> "absent", o |-> "-"] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> -1 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "absent", o |-> "-"] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> -1 @@ c2 :> -1 @@ c3 :> -1)
+/\ pc = (c1 :> "scan" @@ c2 :> "scan" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+State 2: <Scan(c1) line 45, col 12 to line 49, col 59 of module DurableLockGen>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "absent", o |-> "-"] @@
+  1 :> [st |-> "absent", o |-> "-"] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> -1 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "absent", o |-> "-"] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> -1 @@ c2 :> -1 @@ c3 :> -1)
+/\ pc = (c1 :> "decide" @@ c2 :> "scan" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+State 3: <Decide(c1) line 50, col 14 to line 54, col 71 of module DurableLockGen>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "absent", o |-> "-"] @@
+  1 :> [st |-> "absent", o |-> "-"] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> -1 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "absent", o |-> "-"] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> -1 @@ c2 :> -1 @@ c3 :> -1)
+/\ pc = (c1 :> "create" @@ c2 :> "scan" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+State 4: <Create(c1) line 55, col 14 to line 60, col 60 of module DurableLockGen>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "held", o |-> c1] @@
+  1 :> [st |-> "absent", o |-> "-"] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> -1 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "absent", o |-> "-"] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> 0 @@ c2 :> -1 @@ c3 :> -1)
+/\ pc = (c1 :> "verify" @@ c2 :> "scan" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+State 5: <VerifyTop(c1) line 63, col 17 to line 64, col 74 of module DurableLockGen>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "held", o |-> c1] @@
+  1 :> [st |-> "absent", o |-> "-"] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> -1 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "absent", o |-> "-"] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> 0 @@ c2 :> -1 @@ c3 :> -1)
+/\ pc = (c1 :> "rd" @@ c2 :> "scan" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+State 6: <Scan(c2) line 45, col 12 to line 49, col 59 of module DurableLockGen>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "held", o |-> c1] @@
+  1 :> [st |-> "absent", o |-> "-"] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> 0 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "held", o |-> c1] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> 0 @@ c2 :> -1 @@ c3 :> -1)
+/\ pc = (c1 :> "rd" @@ c2 :> "decide" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+State 7: <Decide(c2) line 50, col 14 to line 54, col 71 of module DurableLockGen>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "held", o |-> c1] @@
+  1 :> [st |-> "absent", o |-> "-"] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> 0 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "held", o |-> c1] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> 0 @@ c2 :> -1 @@ c3 :> -1)
+/\ pc = (c1 :> "rd" @@ c2 :> "create" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+State 8: <Create(c2) line 55, col 14 to line 60, col 60 of module DurableLockGen>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "held", o |-> c1] @@
+  1 :> [st |-> "held", o |-> c2] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> 0 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "held", o |-> c1] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> 0 @@ c2 :> 1 @@ c3 :> -1)
+/\ pc = (c1 :> "rd" @@ c2 :> "verify" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+State 9: <VerifyTop(c2) line 63, col 17 to line 64, col 74 of module DurableLockGen>
+/\ val = 0
+/\ lk = ( 0 :> [st |-> "held", o |-> c1] @@
+  1 :> [st |-> "held", o |-> c2] @@
+  2 :> [st |-> "absent", o |-> "-"] @@
+  3 :> [st |-> "absent", o |-> "-"] @@
+  4 :> [st |-> "absent", o |-> "-"] @@
+  5 :> [st |-> "absent", o |-> "-"] @@
+  6 :> [st |-> "absent", o |-> "-"] @@
+  7 :> [st |-> "absent", o |-> "-"] )
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ sg = (c1 :> -1 @@ c2 :> 0 @@ c3 :> -1)
+/\ cont = ( c1 :> [st |-> "absent", o |-> "-"] @@
+  c2 :> [st |-> "held", o |-> c1] @@
+  c3 :> [st |-> "absent", o |-> "-"] )
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ mygen = (c1 :> 0 @@ c2 :> 1 @@ c3 :> -1)
+/\ pc = (c1 :> "rd" @@ c2 :> "rd" @@ c3 :> "scan")
+/\ wlog = <<>>
+
+586 states generated, 329 distinct states found, 130 states left on queue.
+The depth of the complete state graph search is 10.
+Finished in 00s at (2026-10-10 21:25:06)
+Trace exploration spec path: ./DurableLockGen_TTrace_1791667505.tla

@@ -1,0 +1,2 @@
+NO RESULT rc=251 (timeout/killed; NOT proved) mono_t3_t1
+# wall=368s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=mono_t3_t1 --heuristic=O --oraclename=./oracle_clock.sh pca_clock_v3c.spthy +RTS -N4 -M10g

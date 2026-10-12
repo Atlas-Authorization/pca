@@ -1,0 +1,6 @@
+  replay_freedom_counter (all-traces): verified (44 steps)
+# wall=0s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=replay_freedom_counter  pca_store_race.spthy +RTS -N3
+  replay_freedom_nonce (all-traces): verified (8 steps)
+# wall=0s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=replay_freedom_nonce  pca_store_race.spthy +RTS -N3
+  executable_ctr (exists-trace): verified (4 steps)
+# wall=1s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=executable_ctr  pca_store_race.spthy +RTS -N3

@@ -1,0 +1,1 @@
+{"target": "predicates like / matches / re: (ReDoS grammar + mutation)", "note": "ReDoS found by static-analysis pass 2026-10-09; now refused/linear", "input": {"pat": "a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?aaaaaaaaaaaaaaaaaaaaaaaaaaaaaab", "subj": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}

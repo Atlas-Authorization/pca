@@ -1,0 +1,5 @@
+RESULT Proved forall a', c1', c2', a, c1, c2: message, g: hashout; event(Accept(c2, c1, g, a)) && event(Accept(c2', c1', g, a')) ==> (c2 = c2') up to probability Phash(time_1)
+RESULT Proved forall a, c1, c2: message, g: hashout; event(Accept(c2, c1, g, a)) ==> event(Signed(a)) up to probability Psigncoll + Psign(time_2, N, maxlength(game 4: act))
+RESULT Proved forall a, c1, c2: message, g: hashout; event(Accept(c2, c1, g, a)) ==> event(Delegated(c1)) up to probability Psign(time_4, N, maxlength(game 17: cb_1)) + Psign(time_3, N, maxlength(game 11: cb)) + 3 * Psigncoll + Psign(time_2, N, maxlength(game 4: act))
+RESULT Proved forall a, c1, c2: message, g: hashout; event(Accept(c2, c1, g, a)) ==> event(Granted(c2)) up to probability Psign(time_3, N, maxlength(game 11: cb)) + 3 * Psigncoll + Psign(time_2, N, maxlength(game 4: act))
+All queries proved.

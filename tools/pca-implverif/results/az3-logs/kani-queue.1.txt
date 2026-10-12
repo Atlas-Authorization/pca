@@ -1,0 +1,12 @@
+zk_risk_raw_exact_all_u64 rc=0 107s :: VERIFICATION:- SUCCESSFUL Complete - 1 successfully verified harnesses, 0 failures, 1 total. 
+zk_tier_ladder_all rc=0 70s :: VERIFICATION:- SUCCESSFUL Complete - 1 successfully verified harnesses, 0 failures, 1 total. 
+zk_budget_and_auto_admit_in_range rc=0 155s :: VERIFICATION:- SUCCESSFUL Complete - 1 successfully verified harnesses, 0 failures, 1 total. 
+zk_scale_any_f64 rc=0 2s :: VERIFICATION:- SUCCESSFUL Complete - 1 successfully verified harnesses, 0 failures, 1 total. 
+p3_validate_bounds_exact_all_u64 rc=127 0s :: 
+p3_g_from_u128_reduction_total rc=127 0s :: 
+p3_hex256_limbs_len_le_70 rc=127 0s :: 
+fold_within_budget_n3_any_u64 rc=127 0s :: 
+safe_int_i64_full_range rc=127 0s :: 
+decode_b64u_no_panic_bounded rc=127 0s :: 
+decision_aggregation rc=127 0s :: 
+QUEUE-DONE

@@ -1,0 +1,2 @@
+attack_root_widening ABORTED after 930s: tool exited without a result, e.g. out of memory (NOT proved)
+# wall=930s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_root_widening --heuristic=O --oraclename=./oracle_exec.sh pca_actn_unbounded.spthy +RTS -N2 -M9g

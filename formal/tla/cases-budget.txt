@@ -1,0 +1,19 @@
+# Bounded model checks of the Tamarin budget (pca_budget_v4.spthy) and scope/resource (pca_scope_resource.spthy)
+# models.  Bug-flag cases must FAIL (TLC prints the counterexample = the attack witness); the shipped model must PASS
+# at the SAME bound.  Run: CASES=cases-budget.txt OUT=results/budget ./run.sh
+# name | module | invariants | constants | expect
+# ---- budget, bound B1: root + 2 child nodes (any tree shape), 3 spends, root limit 2 (Tamarin 'c2'), child limits 0..3
+budget_shipped_b1                | BudgetTree | TypeOK RootBound NodeBound AllocMonotone SpendDebitsRoot NoNegative | Nodes={n1,n2};Root=r;Spends={s1,s2,s3};RootLim=2;MaxLim=3;Bug="none" | pass
+budget_leaf_only_rootbound       | BudgetTree | RootBound       | Nodes={n1,n2};Root=r;Spends={s1,s2,s3};RootLim=2;MaxLim=3;Bug="leaf_only" | fail
+budget_leaf_only_spenddebitsroot | BudgetTree | SpendDebitsRoot | Nodes={n1,n2};Root=r;Spends={s1,s2,s3};RootLim=2;MaxLim=3;Bug="leaf_only" | fail
+budget_leaf_only_nodebound       | BudgetTree | NodeBound       | Nodes={n1,n2};Root=r;Spends={s1,s2,s3};RootLim=2;MaxLim=3;Bug="leaf_only" | pass
+budget_nonatomic_rootbound       | BudgetTree | RootBound       | Nodes={n1,n2};Root=r;Spends={s1,s2,s3};RootLim=2;MaxLim=3;Bug="nonatomic" | fail
+budget_nonatomic_nodebound       | BudgetTree | NodeBound       | Nodes={n1,n2};Root=r;Spends={s1,s2,s3};RootLim=2;MaxLim=3;Bug="nonatomic" | fail
+budget_noparent_allocmonotone    | BudgetTree | AllocMonotone   | Nodes={n1,n2};Root=r;Spends={s1,s2,s3};RootLim=2;MaxLim=3;Bug="no_parent_check" | fail
+budget_noparent_rootbound        | BudgetTree | RootBound NodeBound SpendDebitsRoot | Nodes={n1,n2};Root=r;Spends={s1,s2,s3};RootLim=2;MaxLim=3;Bug="no_parent_check" | pass
+# ---- scope/resource, bound C1: 2 verbs, 2 path atoms, paths of length <= 2, chains of 1..3 hops
+scope_shipped_c1                 | ScopeChain | ResourceNarrowing ScopeNarrowing RootBoundsAction | Verbs={read,write};Atoms={a,b};MaxLen=2;MaxDepth=3;Bug="none" | pass
+scope_no_ancestor_res            | ScopeChain | ResourceNarrowing | Verbs={read,write};Atoms={a,b};MaxLen=2;MaxDepth=3;Bug="no_ancestor_res" | fail
+scope_no_ancestor_res_root       | ScopeChain | RootBoundsAction  | Verbs={read,write};Atoms={a,b};MaxLen=2;MaxDepth=3;Bug="no_ancestor_res" | fail
+scope_no_ancestor_res_scope_ok   | ScopeChain | ScopeNarrowing    | Verbs={read,write};Atoms={a,b};MaxLen=2;MaxDepth=3;Bug="no_ancestor_res" | pass
+scope_no_ancestor_scope          | ScopeChain | ScopeNarrowing    | Verbs={read,write};Atoms={a,b};MaxLen=2;MaxDepth=3;Bug="no_ancestor_scope" | fail

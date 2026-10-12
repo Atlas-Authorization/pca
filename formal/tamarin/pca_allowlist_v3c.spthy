@@ -1,0 +1,46 @@
+/*
+  PCA -- allowlist rollback, v3c: Accept-only linear register + per-version case-split lemmas.
+  The verifier's lastSeen is a linear fact Seen(v,last) that ONLY Accept_Manifest consumes/produces (no Attest read-and-
+  re-emit chain).  Attest is modelled separately (v3 register model / Lean).  Every accepted version is also recorded in a
+  persistent history !Hist(v,ver) used only by the typing helper.  Versions v0<v1<v2 via !Le.
+  Lemmas are split per version pair so each is an induction over one short pattern.  A helper typing lemma
+  (last in {v0,v1,v2}) is trivially discharged by the closed set of constants.
+  Switches: STATE_WIPE, ANCHORED (head = current anchor, assumed fresh), ANCHOR_REPLAY, NO_VERSION_CHECK.
+*/
+theory PCA_Allowlist_V3C
+begin
+rule Tables:
+  [ ] --> [ !Le('v0','v0'), !Le('v0','v1'), !Le('v0','v2'), !Le('v1','v1'), !Le('v1','v2'), !Le('v2','v2') ]
+rule Op_Init: [ ] --[ OpInit() ]-> [ OpState('s0'), Anchor('v0') ]
+restriction OpOnce: "All #i #j. OpInit() @ i & OpInit() @ j ==> #i = #j"
+rule Publish_V1: [ OpState('s0'), Anchor(a) ] --[ Published('v1') ]-> [ !Manifest('v1'), OpState('s1'), Anchor('v1') ]
+rule Publish_V2: [ OpState('s1'), Anchor(a) ] --[ Published('v2') ]-> [ !Manifest('v2'), OpState('s2'), Anchor('v2') ]
+rule Verifier_Init: [ Fr(~vid) ] --[ VInit(~vid) ]-> [ Seen(~vid, 'v0') ]
+restriction VOnce: "All a b #i #j. VInit(a) @ i & VInit(b) @ j ==> #i = #j"
+#ifdef STATE_WIPE
+rule Wipe: [ Seen(v, l) ] --[ Wiped(v) ]-> [ Seen(v, 'v0') ]
+#endif
+#ifdef NO_VERSION_CHECK
+rule Accept_Manifest: [ !Manifest(ver), Seen(v, last) ] --[ AcceptMf(v, ver) ]-> [ Seen(v, ver), !Hist(v, ver) ]
+#endif
+#ifdef ANCHORED
+rule Accept_Manifest: [ !Manifest(ver), Seen(v, last), !Le(last, ver), Anchor(hv), !Le(hv, ver) ]
+  --[ AcceptMf(v, ver) ]-> [ Seen(v, ver), Anchor(hv), !Hist(v, ver) ]
+#endif
+#ifdef ANCHOR_REPLAY
+rule Issue_Head: [ Anchor(hv) ] --[ HeadIssued(hv) ]-> [ Anchor(hv), !OldHead(hv) ]
+rule Accept_Manifest: [ !Manifest(ver), Seen(v, last), !Le(last, ver), !OldHead(hv), !Le(hv, ver) ]
+  --[ AcceptMf(v, ver) ]-> [ Seen(v, ver), !Hist(v, ver) ]
+#endif
+#ifdef ¬NO_VERSION_CHECK & ¬ANCHORED & ¬ANCHOR_REPLAY
+rule Accept_Manifest: [ !Manifest(ver), Seen(v, last), !Le(last, ver) ]
+  --[ AcceptMf(v, ver) ]-> [ Seen(v, ver), !Hist(v, ver) ]
+#endif
+
+lemma executable_v2_after_v1:
+  exists-trace
+  "Ex v #a #b. AcceptMf(v, 'v1') @ a & AcceptMf(v, 'v2') @ b & #a < #b"
+// per-version case split: the only possible rollback pairs are (v2 then v1), (v2 then v0 is not offered), so one lemma
+lemma no_rollback_v2_then_v1 [use_induction]:
+  "All v #i #j. AcceptMf(v, 'v2') @ i & AcceptMf(v, 'v1') @ j & #i < #j ==> F"
+end

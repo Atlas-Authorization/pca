@@ -1,0 +1,2 @@
+  attack_scope_escalation (exists-trace): verified (18 steps)
+# wall=1024s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_scope_escalation -DNO_ANCESTOR_SCOPE pca_scope_resource.spthy +RTS -N4 -M10g

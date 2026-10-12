@@ -1,0 +1,15 @@
+LocalStack attempt (Linux x86_64 VM, docker 29.1.3), console output transcribed from the first run.
+
+1. localstack/localstack:latest (LocalStack 2026.9.1, build 2026-10-07, sha256:0c644ede65c2d0c95737e09a39007828bd381bdb07ca8200c6bf17d66a4ed191):
+   exits with code 55: "License activation failed! ... No credentials were found in the environment. Please set the
+   LOCALSTACK_AUTH_TOKEN variable". The current image cannot run without an account token, and none was used.
+
+2. localstack/localstack:3.8.1 (community, SERVICES=lambda,apigateway,iam,sts): REST API with a REQUEST authorizer
+   (authorizer-uri -> the authorizer Lambda, identity source method.request.header.PCA-Action, TTL 0, authorization-type CUSTOM on
+   POST /refunds, AWS_PROXY to a backend Lambda). The authorizer was created without error. Requests through
+   http://localhost:4566/restapis/<id>/test/_user_request_/refunds:
+     valid proof     -> {"reached":true,"authorizer":{}}  HTTP 200
+     tampered proof  -> {"reached":true,"authorizer":{}}  HTTP 200
+     no proof        -> {"reached":true,"authorizer":{}}  HTTP 200
+   The backend was reached with an empty authorizer context for all three, i.e. this LocalStack build never invoked the
+   authorizer. It adds no API Gateway authorizer coverage and is NOT counted as evidence.

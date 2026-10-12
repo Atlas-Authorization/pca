@@ -1,0 +1,389 @@
+{
+ "source": "php-infection.json",
+ "counts": {
+  "escaped": 45,
+  "timeouted": 11,
+  "uncovered": 35
+ },
+ "survivors": [
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "escaped"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "timeouted"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  },
+  {
+   "file": "",
+   "kind": "uncovered"
+  }
+ ],
+ "tool": "infection",
+ "stats": {
+  "totalMutantsCount": 1695,
+  "killedCount": 1592,
+  "notCoveredCount": 35,
+  "escapedCount": 45,
+  "errorCount": 12,
+  "syntaxErrorCount": 0,
+  "skippedCount": 0,
+  "ignoredCount": 0,
+  "timeOutCount": 11,
+  "msi": 95.28,
+  "mutationCodeCoverage": 97.94,
+  "coveredCodeMsi": 97.29
+ }
+}

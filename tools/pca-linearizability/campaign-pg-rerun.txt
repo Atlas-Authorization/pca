@@ -1,0 +1,12 @@
+# name | store | secs | procs | conns | chaos | env | expect
+pg-updatewhere-chaos  | pg-updatewhere  | 120 | 3 | 60 | all  | SPREAD=24 CHECK_TIMEOUT=10s | pass
+pg-attest-nonce-chaos | pg-attest-nonce | 120 | 3 | 60 | all  | CHECK_TIMEOUT=10s | pass
+pg-onconflict-chaos   | pg-onconflict   | 120 | 3 | 60 | all  | CHECK_TIMEOUT=10s | pass
+pg-advisory-chaos     | pg-advisory     | 120 | 3 | 60 | all  | SPREAD=24 CHECK_TIMEOUT=10s | pass
+pg-fastpath-conndrop  | pg-fastpath     | 90  | 3 | 60 | connkill | SPREAD=24 CHECK_TIMEOUT=10s | pass
+pg-bad-readwrite      | pg-bad-readwrite   | 45 | 3 | 60 | none | CHECK_TIMEOUT=10s | fail
+pg-bad-nolock         | pg-bad-nolock      | 45 | 3 | 60 | none | CHECK_TIMEOUT=10s | fail
+pg-bad-replica        | pg-bad-replica     | 45 | 3 | 60 | none | CHECK_TIMEOUT=10s | fail
+pg-bad-selectupsert   | pg-bad-selectupsert| 45 | 3 | 60 | none | CHECK_TIMEOUT=10s | fail
+pg-asynccommit-kill9  | pg-updatewhere     | 90 | 3 | 60 | restart | SYNC=off SPREAD=24 CHECK_TIMEOUT=10s | fail
+pg-synccommit-kill9   | pg-updatewhere     | 90 | 3 | 60 | restart | SYNC=on SPREAD=24 CHECK_TIMEOUT=10s | pass

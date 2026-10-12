@@ -1,0 +1,9 @@
+pool-new-gen-1.log {"rounds":8750,"workers":10,"plant":"gen","roundsNotExactlyOneTrue":0,"roundsWithAnyWorkerError":0,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":8750}}
+pool-new-gen-2.log {"rounds":8750,"workers":10,"plant":"gen","roundsNotExactlyOneTrue":0,"roundsWithAnyWorkerError":0,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":8750}}
+pool-new-legacy-1.log {"rounds":8750,"workers":10,"plant":"legacy","roundsNotExactlyOneTrue":0,"roundsWithAnyWorkerError":0,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":8750}}
+pool-new-legacy-2.log {"rounds":8750,"workers":10,"plant":"legacy","roundsNotExactlyOneTrue":0,"roundsWithAnyWorkerError":0,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":8750}}
+pool-new-legacy-3.log {"rounds":8750,"workers":10,"plant":"legacy","roundsNotExactlyOneTrue":0,"roundsWithAnyWorkerError":0,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":8750}}
+pool-new-legacy-4.log {"rounds":8750,"workers":10,"plant":"legacy","roundsNotExactlyOneTrue":0,"roundsWithAnyWorkerError":0,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":8750}}
+pool-new-none-1.log {"rounds":8750,"workers":10,"plant":"none","roundsNotExactlyOneTrue":0,"roundsWithAnyWorkerError":0,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":8750}}
+pool-old-legacy-1.log {"rounds":4000,"workers":10,"plant":"legacy","roundsNotExactlyOneTrue":2,"roundsWithAnyWorkerError":12,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":3998,"2":2}}
+pool-old-legacy-2.log {"rounds":4000,"workers":10,"plant":"legacy","roundsNotExactlyOneTrue":1,"roundsWithAnyWorkerError":18,"chainVerifyFailures":0,"histogramOfTrueCounts":{"1":3999,"2":1}}

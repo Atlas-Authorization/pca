@@ -1,0 +1,356 @@
+{
+ "source": "dotnet-stryker.json",
+ "counts": {
+  "killed": 1492,
+  "ignored": 119,
+  "survived": 33,
+  "nocoverage": 17,
+  "compileerror": 236,
+  "timeout": 18
+ },
+ "survivors": [
+  {
+   "file": "Pca.cs",
+   "line": 33,
+   "mutator": "Logical mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 37,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 42,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 87,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 153,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 153,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 244,
+   "mutator": "AddAssignmentExpression to SubtractAssignmentExpression mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 249,
+   "mutator": "PostIncrementExpression to PostDecrementExpression mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 253,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 269,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 275,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 283,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 301,
+   "mutator": "PostIncrementExpression to PostDecrementExpression mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 317,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 318,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 321,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 326,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 330,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 349,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 349,
+   "mutator": "String Method Mutation (Replace IndexOf() with LastIndexOf())"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 443,
+   "mutator": "Arithmetic mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 445,
+   "mutator": "Logical mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 445,
+   "mutator": "Logical mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 445,
+   "mutator": "Logical mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 456,
+   "mutator": "Block removal mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 465,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 465,
+   "mutator": "MultiplyAssignmentExpression to DivideAssignmentExpression mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 485,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 540,
+   "mutator": "Arithmetic mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 541,
+   "mutator": "Arithmetic mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 562,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 562,
+   "mutator": "RightShiftAssignmentExpression to LeftShiftAssignmentExpression mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 562,
+   "mutator": "RightShiftAssignmentExpression to UnsignedRightShiftAssignmentExpression mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 568,
+   "mutator": "Bitwise mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 568,
+   "mutator": "Bitwise mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 570,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 571,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 578,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 579,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 579,
+   "mutator": "UnaryMinusExpression to UnaryPlusExpression mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 587,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 594,
+   "mutator": "Logical mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 594,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 595,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 596,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 606,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 699,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 707,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 798,
+   "mutator": "Block removal mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 829,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 849,
+   "mutator": "Logical mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 857,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 896,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 953,
+   "mutator": "Block removal mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1001,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1108,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1151,
+   "mutator": "Object initializer mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1151,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1151,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1151,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1152,
+   "mutator": "Statement mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1153,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1153,
+   "mutator": "Boolean mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1197,
+   "mutator": "String mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1198,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1205,
+   "mutator": "Equality mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1221,
+   "mutator": "Conditional (false) mutation"
+  },
+  {
+   "file": "Pca.cs",
+   "line": 1225,
+   "mutator": "String mutation"
+  }
+ ],
+ "tool": "stryker",
+ "schemaVersion": "2",
+ "score": 78.85
+}

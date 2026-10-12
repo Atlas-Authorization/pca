@@ -1,0 +1,2 @@
+  executable_attestation (exists-trace): verified (17 steps)
+  attestation_binding (all-traces): verified (14 steps)

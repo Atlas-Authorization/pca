@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker/master/packages/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": [
+    "@stryker-mutator/vitest-runner"
+  ],
+  "coverageAnalysis": "perTest",
+  "reporters": [
+    "clear-text",
+    "json"
+  ],
+  "jsonReporter": {
+    "fileName": "/tmp/pca-audit-stryker/report.json"
+  },
+  "timeoutMS": 20000,
+  "concurrency": 3,
+  "disableTypeChecks": "src/**/*.ts",
+  "ignoreStatic": true,
+  "ignorePatterns": [
+    "src/zk*.test.ts",
+    "**/*.realsilicon.test.ts",
+    "src/attest-maa-pins.test.ts",
+    "src/mutation-equivalents-diff-*.test.ts"
+  ],
+  "dryRunTimeoutMinutes": 15
+}

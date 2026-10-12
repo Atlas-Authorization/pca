@@ -1,0 +1,323 @@
+/*
+  PCA -- PCActn verification with TIME and the REPLAY STORE as REWRITING SEMANTICS (not restrictions).
+
+  Compared with pca_actn.spthy / pca_actn_unbounded.spthy, two former restrictions are gone:
+    * no `ChkTime_R` ordering restriction  -- expiry is checked in the PREMISE of a rule against a CLOCK fact;
+    * no `OnceNonce` / `OnceCounter` restrictions -- one-time use is a CONSEQUENCE of consuming a linear fact.
+  (The chain is the same ARBITRARY-length recursive Walk of pca_actn_unbounded.spthy.)
+
+  TIME.  A single linear fact Clock(t), t a natural number (builtin natural-numbers: `%1` is one, `%+` is
+  addition), created once by Clock_Init and advanced by Tick: Clock(t) -> Clock(t %+ %1).  Time is therefore
+  totally ordered by the rewriting order of the ONE Clock thread.  The verifier rule Walk_Finish CONSUMES
+  Clock(now) and re-emits it (a read); the signed action carries `exp`, and the verifier's validity check
+  `now <= exp` is the PATTERN MATCH  exp = now %+ d  (d a natural) in the rule's premise.  NO_EXPIRY_CHECK:
+  the premise matches ANY exp (the clock is read but not compared).
+  Tamarin formulas cannot contain %+, so the order is exposed to lemmas by two read-only OBSERVER rules that
+  are ordinary members of the Clock thread:  Obs_Le  emits ClockLe(e) when the clock shows a value <= e
+  (the verifier's validity premise emits the same ClockLe(exp)), Obs_Past emits ClockPast(e) when it shows a
+  value strictly > e.  Lemma clock_no_regress ("a ClockLe(e) read and a ClockPast(e) read are ordered:
+  the Le read comes first") is proved by induction over the thread; no_accept_after_expiry then follows:
+  every accepted action's validity decision (Validity + ClockLe(exp), one rule step) precedes any
+  observation that the clock passed exp.
+  The decision is a function of ONE snapshot of the clock taken at the first gate (as in pcactn.ts / replay.ts,
+  where `now` is passed once); the store stages run after it.
+
+  STORE.  The key space is infinite, so cells are created lazily, ONCE per key, by Cell_Create: it models the
+  INITIAL STATE of the store ("one cell per key, all unused"), exactly like a database whose rows pre-exist
+  in state 'unused'.  The single restriction CellOnce / CtrOnce (at most one creation per key) states that
+  initial-state uniqueness -- it constrains the ENVIRONMENT (a store is a map), NOT the verifier's
+  decision; it is the standard idiom for a linear map in Tamarin and is stated here explicitly as the
+  only store assumption.  All behaviour of the verifier then comes from rule semantics:
+    atomic nonce stage   : consume Cell(k,'unused'), emit Cell(k,'used')     (replay.ts consumeOnce)
+    atomic counter stage : consume Ctr(s, c), require ctr = c %+ d %+ %1 (strictly greater), emit Ctr(s, ctr)
+                           (replay.ts advance)
+  A replay of key k needs Cell(k,'unused') again; no rule creates one (CellOnce) and Cell(k,'used') never
+  returns to 'unused': a replay is IMPOSSIBLE because the fact is gone -- there is no `Once` restriction.
+  Atomic consume is a rule-level fact (consume + emit in one rewrite step); the contract's "atomic across
+  every verifier instance" (replay.ts contract item 1) is precisely the single-step read-modify-write.
+
+  STORE-RACE variants (non-atomic read-then-write; two verifier instances may interleave):
+    -DSTORE_RACE_NONCE : Nonce_Read reads Cell(k,'unused') WITHOUT consuming (re-emits it) and emits a
+                         token; Nonce_Write later overwrites Cell(k,'used') (blind put, not put-if-absent).
+    -DSTORE_RACE_CTR   : Ctr_Read reads Ctr(s,c) and checks ctr > c WITHOUT consuming; Ctr_Write
+                         later blind-writes Ctr(s, ctr).
+  Tamarin MUST falsify replay_freedom_nonce / replay_freedom_counter under them (the interleaved double
+  accept is the attack trace).
+
+  Other switches (as before): NO_GREF_CHECK NO_ANCESTOR_CAV NO_AUD_CHECK NO_EXPIRY_CHECK NO_LEAF_SIG.
+
+  Relationship to Lean: chain walk = ChainLink.lean (see pca_actn_unbounded.spthy); the store invariant is
+  Replay.lean (the abstract store); this file shows the invariant is a CONSEQUENCE of linear consumption.
+*/
+theory PCA_Actn_TimeStore
+begin
+
+builtins: signing, hashing, natural-numbers
+
+rule Gen_Key:
+  [ Fr(~ltk) ] --[ KeyGen(pk(~ltk)) ]-> [ !Ltk(pk(~ltk), ~ltk), Out(pk(~ltk)) ]
+
+rule Reveal:
+  [ !Ltk(pkx, ltk) ] --[ Reveal(pkx) ]-> [ Out(ltk) ]
+
+// ---- time: one linear Clock thread over the naturals ------------------------------------------------
+rule Clock_Init:
+  [ ] --[ ClockInit(), ClockAt(%1) ]-> [ Clock(%1) ]
+
+rule Tick:
+  [ Clock(%t) ] --[ ClockAt(%t %+ %1), TickFrom(%t) ]-> [ Clock(%t %+ %1), Out(%t %+ %1) ]
+
+// observers of the clock (read-only): ClockLe(e): the clock currently shows a value <= e ;
+// ClockPast(e): the clock currently shows a value STRICTLY greater than e.  They consume and re-emit the
+// Clock thread, so they are ordered against Tick / Walk_Finish by linear-fact order alone.
+rule Obs_Le:
+  [ Clock(%t), In(%d) ] --[ ClockLe(%t %+ %d) ]-> [ Clock(%t) ]
+
+rule Obs_Past:
+  [ Clock(%e %+ %d %+ %1), In(%e) ] --[ ClockPast(%e) ]-> [ Clock(%e %+ %d %+ %1) ]
+
+restriction ClockInitOnce: "All #i #j. ClockInit() @ i & ClockInit() @ j ==> #i = #j"
+
+// ---- store cells (initial state: one per key, unused) -----------------------------------------------
+rule Cell_Create:
+  [ In(k) ] --[ CellCreated(k) ]-> [ Cell(k, 'unused') ]
+
+rule Ctr_Create:
+  [ In(s) ] --[ CtrCreated(s) ]-> [ Ctr(s, %1) ]
+
+restriction CellOnce: "All k #i #j. CellCreated(k) @ i & CellCreated(k) @ j ==> #i = #j"
+restriction CtrOnce:  "All s #i #j. CtrCreated(s) @ i & CtrCreated(s) @ j ==> #i = #j"
+
+// ---- principal / delegation / agent (as pca_actn_unbounded.spthy) ------------------------------------
+rule Verifier_Setup:
+  [ !Ltk(pkT, ltkT) ] --[ Trust($aud, pkT) ]-> [ !VCfg($aud, pkT) ]
+
+rule Principal_Grant:
+  let body = <'cap', 'none', pk(ltkP), pkH, $cv>
+      cap  = <body, sign(body, ltkP)>
+  in
+  [ !Ltk(pk(ltkP), ltkP), !Ltk(pkH, ltkH) ]
+  --[ Granted(pk(ltkP), pkH, $cv, h(cap)) ]->
+  [ Out(cap) ]
+
+rule Delegate:
+  let pbody = <'cap', ppar, piss, pk(ltkD), pcv>
+      pcap  = <pbody, psg>
+      body  = <'cap', h(pcap), pk(ltkD), pkE, $cv>
+      cap   = <body, sign(body, ltkD)>
+  in
+  [ !Ltk(pk(ltkD), ltkD), In(pcap), In(pkE) ]
+  --[ Eq(verify(psg, pbody, piss), true), HonestDelegated(h(pcap), h(cap), $cv) ]->
+  [ Out(cap) ]
+
+rule Agent_Act:
+  let act = <'act', aud, verb, res, gref, ctr, nonce, exp>
+  in
+  [ !Ltk(pk(ltkH), ltkH), In(<chain, act>) ]
+  --[ AgentSigned(pk(ltkH), aud, nonce, ctr, verb) ]->
+  [ Out(<chain, act, sign(act, ltkH)>) ]
+
+// ---- recursive chain walk (unbounded; identical to pca_actn_unbounded.spthy) --------------------------
+rule Walk_Start:
+  let
+      b1  = <'cap', par1, iss1, hol1, cv1>
+      c1  = <b1, sg1>
+      act = <'act', aaud, verb, res, gref, ctr, nonce, exp>
+  in
+  [ In(<<c1, rest>, act, asig>), !VCfg(vaud, pkT), Fr(~wid) ]
+  --[ ChkLeafSig(verify(asig, act, hol1)),
+      ChkAud(aaud, vaud),
+      Eq(verify(sg1, b1, iss1), true),
+      ChkCav('leaf', cv1, verb),
+      WalkStart(~wid, verb),
+      HopWalk(~wid, h(c1), cv1, verb, iss1) ]->
+  [ Walk(~wid, h(c1), rest), !Hop(~wid, h(c1), par1, iss1),
+    !Ctx(~wid, <vaud, pkT, aaud, verb, gref, ctr, nonce, exp, hol1>) ]
+
+rule Walk_Step:
+  let
+      b2 = <'cap', par2, iss2, hol2, cv2>
+      c2 = <b2, sg2>
+  in
+  [ Walk(wid, cid, <c2, rest>), !Hop(wid, cid, par, iss),
+    !Ctx(wid, <vaud, pkT, aaud, verb, gref, ctr, nonce, exp, hol1>) ]
+  --[ Eq(par, h(c2)),
+      Eq(iss, hol2),
+      Eq(verify(sg2, b2, iss2), true),
+      ChkCav('anc', cv2, verb),
+      HopWalk(wid, h(c2), cv2, verb, iss2) ]->
+  [ Walk(wid, h(c2), rest), !Hop(wid, h(c2), par2, iss2) ]
+
+// ---- first gate: root, grant_ref, VALIDITY (clock premise).  Emits a token carrying the clock snapshot ----
+#ifdef NO_EXPIRY_CHECK
+rule Walk_Finish:
+  [ Walk(wid, cid, 'end'), !Hop(wid, cid, 'none', iss),
+    !Ctx(wid, <vaud, pkT, aaud, verb, gref, ctr, nonce, exp, hol1>), Clock(%now) ]
+  --[ Eq(iss, pkT), ChkGref(gref, cid), Validity(wid, %now, exp) ]->
+  [ Clock(%now), Stage1(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>) ]
+#else
+rule Walk_Finish:
+  let exp = %now %+ %d
+  in
+  [ Walk(wid, cid, 'end'), !Hop(wid, cid, 'none', iss),
+    !Ctx(wid, <vaud, pkT, aaud, verb, gref, ctr, nonce, exp, hol1>), Clock(%now) ]
+  --[ Eq(iss, pkT), ChkGref(gref, cid), Validity(wid, %now, exp), ClockLe(exp) ]->
+  [ Clock(%now), Stage1(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>) ]
+#endif
+
+// ---- nonce stage ----------------------------------------------------------------------------------
+#ifdef STORE_RACE_NONCE
+// NON-ATOMIC: read (cell is only looked at, not consumed) ...
+rule Nonce_Read:
+  [ Stage1(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>),
+    Cell(<'n', vaud, cid, hol1, nonce>, 'unused') ]
+  --[ NonceRead(wid) ]->
+  [ Cell(<'n', vaud, cid, hol1, nonce>, 'unused'),
+    NonceOk(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>) ]
+// ... then a later blind WRITE (put, not put-if-absent)
+rule Nonce_Write:
+  [ NonceOk(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>),
+    Cell(<'n', vaud, cid, hol1, nonce>, anystate) ]
+  --[ Consume(<'n', vaud, cid, hol1, nonce>) ]->
+  [ Cell(<'n', vaud, cid, hol1, nonce>, 'used'),
+    Stage2(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>) ]
+#else
+rule Nonce_Atomic:
+  [ Stage1(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>),
+    Cell(<'n', vaud, cid, hol1, nonce>, 'unused') ]
+  --[ Consume(<'n', vaud, cid, hol1, nonce>) ]->
+  [ Cell(<'n', vaud, cid, hol1, nonce>, 'used'),
+    Stage2(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>) ]
+#endif
+
+// ---- counter stage: strictly increasing, via naturals ---------------------------------------------------
+#ifdef STORE_RACE_CTR
+rule Ctr_Read:
+  let ctr = %c %+ %d %+ %1
+  in
+  [ Stage2(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>),
+    Ctr(<'c', vaud, cid, hol1>, %c) ]
+  --[ CtrRead(wid) ]->
+  [ Ctr(<'c', vaud, cid, hol1>, %c),
+    CtrOk(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>) ]
+rule Ctr_Write:
+  [ CtrOk(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>),
+    Ctr(<'c', vaud, cid, hol1>, cany) ]
+  --[ Advance(<'c', vaud, cid, hol1>, ctr),
+      Accept(wid, vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now) ]->
+  [ Ctr(<'c', vaud, cid, hol1>, ctr) ]
+#else
+rule Ctr_Atomic:
+  let ctr = %c %+ %d %+ %1
+  in
+  [ Stage2(wid, <vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now>),
+    Ctr(<'c', vaud, cid, hol1>, %c) ]
+  --[ Advance(<'c', vaud, cid, hol1>, ctr),
+      Accept(wid, vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp, %now) ]->
+  [ Ctr(<'c', vaud, cid, hol1>, ctr) ]
+#endif
+
+// ---- restrictions (checks of the verifier; NOT time, NOT the store) -----------------------------------------
+restriction Equality:   "All x y #i. Eq(x, y) @ i ==> x = y"
+#ifdef NO_LEAF_SIG
+#else
+restriction ChkLeafSig_R: "All x #i. ChkLeafSig(x) @ i ==> x = true"
+#endif
+#ifdef NO_AUD_CHECK
+#else
+restriction ChkAud_R: "All a b #i. ChkAud(a, b) @ i ==> a = b"
+#endif
+#ifdef NO_GREF_CHECK
+#else
+restriction ChkGref_R: "All a b #i. ChkGref(a, b) @ i ==> a = b"
+#endif
+#ifdef NO_ANCESTOR_CAV
+restriction ChkCav_R:
+  "All pos cv v #i. ChkCav(pos, cv, v) @ i ==> (not (pos = 'leaf')) | (cv = v) | (cv = 'any')"
+#else
+restriction ChkCav_R:
+  "All pos cv v #i. ChkCav(pos, cv, v) @ i ==> (cv = v) | (cv = 'any')"
+#endif
+
+// ---- sanity ---------------------------------------------------------------------------------------
+lemma executable_accept:
+  exists-trace
+  "Ex w vaud rid lhol n c v iss e now pkD cv0 #g #s #i #k #q.
+      Granted(iss, pkD, cv0, rid) @ g & AgentSigned(lhol, vaud, n, c, v) @ s
+    & CellCreated(<'n', vaud, rid, lhol, n>) @ k & CtrCreated(<'c', vaud, rid, lhol>) @ q
+    & Accept(w, vaud, vaud, rid, lhol, n, c, v, iss, e, now) @ i
+    & (All x #r. Reveal(x) @ r ==> F)"
+
+// two actions from the same holder under one grant accepted in sequence (the counter chain really advances)
+lemma executable_two_actions:
+  exists-trace
+  "Ex w1 w2 vaud rid lhol n1 n2 c1 c2 v1 v2 iss e1 e2 now1 now2 pkD cv0 #g #s1 #s2 #k1 #k2 #q #i #j.
+      Granted(iss, pkD, cv0, rid) @ g & AgentSigned(lhol, vaud, n1, c1, v1) @ s1
+    & AgentSigned(lhol, vaud, n2, c2, v2) @ s2
+    & CellCreated(<'n', vaud, rid, lhol, n1>) @ k1 & CellCreated(<'n', vaud, rid, lhol, n2>) @ k2
+    & CtrCreated(<'c', vaud, rid, lhol>) @ q
+    & Accept(w1, vaud, vaud, rid, lhol, n1, c1, v1, iss, e1, now1) @ i
+    & Accept(w2, vaud, vaud, rid, lhol, n2, c2, v2, iss, e2, now2) @ j & #i < #j
+    & (All x #r. Reveal(x) @ r ==> F)"
+
+// an action accepted only after the clock has ticked (time really passes in a successful run)
+lemma executable_after_tick:
+  exists-trace
+  "Ex w vaud rid lhol n c v iss e now t pkD cv0 #g #s #i #k #q #t1.
+      Granted(iss, pkD, cv0, rid) @ g & AgentSigned(lhol, vaud, n, c, v) @ s
+    & CellCreated(<'n', vaud, rid, lhol, n>) @ k & CtrCreated(<'c', vaud, rid, lhol>) @ q
+    & TickFrom(t) @ t1 & #t1 < #i
+    & Accept(w, vaud, vaud, rid, lhol, n, c, v, iss, e, now) @ i
+    & (All x #r. Reveal(x) @ r ==> F)"
+
+// ---- LEMMA: authorization / attenuation / audience (same statements as the unbounded model) --------------------
+lemma authorization:
+  "All w vaud aaud rid lhol n c v iss e %now #i.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e, %now) @ i
+      ==> (Ex pkH cv #g. Granted(iss, pkH, cv, rid) @ g & #g < #i)
+        | (Ex #r. Reveal(iss) @ r)"
+
+lemma attenuation_root:
+  "All w vaud aaud rid lhol n c v iss e %now pkH cv0 #i #g.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e, %now) @ i & Granted(iss, pkH, cv0, rid) @ g
+      ==> (cv0 = v) | (cv0 = 'any') | (Ex #r. Reveal(iss) @ r)"
+
+lemma audience_binding:
+  "All w vaud aaud rid lhol n c v iss e %now #i.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e, %now) @ i ==> vaud = aaud"
+
+// ---- LEMMA: replay freedom as a CONSEQUENCE of linear-fact consumption ---------------------------------------
+lemma replay_freedom_nonce:
+  "All w1 w2 vaud a1 a2 rid lhol n c1 c2 v1 v2 iss1 iss2 e1 e2 t1 t2 #i #j.
+      Accept(w1, vaud, a1, rid, lhol, n, c1, v1, iss1, e1, t1) @ i
+    & Accept(w2, vaud, a2, rid, lhol, n, c2, v2, iss2, e2, t2) @ j
+      ==> #i = #j"
+
+lemma replay_freedom_counter:
+  "All w1 w2 vaud a1 a2 rid lhol n1 n2 c v1 v2 iss1 iss2 e1 e2 t1 t2 #i #j.
+      Accept(w1, vaud, a1, rid, lhol, n1, c, v1, iss1, e1, t1) @ i
+    & Accept(w2, vaud, a2, rid, lhol, n2, c, v2, iss2, e2, t2) @ j
+      ==> #i = #j"
+
+// ---- LEMMA: expiry from the clock rewriting ------------------------------------------------------------------
+// ClockLe(e) is emitted by the verifier's validity premise (exp = %now + d).  If the clock was ever observed
+// strictly past e, every validity decision that used e happened BEFORE that observation.
+// structural consequence of the rule premise alone (no ordering needed): every accepted action's validity
+// decision read a clock value <= exp (ClockLe(exp) is emitted only by the premise exp = now %+ d)
+lemma accept_has_unexpired_decision:
+  "All w vaud aaud rid lhol n c v iss e %now #i.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e, %now) @ i
+      ==> Ex #k. Validity(w, %now, e) @ k & ClockLe(e) @ k & #k < #i"
+
+lemma clock_no_regress [use_induction]:
+  "All e #k #j. ClockLe(e) @ k & ClockPast(e) @ j ==> #k < #j"
+
+lemma clock_no_regress_plain:
+  "All e #k #j. ClockLe(e) @ k & ClockPast(e) @ j ==> #k < #j"
+
+lemma no_accept_after_expiry:
+  "All w vaud aaud rid lhol n c v iss e %now #i #j.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e, %now) @ i & ClockPast(e) @ j
+      ==> Ex #k. Validity(w, %now, e) @ k & ClockLe(e) @ k & #k < #j"
+
+end

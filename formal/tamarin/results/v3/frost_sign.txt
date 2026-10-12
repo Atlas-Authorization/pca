@@ -1,0 +1,14 @@
+  executable_threshold_signature (exists-trace): verified (16 steps)
+# wall=1s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=executable_threshold_signature  pca_frost_sign_v3.spthy +RTS -N4
+  executable_two_sessions (exists-trace): verified (12 steps)
+# wall=1s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=executable_two_sessions  pca_frost_sign_v3.spthy +RTS -N4
+  nonce_secret (all-traces): verified (6 steps)
+# wall=0s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=nonce_secret  pca_frost_sign_v3.spthy +RTS -N4
+  nonce_one_shot (all-traces): verified (68 steps)
+# wall=0s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=nonce_one_shot  pca_frost_sign_v3.spthy +RTS -N4
+  shares_bound_to_session (all-traces): verified (455 steps)
+# wall=2s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=shares_bound_to_session  pca_frost_sign_v3.spthy +RTS -N4
+  share_secrecy (all-traces): verified (35 steps)
+# wall=1s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=share_secrecy  pca_frost_sign_v3.spthy +RTS -N4
+  sig_needs_t_signers (all-traces): verified (456 steps)
+# wall=2s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=sig_needs_t_signers  pca_frost_sign_v3.spthy +RTS -N4

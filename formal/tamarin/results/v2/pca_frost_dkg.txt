@@ -1,0 +1,4 @@
+  executable_dkg (exists-trace): verified (6 steps)
+# wall=0s heuristic=c tamarin-prover 1.12.0
+  dkg_key_not_adversarial (all-traces): verified (1 steps)
+# wall=1s heuristic=c tamarin-prover 1.12.0

@@ -1,0 +1,2 @@
+# wall=1434s rc=251 tamarin-prover 1.12.0 cmd=tamarin-prover --prove=executable_revocation -DSTATE_WIPE -DANCHORED pca_allowlist_v3.spthy +RTS -N4
+HEAP EXHAUSTED at -M12g (NOT proved)

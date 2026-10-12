@@ -1,0 +1,5 @@
+# gcp: pca_clock small model + guided runs
+pca_clock[]   executable_accept (exists-trace): verified (4 steps)
+pca_clock[DNO_EXPIRY_CHECK]   no_accept_after_expiry (all-traces): falsified - found trace (8 steps)
+pca_clock[]   executable_after_tick (exists-trace): verified (8 steps)
+pca_clock[] NORESULT-or-timeout(300s) no_accept_after_expiry

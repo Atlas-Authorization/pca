@@ -1,0 +1,2 @@
+TIMEOUT after 1800s (NOT found, NOT refuted): attack_resource_escalation under -DNO_ANCESTOR_RES, default heuristic. Re-queued with a longer wall.
+# wall=1801s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_resource_escalation -DNO_ANCESTOR_RES pca_scope_resource.spthy +RTS -N4 -M10g

@@ -1,0 +1,6 @@
+TIMEOUT after 900s budget (NOT proved): root_bound
+# wall=901s heuristic=s tamarin-prover 1.12.0
+TIMEOUT after 900s budget (NOT proved): node_bound
+# wall=900s heuristic=s tamarin-prover 1.12.0
+TIMEOUT after 900s budget (NOT proved): spend_debits_root
+# wall=900s heuristic=s tamarin-prover 1.12.0

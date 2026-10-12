@@ -1,0 +1,12 @@
+[package]
+name = "rust-slh-voter"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+slh-dsa = "0.1.0"
+hex = "0.4"
+signature = "=2.3.0-pre.4"

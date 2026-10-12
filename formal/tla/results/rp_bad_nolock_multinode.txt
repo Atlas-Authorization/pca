@@ -1,0 +1,133 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 47 and seed 1565782857939326020 with 3 workers on 12 cores with 2731MB heap and 64MB offheap memory [pid: 1457164] (Linux 7.0.0-1011-gcp amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/replay-tla/tla/RequirePcaLock.tla
+Parsing file /tmp/tlc-12912363133762101810/Integers.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-12912363133762101810/FiniteSets.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-12912363133762101810/Sequences.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-12912363133762101810/_TLCTrace.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-12912363133762101810/Naturals.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-12912363133762101810/TLC.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-12912363133762101810/TLCExt.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module RequirePcaLock
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module RequirePcaLock
+Starting... (2026-10-10 21:24:57)
+Computing initial states...
+Computed 2 initial states...
+Computed 4 initial states...
+Computed 8 initial states...
+Computed 16 initial states...
+Finished computing initial states: 27 distinct states generated at 2026-10-10 21:24:58.
+Error: Invariant Safe is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ val = 0
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 0
+/\ pc = (c1 :> "start" @@ c2 :> "start" @@ c3 :> "start")
+/\ wlog = <<>>
+
+State 2: <Next line 63, col 9 to line 64, col 35 of module RequirePcaLock>
+/\ val = 0
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 0
+/\ pc = (c1 :> "get" @@ c2 :> "start" @@ c3 :> "start")
+/\ wlog = <<>>
+
+State 3: <Next line 63, col 9 to line 64, col 35 of module RequirePcaLock>
+/\ val = 0
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 0
+/\ pc = (c1 :> "decide" @@ c2 :> "start" @@ c3 :> "start")
+/\ wlog = <<>>
+
+State 4: <Next line 63, col 9 to line 64, col 35 of module RequirePcaLock>
+/\ val = 0
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 0
+/\ pc = (c1 :> "decide" @@ c2 :> "get" @@ c3 :> "start")
+/\ wlog = <<>>
+
+State 5: <Next line 63, col 9 to line 64, col 35 of module RequirePcaLock>
+/\ val = 0
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 0
+/\ pc = (c1 :> "put" @@ c2 :> "get" @@ c3 :> "start")
+/\ wlog = <<>>
+
+State 6: <Next line 63, col 9 to line 64, col 35 of module RequirePcaLock>
+/\ val = 0
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "none" @@ c2 :> "none" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 0
+/\ pc = (c1 :> "put" @@ c2 :> "decide" @@ c3 :> "start")
+/\ wlog = <<>>
+
+State 7: <Next line 63, col 9 to line 64, col 35 of module RequirePcaLock>
+/\ val = 1
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "T" @@ c2 :> "none" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 1
+/\ pc = (c1 :> "done" @@ c2 :> "decide" @@ c3 :> "start")
+/\ wlog = <<<<1, c1>>>>
+
+State 8: <Next line 63, col 9 to line 64, col 35 of module RequirePcaLock>
+/\ val = 1
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "T" @@ c2 :> "none" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 1
+/\ pc = (c1 :> "done" @@ c2 :> "put" @@ c3 :> "start")
+/\ wlog = <<<<1, c1>>>>
+
+State 9: <Next line 63, col 9 to line 64, col 35 of module RequirePcaLock>
+/\ val = 1
+/\ seen = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ owner = "none"
+/\ seenVer = (c1 :> 0 @@ c2 :> 0 @@ c3 :> 0)
+/\ res = (c1 :> "T" @@ c2 :> "T" @@ c3 :> "none")
+/\ cv = (c1 :> 1 @@ c2 :> 1 @@ c3 :> 1)
+/\ ver = 2
+/\ pc = (c1 :> "done" @@ c2 :> "done" @@ c3 :> "start")
+/\ wlog = <<<<1, c1>>, <<1, c2>>>>
+
+5721 states generated, 2934 distinct states found, 814 states left on queue.
+The depth of the complete state graph search is 9.
+Finished in 01s at (2026-10-10 21:24:58)
+Trace exploration spec path: ./RequirePcaLock_TTrace_1791667497.tla

@@ -1,0 +1,2 @@
+TIMEOUT after 900s budget (NOT proved): replay_freedom_counter
+# wall=901s heuristic=O tamarin-prover 1.12.0

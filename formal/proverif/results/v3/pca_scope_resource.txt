@@ -1,0 +1,6 @@
+scope_narrowing_all_hops | 0s | RESULT event(Accept(rid,lid,hol,v,r)) ==> event(ScopeOK(rid,sc_2,v)) && event(ScopeOK(lid,sc2_1,v)) is true.
+resource_narrowing_all_hops | 0s | RESULT event(Accept(rid,lid,hol,v,r)) ==> event(ResOK(rid,rp1_1,r)) && event(ResOK(lid,rp2_1,r)) is true.
+root_scope_bounds_action | 5s | RESULT event(Accept(rid,lid,hol,v,r)) && event(Granted(iss,pkH_2,sc_2,rp_2,rid)) ==> event(ScopeOK(rid,sc_2,v)) || event(Reveal(iss)) is true.
+root_resource_bounds_action | 5s | RESULT event(Accept(rid,lid,hol,v,r)) && event(Granted(iss,pkH_2,sc_2,rp_2,rid)) ==> event(ResOK(rid,rp_2,r)) || event(Reveal(iss)) is true.
+honest_hop_scope_bounds_action | 0s | RESULT event(Accept(rid,lid,hol,v,r)) && event(HonestDelegated(lid,sc_2,rp_2,iss)) ==> event(ScopeOK(lid,sc_2,v)) is true.
+honest_hop_resource_bounds_action | 1s | RESULT event(Accept(rid,lid,hol,v,r)) && event(HonestDelegated(lid,sc_2,rp_2,iss)) ==> event(ResOK(lid,rp_2,r)) is true.

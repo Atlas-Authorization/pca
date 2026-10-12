@@ -1,0 +1,2 @@
+KILLED(memory) after 900s budget (NOT proved): no_accept_after_expiry
+# wall=839s heuristic=O tamarin-prover 1.12.0

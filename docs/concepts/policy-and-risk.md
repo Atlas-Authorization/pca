@@ -26,7 +26,7 @@ In order, `decide`:
 5. maps `r` to a required threshold and checks **budget admission**;
 6. releases the guardian share only if predicates and caveats and the chain are all satisfied. If policy passes but risk or budget requires more, the step-up path remains available.
 
-`deriveDecideInput(pcactn, ctx)` builds a `DecideInput` from a PCActn so caller and verifier derive the action, node and chain identically.
+`deriveDecideInput(pcactn, ctx)` builds a `DecideInput` from a PCActn so caller and verifier derive the action, node and chain identically. `ctx.grant` is required and must be the grant from your own store: without it the call throws `DecideInputGrantRequired` (it never falls back to the presented chain's root).
 
 ## Predicates
 
@@ -52,6 +52,8 @@ Example: revoke only sessions on devices other than the current one.
 { verb: 'revoke_session', resource: 'session:*',
   where: [{ field: 'action.params.device', op: 'ne', ref: 'env.current_device' }] }
 ```
+
+**Where `subject` and `env` come from (hosted API).** Only `action.params.*` is bound by the agent's signature. `subject` and `env` are context, so in the hosted API the values in the request body are **ignored** (an agent could otherwise set `env.current_device` to whatever satisfies the condition); the response carries `x-pca-context-ignored` and a condition rooted there fails closed. To make such a condition satisfiable, a key in the instance's trusted-attestor set (`PUT /v1/pca/attestors`) signs the context and the agent forwards it as `context_attestation: { subject?, env?, issued_at, key, sig }`. The signature covers the grant, the exact action digest, the counter and the values, and must be less than 5 minutes old, so it cannot be lifted onto another action. A verified context sets `x-pca-context-attested: true`.
 
 **Ordering operators.** `lt`, `lte`, `gt` and `gte` compare two finite numbers numerically, or two strings by the **byte-wise order of their UTF-8 encoding** (Unicode code point order): `"\uFFFF"` sorts before `"\u{10000}"`, unlike JavaScript's `<`, which compares UTF-16 code units. There is no Unicode normalisation (`é` as `U+00E9` and as `U+0065 U+0301` are different strings), no case folding and no locale. A string with a lone surrogate (not valid UTF-8) is unordered, so the condition is false. Any other operand pair is unordered and false.
 

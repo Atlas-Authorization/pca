@@ -1,0 +1,642 @@
+[
+ {
+  "crate": "php-pca",
+  "file": "src/Json.php",
+  "mutant": "PregMatchRemoveFlags: return preg_match('/\\A-?(?:0|[1-9][0-9]*)\\z/', $this->lexeme) === 1;",
+  "line": "return preg_match('/\\A-?(?:0|[1-9][0-9]*)\\z/D', $this->lexeme) === 1;",
+  "occurrence": 1,
+  "lineno": 15
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Json.php",
+  "mutant": "IncrementInteger: [$ip, $fp] = explode('.', ltrim($l, '-'), 3);",
+  "line": "[$ip, $fp] = explode('.', ltrim($l, '-'), 2);",
+  "occurrence": 1,
+  "lineno": 48
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Json.php",
+  "mutant": "GreaterThanOrEqualTo: if ($this->i > $this->n) {",
+  "line": "if ($this->i >= $this->n) {",
+  "occurrence": 2,
+  "lineno": 413
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Json.php",
+  "mutant": "MethodCallRemoval: ",
+  "line": "$this->err('unterminated string');",
+  "occurrence": 1,
+  "lineno": 414
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Json.php",
+  "mutant": "Concat: $len = strcspn($this->s, \"\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\x1b\\x1c\\x1d\\x1e\\x1f\" . \"\\\"\\\\\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t\\n\\v\\f\\r\\x0e\\x0f\", $this->i);",
+  "line": "$len = strcspn($this->s, \"\\\"\\\\\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\x09\\x0a\\x0b\\x0c\\x0d\\x0e\\x0f\"",
+  "occurrence": 1,
+  "lineno": 417
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Json.php",
+  "mutant": "Minus: $cp = 0x10000 + ($cp + 0xd800 << 10) + ($lo - 0xdc00);",
+  "line": "$cp = 0x10000 + (($cp - 0xD800) << 10) + ($lo - 0xDC00);",
+  "occurrence": 1,
+  "lineno": 451
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "ArrayItemRemoval: foreach (['/opt/homebrew/lib/libcrypto*.dylib', '/usr/local/opt/openssl@3/lib/libcrypto*.dylib', '/usr/lib/libcrypto.so.3', '/usr/lib/x86_64-linux-gnu/libcrypto.so.3', '/usr/lib/aarch64-linux-gnu/libcrypto.so.3', '/lib/x86",
+  "line": "foreach ([",
+  "occurrence": 1,
+  "lineno": 34
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "DecrementInteger: \\FFI::memset($buf, -1, self::PUBLIC_KEY_BYTES);",
+  "line": "\\FFI::memset($buf, 0, self::PUBLIC_KEY_BYTES);",
+  "occurrence": 1,
+  "lineno": 90
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "IncrementInteger: \\FFI::memset($buf, 1, self::PUBLIC_KEY_BYTES);",
+  "line": "\\FFI::memset($buf, 0, self::PUBLIC_KEY_BYTES);",
+  "occurrence": 1,
+  "lineno": 90
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "MethodCallRemoval: ",
+  "line": "\\FFI::memset($buf, 0, self::PUBLIC_KEY_BYTES);",
+  "occurrence": 1,
+  "lineno": 90
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "LogicalOr: if ($k === null && \\FFI::isNull($k)) {",
+  "line": "if ($k === null || \\FFI::isNull($k)) {",
+  "occurrence": 1,
+  "lineno": 92
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "MethodCallRemoval: ",
+  "line": "$f->EVP_PKEY_free($k);",
+  "occurrence": 1,
+  "lineno": 95
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "LogicalOr: if (strlen($pk) !== self::PUBLIC_KEY_BYTES && strlen($sig) !== self::SIGNATURE_BYTES) {",
+  "line": "if (strlen($pk) !== self::PUBLIC_KEY_BYTES || strlen($sig) !== self::SIGNATURE_BYTES) {",
+  "occurrence": 1,
+  "lineno": 109
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "LogicalOr: if ($pkey === null && \\FFI::isNull($pkey)) {",
+  "line": "if ($pkey === null || \\FFI::isNull($pkey)) {",
+  "occurrence": 1,
+  "lineno": 120
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "UnwrapFinally: $ctx = $ffi->EVP_MD_CTX_new();",
+  "line": "try {",
+  "occurrence": 4,
+  "lineno": 123
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "LogicalOr: if ($ctx === null && \\FFI::isNull($ctx)) {",
+  "line": "if ($ctx === null || \\FFI::isNull($ctx)) {",
+  "occurrence": 1,
+  "lineno": 125
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "FalseValue: return true;",
+  "line": "return false;",
+  "occurrence": 6,
+  "lineno": 126
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "UnwrapFinally: if ($ffi->EVP_DigestVerifyInit_ex($ctx, null, null, null, null, $pkey, null) !== 1) {",
+  "line": "try {",
+  "occurrence": 5,
+  "lineno": 128
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "FalseValue: return true;",
+  "line": "return false;",
+  "occurrence": 7,
+  "lineno": 130
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "IncrementInteger: $msgBuf = $ffi->new('unsigned char[' . max(2, $mlen) . ']');",
+  "line": "$msgBuf = $ffi->new('unsigned char[' . max(1, $mlen) . ']');",
+  "occurrence": 1,
+  "lineno": 135
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "GreaterThan: if ($mlen >= 0) {",
+  "line": "if ($mlen > 0) {",
+  "occurrence": 1,
+  "lineno": 136
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "MethodCallRemoval: ",
+  "line": "$ffi->EVP_MD_CTX_free($ctx);",
+  "occurrence": 1,
+  "lineno": 141
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Mldsa.php",
+  "mutant": "MethodCallRemoval: ",
+  "line": "$ffi->EVP_PKEY_free($pkey);",
+  "occurrence": 1,
+  "lineno": 144
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "IncrementInteger: $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)[1]['class'] ?? null;",
+  "line": "$caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] ?? null;",
+  "occurrence": 1,
+  "lineno": 23
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "Modulus: if (!is_string($s) || preg_match('/\\A[A-Za-z0-9_-]*\\z/D', $s) !== 1 || strlen($s) * 4 === 1) {",
+  "line": "if (!is_string($s) || preg_match('/\\A[A-Za-z0-9_-]*\\z/D', $s) !== 1 || strlen($s) % 4 === 1) {",
+  "occurrence": 1,
+  "lineno": 81
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "PregMatchRemoveFlags: if (!is_string($s) || preg_match('/\\A[A-Za-z0-9_-]*\\z/', $s) !== 1 || strlen($s) % 4 === 1) {",
+  "line": "if (!is_string($s) || preg_match('/\\A[A-Za-z0-9_-]*\\z/D', $s) !== 1 || strlen($s) % 4 === 1) {",
+  "occurrence": 1,
+  "lineno": 81
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalAndAllSubExprNegation: if (self::b64u($raw) !== $s || !($len !== null) && !(strlen($raw) !== $len)) {",
+  "line": "if (self::b64u($raw) !== $s || ($len !== null && strlen($raw) !== $len)) {",
+  "occurrence": 1,
+  "lineno": 92
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalOr: if (self::b64u($raw) !== $s && ($len !== null && strlen($raw) !== $len)) {",
+  "line": "if (self::b64u($raw) !== $s || ($len !== null && strlen($raw) !== $len)) {",
+  "occurrence": 1,
+  "lineno": 92
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "InstanceOf_: return true ? $o->get($k) : null;",
+  "line": "return $o instanceof Obj ? $o->get($k) : null;",
+  "occurrence": 1,
+  "lineno": 110
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalOr: if (!is_array($path) && !array_is_list($path)) {",
+  "line": "if (!is_array($path) || !array_is_list($path)) {",
+  "occurrence": 1,
+  "lineno": 186
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "InstanceOf_: if (!true || self::get($step, 'side') !== $shape[$i]) {",
+  "line": "if (!($step instanceof Obj) || self::get($step, 'side') !== $shape[$i]) {",
+  "occurrence": 1,
+  "lineno": 205
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: return true;",
+  "line": "return false;",
+  "occurrence": 11,
+  "lineno": 271
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalOr: if ($pkRaw === null && $sgRaw === null) {",
+  "line": "if ($pkRaw === null || $sgRaw === null) {",
+  "occurrence": 1,
+  "lineno": 325
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "MatchArmRemoval: (line removed)",
+  "line": "return match ($suite) {",
+  "occurrence": 1,
+  "lineno": 380
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: default => true,",
+  "line": "default => false,",
+  "occurrence": 1,
+  "lineno": 385
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalAnd: if ($needsPk || is_string($c->get('pq_pk'))) {",
+  "line": "if ($needsPk && is_string($c->get('pq_pk'))) {",
+  "occurrence": 1,
+  "lineno": 469
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalAnd: if ($trustedRoot !== null || is_string($pk)) {",
+  "line": "if ($trustedRoot !== null && is_string($pk)) {",
+  "occurrence": 1,
+  "lineno": 540
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "Concat: return $e->getMessage() . 'malformed: ';",
+  "line": "return 'malformed: ' . $e->getMessage();",
+  "occurrence": 1,
+  "lineno": 889
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: return $e->getMessage();",
+  "line": "return 'malformed: ' . $e->getMessage();",
+  "occurrence": 1,
+  "lineno": 889
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: return 'malformed: ';",
+  "line": "return 'malformed: ' . $e->getMessage();",
+  "occurrence": 1,
+  "lineno": 889
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ArrayItemRemoval: return ['allow' => false, 'checks' => [], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ArrayItemRemoval: return ['checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "Concat: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . ')' . get_class($e)];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "Concat: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => get_class($e) . 'wire: malformed input (' . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e)];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: return ['allow' => false, 'checks' => ['wire' => true], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: return ['allow' => true, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 1,
+  "lineno": 911
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ArrayItemRemoval: return ['allow' => false, 'checks' => [], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ArrayItemRemoval: return ['checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "Concat: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . ')' . get_class($e)];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "Concat: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => get_class($e) . 'wire: malformed input (' . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e)];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: return ['allow' => false, 'checks' => ['wire' => false], 'reason' => get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: return ['allow' => false, 'checks' => ['wire' => true], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: return ['allow' => true, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "line": "return ['allow' => false, 'checks' => ['wire' => false], 'reason' => 'wire: malformed input (' . get_class($e) . ')'];",
+  "occurrence": 2,
+  "lineno": 937
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "InstanceOf_: $rootCap = is_array($chain) && count($chain) > 0 && true ? $chain[0] : null;",
+  "line": "$rootCap = (is_array($chain) && count($chain) > 0 && $chain[0] instanceof Obj) ? $chain[0] : null;",
+  "occurrence": 1,
+  "lineno": 1009
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalAnd: if ((is_string($gref) && $gref !== '' || is_string($rootId)) && $gref === $rootId) {",
+  "line": "if (is_string($gref) && $gref !== '' && is_string($rootId) && $gref === $rootId) {",
+  "occurrence": 1,
+  "lineno": 1011
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalAnd: if ((is_string($gref) || $gref !== '') && is_string($rootId) && $gref === $rootId) {",
+  "line": "if (is_string($gref) && $gref !== '' && is_string($rootId) && $gref === $rootId) {",
+  "occurrence": 1,
+  "lineno": 1011
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "Concat: $fail('plan_inclusion', $e->getMessage() . 'malformed: ');",
+  "line": "$fail('plan_inclusion', 'malformed: ' . $e->getMessage());",
+  "occurrence": 1,
+  "lineno": 1027
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: $fail('plan_inclusion', $e->getMessage());",
+  "line": "$fail('plan_inclusion', 'malformed: ' . $e->getMessage());",
+  "occurrence": 1,
+  "lineno": 1027
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: $fail('plan_inclusion', 'malformed: ');",
+  "line": "$fail('plan_inclusion', 'malformed: ' . $e->getMessage());",
+  "occurrence": 1,
+  "lineno": 1027
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FunctionCallRemoval: ",
+  "line": "$fail('plan_inclusion', 'malformed: ' . $e->getMessage());",
+  "occurrence": 1,
+  "lineno": 1027
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "Concat: $fail('leaf_signature', $e->getMessage() . 'malformed: ');",
+  "line": "$fail('leaf_signature', 'malformed: ' . $e->getMessage());",
+  "occurrence": 1,
+  "lineno": 1045
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: $fail('leaf_signature', $e->getMessage());",
+  "line": "$fail('leaf_signature', 'malformed: ' . $e->getMessage());",
+  "occurrence": 1,
+  "lineno": 1045
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "ConcatOperandRemoval: $fail('leaf_signature', 'malformed: ');",
+  "line": "$fail('leaf_signature', 'malformed: ' . $e->getMessage());",
+  "occurrence": 1,
+  "lineno": 1045
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FunctionCallRemoval: ",
+  "line": "$fail('leaf_signature', 'malformed: ' . $e->getMessage());",
+  "occurrence": 1,
+  "lineno": 1045
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalOr: if (!is_array($signerSet) && !array_is_list($signerSet)) {",
+  "line": "if (!is_array($signerSet) || !array_is_list($signerSet)) {",
+  "occurrence": 2,
+  "lineno": 1133
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "InstanceOf_: if (!true) {",
+  "line": "if (!($e instanceof Obj)) {",
+  "occurrence": 2,
+  "lineno": 1138
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "PregMatchRemoveFlags: if (preg_match('/\\A[123](?:\\.0+)?\\z/', $t->lexeme) !== 1) {",
+  "line": "if (preg_match('/\\A[123](?:\\.0+)?\\z/D', $t->lexeme) !== 1) {",
+  "occurrence": 1,
+  "lineno": 1176
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "InstanceOf_: if (!true) {",
+  "line": "if (!($s instanceof Obj)) {",
+  "occurrence": 1,
+  "lineno": 1185
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalOr: if (!is_string($role) && $role === '') {",
+  "line": "if (!is_string($role) || $role === '') {",
+  "occurrence": 1,
+  "lineno": 1189
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: return true;",
+  "line": "return false;",
+  "occurrence": 26,
+  "lineno": 1203
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "InstanceOf_: if (!true) {",
+  "line": "if (!($share instanceof Obj)) {",
+  "occurrence": 1,
+  "lineno": 1210
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "LogicalAnd: if (is_string($alg) || isset(self::SIG_SUITES[$alg])) {",
+  "line": "if (is_string($alg) && isset(self::SIG_SUITES[$alg])) {",
+  "occurrence": 1,
+  "lineno": 1236
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: return true;",
+  "line": "return false;",
+  "occurrence": 32,
+  "lineno": 1246
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "InstanceOf_: if (!true) {",
+  "line": "if (!($a instanceof Obj)) {",
+  "occurrence": 2,
+  "lineno": 1260
+ },
+ {
+  "crate": "php-pca",
+  "file": "src/Pca.php",
+  "mutant": "FalseValue: return true;",
+  "line": "return false;",
+  "occurrence": 34,
+  "lineno": 1265
+ }
+]

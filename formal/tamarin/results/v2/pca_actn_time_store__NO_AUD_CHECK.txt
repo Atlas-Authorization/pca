@@ -1,0 +1,2 @@
+TIMEOUT after 900s budget (NOT proved): audience_binding
+# wall=901s heuristic=O tamarin-prover 1.12.0

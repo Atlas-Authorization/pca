@@ -1,0 +1,2 @@
+  replay_freedom_nonce (all-traces): falsified - found trace (14 steps)
+# wall=6s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=replay_freedom_nonce -DSTORE_RACE_NONCE pca_store_race.spthy +RTS -N3

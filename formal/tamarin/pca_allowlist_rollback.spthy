@@ -1,0 +1,52 @@
+/*
+  PCA -- allowlist manifest ROLLBACK, small dedicated model (attest-allowlist.ts lastSeenVersion,
+  attest-allowlist-anchor.ts anchored high-water mark).  Signatures are abstracted: a manifest can only be
+  delivered if the operator published it (!Manifest); the adversary delivers ANY published manifest to a verifier
+  at any time (replay of old manifests).  Versions v0<v1<v2 with an order table !Le.
+  Operator: Publish_V1 (mA, mB allowed) then Publish_V2 (mB revoked; allowed = {mA}).
+  Verifier holds Seen(vid, last).  Shipped: accept iff last <= ver.  Attestation of measurement m is accepted
+  iff m is allowed in the version currently held.
+  Switches: NO_VERSION_CHECK ; STATE_WIPE (adversary resets verifier local state) ;
+            ANCHORED (also requires anchored head hv <= ver, head = the log's CURRENT value: fresh/witnessed) ;
+            ANCHOR_REPLAY (head taken from any head ever issued: the documented replay-of-old-head residual).
+*/
+theory PCA_Allowlist_Rollback
+begin
+rule Tables:
+  [ ] --> [ !Le('v0','v0'), !Le('v0','v1'), !Le('v0','v2'), !Le('v1','v1'), !Le('v1','v2'), !Le('v2','v2'),
+            !Allowed('v1','mA'), !Allowed('v1','mB'), !Allowed('v2','mA'), !OldHead('v0') ]
+rule Op_Init: [ ] --[ OpInit() ]-> [ OpState('s0'), Anchor('v0') ]
+restriction OpOnce: "All #i #j. OpInit() @ i & OpInit() @ j ==> #i = #j"
+rule Publish_V1: [ OpState('s0'), Anchor(a) ] --[ Published('v1') ]-> [ !Manifest('v1'), OpState('s1'), Anchor('v1'), !OldHead('v1') ]
+rule Publish_V2: [ OpState('s1'), Anchor(a) ] --[ Published('v2') ]-> [ !Manifest('v2'), OpState('s2'), Anchor('v2'), !OldHead('v2') ]
+rule Verifier_Init: [ Fr(~vid) ] --[ VInit(~vid) ]-> [ Seen(~vid, 'v0') ]
+#ifdef STATE_WIPE
+rule Wipe: [ Seen(v, l) ] --[ Wiped(v) ]-> [ Seen(v, 'v0') ]
+#endif
+#ifdef NO_VERSION_CHECK
+rule Accept_Manifest: [ !Manifest(ver), Seen(v, last) ] --[ AcceptMf(v, ver) ]-> [ Seen(v, ver) ]
+#endif
+#ifdef ANCHORED
+rule Accept_Manifest: [ !Manifest(ver), Seen(v, last), !Le(last, ver), Anchor(hv), !Le(hv, ver) ]
+  --[ AcceptMf(v, ver) ]-> [ Seen(v, ver), Anchor(hv) ]
+#endif
+#ifdef ANCHOR_REPLAY
+rule Accept_Manifest: [ !Manifest(ver), Seen(v, last), !Le(last, ver), !OldHead(hv), !Le(hv, ver) ]
+  --[ AcceptMf(v, ver) ]-> [ Seen(v, ver) ]
+#endif
+#ifdef ¬NO_VERSION_CHECK & ¬ANCHORED & ¬ANCHOR_REPLAY
+rule Accept_Manifest: [ !Manifest(ver), Seen(v, last), !Le(last, ver) ] --[ AcceptMf(v, ver) ]-> [ Seen(v, ver) ]
+#endif
+rule Attest: [ Seen(v, ver), In(m), !Allowed(ver, m) ] --[ AttOk(v, m, ver) ]-> [ Seen(v, ver) ]
+
+lemma executable_rollback_scenario:
+  exists-trace
+  "Ex v #p1 #p2 #a1 #t. Published('v1') @ p1 & Published('v2') @ p2 & AcceptMf(v, 'v2') @ a1 & AttOk(v, 'mA', 'v2') @ t"
+lemma executable_attest_mB:
+  exists-trace
+  "Ex v #p #a #t. Published('v1') @ p & AcceptMf(v, 'v1') @ a & AttOk(v, 'mB', 'v1') @ t"
+lemma no_manifest_rollback:
+  "All v #i #j. AcceptMf(v, 'v2') @ i & AcceptMf(v, 'v1') @ j & #i < #j ==> F"
+lemma revoked_never_attested:
+  "All v ver #i #j. AcceptMf(v, 'v2') @ i & AttOk(v, 'mB', ver) @ j & #i < #j ==> F"
+end

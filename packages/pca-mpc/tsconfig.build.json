@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  // Typecheck covers the tests; the BUILD must not emit them, nor the test-only support modules (in-memory mesh, test timing).
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "src/net/memnet.ts", "src/net/test-timing.ts"]
+}

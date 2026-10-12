@@ -1,0 +1,4 @@
+sig_needs_t_signers | 0s | RESULT event(Accepted(m,l_4)) ==> event(Aggregated(c1,c2,m,l_4)) || event(Aggregated(c1,c3,m,l_4)) || event(Aggregated(c2,c3,m,l_4)) is true.
+agg_needs_two_shares | 0s | RESULT event(Aggregated(i_4,j,m,l_4)) ==> (event(Signed(i_4,m,l_4)) || event(RevealShare(i_4))) && (event(Signed(j,m,l_4)) || event(RevealShare(j))) is false.
+nonce_one_shot_inj | 0s | RESULT inj-event(Used(i_4,d_3,e_3,m)) ==> inj-event(Created(i_4,d_3,e_3)) is true.
+nonce_one_shot | 0s | RESULT event(Used(i_4,d_3,e_3,m1_4)) && event(Used(i_4,d_3,e_3,m2_4)) ==> m1_4 = m2_4 is true.

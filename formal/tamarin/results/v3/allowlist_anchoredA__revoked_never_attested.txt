@@ -1,0 +1,1 @@
+# wall=650s rc=143 tamarin-prover 1.12.0 cmd=tamarin-prover --prove=revoked_never_attested -DSTATE_WIPE -DANCHORED pca_allowlist_v3.spthy +RTS -N4

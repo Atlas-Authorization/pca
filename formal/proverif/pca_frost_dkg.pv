@@ -1,0 +1,32 @@
+(* PCA -- FROST DKG with proof of possession (PedPoP): rogue-key attack.  ProVerif 2.05 port of
+   formal/tamarin/pca_frost_dkg.spthy.  Same group abstraction: pub(a) = g^a (one-way), agg(l, adv(l,T)) = T (the
+   rogue last contribution cancelling the honest ones), pop(a, pub(a), ctx) a PoK bound to ctx = (session, id).
+   Participants 1,2 honest; participant 3 is the attacker (rushing: sees C1,C2 first).
+   Query: no accepted group key is pub(x) for an x the attacker knows.
+   Variants (gen.sh): NO_POP  (verifier skips the PoP check of participant 3)  SANITY *)
+free c: channel.
+const id3: bitstring [data].
+fun pub(bitstring): bitstring.
+fun agg(bitstring, bitstring): bitstring.
+fun adv(bitstring, bitstring): bitstring.
+fun pop(bitstring, bitstring, bitstring): bitstring.
+fun chkpop(bitstring, bitstring, bitstring): bool
+  reduc forall a: bitstring, ctx: bitstring; chkpop(pop(a, pub(a), ctx), pub(a), ctx) = true.
+equation forall l: bitstring, t: bitstring; agg(l, adv(l, t)) = t.
+
+event DKGDone(bitstring).
+event Bad(bitstring).
+(*Q:dkg_key_not_adversarial*) query y: bitstring; event(Bad(y)).
+(*+SANITY*) (*Q:sanity1*) query y: bitstring; event(DKGDone(y)).
+
+
+process
+  new a1: bitstring; new a2: bitstring;
+  out(c, (pub(a1), pub(a2)));
+  ( !( in(c, sid: bitstring); out(c, (pop(a1, pub(a1), (sid, id3)), pop(a2, pub(a2), (sid, id3)))) )  (* honest PoPs, session chosen by the attacker *)
+  | !( in(c, (sid: bitstring, c3: bitstring, p3: bitstring));
+       if chkpop(p3, c3, (sid, id3)) = true then                                  (*-NO_POP*)
+       let y = agg((pub(a1), pub(a2)), c3) in
+       event DKGDone(y);
+       in(c, x: bitstring);
+       if y = pub(x) then event Bad(y) ) )

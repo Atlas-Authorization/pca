@@ -1,0 +1,2 @@
+no-result rc=1 after 900s budget (NOT proved): executable_deeper_resource
+# wall=1s heuristic=s tamarin-prover 1.12.0

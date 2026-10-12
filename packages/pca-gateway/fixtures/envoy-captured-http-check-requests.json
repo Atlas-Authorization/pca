@@ -1,0 +1,56 @@
+{
+  "_label": "CAPTURED from a running Envoy 6eb0d2d97489ec1b4e1584a004f5de443d97a41b/1.39.3/Clean/RELEASE/BoringSSL (tetratelabs/archive-envoy darwin-arm64) HTTP ext_authz http_service; the PCA-Action value is a placeholder.",
+  "envoyVersion": "6eb0d2d97489ec1b4e1584a004f5de443d97a41b/1.39.3/Clean/RELEASE/BoringSSL",
+  "requests": [
+    {
+      "scenario": "with_request_body max=1024 allow_partial=true, 5000-byte body",
+      "request": {
+        "method": "POST",
+        "path": "/refunds",
+        "headers": {
+          "host": "127.0.0.1:63517",
+          "content-length": "1024",
+          "pca-action": "<PCA-Action proof: substituted by the test>",
+          "x-request-id": "041d4a09-e6e9-4c41-9d7a-7d464e8613fd",
+          "x-envoy-auth-partial-body": "true",
+          "x-envoy-internal": "true",
+          "x-envoy-expected-rq-timeout-ms": "2000"
+        },
+        "rawHeaderNames": [
+          "host",
+          "content-length",
+          "pca-action",
+          "x-request-id",
+          "x-envoy-auth-partial-body",
+          "x-envoy-internal",
+          "x-envoy-expected-rq-timeout-ms"
+        ],
+        "body": "<1024 bytes elided>"
+      }
+    },
+    {
+      "scenario": "POST /refunds?currency=usd&note=a%20b, client header PCA-ACTION",
+      "request": {
+        "method": "POST",
+        "path": "/refunds?currency=usd&note=a%20b",
+        "headers": {
+          "host": "127.0.0.1:63515",
+          "content-length": "0",
+          "pca-action": "<PCA-Action proof: substituted by the test>",
+          "x-request-id": "116b57d0-48aa-40f3-95e5-63297d1ece98",
+          "x-envoy-internal": "true",
+          "x-envoy-expected-rq-timeout-ms": "2000"
+        },
+        "rawHeaderNames": [
+          "host",
+          "content-length",
+          "pca-action",
+          "x-request-id",
+          "x-envoy-internal",
+          "x-envoy-expected-rq-timeout-ms"
+        ],
+        "body": ""
+      }
+    }
+  ]
+}

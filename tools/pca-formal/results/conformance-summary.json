@@ -1,0 +1,121 @@
+{
+ "disagreement_examples": [],
+ "incomplete_shards": [
+  "att-exh-13",
+  "att-rand-10",
+  "att-rand-11",
+  "att-rand-12",
+  "att-rand-18",
+  "att-rand-19",
+  "att-rand-20",
+  "att-rand-21",
+  "att-rand-8",
+  "thr-rand-9"
+ ],
+ "stages": {
+  "att-exh": {
+   "agree": 14848,
+   "binding_collisions": 0,
+   "binding_tuples": 375,
+   "cpu_seconds": 147,
+   "disagree": 0,
+   "model_accepts": 1080,
+   "scenarios": 14848,
+   "shards": 8,
+   "single_fault_stage_checks": 1344,
+   "stage_agree": 1344
+  },
+  "seq-exh2": {
+   "agree": 5350,
+   "cpu_seconds": 610,
+   "disagree": 0,
+   "model_accepts": 5279,
+   "replay_denied_steps": 636,
+   "scenarios": 5350,
+   "shards": 10
+  },
+  "seq-rand": {
+   "agree": 45460,
+   "cpu_seconds": 9547,
+   "disagree": 0,
+   "model_accepts": 69450,
+   "replay_denied_steps": 31547,
+   "scenarios": 45460,
+   "shards": 10
+  },
+  "single-exh0": {
+   "agree": 35504,
+   "attack:(benign)": 35504,
+   "cpu_seconds": 3842,
+   "disagree": 0,
+   "model_accepts": 6638,
+   "scenarios": 35504,
+   "shards": 18
+  },
+  "single-exh1": {
+   "agree": 828390,
+   "attack:action_not_in_plan": 19725,
+   "attack:audience_optout": 19723,
+   "attack:dropped_ancestor_caveat (NO_ANCESTOR_CAV)": 59170,
+   "attack:dropped_grant_ref (NO_GREF_CHECK)": 59174,
+   "attack:empty_chain": 19724,
+   "attack:expired (NO_EXPIRY_CHECK)": 138062,
+   "attack:forged_hop": 59170,
+   "attack:forged_leaf (NO_LEAF_SIG)": 39447,
+   "attack:forged_root": 78893,
+   "attack:relayed_hop": 59170,
+   "attack:spliced_chain": 59170,
+   "attack:tampered_hop": 59170,
+   "attack:verb_outside_scope": 59175,
+   "attack:widened_caveat": 59170,
+   "attack:wrong_audience (NO_AUD_CHECK)": 39447,
+   "cpu_seconds": 58629,
+   "disagree": 0,
+   "model_accepts": 36521,
+   "scenarios": 828390,
+   "shards": 10
+  },
+  "single-rand": {
+   "agree": 590910,
+   "attack:(benign)": 118118,
+   "attack:action_not_in_plan": 28033,
+   "attack:audience_optout": 28046,
+   "attack:dropped_ancestor_caveat (NO_ANCESTOR_CAV)": 84473,
+   "attack:dropped_grant_ref (NO_GREF_CHECK)": 84332,
+   "attack:empty_chain": 27700,
+   "attack:expired (NO_EXPIRY_CHECK)": 196838,
+   "attack:forged_hop": 84315,
+   "attack:forged_leaf (NO_LEAF_SIG)": 55993,
+   "attack:forged_root": 112612,
+   "attack:relayed_hop": 83801,
+   "attack:spliced_chain": 84380,
+   "attack:tampered_hop": 84696,
+   "attack:verb_outside_scope": 84854,
+   "attack:widened_caveat": 84534,
+   "attack:wrong_audience (NO_AUD_CHECK)": 56126,
+   "cpu_seconds": 16129,
+   "disagree": 0,
+   "model_accepts": 75401,
+   "scenarios": 590910,
+   "shards": 10
+  },
+  "thr-exh": {
+   "agree": 196416,
+   "cpu_seconds": 1510,
+   "disagree": 0,
+   "model_accepts": 11075,
+   "scenarios": 196416,
+   "shards": 10
+  },
+  "thr-rand": {
+   "agree": 286371,
+   "cpu_seconds": 4681,
+   "disagree": 0,
+   "model_accepts": 105988,
+   "scenarios": 286371,
+   "shards": 9
+  }
+ },
+ "total_disagreements": 0,
+ "total_scenarios": 2003249
+}

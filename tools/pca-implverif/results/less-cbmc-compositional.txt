@@ -1,0 +1,128 @@
+# LESS (category 252) compositional CBMC results, CBMC 6.11.0. Harnesses: LESS fork branch atlas-verifier-hardening, tests/formal/.
+# All memory/overflow checks on (--bounds --pointer --pointer-overflow --signed/unsigned-overflow --conversion --undefined-shift --div-by-zero).
+
+## RebuildGGM / CountPublishedSeeds (run-cbmc-rebuild-contract.sh)
+=== base (TARGET 45)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== link (TARGET 45)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== step_count (TARGET 45)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== step_rebuild (TARGET 45)
+** 0 of 1346 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== base (TARGET 68)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== link (TARGET 68)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== step_count (TARGET 68)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== step_rebuild (TARGET 68)
+** 0 of 1346 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== base (TARGET 192)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== link (TARGET 192)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== step_count (TARGET 192)
+** 0 of 771 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== step_rebuild (TARGET 192)
+** 0 of 1346 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+-- negative control (-DNEG_CONTROL: stored object one byte short), expected FAILURE
+=== step_rebuild (TARGET 192)
+[rebuild_step.precondition_instance.5] line 50 memcpy source region readable: FAILURE
+** 1 of 1346 failed (2 iterations)
+VERIFICATION FAILED
+-- reachability control (-DREACH_CONTROL), expected FAILURE
+=== step_rebuild (TARGET 192)
+[step_rebuild.assertion.1] line 22 reachability control: FAILURE
+** 1 of 1347 failed (2 iterations)
+VERIFICATION FAILED
+
+## crypto_sign_open over proved callee contracts (run-cbmc-open-contract.sh)
+=== TARGET 45
+** 0 of 539 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== TARGET 68
+** 0 of 539 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== TARGET 192
+** 0 of 539 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== TARGET 192-unpatched
+** 19 of 528 failed (6 iterations)
+VERIFICATION FAILED
+[LESS_verify.assertion.1] line 15 LESS_verify precondition: header readable: FAILURE
+[LESS_verify.assertion.2] line 19 published seed count within the buffer type: FAILURE
+[LESS_verify.assertion.3] line 20 LESS_verify precondition: all n seeds RebuildGGM will read lie inside the signature: FAILURE
+[LESS_verify.pointer_primitives.4] line 15 pointer outside object bounds in R_OK(sig, 1216ul): FAILURE
+[LESS_verify.pointer_primitives.8] line 20 pointer outside object bounds in R_OK(sig, 1216ul + (size_t)n * (unsigned long int)16): FAILURE
+[SampleChallenge.assertion.1] line 38 stub: callee read extent in bounds: FAILURE
+[SampleChallenge.pointer_primitives.4] line 38 pointer outside object bounds in R_OK(digest, (unsigned long int)(2 * 16)): FAILURE
+[SampleChallenge.precondition_instance.11] line 44 memcpy source region readable: FAILURE
+[crypto_sign_open.overflow.1] line 74 arithmetic overflow on unsigned - in smlen - (unsigned long int)1u: FAILURE
+[crypto_sign_open.overflow.2] line 74 arithmetic overflow on unsigned to signed type conversion in (signed long int)(smlen - (unsigned long int)1u): FAILURE
+[crypto_sign_open.overflow.6] line 80 arithmetic overflow on unsigned - in smlen - (unsigned long long int)sig_len: FAILURE
+[crypto_sign_open.overflow.9] line 85 arithmetic overflow on unsigned to signed type conversion in (signed long int)*mlen: FAILURE
+[crypto_sign_open.pointer_arithmetic.11] line 85 pointer arithmetic: pointer outside object bounds in sm + (signed long int)*mlen: FAILURE
+[crypto_sign_open.pointer_arithmetic.5] line 74 pointer arithmetic: pointer outside object bounds in sm + (signed long int)(smlen - (unsigned long int)1u): FAILURE
+[crypto_sign_open.pointer_dereference.5] line 74 dereference failure: pointer outside object bounds in sm[(signed long int)(smlen - (unsigned long int)1u)]: FAILURE
+[crypto_sign_open.precondition_instance.2] line 81 memcpy source region readable: FAILURE
+[crypto_sign_open.precondition_instance.3] line 81 memcpy destination region writeable: FAILURE
+[memcpy.overflow.1] line 45 arithmetic overflow on unsigned to signed type conversion in (signed long int)n: FAILURE
+[memcpy.overflow.2] line 45 arithmetic overflow on signed to unsigned type conversion in (unsigned long int)(signed long int)n: FAILURE
+
+## SampleChallenge (run-cbmc-sc-contract.sh)
+=== sc_base (TARGET 45)
+** 0 of 526 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== sc_frame (TARGET 45)
+** 0 of 526 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== sc_step (TARGET 45)
+** 0 of 526 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== sc_reach (TARGET 45)
+[sc_reach.assertion.1] line 12 reachability control: FAILURE
+** 1 of 526 failed (2 iterations)
+VERIFICATION FAILED
+=== sc_base (TARGET 192)
+** 0 of 526 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== sc_frame (TARGET 192)
+** 0 of 526 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== sc_frame (TARGET 45)
+** 0 of 527 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== sc_frame_reach (TARGET 45)
+[sc_frame_reach.assertion.1] line 12 reachability control (frame): FAILURE
+** 1 of 527 failed (2 iterations)
+VERIFICATION FAILED
+=== sc_frame (TARGET 68)
+** 0 of 527 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== sc_frame_reach (TARGET 68)
+[sc_frame_reach.assertion.1] line 12 reachability control (frame): FAILURE
+** 1 of 527 failed (2 iterations)
+VERIFICATION FAILED
+=== sc_frame (TARGET 192)
+** 0 of 527 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+=== sc_frame_reach (TARGET 192)
+[sc_frame_reach.assertion.1] line 12 reachability control (frame): FAILURE
+** 1 of 527 failed (2 iterations)
+VERIFICATION FAILED
+-- Verus transposition lemma (tools/pca-implverif/verus/swap_count.rs)
+  Version: 0.2026.10.04.426d8b0
+verification results:: 4 verified, 0 errors

@@ -63,7 +63,7 @@ The `0x00`/`0x01` prefixes make a leaf indistinguishable from an internal node (
 
 ## Plan authorization
 
-Verifier checks `plan_inclusion` (the leaf opens to the root) and `plan_root_authorized` (the root is one the principal side accepted). In `verifyPCActn`, `plan_root_authorized` passes when the resource server supplies its own copy of the plan and its Merkle root equals `plan.root`; otherwise it is `not-enforced`. On the hosted surface, a plan root must be a committed plan of the grant. In the current release plans are auto-authorized on commit; principal or policy-agent authorization of the root is not yet implemented (see [Trust model](../security/trust-model.md)).
+Verifier checks `plan_inclusion` (the leaf opens to the root) and `plan_root_authorized` (the root is one the principal side accepted). In `verifyPCActn`, `plan_root_authorized` passes when the resource server supplies its own copy of the plan and its Merkle root equals `plan.root`; otherwise it is `not-enforced` (and `verifyPCActnCore` alone, with no resource-server plan, always reports `not-enforced`: the agent supplies its own plan, so inclusion proves nothing about authorization; pass `require: ['plan_root_authorized']`, or use `requirePCA`, which demands it by default). On the hosted surface, a plan root must be a committed plan of the grant. In the current release plans are auto-authorized on commit; principal or policy-agent authorization of the root is not yet implemented (see [Trust model](../security/trust-model.md)).
 
 ## Plans and risk
 

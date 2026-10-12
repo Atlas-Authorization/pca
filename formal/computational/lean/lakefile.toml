@@ -1,0 +1,11 @@
+# Computational-security companion to formal/pca-lean (read-only dependency).
+# Core Lean only: no mathlib.
+name = "pca-comp"
+defaultTargets = ["PcaComp"]
+
+[[require]]
+name = "pca-proof"
+path = "../../pca-lean"
+
+[[lean_lib]]
+name = "PcaComp"

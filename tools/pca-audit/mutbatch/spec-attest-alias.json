@@ -1,0 +1,32 @@
+[
+{
+"name": "snp-alias",
+"pkg": "pca",
+"file": "attest-amd-snp.ts",
+"from": "          policy,\n",
+"to": "          policy: opts.policy,\n",
+"filters": [
+"mutation-kill-amd-snp-alias-r2"
+]
+},
+{
+"name": "puf-alias",
+"pkg": "pca",
+"file": "attest-puf.ts",
+"from": "if (!measurements.includes(st.measurement)) {",
+"to": "if (Array.isArray(policy.measurements) && policy.measurements.length > 0 && !policy.measurements.includes(st.measurement)) {",
+"filters": [
+"mutation-kill-attest-policy-alias-r2"
+]
+},
+{
+"name": "pqsw-alias",
+"pkg": "pca",
+"file": "attest-pq-software.ts",
+"from": "if (!measurements.includes(st.measurement)) {",
+"to": "if (Array.isArray(policy.measurements) && policy.measurements.length > 0 && !policy.measurements.includes(st.measurement)) {",
+"filters": [
+"mutation-kill-attest-policy-alias-r2"
+]
+}
+]

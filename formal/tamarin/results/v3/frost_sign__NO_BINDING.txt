@@ -1,0 +1,8 @@
+  nonce_one_shot (all-traces): verified (68 steps)
+# wall=0s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=nonce_one_shot -DNO_BINDING pca_frost_sign_v3.spthy +RTS -N4
+  shares_bound_to_session (all-traces): falsified - found trace (10 steps)
+# wall=5s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=shares_bound_to_session -DNO_BINDING pca_frost_sign_v3.spthy +RTS -N4
+  share_secrecy (all-traces): verified (35 steps)
+# wall=0s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=share_secrecy -DNO_BINDING pca_frost_sign_v3.spthy +RTS -N4
+  sig_needs_t_signers (all-traces): falsified - found trace (11 steps)
+# wall=3s heuristic=default tamarin-prover 1.12.0 cmd=tamarin-prover --prove=sig_needs_t_signers -DNO_BINDING pca_frost_sign_v3.spthy +RTS -N4

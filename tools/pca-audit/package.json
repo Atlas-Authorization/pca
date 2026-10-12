@@ -1,0 +1,13 @@
+{
+  "name": "pca-audit",
+  "private": true,
+  "version": "0.1.0",
+  "description": "External-audit-in-code program for the PCA lineup: mutation testing (Stryker), structure-aware fuzzing, static-analysis configs and triage, dudect-style timing tests, supply-chain (SBOM) checks. Standalone (not a workspace member); pinned dev tools only. Run everything cheap with: bash scripts/pca-audit-all.sh",
+  "type": "module",
+  "devDependencies": {
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
+    "eslint-plugin-security": "3.0.1",
+    "js-yaml": "3.14.1"
+  }
+}

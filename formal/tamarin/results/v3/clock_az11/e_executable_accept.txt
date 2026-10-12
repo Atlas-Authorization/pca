@@ -1,0 +1,2 @@
+  executable_accept (exists-trace): verified (4 steps)
+# wall=0s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=executable_accept --heuristic=O --oraclename=./oracle_clock.sh pca_clock_v3e.spthy +RTS -N4 -M10g

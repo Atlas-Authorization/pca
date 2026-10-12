@@ -1,0 +1,844 @@
+{
+ "generator": "@sd-jwt/core 0.22.0 + @sd-jwt/crypto-nodejs 0.19.0 (independent implementation)",
+ "mine": [
+  {
+   "source": "checkout",
+   "index": 0,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.checkout.open.1",
+      "constraints": [
+       {
+        "type": "checkout.line_items",
+        "items": [
+         {
+          "id": "line_1",
+          "acceptable_items": [
+           {
+            "id": "sku-1",
+            "title": "Widget"
+           },
+           {
+            "id": "sku-2",
+            "title": "Widget Pro"
+           }
+          ],
+          "quantity": 2
+         }
+        ]
+       },
+       {
+        "type": "checkout.allowed_merchants",
+        "allowed": [
+         {
+          "id": "merchant_1",
+          "name": "Demo Merchant",
+          "website": "https://demo-merchant.example"
+         }
+        ]
+       }
+      ],
+      "cnf": {
+       "jwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "i4H01UAc8J9gMTNnHwEFtPaWu50UJB127Y3cMAM7PGk",
+        "y": "TfmeZ4xLPd4Ccuy_aB12PWicnPL9O5Lpc98oFP-6hwc"
+       }
+      },
+      "iat": 1800000000,
+      "exp": 1800086400,
+      "x_pca": {
+       "v": 1,
+       "grant": {
+        "id": "WutpqdC3I3kA5OY7DlWAjR31JGQYlbB0-qDqDl7Qb18",
+        "issuer": "m9TW7iEfYhAiqmzLgK47owz3ydaepmWBg0R2TbLPIlE",
+        "holder": "1b8rCV0Zy46V1yJdU6Lfj8rPof6Mj5l-Y_BdkybWKCw",
+        "caveats": [
+         {
+          "agent_binding": {},
+          "caveats": [
+           {
+            "at": 1800000000000,
+            "type": "not_before"
+           },
+           {
+            "at": 1800086400000,
+            "type": "expires"
+           },
+           {
+            "max": 5,
+            "per_secs": 86400,
+            "type": "rate"
+           },
+           {
+            "class": "reversible",
+            "type": "reversibility_max"
+           }
+          ],
+          "goal_commit": "mz2IFmiGGElt62zKSmBFpnBLQd5OatN5YeGYinymCmc",
+          "predicates": [
+           {
+            "resource": "merchant:merchant_1",
+            "verb": "charge",
+            "where": [
+             {
+              "field": "action.params.amount",
+              "op": "lte",
+              "value": 500
+             },
+             {
+              "field": "action.params.currency",
+              "op": "eq",
+              "value": "USD"
+             },
+             {
+              "field": "action.params.amount",
+              "op": "gte",
+              "value": 0
+             }
+            ]
+           }
+          ],
+          "risk_policy": {
+           "bMax": 1000,
+           "kappa": 500,
+           "lambda": 0,
+           "rho": 1000,
+           "theta1": 0.1,
+           "theta2": 0.1,
+           "weights": {
+            "alpha": 0,
+            "beta": 0,
+            "delta": 0,
+            "epsilon": 0,
+            "gamma": 1,
+            "zeta": 0
+           }
+          },
+          "type": "envelope"
+         }
+        ],
+        "body_digest": "WutpqdC3I3kA5OY7DlWAjR31JGQYlbB0-qDqDl7Qb18",
+        "sig": "sUmjwZ2XZJ5hcwe9fi39gECS3VBCeE2mlN-_yHqAS3HzKjyMo6a6qh-lkQNwvOKkpayOeCU7llzXHoaCdlagCQ"
+       },
+       "terms": {
+        "merchants": [
+         "merchant_1"
+        ],
+        "categories": [],
+        "currency": "USD",
+        "perTransactionCap": 500,
+        "autoApproveThreshold": 50,
+        "cumulativeCap": 1000,
+        "periodStart": 1800000000000,
+        "periodEnd": 1800086400000,
+        "maxTransactionsPerPeriod": 5
+       }
+      }
+     }
+    ]
+   },
+   "verified": {
+    "ok": true,
+    "header": {
+     "alg": "ES256",
+     "typ": "dc+sd-jwt",
+     "kid": "agent-provider-key-1"
+    }
+   }
+  },
+  {
+   "source": "checkout",
+   "index": 1,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.checkout.1",
+      "checkout_hash": "omRujyZmS8HTcriX3CouX_pEArLt_DClJui6RG5MHSQ",
+      "checkout_jwt": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Im1lcmNoYW50LWtleS0xIn0.eyJpZCI6ImNoa18wMDAxIiwibWVyY2hhbnQiOnsiaWQiOiJtZXJjaGFudF8xIiwibmFtZSI6IkRlbW8gTWVyY2hhbnQiLCJ3ZWJzaXRlIjoiaHR0cHM6Ly9kZW1vLW1lcmNoYW50LmV4YW1wbGUifSwic3RhdHVzIjoicmVhZHlfZm9yX2NvbXBsZXRlIiwiY3VycmVuY3kiOiJVU0QiLCJsaW5lX2l0ZW1zIjpbeyJpZCI6ImxpXzEiLCJpdGVtIjp7ImlkIjoic2t1LTEiLCJ0aXRsZSI6IldpZGdldCIsInByaWNlIjoyMDAwfSwicXVhbnRpdHkiOjIsInRvdGFscyI6W3sidHlwZSI6InN1YnRvdGFsIiwiYW1vdW50Ijo0MDAwfV19XSwidG90YWxzIjpbeyJ0eXBlIjoic3VidG90YWwiLCJhbW91bnQiOjQwMDB9LHsidHlwZSI6InRvdGFsIiwiYW1vdW50Ijo0MDAwfV0sImxpbmtzIjpbeyJ0eXBlIjoidGVybXMiLCJ1cmwiOiJodHRwczovL2RlbW8tbWVyY2hhbnQuZXhhbXBsZS90ZXJtcyJ9XX0.kYPQjEAdbNUtP6H2XNESKFpw8kjE_-WhsRsbp4Ib-IhVyKIlO13rl4r2KuvC7NY07UoEnoHsN8_cK_EayLFqyw"
+     }
+    ],
+    "iat": 1800000005,
+    "aud": "merchant",
+    "nonce": "nonce-checkout-0001",
+    "sd_hash": "5cbGUPkEv-p6RneuYvrH7LLIRZtKmSaqKivqgwEFVDo"
+   },
+   "verified": {
+    "ok": true,
+    "header": {
+     "alg": "ES256",
+     "typ": "kb+sd-jwt"
+    }
+   }
+  },
+  {
+   "source": "payment",
+   "index": 0,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.payment.open.1",
+      "constraints": [
+       {
+        "type": "payment.amount_range",
+        "currency": "USD",
+        "min": 0,
+        "max": 50000
+       },
+       {
+        "type": "payment.allowed_payees",
+        "allowed": [
+         {
+          "id": "merchant_1",
+          "name": "Demo Merchant",
+          "website": "https://demo-merchant.example"
+         }
+        ]
+       },
+       {
+        "type": "payment.reference",
+        "conditional_transaction_id": "5cbGUPkEv-p6RneuYvrH7LLIRZtKmSaqKivqgwEFVDo"
+       },
+       {
+        "type": "payment.budget",
+        "currency": "USD",
+        "max": 1000
+       },
+       {
+        "type": "payment.agent_recurrence",
+        "frequency": "ON_DEMAND",
+        "max_occurrences": 5
+       }
+      ],
+      "cnf": {
+       "jwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "i4H01UAc8J9gMTNnHwEFtPaWu50UJB127Y3cMAM7PGk",
+        "y": "TfmeZ4xLPd4Ccuy_aB12PWicnPL9O5Lpc98oFP-6hwc"
+       }
+      },
+      "iat": 1800000000,
+      "exp": 1800086400,
+      "x_pca": {
+       "v": 1,
+       "grant": {
+        "id": "WutpqdC3I3kA5OY7DlWAjR31JGQYlbB0-qDqDl7Qb18",
+        "issuer": "m9TW7iEfYhAiqmzLgK47owz3ydaepmWBg0R2TbLPIlE",
+        "holder": "1b8rCV0Zy46V1yJdU6Lfj8rPof6Mj5l-Y_BdkybWKCw",
+        "caveats": [
+         {
+          "agent_binding": {},
+          "caveats": [
+           {
+            "at": 1800000000000,
+            "type": "not_before"
+           },
+           {
+            "at": 1800086400000,
+            "type": "expires"
+           },
+           {
+            "max": 5,
+            "per_secs": 86400,
+            "type": "rate"
+           },
+           {
+            "class": "reversible",
+            "type": "reversibility_max"
+           }
+          ],
+          "goal_commit": "mz2IFmiGGElt62zKSmBFpnBLQd5OatN5YeGYinymCmc",
+          "predicates": [
+           {
+            "resource": "merchant:merchant_1",
+            "verb": "charge",
+            "where": [
+             {
+              "field": "action.params.amount",
+              "op": "lte",
+              "value": 500
+             },
+             {
+              "field": "action.params.currency",
+              "op": "eq",
+              "value": "USD"
+             },
+             {
+              "field": "action.params.amount",
+              "op": "gte",
+              "value": 0
+             }
+            ]
+           }
+          ],
+          "risk_policy": {
+           "bMax": 1000,
+           "kappa": 500,
+           "lambda": 0,
+           "rho": 1000,
+           "theta1": 0.1,
+           "theta2": 0.1,
+           "weights": {
+            "alpha": 0,
+            "beta": 0,
+            "delta": 0,
+            "epsilon": 0,
+            "gamma": 1,
+            "zeta": 0
+           }
+          },
+          "type": "envelope"
+         }
+        ],
+        "body_digest": "WutpqdC3I3kA5OY7DlWAjR31JGQYlbB0-qDqDl7Qb18",
+        "sig": "sUmjwZ2XZJ5hcwe9fi39gECS3VBCeE2mlN-_yHqAS3HzKjyMo6a6qh-lkQNwvOKkpayOeCU7llzXHoaCdlagCQ"
+       },
+       "terms": {
+        "merchants": [
+         "merchant_1"
+        ],
+        "categories": [],
+        "currency": "USD",
+        "perTransactionCap": 500,
+        "autoApproveThreshold": 50,
+        "cumulativeCap": 1000,
+        "periodStart": 1800000000000,
+        "periodEnd": 1800086400000,
+        "maxTransactionsPerPeriod": 5
+       }
+      }
+     }
+    ]
+   },
+   "verified": {
+    "ok": true,
+    "header": {
+     "alg": "ES256",
+     "typ": "dc+sd-jwt",
+     "kid": "agent-provider-key-1"
+    }
+   }
+  },
+  {
+   "source": "payment",
+   "index": 1,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.payment.1",
+      "transaction_id": "omRujyZmS8HTcriX3CouX_pEArLt_DClJui6RG5MHSQ",
+      "payee": {
+       "id": "merchant_1",
+       "name": "Demo Merchant",
+       "website": "https://demo-merchant.example"
+      },
+      "payment_amount": {
+       "amount": 4000,
+       "currency": "USD"
+      },
+      "payment_instrument": {
+       "id": "card_4242",
+       "type": "card",
+       "description": "Card 4242"
+      },
+      "x_pca": {
+       "v": 1,
+       "charge": {
+        "amount": 40,
+        "currency": "USD"
+       },
+       "pcactn": {
+        "ver": 2,
+        "action": {
+         "verb": "charge",
+         "resource": "merchant:merchant_1",
+         "params_digest": "fHq4fzPKa2xukBPH8rtqtf5knVOvcJV149MoLekXwuo",
+         "reversibility_class": "reversible"
+        },
+        "grant_ref": "WutpqdC3I3kA5OY7DlWAjR31JGQYlbB0-qDqDl7Qb18",
+        "cap_chain": [
+         {
+          "id": "WutpqdC3I3kA5OY7DlWAjR31JGQYlbB0-qDqDl7Qb18",
+          "issuer": "m9TW7iEfYhAiqmzLgK47owz3ydaepmWBg0R2TbLPIlE",
+          "holder": "1b8rCV0Zy46V1yJdU6Lfj8rPof6Mj5l-Y_BdkybWKCw",
+          "caveats": [
+           {
+            "agent_binding": {},
+            "caveats": [
+             {
+              "at": 1800000000000,
+              "type": "not_before"
+             },
+             {
+              "at": 1800086400000,
+              "type": "expires"
+             },
+             {
+              "max": 5,
+              "per_secs": 86400,
+              "type": "rate"
+             },
+             {
+              "class": "reversible",
+              "type": "reversibility_max"
+             }
+            ],
+            "goal_commit": "mz2IFmiGGElt62zKSmBFpnBLQd5OatN5YeGYinymCmc",
+            "predicates": [
+             {
+              "resource": "merchant:merchant_1",
+              "verb": "charge",
+              "where": [
+               {
+                "field": "action.params.amount",
+                "op": "lte",
+                "value": 500
+               },
+               {
+                "field": "action.params.currency",
+                "op": "eq",
+                "value": "USD"
+               },
+               {
+                "field": "action.params.amount",
+                "op": "gte",
+                "value": 0
+               }
+              ]
+             }
+            ],
+            "risk_policy": {
+             "bMax": 1000,
+             "kappa": 500,
+             "lambda": 0,
+             "rho": 1000,
+             "theta1": 0.1,
+             "theta2": 0.1,
+             "weights": {
+              "alpha": 0,
+              "beta": 0,
+              "delta": 0,
+              "epsilon": 0,
+              "gamma": 1,
+              "zeta": 0
+             }
+            },
+            "type": "envelope"
+           }
+          ],
+          "body_digest": "WutpqdC3I3kA5OY7DlWAjR31JGQYlbB0-qDqDl7Qb18",
+          "sig": "sUmjwZ2XZJ5hcwe9fi39gECS3VBCeE2mlN-_yHqAS3HzKjyMo6a6qh-lkQNwvOKkpayOeCU7llzXHoaCdlagCQ"
+         }
+        ],
+        "plan": {
+         "root": "ZaLtl5-WrnO2TwPvTSyHiRIF1dGwUBLPYPmMKWX1NbI",
+         "inclusion_proof": {
+          "index": 0,
+          "size": 1,
+          "path": []
+         },
+         "node_id": "ap2:omRujyZmS8HTcriX3CouX_pEArLt_DClJui6RG5MHSQ",
+         "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+         "quote_digest": "",
+         "epoch": 0,
+         "model_id": "unattested",
+         "measurement": "",
+         "operator": "unattested"
+        },
+        "provenance": {
+         "causal_hash": "",
+         "taint_level": 0,
+         "trusted_refs": []
+        },
+        "freshness": {
+         "beacon_ref": "",
+         "epoch": 0,
+         "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+         "r": 0.08,
+         "inputs": {
+          "amount": 40,
+          "currency": "USD",
+          "blastRadius": 0.08
+         }
+        },
+        "aud": "https://pca.example/instance/1",
+        "iat": 1800000010000,
+        "exp": 1800001210000,
+        "nonce": "ap2:fEB6YSl9qQaQuK0rG_4L6ARk61mYHjQ7IxGtUKVCZxg",
+        "sig": "nLYC6FCWEb72hoxFnT03gnDTIYUo15Pq2XynrUanmffK0bEEpscm8EmCQvUh3itcksxySc_s9F8JZZAcghjrCQ"
+       }
+      }
+     }
+    ],
+    "iat": 1800000010,
+    "aud": "credential-provider",
+    "nonce": "nonce-payment-0001",
+    "sd_hash": "HXiJY1vB-t_jufG8rLdpWOd6b3O6gK-84721Zt9pFZA"
+   },
+   "verified": {
+    "ok": true,
+    "header": {
+     "alg": "ES256",
+     "typ": "kb+sd-jwt"
+    }
+   }
+  }
+ ],
+ "docs": [
+  {
+   "source": "Open Payment Mandate SD-JWT plus disclosures",
+   "index": 0,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.payment.open.1",
+      "constraints": [
+       {
+        "type": "payment.amount_range",
+        "currency": "USD",
+        "max": 20000,
+        "min": 0
+       },
+       {
+        "type": "payment.allowed_payees",
+        "allowed": [
+         {
+          "id": "merchant_1",
+          "name": "Demo Merchant",
+          "website": "https://demo-merchant.example"
+         }
+        ]
+       },
+       {
+        "type": "payment.reference",
+        "conditional_transaction_id": "FzLoxbbtgQGYZxoSM2NJYJtkFTSsdfUBoVEQ12k7JN8"
+       }
+      ],
+      "cnf": {
+       "jwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "QpSyxPQHy38xckyvDr54gZ3T42zj9iLtV4koyb5U27c",
+        "y": "37HLd7JJinxjJIn8J7HijssoecBlfhdW-gUL7feI9lw"
+       }
+      },
+      "iat": 1777342357,
+      "exp": 1777345957
+     }
+    ]
+   },
+   "verified": null
+  },
+  {
+   "source": "Closed Payment Mandate SD-JWT plus disclosures",
+   "index": 0,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.payment.1",
+      "transaction_id": "NivWhuqfzcvZNapvIEJ2-3tsdQLkiuIcye2g46WVgX8",
+      "payee": {
+       "id": "merchant_1",
+       "name": "Demo Merchant",
+       "website": "https://demo-merchant.example"
+      },
+      "payment_amount": {
+       "amount": 19900,
+       "currency": "USD"
+      },
+      "payment_instrument": {
+       "id": "stub",
+       "type": "card",
+       "description": "Card •••4242"
+      }
+     }
+    ],
+    "iat": 1777342370,
+    "aud": "credential-provider",
+    "nonce": "a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3",
+    "sd_hash": "uixoHemmfrrCSbPREo9j-ziLuMkqExsPeWrwA-PK0Ck"
+   },
+   "verified": {
+    "ok": true,
+    "header": {
+     "alg": "ES256",
+     "typ": "kb+sd-jwt"
+    }
+   }
+  },
+  {
+   "source": "Open Payment Mandate chained with a closed Payment Mandate after processing the delegate SD-JWT.",
+   "index": 0,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.payment.open.1",
+      "constraints": [
+       {
+        "type": "payment.amount_range",
+        "currency": "USD",
+        "max": 20000,
+        "min": 0
+       },
+       {
+        "type": "payment.allowed_payees",
+        "allowed": [
+         {
+          "id": "merchant_1",
+          "name": "Demo Merchant",
+          "website": "https://demo-merchant.example"
+         }
+        ]
+       },
+       {
+        "type": "payment.reference",
+        "conditional_transaction_id": "FzLoxbbtgQGYZxoSM2NJYJtkFTSsdfUBoVEQ12k7JN8"
+       }
+      ],
+      "cnf": {
+       "jwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "QpSyxPQHy38xckyvDr54gZ3T42zj9iLtV4koyb5U27c",
+        "y": "37HLd7JJinxjJIn8J7HijssoecBlfhdW-gUL7feI9lw"
+       }
+      },
+      "iat": 1777342357,
+      "exp": 1777345957
+     }
+    ]
+   },
+   "verified": null
+  },
+  {
+   "source": "Open Payment Mandate chained with a closed Payment Mandate after processing the delegate SD-JWT.",
+   "index": 1,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.payment.1",
+      "transaction_id": "NivWhuqfzcvZNapvIEJ2-3tsdQLkiuIcye2g46WVgX8",
+      "payee": {
+       "id": "merchant_1",
+       "name": "Demo Merchant",
+       "website": "https://demo-merchant.example"
+      },
+      "payment_amount": {
+       "amount": 19900,
+       "currency": "USD"
+      },
+      "payment_instrument": {
+       "id": "stub",
+       "type": "card",
+       "description": "Card •••4242"
+      }
+     }
+    ],
+    "iat": 1777342370,
+    "aud": "credential-provider",
+    "nonce": "a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3",
+    "sd_hash": "uixoHemmfrrCSbPREo9j-ziLuMkqExsPeWrwA-PK0Ck"
+   },
+   "verified": {
+    "ok": true,
+    "header": {
+     "alg": "ES256",
+     "typ": "kb+sd-jwt"
+    }
+   }
+  },
+  {
+   "source": "Open Checkout Mandate SD-JWT plus disclosures",
+   "index": 0,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.checkout.open.1",
+      "constraints": [
+       {
+        "type": "checkout.line_items",
+        "items": [
+         {
+          "id": "line_1",
+          "acceptable_items": [
+           {
+            "id": "supershoe_limited_edition_gold_sneaker_womens_9_0",
+            "title": "SuperShoe Limited Edition Gold"
+           }
+          ],
+          "quantity": 1
+         }
+        ]
+       },
+       {
+        "type": "checkout.allowed_merchants",
+        "allowed": [
+         {
+          "id": "merchant_1",
+          "name": "Demo Merchant",
+          "website": "https://demo-merchant.example"
+         }
+        ]
+       }
+      ],
+      "cnf": {
+       "jwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "QpSyxPQHy38xckyvDr54gZ3T42zj9iLtV4koyb5U27c",
+        "y": "37HLd7JJinxjJIn8J7HijssoecBlfhdW-gUL7feI9lw"
+       }
+      },
+      "iat": 1777342357,
+      "exp": 1777345957
+     }
+    ]
+   },
+   "verified": null
+  },
+  {
+   "source": "Closed Checkout Mandate SD-JWT plus disclosures",
+   "index": 0,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.checkout.1",
+      "checkout_hash": "NivWhuqfzcvZNapvIEJ2-3tsdQLkiuIcye2g46WVgX8",
+      "checkout_jwt": "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAibWVyY2hhbnQta2V5LTEifQ.eyJpZCI6ICIwOTQxNDE0NS1iNzBiLTQ4M2EtYjg1Yy1hYTBmYTBjNDU4MDAiLCAibWVyY2hhbnQiOiB7ImlkIjogIm1lcmNoYW50XzEiLCAibmFtZSI6ICJEZW1vIE1lcmNoYW50IiwgIndlYnNpdGUiOiAiaHR0cHM6Ly9kZW1vLW1lcmNoYW50LmV4YW1wbGUifSwgImxpbmVfaXRlbXMiOiBbeyJpZCI6ICJsaV8wIiwgIml0ZW0iOiB7ImlkIjogInN1cGVyc2hvZV9saW1pdGVkX2VkaXRpb25fZ29sZF9zbmVha2VyX3dvbWVuc185XzAiLCAidGl0bGUiOiAiU3VwZXJzaG9lIExpbWl0ZWQgRWRpdGlvbiBHb2xkIFNuZWFrZXIgV29tZW5zIDkiLCAicHJpY2UiOiAxOTkwMH0sICJxdWFudGl0eSI6IDEsICJ0b3RhbHMiOiBbeyJ0eXBlIjogInN1YnRvdGFsIiwgImFtb3VudCI6IDE5OTAwfSwgeyJ0eXBlIjogInRvdGFsIiwgImFtb3VudCI6IDE5OTAwfV19XSwgInN0YXR1cyI6ICJpbmNvbXBsZXRlIiwgImN1cnJlbmN5IjogIlVTRCIsICJ0b3RhbHMiOiBbeyJ0eXBlIjogInN1YnRvdGFsIiwgImFtb3VudCI6IDE5OTAwfSwgeyJ0eXBlIjogInRvdGFsIiwgImFtb3VudCI6IDE5OTAwfV0sICJsaW5rcyI6IFt7InR5cGUiOiAicHJpdmFjeV9wb2xpY3kiLCAidXJsIjogImh0dHBzOi8vaHR0cHMvL2RlbW8tbWVyY2hhbnQuZXhhbXBsZS9wcml2YWN5In0sIHsidHlwZSI6ICJ0ZXJtc19vZl9zZXJ2aWNlIiwgInVybCI6ICJodHRwczovL2h0dHBzLy9kZW1vLW1lcmNoYW50LmV4YW1wbGUvdG9zIn1dfQ.P-VKzhyJuo9-RPiN5ayngh7fLUKcOPAeZz73SOYwd5P9YXmGLOrLTWxgXvGyQQttDDM5D-G4s19vx_U65druRg"
+     }
+    ],
+    "iat": 1777342376,
+    "aud": "merchant",
+    "nonce": "b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4",
+    "sd_hash": "FzLoxbbtgQGYZxoSM2NJYJtkFTSsdfUBoVEQ12k7JN8"
+   },
+   "verified": {
+    "ok": true,
+    "header": {
+     "alg": "ES256",
+     "typ": "kb+sd-jwt"
+    }
+   }
+  },
+  {
+   "source": "Open Checkout Mandate chained with a Closed Checkout Mandate after processing the delegate SD-JWT.",
+   "index": 0,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.checkout.open.1",
+      "constraints": [
+       {
+        "type": "checkout.line_items",
+        "items": [
+         {
+          "id": "line_1",
+          "acceptable_items": [
+           {
+            "id": "supershoe_limited_edition_gold_sneaker_womens_9_0",
+            "title": "SuperShoe Limited Edition Gold"
+           }
+          ],
+          "quantity": 1
+         }
+        ]
+       },
+       {
+        "type": "checkout.allowed_merchants",
+        "allowed": [
+         {
+          "id": "merchant_1",
+          "name": "Demo Merchant",
+          "website": "https://demo-merchant.example"
+         }
+        ]
+       }
+      ],
+      "cnf": {
+       "jwk": {
+        "crv": "P-256",
+        "kty": "EC",
+        "x": "QpSyxPQHy38xckyvDr54gZ3T42zj9iLtV4koyb5U27c",
+        "y": "37HLd7JJinxjJIn8J7HijssoecBlfhdW-gUL7feI9lw"
+       }
+      },
+      "iat": 1777342357,
+      "exp": 1777345957
+     }
+    ]
+   },
+   "verified": null
+  },
+  {
+   "source": "Open Checkout Mandate chained with a Closed Checkout Mandate after processing the delegate SD-JWT.",
+   "index": 1,
+   "claims": {
+    "delegate_payload": [
+     {
+      "vct": "mandate.checkout.1",
+      "checkout_hash": "NivWhuqfzcvZNapvIEJ2-3tsdQLkiuIcye2g46WVgX8",
+      "checkout_jwt": "eyJhbGciOiAiRVMyNTYiLCAidHlwIjogIkpXVCIsICJraWQiOiAibWVyY2hhbnQta2V5LTEifQ.eyJpZCI6ICIwOTQxNDE0NS1iNzBiLTQ4M2EtYjg1Yy1hYTBmYTBjNDU4MDAiLCAibWVyY2hhbnQiOiB7ImlkIjogIm1lcmNoYW50XzEiLCAibmFtZSI6ICJEZW1vIE1lcmNoYW50IiwgIndlYnNpdGUiOiAiaHR0cHM6Ly9kZW1vLW1lcmNoYW50LmV4YW1wbGUifSwgImxpbmVfaXRlbXMiOiBbeyJpZCI6ICJsaV8wIiwgIml0ZW0iOiB7ImlkIjogInN1cGVyc2hvZV9saW1pdGVkX2VkaXRpb25fZ29sZF9zbmVha2VyX3dvbWVuc185XzAiLCAidGl0bGUiOiAiU3VwZXJzaG9lIExpbWl0ZWQgRWRpdGlvbiBHb2xkIFNuZWFrZXIgV29tZW5zIDkiLCAicHJpY2UiOiAxOTkwMH0sICJxdWFudGl0eSI6IDEsICJ0b3RhbHMiOiBbeyJ0eXBlIjogInN1YnRvdGFsIiwgImFtb3VudCI6IDE5OTAwfSwgeyJ0eXBlIjogInRvdGFsIiwgImFtb3VudCI6IDE5OTAwfV19XSwgInN0YXR1cyI6ICJpbmNvbXBsZXRlIiwgImN1cnJlbmN5IjogIlVTRCIsICJ0b3RhbHMiOiBbeyJ0eXBlIjogInN1YnRvdGFsIiwgImFtb3VudCI6IDE5OTAwfSwgeyJ0eXBlIjogInRvdGFsIiwgImFtb3VudCI6IDE5OTAwfV0sICJsaW5rcyI6IFt7InR5cGUiOiAicHJpdmFjeV9wb2xpY3kiLCAidXJsIjogImh0dHBzOi8vaHR0cHMvL2RlbW8tbWVyY2hhbnQuZXhhbXBsZS9wcml2YWN5In0sIHsidHlwZSI6ICJ0ZXJtc19vZl9zZXJ2aWNlIiwgInVybCI6ICJodHRwczovL2h0dHBzLy9kZW1vLW1lcmNoYW50LmV4YW1wbGUvdG9zIn1dfQ.P-VKzhyJuo9-RPiN5ayngh7fLUKcOPAeZz73SOYwd5P9YXmGLOrLTWxgXvGyQQttDDM5D-G4s19vx_U65druRg"
+     }
+    ],
+    "iat": 1777342376,
+    "aud": "merchant",
+    "nonce": "b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4",
+    "sd_hash": "FzLoxbbtgQGYZxoSM2NJYJtkFTSsdfUBoVEQ12k7JN8"
+   },
+   "verified": {
+    "ok": true,
+    "header": {
+     "alg": "ES256",
+     "typ": "kb+sd-jwt"
+    }
+   }
+  }
+ ],
+ "issued_by_sdjwt_js": {
+  "now": 1800000060,
+  "keys": {
+   "issuer": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "zJ_RJauj4mI3N7o7zvJXh1cXxW5s_vX-kO-QTOa9LQo",
+    "y": "Dvnoc9KROoGs_UR03uOsq9K6-XMydbbyhqz6t9tZj10",
+    "kid": "agent-provider-key-1"
+   },
+   "merchant": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "I16we9RRUXkkcX7quNdFOEEMN9hAZZILQCrRa-SJKrg",
+    "y": "Sm091lSwTyYi9j3WSAxjyd75x6E_eN0ctuKmkjgaVQU",
+    "kid": "merchant-key-1"
+   },
+   "agent": {
+    "crv": "P-256",
+    "kty": "EC",
+    "x": "PJqpeDlByC8z_LLgBjvo5f8418MvWrD47kPvYKMalkY",
+    "y": "LV_MsvbTVgHgLUUQbzi-0uUVziNj1YhJveLz2zFhggk"
+   }
+  },
+  "checkout": {
+   "token": "eyJ0eXAiOiJkYytzZC1qd3QiLCJraWQiOiJhZ2VudC1wcm92aWRlci1rZXktMSIsImFsZyI6IkVTMjU2In0.eyJkZWxlZ2F0ZV9wYXlsb2FkIjpbeyIuLi4iOiJTbFRiNjYxVW1JOTA0Vjc2N3FkT1hlTWtZbWNxSlV5MXNlSE5YU0k4NmdFIn1dLCJfc2RfYWxnIjoic2hhLTI1NiJ9.AnxyD6S4e8lptTvB8N98U7YK4PsmzRBR42xgMJAAzZ6zblF-ZxmWJkq9CyQ7pPssR6hfOtzmp0zfJAOAA5VGSg~WyJmOWViMGE5OTcyYjNhOTVlIix7InZjdCI6Im1hbmRhdGUuY2hlY2tvdXQub3Blbi4xIiwiY25mIjp7Imp3ayI6eyJjcnYiOiJQLTI1NiIsImt0eSI6IkVDIiwieCI6IlBKcXBlRGxCeUM4el9MTGdCanZvNWY4NDE4TXZXckQ0N2tQdllLTWFsa1kiLCJ5IjoiTFZfTXN2YlRWZ0hnTFVVUWJ6aS0wdVVWemlOajFZaEp2ZUx6MnpGaGdnayJ9fSwiaWF0IjoxODAwMDAwMDMwLCJleHAiOjE4MDAwMDM2MzAsImNvbnN0cmFpbnRzIjpbeyJ0eXBlIjoiY2hlY2tvdXQubGluZV9pdGVtcyIsIml0ZW1zIjpbeyJpZCI6ImxpbmVfMSIsImFjY2VwdGFibGVfaXRlbXMiOlt7ImlkIjoic2t1LTEiLCJ0aXRsZSI6IldpZGdldCJ9XSwicXVhbnRpdHkiOjJ9XX0seyJ0eXBlIjoiY2hlY2tvdXQuYWxsb3dlZF9tZXJjaGFudHMiLCJhbGxvd2VkIjpbeyJpZCI6Im1lcmNoYW50XzEiLCJuYW1lIjoiRGVtbyBNZXJjaGFudCIsIndlYnNpdGUiOiJodHRwczovL2RlbW8tbWVyY2hhbnQuZXhhbXBsZSJ9XX1dfV0~~eyJ0eXAiOiJrYitzZC1qd3QiLCJhbGciOiJFUzI1NiJ9.eyJkZWxlZ2F0ZV9wYXlsb2FkIjpbeyIuLi4iOiJRY2VBcC16RFRfbVctSFJoYWtoV2NuQkFDelY1WnFPVmQ0MFBKSVc3OWVFIn1dLCJpYXQiOjE4MDAwMDAwNDAsImF1ZCI6Im1lcmNoYW50Iiwibm9uY2UiOiJqcy1ub25jZS1jaGVja291dCIsInNkX2hhc2giOiJueEVRSnVCT2NpUTVvU1NSY1NDOGhRQVNLRTNXVkZjUUJWS3E3ZVV3aE9nIiwiX3NkX2FsZyI6InNoYS0yNTYifQ.Fdi44CzDQRwT0TD1iBQa6vdnoVjhaiX-yscQkQmNR_GYqGqz1V94MxYMrrXwfifxFQK4GrDcZaDtE0WN9opirQ~WyI1ODkyYWY1NWFhNWQwYTYyIiwiY2hlY2tvdXRfand0IiwiZXlKaGJHY2lPaUpGVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0lzSW10cFpDSTZJbTFsY21Ob1lXNTBMV3RsZVMweEluMC5leUpwWkNJNkltTm9hMTlxYzE4d01EQXhJaXdpYldWeVkyaGhiblFpT25zaWFXUWlPaUp0WlhKamFHRnVkRjh4SWl3aWJtRnRaU0k2SWtSbGJXOGdUV1Z5WTJoaGJuUWlMQ0ozWldKemFYUmxJam9pYUhSMGNITTZMeTlrWlcxdkxXMWxjbU5vWVc1MExtVjRZVzF3YkdVaWZTd2ljM1JoZEhWeklqb2ljbVZoWkhsZlptOXlYMk52YlhCc1pYUmxJaXdpWTNWeWNtVnVZM2tpT2lKVlUwUWlMQ0pzYVc1bFgybDBaVzF6SWpwYmV5SnBaQ0k2SW14cFh6RWlMQ0pwZEdWdElqcDdJbWxrSWpvaWMydDFMVEVpTENKMGFYUnNaU0k2SWxkcFpHZGxkQ0lzSW5CeWFXTmxJam95TURBd2ZTd2ljWFZoYm5ScGRIa2lPaklzSW5SdmRHRnNjeUk2VzNzaWRIbHdaU0k2SW5OMVluUnZkR0ZzSWl3aVlXMXZkVzUwSWpvME1EQXdmVjE5WFN3aWRHOTBZV3h6SWpwYmV5SjBlWEJsSWpvaWMzVmlkRzkwWVd3aUxDSmhiVzkxYm5RaU9qUXdNREI5TEhzaWRIbHdaU0k2SW5SdmRHRnNJaXdpWVcxdmRXNTBJam8wTURBd2ZWMHNJbXhwYm10eklqcGJYWDAuTjEzMzVmTkV1azQtLThwcU11Y0FJRUtMdDV1SjN1d2c5b01GQVdPM05IdGFPSWh6bmIyTFVyY1E3U05zMlF4RmROd181NDVDUmxUXzBVVmNjZGRnSFEiXQ~WyJkMmU4ZTdjMzk0MGVjZWQyIix7InZjdCI6Im1hbmRhdGUuY2hlY2tvdXQuMSIsImNoZWNrb3V0X2hhc2giOiJLYzRfdHhuOU8wNVB6d3o1UzgyXzk4Q3doVnUwdHphemhGZkdTeEdyTndnIiwiX3NkIjpbIlV0MFMtbjd3ZVhEWjFuclNqWU9DdWtibjBfX05OVTZIV2NiNXFuNGNXM3ciXX1d~",
+   "aud": "merchant",
+   "nonce": "js-nonce-checkout",
+   "checkout_jwt": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Im1lcmNoYW50LWtleS0xIn0.eyJpZCI6ImNoa19qc18wMDAxIiwibWVyY2hhbnQiOnsiaWQiOiJtZXJjaGFudF8xIiwibmFtZSI6IkRlbW8gTWVyY2hhbnQiLCJ3ZWJzaXRlIjoiaHR0cHM6Ly9kZW1vLW1lcmNoYW50LmV4YW1wbGUifSwic3RhdHVzIjoicmVhZHlfZm9yX2NvbXBsZXRlIiwiY3VycmVuY3kiOiJVU0QiLCJsaW5lX2l0ZW1zIjpbeyJpZCI6ImxpXzEiLCJpdGVtIjp7ImlkIjoic2t1LTEiLCJ0aXRsZSI6IldpZGdldCIsInByaWNlIjoyMDAwfSwicXVhbnRpdHkiOjIsInRvdGFscyI6W3sidHlwZSI6InN1YnRvdGFsIiwiYW1vdW50Ijo0MDAwfV19XSwidG90YWxzIjpbeyJ0eXBlIjoic3VidG90YWwiLCJhbW91bnQiOjQwMDB9LHsidHlwZSI6InRvdGFsIiwiYW1vdW50Ijo0MDAwfV0sImxpbmtzIjpbXX0.N1335fNEuk4--8pqMucAIEKLt5uJ3uwg9oMFAWO3NHtaOIhznb2LUrcQ7SNs2QxFdNw_545CRlT_0UVccddgHQ",
+   "open_hash": "nxEQJuBOciQ5oSSRcSC8hQASKE3WVFcQBVKq7eUwhOg"
+  },
+  "payment": {
+   "token": "eyJ0eXAiOiJkYytzZC1qd3QiLCJraWQiOiJhZ2VudC1wcm92aWRlci1rZXktMSIsImFsZyI6IkVTMjU2In0.eyJkZWxlZ2F0ZV9wYXlsb2FkIjpbeyIuLi4iOiJ0c1p5cjItWEV1RkNQbllEb2NHY21ZcGNoQ3VLcjRoVWJubDlnaXc1cE80In1dLCJfc2RfYWxnIjoic2hhLTI1NiJ9.j5pq-NH17zqOTj7yW6mp_gCuD9PA93OObTTvsXQELVmpdp61lU-0J9CdFETYnqSFQHO28zOe5vFkERyiP7J8Ng~WyJlYTI0NGQ2MWRiMGY1MjY5Iix7InZjdCI6Im1hbmRhdGUucGF5bWVudC5vcGVuLjEiLCJjbmYiOnsiandrIjp7ImNydiI6IlAtMjU2Iiwia3R5IjoiRUMiLCJ4IjoiUEpxcGVEbEJ5Qzh6X0xMZ0Jqdm81Zjg0MThNdldyRDQ3a1B2WUtNYWxrWSIsInkiOiJMVl9Nc3ZiVFZnSGdMVVVRYnppLTB1VVZ6aU5qMVloSnZlTHoyekZoZ2drIn19LCJpYXQiOjE4MDAwMDAwMzAsImV4cCI6MTgwMDAwMzYzMCwiY29uc3RyYWludHMiOlt7InR5cGUiOiJwYXltZW50LmFtb3VudF9yYW5nZSIsImN1cnJlbmN5IjoiVVNEIiwibWluIjowLCJtYXgiOjUwMDAwfSx7InR5cGUiOiJwYXltZW50LmFsbG93ZWRfcGF5ZWVzIiwiYWxsb3dlZCI6W3siaWQiOiJtZXJjaGFudF8xIiwibmFtZSI6IkRlbW8gTWVyY2hhbnQiLCJ3ZWJzaXRlIjoiaHR0cHM6Ly9kZW1vLW1lcmNoYW50LmV4YW1wbGUifV19LHsidHlwZSI6InBheW1lbnQucmVmZXJlbmNlIiwiY29uZGl0aW9uYWxfdHJhbnNhY3Rpb25faWQiOiJueEVRSnVCT2NpUTVvU1NSY1NDOGhRQVNLRTNXVkZjUUJWS3E3ZVV3aE9nIn0seyJ0eXBlIjoicGF5bWVudC5idWRnZXQiLCJjdXJyZW5jeSI6IlVTRCIsIm1heCI6MTAwMH0seyJ0eXBlIjoicGF5bWVudC5hZ2VudF9yZWN1cnJlbmNlIiwiZnJlcXVlbmN5IjoiT05fREVNQU5EIiwibWF4X29jY3VycmVuY2VzIjo1fV19XQ~~eyJ0eXAiOiJrYitzZC1qd3QiLCJhbGciOiJFUzI1NiJ9.eyJkZWxlZ2F0ZV9wYXlsb2FkIjpbeyIuLi4iOiJOY1lSa1FlTkdua2czaDFkeFZ0aXNMS2dIbkdZOGloMWtGdzBfNzB1N2JNIn1dLCJpYXQiOjE4MDAwMDAwNTAsImF1ZCI6ImNyZWRlbnRpYWwtcHJvdmlkZXIiLCJub25jZSI6ImpzLW5vbmNlLXBheW1lbnQiLCJzZF9oYXNoIjoiOWhGREJtUVV5amhtcVRCaXIwd2JCdjFvRTJhdmJldlViYXFuckZHTDViayIsIl9zZF9hbGciOiJzaGEtMjU2In0.gLn9KMjgYl0EoXtXGoathSPdOZH5i8u2Gzg9NjNvR1o3_64txlIvksuWS5MnVKZU-bhtIjbWE1_RvesnYowi8Q~WyIyZjBmNTkwZGI2Y2M1Y2U1Iix7InZjdCI6Im1hbmRhdGUucGF5bWVudC4xIiwidHJhbnNhY3Rpb25faWQiOiJLYzRfdHhuOU8wNVB6d3o1UzgyXzk4Q3doVnUwdHphemhGZkdTeEdyTndnIiwicGF5ZWUiOnsiaWQiOiJtZXJjaGFudF8xIiwibmFtZSI6IkRlbW8gTWVyY2hhbnQiLCJ3ZWJzaXRlIjoiaHR0cHM6Ly9kZW1vLW1lcmNoYW50LmV4YW1wbGUifSwicGF5bWVudF9hbW91bnQiOnsiYW1vdW50Ijo0MDAwLCJjdXJyZW5jeSI6IlVTRCJ9LCJwYXltZW50X2luc3RydW1lbnQiOnsiaWQiOiJjYXJkXzQyNDIiLCJ0eXBlIjoiY2FyZCIsImRlc2NyaXB0aW9uIjoiQ2FyZCA0MjQyIn19XQ~",
+   "aud": "credential-provider",
+   "nonce": "js-nonce-payment"
+  },
+  "transaction_id": "Kc4_txn9O05Pzwz5S82_98CwhVu0tzazhFfGSxGrNwg",
+  "amount_minor": 4000
+ }
+}

@@ -1,0 +1,2 @@
+  root_bound (all-traces): verified (67480 steps)
+# wall=986s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=root_bound --heuristic=o --oraclename=oracle_budget.sh pca_budget_v4.spthy +RTS -N4 -M12g

@@ -1,0 +1,82 @@
+# name | module | invariants(space-sep) | constants(; sep, TLC cfg syntax) | expect(pass|fail)
+contract_good         | ReplayContract | ExactlyOnce CounterMono | Servers={s1,s2,s3};Keys={k1,k2};ExpT=2;MaxT=7;Skew=1;MaxOff=1;PruneMode="safe";Durable=TRUE;MaxC=3 | pass
+contract_ttl_good       | ReplayContract | ExactlyOnce CounterMono | Servers={s1,s2,s3};Keys={k1,k2};ExpT=2;MaxT=7;Skew=1;MaxOff=1;PruneMode="ttl";Durable=TRUE;MaxC=3 | pass
+contract_ttl_bad_skew   | ReplayContract | ExactlyOnce CounterMono | Servers={s1,s2,s3};Keys={k1,k2};ExpT=2;MaxT=7;Skew=1;MaxOff=2;PruneMode="ttl";Durable=TRUE;MaxC=3 | fail
+contract_bad_skew     | ReplayContract | ExactlyOnce CounterMono | Servers={s1,s2,s3};Keys={k1,k2};ExpT=2;MaxT=7;Skew=1;MaxOff=2;PruneMode="safe";Durable=TRUE;MaxC=3 | fail
+contract_bad_prune_early | ReplayContract | ExactlyOnce CounterMono | Servers={s1,s2,s3};Keys={k1,k2};ExpT=2;MaxT=7;Skew=1;MaxOff=1;PruneMode="early";Durable=TRUE;MaxC=3 | fail
+contract_bad_prune_evict | ReplayContract | ExactlyOnce CounterMono | Servers={s1,s2,s3};Keys={k1,k2};ExpT=2;MaxT=7;Skew=1;MaxOff=1;PruneMode="evict";Durable=TRUE;MaxC=3 | fail
+contract_bad_volatile | ReplayContract | ExactlyOnce CounterMono | Servers={s1,s2,s3};Keys={k1,k2};ExpT=2;MaxT=7;Skew=1;MaxOff=1;PruneMode="safe";Durable=FALSE;MaxC=3 | fail
+pg_update_where_consume   | PgStore | Safe | Clients={c1,c2,c3};Mode="update_where";MaxC=3;Consume=TRUE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_update_where_counter   | PgStore | Safe | Clients={c1,c2,c3};Mode="update_where";MaxC=3;Consume=FALSE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_for_update_consume     | PgStore | Safe | Clients={c1,c2,c3};Mode="for_update";MaxC=3;Consume=TRUE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_for_update_counter     | PgStore | Safe | Clients={c1,c2,c3};Mode="for_update";MaxC=3;Consume=FALSE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_advisory_consume       | PgStore | Safe | Clients={c1,c2,c3};Mode="advisory";MaxC=3;Consume=TRUE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_advisory_counter       | PgStore | Safe | Clients={c1,c2,c3};Mode="advisory";MaxC=3;Consume=FALSE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_select_insert_unique_consume | PgStore | Safe | Clients={c1,c2,c3};Mode="select_insert_unique";MaxC=3;Consume=TRUE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_replica_fastpath_consume | PgStore | Safe | Clients={c1,c2,c3};Mode="replica_fastpath";MaxC=3;Consume=TRUE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_replica_fastpath_counter | PgStore | Safe | Clients={c1,c2,c3};Mode="replica_fastpath";MaxC=3;Consume=FALSE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_bad_read_then_write_consume | PgStore | Safe | Clients={c1,c2,c3};Mode="read_then_write";MaxC=3;Consume=TRUE;Crash=FALSE;Restart=FALSE;SyncCommit=TRUE;LoseAck=FALSE | fail
+pg_bad_read_then_write_counter | PgStore | Safe | Clients={c1,c2,c3};Mode="read_then_write";MaxC=3;Consume=FALSE;Crash=FALSE;Restart=FALSE;SyncCommit=TRUE;LoseAck=FALSE | fail
+pg_bad_no_txn_for_update_counter | PgStore | Safe | Clients={c1,c2,c3};Mode="no_txn_for_update";MaxC=3;Consume=FALSE;Crash=FALSE;Restart=FALSE;SyncCommit=TRUE;LoseAck=FALSE | fail
+pg_bad_upsert_overwrite_consume | PgStore | Safe | Clients={c1,c2,c3};Mode="upsert_overwrite";MaxC=3;Consume=TRUE;Crash=FALSE;Restart=FALSE;SyncCommit=TRUE;LoseAck=FALSE | fail
+pg_bad_for_update_noseed_consume | PgStore | Safe | Clients={c1,c2,c3};Mode="for_update_noseed";MaxC=3;Consume=TRUE;Crash=FALSE;Restart=FALSE;SyncCommit=TRUE;LoseAck=FALSE | fail
+pg_bad_replica_decide_consume | PgStore | Safe | Clients={c1,c2,c3};Mode="replica_decide";MaxC=3;Consume=TRUE;Crash=FALSE;Restart=FALSE;SyncCommit=TRUE;LoseAck=FALSE | fail
+pg_bad_async_commit_restart | PgStore | Safe | Clients={c1,c2,c3};Mode="update_where";MaxC=3;Consume=TRUE;Crash=FALSE;Restart=TRUE;SyncCommit=FALSE;LoseAck=FALSE | fail
+redis_set_nx_consume_always  | RedisStore | Safe | Clients={c1,c2,c3};Mode="set_nx";MaxC=3;Consume=TRUE;Failover=FALSE;Restart=TRUE;Persist="always";Evict=FALSE | pass
+redis_lua_counter_always     | RedisStore | Safe | Clients={c1,c2,c3};Mode="lua";MaxC=3;Consume=FALSE;Failover=FALSE;Restart=TRUE;Persist="always";Evict=FALSE | pass
+redis_wait1_failover         | RedisStore | Safe | Clients={c1,c2,c3};Mode="wait1";MaxC=3;Consume=TRUE;Failover=TRUE;Restart=FALSE;Persist="always";Evict=FALSE | pass
+redis_wait1_counter_failover | RedisStore | Safe | Clients={c1,c2,c3};Mode="wait1";MaxC=3;Consume=FALSE;Failover=TRUE;Restart=FALSE;Persist="always";Evict=FALSE | pass
+redis_bad_get_then_set       | RedisStore | Safe | Clients={c1,c2,c3};Mode="get_then_set";MaxC=3;Consume=TRUE;Failover=FALSE;Restart=FALSE;Persist="always";Evict=FALSE | fail
+redis_bad_async_failover     | RedisStore | Safe | Clients={c1,c2,c3};Mode="set_nx";MaxC=3;Consume=TRUE;Failover=TRUE;Restart=FALSE;Persist="always";Evict=FALSE | fail
+redis_bad_everysec_restart   | RedisStore | Safe | Clients={c1,c2,c3};Mode="set_nx";MaxC=3;Consume=TRUE;Failover=FALSE;Restart=TRUE;Persist="everysec";Evict=FALSE | fail
+redis_bad_no_persistence     | RedisStore | Safe | Clients={c1,c2,c3};Mode="set_nx";MaxC=3;Consume=TRUE;Failover=FALSE;Restart=TRUE;Persist="none";Evict=FALSE | fail
+redis_bad_eviction           | RedisStore | Safe | Clients={c1,c2,c3};Mode="set_nx";MaxC=3;Consume=TRUE;Failover=FALSE;Restart=FALSE;Persist="always";Evict=TRUE | fail
+redis_bad_wait1_primary_restart | RedisStore | Safe | Clients={c1,c2,c3};Mode="wait1";MaxC=3;Consume=TRUE;Failover=FALSE;Restart=TRUE;Persist="everysec";Evict=FALSE | fail
+mem_one_process        | MemStore | Safe | Clients={c1,c2,c3};Procs={p1,p2};Mode="one_process";Restart=FALSE;MaxC=3;Consume=TRUE | pass
+mem_bad_restart        | MemStore | Safe | Clients={c1,c2,c3};Procs={p1,p2};Mode="one_process";Restart=TRUE;MaxC=3;Consume=TRUE | fail
+mem_bad_per_process    | MemStore | Safe | Clients={c1,c2,c3};Procs={p1,p2};Mode="per_process";Restart=FALSE;MaxC=3;Consume=TRUE | fail
+dl_no_stale            | DurableLock | Safe | Clients={c1,c2,c3};HungSteal=FALSE;Recheck=FALSE;Crash=FALSE;PreStale=FALSE | pass
+dl_dead_only           | DurableLock | Safe | Clients={c1,c2,c3};HungSteal=FALSE;Recheck=FALSE;Crash=TRUE;PreStale=TRUE | fail
+dl_dead_only_recheck   | DurableLock | Safe | Clients={c1,c2,c3};HungSteal=FALSE;Recheck=TRUE;Crash=TRUE;PreStale=TRUE | fail
+dl_hung_steal          | DurableLock | Safe | Clients={c1,c2,c3};HungSteal=TRUE;Recheck=FALSE;Crash=FALSE;PreStale=FALSE | fail
+dl_hung_steal_recheck  | DurableLock | Safe | Clients={c1,c2,c3};HungSteal=TRUE;Recheck=TRUE;Crash=FALSE;PreStale=FALSE | fail
+pg_for_update_counter_4clients | PgStore | Safe | Clients={c1,c2,c3,c4};Mode="for_update";MaxC=4;Consume=FALSE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+pg_update_where_consume_5clients | PgStore | Safe | Clients={c1,c2,c3,c4,c5};Mode="update_where";MaxC=3;Consume=TRUE;Crash=TRUE;Restart=TRUE;SyncCommit=TRUE;LoseAck=TRUE | pass
+redis_lua_counter_4clients | RedisStore | Safe | Clients={c1,c2,c3,c4};Mode="lua";MaxC=4;Consume=FALSE;Failover=FALSE;Restart=TRUE;Persist="always";Evict=FALSE | pass
+rp_exclusive_lock      | RequirePcaLock | Safe | Clients={c1,c2,c3};Mode="exclusive";MaxC=3 | pass
+rp_lease_fenced        | RequirePcaLock | Safe | Clients={c1,c2,c3};Mode="lease_fenced";MaxC=3 | pass
+rp_bad_lease_unfenced  | RequirePcaLock | Safe | Clients={c1,c2,c3};Mode="lease";MaxC=3 | fail
+rp_bad_nolock_multinode | RequirePcaLock | Safe | Clients={c1,c2,c3};Mode="nolock";MaxC=3 | fail
+dl2_gen_dead_only      | DurableLockGen | Safe | Clients={c1,c2,c3};MaxG=7;AgeBreak=FALSE;Crash=TRUE;PreStale=TRUE;Gc=FALSE;Verify=TRUE | pass
+dl2_gen_no_crash       | DurableLockGen | Safe | Clients={c1,c2,c3};MaxG=7;AgeBreak=FALSE;Crash=FALSE;PreStale=FALSE;Gc=FALSE;Verify=TRUE | pass
+dl2_gen_4clients       | DurableLockGen | Safe | Clients={c1,c2,c3,c4};MaxG=9;AgeBreak=FALSE;Crash=TRUE;PreStale=TRUE;Gc=FALSE;Verify=TRUE | pass
+dl2_bad_age_break      | DurableLockGen | Safe | Clients={c1,c2,c3};MaxG=7;AgeBreak=TRUE;Crash=FALSE;PreStale=FALSE;Gc=FALSE;Verify=TRUE | fail
+dl2_gen_gc_verify      | DurableLockGen | Safe | Clients={c1,c2,c3};MaxG=8;AgeBreak=FALSE;Crash=TRUE;PreStale=TRUE;Gc=TRUE;Verify=TRUE | pass
+dl2_bad_gc_noverify    | DurableLockGen | Safe | Clients={c1,c2,c3};MaxG=8;AgeBreak=FALSE;Crash=FALSE;PreStale=FALSE;Gc=TRUE;Verify=FALSE | fail
+# R6-CORE-01 DurableFence: operator recovery of a PAUSED holder; re-checks before journal AND head rename, generation in
+# every record/head, state.fence cut on recovery, stale-late-head repair. Bad cases: fence removed / head repair removed.
+df_fence_2c              | DurableFence | Safe | Clients={c1,c2};MaxG=8;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;Crash=TRUE;TakeLock=TRUE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_fence_3c_2rec         | DurableFence | Safe | Clients={c1,c2,c3};MaxG=11;MaxRec=2;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;Crash=TRUE;TakeLock=TRUE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_fence_3c_no_headcheck | DurableFence | Safe | Clients={c1,c2,c3};MaxG=11;MaxRec=2;Fence=TRUE;HeadCheck=FALSE;HeadRepair=TRUE;Crash=TRUE;TakeLock=TRUE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_fence_3c_3rec         | DurableFence | Safe | Clients={c1,c2,c3};MaxG=13;MaxRec=3;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;Crash=TRUE;TakeLock=TRUE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_fence_4c_1rec         | DurableFence | Safe | Clients={c1,c2,c3,c4};MaxG=11;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;Crash=TRUE;TakeLock=TRUE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_bad_no_fence          | DurableFence | NoStaleAccepted | Clients={c1,c2,c3};MaxG=11;MaxRec=1;Fence=FALSE;HeadCheck=TRUE;HeadRepair=TRUE;Crash=FALSE;TakeLock=TRUE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+df_bad_no_fence_safe     | DurableFence | Safe | Clients={c1,c2,c3};MaxG=11;MaxRec=1;Fence=FALSE;HeadCheck=TRUE;HeadRepair=TRUE;Crash=FALSE;TakeLock=TRUE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+df_bad_no_head_repair    | DurableFence | ReadableUnlessStale | Clients={c1,c2,c3};MaxG=11;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=FALSE;Crash=FALSE;TakeLock=TRUE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+df_bad_naive_order       | DurableFence | Safe | Clients={c1,c2,c3};MaxG=11;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;Crash=FALSE;TakeLock=FALSE;FencePin=TRUE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+df_bad_no_pin            | DurableFence | Safe | Clients={c1,c2,c3};MaxG=11;MaxRec=2;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;Crash=FALSE;TakeLock=TRUE;FencePin=FALSE;OpCrash=FALSE;MaxOpCrash=0;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+# R6-CORE-01 follow-up: the RECOVERY ITSELF crashes after any of its steps (OpCrash). Way out 1: a same-namespace waiter takes
+# the dead recovery lock over, cutting + fencing first (TakeoverFence) and passing the duty on (Inherit). Way out 2: the operator
+# re-runs recovery (the waiter is in another PID namespace and cannot judge the dead recovery). Liveness under LiveSpec.
+df_rcrash_takeover_3c    | DurableFence | Safe | Clients={c1,c2,c3};MaxG=13;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=TRUE;OpCrash=TRUE;MaxOpCrash=1;Takeover=TRUE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_rcrash_takeover_3c_2x | DurableFence | Safe | Clients={c1,c2,c3};MaxG=14;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=TRUE;OpCrash=TRUE;MaxOpCrash=2;Takeover=TRUE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_rcrash_rerun_3c       | DurableFence | Safe | Clients={c1,c2,c3};MaxG=14;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=TRUE;OpCrash=TRUE;MaxOpCrash=2;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_rcrash_both_3c_2rec   | DurableFence | Safe | Clients={c1,c2,c3};MaxG=15;MaxRec=2;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=TRUE;OpCrash=TRUE;MaxOpCrash=2;Takeover=TRUE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_live_takeover_2c      | DurableFence | spec:LiveSpec prop:NoWedge prop:AckedOrFailedClosed | Clients={c1,c2};MaxG=12;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=FALSE;OpCrash=TRUE;MaxOpCrash=2;Takeover=TRUE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_live_rerun_2c         | DurableFence | spec:LiveSpec prop:NoWedge prop:AckedOrFailedClosed | Clients={c1,c2};MaxG=12;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=FALSE;OpCrash=TRUE;MaxOpCrash=2;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=TRUE;FenceFiles=TRUE | pass
+df_live_takeover_3c      | DurableFence | spec:LiveSpec prop:NoWedge prop:AckedOrFailedClosed | Clients={c1,c2,c3};MaxG=13;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=FALSE;OpCrash=TRUE;MaxOpCrash=1;Takeover=TRUE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | pass
+df_live_bad_no_rerun     | DurableFence | spec:LiveSpec prop:NoWedge | Clients={c1,c2};MaxG=12;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=FALSE;OpCrash=TRUE;MaxOpCrash=1;Takeover=FALSE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+df_bad_takeover_nofence  | DurableFence | NoStaleAccepted | Clients={c1,c2,c3};MaxG=13;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=FALSE;OpCrash=TRUE;MaxOpCrash=1;Takeover=TRUE;TakeoverFence=FALSE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+df_bad_takeover_nofence_safe | DurableFence | Safe | Clients={c1,c2,c3};MaxG=13;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=FALSE;OpCrash=TRUE;MaxOpCrash=1;Takeover=TRUE;TakeoverFence=FALSE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+df_bad_no_inherit        | DurableFence | Safe | Clients={c1,c2,c3};MaxG=13;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=TRUE;OpCrash=TRUE;MaxOpCrash=1;Takeover=TRUE;TakeoverFence=TRUE;Inherit=FALSE;ReRunFair=FALSE;FenceFiles=TRUE | fail
+df_bad_fence_rmw         | DurableFence | Safe | Clients={c1,c2,c3};MaxG=15;MaxRec=2;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=TRUE;OpCrash=TRUE;MaxOpCrash=2;Takeover=TRUE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=FALSE | fail

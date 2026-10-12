@@ -1,0 +1,3 @@
+RESULT Proved forall h2, h1: pkey, a2, cb2, a1, cb1: message, g: hashout; event(Accept(cb1, g, a1, h1)) && event(Accept(cb2, g, a2, h2)) ==> (cb1 = cb2) up to probability Phash(time_1)
+RESULT Could not prove forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb)); forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Signed(a)).
+RESULT Could not prove forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb)); forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Signed(a)).

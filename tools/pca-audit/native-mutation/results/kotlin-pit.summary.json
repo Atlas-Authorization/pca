@@ -1,0 +1,1304 @@
+{
+ "source": "kotlin-pit.json",
+ "counts": {
+  "killed": 3136,
+  "survived": 215,
+  "timed_out": 20,
+  "no_coverage": 24,
+  "memory_error": 6
+ },
+ "survivors": [
+  {
+   "file": "Json.kt",
+   "line": 52,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 52,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 52,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 52,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 52,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 52,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 52,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 52,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 54,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 54,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 54,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 54,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 55,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 55,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 56,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 56,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 56,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 56,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 58,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 58,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 61,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 65,
+   "mutator": "InlineConstantMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 65,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 65,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "numberError"
+  },
+  {
+   "file": "Json.kt",
+   "line": 73,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "isSafeInt"
+  },
+  {
+   "file": "Json.kt",
+   "line": 73,
+   "mutator": "InlineConstantMutator",
+   "method": "isSafeInt"
+  },
+  {
+   "file": "Json.kt",
+   "line": 73,
+   "mutator": "InlineConstantMutator",
+   "method": "isSafeInt"
+  },
+  {
+   "file": "Json.kt",
+   "line": 73,
+   "mutator": "InlineConstantMutator",
+   "method": "isSafeInt"
+  },
+  {
+   "file": "Json.kt",
+   "line": 201,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.kt",
+   "line": 204,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.kt",
+   "line": 204,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.kt",
+   "line": 204,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.kt",
+   "line": 205,
+   "mutator": "InlineConstantMutator",
+   "method": "hex4"
+  },
+  {
+   "file": "Json.kt",
+   "line": 334,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.kt",
+   "line": 334,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.kt",
+   "line": 340,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.kt",
+   "line": 340,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.kt",
+   "line": 341,
+   "mutator": "InlineConstantMutator",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.kt",
+   "line": 341,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.kt",
+   "line": 341,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "fmtNumber"
+  },
+  {
+   "file": "Json.kt",
+   "line": 390,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "ser"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 45,
+   "mutator": "InlineConstantMutator",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 45,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 45,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 46,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 46,
+   "mutator": "InlineConstantMutator",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 46,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "artifactTooLarge"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 96,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 96,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 96,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "InlineConstantMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 97,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 98,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 100,
+   "mutator": "MathMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 100,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 100,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 101,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 101,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 101,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 108,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 108,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 108,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "decodeB64uStrict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 185,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 185,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 186,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 186,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 189,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 195,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 198,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyInclusion"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 248,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "leInt"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 266,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 266,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 267,
+   "mutator": "InlineConstantMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 267,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 267,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 267,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 267,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 268,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 268,
+   "mutator": "InlineConstantMutator",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 268,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "ed25519Strict"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 280,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyB64u"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 280,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyB64u"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 307,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "signableHopBody"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 332,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "suitePolicyError"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 346,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "checkSig"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 370,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 370,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 373,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 374,
+   "mutator": "InlineConstantMutator",
+   "method": "resolveRootPq"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 405,
+   "mutator": "InlineConstantMutator",
+   "method": "wellTyped$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 407,
+   "mutator": "InlineConstantMutator",
+   "method": "wellTyped$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 445,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 445,
+   "mutator": "NegateConditionalsMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 445,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 445,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 445,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 445,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 529,
+   "mutator": "InlineConstantMutator",
+   "method": "validateWireV2"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 537,
+   "mutator": "InlineConstantMutator",
+   "method": "validateWireV2"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 545,
+   "mutator": "InlineConstantMutator",
+   "method": "validateWireV2"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 686,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 703,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 703,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 703,
+   "mutator": "RemoveConditionalMutator_ORDER_ELSE",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 706,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 706,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 714,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 736,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 737,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 737,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 737,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 737,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 740,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 740,
+   "mutator": "NegateConditionalsMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 740,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 740,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 740,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 740,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 748,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 757,
+   "mutator": "VoidMethodCallMutator",
+   "method": "verifyPcactnUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 764,
+   "mutator": "NegateConditionalsMutator",
+   "method": "wellTyped$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 764,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "wellTyped$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 764,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "wellTyped$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 764,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "wellTyped$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 764,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "wellTyped$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 765,
+   "mutator": "InlineConstantMutator",
+   "method": "wellTyped$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 767,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 767,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pca.kt",
+   "line": 767,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyChainUnchecked"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 65,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "resolveSigAlg"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 73,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "mlDsa65Verify"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 73,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "mlDsa65Verify"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 90,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "mlDsa65VerifyB64u"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 90,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "mlDsa65VerifyB64u"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 147,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyLeafSuite"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 164,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifySuite$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 164,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifySuite$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 164,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifySuite$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 168,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifySuite$pca_kotlin_mutation"
+  },
+  {
+   "file": "Pq.kt",
+   "line": 209,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "resolve"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 40,
+   "mutator": "InlineConstantMutator",
+   "method": "signerSetHash"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 87,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "validatedRegistry$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 89,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "validatedRegistry$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 93,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "validatedRegistry$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 112,
+   "mutator": "InlineConstantMutator",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 112,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 112,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 124,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 125,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 125,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 126,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 127,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 127,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 128,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 129,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 129,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 130,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 130,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 130,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 130,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 130,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "verifyShareEntry"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 141,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "exactT$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 142,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "exactT$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 148,
+   "mutator": "InlineConstantMutator",
+   "method": "exactT$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 164,
+   "mutator": "ConditionalsBoundaryMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 164,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 164,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 164,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 164,
+   "mutator": "InlineConstantMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 164,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 164,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 164,
+   "mutator": "RemoveConditionalMutator_ORDER_IF",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 166,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 172,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 181,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 181,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 184,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "verifyShare"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 196,
+   "mutator": "InlineConstantMutator",
+   "method": "signerSetHash"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 196,
+   "mutator": "InlineConstantMutator",
+   "method": "signerSetHash"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 196,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "signerSetHash"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 196,
+   "mutator": "ArgumentPropagationMutator",
+   "method": "signerSetHash"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 198,
+   "mutator": "InlineConstantMutator",
+   "method": "signerSetHash"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 200,
+   "mutator": "InlineConstantMutator",
+   "method": "shareMessage"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 201,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "validatedRegistry$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 201,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "validatedRegistry$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 202,
+   "mutator": "InlineConstantMutator",
+   "method": "validatedRegistry$pca_kotlin_mutation"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 204,
+   "mutator": "NegateConditionalsMutator",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 204,
+   "mutator": "NonVoidMethodCallMutator",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 204,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 204,
+   "mutator": "RemoveConditionalMutator_EQUAL_ELSE",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 204,
+   "mutator": "RemoveConditionalMutator_EQUAL_IF",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 205,
+   "mutator": "InlineConstantMutator",
+   "method": "signerSetHashB64u"
+  },
+  {
+   "file": "Threshold.kt",
+   "line": 207,
+   "mutator": "InlineConstantMutator",
+   "method": "exactT$pca_kotlin_mutation"
+  }
+ ],
+ "tool": "pit",
+ "score": 92.21
+}

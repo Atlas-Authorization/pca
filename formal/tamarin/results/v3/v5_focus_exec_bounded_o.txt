@@ -1,0 +1,3 @@
+  executable_focus_bounded (exists-trace): verified (15 steps)
+# wall=23s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=executable_focus_bounded --heuristic=o --oraclename=oracle_nodebound.sh pca_budget_v5_focus.spthy +RTS -N2 -M12g
+# pcaq job q261011-183336-n64v (sp7); non-vacuity of the focus rules; '/* All wellformedness checks were successful. */'

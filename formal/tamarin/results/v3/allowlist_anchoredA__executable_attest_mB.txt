@@ -1,0 +1,4 @@
+  executable_revocation (exists-trace): analysis incomplete (1 steps)
+  no_manifest_rollback (all-traces): analysis incomplete (1 steps)
+  revoked_never_attested (all-traces): analysis incomplete (1 steps)
+# wall=0s rc=0 tamarin-prover 1.12.0 cmd=tamarin-prover --prove=executable_attest_mB -DSTATE_WIPE -DANCHORED pca_allowlist_v3.spthy +RTS -N4

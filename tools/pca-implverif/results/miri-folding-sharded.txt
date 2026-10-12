@@ -1,0 +1,25 @@
+Miri, folding-pca decoder driver (tools/pca-implverif/miri/folding_dec.rs), sharded by test name, 2026-10-11.
+Toolchain nightly-2026-10-08 (miri 0.1.0 1d81eb4ad9 2026-10-07), target aarch64-unknown-linux-gnu, --release with overflow
+checks + debug assertions, MIRIFLAGS=-Zmiri-strict-provenance (isolation ON: fixture embedded with include_bytes!).
+One queue job per test (tools/pca-implverif/miri-q.sh folding-pca folding_dec.rs aarch64-unknown-linux-gnu <test>), owner iv-close.
+No input reduced: each _pK test takes inputs with index = K mod N of the full list; shards_cover_inputs checks the partition.
+
+test                          job                   result   Miri time
+shards_cover_inputs           q261011-171353-j1r8   ok         6 s
+decode_genuine                q261011-171404-2oac   ok       650 s
+small_helpers                 q261011-171405-ybdo   ok      2869 s
+decode_truncations_p0         q261011-171405-hhhn   ok      1798 s
+decode_truncations_p1         q261011-171406-msyf   ok      1801 s
+decode_truncations_p2         q261011-171407-ltjj   ok      1804 s
+decode_truncations_p3         q261011-171407-7v76   ok      1542 s
+decode_hostile_prefixes_p0    q261011-171408-idwg   ok      1711 s
+decode_hostile_prefixes_p1    q261011-171409-npqu   ok      1706 s
+decode_boundary_bytes_p0      q261011-171409-5r4x   ok      3903 s
+decode_boundary_bytes_p1      q261011-171410-pv1t   ok      3261 s
+decode_boundary_bytes_p4      q261011-171413-rgz1   ok      3261 s
+decode_boundary_bytes_p2      q261011-171410-4y96   STILL RUNNING at write time (started 18:03:59 UTC)
+decode_boundary_bytes_p3      q261011-171411-q1rq   STILL RUNNING at write time (started 18:04:04 UTC)
+decode_boundary_bytes_p5      q261011-171414-ahbz   STILL RUNNING at write time (started 18:08:15 UTC)
+decode_boundary_bytes_p6      q261011-171414-lisy   STILL RUNNING at write time (started 18:11:25 UTC)
+decode_boundary_bytes_p7      q261011-171415-0kv7   STILL RUNNING at write time (started 18:11:27 UTC)
+12 of 17 pass, 0 fail, 0 UB reported; 5 boundary-byte parts unfinished (fetch with: cloud-box tooling/q logs <job>).

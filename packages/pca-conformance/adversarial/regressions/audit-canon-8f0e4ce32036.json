@@ -1,0 +1,9 @@
+{
+ "name": "audit-canon-8f0e4ce32036",
+ "kind": "canon",
+ "raw": "\"plain string with \\\"escapes\\\" and \\\\ backslash\"\"plain str",
+ "found": {
+  "by": "pca-audit structure-aware mutator",
+  "seed": 20261009
+ }
+}

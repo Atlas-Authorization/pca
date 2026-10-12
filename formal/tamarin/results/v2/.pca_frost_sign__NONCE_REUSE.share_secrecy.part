@@ -1,0 +1,2 @@
+  share_secrecy (all-traces): falsified - found trace (10 steps)
+# wall=40s heuristic=c tamarin-prover 1.12.0

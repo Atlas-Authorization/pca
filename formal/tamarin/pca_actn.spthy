@@ -1,0 +1,279 @@
+/*
+  PCA -- PCActn verification flow (symbolic Dolev-Yao model, Tamarin).
+
+  Models packages/pca/src/pcactn.ts verifyPCActnCore + capability.ts verifyChain + replay.ts guardPCActnReplay.
+
+  Entities
+    * Principal P (trust anchor of the verifier), delegates/agents with their own keys.
+    * A capability is  <body, sign(body, issuerKey)>  with  body = <'cap', parentLink, issuer, holder, caveat>,
+      parentLink = 'none' for the root grant, else h(parent capability) (capability.ts capHash).
+      The caveat is a verb pin ('any' = unrestricted).  The real wire carries the CUMULATIVE caveat list and
+      checks the prefix rule; here every hop carries only the caveat it ADDS and the verifier conjoins them
+      along the chain (equivalent abstraction; the prefix/append-only rule itself is machine-checked in Lean,
+      formal/pca-lean/PcaProof/Attenuation.lean).
+    * A PCActn action is  act = <'act', aud, verb, res, grant_ref, ctr, nonce, exp>  signed by the LEAF holder.
+
+  Verifier (pcactn.ts normative order): audience, validity(exp), cap_chain (every hop signed by its issuer,
+  issuer == previous holder, parent link = hash of parent, root issuer == trust anchor), grant_ref_bound
+  (grant_ref == id of ROOT capability), leaf_signature, then the replay guard (one-time nonce key and
+  strictly-increasing counter stream, both keyed on aud, grant_ref, leaf holder).
+
+  Attack-variant switches (pass with  -D=NAME ):
+    NO_GREF_CHECK    drop the grant_ref_bound check
+    NO_ANCESTOR_CAV  evaluate only the LEAF hop's caveat (ancestors' caveats ignored)
+    NO_AUD_CHECK     drop the audience check
+    NO_EXPIRY_CHECK  drop the validity-window check
+    NO_LEAF_SIG      drop the leaf-signature check
+  With no switch the model is the shipped verifier.
+
+  Modelling conventions: the adversary is Dolev-Yao (controls the network, can Reveal any long-term key);
+  honest agents sign ANY action they are asked to (a prompt-injected agent: worst case for the agent role);
+  the one-time-use store is modelled by the standard 'Once' restriction (atomic consumeOnce / advance:
+  strictly-increasing counters imply each counter value at most once per stream) -- the store INVARIANT is
+  proved in Lean, not here.  Time: expiry is an ordering restriction (AXIOM-LEVEL: the lemma no_accept_after_expiry follows from it; the NO_EXPIRY_CHECK variant shows the check is necessary).
+*/
+theory PCA_Actn
+begin
+
+builtins: signing, hashing
+
+// ---- keys ------------------------------------------------------------------------------------
+rule Gen_Key:
+  [ Fr(~ltk) ] --[ KeyGen(pk(~ltk)) ]-> [ !Ltk(pk(~ltk), ~ltk), Out(pk(~ltk)) ]
+
+rule Reveal:
+  [ !Ltk(pkx, ltk) ] --[ Reveal(pkx) ]-> [ Out(ltk) ]
+
+// ---- time ------------------------------------------------------------------------------------
+// Time: validity windows are epochs the clock passes through.  The verifier's `now <= exp` check is the
+// ORDERING restriction ChkTime_R below (Tamarin has no clocks); dropping it is the NO_EXPIRY_CHECK variant.
+rule Tick:
+  [ Fr(~e) ] --[ Tick(~e) ]-> [ !Epoch(~e), Out(~e) ]
+
+rule Expire:
+  [ !Epoch(e) ] --[ Expired(e) ]-> [ ]
+
+#ifdef NO_EXPIRY_CHECK
+#else
+restriction ChkTime_R: "All e #i #j. AcceptTime(e) @ i & Expired(e) @ j ==> #i < #j"
+#endif
+
+// ---- verifier configuration: audience + trust anchor -----------------------------------------
+rule Verifier_Setup:
+  [ !Ltk(pkT, ltkT) ] --[ Trust($aud, pkT) ]-> [ !VCfg($aud, pkT) ]
+
+// ---- principal issues the ROOT grant (capability.ts issueGrant) -----------------------------
+rule Principal_Grant:
+  let body = <'cap', 'none', pk(ltkP), pkH, $cv>
+      cap  = <body, sign(body, ltkP)>
+  in
+  [ !Ltk(pk(ltkP), ltkP), !Ltk(pkH, ltkH) ]
+  --[ Granted(pk(ltkP), pkH, $cv, h(cap)) ]->
+  [ Out(cap) ]
+
+// ---- honest delegation (capability.ts delegate / attenuate) ----------------------------------
+rule Delegate:
+  let pbody = <'cap', ppar, piss, pk(ltkD), pcv>
+      pcap  = <pbody, psg>
+      body  = <'cap', h(pcap), pk(ltkD), pkE, $cv>
+      cap   = <body, sign(body, ltkD)>
+  in
+  [ !Ltk(pk(ltkD), ltkD), In(pcap), In(pkE) ]
+  --[ Eq(verify(psg, pbody, piss), true), HonestDelegated(h(pcap), h(cap), $cv) ]->
+  [ Out(cap) ]
+
+// ---- honest agent signs whatever it is asked to (worst case: prompt-injected) -------------------
+rule Agent_Act:
+  let act = <'act', aud, verb, res, gref, ctr, nonce, exp>
+  in
+  [ !Ltk(pk(ltkH), ltkH), In(<chain, act>) ]
+  --[ AgentSigned(pk(ltkH), aud, nonce, ctr, verb) ]->
+  [ Out(<chain, act, sign(act, ltkH)>) ]
+
+// ---- verifier: the whole chain walk leaf -> root in ONE step, for chains of depth 1, 2 and 3 --------
+// (bounded depth: Tamarin cannot prove the unbounded recursive walk automatically; arbitrary-length
+//  attenuation is proved in Lean, formal/pca-lean/PcaProof/Attenuation.lean)
+rule Verify_Depth1:
+  let
+      b1 = <'cap', par1, iss1, hol1, cv1>
+      c1 = <b1, sg1>
+      act = <'act', aaud, verb, res, gref, ctr, nonce, exp>
+  in
+  [ In(<<c1, 'end'>, act, asig>), !VCfg(vaud, pkT) ]
+  --[ ChkLeafSig(verify(asig, act, hol1)),
+      ChkAud(aaud, vaud),
+      Eq(verify(sg1, b1, iss1), true),
+      ChkCav('leaf', cv1, verb),
+      HopWalk(h(c1), verb),
+      Eq(par1, 'none'),
+      Eq(iss1, pkT),
+      ChkGref(gref, h(c1)),
+      Consume(<'n', vaud, gref, hol1, nonce>),
+      Advance(<'c', vaud, gref, hol1>, ctr),
+      AcceptTime(exp),
+      Accept(vaud, aaud, h(c1), hol1, nonce, ctr, verb, iss1, exp) ]->
+  [ ]
+
+
+rule Verify_Depth2:
+  let
+      b1 = <'cap', par1, iss1, hol1, cv1>
+      c1 = <b1, sg1>
+      b2 = <'cap', par2, iss2, hol2, cv2>
+      c2 = <b2, sg2>
+      act = <'act', aaud, verb, res, gref, ctr, nonce, exp>
+  in
+  [ In(<<c1, <c2, 'end'>>, act, asig>), !VCfg(vaud, pkT) ]
+  --[ ChkLeafSig(verify(asig, act, hol1)),
+      ChkAud(aaud, vaud),
+      Eq(verify(sg1, b1, iss1), true),
+      ChkCav('leaf', cv1, verb),
+      HopWalk(h(c1), verb),
+      Eq(par1, h(c2)),
+      Eq(iss1, hol2),
+      Eq(verify(sg2, b2, iss2), true),
+      ChkCav('anc', cv2, verb),
+      HopWalk(h(c2), verb),
+      Eq(par2, 'none'),
+      Eq(iss2, pkT),
+      ChkGref(gref, h(c2)),
+      Consume(<'n', vaud, gref, hol1, nonce>),
+      Advance(<'c', vaud, gref, hol1>, ctr),
+      AcceptTime(exp),
+      Accept(vaud, aaud, h(c2), hol1, nonce, ctr, verb, iss2, exp) ]->
+  [ ]
+
+
+rule Verify_Depth3:
+  let
+      b1 = <'cap', par1, iss1, hol1, cv1>
+      c1 = <b1, sg1>
+      b2 = <'cap', par2, iss2, hol2, cv2>
+      c2 = <b2, sg2>
+      b3 = <'cap', par3, iss3, hol3, cv3>
+      c3 = <b3, sg3>
+      act = <'act', aaud, verb, res, gref, ctr, nonce, exp>
+  in
+  [ In(<<c1, <c2, <c3, 'end'>>>, act, asig>), !VCfg(vaud, pkT) ]
+  --[ ChkLeafSig(verify(asig, act, hol1)),
+      ChkAud(aaud, vaud),
+      Eq(verify(sg1, b1, iss1), true),
+      ChkCav('leaf', cv1, verb),
+      HopWalk(h(c1), verb),
+      Eq(par1, h(c2)),
+      Eq(iss1, hol2),
+      Eq(verify(sg2, b2, iss2), true),
+      ChkCav('anc', cv2, verb),
+      HopWalk(h(c2), verb),
+      Eq(par2, h(c3)),
+      Eq(iss2, hol3),
+      Eq(verify(sg3, b3, iss3), true),
+      ChkCav('anc', cv3, verb),
+      HopWalk(h(c3), verb),
+      Eq(par3, 'none'),
+      Eq(iss3, pkT),
+      ChkGref(gref, h(c3)),
+      Consume(<'n', vaud, gref, hol1, nonce>),
+      Advance(<'c', vaud, gref, hol1>, ctr),
+      AcceptTime(exp),
+      Accept(vaud, aaud, h(c3), hol1, nonce, ctr, verb, iss3, exp) ]->
+  [ ]
+
+
+// ---- restrictions ----------------------------------------------------------------------------
+restriction Equality:   "All x y #i. Eq(x, y) @ i ==> x = y"
+#ifdef NO_LEAF_SIG
+#else
+restriction ChkLeafSig_R: "All x #i. ChkLeafSig(x) @ i ==> x = true"
+#endif
+#ifdef NO_AUD_CHECK
+#else
+restriction ChkAud_R: "All a b #i. ChkAud(a, b) @ i ==> a = b"
+#endif
+#ifdef NO_GREF_CHECK
+#else
+restriction ChkGref_R: "All a b #i. ChkGref(a, b) @ i ==> a = b"
+#endif
+// every hop's caveat must permit the verb; NO_ANCESTOR_CAV holds only the LEAF hop to its caveat
+#ifdef NO_ANCESTOR_CAV
+restriction ChkCav_R:
+  "All pos cv v #i. ChkCav(pos, cv, v) @ i ==> (not (pos = 'leaf')) | (cv = v) | (cv = 'any')"
+#else
+restriction ChkCav_R:
+  "All pos cv v #i. ChkCav(pos, cv, v) @ i ==> (cv = v) | (cv = 'any')"
+#endif
+// atomic one-time-use store (replay.ts consumeOnce) and strictly-increasing counter stream (advance)
+restriction OnceNonce:   "All k #i #j. Consume(k) @ i & Consume(k) @ j ==> #i = #j"
+restriction OnceCounter: "All s c #i #j. Advance(s, c) @ i & Advance(s, c) @ j ==> #i = #j"
+
+// ---- sanity: the honest flows are executable (so the proofs are not vacuous) -------------------
+lemma executable_root_grant:
+  exists-trace
+  "Ex vaud rid lhol n c v iss e #i. Accept(vaud, vaud, rid, lhol, n, c, v, iss, e) @ i
+     & (All x #r. Reveal(x) @ r ==> F)"
+
+lemma executable_delegation_issued:
+  exists-trace
+  "Ex hp hc cv1 #d. HonestDelegated(hp, hc, cv1) @ d"
+
+lemma executable_delegated:
+  exists-trace
+  "Ex vaud rid lhol n c v iss e hp hc cv1 #i #d #w. Accept(vaud, vaud, rid, lhol, n, c, v, iss, e) @ i
+     & HonestDelegated(hp, hc, cv1) @ d & HopWalk(hc, v) @ w
+     & (All x #r. Reveal(x) @ r ==> F)"
+
+// ---- LEMMA 1: authorization -- every accepted action traces to a principal-signed grant ---------
+lemma authorization:
+  "All vaud aaud rid lhol n c v iss e #i.
+      Accept(vaud, aaud, rid, lhol, n, c, v, iss, e) @ i
+      ==> (Ex pkH cv #g. Granted(iss, pkH, cv, rid) @ g & #g < #i)
+        | (Ex #r. Reveal(iss) @ r)"
+
+// leaf signature: the action was signed by the leaf holder (or its key is compromised)
+lemma leaf_signature_authenticity:
+  "All vaud aaud rid lhol n c v iss e #i #k.
+      Accept(vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & KeyGen(lhol) @ k
+      ==> (Ex #s. AgentSigned(lhol, aaud, n, c, v) @ s & #s < #i)
+        | (Ex #r. Reveal(lhol) @ r)"
+
+// ---- LEMMA 2: attenuation -- authority never widens along delegation ---------------------------
+// Whatever the (possibly compromised) delegates append, an accepted verb is permitted by the ROOT caveat
+// issued by an uncompromised principal ...
+lemma attenuation_root:
+  "All vaud aaud rid lhol n c v iss e pkH cv0 #i #g.
+      Accept(vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & Granted(iss, pkH, cv0, rid) @ g
+      ==> (cv0 = v) | (cv0 = 'any') | (Ex #r. Reveal(iss) @ r)"
+
+// ... and by the caveat of every uncompromised honest delegator's hop that the accepted chain passes through.
+lemma attenuation_hop:
+  "All vaud aaud rid lhol n c v iss e hp hc cv1 #i #d #w.
+      Accept(vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & HonestDelegated(hp, hc, cv1) @ d
+      & HopWalk(hc, v) @ w
+      ==> (cv1 = v) | (cv1 = 'any')"
+
+// ---- LEMMA 3: replay-freedom ------------------------------------------------------------------
+// per (audience, ROOT grant id, leaf holder, nonce) an action is accepted at most once
+lemma replay_freedom_nonce:
+  "All vaud a1 a2 rid lhol n c1 c2 v1 v2 iss1 iss2 e1 e2 #i #j.
+      Accept(vaud, a1, rid, lhol, n, c1, v1, iss1, e1) @ i
+    & Accept(vaud, a2, rid, lhol, n, c2, v2, iss2, e2) @ j
+      ==> #i = #j"
+
+// per (audience, ROOT grant id, leaf holder) a counter value is accepted at most once
+lemma replay_freedom_counter:
+  "All vaud a1 a2 rid lhol n1 n2 c v1 v2 iss1 iss2 e1 e2 #i #j.
+      Accept(vaud, a1, rid, lhol, n1, c, v1, iss1, e1) @ i
+    & Accept(vaud, a2, rid, lhol, n2, c, v2, iss2, e2) @ j
+      ==> #i = #j"
+
+// ---- LEMMA 4: audience binding ----------------------------------------------------------------
+lemma audience_binding:
+  "All vaud aaud rid lhol n c v iss e #i.
+      Accept(vaud, aaud, rid, lhol, n, c, v, iss, e) @ i ==> vaud = aaud"
+
+// ---- LEMMA 5: expiry --------------------------------------------------------------------------
+lemma no_accept_after_expiry:
+  "All vaud aaud rid lhol n c v iss e #i #j.
+      Accept(vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & Expired(e) @ j ==> #i < #j"
+
+end

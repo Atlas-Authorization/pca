@@ -1,0 +1,9 @@
+pg-async-revisit-kill9 pg-onconflict chaos=restart SYNC=off SLICE=2ms REVISIT=30000 CHECK_TIMEOUT=20s expect=fail got=fail OK kills=6 | CHECK files=3 ops=2713994 (true=78851 false=2502700 unknown=132443 of-which-pending=0) keys=78815 checked=78775 NON-LINEARIZABLE=40 timeouts=0 torn-lines=0 pruned-trivial=2502328 searched=211666 exact-fallback-resolved=0
+pg-sync-revisit-kill9 pg-onconflict chaos=restart SYNC=on SLICE=2ms REVISIT=30000 CHECK_TIMEOUT=20s expect=pass got=pass OK kills=6 | CHECK files=3 ops=1866028 (true=78336 false=1675171 unknown=112521 of-which-pending=0) keys=78362 checked=78362 NON-LINEARIZABLE=0 timeouts=0 torn-lines=0 pruned-trivial=1674712 searched=191316 exact-fallback-resolved=0
+pg-async-counter-revisit-kill9 pg-updatewhere chaos=restart SYNC=off SLICE=2ms REVISIT=30000 CHECK_TIMEOUT=20s expect=fail got=fail OK kills=6 | CHECK files=3 ops=2550539 (true=271470 false=2278493 unknown=576 of-which-pending=0) keys=78616 checked=78600 NON-LINEARIZABLE=32 timeouts=0 torn-lines=0 pruned-trivial=2278232 searched=272307 exact-fallback-resolved=0
+== out/recheck-bad-consume.txt
+CHECK files=3 ops=3403266 (true=226519 false=3176747 unknown=0 of-which-pending=0) keys=26670 checked=450 NON-LINEARIZABLE=26220 timeouts=0 torn-lines=0 pruned-trivial=2886293 searched=516973 exact-fallback-resolved=0
+== out/recheck-pg-fastpath.txt
+CHECK files=3 ops=2957434 (true=382682 false=2573889 unknown=863 of-which-pending=0) keys=1 checked=1 NON-LINEARIZABLE=0 timeouts=0 torn-lines=0 pruned-trivial=1 searched=25 exact-fallback-resolved=0
+== out/recheck-redis-setnx.txt
+CHECK files=43 ops=5560327 (true=68783 false=5471116 unknown=20428 of-which-pending=2337) keys=2 checked=2 NON-LINEARIZABLE=0 timeouts=0 torn-lines=0 pruned-trivial=173 searched=66 exact-fallback-resolved=0

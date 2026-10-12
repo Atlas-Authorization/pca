@@ -1,0 +1,14 @@
+budget_shipped_b1                  expect=pass got=pass OK           4s  31549 gen 10448 distinct 
+budget_leaf_only_rootbound         expect=fail got=fail OK           1s  799 gen 387 distinct Error: Invariant RootBound is violated.
+budget_leaf_only_spenddebitsroot   expect=fail got=fail OK           1s  32 gen 31 distinct Error: Invariant SpendDebitsRoot is violated.
+budget_leaf_only_nodebound         expect=pass got=pass OK           1s  2239 gen 826 distinct 
+budget_nonatomic_rootbound         expect=fail got=fail OK           2s  72533 gen 25612 distinct Error: Invariant RootBound is violated.
+budget_nonatomic_nodebound         expect=fail got=fail OK           2s  21958 gen 7944 distinct Error: Invariant NodeBound is violated.
+budget_noparent_allocmonotone      expect=fail got=fail OK           1s  19 gen 11 distinct Error: Invariant AllocMonotone is violated.
+budget_noparent_rootbound          expect=pass got=pass OK           2s  86996 gen 26538 distinct 
+scope_shipped_c1                   expect=pass got=pass OK           2s  26592 gen 12124 distinct 
+scope_no_ancestor_res              expect=fail got=fail OK           1s  1025 gen 1025 distinct Error: Invariant ResourceNarrowing is violated.
+scope_no_ancestor_res_root         expect=fail got=fail OK           1s  2422 gen 1494 distinct Error: Invariant RootBoundsAction is violated.
+scope_no_ancestor_res_scope_ok     expect=pass got=pass OK           3s  98952 gen 23228 distinct 
+scope_no_ancestor_scope            expect=fail got=fail OK           1s  688 gen 688 distinct Error: Invariant ScopeNarrowing is violated.
+mismatches: 0

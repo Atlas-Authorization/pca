@@ -1,0 +1,74 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 111 and seed -867333907860927739 with 3 workers on 12 cores with 2731MB heap and 64MB offheap memory [pid: 1454025] (Linux 7.0.0-1011-gcp amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/replay-tla/tla/ReplayContract.tla
+Parsing file /tmp/tlc-239608189474626008/Integers.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-239608189474626008/FiniteSets.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-239608189474626008/Sequences.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-239608189474626008/_TLCTrace.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-239608189474626008/Naturals.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-239608189474626008/TLC.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-239608189474626008/TLCExt.tla (jar:file:/work/replay-tla/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module ReplayContract
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module ReplayContract
+Starting... (2026-10-10 21:22:35)
+Computing initial states...
+Computed 2 initial states...
+Computed 4 initial states...
+Computed 8 initial states...
+Computed 16 initial states...
+Finished computing initial states: 27 distinct states generated at 2026-10-10 21:22:35.
+Error: Invariant ExactlyOnce is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ store = (k1 :> -1 @@ k2 :> -1)
+/\ clog = <<>>
+/\ last = -1
+/\ off = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 2)
+/\ t = 0
+/\ acc = (k1 :> 0 @@ k2 :> 0)
+
+State 2: <Consume(s3,k1) line 47, col 3 to line 53, col 37 of module ReplayContract>
+/\ store = (k1 :> 1 @@ k2 :> -1)
+/\ clog = <<>>
+/\ last = -1
+/\ off = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 2)
+/\ t = 0
+/\ acc = (k1 :> 1 @@ k2 :> 0)
+
+State 3: <Tick line 42, col 9 to line 42, col 78 of module ReplayContract>
+/\ store = (k1 :> 1 @@ k2 :> -1)
+/\ clog = <<>>
+/\ last = -1
+/\ off = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 2)
+/\ t = 1
+/\ acc = (k1 :> 1 @@ k2 :> 0)
+
+State 4: <Tick line 42, col 9 to line 42, col 78 of module ReplayContract>
+/\ store = (k1 :> 1 @@ k2 :> -1)
+/\ clog = <<>>
+/\ last = -1
+/\ off = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 2)
+/\ t = 2
+/\ acc = (k1 :> 1 @@ k2 :> 0)
+
+State 5: <Consume(s1,k1) line 47, col 3 to line 53, col 37 of module ReplayContract>
+/\ store = (k1 :> 3 @@ k2 :> -1)
+/\ clog = <<>>
+/\ last = -1
+/\ off = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 2)
+/\ t = 2
+/\ acc = (k1 :> 2 @@ k2 :> 0)
+
+22555 states generated, 4227 distinct states found, 2553 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 01s at (2026-10-10 21:22:35)
+Trace exploration spec path: ./ReplayContract_TTrace_1791667354.tla

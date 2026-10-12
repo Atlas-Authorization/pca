@@ -1,0 +1,92 @@
+(* PCA -- attestation binding, ProVerif port of formal/tamarin/pca_attest.spthy (ProVerif 2.05, typed pi).
+   report_data = h((bindT, holder, grant, epoch, nonce)); honest approved enclave answers ANY nonce with a quote
+   binding ITS OWN holder/grant/epoch; a rogue enclave on genuine hardware signs arbitrary (m <> mApproved, report_data).
+   Variants (gen.sh): NOBIND_HOLDER NOBIND_GRANT NOBIND_EPOCH NOBIND_NONCE (field omitted from report_data on both
+   enclave and verifier side), SANITY (no key/TEE-root reveal). *)
+
+fun pk(bitstring): bitstring.
+fun sign(bitstring, bitstring): bitstring.
+fun verify(bitstring, bitstring, bitstring): bool
+  reduc forall m: bitstring, k: bitstring; verify(sign(m, k), m, pk(k)) = true.
+fun h(bitstring): bitstring.
+
+const quoteT, bindT, mApproved, dropped, revealtee: bitstring [data].
+
+free c: channel.
+table keys(bitstring, bitstring).
+table encl(bitstring, bitstring, bitstring).             (* provisioned approved enclaves: holder, grant, epoch *)
+table expects(bitstring, bitstring, bitstring, bitstring). (* verifier sessions: holder, grant, epoch, nonce *)
+
+event KeyGen(bitstring).
+event Reveal(bitstring).
+event RevealTEE(bitstring).
+event Provision(bitstring, bitstring, bitstring).
+event QuoteIssued(bitstring, bitstring, bitstring, bitstring).
+event NonceIssued(bitstring, bitstring, bitstring, bitstring).
+event Accepted(bitstring, bitstring, bitstring, bitstring, bitstring).
+
+(* attestation_binding *)
+(*Q:attestation_binding*) query pkH, g, e, n, m, p: bitstring; event(Accepted(pkH, g, e, n, m)) ==> event(QuoteIssued(pkH, g, e, n)) || event(RevealTEE(p)).
+(* sanity *)
+(*+SANITY*) (*Q:sanity1*) query pkH, g, e, n, m: bitstring; event(Accepted(pkH, g, e, n, m)).
+(*+SANITY*) (*Q:sanity2*) query pkH, g, e, n, m: bitstring; event(Accepted(pkH, g, e, n, m)) && event(QuoteIssued(pkH, g, e, n)).
+
+let KeyGenP() = new k: bitstring; insert keys(pk(k), k); event KeyGen(pk(k)); out(c, pk(k)).
+let RevealP() = in(c, p: bitstring); get keys(=p, k) in event Reveal(p); out(c, k).
+let RevealTee(tsk: bitstring) = in(c, =revealtee); event RevealTEE(pk(tsk)); out(c, tsk).
+
+let ProvisionP() =
+  in(c, (pkH: bitstring, g: bitstring, e: bitstring));
+  get keys(=pkH, l) in
+  event Provision(pkH, g, e);
+  insert encl(pkH, g, e).
+
+let EnclaveQuote(tsk: bitstring) =
+  in(c, n: bitstring);
+  get encl(pkH: bitstring, g: bitstring, e: bitstring) in
+  let ph = pkH in                                                          (*-NOBIND_HOLDER*)
+(*+NOBIND_HOLDER*) let ph = dropped in
+  let pg = g in                                                            (*-NOBIND_GRANT*)
+(*+NOBIND_GRANT*) let pg = dropped in
+  let pe = e in                                                            (*-NOBIND_EPOCH*)
+(*+NOBIND_EPOCH*) let pe = dropped in
+  let pn = n in                                                            (*-NOBIND_NONCE*)
+(*+NOBIND_NONCE*) let pn = dropped in
+  let body = (quoteT, mApproved, h((bindT, ph, pg, pe, pn))) in
+  event QuoteIssued(pkH, g, e, n);
+  out(c, (body, sign(body, tsk))).
+
+let RogueQuote(tsk: bitstring) =
+  in(c, (m: bitstring, rd: bitstring));
+  if m <> mApproved then
+  out(c, ((quoteT, m, rd), sign((quoteT, m, rd), tsk))).
+
+let IssueNonce() =
+  in(c, (pkH: bitstring, g: bitstring, e: bitstring));
+  new n: bitstring;
+  event NonceIssued(pkH, g, e, n);
+  insert expects(pkH, g, e, n);
+  out(c, n).
+
+let AcceptAtt(tsk: bitstring) =
+  get expects(pkH: bitstring, g: bitstring, e: bitstring, n: bitstring) in
+  in(c, (body: bitstring, sg: bitstring));
+  let ph = pkH in                                                          (*-NOBIND_HOLDER*)
+(*+NOBIND_HOLDER*) let ph = dropped in
+  let pg = g in                                                            (*-NOBIND_GRANT*)
+(*+NOBIND_GRANT*) let pg = dropped in
+  let pe = e in                                                            (*-NOBIND_EPOCH*)
+(*+NOBIND_EPOCH*) let pe = dropped in
+  let pn = n in                                                            (*-NOBIND_NONCE*)
+(*+NOBIND_NONCE*) let pn = dropped in
+  let (=quoteT, m: bitstring, =h((bindT, ph, pg, pe, pn))) = body in
+  if verify(sg, body, pk(tsk)) = true then
+  if m = mApproved then
+  event Accepted(pkH, g, e, n, m).
+
+process
+  new tsk: bitstring; out(c, pk(tsk));
+  ( !KeyGenP() | !ProvisionP() | !EnclaveQuote(tsk) | !RogueQuote(tsk) | !IssueNonce() | !AcceptAtt(tsk)
+  | !RevealP()                                                              (*-SANITY*)
+  | !RevealTee(tsk)                                                         (*-SANITY*)
+  )

@@ -1,0 +1,332 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "library",
+      "bom-ref": "root",
+      "name": "@atlasauth/pca-verified-core",
+      "version": "0.4.0",
+      "purl": "pkg:npm/%40atlasauth/pca-verified-core@0.4.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "pca:generator",
+        "value": "tools/pca-trustbase/gen-sbom.mjs"
+      },
+      {
+        "name": "pca:note",
+        "value": "deterministic: no timestamp; regenerate after any lockfile, .dfy or generated-JS change"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "file",
+      "bom-ref": "file:generated/pca_core.js",
+      "name": "packages/pca-verified-core/generated/pca_core.js",
+      "version": "0.4.0",
+      "scope": "required",
+      "description": "Dafny-compiled JavaScript shipped in the package",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "dbde5f2571178a6efa19dcf6bf21405644c30536c8d838e68820483743913c19"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40noble/curves@1.9.1",
+      "name": "@noble/curves",
+      "version": "1.9.1",
+      "scope": "required",
+      "purl": "pkg:npm/%40noble/curves@1.9.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "935d72671660fadfa05af05b22cc16d32a0996ef1c1ce0bb761ba7c0ece8587fe65c6062632478618ea10042bfdc452ce14a41f256b545f751a5e1ac147916b0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "pca:role",
+          "value": "cryptographic primitive trusted by the glue (not by the Dafny proofs)"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40noble/hashes@1.8.0",
+      "name": "@noble/hashes",
+      "version": "1.8.0",
+      "scope": "required",
+      "purl": "pkg:npm/%40noble/hashes@1.8.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8c2b3d95d77b370ce98170c87fa3f7f8dac787dfec0fa0907711f28d023e87feab0cda3cf32a41c71cf8e540ee647cfdaf7b4dcfb37f5489d256855db57108e0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "pca:role",
+          "value": "cryptographic primitive trusted by the glue (not by the Dafny proofs)"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40noble/post-quantum@0.4.1",
+      "name": "@noble/post-quantum",
+      "version": "0.4.1",
+      "scope": "required",
+      "purl": "pkg:npm/%40noble/post-quantum@0.4.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4d15e3be763d8c014d59bc4ec7ea4ab76d4136c08458a16331b20ac1dc7d0905c1b9d0da9e9636d047ce728a15ec322c452ffe31ff03f2eb6950f8df1ab43c7c"
+        }
+      ],
+      "properties": [
+        {
+          "name": "pca:role",
+          "value": "cryptographic primitive trusted by the glue (not by the Dafny proofs)"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/bignumber.js@9.3.1",
+      "name": "bignumber.js",
+      "version": "9.3.1",
+      "scope": "required",
+      "purl": "pkg:npm/bignumber.js@9.3.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "2a8d2e5f5e682144bbc09dd16f7d05b3a4a455b2e63c100a7659bbabdf9a93d6db21e15fd0cc2e06c415eb3efe5fbebcfdc1ec7e0f96972b03589726b618ec8d"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/fast-check@3.23.2",
+      "name": "fast-check",
+      "version": "3.23.2",
+      "scope": "excluded",
+      "purl": "pkg:npm/fast-check@3.23.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "879fb53b3cdf082dc47fb55bb4a75cbfbcecb2d510c140e5629513be3794b0902cb0f80b9fb4336dba0fb4be6ba34e0cab4acf3ac33397bab98486d1b36c03d4"
+        }
+      ],
+      "properties": [
+        {
+          "name": "pca:role",
+          "value": "dev/test only; not shipped"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/typescript@5.9.3",
+      "name": "typescript",
+      "version": "5.9.3",
+      "scope": "excluded",
+      "purl": "pkg:npm/typescript@5.9.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8e5d6f6733c38a72ebf5e52ddc9feded5e8580d130f508ef04f772b33f4a7d00c3e357d0ac2d98e2f290762694a454f86d795bd511e12e9a7cc2d9ba3394e04b"
+        }
+      ],
+      "properties": [
+        {
+          "name": "pca:role",
+          "value": "dev/test only; not shipped"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vitest@2.1.9",
+      "name": "vitest",
+      "version": "2.1.9",
+      "scope": "excluded",
+      "purl": "pkg:npm/vitest@2.1.9",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "31298f33d44462a0c6048f38dfd980e265a1579b0a9839412962186c0de545bd8f4c70021349a02b003cc90db1abdbf10d3ba4e223eb102040116d9aa055d8d1"
+        }
+      ],
+      "properties": [
+        {
+          "name": "pca:role",
+          "value": "dev/test only; not shipped"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "tool:dafny",
+      "name": "dafny",
+      "version": "4.11.0",
+      "scope": "excluded",
+      "description": "proof checker + JS compiler (build-time; trusted for soundness of the proofs and for the generated JS)",
+      "purl": "pkg:github/dafny-lang/dafny@v4.11.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a46a9ff7cdd720f7955854c78e95df13f4cfe6b80691b05f8654fe19e8267179"
+        }
+      ],
+      "properties": [
+        {
+          "name": "commit",
+          "value": "fcb2042d6d043a2634f0854338c08feeaaaf4ae2"
+        },
+        {
+          "name": "tree-sha256",
+          "value": "c58e71fb311b05963bbb72b5e86fcc83adae84771756ce97a3cdc220c569ccf8"
+        },
+        {
+          "name": "asset",
+          "value": "dafny-4.11.0-x64-ubuntu-22.04.zip"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "tool:z3",
+      "name": "z3",
+      "version": "4.12.1",
+      "scope": "excluded",
+      "description": "SMT solver bundled with Dafny, used for every proof (build-time)",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "22214e518eed9eec867d18b485e7b2570d09cbf1d94a47c8eec6ec4de0287eff"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "tool:boogie",
+      "name": "boogie",
+      "version": "3.5.5",
+      "scope": "excluded",
+      "description": "verification-condition generator bundled with Dafny (build-time)",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "51b260f8f0b8983d258dbb339eadc367b81014b764f4b52e8c910caecec9239b"
+        }
+      ]
+    },
+    {
+      "type": "framework",
+      "bom-ref": "tool:dotnet",
+      "name": ".NET runtime",
+      "version": "8.0.31",
+      "scope": "excluded",
+      "description": "runs Dafny (build-time); distro package, not byte-pinned"
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:formal/dafny/Common.dfy",
+      "name": "formal/dafny/Common.dfy",
+      "scope": "excluded",
+      "description": "proved source",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "92546231df0028abe13a4d06778b54200179883dd1ccef96affe62cd4172a009"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:formal/dafny/Chain.dfy",
+      "name": "formal/dafny/Chain.dfy",
+      "scope": "excluded",
+      "description": "proved source",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "25286538c1f43f677e1c8fe1e97fa7b4479c9b38b76b3bbf8ff67ff80cf6c746"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:formal/dafny/Caveats.dfy",
+      "name": "formal/dafny/Caveats.dfy",
+      "scope": "excluded",
+      "description": "proved source",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f6efb13a73f7a1a762bffbdf51188e4905ec7ceac3252580f319a81876ab31c7"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:formal/dafny/Threshold.dfy",
+      "name": "formal/dafny/Threshold.dfy",
+      "scope": "excluded",
+      "description": "proved source",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "32f990e1322a3380703fc67b303ead129b71cd3328218f28b3dcbd7b9d144e20"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:formal/dafny/Replay.dfy",
+      "name": "formal/dafny/Replay.dfy",
+      "scope": "excluded",
+      "description": "proved source",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a5dbeda48621a91b79cd294b729a59aa15a3d39e64da241e3af9815d9cb783ba"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:formal/dafny/Verdict.dfy",
+      "name": "formal/dafny/Verdict.dfy",
+      "scope": "excluded",
+      "description": "proved source",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "00abe6d1c24a8bc3b88ee44952239d26c6ec4c19f53035bbcdd8489d64f90e80"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "root",
+      "dependsOn": [
+        "pkg:npm/bignumber.js@9.3.1"
+      ]
+    }
+  ]
+}

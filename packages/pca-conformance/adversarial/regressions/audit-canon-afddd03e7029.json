@@ -1,0 +1,9 @@
+{
+ "name": "audit-canon-afddd03e7029",
+ "kind": "canon",
+ "raw": "{\"ver\":2,\"x\":{\"y\":[true,false,null,0,-lse,null,0,-0,1e2,1.5]},\"s\":ː\\�d83d\\ude00 \\u0000 /\"}\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000{\"ver\":2,\"x\":{\"y\":[true,false,null,0,-lse,null,0,-0,1e2,1",
+ "found": {
+  "by": "pca-audit structure-aware mutator",
+  "seed": 20261009
+ }
+}

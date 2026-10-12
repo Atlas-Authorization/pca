@@ -1,0 +1,224 @@
+/*
+  PCA -- scope (set) and resource (prefix) caveats: monotone narrowing of predicates along a delegation chain
+  of ARBITRARY length (symbolic Dolev-Yao model, Tamarin).  Models the verb_in / resource_in caveat families of
+  capability.ts / predicates.ts and the way the verifier conjoins every hop's caveats (chain walk as in
+  pca_actn_unbounded.spthy; effective authority = conjunction of the caveats along the chain, which is
+  formal/pca-lean/PcaProof/ChainLink.lean `walk_iff_eff`).
+
+  A hop caveat is the pair  cv = <scope, respat>:
+    scope    'any' or a finite SET of verbs, written as a list  <v1, <v2, ... 'nil'>>   (verb_in)
+    respat   a resource PATH-PREFIX pattern, written as a list <a1, <a2, ... 'nil'>>    (resource_in, prefix)
+  An action carries a verb and a resource path  <a1, <a2, ... >>.
+  Membership and prefix are defined INDUCTIVELY by rules deriving persistent facts (so Tamarin proves things about
+  sets and prefixes of any length), each rule step also emits an event that the lemmas use as derivation evidence:
+      MemEv(set, v)   v is a member of the scope set           Pre(p, r): p is a prefix of r
+  The verifier's per-hop check consumes !Mem(scope, verb) and !Pre(respat, res) in the premise of the walk step.
+
+  Variants (-D...):
+    NO_ANCESTOR_SCOPE  only the LEAF hop's scope is checked (ancestors' scope ignored)  -> scope narrowing breaks
+    NO_ANCESTOR_RES    only the LEAF hop's resource pattern is checked                 -> resource narrowing breaks
+*/
+theory PCA_Scope_Resource
+begin
+
+builtins: signing, hashing
+
+// ---- derived predicates ----------------------------------------------------------------------------------------
+rule Mem_Any:   [ In(v) ] --[ MemEv('any', v) ]-> [ !Mem('any', v) ]
+rule Mem_Here:  [ In(v), In(rest) ] --[ MemEv(<v, rest>, v) ]-> [ !Mem(<v, rest>, v) ]
+rule Mem_Later: [ !Mem(rest, v), In(x) ] --[ MemEv(<x, rest>, v) ]-> [ !Mem(<x, rest>, v) ]
+
+rule Pre_Nil:   [ In(r) ] --[ PreEv('nil', r) ]-> [ !Pre('nil', r) ]
+rule Pre_Cons:  [ !Pre(p, r), In(a) ] --[ PreEv(<a, p>, <a, r>) ]-> [ !Pre(<a, p>, <a, r>) ]
+
+// ---- keys, grants, delegation, agent (as pca_actn_unbounded.spthy, caveat = <scope, respat>) ---------------------------
+rule Gen_Key:
+  [ Fr(~ltk) ] --[ KeyGen(pk(~ltk)) ]-> [ !Ltk(pk(~ltk), ~ltk), Out(pk(~ltk)) ]
+
+rule Reveal:
+  [ !Ltk(pkx, ltk) ] --[ Reveal(pkx) ]-> [ Out(ltk) ]
+
+rule Verifier_Setup:
+  [ !Ltk(pkT, ltkT) ] --[ Trust(pkT) ]-> [ !VCfg(pkT) ]
+
+rule Principal_Grant:
+  let body = <'cap', 'none', pk(ltkP), pkH, <sc, rp>>
+      cap  = <body, sign(body, ltkP)>
+  in
+  [ !Ltk(pk(ltkP), ltkP), !Ltk(pkH, ltkH), In(sc), In(rp) ]
+  --[ Granted(pk(ltkP), pkH, sc, rp, h(cap)) ]->
+  [ Out(cap) ]
+
+rule Delegate:
+  let pbody = <'cap', ppar, piss, pk(ltkD), pcv>
+      pcap  = <pbody, psg>
+      body  = <'cap', h(pcap), pk(ltkD), pkE, <sc, rp>>
+      cap   = <body, sign(body, ltkD)>
+  in
+  [ !Ltk(pk(ltkD), ltkD), In(pcap), In(pkE), In(sc), In(rp) ]
+  --[ Eq(verify(psg, pbody, piss), true), HonestDelegated(h(pcap), h(cap), sc, rp) ]->
+  [ Out(cap) ]
+
+rule Agent_Act:
+  let act = <'act', verb, res>
+  in
+  [ !Ltk(pk(ltkH), ltkH), In(<chain, act>) ]
+  --[ AgentSigned(pk(ltkH), verb, res) ]->
+  [ Out(<chain, act, sign(act, ltkH)>) ]
+
+// ---- recursive verifier walk -----------------------------------------------------------------------------------------------
+rule Walk_Start:
+  let
+      b1  = <'cap', par1, iss1, hol1, <sc1, rp1>>
+      c1  = <b1, sg1>
+      act = <'act', verb, res>
+  in
+  [ In(<<c1, rest>, act, asig>), !VCfg(pkT), Fr(~wid),
+    !Mem(sc1, verb), !Pre(rp1, res) ]
+  --[ Eq(verify(asig, act, hol1), true),
+      Eq(verify(sg1, b1, iss1), true),
+      WalkStart(~wid, verb, res),
+      HopWalk(~wid, h(c1), sc1, rp1, verb, res, iss1) ]->
+  [ Walk(~wid, h(c1), rest), !Hop(~wid, h(c1), par1, iss1), !Ctx(~wid, <pkT, verb, res, hol1>) ]
+
+#ifdef NO_ANCESTOR_SCOPE
+rule Walk_Step:
+  let
+      b2 = <'cap', par2, iss2, hol2, <sc2, rp2>>
+      c2 = <b2, sg2>
+  in
+  [ Walk(wid, cid, <c2, rest>), !Hop(wid, cid, par, iss), !Ctx(wid, <pkT, verb, res, hol1>), !Pre(rp2, res) ]
+  --[ Eq(par, h(c2)), Eq(iss, hol2), Eq(verify(sg2, b2, iss2), true),
+      HopWalk(wid, h(c2), sc2, rp2, verb, res, iss2) ]->
+  [ Walk(wid, h(c2), rest), !Hop(wid, h(c2), par2, iss2) ]
+#endif
+#ifdef NO_ANCESTOR_RES
+rule Walk_Step:
+  let
+      b2 = <'cap', par2, iss2, hol2, <sc2, rp2>>
+      c2 = <b2, sg2>
+  in
+  [ Walk(wid, cid, <c2, rest>), !Hop(wid, cid, par, iss), !Ctx(wid, <pkT, verb, res, hol1>), !Mem(sc2, verb) ]
+  --[ Eq(par, h(c2)), Eq(iss, hol2), Eq(verify(sg2, b2, iss2), true),
+      HopWalk(wid, h(c2), sc2, rp2, verb, res, iss2) ]->
+  [ Walk(wid, h(c2), rest), !Hop(wid, h(c2), par2, iss2) ]
+#endif
+#ifdef ¬NO_ANCESTOR_SCOPE & ¬NO_ANCESTOR_RES
+rule Walk_Step:
+  let
+      b2 = <'cap', par2, iss2, hol2, <sc2, rp2>>
+      c2 = <b2, sg2>
+  in
+  [ Walk(wid, cid, <c2, rest>), !Hop(wid, cid, par, iss), !Ctx(wid, <pkT, verb, res, hol1>),
+    !Mem(sc2, verb), !Pre(rp2, res) ]
+  --[ Eq(par, h(c2)), Eq(iss, hol2), Eq(verify(sg2, b2, iss2), true),
+      HopWalk(wid, h(c2), sc2, rp2, verb, res, iss2) ]->
+  [ Walk(wid, h(c2), rest), !Hop(wid, h(c2), par2, iss2) ]
+#endif
+
+rule Walk_Finish:
+  [ Walk(wid, cid, 'end'), !Hop(wid, cid, 'none', iss), !Ctx(wid, <pkT, verb, res, hol1>) ]
+  --[ Eq(iss, pkT), Accept(wid, cid, hol1, verb, res, iss) ]->
+  [ ]
+
+restriction Equality: "All x y #i. Eq(x, y) @ i ==> x = y"
+
+// ---- sanity -------------------------------------------------------------------------------------------------------------------
+lemma executable_accept:
+  exists-trace
+  "Ex w rid lhol v r iss pkD sc rp #g #s #m #p #i. Granted(iss, pkD, sc, rp, rid) @ g & AgentSigned(lhol, v, r) @ s
+     & MemEv(sc, v) @ m & PreEv(rp, r) @ p & Accept(w, rid, lhol, v, r, iss) @ i & (All x #q. Reveal(x) @ q ==> F)"
+
+lemma executable_delegated:
+  exists-trace
+  "Ex w rid hc lhol v r iss pkD sc rp sc2 rp2 #g #d #s #m #p #m2 #p2 #i.
+      Granted(iss, pkD, sc, rp, rid) @ g & HonestDelegated(rid, hc, sc2, rp2) @ d & AgentSigned(lhol, v, r) @ s
+     & MemEv(sc, v) @ m & PreEv(rp, r) @ p & MemEv(sc2, v) @ m2 & PreEv(rp2, r) @ p2
+     & Accept(w, rid, lhol, v, r, iss) @ i & (All x #q. Reveal(x) @ q ==> F)"
+
+// a resource strictly deeper than the (non-empty) pattern: pattern [a] against the path a/b
+lemma executable_deeper_resource:
+  exists-trace
+  "Ex w rid lhol v iss pkD sc #g #s #m #p #i.
+      Granted(iss, pkD, sc, <'a', 'nil'>, rid) @ g & AgentSigned(lhol, v, <'a', <'b', 'nil'>>) @ s
+     & MemEv(sc, v) @ m & PreEv(<'a', 'nil'>, <'a', <'b', 'nil'>>) @ p
+     & Accept(w, rid, lhol, v, <'a', <'b', 'nil'>>, iss) @ i & (All x #q. Reveal(x) @ q ==> F)"
+
+// ---- LEMMAS -----------------------------------------------------------------------------------------------------------------------
+// every hop the accepted walk traversed has a scope set containing the accepted verb ...
+lemma scope_narrowing_all_hops:
+  "All w rid lhol v r iss h sc rp v2 r2 iss2 #i #x.
+      Accept(w, rid, lhol, v, r, iss) @ i & HopWalk(w, h, sc, rp, v2, r2, iss2) @ x
+      ==> v2 = v & (Ex #m. MemEv(sc, v) @ m)"
+
+// ... and a resource pattern that is a prefix of the accepted resource path
+lemma resource_narrowing_all_hops:
+  "All w rid lhol v r iss h sc rp v2 r2 iss2 #i #x.
+      Accept(w, rid, lhol, v, r, iss) @ i & HopWalk(w, h, sc, rp, v2, r2, iss2) @ x
+      ==> r2 = r & (Ex #m. PreEv(rp, r) @ m)"
+
+// in particular the principal's ROOT grant bounds the accepted action (unless the principal's key is revealed)
+lemma root_scope_bounds_action:
+  "All w rid lhol v r iss pkH sc rp #i #g.
+      Accept(w, rid, lhol, v, r, iss) @ i & Granted(iss, pkH, sc, rp, rid) @ g
+      ==> (Ex #m. MemEv(sc, v) @ m) | (Ex #q. Reveal(iss) @ q)"
+
+lemma root_resource_bounds_action:
+  "All w rid lhol v r iss pkH sc rp #i #g.
+      Accept(w, rid, lhol, v, r, iss) @ i & Granted(iss, pkH, sc, rp, rid) @ g
+      ==> (Ex #m. PreEv(rp, r) @ m) | (Ex #q. Reveal(iss) @ q)"
+
+// the honest delegators' caveats bound the action too
+lemma honest_hop_scope_bounds_action:
+  "All w rid lhol v r iss hp hc sc rp v2 r2 iss2 #i #d #x.
+      Accept(w, rid, lhol, v, r, iss) @ i & HonestDelegated(hp, hc, sc, rp) @ d
+      & HopWalk(w, hc, sc, rp, v2, r2, iss2) @ x
+      ==> Ex #m. MemEv(sc, v) @ m"
+
+// authorization: the root of any accepted chain was a principal grant (or the anchor key is revealed)
+lemma authorization:
+  "All w rid lhol v r iss #i. Accept(w, rid, lhol, v, r, iss) @ i
+     ==> (Ex pkH sc rp #g. Granted(iss, pkH, sc, rp, rid) @ g) | (Ex #q. Reveal(iss) @ q)"
+
+// ---- attack witnesses for the -D variants: a 2-hop chain whose ROOT grant excludes the accepted action ------------
+lemma attack_scope_escalation:
+  exists-trace
+  "Ex w rid hc lhol iss pkD rp sc2 rp2 r #g #d #i.
+      Granted(iss, pkD, <'read', 'nil'>, rp, rid) @ g & HonestDelegated(rid, hc, sc2, rp2) @ d
+    & Accept(w, rid, lhol, 'write', r, iss) @ i & (All x #q. Reveal(x) @ q ==> F)"
+lemma attack_resource_escalation:
+  exists-trace
+  "Ex w rid hc lhol iss pkD sc sc2 rp2 v #g #d #i.
+      Granted(iss, pkD, sc, <'a', 'nil'>, rid) @ g & HonestDelegated(rid, hc, sc2, rp2) @ d
+    & Accept(w, rid, lhol, v, <'b', 'nil'>, iss) @ i & (All x #q. Reveal(x) @ q ==> F)"
+// bounded witness: one key-pair grant, one honest delegation, one walk, one agent signature
+lemma attack_resource_bounded:
+  exists-trace
+  "Ex w rid hc lhol iss pkD sc sc2 rp2 v #g #d #s #i.
+      Granted(iss, pkD, sc, <'a', 'nil'>, rid) @ g & HonestDelegated(rid, hc, sc2, rp2) @ d
+    & AgentSigned(lhol, v, <'b', 'nil'>) @ s
+    & Accept(w, rid, lhol, v, <'b', 'nil'>, iss) @ i & (All x #q. Reveal(x) @ q ==> F)
+    & (All a b c e f #q. Granted(a, b, c, e, f) @ q ==> #q = #g)
+    & (All a b c e #q. HonestDelegated(a, b, c, e) @ q ==> #q = #d)
+    & (All a b c #q. AgentSigned(a, b, c) @ q ==> #q = #s)
+    & (All w2 v2 r2 #q. WalkStart(w2, v2, r2) @ q ==> w2 = w)"
+// pinned witness (closure round 2): the 2-hop chain TLC found (scope_no_ancestor_res), every caveat fixed
+// (scope {read}, root pattern [a], delegated pattern [b], action read on [b]), the trace restricted to one grant, one
+// delegation, one agent signature and one walk, no reveals.  Under -DNO_ANCESTOR_RES a found trace is the attack;
+// on the shipped verifier "no trace found" is the control at the same pin.
+lemma attack_resource_pinned:
+  exists-trace
+  "Ex w rid hc lhol iss pkD #g #d #s #ws #h1 #h2 #i.
+      Granted(iss, pkD, <'read', 'nil'>, <'a', 'nil'>, rid) @ g
+    & HonestDelegated(rid, hc, <'read', 'nil'>, <'b', 'nil'>) @ d
+    & AgentSigned(lhol, 'read', <'b', 'nil'>) @ s
+    & WalkStart(w, 'read', <'b', 'nil'>) @ ws
+    & HopWalk(w, hc, <'read', 'nil'>, <'b', 'nil'>, 'read', <'b', 'nil'>, pkD) @ h1
+    & HopWalk(w, rid, <'read', 'nil'>, <'a', 'nil'>, 'read', <'b', 'nil'>, iss) @ h2
+    & Accept(w, rid, lhol, 'read', <'b', 'nil'>, iss) @ i
+    & (All x #q. Reveal(x) @ q ==> F)
+    & (All a1 a2 a3 a4 a5 #q. Granted(a1, a2, a3, a4, a5) @ q ==> #q = #g)
+    & (All a1 a2 a3 a4 #q. HonestDelegated(a1, a2, a3, a4) @ q ==> #q = #d)
+    & (All a1 a2 a3 #q. AgentSigned(a1, a2, a3) @ q ==> #q = #s)
+    & (All a1 a2 a3 #q. WalkStart(a1, a2, a3) @ q ==> #q = #ws)"
+end

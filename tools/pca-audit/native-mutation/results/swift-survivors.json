@@ -1,0 +1,666 @@
+[
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "1->2 => var r = [Int8](repeating: -2, count: 256)",
+  "line": "var r = [Int8](repeating: -1, count: 256)",
+  "occurrence": 1,
+  "lineno": 10
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "1->0 => var r = [Int8](repeating: -0, count: 256)",
+  "line": "var r = [Int8](repeating: -1, count: 256)",
+  "occurrence": 1,
+  "lineno": 10
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "256->257 => var r = [Int8](repeating: -1, count: 257)",
+  "line": "var r = [Int8](repeating: -1, count: 256)",
+  "occurrence": 1,
+  "lineno": 10
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "256->255 => var r = [Int8](repeating: -1, count: 255)",
+  "line": "var r = [Int8](repeating: -1, count: 256)",
+  "occurrence": 1,
+  "lineno": 10
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "+->- => out.reserveCapacity((bytes.count * 4 - 2) / 3)",
+  "line": "out.reserveCapacity((bytes.count * 4 + 2) / 3)",
+  "occurrence": 1,
+  "lineno": 17
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "*->/ => out.reserveCapacity((bytes.count / 4 + 2) / 3)",
+  "line": "out.reserveCapacity((bytes.count * 4 + 2) / 3)",
+  "occurrence": 1,
+  "lineno": 17
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "4->5 => out.reserveCapacity((bytes.count * 5 + 2) / 3)",
+  "line": "out.reserveCapacity((bytes.count * 4 + 2) / 3)",
+  "occurrence": 1,
+  "lineno": 17
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "4->3 => out.reserveCapacity((bytes.count * 3 + 2) / 3)",
+  "line": "out.reserveCapacity((bytes.count * 4 + 2) / 3)",
+  "occurrence": 1,
+  "lineno": 17
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "2->3 => out.reserveCapacity((bytes.count * 4 + 3) / 3)",
+  "line": "out.reserveCapacity((bytes.count * 4 + 2) / 3)",
+  "occurrence": 1,
+  "lineno": 17
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "2->1 => out.reserveCapacity((bytes.count * 4 + 1) / 3)",
+  "line": "out.reserveCapacity((bytes.count * 4 + 2) / 3)",
+  "occurrence": 1,
+  "lineno": 17
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "3->4 => out.reserveCapacity((bytes.count * 4 + 2) / 4)",
+  "line": "out.reserveCapacity((bytes.count * 4 + 2) / 3)",
+  "occurrence": 1,
+  "lineno": 17
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "3->2 => out.reserveCapacity((bytes.count * 4 + 2) / 2)",
+  "line": "out.reserveCapacity((bytes.count * 4 + 2) / 3)",
+  "occurrence": 1,
+  "lineno": 17
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "0->1 => let b1 = i + 1 < bytes.count ? UInt32(bytes[i + 1]) : 1",
+  "line": "let b1 = i + 1 < bytes.count ? UInt32(bytes[i + 1]) : 0",
+  "occurrence": 1,
+  "lineno": 21
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "0->1 => let b2 = i + 2 < bytes.count ? UInt32(bytes[i + 2]) : 1",
+  "line": "let b2 = i + 2 < bytes.count ? UInt32(bytes[i + 2]) : 0",
+  "occurrence": 1,
+  "lineno": 22
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "0->1 => var acc: UInt32 = 1",
+  "line": "var acc: UInt32 = 0",
+  "occurrence": 1,
+  "lineno": 42
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Base64URLStrict.swift",
+  "mutant": "8->7 => if bits >= 7 {",
+  "line": "if bits >= 8 {",
+  "occurrence": 1,
+  "lineno": 47
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "3->4 => var l = [UInt32](repeating: 0, count: (bytes.count + 4) / 4)",
+  "line": "var l = [UInt32](repeating: 0, count: (bytes.count + 3) / 4)",
+  "occurrence": 1,
+  "lineno": 30
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "4->3 => var l = [UInt32](repeating: 0, count: (bytes.count + 3) / 3)",
+  "line": "var l = [UInt32](repeating: 0, count: (bytes.count + 3) / 4)",
+  "occurrence": 1,
+  "lineno": 30
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "9->10 => precondition(d <= 10, \"BigUInt(decimal:) non-digit\")",
+  "line": "precondition(d <= 9, \"BigUInt(decimal:) non-digit\")",
+  "occurrence": 1,
+  "lineno": 43
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "<-><= => if a.limbs.count != b.limbs.count { return a.limbs.count <= b.limbs.count }",
+  "line": "if a.limbs.count != b.limbs.count { return a.limbs.count < b.limbs.count }",
+  "occurrence": 1,
+  "lineno": 67
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "<-><= => if a.limbs[i] != b.limbs[i] { return a.limbs[i] <= b.limbs[i] }",
+  "line": "if a.limbs[i] != b.limbs[i] { return a.limbs[i] < b.limbs[i] }",
+  "occurrence": 1,
+  "lineno": 70
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "+->- => var out = [UInt32](); out.reserveCapacity(n - 1)",
+  "line": "var out = [UInt32](); out.reserveCapacity(n + 1)",
+  "occurrence": 1,
+  "lineno": 78
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "1->2 => var out = [UInt32](); out.reserveCapacity(n + 2)",
+  "line": "var out = [UInt32](); out.reserveCapacity(n + 1)",
+  "occurrence": 1,
+  "lineno": 78
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "1->0 => var out = [UInt32](); out.reserveCapacity(n + 0)",
+  "line": "var out = [UInt32](); out.reserveCapacity(n + 1)",
+  "occurrence": 1,
+  "lineno": 78
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "||->&& => if a.isZero && b.isZero { return BigUInt() }",
+  "line": "if a.isZero || b.isZero { return BigUInt() }",
+  "occurrence": 1,
+  "lineno": 107
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "||->&& => if a.isZero && bits == 0 { return a }",
+  "line": "if a.isZero || bits == 0 { return a }",
+  "occurrence": 1,
+  "lineno": 123
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/BigUInt.swift",
+  "mutant": "1->2 => var out = [UInt32](repeating: 0, count: a.limbs.count + limbShift + 2)",
+  "line": "var out = [UInt32](repeating: 0, count: a.limbs.count + limbShift + 1)",
+  "occurrence": 1,
+  "lineno": 126
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Strict.swift",
+  "mutant": "false->true => guard let key = try? Curve25519.Signing.PublicKey(rawRepresentation: Data(pk)) else { return true }",
+  "line": "guard let key = try? Curve25519.Signing.PublicKey(rawRepresentation: Data(pk)) else { return false }",
+  "occurrence": 1,
+  "lineno": 72
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "3->4 => var i = 4",
+  "line": "var i = 3",
+  "occurrence": 1,
+  "lineno": 27
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": ">->>= => while i >= 0 { if x[i] != P[i] { return x[i] >= P[i] }; i -= 1 }",
+  "line": "while i >= 0 { if x[i] != P[i] { return x[i] > P[i] }; i -= 1 }",
+  "occurrence": 1,
+  "lineno": 28
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "8->9 => var r = [UInt64](repeating: 0, count: 9)",
+  "line": "var r = [UInt64](repeating: 0, count: 8)",
+  "occurrence": 1,
+  "lineno": 71
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "255->254 => var i = 254",
+  "line": "var i = 255",
+  "occurrence": 1,
+  "lineno": 103
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "4->5 => var limbs = [UInt64](repeating: 0, count: 5)",
+  "line": "var limbs = [UInt64](repeating: 0, count: 4)",
+  "occurrence": 1,
+  "lineno": 134
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "3->2 => let sign = Int(limbs[2] >> 63)",
+  "line": "let sign = Int(limbs[3] >> 63)",
+  "occurrence": 1,
+  "lineno": 136
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "63->64 => let sign = Int(limbs[3] >> 64)",
+  "line": "let sign = Int(limbs[3] >> 63)",
+  "occurrence": 1,
+  "lineno": 136
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "63->62 => let sign = Int(limbs[3] >> 62)",
+  "line": "let sign = Int(limbs[3] >> 63)",
+  "occurrence": 1,
+  "lineno": 136
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "==->!= => if x.isZero && sign != 1 { return nil }",
+  "line": "if x.isZero && sign == 1 { return nil }",
+  "occurrence": 1,
+  "lineno": 151
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "1->2 => if x.isZero && sign == 2 { return nil }",
+  "line": "if x.isZero && sign == 1 { return nil }",
+  "occurrence": 1,
+  "lineno": 151
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "1->0 => if x.isZero && sign == 0 { return nil }",
+  "line": "if x.isZero && sign == 1 { return nil }",
+  "occurrence": 1,
+  "lineno": 151
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "!=->== => if Int(x.a0 & 1) == sign { x = fsub(zero, x) }",
+  "line": "if Int(x.a0 & 1) != sign { x = fsub(zero, x) }",
+  "occurrence": 1,
+  "lineno": 152
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "1->2 => if Int(x.a0 & 2) != sign { x = fsub(zero, x) }",
+  "line": "if Int(x.a0 & 1) != sign { x = fsub(zero, x) }",
+  "occurrence": 1,
+  "lineno": 152
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "1->0 => if Int(x.a0 & 0) != sign { x = fsub(zero, x) }",
+  "line": "if Int(x.a0 & 1) != sign { x = fsub(zero, x) }",
+  "occurrence": 1,
+  "lineno": 152
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "-->+ => var i = L.bitLength + 1",
+  "line": "var i = L.bitLength - 1",
+  "occurrence": 1,
+  "lineno": 170
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "1->0 => var i = L.bitLength - 0",
+  "line": "var i = L.bitLength - 1",
+  "occurrence": 1,
+  "lineno": 170
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": ">->>= => if cache.count >= 8192 { cache.removeAll() }",
+  "line": "if cache.count > 8192 { cache.removeAll() }",
+  "occurrence": 1,
+  "lineno": 179
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "8192->8193 => if cache.count > 8193 { cache.removeAll() }",
+  "line": "if cache.count > 8192 { cache.removeAll() }",
+  "occurrence": 1,
+  "lineno": 179
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Ed25519Torsion.swift",
+  "mutant": "8192->8191 => if cache.count > 8191 { cache.removeAll() }",
+  "line": "if cache.count > 8192 { cache.removeAll() }",
+  "occurrence": 1,
+  "lineno": 179
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Merkle.swift",
+  "mutant": "1->0 => if size < 0 || index < 0 || index >= size { return false }",
+  "line": "if size < 1 || index < 0 || index >= size { return false }",
+  "occurrence": 1,
+  "lineno": 59
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/PCActn.swift",
+  "mutant": "true->false => let hasAud = !(aud?.isEmpty ?? false)",
+  "line": "let hasAud = !(aud?.isEmpty ?? true)",
+  "occurrence": 1,
+  "lineno": 85
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/PCActn.swift",
+  "mutant": "false->true => record(\"audience\", aud.map { $0.unicodeScalars.elementsEqual(expected.unicodeScalars) } ?? true, \"aud does not match this resource server / instance\")",
+  "line": "record(\"audience\", aud.map { $0.unicodeScalars.elementsEqual(expected.unicodeScalars) } ?? false, \"aud does not match this resource server / instance\")",
+  "occurrence": 1,
+  "lineno": 93
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/PCActn.swift",
+  "mutant": "0->1 => let iat = p[\"iat\"]?.safeInt ?? 1",
+  "line": "let iat = p[\"iat\"]?.safeInt ?? 0",
+  "occurrence": 1,
+  "lineno": 97
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/PCActn.swift",
+  "mutant": "0->1 => let exp = p[\"exp\"]?.safeInt ?? 1",
+  "line": "let exp = p[\"exp\"]?.safeInt ?? 0",
+  "occurrence": 1,
+  "lineno": 98
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/PCActn.swift",
+  "mutant": "false->true => let planOk = Merkle.planLeaf(plan[\"node_id\"], action, cond).map { Merkle.verifyInclusion(root, proof, $0) } ?? true",
+  "line": "let planOk = Merkle.planLeaf(plan[\"node_id\"], action, cond).map { Merkle.verifyInclusion(root, proof, $0) } ?? false",
+  "occurrence": 1,
+  "lineno": 135
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/PCActn.swift",
+  "mutant": "false->true => let counterOk = (p[\"counter\"]?.safeInt).map { $0 >= 0 } ?? true",
+  "line": "let counterOk = (p[\"counter\"]?.safeInt).map { $0 >= 0 } ?? false",
+  "occurrence": 1,
+  "lineno": 156
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "<-><= => let neg = d <= 0",
+  "line": "let neg = d < 0",
+  "occurrence": 1,
+  "lineno": 68
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "<-><= => if a.rounded() == a && a <= 9_007_199_254_740_992.0 { // 2^53: representable integer, print as integer",
+  "line": "if a.rounded() == a && a < 9_007_199_254_740_992.0 { // 2^53: representable integer, print as integer",
+  "occurrence": 1,
+  "lineno": 70
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "0->1 => exp = Int(s[s.index(after: eIdx)...]) ?? 1",
+  "line": "exp = Int(s[s.index(after: eIdx)...]) ?? 0",
+  "occurrence": 1,
+  "lineno": 76
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": ">->>= => while digits.count >= 1 && digits.first == \"0\" { digits.removeFirst() }",
+  "line": "while digits.count > 1 && digits.first == \"0\" { digits.removeFirst() }",
+  "occurrence": 1,
+  "lineno": 87
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "1->2 => while digits.count > 2 && digits.first == \"0\" { digits.removeFirst() }",
+  "line": "while digits.count > 1 && digits.first == \"0\" { digits.removeFirst() }",
+  "occurrence": 1,
+  "lineno": 87
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "1->0 => while digits.count > 0 && digits.first == \"0\" { digits.removeFirst() }",
+  "line": "while digits.count > 1 && digits.first == \"0\" { digits.removeFirst() }",
+  "occurrence": 1,
+  "lineno": 87
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": ">->>= => while digits.count >= 1 && digits.last == \"0\" { digits.removeLast(); e10 += 1 }",
+  "line": "while digits.count > 1 && digits.last == \"0\" { digits.removeLast(); e10 += 1 }",
+  "occurrence": 1,
+  "lineno": 88
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "1->2 => while digits.count > 2 && digits.last == \"0\" { digits.removeLast(); e10 += 1 }",
+  "line": "while digits.count > 1 && digits.last == \"0\" { digits.removeLast(); e10 += 1 }",
+  "occurrence": 1,
+  "lineno": 88
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "1->0 => while digits.count > 0 && digits.last == \"0\" { digits.removeLast(); e10 += 1 }",
+  "line": "while digits.count > 1 && digits.last == \"0\" { digits.removeLast(); e10 += 1 }",
+  "occurrence": 1,
+  "lineno": 88
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "<-><= => let keys = o.keys.sorted { compareUtf8($0.s, $1.s) <= 0 }",
+  "line": "let keys = o.keys.sorted { compareUtf8($0.s, $1.s) < 0 }",
+  "occurrence": 1,
+  "lineno": 173
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictJSON.swift",
+  "mutant": "0->1 => let keys = o.keys.sorted { compareUtf8($0.s, $1.s) < 1 }",
+  "line": "let keys = o.keys.sorted { compareUtf8($0.s, $1.s) < 0 }",
+  "occurrence": 1,
+  "lineno": 173
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictParser.swift",
+  "mutant": "1->2 => if peek() == 0x2d { i += 2 }",
+  "line": "if peek() == 0x2d { i += 1 }",
+  "occurrence": 1,
+  "lineno": 128
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictParser.swift",
+  "mutant": "true->false => isFloat = false; i += 1",
+  "line": "isFloat = true; i += 1",
+  "occurrence": 1,
+  "lineno": 132
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictParser.swift",
+  "mutant": "1->2 => isFloat = true; i += 2",
+  "line": "isFloat = true; i += 1",
+  "occurrence": 1,
+  "lineno": 132
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictParser.swift",
+  "mutant": "true->false => isFloat = false; i += 1",
+  "line": "isFloat = true; i += 1",
+  "occurrence": 2,
+  "lineno": 136
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictParser.swift",
+  "mutant": "1->2 => isFloat = true; i += 2",
+  "line": "isFloat = true; i += 1",
+  "occurrence": 2,
+  "lineno": 136
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictParser.swift",
+  "mutant": "1->2 => if let s = peek(), s == 0x2b || s == 0x2d { i += 2 }",
+  "line": "if let s = peek(), s == 0x2b || s == 0x2d { i += 1 }",
+  "occurrence": 1,
+  "lineno": 137
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/StrictParser.swift",
+  "mutant": "16->17 => if abs.count > 17 { throw err(\"integer outside the safe range\") }",
+  "line": "if abs.count > 16 { throw err(\"integer outside the safe range\") }",
+  "occurrence": 1,
+  "lineno": 178
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "<-><= => return r != 0 ? r <= 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 0",
+  "line": "return r != 0 ? r < 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 0",
+  "occurrence": 1,
+  "lineno": 27
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "<-><= => return r != 0 ? r < 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) <= 0",
+  "line": "return r != 0 ? r < 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 0",
+  "occurrence": 1,
+  "lineno": 27
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "0->1 => return r != 1 ? r < 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 0",
+  "line": "return r != 0 ? r < 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 0",
+  "occurrence": 1,
+  "lineno": 27
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "0->1 => return r != 0 ? r < 1 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 0",
+  "line": "return r != 0 ? r < 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 0",
+  "occurrence": 1,
+  "lineno": 27
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "0->1 => return r != 0 ? r < 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 1",
+  "line": "return r != 0 ? r < 0 : Canonical.compareUtf8($0.publicKey, $1.publicKey) < 0",
+  "occurrence": 1,
+  "lineno": 27
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "false->true => guard let ssh = signerSetHashJSON(setArr) else { return true }",
+  "line": "guard let ssh = signerSetHashJSON(setArr) else { return false }",
+  "occurrence": 1,
+  "lineno": 77
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "<-><= => if c != 0 { return c <= 0 }",
+  "line": "if c != 0 { return c < 0 }",
+  "occurrence": 1,
+  "lineno": 155
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "0->1 => if c != 1 { return c < 0 }",
+  "line": "if c != 0 { return c < 0 }",
+  "occurrence": 1,
+  "lineno": 155
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "0->1 => if c != 0 { return c < 1 }",
+  "line": "if c != 0 { return c < 0 }",
+  "occurrence": 1,
+  "lineno": 155
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "<-><= => return Canonical.compareUtf8(a.publicKey, b.publicKey) <= 0",
+  "line": "return Canonical.compareUtf8(a.publicKey, b.publicKey) < 0",
+  "occurrence": 1,
+  "lineno": 156
+ },
+ {
+  "crate": "swift-pca",
+  "file": "Sources/AtlasPCAVerify/Threshold.swift",
+  "mutant": "0->1 => return Canonical.compareUtf8(a.publicKey, b.publicKey) < 1",
+  "line": "return Canonical.compareUtf8(a.publicKey, b.publicKey) < 0",
+  "occurrence": 1,
+  "lineno": 156
+ }
+]

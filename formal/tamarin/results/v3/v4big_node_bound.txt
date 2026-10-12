@@ -1,0 +1,2 @@
+TIMEOUT after 21600s (queue wall) (NOT proved): node_bound with helpers nb_alloc_unique, nb_debit_has_alloc, nb_c1_debit_from on cloud-box, +RTS -N8 -M100g; no verdict for node_bound or the helpers (outputs not pulled on timeout)
+# pcaq job q261011-034422-q0ce (worker restarted once mid-run and re-adopted the job)

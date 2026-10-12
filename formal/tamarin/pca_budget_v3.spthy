@@ -1,0 +1,153 @@
+/*
+  PCA -- budget_alloc caveats, v3: STRUCTURAL node identities so the proofs terminate.
+
+  Changes against pca_budget.spthy (v2, whose root_bound/node_bound/spend_debits_root timed out):
+    * v2 derived "parent" and "root of" with recursive PERSISTENT facts (!Parent, !RootOf): every proof had to
+      unfold an unbounded chain of Alloc_Child instances.  Here a node IS its path: the root is a fresh atom r, a
+      child is the triple <~id, parent, r>.  Parent and root are therefore read off the term by pattern matching
+      (no recursion); the debit walk to the root is still a recursive rule (one Debit_Mid step per level), so the
+      tree depth is unbounded.
+    * Spent(s, r) is only emitted by the rule that debits the ROOT meter itself (token Debit(sid, r, r)): a spend
+      is complete exactly when the root meter was decremented.
+  Meters are linear facts Cnt(n, c) over symbolic counters c0<c1<c2<c3, decremented through the table !Dec
+  (no row for c0: a meter at zero cannot be debited, so there is no negative spend).  The countdown IS the
+  inductive "spent so far" counter: initial - remaining = spent so far.
+  The limit proved is concrete (root limit 'c2'; -DROOT3: 'c3'); Tamarin has no arithmetic in lemmas, so no
+  claim is made for an arbitrary limit n.
+
+  Switches (-D): NO_PARENT_CHECK  DEBIT_LEAF_ONLY  NONATOMIC_DEBIT  ROOT3
+*/
+theory PCA_Budget_V3
+begin
+
+rule Tables:
+  [ ] --> [ !Dec('c3', 'c2'), !Dec('c2', 'c1'), !Dec('c1', 'c0'),
+            !Le('c0','c0'), !Le('c0','c1'), !Le('c0','c2'), !Le('c0','c3'),
+            !Le('c1','c1'), !Le('c1','c2'), !Le('c1','c3'),
+            !Le('c2','c2'), !Le('c2','c3'), !Le('c3','c3') ]
+
+#ifdef ROOT3
+rule Root_Grant:
+  [ Fr(~r) ] --[ RootNode(~r, 'c3') ]-> [ !IsRoot(~r), !Lim(~r, 'c3'), Cnt(~r, 'c3') ]
+#else
+rule Root_Grant:
+  [ Fr(~r) ] --[ RootNode(~r, 'c2') ]-> [ !IsRoot(~r), !Lim(~r, 'c2'), Cnt(~r, 'c2') ]
+#endif
+
+// ---- delegation with allocation: child under the root, and child under a non-root node --------------------
+#ifdef NO_PARENT_CHECK
+rule Alloc_Child_R:
+  [ !IsRoot(p), !Lim(p, plim), In(climit), Fr(~id) ]
+  --[ Alloc(<~id, p, p>, climit, p, plim) ]->
+  [ !Lim(<~id, p, p>, climit), !Node(<~id, p, p>), Cnt(<~id, p, p>, climit) ]
+rule Alloc_Child_D:
+  [ !Lim(<pid, pp, r>, plim), In(climit), Fr(~id) ]
+  --[ Alloc(<~id, <pid, pp, r>, r>, climit, <pid, pp, r>, plim) ]->
+  [ !Lim(<~id, <pid, pp, r>, r>, climit), !Node(<~id, <pid, pp, r>, r>), Cnt(<~id, <pid, pp, r>, r>, climit) ]
+#else
+rule Alloc_Child_R:
+  [ !IsRoot(p), !Lim(p, plim), In(climit), !Le(climit, plim), Fr(~id) ]
+  --[ Alloc(<~id, p, p>, climit, p, plim) ]->
+  [ !Lim(<~id, p, p>, climit), !Node(<~id, p, p>), Cnt(<~id, p, p>, climit) ]
+rule Alloc_Child_D:
+  [ !Lim(<pid, pp, r>, plim), In(climit), !Le(climit, plim), Fr(~id) ]
+  --[ Alloc(<~id, <pid, pp, r>, r>, climit, <pid, pp, r>, plim) ]->
+  [ !Lim(<~id, <pid, pp, r>, r>, climit), !Node(<~id, <pid, pp, r>, r>), Cnt(<~id, <pid, pp, r>, r>, climit) ]
+#endif
+
+// ---- a spend of one unit by the holder of a node -------------------------------------------------------------
+#ifdef DEBIT_LEAF_ONLY
+rule Spend_Leaf_Only_Root:
+  [ !IsRoot(r), Cnt(r, c), !Dec(c, c1), Fr(~sid) ]
+  --[ Debited(~sid, r, r), Spent(~sid, r), SpendBegin(~sid, r) ]-> [ Cnt(r, c1) ]
+rule Spend_Leaf_Only_Node:
+  [ !Node(<id, p, r>), Cnt(<id, p, r>, c), !Dec(c, c1), Fr(~sid) ]
+  --[ Debited(~sid, <id, p, r>, r), Spent(~sid, r), SpendBegin(~sid, <id, p, r>) ]-> [ Cnt(<id, p, r>, c1) ]
+#else
+rule Spend_Begin_Root:
+  [ !IsRoot(r), Fr(~sid) ] --[ SpendBegin(~sid, r) ]-> [ Debit(~sid, r, r) ]
+rule Spend_Begin_Node:
+  [ !Node(<id, p, r>), Fr(~sid) ] --[ SpendBegin(~sid, <id, p, r>) ]-> [ Debit(~sid, <id, p, r>, r) ]
+#endif
+
+#ifdef NONATOMIC_DEBIT
+// read the count, later blind-write the decremented VALUE READ (lost update)
+rule Debit_Read:
+  [ Debit(sid, n, r), Cnt(n, c), !Dec(c, c1) ]
+  --[ DebitRead(sid, n) ]-> [ Cnt(n, c), Snap(sid, n, r, c1) ]
+rule Debit_Write_Mid:
+  [ Snap(sid, <id, p, r>, r, c1), Cnt(<id, p, r>, cany) ]
+  --[ Debited(sid, <id, p, r>, r), DebitFrom(<id, p, r>, c1) ]-> [ Cnt(<id, p, r>, c1), Debit(sid, p, r) ]
+rule Debit_Write_Root:
+  [ Snap(sid, r, r, c1), !IsRoot(r), Cnt(r, cany) ]
+  --[ Debited(sid, r, r), Spent(sid, r) ]-> [ Cnt(r, c1) ]
+#else
+rule Debit_Mid:
+  [ Debit(sid, <id, p, r>, r), Cnt(<id, p, r>, c), !Dec(c, c1) ]
+  --[ Debited(sid, <id, p, r>, r), DebitFrom(<id, p, r>, c) ]-> [ Cnt(<id, p, r>, c1), Debit(sid, p, r) ]
+rule Debit_Root:
+  [ Debit(sid, r, r), !IsRoot(r), Cnt(r, c), !Dec(c, c1) ]
+  --[ Debited(sid, r, r), DebitFrom(r, c), Spent(sid, r) ]-> [ Cnt(r, c1) ]
+#endif
+
+// ---- sanity -------------------------------------------------------------------------------------------------
+lemma executable_spend: exists-trace "Ex s r #i. Spent(s, r) @ i"
+lemma executable_two_spends: exists-trace "Ex s1 s2 r #i #j. Spent(s1, r) @ i & Spent(s2, r) @ j & not (s1 = s2)"
+#ifdef ¬NONATOMIC_DEBIT & ¬DEBIT_LEAF_ONLY
+lemma executable_deep_spend:
+  exists-trace
+  "Ex s r n1 n2 n3 #a #b #c #d #e #f #x1 #x2 #x3 #x4.
+      RootNode(r, 'c2') @ a & Alloc(n1, 'c2', r, 'c2') @ b & Alloc(n2, 'c2', n1, 'c2') @ c
+    & Alloc(n3, 'c2', n2, 'c2') @ d & SpendBegin(s, n3) @ e
+    & Debited(s, n3, r) @ x1 & Debited(s, n2, r) @ x2 & Debited(s, n1, r) @ x3 & Debited(s, r, r) @ x4
+    & Spent(s, r) @ f"
+#endif
+
+// ---- allocation monotonicity (allocationsMonotone) --------------------------------------------------------
+lemma alloc_monotone:
+  "All n cl p pl #i. Alloc(n, cl, p, pl) @ i
+     ==> not (   (cl = 'c1' & pl = 'c0')
+               | (cl = 'c2' & (pl = 'c0' | pl = 'c1'))
+               | (cl = 'c3' & (pl = 'c0' | pl = 'c1' | pl = 'c2')) )"
+
+// ---- headline bound: total consumption under a root <= the root limit ---------------------------------------
+#ifdef ROOT3
+lemma root_bound:
+  "All r s1 s2 s3 s4 #i #j #k #l.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k & Spent(s4, r) @ l
+      ==> s1 = s2 | s1 = s3 | s1 = s4 | s2 = s3 | s2 = s4 | s3 = s4"
+#else
+lemma root_bound:
+  "All r s1 s2 s3 #i #j #k.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+      ==> s1 = s2 | s1 = s3 | s2 = s3"
+#endif
+
+// a node allocated 1 unit is debited by at most ONE spend, whatever happens below it
+lemma node_bound:
+  "All n p pl s1 s2 r1 r2 #a #i #j.
+      Alloc(n, 'c1', p, pl) @ a & Debited(s1, n, r1) @ i & Debited(s2, n, r2) @ j ==> s1 = s2"
+
+// every completed spend debited the ROOT meter (consumption of the root's own counter)
+lemma spend_debits_root:
+  "All s r #i. Spent(s, r) @ i ==> Ex #d. Debited(s, r, r) @ d"
+
+// no negative spend: a meter at zero is never debited
+lemma no_negative_spend: "All n #i. DebitFrom(n, 'c0') @ i ==> F"
+
+// the root's counter is the only thing Spent consults: a spend of a node-rooted-at r is counted under r
+lemma spent_root_is_root_node:
+  "All s r #i. Spent(s, r) @ i ==> Ex #a. RootNode(r, 'c2') @ a | RootNode(r, 'c3') @ a"
+// attack witness (used with the -D variants): a completed spend count beyond the root limit 'c2'
+#ifdef ROOT3
+lemma attack_overspend:
+  exists-trace
+  "Ex r s1 s2 s3 s4 #a #i #j #k #l. RootNode(r, 'c3') @ a & Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k & Spent(s4, r) @ l
+     & not (s1 = s2) & not (s1 = s3) & not (s1 = s4) & not (s2 = s3) & not (s2 = s4) & not (s3 = s4)"
+#else
+lemma attack_overspend:
+  exists-trace
+  "Ex r s1 s2 s3 #a #i #j #k. RootNode(r, 'c2') @ a & Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+     & not (s1 = s2) & not (s1 = s3) & not (s2 = s3)"
+#endif
+end

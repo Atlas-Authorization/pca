@@ -1,0 +1,45 @@
+/*
+  PCA -- explicit time, PERSISTENT encoding (v3p): no read-and-re-emit linear Clock thread.
+  Time_Init emits !Time('t0'); Time_Next consumes nothing linear and extends the chain !Time(t) -> !Time(u) via !Succ.
+  Verify takes ANY already-emitted !Time(now) (a SNAPSHOT) and checks !Le(now, exp) in its premise.
+  ClockPast(e,t): observer on any emitted !Time(t) with !Lt(e,t).
+
+  SEMANTIC GAP vs the linear clock (honest): persistent facts carry no ordering between a Verify step and
+  later Time_Next / Obs_Past steps, so the verifier may use a STALE snapshot.  That is an OVER-approximation of
+  verifier schedules, but it is NOT conservative for the real-time property: "Accept(e) happens before the clock is
+  observed past e" is FALSE here (an Accept using snapshot t0 after the clock showed t3).  Tamarin falsifies
+  no_accept_after_expiry_realtime below; this is expected and is NOT an attack on the implementation, it is the loss
+  of the "snapshot is current" assumption.  What IS provable here is the SNAPSHOT-RELATIVE statement
+  (snapshot_expiry): every accepted action's own snapshot is <= exp, so any time observed strictly past exp is
+  strictly later than the snapshot.  The real-time statement needs a current-snapshot assumption (the verifier
+  reads the clock at decision time), which only the linear thread (pca_clock_v3.spthy, still unproved) expresses.
+  -DNO_EXPIRY_CHECK drops the !Le premise: snapshot_expiry must then be falsified.
+*/
+theory PCA_Clock_V3p
+begin
+rule Tables:
+  [ ] --> [ !Succ('t0','t1'), !Succ('t1','t2'), !Succ('t2','t3'),
+            !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'), !Le('t0','t3'), !Le('t1','t1'), !Le('t1','t2'),
+            !Le('t1','t3'), !Le('t2','t2'), !Le('t2','t3'), !Le('t3','t3'),
+            !Lt('t0','t1'), !Lt('t0','t2'), !Lt('t0','t3'), !Lt('t1','t2'), !Lt('t1','t3'), !Lt('t2','t3') ]
+rule Time_Init: [ ] --[ TimeAt('t0') ]-> [ !Time('t0') ]
+rule Time_Next: [ !Time(t), !Succ(t, u) ] --[ TimeAt(u), TickFrom(t) ]-> [ !Time(u) ]
+rule Obs_Past: [ !Time(t), In(e), !Lt(e, t) ] --[ ClockPast(e, t) ]-> [ ]
+#ifdef NO_EXPIRY_CHECK
+rule Verify: [ !Time(now), In(exp) ] --[ Accept(exp, now) ]-> [ ]
+#else
+rule Verify: [ !Time(now), In(exp), !Le(now, exp) ] --[ Accept(exp, now) ]-> [ ]
+#endif
+lemma executable_accept: exists-trace "Ex e n #i. Accept(e, n) @ i"
+lemma executable_after_tick: exists-trace "Ex e n t #i #k. Accept(e, n) @ i & TickFrom(t) @ k & #k < #i"
+lemma stale_accept_exists: exists-trace "Ex e n t #i #j. Accept(e, n) @ i & ClockPast(e, t) @ j & #j < #i"
+// snapshot-relative expiry: the observed-past time is strictly later than the accepting snapshot
+lemma snapshot_expiry:
+  "All e n t #i #j. Accept(e, n) @ i & ClockPast(e, t) @ j
+     ==> not( t = n
+        | (t='t0' & n='t1') | (t='t0' & n='t2') | (t='t0' & n='t3')
+        | (t='t1' & n='t2') | (t='t1' & n='t3') | (t='t2' & n='t3') )"
+// real-time statement: expected FALSE (stale snapshot)
+lemma no_accept_after_expiry_realtime:
+  "All e n t #i #j. Accept(e, n) @ i & ClockPast(e, t) @ j ==> #i < #j"
+end

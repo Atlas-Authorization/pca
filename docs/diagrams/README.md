@@ -12,7 +12,7 @@ Professional diagrams for Proof-Carrying Authority. Each has a self-contained `.
 | Threshold and step-up | Escalation t = 1, 2, 3 by risk, the hosted step-up flow, and multi-signature versus FROST aggregation. | [svg](threshold-stepup.svg) / [mmd](threshold-stepup.mmd) |
 | Cryptographic backends | The full backend surface: the crypto-agile signature suite registry (classical, lattice/hash PQ, hybrids), the four zero-knowledge backends, the malicious-secure MPC Policy VM, the five composable attestation roots, and supporting primitives. | [svg](crypto-backends.svg) / [mmd](crypto-backends.mmd) |
 
-See also the [PCA overview](../README.md) and the [specification](../../specs/agentic-auth-proof-carrying-authority.md).
+See also the [PCA overview](../README.md).
 
 ## authN, authZ, authF
 

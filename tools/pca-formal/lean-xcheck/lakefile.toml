@@ -1,0 +1,13 @@
+name = "pca-xcheck"
+defaultTargets = ["xcheck"]
+
+[[require]]
+name = "pca-proof"
+path = "../../../formal/pca-lean"
+
+[[lean_lib]]
+name = "Xcheck"
+
+[[lean_exe]]
+name = "xcheck"
+root = "Main"

@@ -1,0 +1,3 @@
+  attack_resource_pinned (exists-trace): verified (30 steps)
+# wall=66s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_resource_pinned --heuristic=o --oraclename=oracle_walk.sh -DNO_ANCESTOR_RES pca_scope_resource.spthy +RTS -N2 -M6g
+# closure round 3; '/* All wellformedness checks were successful. */'

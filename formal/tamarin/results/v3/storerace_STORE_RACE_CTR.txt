@@ -1,0 +1,4 @@
+  replay_freedom_counter (all-traces): falsified - found trace (9 steps)
+# wall=3s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=replay_freedom_counter -DSTORE_RACE_CTR pca_store_race.spthy +RTS -N3
+  attack_double_counter_interleaved (exists-trace): verified (13 steps)
+# wall=2s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_double_counter_interleaved -DSTORE_RACE_CTR pca_store_race.spthy +RTS -N3

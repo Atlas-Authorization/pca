@@ -1,0 +1,2 @@
+TIMEOUT after 600s budget (NOT proved): measurement_in_projection
+# wall=602s heuristic=s tamarin-prover 1.12.0

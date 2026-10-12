@@ -1,0 +1,65 @@
+/*
+  PCA -- replay store as LINEAR FACTS, atomic vs non-atomic (small dedicated model: store + Accept only).
+  Models replay.ts consumeOnce / advance.  A cell Cell(k,'unused') is created once per key (CellOnce: the store is
+  a map -- the only store assumption); a one-time acceptance CONSUMES it and emits Cell(k,'used').  Replay
+  freedom is then a consequence of linear-fact consumption: no rule re-creates 'unused'.  No Once restriction.
+  Counter stream: Ctr(s, c) linear, advance requires c < ctr (symbolic order table k0<k1<k2), emits Ctr(s, ctr).
+  Variants: -DSTORE_RACE_NONCE (read without consuming, later blind write) and -DSTORE_RACE_CTR (same for the
+  counter): two verifier instances interleave and both accept -> replay_freedom_* falsified.
+*/
+theory PCA_Store_Race
+begin
+
+rule Cell_Create: [ In(k) ] --[ CellCreated(k) ]-> [ Cell(k, 'unused') ]
+#ifdef STORE_RACE_CTR
+rule Ctr_Create:  [ In(s) ] --[ CtrCreated(s) ]-> [ Ctr(s, 'k0'), !CtrVal(s, 'k0') ]
+#else
+rule Ctr_Create:  [ In(s) ] --[ CtrCreated(s) ]-> [ Ctr(s, 'k0') ]
+#endif
+rule Tables: [ ] --> [ !Lt('k0','k1'), !Lt('k0','k2'), !Lt('k1','k2') ]
+restriction CellOnce: "All k #i #j. CellCreated(k) @ i & CellCreated(k) @ j ==> #i = #j"
+restriction CtrOnce:  "All s #i #j. CtrCreated(s) @ i & CtrCreated(s) @ j ==> #i = #j"
+
+#ifdef STORE_RACE_NONCE
+rule Nonce_Read:
+  [ In(k), Fr(~v), Cell(k, 'unused') ] --[ NonceRead(~v, k) ]-> [ Cell(k, 'unused'), Ok(~v, k) ]
+rule Nonce_Write:
+  [ Ok(v, k), Cell(k, st) ] --[ AcceptNonce(v, k) ]-> [ Cell(k, 'used') ]
+#else
+rule Nonce_Atomic:
+  [ In(k), Fr(~v), Cell(k, 'unused') ] --[ AcceptNonce(~v, k) ]-> [ Cell(k, 'used') ]
+#endif
+
+#ifdef STORE_RACE_CTR
+// NON-ATOMIC counter: the READ looks at a committed value of the stream (!CtrVal = every value ever committed;
+// a read is not a linear consumption, so it may see a value that is stale by the time of the write -- that is
+// exactly the read-then-write race), the later WRITE blindly overwrites the live cell.  Reads of a persistent
+// history (not a re-emitted linear fact) also avoid the unbounded Ctr(s,c) <- Ctr_Read <- Ctr(s,c) backward chain.
+rule Ctr_Read:
+  [ In(<s, ctr>), Fr(~v), !CtrVal(s, c), !Lt(c, ctr) ] --[ CtrRead(~v, s, c) ]-> [ COk(~v, s, ctr) ]
+rule Ctr_Write:
+  [ COk(v, s, ctr), Ctr(s, cany) ] --[ AcceptCtr(v, s, ctr) ]-> [ Ctr(s, ctr), !CtrVal(s, ctr) ]
+#else
+rule Ctr_Atomic:
+  [ In(<s, ctr>), Fr(~v), Ctr(s, c), !Lt(c, ctr) ] --[ AcceptCtr(~v, s, ctr) ]-> [ Ctr(s, ctr) ]
+#endif
+
+lemma executable_nonce: exists-trace "Ex v k #i. AcceptNonce(v, k) @ i"
+lemma executable_ctr:   exists-trace "Ex v s c #i. AcceptCtr(v, s, c) @ i"
+
+// guided attack witnesses (exists-trace): two distinct verifier instances accept the same key / counter value
+lemma attack_double_nonce:
+  exists-trace "Ex v1 v2 k #i #j. AcceptNonce(v1, k) @ i & AcceptNonce(v2, k) @ j & not (#i = #j)"
+lemma attack_double_counter:
+  exists-trace "Ex v1 v2 s c #i #j. AcceptCtr(v1, s, c) @ i & AcceptCtr(v2, s, c) @ j & not (#i = #j)"
+
+// faithful interleaving: BOTH reads happen before EITHER write (two verifier instances, real race)
+lemma attack_double_counter_interleaved:
+  exists-trace "Ex v1 v2 s c r1 r2 #i #j #a #b. AcceptCtr(v1, s, c) @ i & AcceptCtr(v2, s, c) @ j & not (#i = #j)
+     & CtrRead(v1, s, r1) @ a & CtrRead(v2, s, r2) @ b & #a < #i & #a < #j & #b < #i & #b < #j"
+
+lemma replay_freedom_nonce:
+  "All v1 v2 k #i #j. AcceptNonce(v1, k) @ i & AcceptNonce(v2, k) @ j ==> #i = #j"
+lemma replay_freedom_counter:
+  "All v1 v2 s c #i #j. AcceptCtr(v1, s, c) @ i & AcceptCtr(v2, s, c) @ j ==> #i = #j"
+end

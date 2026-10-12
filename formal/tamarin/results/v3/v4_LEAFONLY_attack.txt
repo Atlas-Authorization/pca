@@ -1,0 +1,2 @@
+OPEN (NOT found): attack_leafonly_witness - tamarin heap exhausted at +RTS -M10g after 1738s (default heuristic), no verdict
+# wall=1738s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_leafonly_witness -DDEBIT_LEAF_ONLY pca_budget_v4.spthy +RTS -N4 -M10g

@@ -1,0 +1,236 @@
+#!/usr/bin/env node
+// Small operator mutator for the Swift verifier (Muter is not available here). Works on COPIES of the package (never edits the repo):
+//   node mutate.mjs list  <file.swift>...                      list mutants (id, line, op, original => replacement)
+//   node mutate.mjs run   <workers> <budget-minutes> <out.json> <file.swift>... [--only=ids] [--every=N --offset=K]
+// Each worker owns a private copy of sdks/swift-pca under $TMPDIR/swiftmut/wN, applies one mutant, runs the oracle
+// (swift test: existing unit tests + core conformance + the FULL adversarial corpus via PCA_CONFORMANCE_ADV) under nice,
+// and records KILLED / SURVIVED / NONVIABLE (compile error) / TIMEOUT. A mutant is killed iff the oracle exits non-zero.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawn, spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, '../../..');
+const pkg = path.join(root, 'sdks/swift-pca');
+
+function maskLine(l) { // blank out string literals and // comments so operators inside them are ignored
+  let out = '', inStr = false;
+  for (let i = 0; i < l.length; i++) {
+    const c = l[i];
+    if (!inStr && c === '/' && l[i + 1] === '/') { out += ' '.repeat(l.length - i); break; }
+    if (!inStr && c === '/' && l[i + 1] === '*') { // same-line /* ... */ comment
+      const e = l.indexOf('*/', i + 2);
+      const end = e < 0 ? l.length : e + 2;
+      out += ' '.repeat(end - i); i = end - 1; continue;
+    }
+    if (c === '"' && l[i - 1] !== '\\') { inStr = !inStr; out += '"'; continue; }
+    out += inStr ? ' ' : c;
+  }
+  return out;
+}
+const RULES = [
+  [/ == /g, ' != '], [/ != /g, ' == '], [/ <= /g, ' < '], [/ >= /g, ' > '], [/ < /g, ' <= '], [/ > /g, ' >= '],
+  [/ && /g, ' || '], [/ \|\| /g, ' && '], [/ \+ /g, ' - '], [/ - /g, ' + '], [/ \* /g, ' / '], [/ & /g, ' | '], [/ \| /g, ' & '], [/ \^ /g, ' | '],
+  [/ << /g, ' >> '], [/ >> /g, ' << '], [/\btrue\b/g, 'false'], [/\bfalse\b/g, 'true'],
+];
+function mutantsFor(file) {
+  const src = fs.readFileSync(file, 'utf8').split('\n');
+  const out = [];
+  const add = (ln, repl, op) => { if (repl !== src[ln]) out.push({ line: ln + 1, op, orig: src[ln].trim(), repl: repl.trim(), text: src.map((x, i) => (i === ln ? repl : x)).join('\n') }); };
+  // Lines the oracle does not compile: on Linux the `#else` branch of an `#if os(Linux)` block (e.g. the macOS CryptoKit
+  // ML-DSA path that linux-prep replaces with liboqs). Mutating them would only report fake survivors.
+  const dead = new Set();
+  if (process.platform === 'linux') {
+    let st = 0; // 0 outside, 1 in the Linux branch, 2 in the non-Linux branch
+    src.forEach((l, i) => {
+      const t = l.trim();
+      if (/^#if os\(Linux\)/.test(t)) st = 1; else if (st && t === '#else') st = 2; else if (st && t === '#endif') st = 0; else if (st === 2) dead.add(i);
+    });
+  }
+  src.forEach((raw, ln) => {
+    if (dead.has(ln)) return;
+    const m = maskLine(raw);
+    if (/^\s*(\/\/|\/\*|\*|import |@|\/\/\/)/.test(raw) || /^\s*(static let|let|var)\s+\w+(:\s*[\w\[\]]+)?\s*=\s*\d/.test(raw) && false) return;
+    for (const [re, rep] of RULES) {
+      re.lastIndex = 0;
+      let mm;
+      while ((mm = re.exec(m))) {
+        // skip generics / closures / arrows: ' -> ' and '<' in type position are not spaced operators in practice
+        if (mm[0] === ' - ' && m[mm.index + 3] === '>') continue;
+        add(ln, raw.slice(0, mm.index) + rep + raw.slice(mm.index + mm[0].length), `${mm[0].trim()}->${rep.trim()}`);
+      }
+    }
+    // integer literals
+    const numRe = /(?<![\w.\]"])(\d[\d_]*)(?![\w."])/g;
+    let nm;
+    while ((nm = numRe.exec(m))) {
+      const v = parseInt(nm[1].replace(/_/g, ''), 10);
+      if (!Number.isFinite(v) || v > 2 ** 52) continue;
+      add(ln, raw.slice(0, nm.index) + (v + 1) + raw.slice(nm.index + nm[1].length), `${v}->${v + 1}`);
+      if (v >= 1) add(ln, raw.slice(0, nm.index) + (v - 1) + raw.slice(nm.index + nm[1].length), `${v}->${v - 1}`);
+    }
+    // prefix negation removal:  !(x) / !x  (only when preceded by space, '(' or '&&')
+    const nr = /(?<=[\s(])!(?=[\w(])/g;
+    let bm;
+    while ((bm = nr.exec(m))) add(ln, raw.slice(0, bm.index) + raw.slice(bm.index + 1), 'drop-!');
+    // returns
+    if (/^\s*return false\s*$/.test(m)) add(ln, raw.replace('return false', 'return true'), 'return false->true');
+    if (/^\s*return true\s*$/.test(m)) add(ln, raw.replace('return true', 'return false'), 'return true->false');
+    if (/^\s*return nil\s*$/.test(m) || /^\s*continue\s*$/.test(m) === false && /^\s*break\s*$/.test(m) === false && false) { /* keep nil returns unmutated */ }
+    // if/guard conditions: negate whole condition
+    const cm = /^(\s*)(if|guard|while)\s+(?!let\b|case\b|var\b)(.+?)\s*(\{|else \{)\s*$/.exec(m);
+    if (cm && !/\blet\b|\bcase\b/.test(cm[3]) && cm[2] !== 'while') {
+      const idx = raw.indexOf(cm[2]) + cm[2].length + 1;
+      const endIdx = raw.length - raw.slice(raw.indexOf(cm[3]) + cm[3].length).length;
+      add(ln, raw.slice(0, idx) + '!(' + raw.slice(idx, endIdx) + ')' + raw.slice(endIdx), `${cm[2]}-negate`);
+    }
+  });
+  return out;
+}
+
+const [cmd, ...rest] = process.argv.slice(2);
+if (cmd === 'list') {
+  for (const f of rest) { const ms = mutantsFor(f); ms.forEach((m, i) => console.log(`${path.basename(f)}\t${i}\t${m.line}\t${m.op}\t${m.orig.slice(0, 70)} => ${m.repl.slice(0, 70)}`)); console.error(path.basename(f), ms.length); }
+  process.exit(0);
+}
+if (cmd === 'survivors') {
+  // node mutate.mjs survivors [--src=<sdks/swift-pca checkout the run mutated>] <results.json>...
+  //   -> stdout: [{crate,file,mutant,line,occurrence?,lineno}] for native-check-equivalents.mjs. One record per mutation SITE
+  //   (later result files win for the same file + line + op + replacement; TIMEOUT counts as detected, NONVIABLE as not a
+  //   mutant). occurrence = which copy of the line text in the file, computed from --src (default: this checkout) and emitted
+  //   only when that source still has the text at the recorded line; otherwise the checker places the site by the line hint.
+  const srcDir = rest.find((a) => a.startsWith('--src='))?.slice(6) ?? pkg;
+  const by = new Map();
+  for (const f of rest.filter((a) => !a.startsWith('--'))) for (const r of JSON.parse(fs.readFileSync(f, 'utf8'))) by.set(`${r.file}#${r.line}#${r.op}#${r.repl}`, r);
+  const srcs = new Map();
+  const occ = (file, ln, text) => {
+    if (!srcs.has(file)) { const p = path.join(srcDir, file); srcs.set(file, fs.existsSync(p) ? fs.readFileSync(p, 'utf8').split('\n').map((l) => l.trim()) : null); }
+    const L = srcs.get(file);
+    if (!L || L[ln - 1] !== text.trim()) return undefined;
+    let n = 0;
+    for (let i = 0; i < ln; i++) if (L[i] === text.trim()) n++;
+    return n;
+  };
+  // a survivor the current mutator no longer generates on that source (non-compiled #else branch, same-line comment) is not a mutant
+  const gen = new Map();
+  const generated = (r) => {
+    if (!gen.has(r.file)) { const p = path.join(srcDir, r.file); gen.set(r.file, fs.existsSync(p) ? new Set(mutantsFor(p).map((m) => `${m.line}#${m.op}#${m.repl}`)) : null); }
+    const g = gen.get(r.file);
+    return !g || g.has(`${r.line}#${r.op}#${r.repl}`);
+  };
+  const out = [...by.values()].filter((r) => r.status === 'SURVIVED' && generated(r))
+    .sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.idx - b.idx)
+    .map((r) => ({ crate: 'swift-pca', file: r.file, mutant: `${r.op} => ${r.repl}`, line: r.orig.trim(), occurrence: occ(r.file, r.line, r.orig), lineno: r.line }));
+  console.log(JSON.stringify(out, null, 1));
+  const st = {};
+  for (const r of by.values()) st[r.status] = (st[r.status] || 0) + 1;
+  console.error(JSON.stringify(st));
+  process.exit(0);
+}
+if (cmd === 'run') {
+  const flags = rest.filter((a) => a.startsWith('--'));
+  const pos = rest.filter((a) => !a.startsWith('--'));
+  const workers = +pos[0], budget = +pos[1] * 60_000, outFile = pos[2], files = pos.slice(3);
+  const every = +(flags.find((f) => f.startsWith('--every='))?.slice(8) ?? 1), offset = +(flags.find((f) => f.startsWith('--offset='))?.slice(9) ?? 0);
+  const tmp = path.join(process.env.TMPDIR || os.tmpdir(), 'swiftmut');
+  fs.mkdirSync(tmp, { recursive: true });
+  const advPath = path.join(tmp, 'adv.json');
+  if (!fs.existsSync(advPath)) {
+    const z = await import('node:zlib');
+    fs.writeFileSync(advPath, z.gunzipSync(fs.readFileSync(path.join(root, 'packages/pca/conformance/vectors-adversarial.json.gz'))));
+  }
+  let all = [];
+  for (const f of files) mutantsFor(path.join(pkg, f)).forEach((m, i) => all.push({ file: f, idx: i, ...m }));
+  all = all.filter((_, i) => i % every === offset);
+  // --retry=a.json,b.json: only the mutants that SURVIVED in earlier result files (matched by file + source text + op +
+  // replacement, so line shifts from edits elsewhere in the file do not matter)
+  const retry = flags.find((f) => f.startsWith('--retry='))?.slice(8);
+  if (retry) {
+    const want = new Set();
+    for (const f of retry.split(',')) for (const r of JSON.parse(fs.readFileSync(f, 'utf8'))) if (r.status === 'SURVIVED') want.add(`${r.file}#${r.orig}#${r.op}#${r.repl}`);
+    all = all.filter((m) => want.has(`${m.file}#${m.orig}#${m.op}#${m.repl}`));
+  }
+  const results = fs.existsSync(outFile) ? JSON.parse(fs.readFileSync(outFile, 'utf8')) : [];
+  const done = new Set(results.map((r) => `${r.file}#${r.idx}`));
+  const queue = all.filter((m) => !done.has(`${m.file}#${m.idx}`));
+  console.error(`mutants ${all.length}, remaining ${queue.length}`);
+  const t0 = Date.now();
+  const save = () => fs.writeFileSync(outFile, JSON.stringify(results, null, 1));
+  let baselineSig = null, baselineCode = null;
+  const MAX_RSS = (+process.env.SWIFTMUT_MAX_RSS_MB || 4096) * 1048576; // per worker (process group)
+  const runOne = (w, m) => new Promise((resolve) => {
+    const dir = path.join(tmp, `w${w}`, 'sdks/swift-pca');
+    const target = path.join(dir, m.file);
+    const orig = fs.readFileSync(path.join(pkg, m.file), 'utf8');
+    fs.writeFileSync(target, m.text);
+    // own process group, so a timeout / memory kill takes the compiler and the test binary down with the driver
+    // ulimit -d: a hard per-process heap cap, so a runaway allocation fails (the oracle crashes == detected) instead of
+    // exhausting the job's cgroup before the watchdog below can react.
+    const p = spawn('bash', ['-c', `ulimit -d ${Math.floor(MAX_RSS / 1024)}; exec nice -n 19 swift test --scratch-path "$0" --filter AtlasPCAVerifyTests`, path.join(dir, '.b')], { cwd: dir, env: { ...process.env, PCA_CONFORMANCE_ADV: advPath }, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    let out = '';
+    const add = (d) => { if (out.length < 16 << 20) out += d; };
+    p.stdout.on('data', add); p.stderr.on('data', add);
+    const killGroup = () => { try { process.kill(-p.pid, 'SIGKILL'); } catch { try { p.kill('SIGKILL'); } catch {} } };
+    const to = setTimeout(killGroup, 150_000);
+    // memory watchdog: a mutant that allocates without bound (e.g. a loop that keeps appending) would otherwise exhaust
+    // the job's memory cap within seconds and the OOM kill would lose the whole run. Over the cap == detected (TIMEOUT).
+    let memKilled = false;
+    const wd = setInterval(() => {
+      // RSS of the whole descendant tree of the oracle (children may run in their own process groups)
+      const kids = new Map(), rss = new Map();
+      try {
+        for (const e of fs.readdirSync('/proc')) {
+          if (!/^\d+$/.test(e)) continue;
+          let st; try { st = fs.readFileSync(`/proc/${e}/stat`, 'utf8'); } catch { continue; }
+          const f = st.slice(st.lastIndexOf(')') + 2).split(' ');
+          const pp = +f[1];
+          if (!kids.has(pp)) kids.set(pp, []);
+          kids.get(pp).push(+e); rss.set(+e, +f[21]);
+        }
+      } catch { return; }
+      let pages = 0; const tree = [p.pid];
+      for (let k = 0; k < tree.length; k++) { pages += rss.get(tree[k]) ?? 0; for (const c of kids.get(tree[k]) ?? []) tree.push(c); }
+      if (pages * 4096 > MAX_RSS) { memKilled = true; killGroup(); for (const t of tree) { try { process.kill(t, 'SIGKILL'); } catch {} } }
+    }, 250);
+    p.on('close', (code, sig) => {
+      clearTimeout(to); clearInterval(wd);
+      fs.writeFileSync(target, orig);
+      let status;
+      const lines = out.split('\n').filter((l) => /error:/.test(l));
+      const compileErr = lines.some((l) => /\/Sources\//.test(l));
+      const sig2 = JSON.stringify(lines.filter((l) => /\/Tests\//.test(l)).map((l) => l.replace(/^.*\/Tests\//, 'Tests/')).sort());
+      if (sig === 'SIGKILL' || memKilled) status = 'TIMEOUT';
+      else if (compileErr) status = 'NONVIABLE';
+      else if (m.baseline === true) { baselineSig = sig2; status = 'SURVIVED'; }
+      else status = sig2 === baselineSig && code === (baselineCode ?? code) ? 'SURVIVED' : 'KILLED';
+      if (m.baseline === true) baselineCode = code;
+      resolve(status);
+    });
+  });
+  const wk = async (w) => {
+    const wroot = path.join(tmp, `w${w}`);
+    const dir = path.join(wroot, 'sdks/swift-pca');
+    fs.rmSync(path.join(dir, 'Sources'), { recursive: true, force: true });
+    fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(path.join(wroot, 'tools'), { recursive: true });
+    for (const [l, t] of [['packages', path.join(root, 'packages')], ['tools/pca-diff-fuzz', path.join(root, 'tools/pca-diff-fuzz')]]) { try { fs.rmSync(path.join(wroot, l), { force: true }); fs.symlinkSync(t, path.join(wroot, l)); } catch {} }
+    for (const d of ['Sources', 'Tests', 'Package.swift']) spawnSync('cp', ['-R', path.join(pkg, d), dir]);
+    // warm build
+    spawnSync('nice', ['-n', '19', 'swift', 'build', '--build-tests', '--scratch-path', path.join(dir, '.b')], { cwd: dir, stdio: 'ignore' });
+    // baseline: the unmutated copy must pass the oracle, otherwise every mutant would be trivially 'killed'
+    const base = await runOne(w, { file: files[0], text: fs.readFileSync(path.join(pkg, files[0]), 'utf8'), baseline: true });
+    if (base !== 'SURVIVED') { console.error(`worker ${w}: BASELINE FAILED (${base}); aborting`); process.exit(3); }
+    while (queue.length && Date.now() - t0 < budget) {
+      const m = queue.shift();
+      const status = await runOne(w, m);
+      results.push({ file: m.file, idx: m.idx, line: m.line, op: m.op, orig: m.orig, repl: m.repl, status });
+      if (results.length % 5 === 0) save();
+    }
+  };
+  await Promise.all(Array.from({ length: workers }, (_, w) => wk(w)));
+  save();
+  const by = {};
+  for (const r of results) by[r.status] = (by[r.status] || 0) + 1;
+  console.error(JSON.stringify(by));
+}

@@ -1,0 +1,82 @@
+{
+  "_label": "CAPTURED from a running Envoy 6eb0d2d97489ec1b4e1584a004f5de443d97a41b/1.39.3/Clean/RELEASE/BoringSSL (tetratelabs/archive-envoy darwin-arm64) gRPC ext_authz CheckRequest, decoded by protobufjs (camelCase); the PCA-Action value is a placeholder.",
+  "envoyVersion": "6eb0d2d97489ec1b4e1584a004f5de443d97a41b/1.39.3/Clean/RELEASE/BoringSSL",
+  "requests": [
+    {
+      "scenario": "POST /refunds?currency=usd&note=a%20b, client header PCA-ACTION",
+      "request": {
+        "attributes": {
+          "contextExtensions": {},
+          "source": {
+            "labels": {},
+            "address": {
+              "socketAddress": {
+                "address": "127.0.0.1",
+                "portValue": 63554
+              }
+            }
+          },
+          "destination": {
+            "labels": {},
+            "address": {
+              "socketAddress": {
+                "address": "127.0.0.1",
+                "portValue": 63524
+              }
+            }
+          },
+          "request": {
+            "http": {
+              "headers": {
+                "x-mixed-case": "v",
+                "x-forwarded-proto": "http",
+                ":path": "/refunds?currency=usd&note=a%20b",
+                ":scheme": "http",
+                "x-request-id": "5ba264a0-883f-432a-b7ef-58cef30a11e3",
+                "pca-action": "<PCA-Action proof: substituted by the test>",
+                ":method": "POST",
+                ":authority": "127.0.0.1:63524"
+              },
+              "id": "3685971601131344236",
+              "method": "POST",
+              "path": "/refunds?currency=usd&note=a%20b",
+              "host": "127.0.0.1:63524",
+              "scheme": "http",
+              "protocol": "HTTP/1.1"
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "with_request_body max=1024 allow_partial=true, 5000-byte body (body elided)",
+      "request": {
+        "attributes": {
+          "request": {
+            "http": {
+              "headers": {
+                "x-envoy-auth-partial-body": "true",
+                "x-request-id": "7a4033e5-0449-4d0b-94e5-a1e7f1a1006f",
+                "pca-action": "<PCA-Action proof: substituted by the test>",
+                "x-forwarded-proto": "http",
+                ":path": "/refunds",
+                ":scheme": "http",
+                ":authority": "127.0.0.1:63525",
+                ":method": "POST"
+              },
+              "id": "15234061557689725583",
+              "method": "POST",
+              "path": "/refunds",
+              "host": "127.0.0.1:63525",
+              "scheme": "http",
+              "size": "5000",
+              "protocol": "HTTP/1.1",
+              "body": "<1024 bytes elided>",
+              "rawBody": "<elided>"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

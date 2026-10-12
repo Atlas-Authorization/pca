@@ -1,0 +1,1 @@
+authorization | 2s | RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> event(Granted(iss,pkH_2,cv_3,rid)) || event(Reveal(iss)) is false.

@@ -1,0 +1,4 @@
+  stepup3_requires_principal (all-traces): falsified - found trace (13 steps)
+  stepup3_requires_guardian (all-traces): falsified - found trace (13 steps)
+  stepup2_compromised_agent_insufficient (all-traces): falsified - found trace (10 steps)
+  stepup2_one_compromised_key_insufficient (all-traces): falsified - found trace (10 steps)

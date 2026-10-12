@@ -1,0 +1,222 @@
+{
+  "_about": "Every eslint-plugin-security finding over the PCA production sources must be fixed or listed here with a reason. check-eslint.mjs fails on any (rule, file) pair that is not listed, or whose count grows. Reviewed 2026-10-09.",
+  "eslint-security": [
+    {
+      "rule": "security/detect-object-injection",
+      "files": "*",
+      "max": 900,
+      "reason": "Bracket access with a computed key (obj[k]). Warning-level by design: the rule cannot distinguish a validated key from a hostile one. The real risk (prototype pollution via __proto__/constructor/prototype keys) is closed at the source: untrusted JSON enters through the strict parser (own-property __proto__ handling, duplicate-key rejection) and every fuzz target runs a shared-prototype pollution check after each input (Object/Array/Function/String/Number/Uint8Array/Map prototypes, 0 findings across all runs)."
+    },
+    {
+      "rule": "security/detect-non-literal-fs-filename",
+      "files": [
+        "packages/pca/src/durable-state.ts"
+      ],
+      "max": 24,
+      "reason": "Paths are join(dir, fixed file name) under an operator-configured state directory created 0700; no request-derived segment reaches a path."
+    },
+    {
+      "rule": "security/detect-non-literal-fs-filename",
+      "files": [
+        "packages/pca-mpc/src/net/certs.ts",
+        "packages/pca-mpc/src/net/launch-local.ts",
+        "packages/pca-mpc/src/net/party-main.ts",
+        "packages/pca/src/frost-net-runner.ts",
+        "packages/pca-cli/src/cli.ts",
+        "packages/pca-policy-ci/src/cli.ts",
+        "packages/pca-ap2/src/testkit.ts"
+      ],
+      "max": 3,
+      "reason": "Command-line tools and test kits that read paths the operator typed on the command line or generated themselves; not reachable from verifier input."
+    },
+    {
+      "rule": "security/detect-non-literal-fs-filename",
+      "files": [
+        "packages/pca-fndsa-wasm/src/index.ts",
+        "packages/pca-less-wasm/src/index.ts",
+        "packages/pca-mpc-lwe-ot-wasm/src/index.ts",
+        "packages/pca-mpc-wasm/src/index.ts"
+      ],
+      "max": 2,
+      "reason": "Loads the package's own bundled .wasm from a path derived from __dirname / import.meta.url."
+    },
+    {
+      "rule": "security/detect-non-literal-require",
+      "files": [
+        "packages/pca-mpc/src/ec.ts",
+        "packages/pca-mpc/src/endemic-ot.ts"
+      ],
+      "max": 2,
+      "reason": "require() over a fixed in-source candidate list (the optional wasm backend by package name, then its sibling dist path); no external input."
+    },
+    {
+      "rule": "security/detect-possible-timing-attacks",
+      "files": [
+        "packages/pca/src/receipt.ts",
+        "packages/pca/src/strict-jws.ts",
+        "packages/pca-aggsig/src/bls.ts"
+      ],
+      "max": 1,
+      "reason": "Comparisons of public values only: a SHA-256 digest of public receipt data (receipt.ts), JWS header token names (strict-jws.ts) and a private-constructor sentinel object (bls.ts). None involves a secret."
+    },
+    {
+      "rule": "security/detect-non-literal-regexp",
+      "files": [
+        "packages/pca/src/predicates.ts"
+      ],
+      "max": 4,
+      "reason": "Regex sources that come from signed grants are admitted only after isSafeRegexSource (length caps, no backreferences/lookaround, nested-quantifier ban, 22-bit backtracking budget) and are evaluated against a subject capped at 512 chars; the glob operator no longer uses a RegExp at all. Fuzzed (grammar + mutation + amplification) with a 1 s hang gate: clean."
+    },
+    {
+      "rule": "security/detect-non-literal-regexp",
+      "files": [
+        "packages/pca/src/prohibitions.ts"
+      ],
+      "max": 1,
+      "reason": "Validation-time compile of a prohibition pattern that has already passed isSafeRegexSource and the 200-char cap."
+    },
+    {
+      "rule": "security/detect-non-literal-regexp",
+      "files": [
+        "packages/pca-analyzer/src/index.ts"
+      ],
+      "max": 1,
+      "reason": "Fixed 2026-10-09: now guarded by isSafeRegexSource, a 200-char pattern cap and the 512-char subject cap before compilation."
+    },
+    {
+      "rule": "security/detect-non-literal-regexp",
+      "files": [
+        "packages/pca/src/attest-intel-collateral.ts"
+      ],
+      "max": 1,
+      "reason": "Interpolates a field name from a fixed in-source list (tcbInfo / qeIdentity), never input text."
+    },
+    {
+      "rule": "security/detect-non-literal-regexp",
+      "files": [
+        "packages/pca/src/attest-nvidia-rim.ts"
+      ],
+      "max": 1,
+      "reason": "Interpolates the chip family named by the signature-verified GPU report; escaped 2026-10-09 so no report byte can change the pattern."
+    },
+    {
+      "rule": "security/detect-unsafe-regex",
+      "files": [
+        "packages/pca/src/attest-allowlist.ts",
+        "packages/pca/src/attest-maa-keys.ts",
+        "packages/pca/src/attest-nvidia-rim.ts",
+        "packages/pca/src/facade.ts",
+        "packages/pca/src/strict-json.ts",
+        "packages/pca/src/predicates.ts",
+        "packages/pca-ciba/src/index.ts",
+        "packages/pca-webbotauth/src/index.ts"
+      ],
+      "max": 3,
+      "reason": "Heuristic star-height flag. Each pattern was measured with 200k-character adversarial inputs (digit runs, dotted runs, quote and escape runs, whitespace runs): all finish in under 3 ms (anchored, unambiguous alternation, or bounded repeats). The scanner-style patterns that DID blow up (Rego allow rule, Cedar word-operator and scope clauses) were fixed, not suppressed."
+    },
+    {
+      "rule": "security/detect-unsafe-regex",
+      "files": [
+        "packages/pca-policy-bridge/src/rego.ts"
+      ],
+      "max": 2,
+      "reason": "Remaining numeric-literal pattern ^-?\\d+(\\.\\d+)?$ (linear) and the allow-rule pattern, which was quadratic and is fixed (one whitespace gap per position; regression test with 200k spaces)."
+    },
+    {
+      "rule": "@typescript-eslint/no-explicit-any",
+      "files": [
+        "packages/pca-mpc/src/net/launch-local.ts"
+      ],
+      "max": 3,
+      "reason": "Not a security finding: the file carries eslint-disable comments for a rule this security-only config does not load (reported as an unknown rule)."
+    },
+    {
+      "rule": "(unknown-rule-comment)",
+      "files": [
+        "packages/pca-gateway/src/index.ts"
+      ],
+      "max": 1,
+      "reason": "Same artefact: an eslint-disable comment for no-control-regex, which this security-only config does not load."
+    },
+    {
+      "rule": "security/detect-unsafe-regex",
+      "files": [
+        "packages/pca-policy-bridge/src/cedar.ts"
+      ],
+      "max": 4,
+      "reason": "Anchored, unambiguous patterns measured linear on 200k-character inputs; the scope-clause and word-operator patterns that were quadratic (adjacent whitespace gaps, lazy group before \\s+) were rewritten and carry regression tests."
+    }
+  ],
+  "gitleaks": "tools/pca-audit/static/gitleaks.toml carries its own reasoned allowlist (194 raw hits, all published test vectors, public attestation captures or build output).",
+  "osv-pnpm": [
+    {
+      "pkg": "@xmldom/xmldom",
+      "status": "fixed",
+      "reason": "0.8.10 -> 0.8.15 in packages/pca (15 advisories; parses NVIDIA RIM XML before the signature is verified)."
+    },
+    {
+      "pkg": "brace-expansion 2.1.2, underscore 1.13.6",
+      "status": "accepted",
+      "reason": "Transitive of the optional snarkjs/circom toolchain (zero-knowledge path). The advisories are DoS on attacker-controlled glob / deep-object input; PCA passes neither (no globbing of untrusted text; no untrusted objects into underscore). Fix by upgrading snarkjs when its range allows."
+    },
+    {
+      "pkg": "undici 5.29.0, @fastify/busboy 2.1.1",
+      "status": "accepted",
+      "reason": "Pulled only through pca-ai-sdk (the Vercel AI SDK peer chain). HTTP-client/multipart advisories in code the PCA adapter never calls; the integrator's own AI SDK version governs."
+    },
+    {
+      "pkg": "@opentelemetry/core, langsmith, uuid 10.0.0",
+      "status": "accepted",
+      "reason": "Pulled only through pca-langchain's LangChain peer chain; not used by the PCA guard."
+    },
+    {
+      "pkg": "fastify, fast-uri",
+      "status": "accepted",
+      "reason": "Dev/peer dependency of the pca-fastify, pca-mcp and pca-llamaindex adapters; the integrator supplies and patches their own framework."
+    },
+    {
+      "pkg": "next, postcss, sharp, source-map-js",
+      "status": "accepted",
+      "reason": "pca-next adapter's framework peer chain; the integrator's Next.js version governs."
+    }
+  ],
+  "osv-cargo": [
+    {
+      "pkg": "pqc_kyber 0.7.1 (pca-mpc-lwe-ot-wasm, vendored unchanged)",
+      "ids": [
+        "RUSTSEC-2023-0079 (KyberSlash division timing)",
+        "RUSTSEC-2026-0289 (unmaintained)",
+        "RUSTSEC-2026-0290 (AVX2 backend skips FO rejection)"
+      ],
+      "status": "open-documented",
+      "reason": "No patched release exists (crate is unmaintained). 0290 is AVX2-only and the crate is built for wasm32 (no AVX2). KyberSlash (variable-time division in compress/message encoding) is a real timing weakness of this K-PKE; the lattice base-OT is an experimental research construction and is documented as not side-channel hardened. Replacing the K-PKE with a constant-time implementation is a follow-up."
+    },
+    {
+      "pkg": "bincode, paste, atomic-polyfill, derivative, number_prefix",
+      "status": "accepted",
+      "reason": "Unmaintained-crate notices (no vulnerability) in the folding / stark / zkVM proof crates' dependency trees."
+    },
+    {
+      "pkg": "rsa 0.9.10 (Marvin timing)",
+      "status": "accepted",
+      "reason": "Present only in the zkVM host dependency tree via the prover SDK; PCA performs no RSA operation."
+    },
+    {
+      "pkg": "tracing-subscriber 0.2.25 (ANSI log poisoning)",
+      "status": "accepted",
+      "reason": "Transitive of the zkVM toolchain; PCA verifiers do not log untrusted input through it."
+    }
+  ],
+  "clippy": [
+    {
+      "crate": "sdks/folding-pca, sdks/stark-pca (test targets only)",
+      "status": "accepted",
+      "reason": "Library and binary targets are clippy -D warnings clean; the remaining lints (needless_range_loop, doc_overindented_list_items) are style lints in adversarial test code that indexes parallel arrays on purpose."
+    },
+    {
+      "crate": "packages/pca-mpc-lwe-ot-wasm",
+      "status": "open",
+      "reason": "Two style lints (doc_lazy_continuation, manual_is_multiple_of) in a crate under active development by another workstream; not security relevant."
+    }
+  ]
+}

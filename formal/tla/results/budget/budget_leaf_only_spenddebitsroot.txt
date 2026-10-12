@@ -1,0 +1,74 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 62 and seed 9116385890535654989 with 2 workers on 2 cores with 2731MB heap and 64MB offheap memory [pid: 10397] (Linux 7.0.0-1017-azure amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/jobs/q261011-171944-a37m/ws/formal/tla/BudgetTree.tla
+Parsing file /tmp/tlc-3773199890998343420/Naturals.tla (jar:file:~/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-3773199890998343420/FiniteSets.tla (jar:file:~/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-3773199890998343420/_TLCTrace.tla (jar:file:~/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-3773199890998343420/Sequences.tla (jar:file:~/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-3773199890998343420/TLC.tla (jar:file:~/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-3773199890998343420/TLCExt.tla (jar:file:~/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Parsing file /tmp/tlc-3773199890998343420/Integers.tla (jar:file:~/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Integers
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module BudgetTree
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module BudgetTree
+Starting... (2026-10-11 17:20:20)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-11 17:20:21.
+Error: Invariant SpendDebitsRoot is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ lim = (n1 :> 0 @@ n2 :> 0 @@ r :> 2)
+/\ st = (s1 :> "idle" @@ s2 :> "idle" @@ s3 :> "idle")
+/\ debited = (n1 :> {} @@ n2 :> {} @@ r :> {})
+/\ at = (s1 :> r @@ s2 :> r @@ s3 :> r)
+/\ spent = {}
+/\ alloc = {}
+/\ parent = (n1 :> r @@ n2 :> r)
+/\ cnt = (n1 :> 0 @@ n2 :> 0 @@ r :> 2)
+/\ snap = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 0)
+
+State 2: <Alloc(n1,r,0) line 59, col 3 to line 66, col 47 of module BudgetTree>
+/\ lim = (n1 :> 0 @@ n2 :> 0 @@ r :> 2)
+/\ st = (s1 :> "idle" @@ s2 :> "idle" @@ s3 :> "idle")
+/\ debited = (n1 :> {} @@ n2 :> {} @@ r :> {})
+/\ at = (s1 :> r @@ s2 :> r @@ s3 :> r)
+/\ spent = {}
+/\ alloc = {n1}
+/\ parent = (n1 :> r @@ n2 :> r)
+/\ cnt = (n1 :> 0 @@ n2 :> 0 @@ r :> 2)
+/\ snap = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 0)
+
+State 3: <Alloc(n2,r,1) line 59, col 3 to line 66, col 47 of module BudgetTree>
+/\ lim = (n1 :> 0 @@ n2 :> 1 @@ r :> 2)
+/\ st = (s1 :> "idle" @@ s2 :> "idle" @@ s3 :> "idle")
+/\ debited = (n1 :> {} @@ n2 :> {} @@ r :> {})
+/\ at = (s1 :> r @@ s2 :> r @@ s3 :> r)
+/\ spent = {}
+/\ alloc = {n1, n2}
+/\ parent = (n1 :> r @@ n2 :> r)
+/\ cnt = (n1 :> 0 @@ n2 :> 1 @@ r :> 2)
+/\ snap = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 0)
+
+State 4: <Begin(s1,n2) line 69, col 3 to line 81, col 43 of module BudgetTree>
+/\ lim = (n1 :> 0 @@ n2 :> 1 @@ r :> 2)
+/\ st = (s1 :> "done" @@ s2 :> "idle" @@ s3 :> "idle")
+/\ debited = (n1 :> {} @@ n2 :> {s1} @@ r :> {})
+/\ at = (s1 :> n2 @@ s2 :> r @@ s3 :> r)
+/\ spent = {s1}
+/\ alloc = {n1, n2}
+/\ parent = (n1 :> r @@ n2 :> r)
+/\ cnt = (n1 :> 0 @@ n2 :> 0 @@ r :> 2)
+/\ snap = (s1 :> 0 @@ s2 :> 0 @@ s3 :> 0)
+
+32 states generated, 31 distinct states found, 22 states left on queue.
+The depth of the complete state graph search is 4.
+Finished in 00s at (2026-10-11 17:20:21)
+Trace exploration spec path: ./BudgetTree_TTrace_1791739220.tla

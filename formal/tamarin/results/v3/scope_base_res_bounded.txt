@@ -1,0 +1,5 @@
+  attack_resource_bounded (exists-trace): falsified - no trace found (70 steps)
+# CONTROL (no -D flag): within the witness bound (one grant, one delegation, one agent signature, one walk) no trace accepts a resource outside the root grant's prefix. Line read from raw_scope_base_res_bounded.log.
+  attack_resource_bounded (exists-trace): falsified - no trace found (70 steps)
+# wall=8s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_resource_bounded  pca_scope_resource.spthy +RTS -N4 -M16g
+# pcaq job q261011-074143-za73

@@ -1,0 +1,33 @@
+/*
+  PCA -- explicit clock, BOUNDED-HORIZON INDEXED THREAD (v3).  The v2 model (pca_clock.spthy) has a linear Clock(t)
+  thread with read-and-re-emit rules; the backward search Clock(x) <- Reader <- Clock(x) <- ... is infinite, so
+  Tamarin cannot close the proof.  Here every thread step (Init, Tick, Obs_Past, Verify) also advances a STEP INDEX
+  i0 < i1 < ... < i10 (explicit table !Nx), so any backward chain has length <= 10: the verification is exact for all
+  executions with at most 10 clock-thread events (= 10 ticks/reads/verifications), over time points t0..t3.  This is a
+  BOUNDED-HORIZON result (not an unbounded one); the unbounded statement is Lean Replay.no_double_accept.
+  Expiry is a rule PREMISE (!Le(now, exp)); no ChkTime restriction.  -DNO_EXPIRY_CHECK drops that premise.
+  no_accept_after_expiry: ClockPast(e) at j (clock showed a time strictly greater than e) implies every Accept(e) is before j.
+*/
+theory PCA_Clock_V3b
+begin
+rule Tables:
+  [ ] --> [ !Succ('t0','t1'), !Succ('t1','t2'), !Succ('t2','t3'),
+            !Le('t0','t0'), !Le('t0','t1'), !Le('t0','t2'), !Le('t0','t3'), !Le('t1','t1'), !Le('t1','t2'),
+            !Le('t1','t3'), !Le('t2','t2'), !Le('t2','t3'), !Le('t3','t3'),
+            !Lt('t0','t1'), !Lt('t0','t2'), !Lt('t0','t3'), !Lt('t1','t2'), !Lt('t1','t3'), !Lt('t2','t3'),
+            !Nx('i0','i1'), !Nx('i1','i2'), !Nx('i2','i3'), !Nx('i3','i4'), !Nx('i4','i5'), !Nx('i5','i6'), !Nx('i6','i7'), !Nx('i7','i8'), !Nx('i8','i9'), !Nx('i9','i10') ]
+rule Clock_Init: [ ] --[ ClockInit() ]-> [ Clock('t0','i0') ]
+restriction ClockOnce: "All #i #j. ClockInit() @ i & ClockInit() @ j ==> #i = #j"
+rule Tick: [ Clock(t, n), !Succ(t, u), !Nx(n, m) ] --[ TickFrom(t) ]-> [ Clock(u, m) ]
+rule Obs_Past: [ Clock(t, n), In(e), !Lt(e, t), !Nx(n, m) ] --[ ClockPast(e) ]-> [ Clock(t, m) ]
+#ifdef NO_EXPIRY_CHECK
+rule Verify: [ Clock(now, n), In(exp), !Nx(n, m) ] --[ Accept(exp) ]-> [ Clock(now, m) ]
+#else
+rule Verify: [ Clock(now, n), In(exp), !Le(now, exp), !Nx(n, m) ] --[ Accept(exp) ]-> [ Clock(now, m) ]
+#endif
+lemma executable_accept: exists-trace "Ex e #i. Accept(e) @ i"
+lemma executable_after_tick: exists-trace "Ex e t #i #k. Accept(e) @ i & TickFrom(t) @ k & #k < #i"
+lemma executable_accept_then_past: exists-trace "Ex e #i #j. Accept(e) @ i & ClockPast(e) @ j & #i < #j"
+lemma no_accept_after_expiry:
+  "All e #i #j. Accept(e) @ i & ClockPast(e) @ j ==> #i < #j"
+end

@@ -1,0 +1,2 @@
+  honest_hop_scope_bounds_action (all-traces): verified (1586 steps)
+# wall=50s heuristic=c tamarin-prover 1.12.0

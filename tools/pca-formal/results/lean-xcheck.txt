@@ -1,0 +1,6 @@
+Lean 4.34.1 (lake exe xcheck, tools/pca-formal/lean-xcheck) vs packages/pca (tsx compare.ts):
+{"lean":{"eff":4680,"replay":54241,"gref":24},
+ "eff":{"tableRows":4680,"agree":4680,"realChainsVerifiedByVerifyChain":4680,"mismatches":[]},
+ "replay":{"sequences":54241,"agree":54241,"mismatches":[]},
+ "gref":{"rows":24,"agree":24,"mismatches":[]}}
+Machine-checked links (#print axioms): satB_iff, effB_iff, liveB_iff: propext,Quot.sound; consume_sound/consume_refuse/adv_sound: +Classical.choice; prune_sound: none.

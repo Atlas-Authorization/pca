@@ -1,0 +1,6 @@
+  executable_t3 (exists-trace): verified (12 steps)
+  executable_t2 (exists-trace): verified (8 steps)
+  stepup3_requires_principal (all-traces): verified (60 steps)
+  stepup3_requires_guardian (all-traces): verified (45 steps)
+  stepup2_compromised_agent_insufficient (all-traces): verified (63 steps)
+  stepup2_one_compromised_key_insufficient (all-traces): verified (53 steps)

@@ -1,0 +1,152 @@
+[
+{
+"name": "snap-attest-azure-maa",
+"pkg": "pca",
+"file": "attest-azure-maa.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-attest-gcp-confidential-space",
+"pkg": "pca",
+"file": "attest-gcp-confidential-space.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-attest-intel-dcap",
+"pkg": "pca",
+"file": "attest-intel-dcap.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-attest-nvidia-spdm",
+"pkg": "pca",
+"file": "attest-nvidia-spdm.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-attest-amd-snp",
+"pkg": "pca",
+"file": "attest-amd-snp.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-attest-puf",
+"pkg": "pca",
+"file": "attest-puf.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-attest-pq-software",
+"pkg": "pca",
+"file": "attest-pq-software.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-zk",
+"pkg": "pca",
+"file": "zk.ts",
+"from": "  opts = snapshotConfig(opts, { keep: ['snarkBackend'] }); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-semantic-threshold",
+"pkg": "pca",
+"file": "semantic-threshold.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-revocation",
+"pkg": "pca",
+"file": "revocation.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-threshold",
+"pkg": "pca",
+"file": "threshold.ts",
+"from": "  opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-attest-maa-keys",
+"pkg": "pca",
+"file": "attest-maa-keys.ts",
+"from": "  opts = snapshotConfig(opts, { keep: ['store', 'fetch'] }); // freeze the policy: later edits must not change what this trust enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-attverifier",
+"pkg": "pca",
+"file": "attestation.ts",
+"from": "  opts = snapshotConfig(opts, { keep: ['nonceStore', 'hardwareVerifier', 'resolveDocument'] }); // freeze the configuration: later edits by the caller must not change what this verifier enforces\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-multiroot",
+"pkg": "pca",
+"file": "attestation.ts",
+"from": "  // Freeze the configuration: later edits by the caller must not change what this verifier enforces. Each root is copied\n  // shallowly (its verifier stays the caller's object: behaviour, not data).\n  policy = Object.freeze({ threshold: policy?.threshold, roots: Array.isArray(policy?.roots) ? Object.freeze(policy.roots.map((r) => (r !== null && typeof r === 'object' ? Object.freeze({ ...r }) : r))) : policy?.roots }) as MultiRootAttestationPolicy;\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+},
+{
+"name": "snap-requirepca",
+"pkg": "pca",
+"file": "server/require-pca.ts",
+"from": "  // Freeze the configuration (e.g. the `require` list, the attestation trust list): later edits by the caller must not\n  // change what this guard enforces. Stores and hook objects stay the caller's (behaviour/state, not data).\n  opts = Object.freeze({\n    ...snapshotConfig(opts, { keep: ['budgetStore', 'hooks', 'attestation'] }),\n    ...(opts.attestation ? { attestation: snapshotConfig(opts.attestation, { keep: ['nonceStore', 'hardwareVerifier', 'resolveDocument'] }) } : {}),\n  });\n",
+"to": "",
+"filters": [
+"config-snapshot"
+]
+}
+]

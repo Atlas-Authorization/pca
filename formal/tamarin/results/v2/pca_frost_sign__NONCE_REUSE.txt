@@ -1,0 +1,6 @@
+  share_secrecy (all-traces): falsified - found trace (10 steps)
+# wall=66s heuristic=c tamarin-prover 1.12.0
+  sig_needs_t_signers (all-traces): falsified - found trace (16 steps)
+# wall=591s heuristic=s tamarin-prover 1.12.0
+  nonce_one_shot (all-traces): falsified - found trace (11 steps)
+# wall=2s heuristic=c tamarin-prover 1.12.0

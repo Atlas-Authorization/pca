@@ -1,0 +1,305 @@
+/*
+  PCA -- PCActn verification for delegation chains of ARBITRARY length (symbolic Dolev-Yao, Tamarin).
+
+  This is the UNBOUNDED sibling of pca_actn.spthy (which unrolls depths 1,2,3).  Same entities, same
+  attack-variant switches (-DNO_GREF_CHECK -DNO_ANCESTOR_CAV -DNO_AUD_CHECK -DNO_EXPIRY_CHECK -DNO_LEAF_SIG),
+  but the verifier walks the chain ONE HOP PER RULE STEP.  State (linear + persistent):
+
+      Walk(wid, cid, rest)           linear: the walk cursor.  cid = h(cap) of the hop JUST processed,
+                                     rest = the not-yet-processed tail of the wire chain (<cap, rest'> | 'end')
+      !Hop(wid, cid, par, iss)       persistent record of that hop: its parent link (h(parent cap) or 'none' at
+                                     the root) and issuer; the next hop must have  h = par  and  holder = iss
+      !Ctx(wid, <vaud, pkT, aaud, verb, gref, ctr, nonce, exp, leafholder>)
+                                     persistent action context, written ONCE by Walk_Start
+
+  The context lives in a persistent fact keyed by the fresh walk id, so every rule that needs the audience, the
+  verb or the grant_ref reads it in ONE derivation step (its only producer is Walk_Start); the proofs therefore
+  never have to unroll the walk, and the only unbounded object is the linear cursor Walk(...), which the oracle
+  (oracle_walk.sh) solves LAST.
+
+  Rules:  Walk_Start   consumes the wire chain + action, checks leaf signature, audience, the LEAF hop
+                       (signature by its issuer, caveat permits verb), emits Walk for the leaf hop;
+          Walk_Step    consumes Walk, takes the next hop <c,rest'> off `rest`, checks par = h(c),
+                       iss = holder(c), signature of c by its issuer, caveat of c permits verb, emits Walk
+                       for c (hence: one rule instance per hop, any number of hops);
+          Walk_Finish  consumes Walk whose par = 'none' and rest = 'end': issuer = trust anchor,
+                       grant_ref = cid (id of the root), replay guards, expiry, emits Accept.
+  There is NO depth bound anywhere: a verification of a chain of n hops is a trace with 1 Walk_Start, n-1
+  Walk_Step and 1 Walk_Finish steps.  `executable_deep_chain` exhibits n = 5 (and the proofs cover all n).
+
+  RELATION TO LEAN (formal/pca-lean/PcaProof):
+    Tamarin's Walk_* rules are the recursive "hop list walk": ChainLink.lean defines  walkOk : List Caveat ->
+    Action -> Prop  by recursion on the hop list (one hop per recursion step, exactly Walk_Start/Walk_Step/
+    Walk_Finish: "this hop's caveat permits the action, and the rest of the walk is ok") and proves
+    walkOk caveats a  <->  Attenuation.Eff (caveats.flatten) a  (fold / conjunction-of-all-caveats definition
+    of effective authority used in Attenuation.lean and in the Verifier/Theorem-2 statements)
+    (ChainLink.walk_iff_eff).  So "Walk accepts <=> every caveat along the chain permits the action" is
+    a machine-checked equivalence, and the Tamarin recursive encoding computes the Lean "effective authority
+    is the conjunction of the caveats along the chain" predicate.  Append-only (the prefix rule) is the Lean
+    Attenuation.IsPrefix structural rule; here (as in pca_actn.spthy) every hop carries only the caveat it adds
+    and the verifier conjoins them along the chain -- the standard equivalent abstraction.  The Tamarin <-> Lean
+    link is by SAME DEFINITIONS plus the equivalence theorem; it is NOT a mechanized extraction.
+
+  Soundness note: honest agents sign ANY action (worst case, prompt-injected); one-time-use store and
+  strictly-increasing counters are the 'Once' restrictions as in pca_actn.spthy (the linear-fact store is
+  pca_actn_time_store.spthy); expiry is the ChkTime_R ordering restriction as in pca_actn.spthy (the clock
+  rewriting semantics is in pca_actn_time_store.spthy).
+*/
+theory PCA_Actn_Unbounded
+begin
+
+builtins: signing, hashing
+
+rule Gen_Key:
+  [ Fr(~ltk) ] --[ KeyGen(pk(~ltk)) ]-> [ !Ltk(pk(~ltk), ~ltk), Out(pk(~ltk)) ]
+
+rule Reveal:
+  [ !Ltk(pkx, ltk) ] --[ Reveal(pkx) ]-> [ Out(ltk) ]
+
+rule Tick:
+  [ Fr(~e) ] --[ Tick(~e) ]-> [ !Epoch(~e), Out(~e) ]
+
+rule Expire:
+  [ !Epoch(e) ] --[ Expired(e) ]-> [ ]
+
+#ifdef NO_EXPIRY_CHECK
+#else
+restriction ChkTime_R: "All e #i #j. AcceptTime(e) @ i & Expired(e) @ j ==> #i < #j"
+#endif
+
+rule Verifier_Setup:
+  [ !Ltk(pkT, ltkT) ] --[ Trust($aud, pkT) ]-> [ !VCfg($aud, pkT) ]
+
+rule Principal_Grant:
+  let body = <'cap', 'none', pk(ltkP), pkH, $cv>
+      cap  = <body, sign(body, ltkP)>
+  in
+  [ !Ltk(pk(ltkP), ltkP), !Ltk(pkH, ltkH) ]
+  --[ Granted(pk(ltkP), pkH, $cv, h(cap)) ]->
+  [ Out(cap) ]
+
+rule Delegate:
+  let pbody = <'cap', ppar, piss, pk(ltkD), pcv>
+      pcap  = <pbody, psg>
+      body  = <'cap', h(pcap), pk(ltkD), pkE, $cv>
+      cap   = <body, sign(body, ltkD)>
+  in
+  [ !Ltk(pk(ltkD), ltkD), In(pcap), In(pkE) ]
+  --[ Eq(verify(psg, pbody, piss), true), HonestDelegated(h(pcap), h(cap), $cv) ]->
+  [ Out(cap) ]
+
+rule Agent_Act:
+  let act = <'act', aud, verb, res, gref, ctr, nonce, exp>
+  in
+  [ !Ltk(pk(ltkH), ltkH), In(<chain, act>) ]
+  --[ AgentSigned(pk(ltkH), aud, nonce, ctr, verb) ]->
+  [ Out(<chain, act, sign(act, ltkH)>) ]
+
+// ---- the recursive verifier walk -------------------------------------------------------------------
+rule Walk_Start:
+  let
+      b1  = <'cap', par1, iss1, hol1, cv1>
+      c1  = <b1, sg1>
+      act = <'act', aaud, verb, res, gref, ctr, nonce, exp>
+  in
+  [ In(<<c1, rest>, act, asig>), !VCfg(vaud, pkT), Fr(~wid) ]
+  --[ ChkLeafSig(verify(asig, act, hol1)),
+      ChkAud(aaud, vaud),
+      Eq(verify(sg1, b1, iss1), true),
+      ChkCav('leaf', cv1, verb),
+      WalkStart(~wid, verb),
+      HopWalk(~wid, h(c1), cv1, verb, iss1) ]->
+  [ Walk(~wid, h(c1), rest), !Hop(~wid, h(c1), par1, iss1),
+    !Ctx(~wid, <vaud, pkT, aaud, verb, gref, ctr, nonce, exp, hol1>) ]
+
+rule Walk_Step:
+  let
+      b2 = <'cap', par2, iss2, hol2, cv2>
+      c2 = <b2, sg2>
+  in
+  [ Walk(wid, cid, <c2, rest>), !Hop(wid, cid, par, iss),
+    !Ctx(wid, <vaud, pkT, aaud, verb, gref, ctr, nonce, exp, hol1>) ]
+  --[ Eq(par, h(c2)),
+      Eq(iss, hol2),
+      Eq(verify(sg2, b2, iss2), true),
+      ChkCav('anc', cv2, verb),
+      HopWalk(wid, h(c2), cv2, verb, iss2) ]->
+  [ Walk(wid, h(c2), rest), !Hop(wid, h(c2), par2, iss2) ]
+
+rule Walk_Finish:
+  [ Walk(wid, cid, 'end'), !Hop(wid, cid, 'none', iss),
+    !Ctx(wid, <vaud, pkT, aaud, verb, gref, ctr, nonce, exp, hol1>) ]
+  --[ Eq(iss, pkT),
+      ChkGref(gref, cid),
+      Consume(<'n', vaud, gref, hol1, nonce>),
+      Advance(<'c', vaud, gref, hol1>, ctr),
+      AcceptTime(exp),
+      Accept(wid, vaud, aaud, cid, hol1, nonce, ctr, verb, iss, exp) ]->
+  [ ]
+
+// ---- restrictions ----------------------------------------------------------------------------
+restriction Equality:   "All x y #i. Eq(x, y) @ i ==> x = y"
+#ifdef NO_LEAF_SIG
+#else
+restriction ChkLeafSig_R: "All x #i. ChkLeafSig(x) @ i ==> x = true"
+#endif
+#ifdef NO_AUD_CHECK
+#else
+restriction ChkAud_R: "All a b #i. ChkAud(a, b) @ i ==> a = b"
+#endif
+#ifdef NO_GREF_CHECK
+#else
+restriction ChkGref_R: "All a b #i. ChkGref(a, b) @ i ==> a = b"
+#endif
+#ifdef NO_ANCESTOR_CAV
+restriction ChkCav_R:
+  "All pos cv v #i. ChkCav(pos, cv, v) @ i ==> (not (pos = 'leaf')) | (cv = v) | (cv = 'any')"
+#else
+restriction ChkCav_R:
+  "All pos cv v #i. ChkCav(pos, cv, v) @ i ==> (cv = v) | (cv = 'any')"
+#endif
+restriction OnceNonce:   "All k #i #j. Consume(k) @ i & Consume(k) @ j ==> #i = #j"
+restriction OnceCounter: "All s c #i #j. Advance(s, c) @ i & Advance(s, c) @ j ==> #i = #j"
+
+// ---- sanity ---------------------------------------------------------------------------------------
+lemma executable_root_grant:
+  exists-trace
+  "Ex w vaud rid lhol n c v iss e #i. Accept(w, vaud, vaud, rid, lhol, n, c, v, iss, e) @ i
+     & (All x #r. Reveal(x) @ r ==> F)"
+
+lemma executable_delegation_issued:
+  exists-trace
+  "Ex hp hc cv1 #d. HonestDelegated(hp, hc, cv1) @ d"
+
+lemma executable_delegated:
+  exists-trace
+  "Ex w vaud rid lhol n c v iss e hc cv0 cv1 pkD iss2 #g #d #s #i #x.
+      Granted(iss, pkD, cv0, rid) @ g & HonestDelegated(rid, hc, cv1) @ d
+    & AgentSigned(lhol, vaud, n, c, v) @ s
+    & Accept(w, vaud, vaud, rid, lhol, n, c, v, iss, e) @ i & HopWalk(w, hc, cv1, v, iss2) @ x
+    & (All y #r. Reveal(y) @ r ==> F)"
+
+// two-hop chain (one Walk_Step): the smallest chain beyond the leaf; the honest narrative is spelled out so the
+// search is guided (grant -> one honest delegation -> agent signs -> verifier walks 2 hops)
+lemma executable_two_hops:
+  exists-trace
+  "Ex w vaud rid lhol n c v iss e hc cv0 cv1 pkD j1 j2 #g #d #s #i #x1 #x2.
+      Granted(iss, pkD, cv0, rid) @ g & HonestDelegated(rid, hc, cv1) @ d
+    & AgentSigned(lhol, vaud, n, c, v) @ s
+    & Accept(w, vaud, vaud, rid, lhol, n, c, v, iss, e) @ i
+    & HopWalk(w, hc, cv1, v, j1) @ x1 & HopWalk(w, rid, cv0, v, j2) @ x2
+    & (All y #r. Reveal(y) @ r ==> F)"
+
+// a verification that walked 5 distinct hops (grant + 4 honest delegations): the recursion really iterates
+// (the proofs below cover EVERY length)
+lemma executable_deep_chain:
+  exists-trace
+  "Ex w vaud r0 r1 r2 r3 r4 lhol n c v iss e cv0 cv1 cv2 cv3 cv4 pkD j0 j1 j2 j3 j4 #g #d1 #d2 #d3 #d4 #s #i #x0 #x1 #x2 #x3 #x4.
+      Granted(iss, pkD, cv0, r0) @ g
+    & HonestDelegated(r0, r1, cv1) @ d1 & HonestDelegated(r1, r2, cv2) @ d2
+    & HonestDelegated(r2, r3, cv3) @ d3 & HonestDelegated(r3, r4, cv4) @ d4
+    & AgentSigned(lhol, vaud, n, c, v) @ s
+    & Accept(w, vaud, vaud, r0, lhol, n, c, v, iss, e) @ i
+    & HopWalk(w, r0, cv0, v, j0) @ x0 & HopWalk(w, r1, cv1, v, j1) @ x1 & HopWalk(w, r2, cv2, v, j2) @ x2
+    & HopWalk(w, r3, cv3, v, j3) @ x3 & HopWalk(w, r4, cv4, v, j4) @ x4
+    & (All y #r. Reveal(y) @ r ==> F)"
+
+// attack witness (guided): an accepted action whose ROOT grant does not permit the verb, with the principal's key
+// intact.  UNREACHABLE in the shipped verifier (this lemma is then reported "falsified - no trace found", i.e. no
+// such execution exists); a trace exists under -DNO_ANCESTOR_CAV (ancestors' caveats ignored).
+lemma attack_root_widening:
+  exists-trace
+  "Ex w vaud rid lhol n c v iss e pkD cv0 #g #i.
+      Granted(iss, pkD, cv0, rid) @ g & Accept(w, vaud, vaud, rid, lhol, n, c, v, iss, e) @ i
+    & not (cv0 = v) & not (cv0 = 'any') & (All y #r. Reveal(y) @ r ==> F)"
+
+// attack witness (guided): grant -> honest delegation with caveat cv1 -> honest delegation with caveat cv2 = v;
+// the accepted verb v is NOT permitted by the middle hop's caveat cv1.  No trace in the shipped verifier;
+// a trace exists under -DNO_ANCESTOR_CAV.
+lemma attack_ancestor_widening:
+  exists-trace
+  "Ex w vaud r0 r1 r2 lhol n c v iss e pkD cv0 cv1 j1 j2 #g #d1 #d2 #i #x1 #x2.
+      Granted(iss, pkD, cv0, r0) @ g & HonestDelegated(r0, r1, cv1) @ d1 & HonestDelegated(r1, r2, v) @ d2
+    & Accept(w, vaud, vaud, r0, lhol, n, c, v, iss, e) @ i
+    & HopWalk(w, r1, cv1, v, j1) @ x1 & HopWalk(w, r2, v, v, j2) @ x2
+    & not (cv1 = v) & not (cv1 = 'any') & (All y #r. Reveal(y) @ r ==> F)"
+
+// ---- inductive helper lemmas (over the walk) ------------------------------------------------------
+// H1: every walked hop belongs to a walk that was started, with the SAME verb (verb invariant of the walk)
+// (structural helper lemmas; with !Ctx they are one-step, no induction)
+lemma walk_verb_invariant:
+  "All w h cv v iss #i. HopWalk(w, h, cv, v, iss) @ i
+     ==> Ex #s. WalkStart(w, v) @ s & (#s < #i | #s = #i)"
+
+// H2: every Accept belongs to a started walk with the same verb
+lemma accept_verb_invariant:
+  "All w vaud aaud rid lhol n c v iss e #i. Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e) @ i
+     ==> Ex #s. WalkStart(w, v) @ s & #s < #i"
+
+// H3: at most one start per walk id, so (w) determines the verb
+lemma walk_start_unique:
+  "All w v1 v2 #i #j. WalkStart(w, v1) @ i & WalkStart(w, v2) @ j ==> #i = #j"
+
+// H4: every walked hop's cap hash was issued by a principal grant / honest delegation, or its issuer's key
+//     is compromised (signature authenticity at every hop, whatever the position)
+lemma hop_issuance:
+  "All w h cv v iss #i #k. HopWalk(w, h, cv, v, iss) @ i & KeyGen(iss) @ k
+     ==> (Ex pkH #g. Granted(iss, pkH, cv, h) @ g)
+       | (Ex hp #d. HonestDelegated(hp, h, cv) @ d)
+       | (Ex #r. Reveal(iss) @ r)"
+
+// ---- LEMMA 1: authorization (root = principal grant) --------------------------------------------------
+lemma authorization:
+  "All w vaud aaud rid lhol n c v iss e #i.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e) @ i
+      ==> (Ex pkH cv #g. Granted(iss, pkH, cv, rid) @ g & #g < #i)
+        | (Ex #r. Reveal(iss) @ r)"
+
+lemma leaf_signature_authenticity:
+  "All w vaud aaud rid lhol n c v iss e #i #k.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & KeyGen(lhol) @ k
+      ==> (Ex #s. AgentSigned(lhol, aaud, n, c, v) @ s & #s < #i)
+        | (Ex #r. Reveal(lhol) @ r)"
+
+// ---- LEMMA 2: attenuation along chains of ANY length ---------------------------------------------------
+lemma attenuation_root:
+  "All w vaud aaud rid lhol n c v iss e pkH cv0 #i #g.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & Granted(iss, pkH, cv0, rid) @ g
+      ==> (cv0 = v) | (cv0 = 'any') | (Ex #r. Reveal(iss) @ r)"
+
+lemma attenuation_hop:
+  "All w vaud aaud rid lhol n c v iss e hp hc cv1 iss2 #i #d #x.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & HonestDelegated(hp, hc, cv1) @ d
+      & HopWalk(w, hc, cv1, v, iss2) @ x
+      ==> (cv1 = v) | (cv1 = 'any')"
+
+// the strong, chain-bound form: for the walk w that was ACCEPTED, EVERY hop that walk traversed (leaf,
+// every intermediate, root) carries a caveat that permits the accepted verb.  By induction on the walk.
+lemma chain_all_hops_permit:
+  "All w vaud aaud rid lhol n c v iss e h cv v2 iss2 #i #x.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & HopWalk(w, h, cv, v2, iss2) @ x
+      ==> v2 = v & ( (cv = v) | (cv = 'any') )"
+
+// ---- LEMMA 3: replay freedom ------------------------------------------------------------------
+lemma replay_freedom_nonce:
+  "All w1 w2 vaud a1 a2 rid lhol n c1 c2 v1 v2 iss1 iss2 e1 e2 #i #j.
+      Accept(w1, vaud, a1, rid, lhol, n, c1, v1, iss1, e1) @ i
+    & Accept(w2, vaud, a2, rid, lhol, n, c2, v2, iss2, e2) @ j
+      ==> #i = #j"
+
+lemma replay_freedom_counter:
+  "All w1 w2 vaud a1 a2 rid lhol n1 n2 c v1 v2 iss1 iss2 e1 e2 #i #j.
+      Accept(w1, vaud, a1, rid, lhol, n1, c, v1, iss1, e1) @ i
+    & Accept(w2, vaud, a2, rid, lhol, n2, c, v2, iss2, e2) @ j
+      ==> #i = #j"
+
+// ---- LEMMA 4/5 ----------------------------------------------------------------------------------
+lemma audience_binding:
+  "All w vaud aaud rid lhol n c v iss e #i.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e) @ i ==> vaud = aaud"
+
+lemma no_accept_after_expiry:
+  "All w vaud aaud rid lhol n c v iss e #i #j.
+      Accept(w, vaud, aaud, rid, lhol, n, c, v, iss, e) @ i & Expired(e) @ j ==> #i < #j"
+
+end

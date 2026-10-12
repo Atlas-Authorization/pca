@@ -1,0 +1,1 @@
+{"mode":"exh","args":["10/22",null,null],"seconds":182.172,"cases":19642,"agree":19642,"disagree":0,"modelAccepted":1102,"hist":{"t0:rej:0":3929,"t1:rej:0":2868,"t1:acc:1":1019,"t1:acc:2":40,"t2:rej:0":2870,"t2:rej:1":1016,"t2:acc:2":43,"t3:rej:0":2867,"t3:rej:1":1023,"t3:rej:2":38,"t4:rej:0":3929},"examples":[]}

@@ -1,0 +1,1 @@
+attestation_binding | 0s | RESULT event(Accepted(pkH_4,g_4,e_4,n_3,m_2)) ==> event(QuoteIssued(pkH_4,g_4,e_4,n_3)) || event(RevealTEE(p_1)) is false.

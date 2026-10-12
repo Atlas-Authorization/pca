@@ -1,0 +1,2 @@
+  spend_debits_root (all-traces): verified (2 steps)
+# wall=1s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=spend_debits_root --heuristic=o --oraclename=oracle_budget.sh pca_budget_v4.spthy +RTS -N2 -M6g

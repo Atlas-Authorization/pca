@@ -1,0 +1,2 @@
+# wall=1940s rc=251 tamarin-prover 1.12.0 cmd=tamarin-prover --prove=no_manifest_rollback -DNO_ATTEST pca_allowlist_v3.spthy +RTS -N4
+HEAP EXHAUSTED at -M12g (NOT proved)

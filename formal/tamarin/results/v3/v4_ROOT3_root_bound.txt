@@ -1,0 +1,3 @@
+OPEN (NOT proved): heap exhausted at +RTS -M16g after 2157s: root_bound
+# wall=2157s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=root_bound --heuristic=o --oraclename=oracle_budget.sh --prove=nb_alloc_unique --prove=nb_debit_has_alloc --prove=nb_c1_debit_from -DROOT3 pca_budget_v4.spthy +RTS -N4 -M16g
+# ROOT3 limit-3 bound; pcaq job q261011-034423-x7i9, cloud-box-4; raw log (50MB) not committed

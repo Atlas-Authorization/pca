@@ -1,0 +1,9 @@
+{
+ "name": "audit-canon-5ec941ca48ed",
+ "kind": "canon",
+ "raw": "{\"ver\":2,\"x\":{\"y\":[true,false,null,0,-0,,1.5]},\"s\":\"\\ud83d\\ude00 \\u0000 \"__proto__\":{\"polluted\":1}/\"}",
+ "found": {
+  "by": "pca-audit structure-aware mutator",
+  "seed": 20261009
+ }
+}

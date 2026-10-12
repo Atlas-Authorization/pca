@@ -1,0 +1,22 @@
+{
+  "retrieved": "2026-10-08",
+  "files": [
+    {
+      "file": "ciba-core-1_0-examples.json",
+      "kind": "official-specification-examples",
+      "source": "https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html",
+      "specification": "OpenID Connect Client-Initiated Backchannel Authentication Flow - Core 1.0 (Final, September 1, 2021)",
+      "sourceSha256": "870ed5d15125840bd877a5e6e9e3216a39e83ba65ae5f663a7d39a4c32cabd8a",
+      "sha256": "a1823cfda234b16b77ccf0525e4df4988e699db2cc5edab3985f305d48c40d77",
+      "note": "Non-normative examples copied verbatim from the specification (whitespace de-indented only); the request-parameter list and error-code list are extracted from the specification text. Copyright (c) 2021 The OpenID Foundation; examples reproduced with attribution."
+    },
+    {
+      "file": "keycloak-ciba-transcripts.json",
+      "kind": "real-provider-transcript",
+      "source": "Keycloak 26.8.0 (official release distribution, start-dev, throwaway local realm), recorded by src/keycloak.integration.test.ts via scripts/run-keycloak-ciba.sh",
+      "recordedAt": "2026-10-09T03:21:42.020Z",
+      "sha256": "1d12aaf8dfc895876ca4025c9f8da03b5994ef6599d3d300e20853a913ffa03e",
+      "note": "HTTP exchanges between the pca-ciba client, Keycloak and a mock authentication-channel device. Access/ID/refresh tokens, auth_req_id values, client_notification_token and credentials are redacted. Re-record with PCA_CIBA_RECORD=1."
+    }
+  ]
+}

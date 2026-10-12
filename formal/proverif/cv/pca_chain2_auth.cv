@@ -1,0 +1,98 @@
+(* PCA -- computational proof (CryptoVerif 2.13) for a delegation chain of depth 2:
+     principal kP --signs--> root cap  cb2 = cap(none, pkP, pkD, cv2)            (holder = honest delegator D)
+     delegator kD --signs--> child cap cb1 = cap(H(cb2,sg2), pkD, hol1, cv1)     (D signs ANY child asked of it; hol1 free)
+     holder   kH  --signs--> action act (any action)
+   Verifier: check(cb2,pkP,sg2) && par2 = none && iss2 = pkP && par1 = H(hk,(cb2,sg2)) && iss1 = hol2
+             && check(cb1, iss1, sg1) && gref = H(hk,(cb2,sg2)) && check(act, hol1, asg).
+   Accept is emitted only when the leaf holder hol1 is the honest holder key pkH (the honest-key premise of the
+   Tamarin lemma leaf_signature_authenticity).  Assumptions: UF-CMA signatures, collision-resistant H.  No key corruption. *)
+
+param N.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type hashkey [fixed].
+type hashout [fixed].
+type capwire.
+type audience. type verb_t. type res_t. type ctr_t. type nonce_t. type exp_t. type caveat.
+
+proba Psign.
+proba Psigncoll.
+proba Phash.
+
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+expand CollisionResistant_hash_1(hashkey, capwire, hashout, hash, hash_oracle, Phash).
+
+const noneh: hashout.
+fun mkcap(hashout, pkey, pkey, caveat): message [data].
+fun mkact(audience, verb_t, res_t, hashout, ctr_t, nonce_t, exp_t): message [data].
+fun mkcw(message, signature): capwire [data].
+equation forall p: hashout, i: pkey, h: pkey, c: caveat, a: audience, v: verb_t, r: res_t, g: hashout, k: ctr_t, n: nonce_t, e: exp_t;
+  mkcap(p, i, h, c) <> mkact(a, v, r, g, k, n, e).
+
+event Granted(message).            (* principal signed this root grant *)
+event Delegated(message).          (* honest delegator signed this child cap *)
+event Signed(message).             (* honest agent signed this action *)
+event Accept(message, message, hashout, message).   (* root cb2, child cb1, grant_ref, act *)
+
+query c2: message, c1: message, g: hashout, a: message;
+  event(Accept(c2, c1, g, a)) ==> event(Granted(c2)).
+query c2: message, c1: message, g: hashout, a: message;
+  event(Accept(c2, c1, g, a)) ==> event(Delegated(c1)).
+query c2: message, c1: message, g: hashout, a: message;
+  event(Accept(c2, c1, g, a)) ==> event(Signed(a)).
+query c2: message, c2': message, c1: message, c1': message, g: hashout, a: message, a': message;
+  event(Accept(c2, c1, g, a)) && event(Accept(c2', c1', g, a')) ==> c2 = c2'.
+
+channel c0, cP, cP2, cD, cD2, cA, cA2, cV, cV2.
+
+let Principal(pkP0: pkey, pkD: pkey, skP: skey) =
+  ! N
+  in(cP, cv: caveat);
+  let cb = mkcap(noneh, pkP0, pkD, cv) in
+  event Granted(cb);
+  out(cP2, (cb, sign(cb, skP))).
+
+let Delegator(pkD: pkey, skD: skey) =
+  ! N
+  in(cD, (par: hashout, hol: pkey, cv: caveat));
+  let cb = mkcap(par, pkD, hol, cv) in
+  event Delegated(cb);
+  out(cD2, (cb, sign(cb, skD))).
+
+let Agent(skH: skey) =
+  ! N
+  in(cA, (aud: audience, vb: verb_t, rs: res_t, gref: hashout, ctr: ctr_t, nonce: nonce_t, ex: exp_t));
+  let act = mkact(aud, vb, rs, gref, ctr, nonce, ex) in
+  event Signed(act);
+  out(cA2, sign(act, skH)).
+
+let Verifier(hk: hashkey, pkP: pkey, pkH: pkey) =
+  ! N
+  in(cV, (cb2: message, sg2: signature, cb1: message, sg1: signature, aud: audience, vb: verb_t, rs: res_t, gref: hashout, ctr: ctr_t, nonce: nonce_t, ex: exp_t, asg: signature));
+  let mkcap(par2, iss2, hol2, cv2) = cb2 in
+  let mkcap(par1, iss1, hol1, cv1) = cb1 in
+  let act = mkact(aud, vb, rs, gref, ctr, nonce, ex) in
+  if par2 = noneh then
+  if iss2 = pkP then
+  if check(cb2, pkP, sg2) then
+  if par1 = hash(hk, mkcw(cb2, sg2)) then
+  if iss1 = hol2 then
+  if check(cb1, iss1, sg1) then
+  if gref = hash(hk, mkcw(cb2, sg2)) then
+  if hol1 = pkH then
+  if check(act, hol1, asg) then
+  event Accept(cb2, cb1, gref, act);
+  out(cV2, ()).
+
+process
+  in(c0, ());
+  new hk: hashkey;
+  new rkP: keyseed; let pkP = pkgen(rkP) in let skP = skgen(rkP) in
+  new rkD: keyseed; let pkD = pkgen(rkD) in let skD = skgen(rkD) in
+  new rkH: keyseed; let pkH = pkgen(rkH) in let skH = skgen(rkH) in
+  out(c0, (pkP, pkD, pkH));
+  ( hash_oracle(hk) | Principal(pkP, pkD, skP) | Delegator(pkD, skD) | Agent(skH) | Verifier(hk, pkP, pkH) )

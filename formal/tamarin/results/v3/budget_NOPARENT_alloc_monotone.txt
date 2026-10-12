@@ -1,0 +1,2 @@
+  alloc_monotone (all-traces): falsified - found trace (8 steps)
+# wall=0s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=alloc_monotone --heuristic=o --oraclename=oracle_budget.sh -DNO_PARENT_CHECK pca_budget_v3.spthy +RTS -N4 -M10g

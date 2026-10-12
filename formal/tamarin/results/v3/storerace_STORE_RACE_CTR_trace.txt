@@ -1,0 +1,10 @@
+analyzed: pca_store_race.spthy
+  processing time: 1.57s
+  executable_nonce (exists-trace): analysis incomplete (1 steps)
+  executable_ctr (exists-trace): analysis incomplete (1 steps)
+  attack_double_nonce (exists-trace): analysis incomplete (1 steps)
+  attack_double_counter (exists-trace): analysis incomplete (1 steps)
+  attack_double_counter_interleaved (exists-trace): verified (13 steps)
+  replay_freedom_nonce (all-traces): analysis incomplete (1 steps)
+  replay_freedom_counter (all-traces): analysis incomplete (1 steps)
+==============================================================================

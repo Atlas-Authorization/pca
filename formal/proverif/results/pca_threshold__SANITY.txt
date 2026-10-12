@@ -1,0 +1,3 @@
+sanity1 | 0s | RESULT not event(Accept(m_7,ss_7,three,a,g,p)) is false.
+sanity2 | 0s | RESULT not event(Accept(m_7,ss_7,two,a,g,p)) is false.
+sanity3 | 0s | RESULT not (event(Accept(m_7,ss_7,three,a,g,p)) && event(Issued(principalR,p,m_7,ss_7,three))) is false.

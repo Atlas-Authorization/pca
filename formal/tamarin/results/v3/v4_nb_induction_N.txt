@@ -1,0 +1,6 @@
+  nb_alloc_unique (all-traces): verified (6 steps)
+  nb_debit_has_alloc (all-traces): verified (119 steps)
+  nb_c1_debit_from (all-traces): verified (23 steps)
+  node_bound_ind (all-traces): verified (55 steps)
+# wall=2s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=node_bound_ind --prove=nb_alloc_unique --prove=nb_debit_has_alloc --prove=nb_c1_debit_from --heuristic=o --oraclename=oracle_nodebound.sh -DNB_IND pca_budget_v4.spthy +RTS -N2 -M12g
+# pcaq job q261011-175844-sjjv (sp1); -DNB_IND: node_bound as a [use_induction] lemma on the shipped v4 model

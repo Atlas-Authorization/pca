@@ -1,0 +1,2 @@
+  scope_narrowing_all_hops (all-traces): verified (1204 steps)
+# wall=67s heuristic=c tamarin-prover 1.12.0

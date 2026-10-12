@@ -1,0 +1,4 @@
+{
+  "generator": "@atlasauth/pca-dpop createDpopProof via crosscheck/gen-ours.mts; key = RFC 8032 test vector 1",
+  "proof": "eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVkRFNBIiwiandrIjp7Imt0eSI6Ik9LUCIsImNydiI6IkVkMjU1MTkiLCJ4IjoiMTFxWUFZS3hDcmZWU183VHlXUUhPZzdoY3ZQYXBpTWxyd0lhYVBjSFVSbyJ9fQ.eyJodG0iOiJQT1NUIiwiaHR1IjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20vdG9rZW4iLCJpYXQiOjE3MDAwMDAwMDAsImp0aSI6ImNyb3NzY2hlY2stMSIsIm5vbmNlIjoibi0xIiwiYXRoIjoiYWJjIn0.dMeVwbZQ0p2IX8ksbF4ltsHxg7kn0jHIO6sLUtNdl_eWmCAkdb9SStpEvm-lZUiuYOeaJeP39y9LZ0j6EMM2CA"
+}

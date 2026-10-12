@@ -1,0 +1,3 @@
+  attack_scope_escalation (exists-trace): falsified - no trace found (515 steps)
+# CONTROL (no -D flag): the scope escalation is impossible in the shipped model. Line read from raw_scope_base_scope_attack.log (the runner of that job dropped exists-trace verdicts; fixed in run3.sh).
+# wall=48s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_scope_escalation pca_scope_resource.spthy +RTS -N4 -M12g (pcaq job q261011-034431-ypbz, cloud-box-11)

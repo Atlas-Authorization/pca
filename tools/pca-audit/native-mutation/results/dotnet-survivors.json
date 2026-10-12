@@ -1,0 +1,452 @@
+[
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Logical mutation: pk.Length != MlDsa65PublicKeyBytes && sig.Length != MlDsa65SignatureBytes",
+  "line": "if (pk.Length != MlDsa65PublicKeyBytes || sig.Length != MlDsa65SignatureBytes) return false;",
+  "occurrence": 1,
+  "lineno": 33,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "var v = new MLDsaSigner(MLDsaParameters.ml_dsa_65, false); // empty context, matching @noble/post-quantum",
+  "occurrence": 1,
+  "lineno": 37,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "catch { return false; }",
+  "occurrence": 1,
+  "lineno": 42,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: (long)text.Length * 3 < MaxArtifactBytes",
+  "line": "if ((long)text.Length * 3 <= MaxArtifactBytes) return false;",
+  "occurrence": 1,
+  "lineno": 87,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"Stryker was here!\"",
+  "line": "string fracPart = \"\";",
+  "occurrence": 1,
+  "lineno": 321,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: raw.IndexOfAny(new[] { 'e', 'E' }) > 0",
+  "line": "if (i != raw.Length) return raw.IndexOfAny(new[] { 'e', 'E' }) >= 0 ? \"exponent form is not allowed\" : \"bad number\";",
+  "occurrence": 1,
+  "lineno": 330,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: x.Raw.IndexOf('.') <= 0",
+  "line": "if (v is Num x && x.Raw.IndexOf('.') < 0 && NumberError(x.Raw) == null) { n = long.Parse(x.Raw, CultureInfo.InvariantCulture); return true; }",
+  "occurrence": 1,
+  "lineno": 349,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String Method Mutation (Replace IndexOf() with LastIndexOf()): x.Raw.LastIndexOf",
+  "line": "if (v is Num x && x.Raw.IndexOf('.') < 0 && NumberError(x.Raw) == null) { n = long.Parse(x.Raw, CultureInfo.InvariantCulture); return true; }",
+  "occurrence": 1,
+  "lineno": 349,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Arithmetic mutation: s.Length * 4",
+  "line": "if (s.Length % 4 == 1) return null;",
+  "occurrence": 1,
+  "lineno": 443,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Logical mutation: c >= 'A' || c <= 'Z'",
+  "line": "if (!(c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' || c == '_')) return null;",
+  "occurrence": 1,
+  "lineno": 445,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Logical mutation: c >= 'a' || c <= 'z'",
+  "line": "if (!(c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' || c == '_')) return null;",
+  "occurrence": 1,
+  "lineno": 445,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Logical mutation: c >= '0' || c <= '9'",
+  "line": "if (!(c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' || c == '_')) return null;",
+  "occurrence": 1,
+  "lineno": 445,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Block removal mutation: {}",
+  "line": "catch (FormatException) { return null; }",
+  "occurrence": 1,
+  "lineno": 456,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Arithmetic mutation: P + 1",
+  "line": "static readonly BigInteger SqrtM1 = BigInteger.ModPow(2, (P - 1) / 4, P);",
+  "occurrence": 1,
+  "lineno": 540,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "RightShiftAssignmentExpression to UnsignedRightShiftAssignmentExpression mutation: k >>>= 1",
+  "line": "while (k > 0) { if (!k.IsEven) r = Add(r, q); q = Add(q, q); k >>= 1; }",
+  "occurrence": 1,
+  "lineno": 562,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Bitwise mutation: b[31] << 7",
+  "line": "int sign = b[31] >> 7;",
+  "occurrence": 1,
+  "lineno": 568,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Bitwise mutation: b[31] >>> 7",
+  "line": "int sign = b[31] >> 7;",
+  "occurrence": 1,
+  "lineno": 568,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: false",
+  "line": "var y = new BigInteger(yb, isUnsigned: true, isBigEndian: false);",
+  "occurrence": 1,
+  "lineno": 570,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: y > P",
+  "line": "if (y >= P) return null; // non-canonical y",
+  "occurrence": 1,
+  "lineno": 571,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: sign != 1",
+  "line": "if (x == 0 && sign == 1) return null;",
+  "occurrence": 1,
+  "lineno": 578,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: (int)(x & 1) == sign",
+  "line": "if ((int)(x & 1) != sign) x = Mod(-x);",
+  "occurrence": 1,
+  "lineno": 579,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "UnaryMinusExpression to UnaryPlusExpression mutation: +x",
+  "line": "if ((int)(x & 1) != sign) x = Mod(-x);",
+  "occurrence": 1,
+  "lineno": 579,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "if (p == null) return false;",
+  "occurrence": 1,
+  "lineno": 587,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Logical mutation: pk.Length != 32 && sig.Length != 64",
+  "line": "if (pk.Length != 32 || sig.Length != 64) return false;",
+  "occurrence": 1,
+  "lineno": 594,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "if (pk.Length != 32 || sig.Length != 64) return false;",
+  "occurrence": 1,
+  "lineno": 594,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: false",
+  "line": "var s = new BigInteger(sig.AsSpan(32), isUnsigned: true, isBigEndian: false);",
+  "occurrence": 1,
+  "lineno": 595,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: s > L",
+  "line": "if (s >= L) return false; // non-canonical S",
+  "occurrence": 1,
+  "lineno": 596,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "catch { return false; }",
+  "occurrence": 3,
+  "lineno": 606,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "if (name == null) return false;",
+  "occurrence": 1,
+  "lineno": 699,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "_ => false,",
+  "occurrence": 1,
+  "lineno": 707,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Block removal mutation: {}",
+  "line": "catch { return null; }",
+  "occurrence": 1,
+  "lineno": 798,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "if (ssh == null) return false;",
+  "occurrence": 1,
+  "lineno": 829,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Logical mutation: alg != null || Pq.Suites.ContainsKey(alg)",
+  "line": "if (alg != null && Pq.Suites.ContainsKey(alg)) tag = Encoding.UTF8.GetBytes(ShareSuiteTag + alg);",
+  "occurrence": 1,
+  "lineno": 849,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "catch { return false; }",
+  "occurrence": 4,
+  "lineno": 857,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"\"",
+  "line": "if (d == null) return label + \": bad signature (not signed by expected key)\";",
+  "occurrence": 1,
+  "lineno": 896,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Block removal mutation: {}",
+  "line": "try { if (CapHash(trustedRoot) == CapHash(root)) trusted = tpk; } catch { trusted = null; }",
+  "occurrence": 1,
+  "lineno": 953,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"\"",
+  "line": "PinnedPq.Resolve(Get(parent, \"holder\") as string, Get(c, \"pq_pk\"), holderPq: Get(parent, \"holder_pq\")));",
+  "occurrence": 1,
+  "lineno": 1001,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"\"",
+  "line": "catch (Exception e) { return \"malformed: \" + e.Message; }",
+  "occurrence": 1,
+  "lineno": 1108,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Object initializer mutation: new Verdict {}",
+  "line": "var v = new Verdict { Allow = false, Reason = \"wire: malformed input (\" + ex.GetType().Name + \")\" };",
+  "occurrence": 1,
+  "lineno": 1151,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "var v = new Verdict { Allow = false, Reason = \"wire: malformed input (\" + ex.GetType().Name + \")\" };",
+  "occurrence": 1,
+  "lineno": 1151,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"\"",
+  "line": "var v = new Verdict { Allow = false, Reason = \"wire: malformed input (\" + ex.GetType().Name + \")\" };",
+  "occurrence": 1,
+  "lineno": 1151,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"\"",
+  "line": "var v = new Verdict { Allow = false, Reason = \"wire: malformed input (\" + ex.GetType().Name + \")\" };",
+  "occurrence": 1,
+  "lineno": 1151,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Statement mutation: ;",
+  "line": "v.Checks.Clear();",
+  "occurrence": 1,
+  "lineno": 1152,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"\"",
+  "line": "v.Checks[\"wire\"] = false;",
+  "occurrence": 2,
+  "lineno": 1153,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Boolean mutation: true",
+  "line": "v.Checks[\"wire\"] = false;",
+  "occurrence": 2,
+  "lineno": 1153,
+  "status": "NoCoverage"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"\"",
+  "line": "var gi = Get(grant, \"issuer\");",
+  "occurrence": 1,
+  "lineno": 1197,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: gi == null",
+  "line": "var (why, ok) = VerifyChain(chain, gi, gi != null, allowedSuites, trustedRoot: grant); // chain[0] == grant was checked above",
+  "occurrence": 1,
+  "lineno": 1198,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Equality mutation: gref.Length >= 0",
+  "line": "if (p.TryGetValue(\"grant_ref\", out var grefObj) && grefObj is string gref && gref.Length > 0",
+  "occurrence": 1,
+  "lineno": 1205,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "Conditional (false) mutation: (false?null :SuitePolicyError(Get(p, \"alg\"), \"leaf\", allowedSuites) ?? PqBindingError(p, Get(leafCapObj, \"holder_pq\"), \"leaf\"))",
+  "line": "var leafErr = leafCapObj == null ? null",
+  "occurrence": 1,
+  "lineno": 1221,
+  "status": "Survived"
+ },
+ {
+  "crate": "dotnet-pca",
+  "file": "AtlasPca/Pca.cs",
+  "mutant": "String mutation: \"\"",
+  "line": "PinnedPq.Resolve(Get(leafCapObj, \"holder\") as string, Get(p, \"pq_pk\"), holderPq: Get(leafCapObj, \"holder_pq\")))) v.Checks[\"leaf_signature\"] = true;",
+  "occurrence": 1,
+  "lineno": 1225,
+  "status": "Survived"
+ }
+]

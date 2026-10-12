@@ -1,0 +1,185 @@
+{
+  "_label": "CAPTURED from the Envoy sidecar of Istio 1.31.1 (CUSTOM AuthorizationPolicy, envoyExtAuthzHttp provider) on single-node k3s v1.36.5+k3s1, Azure Standard_D2s_v4, 2026-10-08: the HTTP requests the PCA check service received (the in-process log of scripts/istio/mesh-authz.ts). The PCA-Action value is not retained.",
+  "requests": [
+    {
+      "method": "POST",
+      "url": "/refunds?currency=usd&note=a%20b",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-request-id": "5017d9df-e87e-4ad5-9cb3-fea9f7c30ea3",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "7f6a768a-ae0e-425f-a74c-1460a0c8da38",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000",
+        "pca-action": "<PCA-Action proof: not retained>"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "a90b7391-93e1-44ae-b2c7-44daf9ee7e86",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "c2f4b7a6-1dba-4cf1-a3e6-33d150af6e80",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/payouts",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-request-id": "162f6961-8962-408c-bf68-1c96dc17f9dc",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/admin",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "d7468f4a-573a-4d06-ba29-9df3ee59babb",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "b8c69a8d-0e80-4b33-bfd4-5870f394ddee",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-request-id": "689fe3db-7b10-4506-92d9-8d7e531d37cf",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-request-id": "a3608a6e-3766-4da1-b115-b1e69cf28a91",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "3a777132-a7fd-497f-9780-0fc85eb80e9e",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000",
+        "pca-action": "<PCA-Action proof: not retained>"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "45f36c30-8e87-4225-b6e1-3217879ab304",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000",
+        "pca-action": "<PCA-Action proof: not retained>"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "7ee0f78e-25d7-48fe-bf1a-84a06c296e85",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000",
+        "pca-action": "<PCA-Action proof: not retained>"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "83dad9bb-a7fe-45de-87a6-f287e74f3fd0",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000",
+        "pca-action": "<PCA-Action proof: not retained>"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "6e5e5da1-3b7b-4797-a59f-564acd9458b2",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000",
+        "pca-action": "<PCA-Action proof: not retained>"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "/refunds",
+      "headers": {
+        "host": "upstream.foo.svc.cluster.local:8080",
+        "content-length": "0",
+        "x-request-id": "967a85f0-8cb6-4801-9073-c8ec69a3dbdf",
+        "pca-action": "<PCA-Action proof: not retained>",
+        "x-envoy-internal": "true",
+        "x-envoy-expected-rq-timeout-ms": "600000"
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+[
+{
+"name": "maa-fin-del",
+"pkg": "pca",
+"file": "attest-maa-keys.ts",
+"from": "      if (!Number.isFinite(v.from) || !Number.isFinite(v.to)) throw new Error(`cert ${j}: unparsable validity`);",
+"to": "",
+"filters": [
+"mutation-kill-maa-keys-validity-r2"
+]
+},
+{
+"name": "maa-fin-and",
+"pkg": "pca",
+"file": "attest-maa-keys.ts",
+"from": "      if (!Number.isFinite(v.from) || !Number.isFinite(v.to)) throw new Error(`cert ${j}: unparsable validity`);",
+"to": "      if (!Number.isFinite(v.from) && !Number.isFinite(v.to)) throw new Error(`cert ${j}: unparsable validity`);",
+"filters": [
+"mutation-kill-maa-keys-validity-r2"
+]
+},
+{
+"name": "maa-fin-msg",
+"pkg": "pca",
+"file": "attest-maa-keys.ts",
+"from": "      if (!Number.isFinite(v.from) || !Number.isFinite(v.to)) throw new Error(`cert ${j}: unparsable validity`);",
+"to": "      if (!Number.isFinite(v.from) || !Number.isFinite(v.to)) throw new Error(``);",
+"filters": [
+"mutation-kill-maa-keys-validity-r2"
+]
+}
+]

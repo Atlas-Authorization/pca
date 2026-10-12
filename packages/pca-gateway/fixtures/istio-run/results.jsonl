@@ -1,0 +1,22 @@
+{"scenario":"allow valid proof, query string","got":"200","want":"200"}
+{"scenario":"upstream received the allowed request","got":"1","want":"1"}
+{"scenario":"deny missing proof","got":"401","want":"401"}
+{"scenario":"deny tampered proof","got":"401","want":"401"}
+{"scenario":"deny wrong audience","got":"403","want":"403"}
+{"scenario":"deny refund proof at payouts","got":"403","want":"403"}
+{"scenario":"deny unmapped-but-policed route /admin with a valid proof","got":"403","want":"403"}
+{"scenario":"replay: first use","got":"200","want":"200"}
+{"scenario":"replay: second use denied","got":"403","want":"403"}
+{"scenario":"denied requests never reached upstream","got":"1","want":"1"}
+{"scenario":"deny undecodable proof (header name upper-case)","got":"401","want":"401"}
+{"scenario":"unpoliced path passes without a proof","got":"200","want":"200"}
+{"scenario":"path-probe //refunds","status":"200","reachedUpstream":1}
+{"scenario":"path-probe /refunds/../refunds","status":"401","reachedUpstream":0}
+{"scenario":"path-probe /%72efunds","status":"401","reachedUpstream":0}
+{"scenario":"path-probe /./refunds","status":"401","reachedUpstream":0}
+{"scenario":"MERGE_SLASHES: //refunds without a proof is denied","got":"401","want":"401"}
+{"scenario":"merge-slashes //refunds","status":"401","reachedUpstream":0}
+{"scenario":"MERGE_SLASHES: ///refunds without a proof is denied","got":"401","want":"401"}
+{"scenario":"merge-slashes ///refunds","status":"401","reachedUpstream":0}
+{"scenario":"MERGE_SLASHES: //refunds with a valid proof is allowed","got":"200","want":"200"}
+{"scenario":"provider down -> denied (failOpen=false default)","got":"403","want":"403"}

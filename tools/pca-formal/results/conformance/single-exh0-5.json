@@ -1,0 +1,1 @@
+{"mode":"single-exh","args":["0","5/22",null],"seconds":325.405,"n":1973,"agree":1973,"allow":366,"deny":1607,"disagree":0,"byAttack":{"(benign)":{"n":1973,"allow":366,"disagree":0}},"failedHist":{"plan_inclusion":658,"policy":822,"delegated_caveats":1434},"examples":[]}

@@ -1,0 +1,140 @@
+{
+  "retrieved": "2026-10-08",
+  "files": [
+    {
+      "file": "aws-http-api-payload-v2.json",
+      "kind": "official-documentation-example",
+      "source": "https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-lambda-authorizer.html",
+      "sourceSha256": "6bdb71a7369aacadc7d8ce25a379302772346ecab94fb32876b2d3a0cbe5a716",
+      "sha256": "0c9e3d70b256bf3cf1429a419ff2201d323de967cb6408f75a80ee8129e3dd19",
+      "retrieved": "2026-10-08",
+      "note": "Payload format 2.0 request-authorizer event, JSON reproduced verbatim from the documentation example (re-indented)."
+    },
+    {
+      "file": "aws-http-api-payload-v1.json",
+      "kind": "official-documentation-example",
+      "source": "https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-lambda-authorizer.html",
+      "sourceSha256": "6bdb71a7369aacadc7d8ce25a379302772346ecab94fb32876b2d3a0cbe5a716",
+      "sha256": "98efee65ded14a9114a70a751fa69f2ae0c0d3654d6c90d26f7f44e76ca4c6bb",
+      "retrieved": "2026-10-08",
+      "note": "Payload format 1.0 request-authorizer event for HTTP APIs, reproduced verbatim from the documentation example (re-indented)."
+    },
+    {
+      "file": "aws-rest-request-authorizer.json",
+      "kind": "official-documentation-example",
+      "source": "https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-lambda-authorizer-input.html",
+      "sourceSha256": "ccaaf41471569c5563576a0a0c96d8b642cb18f6dfe35ded92f460729778e25f",
+      "sha256": "90a9061a31c2b7ed37964dfb0002352fb7ed0fe248fc5211006b43c9ae854769",
+      "retrieved": "2026-10-08",
+      "note": "REST API REQUEST authorizer event, reproduced verbatim from the documentation example (re-indented)."
+    },
+    {
+      "file": "envoy-attribute_context.proto",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/envoyproxy/envoy/v1.39.3/api/envoy/service/auth/v3/attribute_context.proto",
+      "sourceSha256": "4d7e49959ed507b3274baea1ce5fbdf6b7afb3d762cec982c0f08a2d8898ea5c",
+      "sha256": "4d7e49959ed507b3274baea1ce5fbdf6b7afb3d762cec982c0f08a2d8898ea5c",
+      "retrieved": "2026-10-08",
+      "note": "Envoy v1.39.3 (commit 6eb0d2d97489ec1b4e1584a004f5de443d97a41b), Apache-2.0. Documents that the request path includes the query string."
+    },
+    {
+      "file": "envoy-ext_authz.proto",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/envoyproxy/envoy/v1.39.3/api/envoy/extensions/filters/http/ext_authz/v3/ext_authz.proto",
+      "sourceSha256": "3221b03ebf4ad4abed0656dcfca32e991e8124128fbe279784f504e7afd46aee",
+      "sha256": "3221b03ebf4ad4abed0656dcfca32e991e8124128fbe279784f504e7afd46aee",
+      "retrieved": "2026-10-08",
+      "note": "Envoy v1.39.3 (commit 6eb0d2d97489ec1b4e1584a004f5de443d97a41b), Apache-2.0. HttpService path_prefix / path_override."
+    },
+    {
+      "file": "envoy-external_auth.proto",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/envoyproxy/envoy/v1.39.3/api/envoy/service/auth/v3/external_auth.proto",
+      "sourceSha256": "651f198016f628db10aba4ffd0cced85a3c7b06292afb557d0b09b96038c718a",
+      "sha256": "651f198016f628db10aba4ffd0cced85a3c7b06292afb557d0b09b96038c718a",
+      "retrieved": "2026-10-08",
+      "note": "Envoy v1.39.3, Apache-2.0. CheckRequest / CheckResponse / OkHttpResponse (headers_to_remove) / DeniedHttpResponse."
+    },
+    {
+      "file": "envoy-base.proto",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/envoyproxy/envoy/v1.39.3/api/envoy/config/core/v3/base.proto",
+      "sourceSha256": "5a6a07551e0db451d6984d905aa45269f3134e00b2160ca19dc8875245edab7c",
+      "sha256": "5a6a07551e0db451d6984d905aa45269f3134e00b2160ca19dc8875245edab7c",
+      "retrieved": "2026-10-08",
+      "note": "Envoy v1.39.3, Apache-2.0. HeaderValue / HeaderValueOption (append_action)."
+    },
+    {
+      "file": "envoy-http_status.proto",
+      "kind": "official-source",
+      "source": "https://raw.githubusercontent.com/envoyproxy/envoy/v1.39.3/api/envoy/type/v3/http_status.proto",
+      "sourceSha256": "d46c670810e539fabf6c8204d9a33dd135f092ef5896d6c37193999e38a3952c",
+      "sha256": "d46c670810e539fabf6c8204d9a33dd135f092ef5896d6c37193999e38a3952c",
+      "retrieved": "2026-10-08",
+      "note": "Envoy v1.39.3, Apache-2.0. HttpStatus."
+    },
+    {
+      "file": "envoy-ext_authz-grpc-subset.proto",
+      "kind": "hand-trimmed-subset",
+      "source": null,
+      "sourceSha256": null,
+      "sha256": "bf895a007087b8458b6e5f09e6da3bd7dd26b84e7eb72334c526694f235a4b77",
+      "retrieved": "2026-10-08",
+      "note": "Hand-trimmed subset of the vendored official protos (same package, messages, field numbers) so the test harness can serve ext_authz gRPC without Envoy's full import closure. envoy.fixtures.test.ts re-derives every field number from the official files."
+    },
+    {
+      "file": "envoy-captured-http-check-requests.json",
+      "kind": "captured-from-envoy",
+      "source": "https://github.com/tetratelabs/archive-envoy/releases/download/v1.39.3/envoy-v1.39.3-darwin-arm64.tar.xz",
+      "sourceSha256": "e48fff9d9b88ce7c34150b8af4138e38ae2b83af10ce927e735840023deaf312",
+      "sha256": "a82de72878372c15bef542e7ad2d63d5b5e0565286c0de44bae63779098aecf2",
+      "retrieved": "2026-10-08",
+      "note": "Captured from a running Envoy (6eb0d2d97489ec1b4e1584a004f5de443d97a41b/1.39.3/Clean/RELEASE/BoringSSL, tetratelabs archive-envoy darwin-arm64, same version as the vendored protos) by src/envoy.integration.test.ts with PCA_ENVOY_CAPTURE: HTTP ext_authz http_service requests received by the check service. The PCA-Action value is a placeholder and large bodies are elided. sourceSha256 is the sha256 of the Envoy tarball."
+    },
+    {
+      "file": "envoy-captured-grpc-check-requests.json",
+      "kind": "captured-from-envoy",
+      "source": "https://github.com/tetratelabs/archive-envoy/releases/download/v1.39.3/envoy-v1.39.3-darwin-arm64.tar.xz",
+      "sourceSha256": "e48fff9d9b88ce7c34150b8af4138e38ae2b83af10ce927e735840023deaf312",
+      "sha256": "9ba008d5dab48b4177fa9dc68028b2aafa84244e3c64ac83982177eceb93b63c",
+      "retrieved": "2026-10-08",
+      "note": "Captured from a running Envoy (6eb0d2d97489ec1b4e1584a004f5de443d97a41b/1.39.3/Clean/RELEASE/BoringSSL, tetratelabs archive-envoy darwin-arm64, same version as the vendored protos) by src/envoy.integration.test.ts with PCA_ENVOY_CAPTURE: gRPC ext_authz CheckRequest messages received by a grpc-js server, decoded by protobufjs. The PCA-Action value is a placeholder and large bodies are elided. sourceSha256 is the sha256 of the Envoy tarball."
+    },
+    {
+      "file": "istio-run/istio-check-requests.json",
+      "kind": "captured-from-istio",
+      "source": "scripts/istio/run-istio-test.sh on k3s v1.36.5+k3s1, Azure Standard_D2s_v4, 2026-10-08",
+      "sourceSha256": null,
+      "sha256": "5c72d959a582150a888fddf53b548c312abc5ffc8ce151ce93a08d48466e3fe1",
+      "retrieved": "2026-10-08",
+      "note": "HTTP requests the PCA check service received from the Istio 1.31.1 sidecar (CUSTOM provider, envoyExtAuthzHttp). The PCA-Action value is not retained."
+    },
+    {
+      "file": "istio-run/run.log",
+      "kind": "captured-from-istio",
+      "source": "scripts/istio/run-istio-test.sh on k3s v1.36.5+k3s1, Azure Standard_D2s_v4, 2026-10-08",
+      "sourceSha256": null,
+      "sha256": "c0474f0b32cff3f8533fe705585cd7209353e10f50ac98638bd21310ab094d4e",
+      "retrieved": "2026-10-08",
+      "note": "Output of scripts/istio/run-istio-test.sh (16 PASS, FAILS=0). The PCA-Action value is not retained."
+    },
+    {
+      "file": "istio-run/results.jsonl",
+      "kind": "captured-from-istio",
+      "source": "scripts/istio/run-istio-test.sh on k3s v1.36.5+k3s1, Azure Standard_D2s_v4, 2026-10-08",
+      "sourceSha256": null,
+      "sha256": "909c9b471181500ac2acc807717162ddf6b940666e23e7db4075a51b1c9cf0fd",
+      "retrieved": "2026-10-08",
+      "note": "Machine-readable scenario results of the same run, including the path probes. The PCA-Action value is not retained."
+    },
+    {
+      "file": "istio-run/istio-version.txt",
+      "kind": "captured-from-istio",
+      "source": "scripts/istio/run-istio-test.sh on k3s v1.36.5+k3s1, Azure Standard_D2s_v4, 2026-10-08",
+      "sourceSha256": null,
+      "sha256": "8ab75903e20b42ae8a8cdd3bcf9707a0f48ddca3a7df96f53758d9b105e02a4b",
+      "retrieved": "2026-10-08",
+      "note": "istioctl version output. The PCA-Action value is not retained."
+    }
+  ]
+}

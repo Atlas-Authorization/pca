@@ -44,6 +44,7 @@ Every signature covers a message that begins with a fixed ASCII domain string en
 | `atlas-pca/zk-compliance/v1\0` | Attested-VM compliance statement |
 | `atlas-pca/beacon/v1\0` | Freshness beacon |
 | `atlas-pca/ledger-head/v1\0` | Witnessed ledger head |
+| `atlas-pca/pq-binding/v2\0` | PQ key pin binding: Ed25519 signature over `domain || ed \0 pq \0 epoch \0 aud` (`aud` = instance id, `epoch` a positive integer that only increases; v1 bindings without epoch/aud are not accepted) |
 | `pca-revset/v1\0` | Revocation-set root binding (hashed, not signed) |
 
 For attestation, optimistic, zk-compliance and beacons the message is `domain || canonical(body)` where `body` is the object without `sig` (for a beacon, the fields `v, scope, epoch, not_after, guardian`). For a ledger head it is `domain || canonical({ principal, size, root })`.
@@ -159,6 +160,15 @@ A PCActn, a capability hop and the other signed objects may carry an optional `a
 | `slh-dsa-sha2-256s`, `hybrid-ed25519-slh-dsa-sha2-256s` | hash-based, category 5 | 64 B | 29,792 B |
 | `fn-dsa-512`, `fn-dsa-1024` | lattice (Falcon, FIPS 206 draft) | 897 B, 1,793 B | 666 B, 1,280 B |
 | `less-cat1`, `hybrid-ed25519-less-cat1` | code-based (LESS, NIST candidate) | 97,484 B | 1,153 to 1,329 B in 16-byte steps |
+
+FN-DSA is a pure suite (no hybrid is defined). It is usable on capability hops (`mintRoot`/`delegate` with `suite: { alg, fnDsa512 | fnDsa1024 }`, key material plus a 32-byte `signSeed`), as a PCActn leaf and as a quorum-share suite, under the same rules as ML-DSA: `pq_pk` is body-bound, the signer's PQ key must be the one its parent committed to in `holder_pq` (unbound keys are rejected unless `allowUnboundPq`), and `allowedSuites` applies. It needs the `@atlasauth/pca-fndsa-wasm` backend; without it every FN-DSA verification fails closed.
+
+**Hosted-API suite policy.** The hosted API does not accept every registered suite. By default (instance config `pca.allowedSuites` unset) it accepts `ed25519` and the hybrids that include Ed25519 (every `hybrid-*` row above) and refuses the pure post-quantum suites (`ml-dsa-*`, `slh-dsa-*`, `fn-dsa-*`, `less-cat1`) on leaves, hops and grant roots; an operator opts a pure suite in by listing it. The binding rules do not change: an allowed pure-PQ or hybrid signer's `pq_pk` must equal the parent's `holder_pq` commitment. The effective list is readable at `GET /v1/pca/suites`; see the API reference. Library verifiers (`allowedSuites` / `allowed_suites`) have no such default: absent means every registered suite.
+
+
+### Suites on the guardian-signed surfaces
+
+Revocation epochs, liveness beacons, tree heads, witness cosignatures, legacy witnessed heads, bond settlements, safety certificates, state attestations, judge verdicts, software attestations and quorum shares all accept every suite in the table above through one signer-options type, `SignerSuiteOpts` (`{ alg, mlDsa | mlDsa87 | slhDsa | slhDsa256s | fnDsa512 | fnDsa1024 | lessCat1 }`; FN-DSA and LESS key material also carry a 32-byte `signSeed`). The wire format is the one described above and does not change per surface: a non-default suite adds `alg` and `pq_pk` to the signed body (so neither can be swapped or stripped) and `sig`, plus `pq_sig` for a hybrid, outside it. The default `ed25519` bytes are unchanged. The verifier takes the PQ key from its own pin for the named identity (`pqPins`, built with `signPqBinding` / `pqPinFor`), never from the artifact: an artifact whose `pq_pk` is not the pin, or any non-ed25519 artifact with no pin, is refused unless the verifier sets `allowUnboundPq`. A quorum share's key is the `pq_pk` registered for its role in the signer set, which may be any suite's key.
 
 The LESS signature is variable length (its last byte is the number of opened seed-tree leaves), so its length is checked as a range on a 16-byte grid rather than as one exact size. LESS is a NIST additional-signature Round 2 candidate, not a standard, and the suites are implemented by the TypeScript reference only: the other verifiers reject them as an unknown `alg`. They are not part of the conformance vectors.
 

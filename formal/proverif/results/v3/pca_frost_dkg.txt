@@ -1,0 +1,1 @@
+dkg_key_not_adversarial | 0s | RESULT not event(Bad(y_1)) is true.

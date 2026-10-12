@@ -1,0 +1,10 @@
+# Lean (version 4.34.1, arm64-apple-darwin24.6.0, commit 5045d0056413266e57c625dcd7c365b10e377c52, Release)
+# cd formal/pca-lean && lake build  -> 'Build completed successfully (9 jobs)', no sorry in ChainLink.lean
+'PcaProof.ChainLink.walk_iff_eff' depends on axioms: [propext]
+'PcaProof.ChainLink.walk_append' depends on axioms: [propext]
+'PcaProof.ChainLink.walk_prefix' depends on axioms: [propext]
+'PcaProof.ChainLink.walkH_iff_eff_flatten' depends on axioms: [propext]
+'PcaProof.ChainLink.walkH_cumulative' depends on axioms: [propext]
+'PcaProof.ChainLink.tWalk_iff_forall' depends on axioms: [propext, Quot.sound]
+'PcaProof.ChainLink.tWalk_iff_eff' depends on axioms: [propext, Quot.sound]
+'PcaProof.ChainLink.tWalk_prefix' depends on axioms: [propext, Quot.sound]

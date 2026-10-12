@@ -1,0 +1,121 @@
+(* PCA -- risk-adaptive threshold step-up, ProVerif port of formal/tamarin/pca_threshold.spthy (ProVerif 2.05, typed pi).
+   Roles agent/guardian/principal, one key each per signer set; share = sign((shareT, role, h(m), ss, t), k_role);
+   agent leaf signature over the bare message (leafT, m) is the agent's effective t=1 baseline.
+   Variants (gen.sh):  UNBOUND_SHARE  NO_DISTINCT  NO_SET_DISTINCT  SANITY (no Reveal process) *)
+
+fun pk(bitstring): bitstring.
+fun sign(bitstring, bitstring): bitstring.
+fun h(bitstring): bitstring.
+
+const ok: bitstring [data].
+const shareT, leafT, ssT, agentR, guardianR, principalR, one, two, three: bitstring [data].
+
+free c: channel.
+table keys(bitstring, bitstring).
+table sets(bitstring, bitstring, bitstring, bitstring).      (* ss, pkA, pkG, pkP *)
+
+event KeyGen(bitstring).
+event Reveal(bitstring).
+event SetReg(bitstring).
+event Issued(bitstring, bitstring, bitstring, bitstring, bitstring).   (* role, pkR, m, ss, t *)
+event AgentLeafSigned(bitstring, bitstring).
+event Accept(bitstring, bitstring, bitstring, bitstring, bitstring, bitstring). (* m, ss, t, a, g, p *)
+
+(* stepup3_requires_principal *)
+(*Q:stepup3_requires_principal*) query m, ss, a, g, p: bitstring; event(Accept(m, ss, three, a, g, p)) ==> event(Issued(principalR, p, m, ss, three)) || event(Reveal(p)).
+(* stepup3_requires_guardian *)
+(*Q:stepup3_requires_guardian*) query m, ss, a, g, p: bitstring; event(Accept(m, ss, three, a, g, p)) ==> event(Issued(guardianR, g, m, ss, three)) || event(Reveal(g)).
+(* stepup2_compromised_agent_insufficient: not Rev(g) & not Rev(p) ==> Issued(g) | Issued(p) *)
+(*Q:stepup2_compromised_agent_insufficient*) query m, ss, a, g, p: bitstring; event(Accept(m, ss, two, a, g, p)) ==> event(Issued(guardianR, g, m, ss, two)) || event(Issued(principalR, p, m, ss, two)) || event(Reveal(g)) || event(Reveal(p)).
+(* stepup2_one_compromised_key_insufficient: unless two DISTINCT keys among a,g,p are revealed, an honest share/leaf-sig exists *)
+(*Q:stepup2_one_compromised_key_insufficient*) query m, ss, a, g, p: bitstring; event(Accept(m, ss, two, a, g, p)) ==> event(Issued(agentR, a, m, ss, two)) || event(AgentLeafSigned(a, m)) || event(Issued(guardianR, g, m, ss, two)) || event(Issued(principalR, p, m, ss, two)) || (event(Reveal(a)) && event(Reveal(g)) && a <> g) || (event(Reveal(a)) && event(Reveal(p)) && a <> p) || (event(Reveal(g)) && event(Reveal(p)) && g <> p).
+(* sanity (ProVerif 'false' = reachable) *)
+(*+SANITY*) (*Q:sanity1*) query m, ss, a, g, p: bitstring; event(Accept(m, ss, three, a, g, p)).
+(*+SANITY*) (*Q:sanity2*) query m, ss, a, g, p: bitstring; event(Accept(m, ss, two, a, g, p)).
+(*+SANITY*) (*Q:sanity3*) query m, ss, a, g, p: bitstring; event(Accept(m, ss, three, a, g, p)) && event(Issued(principalR, p, m, ss, three)).
+
+let KeyGenP() = new k: bitstring; insert keys(pk(k), k); event KeyGen(pk(k)); out(c, pk(k)).
+let RevealP() = in(c, p: bitstring); get keys(=p, k) in event Reveal(p); out(c, k).
+
+(* signer-set registration; pubkeys distinct unless NO_SET_DISTINCT *)
+let RegisterSet() =
+  in(c, (pkA: bitstring, pkG: bitstring, pkP: bitstring));
+  get keys(=pkA, la) in get keys(=pkG, lg) in get keys(=pkP, lp) in
+  if pkA <> pkG && pkA <> pkP && pkG <> pkP then                                (*-NO_SET_DISTINCT*)
+  let ss = h((ssT, pkA, pkG, pkP)) in
+  event SetReg(ss);
+  insert sets(ss, pkA, pkG, pkP).
+
+(* honest key owners sign shares, each only in its own role slot (Tamarin restriction key_role) *)
+let SignAgent() =
+  in(c, (m: bitstring, t: bitstring, ss: bitstring));
+  get sets(=ss, pkA: bitstring, pkG: bitstring, pkP: bitstring) in
+  get keys(=pkA, la) in
+  event Issued(agentR, pkA, m, ss, t);
+  out(c, sign((shareT, agentR, h(m), ss, t), la)).                               (*-UNBOUND_SHARE*)
+(*+UNBOUND_SHARE*)  out(c, sign((shareT, h(m)), la)).
+let SignGuardian() =
+  in(c, (m: bitstring, t: bitstring, ss: bitstring));
+  get sets(=ss, pkA: bitstring, pkG: bitstring, pkP: bitstring) in
+  get keys(=pkG, lg) in
+  event Issued(guardianR, pkG, m, ss, t);
+  out(c, sign((shareT, guardianR, h(m), ss, t), lg)).                            (*-UNBOUND_SHARE*)
+(*+UNBOUND_SHARE*)  out(c, sign((shareT, h(m)), lg)).
+let SignPrincipal() =
+  in(c, (m: bitstring, t: bitstring, ss: bitstring));
+  get sets(=ss, pkA: bitstring, pkG: bitstring, pkP: bitstring) in
+  get keys(=pkP, lp) in
+  event Issued(principalR, pkP, m, ss, t);
+  out(c, sign((shareT, principalR, h(m), ss, t), lp)).                           (*-UNBOUND_SHARE*)
+(*+UNBOUND_SHARE*)  out(c, sign((shareT, h(m)), lp)).
+
+(* agent leaf signature over the BARE message; any honest key (domain-separated by leafT) *)
+let AgentLeafSign() =
+  in(c, (pkR: bitstring, m: bitstring));
+  get keys(=pkR, l) in
+  event AgentLeafSigned(pkR, m);
+  out(c, sign((leafT, m), l)).
+
+(* verifier: slot predicates as destructors (an agent slot is filled by a bound share OR the leaf baseline) *)
+fun okA(bitstring, bitstring, bitstring, bitstring, bitstring): bitstring
+  reduc forall m: bitstring, ss: bitstring, t: bitstring, k: bitstring;
+    okA(sign((shareT, agentR, h(m), ss, t), k), m, ss, t, pk(k)) = ok           (*-UNBOUND_SHARE*)
+(*+UNBOUND_SHARE*)    okA(sign((shareT, h(m)), k), m, ss, t, pk(k)) = ok
+  otherwise forall m: bitstring, ss: bitstring, t: bitstring, k: bitstring;
+    okA(sign((leafT, m), k), m, ss, t, pk(k)) = ok.
+fun okG(bitstring, bitstring, bitstring, bitstring, bitstring): bitstring
+  reduc forall m: bitstring, ss: bitstring, t: bitstring, k: bitstring;
+    okG(sign((shareT, guardianR, h(m), ss, t), k), m, ss, t, pk(k)) = ok.        (*-UNBOUND_SHARE*)
+(*+UNBOUND_SHARE*)    okG(sign((shareT, h(m)), k), m, ss, t, pk(k)) = ok.
+fun okP(bitstring, bitstring, bitstring, bitstring, bitstring): bitstring
+  reduc forall m: bitstring, ss: bitstring, t: bitstring, k: bitstring;
+    okP(sign((shareT, principalR, h(m), ss, t), k), m, ss, t, pk(k)) = ok.       (*-UNBOUND_SHARE*)
+(*+UNBOUND_SHARE*)    okP(sign((shareT, h(m)), k), m, ss, t, pk(k)) = ok.
+fun okL(bitstring, bitstring, bitstring): bitstring
+  reduc forall m: bitstring, k: bitstring; okL(sign((leafT, m), k), m, pk(k)) = ok.
+
+let AcceptT1() =
+  in(c, (m: bitstring, ss: bitstring, sg: bitstring));
+  get sets(=ss, pkA: bitstring, pkG: bitstring, pkP: bitstring) in
+  if okL(sg, m, pkA) = ok then
+  event Accept(m, ss, one, pkA, pkG, pkP).
+let AcceptT2() =
+  in(c, (m: bitstring, ss: bitstring, s1: bitstring, s2: bitstring));
+  get sets(=ss, pkA: bitstring, pkG: bitstring, pkP: bitstring) in
+  ( (if okA(s1, m, ss, two, pkA) = ok && okG(s2, m, ss, two, pkG) = ok then event Accept(m, ss, two, pkA, pkG, pkP))
+  | (if okA(s1, m, ss, two, pkA) = ok && okP(s2, m, ss, two, pkP) = ok then event Accept(m, ss, two, pkA, pkG, pkP))
+  | (if okG(s1, m, ss, two, pkG) = ok && okP(s2, m, ss, two, pkP) = ok then event Accept(m, ss, two, pkA, pkG, pkP))
+(*+NO_DISTINCT*)  | (if okA(s1, m, ss, two, pkA) = ok && okA(s2, m, ss, two, pkA) = ok then event Accept(m, ss, two, pkA, pkG, pkP))
+(*+NO_DISTINCT*)  | (if okG(s1, m, ss, two, pkG) = ok && okG(s2, m, ss, two, pkG) = ok then event Accept(m, ss, two, pkA, pkG, pkP))
+  ).
+let AcceptT3() =
+  in(c, (m: bitstring, ss: bitstring, s1: bitstring, s2: bitstring, s3: bitstring));
+  get sets(=ss, pkA: bitstring, pkG: bitstring, pkP: bitstring) in
+  ( (if okA(s1, m, ss, three, pkA) = ok && okG(s2, m, ss, three, pkG) = ok && okP(s3, m, ss, three, pkP) = ok then event Accept(m, ss, three, pkA, pkG, pkP))
+(*+NO_DISTINCT*)  | (if okA(s1, m, ss, three, pkA) = ok && okA(s2, m, ss, three, pkA) = ok && okA(s3, m, ss, three, pkA) = ok then event Accept(m, ss, three, pkA, pkG, pkP))
+  ).
+
+process
+  !KeyGenP() | !RegisterSet() | !SignAgent() | !SignGuardian() | !SignPrincipal() | !AgentLeafSign()
+  | !AcceptT1() | !AcceptT2() | !AcceptT3()
+  | !RevealP()                                                                  (*-SANITY*)

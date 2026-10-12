@@ -1,0 +1,154 @@
+[
+ {
+  "hj": "{ \"alg\" :\"EdDSA\",\"x\":\"~~~\"}",
+  "pj": "{\"q\":\">>>?\"}",
+  "n": 64,
+  "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w",
+  "aliases": [
+   {
+    "name": "padded signature",
+    "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w=="
+   },
+   {
+    "name": "altered trailing bits",
+    "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-x"
+   },
+   {
+    "name": "standard alphabet header",
+    "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5+fiJ9.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w"
+   },
+   {
+    "name": "standard alphabet payload",
+    "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9.eyJxIjoiPj4+PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w"
+   },
+   {
+    "name": "standard alphabet signature",
+    "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9.eyJxIjoiPj4-PyJ9.+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+w"
+   },
+   {
+    "name": "trailing newline",
+    "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w\n"
+   },
+   {
+    "name": "trailing space",
+    "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w "
+   },
+   {
+    "name": "leading space",
+    "token": " eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w"
+   },
+   {
+    "name": "interior newline",
+    "token": "eyAiYWxnIiA6IkVkRFNBIiwieCI6In5-fiJ9\n.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w"
+   },
+   {
+    "name": "duplicate header key",
+    "token": "eyJhbGciOjAsICJhbGciIDoiRWREU0EiLCJ4Ijoifn5-In0.eyJxIjoiPj4-PyJ9.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-w"
+   }
+  ]
+ },
+ {
+  "hj": "{\"alg\":\"EdDSA\"}",
+  "pj": "{\"a\":1}",
+  "n": 32,
+  "token": "eyJhbGciOiJFZERTQSJ9.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s",
+  "aliases": [
+   {
+    "name": "padded signature",
+    "token": "eyJhbGciOiJFZERTQSJ9.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s="
+   },
+   {
+    "name": "altered trailing bits",
+    "token": "eyJhbGciOiJFZERTQSJ9.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_t"
+   },
+   {
+    "name": "standard alphabet signature",
+    "token": "eyJhbGciOiJFZERTQSJ9.eyJhIjoxfQ.+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/s"
+   },
+   {
+    "name": "trailing newline",
+    "token": "eyJhbGciOiJFZERTQSJ9.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s\n"
+   },
+   {
+    "name": "trailing space",
+    "token": "eyJhbGciOiJFZERTQSJ9.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s "
+   },
+   {
+    "name": "leading space",
+    "token": " eyJhbGciOiJFZERTQSJ9.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s"
+   },
+   {
+    "name": "interior newline",
+    "token": "eyJhbGciOiJFZERTQSJ9\n.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s"
+   },
+   {
+    "name": "duplicate header key",
+    "token": "eyJhbGciOjAsImFsZyI6IkVkRFNBIn0.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s"
+   }
+  ]
+ },
+ {
+  "hj": "{}",
+  "pj": "{\"a\":1}",
+  "n": 48,
+  "token": "e30.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7",
+  "aliases": [
+   {
+    "name": "padded signature",
+    "token": "e30.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7="
+   },
+   {
+    "name": "standard alphabet signature",
+    "token": "e30.eyJhIjoxfQ.+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7"
+   },
+   {
+    "name": "trailing newline",
+    "token": "e30.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7\n"
+   },
+   {
+    "name": "trailing space",
+    "token": "e30.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7 "
+   },
+   {
+    "name": "leading space",
+    "token": " e30.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7"
+   },
+   {
+    "name": "interior newline",
+    "token": "e30\n.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7"
+   }
+  ]
+ },
+ {
+  "hj": " {\"a\":1}",
+  "pj": "{\"a\":1}",
+  "n": 48,
+  "token": "IHsiYSI6MX0.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7",
+  "aliases": [
+   {
+    "name": "padded signature",
+    "token": "IHsiYSI6MX0.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7="
+   },
+   {
+    "name": "standard alphabet signature",
+    "token": "IHsiYSI6MX0.eyJhIjoxfQ.+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7"
+   },
+   {
+    "name": "trailing newline",
+    "token": "IHsiYSI6MX0.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7\n"
+   },
+   {
+    "name": "trailing space",
+    "token": "IHsiYSI6MX0.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7 "
+   },
+   {
+    "name": "leading space",
+    "token": " IHsiYSI6MX0.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7"
+   },
+   {
+    "name": "interior newline",
+    "token": "IHsiYSI6MX0\n.eyJhIjoxfQ.-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7"
+   }
+  ]
+ }
+]

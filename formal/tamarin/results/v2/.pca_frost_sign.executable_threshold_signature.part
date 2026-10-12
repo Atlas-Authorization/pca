@@ -1,0 +1,2 @@
+  executable_threshold_signature (exists-trace): verified (16 steps)
+# wall=6s heuristic=c tamarin-prover 1.12.0

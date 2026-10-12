@@ -1,0 +1,101 @@
+(* PCA -- scope (verb set) and resource (path prefix) caveats narrow along a delegation chain.  ProVerif 2.05 port of
+   formal/tamarin/pca_scope_resource.spthy, BOUNDED: ProVerif has no recursion in destructors, so scope sets hold at
+   most 2 verbs (anys | sone(v) | stwo(v,w)) and resource prefixes/paths are cons-lists of up to 2 resp. 3 segments;
+   the chain is root + one honest delegation (2 hops).  The Tamarin model proves the same lemmas for sets, prefixes
+   and chains of ARBITRARY length; this file is the independent bounded confirmation and the attack-variant check.
+   Verifier events record the per-hop predicate decisions: ScopeOK(scope, verb) / ResOK(pattern, path) are emitted only
+   after the destructor memb / pre returned true.
+   Variants (gen.sh):  NO_ANCESTOR_SCOPE (only the leaf hop's scope is checked)
+                       NO_ANCESTOR_RES (only the leaf hop's resource pattern is checked)   SANITY (no Reveal) *)
+fun pk(bitstring): bitstring.
+fun sign(bitstring, bitstring): bitstring.
+fun verify(bitstring, bitstring, bitstring): bool
+  reduc forall m: bitstring, k: bitstring; verify(sign(m, k), m, pk(k)) = true.
+fun h(bitstring): bitstring.
+const capT, actT, none, endm, anys, nil, v1, v2, v3: bitstring [data].
+fun sone(bitstring): bitstring [data].
+fun stwo(bitstring, bitstring): bitstring [data].
+fun cons(bitstring, bitstring): bitstring [data].
+fun memb(bitstring, bitstring): bool
+  reduc forall v: bitstring; memb(anys, v) = true
+  otherwise forall v: bitstring; memb(sone(v), v) = true
+  otherwise forall v: bitstring, w: bitstring; memb(stwo(v, w), v) = true
+  otherwise forall v: bitstring, w: bitstring; memb(stwo(w, v), v) = true.
+fun pre(bitstring, bitstring): bool
+  reduc forall r: bitstring; pre(nil, r) = true
+  otherwise forall a: bitstring, r: bitstring; pre(cons(a, nil), cons(a, r)) = true
+  otherwise forall a: bitstring, b: bitstring, r: bitstring; pre(cons(a, cons(b, nil)), cons(a, cons(b, r))) = true.
+
+free c: channel.
+table keys(bitstring, bitstring).
+event KeyGen(bitstring).
+event Reveal(bitstring).
+event Granted(bitstring, bitstring, bitstring, bitstring, bitstring).       (* issuer, holder, scope, pattern, id(root cap) *)
+event HonestDelegated(bitstring, bitstring, bitstring, bitstring).          (* id(child), scope, pattern, issuer *)
+event ScopeOK(bitstring, bitstring, bitstring).      (* cap id, scope, verb *)
+event ResOK(bitstring, bitstring, bitstring).        (* cap id, pattern, path *)
+event Accept(bitstring, bitstring, bitstring, bitstring, bitstring).   (* root id, leaf id, leaf holder, verb, path *)
+
+(*Q:scope_narrowing_all_hops*) query rid, lid, hol, v, r, sc, sc2: bitstring; event(Accept(rid, lid, hol, v, r)) ==> event(ScopeOK(rid, sc, v)) && event(ScopeOK(lid, sc2, v)).
+(*Q:resource_narrowing_all_hops*) query rid, lid, hol, v, r, rp1, rp2: bitstring; event(Accept(rid, lid, hol, v, r)) ==> event(ResOK(rid, rp1, r)) && event(ResOK(lid, rp2, r)).
+(*Q:root_scope_bounds_action*) query rid, lid, hol, v, r, iss, pkH, sc, rp: bitstring; event(Accept(rid, lid, hol, v, r)) && event(Granted(iss, pkH, sc, rp, rid)) ==> event(ScopeOK(rid, sc, v)) || event(Reveal(iss)).
+(*Q:root_resource_bounds_action*) query rid, lid, hol, v, r, iss, pkH, sc, rp: bitstring; event(Accept(rid, lid, hol, v, r)) && event(Granted(iss, pkH, sc, rp, rid)) ==> event(ResOK(rid, rp, r)) || event(Reveal(iss)).
+(*Q:honest_hop_scope_bounds_action*) query rid, lid, hol, v, r, sc, rp, iss: bitstring; event(Accept(rid, lid, hol, v, r)) && event(HonestDelegated(lid, sc, rp, iss)) ==> event(ScopeOK(lid, sc, v)).
+(*Q:honest_hop_resource_bounds_action*) query rid, lid, hol, v, r, sc, rp, iss: bitstring; event(Accept(rid, lid, hol, v, r)) && event(HonestDelegated(lid, sc, rp, iss)) ==> event(ResOK(lid, rp, r)).
+(*+SANITY*) (*Q:sanity1*) query rid, lid, hol, v, r: bitstring; event(Accept(rid, lid, hol, v, r)).
+(*+SANITY*) (*Q:sanity2*) query rid, lid, hol, v, r, sc, rp, iss: bitstring; event(Accept(rid, lid, hol, v, r)) && event(HonestDelegated(lid, sc, rp, iss)).
+
+let KeyGenP() = new k: bitstring; insert keys(pk(k), k); event KeyGen(pk(k)); out(c, pk(k)).
+let RevealP() = in(c, p: bitstring); get keys(=p, k) in event Reveal(p); out(c, k).
+
+let PrincipalGrant() =
+  in(c, (pkP: bitstring, pkH: bitstring, sc: bitstring, rp: bitstring));
+  get keys(=pkP, ltkP) in get keys(=pkH, ltkH) in
+  let body = (capT, none, pkP, pkH, (sc, rp)) in
+  let cap = (body, sign(body, ltkP)) in
+  event Granted(pkP, pkH, sc, rp, h(cap));
+  out(c, cap).
+
+let Delegate() =
+  in(c, (pcap: bitstring, pkE: bitstring, sc: bitstring, rp: bitstring));
+  let ((=capT, =none, piss: bitstring, pkD: bitstring, pcv: bitstring), psg: bitstring) = pcap in
+  get keys(=pkD, ltkD) in
+  if verify(psg, (capT, none, piss, pkD, pcv), piss) = true then
+  let body = (capT, h(pcap), pkD, pkE, (sc, rp)) in
+  let cap = (body, sign(body, ltkD)) in
+  event HonestDelegated(h(cap), sc, rp, pkD);
+  out(c, cap).
+
+let AgentAct() =
+  in(c, (chain: bitstring, pkH: bitstring, verb: bitstring, res: bitstring));
+  get keys(=pkH, ltkH) in
+  let act = (actT, verb, res) in
+  out(c, (chain, act, sign(act, ltkH))).
+
+(* verifier: leaf (hop 1) is checked first, then the ancestor (the root) *)
+let Verify(pkT: bitstring) =
+  in(c, ((c1: bitstring, (c2: bitstring, =endm)), (=actT, verb: bitstring, res: bitstring), asig: bitstring));
+  let ((=capT, par1: bitstring, iss1: bitstring, hol1: bitstring, (sc1: bitstring, rp1: bitstring)), sg1: bitstring) = c1 in
+  let ((=capT, par2: bitstring, iss2: bitstring, hol2: bitstring, (sc2: bitstring, rp2: bitstring)), sg2: bitstring) = c2 in
+  if verify(asig, (actT, verb, res), hol1) = true then
+  if verify(sg1, (capT, par1, iss1, hol1, (sc1, rp1)), iss1) = true then
+  if memb(sc1, verb) = true then
+  if pre(rp1, res) = true then
+  if par1 = h(c2) then
+  if iss1 = hol2 then
+  if verify(sg2, (capT, par2, iss2, hol2, (sc2, rp2)), iss2) = true then
+  if memb(sc2, verb) = true then                                       (*-NO_ANCESTOR_SCOPE*)
+  if pre(rp2, res) = true then                                         (*-NO_ANCESTOR_RES*)
+  if par2 = none then
+  if iss2 = pkT then
+  event ScopeOK(h(c1), sc1, verb); event ResOK(h(c1), rp1, res);
+  event ScopeOK(h(c2), sc2, verb);                                     (*-NO_ANCESTOR_SCOPE*)
+  event ResOK(h(c2), rp2, res);                                        (*-NO_ANCESTOR_RES*)
+  event Accept(h(c2), h(c1), hol1, verb, res).
+
+process
+  new kT: bitstring;
+  insert keys(pk(kT), kT); event KeyGen(pk(kT)); out(c, pk(kT));
+  ( !KeyGenP()
+  | !RevealP()                                                     (*-SANITY*)
+  | !PrincipalGrant() | !Delegate() | !AgentAct() | !Verify(pk(kT)) )

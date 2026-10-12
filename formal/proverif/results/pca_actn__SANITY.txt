@@ -1,0 +1,5 @@
+sanity1 | 0s | RESULT not event(ReachD1) is false.
+sanity2 | 0s | RESULT not event(ReachD2) is false.
+sanity3 | 1s | RESULT not event(ReachD3) is false.
+sanity4 | 0s | RESULT not event(ReachDelegated) is false.
+sanity5 | 1s | RESULT not event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) is false.

@@ -1,0 +1,153 @@
+/*
+  PCA -- budget_alloc caveats: per-node budget tree, monotone allocations, consumption debited up the path
+  (symbolic model, Tamarin).  Models packages/pca/src/capability.ts  budget_alloc / allocationsMonotone /
+  budgetAllocNodes and the server-side metering contract they describe:
+
+     * a delegation hop MAY carry  budget_alloc{limit}  = the trust-budget allocation B_sub of its whole subtree;
+     * verifyChain REJECTS a budget_alloc whose limit is greater than the nearest ancestor allocation
+       (allocationsMonotone: a child can only allocate <= its parent);
+     * the acting leaf's spend is DEBITED against EVERY node on its path (its own allocation and every
+       ancestor's, up to the root), so a swarm under any node can never collectively exceed that node's
+       allocation.  (This is the CODE's design: monotone limits + debit all ancestors; NOT "sum of sibling
+       allocations <= parent limit".  Sibling over-allocation is harmless because the parent's own meter
+       is debited by every descendant spend.)
+
+  Encoding (no arithmetic in lemmas -- Tamarin formulas cannot contain %+; budgets are small symbolic
+  counters c0 < c1 < c2 < c3 with an explicit decrement table !Dec and order table !Le):
+     !Parent(n, p)      node n's parent ('none' at the root)    !Lim(n, l)   n's carried allocation
+     Cnt(n, c)          LINEAR meter of node n: c units remain  (one fact per node => consumption is atomic)
+     Debit(sid, n, r)   spend `sid` (root r) must still debit node n and every ancestor
+  A spend of ONE unit is the unit of consumption (amounts > 1 are repeated spends).  The headline lemma is
+  CONCRETE: with root limit c2 at most 2 spends complete under a root, however many delegations and
+  allocations exist below it (root_bound).  It is proved for the root limit 2 (-DROOT3: limit 3 and
+  at most 3 spends); it is NOT claimed for arbitrary limits (Tamarin has no arithmetic in lemmas).
+
+  Attack-variant switches (-D...):
+    NO_PARENT_CHECK  allocation of a child is NOT checked against the parent's  (alloc_monotone must break;
+                     root_bound still holds -- defense in depth: debit-all protects the root regardless)
+    DEBIT_LEAF_ONLY  a spend debits only the leaf's own meter, not its ancestors'  (root_bound must break)
+    NONATOMIC_DEBIT  meter update is read-then-blind-write per node (lost update)  (root_bound and
+                     node_bound must break; two spends read the same count and both succeed)
+*/
+theory PCA_Budget
+begin
+
+// ---- tables ----------------------------------------------------------------------------------------
+rule Tables:
+  [ ] --> [ !Dec('c3', 'c2'), !Dec('c2', 'c1'), !Dec('c1', 'c0'),
+            !Le('c0','c0'), !Le('c0','c1'), !Le('c0','c2'), !Le('c0','c3'),
+            !Le('c1','c1'), !Le('c1','c2'), !Le('c1','c3'),
+            !Le('c2','c2'), !Le('c2','c3'), !Le('c3','c3') ]
+
+// ---- root grant carries the root allocation ---------------------------------------------------------
+#ifdef ROOT3
+rule Root_Grant:
+  [ Fr(~n) ] --[ RootNode(~n, 'c3') ]->
+  [ !Parent(~n, 'none'), !Lim(~n, 'c3'), !RootOf(~n, ~n), Cnt(~n, 'c3') ]
+#else
+rule Root_Grant:
+  [ Fr(~n) ] --[ RootNode(~n, 'c2') ]->
+  [ !Parent(~n, 'none'), !Lim(~n, 'c2'), !RootOf(~n, ~n), Cnt(~n, 'c2') ]
+#endif
+
+// ---- delegation: a child hop carries an allocation (checked against the parent's) ---------------------------
+#ifdef NO_PARENT_CHECK
+rule Alloc_Child:
+  [ !Lim(p, plim), !RootOf(p, r), In(climit), Fr(~n) ]
+  --[ Alloc(~n, climit, p, plim) ]->
+  [ !Parent(~n, p), !Lim(~n, climit), !RootOf(~n, r), Cnt(~n, climit) ]
+#else
+rule Alloc_Child:
+  [ !Lim(p, plim), !RootOf(p, r), In(climit), !Le(climit, plim), Fr(~n) ]
+  --[ Alloc(~n, climit, p, plim) ]->
+  [ !Parent(~n, p), !Lim(~n, climit), !RootOf(~n, r), Cnt(~n, climit) ]
+#endif
+
+// ---- a spend of one unit by the holder of node `leaf` ----------------------------------------------------------
+#ifdef DEBIT_LEAF_ONLY
+rule Spend_Leaf_Only:
+  [ !RootOf(leaf, r), !Dec(c, c1), Cnt(leaf, c), Fr(~sid) ]
+  --[ Debited(~sid, leaf, r), Spent(~sid, r), SpentAt(~sid, leaf) ]->
+  [ Cnt(leaf, c1) ]
+#else
+rule Spend_Begin:
+  [ !RootOf(leaf, r), Fr(~sid) ] --[ SpendBegin(~sid, leaf) ]-> [ Debit(~sid, leaf, r) ]
+#endif
+
+#ifdef NONATOMIC_DEBIT
+// read the count, later blind-write the decremented VALUE READ (lost update)
+rule Debit_Read:
+  [ Debit(sid, n, r), Cnt(n, c), !Dec(c, c1) ]
+  --[ DebitRead(sid, n) ]->
+  [ Cnt(n, c), Snap(sid, n, r, c1) ]
+
+rule Debit_Write_Mid:
+  [ Snap(sid, n, r, c1), Cnt(n, cany), !Parent(n, p) ]
+  --[ Debited(sid, n, r) ]->
+  [ Cnt(n, c1), Debit(sid, p, r) ]
+
+rule Debit_Write_Root:
+  [ Snap(sid, n, r, c1), Cnt(n, cany), !Parent(n, 'none') ]
+  --[ Debited(sid, n, r), Spent(sid, r) ]->
+  [ Cnt(n, c1) ]
+#else
+rule Debit_Mid:
+  [ Debit(sid, n, r), Cnt(n, c), !Dec(c, c1), !Parent(n, p) ]
+  --[ Debited(sid, n, r) ]->
+  [ Cnt(n, c1), Debit(sid, p, r) ]
+
+rule Debit_Root:
+  [ Debit(sid, n, r), Cnt(n, c), !Dec(c, c1), !Parent(n, 'none') ]
+  --[ Debited(sid, n, r), Spent(sid, r) ]->
+  [ Cnt(n, c1) ]
+#endif
+
+// ---- sanity ------------------------------------------------------------------------------------------------
+lemma executable_spend:
+  exists-trace
+  "Ex s r #i. Spent(s, r) @ i"
+
+lemma executable_two_spends:
+  exists-trace
+  "Ex s1 s2 r #i #j. Spent(s1, r) @ i & Spent(s2, r) @ j & not (s1 = s2)"
+
+// a spend by a node three levels below the root completes, debiting root, child and grandchild
+lemma executable_deep_spend:
+  exists-trace
+  "Ex s r n1 n2 n3 #a #b #c #d #e #f #x1 #x2 #x3 #x4.
+      RootNode(r, 'c2') @ a & Alloc(n1, 'c2', r, 'c2') @ b & Alloc(n2, 'c2', n1, 'c2') @ c
+    & Alloc(n3, 'c2', n2, 'c2') @ d & SpendBegin(s, n3) @ e
+    & Debited(s, n3, r) @ x1 & Debited(s, n2, r) @ x2 & Debited(s, n1, r) @ x3 & Debited(s, r, r) @ x4
+    & Spent(s, r) @ f"
+
+// ---- LEMMA: allocation monotonicity (allocationsMonotone) ----------------------------------------------------
+// a child's allocation never exceeds its parent's carried allocation
+lemma alloc_monotone:
+  "All n cl p pl #i. Alloc(n, cl, p, pl) @ i
+     ==> not (   (cl = 'c1' & pl = 'c0')
+               | (cl = 'c2' & (pl = 'c0' | pl = 'c1'))
+               | (cl = 'c3' & (pl = 'c0' | pl = 'c1' | pl = 'c2')) )"
+
+// ---- LEMMA: the headline bound -- total consumption under a root is bounded by the root limit --------------------------
+#ifdef ROOT3
+lemma root_bound:
+  "All r s1 s2 s3 s4 #i #j #k #l.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k & Spent(s4, r) @ l
+      ==> s1 = s2 | s1 = s3 | s1 = s4 | s2 = s3 | s2 = s4 | s3 = s4"
+#else
+lemma root_bound:
+  "All r s1 s2 s3 #i #j #k.
+      Spent(s1, r) @ i & Spent(s2, r) @ j & Spent(s3, r) @ k
+      ==> s1 = s2 | s1 = s3 | s2 = s3"
+#endif
+
+// ---- LEMMA: subtree bound -- a node allocated 1 unit is debited by at most ONE spend, whatever happens below it -----------
+lemma node_bound:
+  "All n p pl s1 s2 r1 r2 #a #i #j.
+      Alloc(n, 'c1', p, pl) @ a & Debited(s1, n, r1) @ i & Debited(s2, n, r2) @ j ==> s1 = s2"
+
+// ---- LEMMA: every completed spend debited the ROOT (not only the leaf) -----------------------------------------------
+lemma spend_debits_root:
+  "All s r #i. Spent(s, r) @ i ==> Ex #d. Debited(s, r, r) @ d"
+
+end

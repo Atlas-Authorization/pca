@@ -1,0 +1,2 @@
+  attack_root_widening (exists-trace): verified (18 steps)
+# wall=64s tamarin-prover 1.12.0 cmd=tamarin-prover --prove=attack_root_widening -DNO_ANCESTOR_CAV --heuristic=O --oraclename=./oracle_exec.sh pca_actn_unbounded.spthy +RTS -N4

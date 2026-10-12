@@ -1,0 +1,100 @@
+(* PCA -- FROST two-round signing, ProVerif port of formal/tamarin/pca_frost_sign.spthy (ProVerif 2.05, typed pi).
+   t = 2 of n = 3.  Same symbolic abstraction as the Tamarin model: Shamir share sh(g,i); answer
+   zs(share, d, e, msg, L) (bound to msg and the commitment list L through the binding factor); group signature
+   tsig(Y,msg,L) is a PRIVATE function producible only by Aggregate (two distinct participants' answers for the SAME
+   (msg,L)); Extract = algebraic key recovery from THREE answers under one nonce pair for pairwise different (msg,L).
+   Honest signers sign any (msg,L) whose list contains their own commitment (prompt-injected worst case).
+   Variants (gen.sh):  NONCE_REUSE (nonce pair persistent, many answers)   NO_BINDING (answer does not commit to L)
+                       REV_CTHREE (only share c3 is revealable; used for the share_secrecy query)  SANITY (no reveal)
+                       NO_EXTRACT (assume nonce hygiene: the algebraic key-recovery process is removed) *)
+
+free g: bitstring [private].
+set preciseActions = true.
+free c: channel.
+const c1, c2, c3, cmtT, nolist: bitstring [data].
+fun sh(bitstring, bitstring): bitstring.
+fun pubk(bitstring): bitstring.
+fun cm(bitstring): bitstring.
+fun cmt(bitstring, bitstring, bitstring): bitstring [data].
+fun zs(bitstring, bitstring, bitstring, bitstring, bitstring): bitstring.
+fun tsig(bitstring, bitstring, bitstring): bitstring [private].
+fun zsd(bitstring): bitstring
+  reduc forall s: bitstring, d: bitstring, e: bitstring, m: bitstring, l: bitstring; zsd(zs(s, d, e, m, l)) = (s, d, e, m, l) [private].
+
+event RevealShare(bitstring).
+event Signed(bitstring, bitstring, bitstring).        (* participant, msg, list *)
+event Aggregated(bitstring, bitstring, bitstring, bitstring).
+event Accepted(bitstring, bitstring).
+event Used(bitstring, bitstring, bitstring, bitstring).   (* participant, d, e, msg *)
+event Extracted(bitstring).
+event Created(bitstring, bitstring, bitstring).
+
+(* sig_needs_t_signers: an accepted group signature is the aggregation of two distinct participants, each honestly
+   signing exactly (msg,L) or revealed *)
+(*Q:sig_needs_t_signers*) query m, l: bitstring; event(Accepted(m, l)) ==> (event(Aggregated(c1, c2, m, l)) || event(Aggregated(c1, c3, m, l)) || event(Aggregated(c2, c3, m, l))).
+(*Q:agg_needs_two_shares*) query i, j, m, l: bitstring; event(Aggregated(i, j, m, l)) ==> (event(Signed(i, m, l)) || event(RevealShare(i))) && (event(Signed(j, m, l)) || event(RevealShare(j))).
+(* Aggregated(i,j,..) only fires for DISTINCT participants (Aggregate(c1,c2), (c1,c3), (c2,c3)), so the two lines together
+   give: an accepted (msg,L) needs two distinct participants who each signed exactly (msg,L) or whose share was revealed *)
+(*Q:nonce_one_shot_inj*) query i, d, e, m: bitstring; inj-event(Used(i, d, e, m)) ==> inj-event(Created(i, d, e)).
+(*Q:nonce_one_shot*) query i, d, e, m1, m2: bitstring; event(Used(i, d, e, m1)) && event(Used(i, d, e, m2)) ==> m1 = m2.
+(* share_secrecy: with only c3 revealable, the shares of c1 and c2 stay secret *)
+(*Q:share_secrecy_1*) query attacker(sh(g, c1)).
+(*Q:share_secrecy_2*) query attacker(sh(g, c2)).
+(* sanity *)
+(*+SANITY*) (*Q:sanity1*) query m, l: bitstring; event(Accepted(m, l)).
+(*+SANITY*) (*Q:sanity2*) query m, l: bitstring; event(Accepted(m, l)) && event(Signed(c1, m, l)) && event(Signed(c2, m, l)).
+
+let RevealP() = in(c, i: bitstring); event RevealShare(i); out(c, sh(g, i)).
+let RevealP3() = event RevealShare(c3); out(c, sh(g, c3)).
+
+let SignerOnce(i: bitstring) =
+  new d: bitstring; new e: bitstring;
+  event Created(i, d, e);
+  out(c, cmt(i, cm(d), cm(e)));
+  in(c, (msg: bitstring, l1: bitstring, l2: bitstring));
+  if l1 = cmt(i, cm(d), cm(e)) || l2 = cmt(i, cm(d), cm(e)) then
+  event Signed(i, msg, (l1, l2)); event Used(i, d, e, msg);
+  out(c, zs(sh(g, i), d, e, msg, (l1, l2))).                                   (*-NONCE_REUSE,NO_BINDING*)
+(*+NO_BINDING*)  out(c, zs(sh(g, i), d, e, msg, nolist)).
+(*+NONCE_REUSE*)  out(c, zs(sh(g, i), d, e, msg, (l1, l2))).
+
+let SignerReuse(i: bitstring) =
+  new d: bitstring; new e: bitstring;
+  event Created(i, d, e);
+  out(c, cmt(i, cm(d), cm(e)));
+  !( in(c, (msg: bitstring, l1: bitstring, l2: bitstring));
+     if l1 = cmt(i, cm(d), cm(e)) || l2 = cmt(i, cm(d), cm(e)) then
+     event Signed(i, msg, (l1, l2)); event Used(i, d, e, msg);
+     out(c, zs(sh(g, i), d, e, msg, (l1, l2))) ).
+
+let Aggregate(pi: bitstring, pj: bitstring) =
+  in(c, (a: bitstring, b: bitstring, l: bitstring));
+  let (s1: bitstring, d1: bitstring, e1: bitstring, m1: bitstring, l1: bitstring) = zsd(a) in
+  let (s2: bitstring, d2: bitstring, e2: bitstring, m2: bitstring, l2: bitstring) = zsd(b) in
+  if s1 = sh(g, pi) && s2 = sh(g, pj) && m1 = m2 && l1 = l2 && l1 = l then      (*-NO_BINDING*)
+(*+NO_BINDING*)  if s1 = sh(g, pi) && s2 = sh(g, pj) && m1 = m2 && l1 = nolist && l2 = nolist then
+  event Aggregated(pi, pj, m1, l);
+  out(c, tsig(pubk(g), m1, l)).
+
+let Extract() =
+  in(c, (a: bitstring, b: bitstring, d3: bitstring));
+  let (s1: bitstring, dd: bitstring, ee: bitstring, m1: bitstring, l1: bitstring) = zsd(a) in
+  let (=s1, =dd, =ee, m2: bitstring, l2: bitstring) = zsd(b) in
+  let (=s1, =dd, =ee, m3: bitstring, l3: bitstring) = zsd(d3) in
+  if (m1, l1) <> (m2, l2) && (m1, l1) <> (m3, l3) && (m2, l2) <> (m3, l3) then
+  event Extracted(s1);
+  out(c, s1).
+
+let Verifier() =
+  in(c, (msg: bitstring, l: bitstring, s: bitstring));
+  if s = tsig(pubk(g), msg, l) then event Accepted(msg, l).
+
+process
+  out(c, pubk(g));
+  ( !SignerOnce(c1) | !SignerOnce(c2) | !SignerOnce(c3)          (*-NONCE_REUSE*)
+(*+NONCE_REUSE*) ( !SignerReuse(c1) | !SignerReuse(c2) | !SignerReuse(c3)
+  | !Aggregate(c1, c2) | !Aggregate(c1, c3) | !Aggregate(c2, c3) | !Verifier()
+  | !Extract()                                                       (*-NO_EXTRACT*)
+  | !RevealP()                                                    (*-SANITY,REV_CTHREE*)
+(*+REV_CTHREE*)  | !RevealP3()
+  )

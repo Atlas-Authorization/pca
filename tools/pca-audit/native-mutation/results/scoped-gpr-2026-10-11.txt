@@ -1,0 +1,12 @@
+Scoped native mutation, code changed since each crate's last full run (2026-10-11, 2-vCPU spot boxes)
+
+rust-pca  cargo-mutants --all-features --re "$(cat tools/pca-audit/native-mutation/rust-scope.re)", 6 shards (zk-mutants-box.sh)
+          scope: strict digests (1ba8297a), hop body-depth check (deeper_than_cap / body_too_deep), strict_parse_envelope /
+          strict_parse_depth (c3e2eecd), R6 signer-set / threshold / chain / pcactn / middleware verify_request paths
+          165 mutants: 160 caught, 5 unviable, 0 missed, 0 timeout  -> nothing to ledger
+go-pca    tools/pca-audit/go-mutate/scoped.sh (lines in scope-lines.txt: R6 pca.go lines, strictjson.go depth cap, all of threshold.go)
+          228 mutants: 125 killed, 49 non-viable; 54 survived -> 36 killed by threshold_mut_test.go (re-verified on the queue),
+          18 equivalent (10 ledger entries, keyed by line text), 0 open
+python-pca  no separate run: the full mutmut pass over atlas_pca (py-zk-mut, shards [0-3]/[4-6]/[7-9], commits 63bd0926,
+          6d8533a8) ran on a tree that already contained 85981706 (strict hash_canonical / _leaf_hash, total
+          verify_leaf_suite) and c6ce6021 (R6 paths); pca.py is unchanged since. All its survivors were killed or ledgered there.
