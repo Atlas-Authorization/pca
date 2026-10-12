@@ -1,0 +1,122 @@
+name: Formal - symbolic protocol models
+
+# ProVerif 2.05 + CryptoVerif 2.13 and Tamarin 1.12.0 (Maude 3.5.1): every model is re-run and its verdicts are compared
+# with the result files committed under formal/proverif/results, formal/proverif/cv/results and formal/tamarin/results
+# (.github/scripts/formal-check.py). A recorded proof or a recorded attack must be reproduced exactly; a timeout where a
+# verdict was recorded fails. Tamarin: the v1 theories in full and every v2 lemma with a recorded verdict, at its recorded
+# heuristic (lemmas recorded only as timeouts are not re-run; the memory-bound budget node_bound runs need ~100 GB and stay
+# off the hosted runners). Runs on ci/** pushes and on demand; never on main pushes.
+on:
+  push:
+    branches: ['ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proverif:
+    name: ProVerif + CryptoVerif
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - name: opam cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.opam
+          key: opam-proverif-${{ hashFiles('TOOLCHAIN.lock') }}
+      - name: ProVerif + CryptoVerif (opam, versions from TOOLCHAIN.lock)
+        run: |
+          . ./TOOLCHAIN.lock
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq opam build-essential m4 pkg-config libgmp-dev zlib1g-dev graphviz >/dev/null
+          export OPAMYES=1 OPAMCONFIRMLEVEL=unsafe-yes   # non-interactive, incl. opam's system-package (depext) installs
+          [ -d "$HOME/.opam" ] || opam init -y --disable-sandboxing --bare >/dev/null
+          opam switch list 2>/dev/null | grep -qw pv || opam switch create pv "$OCAML_VERSION" -y
+          eval "$(opam env --switch=pv)"
+          command -v proverif >/dev/null || opam install -y "proverif.$PROVERIF_VERSION" "cryptoverif.$CRYPTOVERIF_VERSION"
+          proverif --help 2>&1 | head -1; cryptoverif -help 2>&1 | head -1
+      - name: ProVerif (every model x variant x query) vs the recorded verdicts
+        run: |
+          eval "$(opam env --switch=pv)"
+          cp -R formal/proverif/results "$RUNNER_TEMP/pv-recorded"
+          bash formal/proverif/run_all.sh 4 1800
+          python3 .github/scripts/formal-check.py proverif "$RUNNER_TEMP/pv-recorded" formal/proverif/results
+      - name: ProVerif revision-3 models (every query must reach a verdict)
+        if: ${{ hashFiles('formal/proverif/run_all_v3.sh') != '' }}
+        run: |
+          eval "$(opam env --switch=pv)"
+          bash formal/proverif/run_all_v3.sh 4 1800
+          cat formal/proverif/results/v3/*.txt | grep -v '^$' | grep -v 'Version\|version' || true
+          if grep -hE 'TIMEOUT|NO RESULT' formal/proverif/results/v3/*.txt; then echo "::error::a v3 query reached no verdict"; exit 1; fi
+      - name: CryptoVerif (proofs + negative controls) vs the recorded output
+        if: ${{ hashFiles('formal/proverif/cv/run_cv.sh') != '' }}
+        run: |
+          eval "$(opam env --switch=pv)"
+          cp -R formal/proverif/cv/results "$RUNNER_TEMP/cv-recorded"
+          (cd formal/proverif/cv && bash run_cv.sh)
+          python3 .github/scripts/formal-check.py exact "$RUNNER_TEMP/cv-recorded" formal/proverif/cv/results versions.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-proverif
+          path: |
+            formal/proverif/results
+            formal/proverif/cv/results
+
+  tamarin-v1:
+    name: Tamarin (v1 theories)
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tamarin 1.12.0 + Maude 3.5.1
+        run: |
+          bash tools/pca-formal/box-setup.sh tamarin
+          echo "$HOME/tools/maude" >> "$GITHUB_PATH"; echo "$HOME/tools/tamarin" >> "$GITHUB_PATH"
+      - name: Every lemma vs the recorded verdict
+        run: |
+          tamarin-prover --version | head -2
+          mkdir -p "$RUNNER_TEMP/tam-recorded"; cp formal/tamarin/results/*.txt "$RUNNER_TEMP/tam-recorded/"
+          (cd formal/tamarin && sh ./run_all.sh 1200)
+          python3 .github/scripts/formal-check.py tamarin-v1 "$RUNNER_TEMP/tam-recorded" formal/tamarin/results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-tamarin-v1
+          path: formal/tamarin/results/*.txt
+
+  tamarin-v2:
+    name: Tamarin (v2, recorded verdicts) ${{ matrix.shard }}/2
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tamarin 1.12.0 + Maude 3.5.1
+        run: |
+          bash tools/pca-formal/box-setup.sh tamarin
+          echo "$HOME/tools/maude" >> "$GITHUB_PATH"; echo "$HOME/tools/tamarin" >> "$GITHUB_PATH"
+      - name: Lemmas with a recorded verdict, at the recorded heuristic
+        run: |
+          set -uo pipefail
+          python3 .github/scripts/formal-check.py tamarin-v2-jobs formal/tamarin/results/v2 ${{ matrix.shard }} 2 > "$RUNNER_TEMP/jobs.txt"
+          cat "$RUNNER_TEMP/jobs.txt"
+          cd formal/tamarin; mkdir -p results/v2
+          export T=1800 N=2 MEM=6g TV="$(tamarin-prover --version 2>&1 | grep -io 'tamarin-prover [0-9.]*' | head -1)"
+          xargs -P 2 -I{} ./run_all_v2.sh __job {} < "$RUNNER_TEMP/jobs.txt"
+          mkdir -p "$RUNNER_TEMP/parts"; cp results/v2/.*.part "$RUNNER_TEMP/parts/" 2>/dev/null || true
+          python3 "$GITHUB_WORKSPACE/.github/scripts/formal-check.py" tamarin-v2-check results/v2 results/v2 "$RUNNER_TEMP/jobs.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-tamarin-v2-${{ matrix.shard }}
+          path: ${{ runner.temp }}/parts

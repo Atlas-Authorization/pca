@@ -1,0 +1,104 @@
+[
+ {
+  "file": "forge-leaf-small-order-holder-identity.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 1225
+ },
+ {
+  "file": "forge-leaf-small-order-holder-order2.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 1232
+ },
+ {
+  "file": "forge-hop-small-order-root-issuer.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 1199
+ },
+ {
+  "file": "forge-leaf-small-order-holder-identityNoncanonY.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 1284
+ },
+ {
+  "file": "sig-noncanonical-tail.json",
+  "allImplementationsAgree": true,
+  "allow": false,
+  "bytes": 1362
+ },
+ {
+  "file": "proof-sibling-noncanonical-tail.json",
+  "allImplementationsAgree": true,
+  "allow": false,
+  "bytes": 1340
+ },
+ {
+  "file": "proof-index-plus1.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 1362
+ },
+ {
+  "file": "proof-size-zero.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 1326
+ },
+ {
+  "file": "chain-too-long-17.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 7384
+ },
+ {
+  "file": "conditions-digest-nonstring-resigned.json",
+  "allImplementationsAgree": true,
+  "allow": false,
+  "bytes": 1215
+ },
+ {
+  "file": "counter-literal-1_0.json",
+  "allImplementationsAgree": true,
+  "allow": false,
+  "bytes": 1260
+ },
+ {
+  "file": "counter-literal-9007199254740993.json",
+  "allImplementationsAgree": true,
+  "allow": false,
+  "bytes": 1362
+ },
+ {
+  "file": "badjson-comment.json",
+  "allImplementationsAgree": true,
+  "allow": false,
+  "bytes": 1202
+ },
+ {
+  "file": "badjson-lone-low-surrogate-escape.json",
+  "allImplementationsAgree": true,
+  "allow": false,
+  "bytes": 1324
+ },
+ {
+  "file": "edge-deep-nest-inputs.json",
+  "allImplementationsAgree": false,
+  "allow": true,
+  "bytes": 1461
+ },
+ {
+  "file": "aud-other-resigned.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 1319
+ },
+ {
+  "file": "expired-resigned.json",
+  "allImplementationsAgree": false,
+  "allow": false,
+  "bytes": 1269
+ }
+]

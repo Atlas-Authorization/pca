@@ -1,0 +1,9 @@
+{
+  "name": "pca-diff-fuzz",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Differential + metamorphic fuzzing of the PCA verifiers across languages (TS is the oracle).",
+  "scripts": {
+    "audit": "./run.sh"
+  }
+}

@@ -1,0 +1,102 @@
+name: Formal - Kani
+
+# Kani bounded model checking of the SHIPPING Rust verifier sources (tools/pca-implverif/kani-*/ copy the crate sources
+# byte-for-byte from the pca-rust repo, checked out at the same ref as this run) - one harness per job. Harnesses that
+# do not fit a hosted runner (4 vCPU, 16 GB, 6 h) are excluded in .github/scripts/formal-kani-tiers.txt with the reason;
+# "probe" harnesses run only on a manual run with kani_probe=true and do not gate. Every other harness must report
+# VERIFICATION SUCCESSFUL. Runs on ci/** pushes and on demand; never on main pushes.
+on:
+  push:
+    branches: ['ci/**']
+  workflow_dispatch:
+    inputs:
+      native_ref:
+        description: 'Ref of the pca-rust repo (default: the ref of this run)'
+        required: false
+        default: ''
+      kani_probe:
+        description: 'Also run the probe-tier harnesses (non-gating)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NATIVE_REF: ${{ inputs.native_ref || github.ref_name }}
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kani cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.kani
+            ~/.cargo/bin/kani
+            ~/.cargo/bin/cargo-kani
+          key: kani-${{ hashFiles('TOOLCHAIN.lock') }}-${{ runner.os }}
+      - name: Kani (version from TOOLCHAIN.lock)
+        run: bash .github/scripts/formal-kani-setup.sh
+      - name: Verified sources (pca-rust @ ${{ env.NATIVE_REF }})
+        run: bash .github/scripts/formal-natives.sh "$NATIVE_REF"
+      - name: List harnesses
+        id: plan
+        run: |
+          rc=0; m="$(bash .github/scripts/formal-kani-plan.sh "${{ inputs.kani_probe || false }}")" || rc=$?
+          echo "matrix=$m" >> "$GITHUB_OUTPUT"
+          echo "$m" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["include"]), "harness job(s)")'
+          exit $rc
+
+  harness:
+    name: ${{ matrix.crate }} ${{ matrix.harness }}
+    needs: plan
+    if: ${{ always() && needs.plan.outputs.matrix != '' && needs.plan.outputs.matrix != '{"include":[]}' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    continue-on-error: ${{ matrix.probe }}
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kani cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.kani
+            ~/.cargo/bin/kani
+            ~/.cargo/bin/cargo-kani
+          key: kani-${{ hashFiles('TOOLCHAIN.lock') }}-${{ runner.os }}
+      - name: Kani (version from TOOLCHAIN.lock)
+        run: bash .github/scripts/formal-kani-setup.sh
+      - run: bash .github/scripts/formal-natives.sh "$NATIVE_REF"
+      - name: cargo kani --harness ${{ matrix.harness }}
+        working-directory: tools/pca-implverif/${{ matrix.crate }}
+        env:
+          H: ${{ matrix.harness }}
+          F: ${{ matrix.features }}
+        run: |
+          bash ./build.sh
+          mkdir -p "$RUNNER_TEMP/kani"; log="$RUNNER_TEMP/kani/$(echo "$H" | tr ':/' '__').log"
+          s=$(date +%s)
+          rc=0; cargo kani -Z stubbing -Z function-contracts -Z loop-contracts ${F:+--features "$F"} --harness "$H" --exact \
+            --output-format terse > "$log" 2>&1 || rc=$?
+          echo "rc=$rc wall=$(( $(date +%s) - s ))s"; grep -a -E 'VERIFICATION:|Complete - |Runtime (Symex|Solver)|error' "$log" | tail -8 || true
+          grep -aq 'VERIFICATION:- SUCCESSFUL' "$log" && [ "$rc" = 0 ]
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kani-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/kani
