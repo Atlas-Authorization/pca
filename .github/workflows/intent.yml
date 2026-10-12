@@ -1,0 +1,56 @@
+name: Intent layer
+
+# packages/pca-intent: typecheck, unit tests, and the Intent Fidelity Benchmark (deterministic; at least 300 cases, every
+# hand label re-derived exactly). Skipped on trees that do not contain the package.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  intent:
+    name: pca-intent tests + benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Present in this tree?
+        id: present
+        run: |
+          if [ -f packages/pca-intent/package.json ]; then echo "yes=true" >> "$GITHUB_OUTPUT"
+          else echo "yes=false" >> "$GITHUB_OUTPUT"; echo "::notice::packages/pca-intent is not part of this tree: nothing to test"; fi
+      - if: steps.present.outputs.yes == 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.present.outputs.yes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        if: steps.present.outputs.yes == 'true'
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-intent... --filter=@atlasauth/pca...
+      - name: Build dependencies
+        if: steps.present.outputs.yes == 'true'
+        run: pnpm -r --filter=@atlasauth/pca-intent^... run build
+      - name: Typecheck
+        if: steps.present.outputs.yes == 'true'
+        run: pnpm --filter @atlasauth/pca-intent run typecheck
+      - name: Unit tests
+        if: steps.present.outputs.yes == 'true'
+        run: pnpm --filter @atlasauth/pca-intent run test
+      - name: Intent Fidelity Benchmark
+        if: steps.present.outputs.yes == 'true'
+        run: bash .github/scripts/ts-intent-bench.sh "$RUNNER_TEMP/intent-bench" 300
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.present.outputs.yes == 'true'
+        with:
+          name: intent-benchmark
+          path: ${{ runner.temp }}/intent-bench/
+          if-no-files-found: ignore

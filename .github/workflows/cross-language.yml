@@ -1,0 +1,112 @@
+name: Cross-language gate
+
+# One corpus, every verifier: the TypeScript reference (packages/pca, from source) and the native verifiers from their
+# own public repos, checked out at the SAME ref as this run (a ci/** branch, a tag, or main), all run over the shared
+# adversarial corpus + regressions + a seeded mutation fuzz by scripts/pca-conformance-all.mjs. Fails on any
+# cross-language disagreement, crash or hang, or when any implementation did not run. Swift and Kotlin have no
+# differential driver: their native suites run the corpus in their own repos' CI.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+    inputs:
+      native_ref:
+        description: 'Ref of the native verifier repos (default: the ref of this run)'
+        required: false
+        default: ''
+      fuzz:
+        description: 'Mutation-fuzz iterations'
+        required: false
+        default: '3000'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BC_VERSION: '1.80'
+  NATIVE_REF: ${{ inputs.native_ref || github.ref_name }}
+
+jobs:
+  gate:
+    name: all languages, 0 disagreements
+    # OpenSSL >= 3.5 (ubuntu-26.04): the Ruby and PHP verifiers get ML-DSA from libcrypto; on OpenSSL 3.0 they fail
+    # closed on the ML-DSA vectors and the gate would (rightly) report them as disagreements
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native verifiers at ${{ env.NATIVE_REF }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/native" sdks
+          for r in go python ruby php dotnet rust java; do
+            url="https://github.com/${{ github.repository_owner }}/pca-$r.git"
+            # the release-candidate push lands the flagship first: wait up to 20 min for each native repo's ref
+            for i in $(seq 1 40); do
+              git ls-remote --exit-code "$url" "refs/heads/$NATIVE_REF" "refs/tags/$NATIVE_REF" >/dev/null 2>&1 && break
+              [ "$i" = 40 ] && { echo "::error::pca-$r has no ref '$NATIVE_REF' (push the native repos at the same ref)"; exit 1; }
+              echo "waiting for pca-$r@$NATIVE_REF ($i/40)"; sleep 30
+            done
+            git clone -q --depth 1 --branch "$NATIVE_REF" "$url" "$RUNNER_TEMP/native/pca-$r"
+            echo "pca-$r @ $(git -C "$RUNNER_TEMP/native/pca-$r" rev-parse HEAD)"
+          done
+          # the drivers expect the verifiers under sdks/<lang>-pca; the Rust verifier is one crate of the pca-rust workspace
+          for r in go python ruby php dotnet java; do cp -R "$RUNNER_TEMP/native/pca-$r" "sdks/$r-pca"; done
+          cp -R "$RUNNER_TEMP/native/pca-rust/crates/atlas-pca" sdks/rust-pca
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: sdks/go-pca/go.mod
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sodium
+          coverage: none
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install (reference implementation + corpus generator)
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca... --filter=@atlasauth/pca-conformance...
+      - name: Build (the reference loads its built workspace dependencies)
+        run: pnpm -r --filter=@atlasauth/pca... --filter=@atlasauth/pca-conformance... run build
+      - name: BouncyCastle for the Java verifier
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/bcprov.jar" "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar"
+          echo "PCA_BC_JAR=$RUNNER_TEMP/bcprov.jar" >> "$GITHUB_ENV"
+      - name: Python verifier backends
+        run: python -m pip install cryptography dilithium-py
+      - name: Corpus regenerates byte-identically
+        run: packages/pca/node_modules/.bin/tsx packages/pca-conformance/adversarial/gen-adversarial.ts --check
+      - name: Every language over the corpus
+        run: >
+          scripts/pca-conformance-all.sh --no-native --require go,python,ruby,php,dotnet,rust,java
+          --fuzz ${{ inputs.fuzz || '3000' }} --out "$RUNNER_TEMP/pca-conformance-all"
+      - name: Upload matrix + report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-language-matrix
+          path: |
+            ${{ runner.temp }}/pca-conformance-all/MATRIX.md
+            ${{ runner.temp }}/pca-conformance-all/report.json
+          if-no-files-found: ignore

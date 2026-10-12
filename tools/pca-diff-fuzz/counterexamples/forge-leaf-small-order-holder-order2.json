@@ -1,0 +1,92 @@
+{
+ "mutator": "forge-leaf-small-order-holder-order2",
+ "case": "c002397",
+ "bytes": 1232,
+ "allImplementationsAgree": false,
+ "context": {
+  "now": 1800000000000,
+  "aud": "rs-fuzz"
+ },
+ "results": {
+  "oracle": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": false,
+    "counter": true
+   }
+  },
+  "dotnet": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": false,
+    "counter": true
+   }
+  },
+  "go": {
+   "allow": false,
+   "checks": {
+    "audience": true,
+    "chain": true,
+    "counter": true,
+    "leaf_signature": false,
+    "plan_inclusion": true,
+    "validity": true,
+    "version": true,
+    "wire": true
+   }
+  },
+  "php": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": false,
+    "counter": true
+   }
+  },
+  "python": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": false,
+    "counter": true
+   }
+  },
+  "ruby": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": false,
+    "counter": true
+   }
+  }
+ },
+ "pcactn_json": "{\"ver\":2,\"action\":{\"verb\":\"x\",\"resource\":\"db/(@Ur+\",\"params_digest\":\"RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o\",\"reversibility_class\":\"reversible\"},\"grant_ref\":\"KOkFZ9UI_Hbeq55PT9qo_wvqyFnQurqQemYOABdel0s\",\"cap_chain\":[{\"id\":\"KOkFZ9UI_Hbeq55PT9qo_wvqyFnQurqQemYOABdel0s\",\"issuer\":\"664DtjPOxss8Bk1TB6M6CdoaDUS7sS_xC163Hqq6huM\",\"holder\":\"7P_______________________________________38\",\"caveats\":[],\"body_digest\":\"KOkFZ9UI_Hbeq55PT9qo_wvqyFnQurqQemYOABdel0s\",\"sig\":\"NLjUU-G9Dkv7OWhtVHBnUXjjOcJDbWQOz-mJPFV78tXJztgJQbvaooZg6C49yl4ud029e7bC_OaRtWp_M7uuBw\"}],\"plan\":{\"root\":\"2SnRZ4XNbzJAK1Z1JKNvJvd3xkqB1uXrZ-VJ5CqmSUM\",\"inclusion_proof\":{\"index\":0,\"size\":1,\"path\":[]},\"node_id\":\"n0\",\"conditions_digest\":\"Ud4sQr7Kx7NrANw6LZ2r9qSAHpGkLp4XHTcKTfgdI0k\"},\"attestation\":{\"quote_digest\":\"0*Z~{4\",\"epoch\":0,\"model_id\":\"unattested\",\"measurement\":\"\",\"operator\":\"ctl\\u0001\"},\"provenance\":{\"causal_hash\":\"\",\"taint_level\":0,\"trusted_refs\":[]},\"freshness\":{\"beacon_ref\":\"\",\"epoch\":0,\"accumulator_witness\":\"C+>\"},\"counter\":422,\"risk_claim\":{\"r\":0,\"inputs\":{\"a\":994315}},\"aud\":\"rs-fuzz\",\"iat\":1799999999548,\"exp\":1800000000548,\"nonce\":\"a b89\",\"caution\":0.25,\"sig\":\"7P_______________________________________38AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}",
+ "grant": "{\"body_digest\":\"KOkFZ9UI_Hbeq55PT9qo_wvqyFnQurqQemYOABdel0s\",\"caveats\":[],\"holder\":\"7P_______________________________________38\",\"id\":\"KOkFZ9UI_Hbeq55PT9qo_wvqyFnQurqQemYOABdel0s\",\"issuer\":\"664DtjPOxss8Bk1TB6M6CdoaDUS7sS_xC163Hqq6huM\",\"sig\":\"NLjUU-G9Dkv7OWhtVHBnUXjjOcJDbWQOz-mJPFV78tXJztgJQbvaooZg6C49yl4ud029e7bC_OaRtWp_M7uuBw\"}"
+}

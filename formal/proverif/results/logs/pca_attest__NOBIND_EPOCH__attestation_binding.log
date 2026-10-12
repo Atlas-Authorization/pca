@@ -1,0 +1,167 @@
+-- Query event(Accepted(pkH_4,g_4,e_4,n_3,m_2)) ==> event(QuoteIssued(pkH_4,g_4,e_4,n_3)) || event(RevealTEE(p_1)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+Starting query event(Accepted(pkH_4,g_4,e_4,n_3,m_2)) ==> event(QuoteIssued(pkH_4,g_4,e_4,n_3)) || event(RevealTEE(p_1))
+goal reachable: b-event(QuoteIssued(pk(k_2),g_4,e_4,n_3)) && attacker(e_4) && attacker(g_4) && attacker(e_5) -> event(Accepted(pk(k_2),g_4,e_5,n_3,mApproved))
+Abbreviations:
+k_2 = k[!1 = @sid]
+n_3 = n_1[e_2 = e_5,g_2 = g_4,pkH_2 = pk(k_2),!1 = @sid_1]
+
+Derivation:
+Abbreviations:
+k_2 = k[!1 = @sid]
+n_3 = n_1[e_2 = e_4,g_2 = g_4,pkH_2 = pk(k_2),!1 = @sid_1]
+
+1. We assume as hypothesis that
+attacker(e_4).
+
+2. We assume as hypothesis that
+attacker(g_4).
+
+3. The message pk(k_2) may be sent to the attacker at output {7}.
+attacker(pk(k_2)).
+
+4. By 3, the attacker may know pk(k_2).
+By 2, the attacker may know g_4.
+By 1, the attacker may know e_4.
+Using the function 3-tuple the attacker may obtain (pk(k_2),g_4,e_4).
+attacker((pk(k_2),g_4,e_4)).
+
+5. The message (pk(k_2),g_4,e_4) that the attacker may have by 4 may be received at input {30}.
+So the entry expects(pk(k_2),g_4,e_4,n_3) may be inserted in a table at insert {33}.
+table(expects(pk(k_2),g_4,e_4,n_3)).
+
+6. The message (pk(k_2),g_4,e_4) that the attacker may have by 4 may be received at input {30}.
+So the message n_3 may be sent to the attacker at output {34}.
+attacker(n_3).
+
+7. We assume as hypothesis that
+attacker(e_5).
+
+8. By 3, the attacker may know pk(k_2).
+By 2, the attacker may know g_4.
+By 7, the attacker may know e_5.
+Using the function 3-tuple the attacker may obtain (pk(k_2),g_4,e_5).
+attacker((pk(k_2),g_4,e_5)).
+
+9. The entry keys(pk(k_2),k_2) may be inserted in a table at insert {5}.
+table(keys(pk(k_2),k_2)).
+
+10. The message (pk(k_2),g_4,e_5) that the attacker may have by 8 may be received at input {9}.
+The entry keys(pk(k_2),k_2) that may be in a table by 9 may be read at get {12}.
+So the entry encl(pk(k_2),g_4,e_5) may be inserted in a table at insert {11}.
+table(encl(pk(k_2),g_4,e_5)).
+
+11. The message n_3 that the attacker may have by 6 may be received at input {15}.
+The entry encl(pk(k_2),g_4,e_5) that may be in a table by 10 may be read at get {23}.
+The event QuoteIssued(pk(k_2),g_4,e_5,n_3) may be executed at {21}.
+So the message ((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[])) may be sent to the attacker at output {22}.
+attacker(((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[]))).
+
+12. By 11, the attacker may know ((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[])).
+Using the function 2-proj-2-tuple the attacker may obtain sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[]).
+attacker(sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[])).
+
+13. Using the function dropped the attacker may obtain dropped.
+attacker(dropped).
+
+14. Using the function bindT the attacker may obtain bindT.
+attacker(bindT).
+
+15. By 14, the attacker may know bindT.
+By 3, the attacker may know pk(k_2).
+By 2, the attacker may know g_4.
+By 13, the attacker may know dropped.
+By 6, the attacker may know n_3.
+Using the function 5-tuple the attacker may obtain (bindT,pk(k_2),g_4,dropped,n_3).
+attacker((bindT,pk(k_2),g_4,dropped,n_3)).
+
+16. By 15, the attacker may know (bindT,pk(k_2),g_4,dropped,n_3).
+Using the function h the attacker may obtain h((bindT,pk(k_2),g_4,dropped,n_3)).
+attacker(h((bindT,pk(k_2),g_4,dropped,n_3))).
+
+17. Using the function mApproved the attacker may obtain mApproved.
+attacker(mApproved).
+
+18. Using the function quoteT the attacker may obtain quoteT.
+attacker(quoteT).
+
+19. By 18, the attacker may know quoteT.
+By 17, the attacker may know mApproved.
+By 16, the attacker may know h((bindT,pk(k_2),g_4,dropped,n_3)).
+Using the function 3-tuple the attacker may obtain (quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))).
+attacker((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3)))).
+
+20. By 19, the attacker may know (quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))).
+By 12, the attacker may know sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[]).
+Using the function 2-tuple the attacker may obtain ((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[])).
+attacker(((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[]))).
+
+21. The entry expects(pk(k_2),g_4,e_4,n_3) that may be in a table by 5 may be read at get {46}.
+The message ((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),sign((quoteT,mApproved,h((bindT,pk(k_2),g_4,dropped,n_3))),tsk[])) that the attacker may have by 20 may be received at input {37}.
+So event Accepted(pk(k_2),g_4,e_4,n_3,mApproved) may be executed at {45}.
+event(Accepted(pk(k_2),g_4,e_4,n_3,mApproved)).
+
+22. By 21, event(Accepted(pk(k_2),g_4,e_4,n_3,mApproved)).
+The goal is reached, represented in the following fact:
+event(Accepted(pk(k_2),g_4,e_4,n_3,mApproved)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new tsk: bitstring creating tsk_5 at {1}
+
+out(c, ~M) with ~M = pk(tsk_5) at {2}
+
+new k: bitstring creating k_3 at {4} in copy a
+
+insert keys(pk(k_3),k_3) at {5} in copy a
+
+event KeyGen(pk(k_3)) at {6} in copy a
+
+out(c, ~M_1) with ~M_1 = pk(k_3) at {7} in copy a
+
+in(c, (~M_1,a_1,a_2)) with ~M_1 = pk(k_3) at {9} in copy a_3
+
+get keys(pk(k_3),k_3) at {12} in copy a_3
+
+event Provision(pk(k_3),a_1,a_2) at {10} in copy a_3
+
+insert encl(pk(k_3),a_1,a_2) at {11} in copy a_3
+
+in(c, (~M_1,a_1,a_4)) with ~M_1 = pk(k_3) at {30} in copy a_5
+
+new n_1: bitstring creating n_4 at {31} in copy a_5
+
+event NonceIssued(pk(k_3),a_1,a_4,n_4) at {32} in copy a_5
+
+insert expects(pk(k_3),a_1,a_4,n_4) at {33} in copy a_5
+
+out(c, ~M_2) with ~M_2 = n_4 at {34} in copy a_5
+
+in(c, ~M_2) with ~M_2 = n_4 at {15} in copy a_6
+
+get encl(pk(k_3),a_1,a_2) at {23} in copy a_6
+
+event QuoteIssued(pk(k_3),a_1,a_2,n_4) at {21} in copy a_6
+
+out(c, ((quoteT,mApproved,~M_3),~M_4)) with ~M_3 = h((bindT,pk(k_3),a_1,dropped,n_4)), ~M_4 = sign((quoteT,mApproved,h((bindT,pk(k_3),a_1,dropped,n_4))),tsk_5) at {22} in copy a_6
+
+get expects(pk(k_3),a_1,a_4,n_4) at {46} in copy a_7
+
+in(c, ((quoteT,mApproved,h((bindT,~M_1,a_1,dropped,~M_2))),~M_4)) with h((bindT,~M_1,a_1,dropped,~M_2)) = h((bindT,pk(k_3),a_1,dropped,n_4)), ~M_4 = sign((quoteT,mApproved,h((bindT,pk(k_3),a_1,dropped,n_4))),tsk_5) at {37} in copy a_7
+
+event Accepted(pk(k_3),a_1,a_4,n_4,mApproved) at {45} in copy a_7 (goal)
+
+The event Accepted(pk(k_3),a_1,a_4,n_4,mApproved) is executed at {45} in copy a_7.
+A trace has been found.
+RESULT event(Accepted(pkH_4,g_4,e_4,n_3,m_2)) ==> event(QuoteIssued(pkH_4,g_4,e_4,n_3)) || event(RevealTEE(p_1)) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query event(Accepted(pkH_4,g_4,e_4,n_3,m_2)) ==> event(QuoteIssued(pkH_4,g_4,e_4,n_3)) || event(RevealTEE(p_1)) is false.
+
+--------------------------------------------------------------
+

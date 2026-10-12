@@ -1,0 +1,123 @@
+-- Query event(Used(i_4,d_3,e_3,m1_4)) && event(Used(i_4,d_3,e_3,m2_4)) ==> m1_4 = m2_4 in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 130 rules (62 with conclusion selected). Queue: 134 rules.
+400 rules inserted. Base: 205 rules (105 with conclusion selected). Queue: 323 rules.
+600 rules inserted. Base: 366 rules (263 with conclusion selected). Queue: 162 rules.
+800 rules inserted. Base: 509 rules (405 with conclusion selected). Queue: 19 rules.
+Starting query event(Used(i_4,d_3,e_3,m1_4)) && event(Used(i_4,d_3,e_3,m2_4)) ==> m1_4 = m2_4
+goal reachable: l1_7 ≠ cmt(c1,cm(d_3),cm(e_3)) && l1_8 ≠ cmt(c1,cm(d_3),cm(e_3)) && attacker(m1_4) && attacker(l1_8) && b-event(@p_act(@occ9_1,(m1_4,l1_8,cmt(c1,cm(d_3),cm(e_3))))) && attacker(m2_4) && attacker(l1_7) && b-event(@p_act(@occ9_2,(m2_4,l1_7,cmt(c1,cm(d_3),cm(e_3))))) -> event(Used(c1,d_3,e_3,m1_4)) && event(Used(c1,d_3,e_3,m2_4))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ9_1 = @occ9[!2 = @sid_1,!1 = @sid]
+@occ9_2 = @occ9[!2 = @sid_2,!1 = @sid]
+
+Derivation:
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ9_1 = @occ9[!2 = @sid_1,!1 = @sid]
+@occ9_2 = @occ9[!2 = @sid_2,!1 = @sid]
+
+1. The message cmt(c1,cm(d_3),cm(e_3)) may be sent to the attacker at output {7}.
+attacker(cmt(c1,cm(d_3),cm(e_3))).
+
+2. By 1, the attacker may know cmt(c1,cm(d_3),cm(e_3)).
+Using the function 3-proj-cmt the attacker may obtain cm(e_3).
+attacker(cm(e_3)).
+
+3. By 1, the attacker may know cmt(c1,cm(d_3),cm(e_3)).
+Using the function 2-proj-cmt the attacker may obtain cm(d_3).
+attacker(cm(d_3)).
+
+4. Using the function c1 the attacker may obtain c1.
+attacker(c1).
+
+5. By 4, the attacker may know c1.
+By 3, the attacker may know cm(d_3).
+By 2, the attacker may know cm(e_3).
+Using the function cmt the attacker may obtain cmt(c1,cm(d_3),cm(e_3)).
+attacker(cmt(c1,cm(d_3),cm(e_3))).
+
+6. We assume as hypothesis that
+attacker(l1_7).
+
+7. We assume as hypothesis that
+attacker(m2_4).
+
+8. By 7, the attacker may know m2_4.
+By 6, the attacker may know l1_7.
+By 5, the attacker may know cmt(c1,cm(d_3),cm(e_3)).
+Using the function 3-tuple the attacker may obtain (m2_4,l1_7,cmt(c1,cm(d_3),cm(e_3))).
+attacker((m2_4,l1_7,cmt(c1,cm(d_3),cm(e_3)))).
+
+9. The event @p_act(@occ9_2,(m2_4,l1_7,cmt(c1,cm(d_3),cm(e_3)))) records how variables are instantiated at {9}.
+The message (m2_4,l1_7,cmt(c1,cm(d_3),cm(e_3))) that the attacker may have by 8 may be received at input {9}.
+We have l1_7 ≠ cmt(c1,cm(d_3),cm(e_3)).
+So event Used(c1,d_3,e_3,m2_4) may be executed at {12}.
+event(Used(c1,d_3,e_3,m2_4)).
+
+10. We assume as hypothesis that
+attacker(l1_8).
+
+11. We assume as hypothesis that
+attacker(m1_4).
+
+12. By 11, the attacker may know m1_4.
+By 10, the attacker may know l1_8.
+By 5, the attacker may know cmt(c1,cm(d_3),cm(e_3)).
+Using the function 3-tuple the attacker may obtain (m1_4,l1_8,cmt(c1,cm(d_3),cm(e_3))).
+attacker((m1_4,l1_8,cmt(c1,cm(d_3),cm(e_3)))).
+
+13. The event @p_act(@occ9_1,(m1_4,l1_8,cmt(c1,cm(d_3),cm(e_3)))) records how variables are instantiated at {9}.
+The message (m1_4,l1_8,cmt(c1,cm(d_3),cm(e_3))) that the attacker may have by 12 may be received at input {9}.
+We have l1_8 ≠ cmt(c1,cm(d_3),cm(e_3)).
+So event Used(c1,d_3,e_3,m1_4) may be executed at {12}.
+event(Used(c1,d_3,e_3,m1_4)).
+
+14. By 13, event(Used(c1,d_3,e_3,m1_4)).
+By 9, event(Used(c1,d_3,e_3,m2_4)).
+The goals are reached, combined in the following fact:
+event(Used(c1,d_3,e_3,m1_4)) && event(Used(c1,d_3,e_3,m2_4)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+out(c, ~M) with ~M = pubk(g) at {1}
+
+new d: bitstring creating d_4 at {4} in copy a_4
+
+new e: bitstring creating e_4 at {5} in copy a_4
+
+event Created(c1,d_4,e_4) at {6} in copy a_4
+
+out(c, cmt(c1,~M_1,~M_2)) with ~M_1 = cm(d_4), ~M_2 = cm(e_4) at {7} in copy a_4
+
+in(c, (a_5,a_6,cmt(c1,~M_1,~M_2))) with ~M_1 = cm(d_4), ~M_2 = cm(e_4) at {9} in copy a_4, a_7
+
+event Signed(c1,a_5,(a_6,cmt(c1,cm(d_4),cm(e_4)))) at {11} in copy a_4, a_7
+
+event Used(c1,d_4,e_4,a_5) at {12} in copy a_4, a_7 (goal)
+
+out(c, ~M_3) with ~M_3 = zs(sh(g,c1),d_4,e_4,a_5,(a_6,cmt(c1,cm(d_4),cm(e_4)))) at {13} in copy a_4, a_7
+
+in(c, (a_8,a_9,cmt(c1,~M_1,~M_2))) with ~M_1 = cm(d_4), ~M_2 = cm(e_4) at {9} in copy a_4, a_10
+
+event Signed(c1,a_8,(a_9,cmt(c1,cm(d_4),cm(e_4)))) at {11} in copy a_4, a_10
+
+event Used(c1,d_4,e_4,a_8) at {12} in copy a_4, a_10 (goal)
+
+The event Used(c1,d_4,e_4,a_5) is executed at {12} in copy a_4, a_7.
+The event Used(c1,d_4,e_4,a_8) is executed at {12} in copy a_4, a_10.
+A trace has been found.
+RESULT event(Used(i_4,d_3,e_3,m1_4)) && event(Used(i_4,d_3,e_3,m2_4)) ==> m1_4 = m2_4 is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query event(Used(i_4,d_3,e_3,m1_4)) && event(Used(i_4,d_3,e_3,m2_4)) ==> m1_4 = m2_4 is false.
+
+--------------------------------------------------------------
+

@@ -1,0 +1,28 @@
+pca_actn_unbounded:   executable_root_grant (exists-trace): verified (11 steps)
+pca_actn_unbounded:   executable_delegation_issued (exists-trace): verified (6 steps)
+pca_actn_unbounded:   walk_verb_invariant (all-traces): verified (5 steps)
+pca_actn_unbounded:   accept_verb_invariant (all-traces): verified (11 steps)
+pca_actn_unbounded:   walk_start_unique (all-traces): verified (2 steps)
+pca_actn_unbounded: TIMEOUT after 900s budget (NOT proved): executable_delegated
+pca_actn_unbounded: TIMEOUT after 900s budget (NOT proved): executable_deep_chain
+pca_actn_unbounded:   leaf_signature_authenticity (all-traces): verified (186 steps)
+pca_actn_unbounded:   attenuation_root (all-traces): verified (42 steps)
+pca_actn_unbounded: TIMEOUT after 900s budget (NOT proved): hop_issuance
+pca_actn_unbounded:   attenuation_hop (all-traces): verified (66 steps)
+pca_actn_unbounded:   replay_freedom_nonce (all-traces): verified (2 steps)
+pca_actn_unbounded:   replay_freedom_counter (all-traces): verified (2 steps)
+pca_actn_unbounded:   authorization (all-traces): verified (328 steps)
+pca_actn_unbounded:   audience_binding (all-traces): verified (11 steps)
+pca_actn_unbounded:   chain_all_hops_permit (all-traces): verified (62 steps)
+pca_actn_unbounded:   no_accept_after_expiry (all-traces): verified (2 steps)
+pca_actn_unbounded__NO_GREF_CHECK:   replay_freedom_nonce (all-traces): falsified - found trace (16 steps)
+pca_actn_unbounded__NO_GREF_CHECK:   replay_freedom_counter (all-traces): falsified - found trace (16 steps)
+pca_actn_unbounded__NO_ANCESTOR_CAV: TIMEOUT after 900s budget (NOT proved): attenuation_root
+pca_actn_unbounded__NO_AUD_CHECK:   audience_binding (all-traces): falsified - found trace (11 steps)
+pca_actn_unbounded__NO_ANCESTOR_CAV: TIMEOUT after 900s budget (NOT proved): chain_all_hops_permit
+pca_actn_unbounded__NO_ANCESTOR_CAV: TIMEOUT after 900s budget (NOT proved): attenuation_hop
+pca_actn_unbounded__NO_EXPIRY_CHECK:   no_accept_after_expiry (all-traces): falsified - found trace (13 steps)
+pca_actn_unbounded__NO_LEAF_SIG:   leaf_signature_authenticity (all-traces): falsified - found trace (11 steps)
+pca_budget: KILLED(memory) after 900s budget (NOT proved): executable_deep_spend
+pca_budget:   alloc_monotone (all-traces): verified (8 steps)
+Terminated
