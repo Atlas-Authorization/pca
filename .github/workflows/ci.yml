@@ -1,0 +1,84 @@
+name: CI
+
+# Every packages/* TypeScript package: build (tsc) + its test suite, split into shards. The core package's suite includes
+# the shared conformance corpus (conformance/vectors.json). Plus the model-to-code conformance smoke run
+# (tools/pca-formal/conformance against packages/pca).
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: packages shard ${{ matrix.shard }}/6
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v4
+      # Node: packages declare engines >=20; shards run on 22 (LTS), except the shard holding pca-verified-core, which runs
+      # on 24: its N-version primitives test needs ML-DSA / SLH-DSA in node:crypto (OpenSSL 3.5), absent on 22.
+      - name: Select packages
+        id: sel
+        run: |
+          echo "BUILD_FILTER=$(node .github/scripts/ts-shard.mjs ${{ matrix.shard }} 6 --deps)" >> "$GITHUB_ENV"
+          t="$(node .github/scripts/ts-shard.mjs ${{ matrix.shard }} 6)"
+          echo "TEST_FILTER=$t" >> "$GITHUB_ENV"
+          case " $t " in *"--filter=@atlasauth/pca-verified-core "*) echo "node=24" ;; *) echo "node=22" ;; esac >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.sel.outputs.node }}
+      - name: Install (lockfile pinned)
+        run: pnpm install --frozen-lockfile --filter=. $BUILD_FILTER
+      - name: Build (shard packages + their dependencies)
+        run: pnpm -r $BUILD_FILTER run build
+      # the core package's Groth16 tests need the compliance circuit's build outputs (not tracked; regenerated offline
+      # by circuits/setup.sh with circom + snarkjs, a local throwaway phase-1)
+      - name: Compliance circuit (core package shard only)
+        if: contains(format('{0} ', env.TEST_FILTER), '--filter=@atlasauth/pca ')
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/circom" https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
+          chmod +x "$RUNNER_TEMP/circom"
+          CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
+      # Excluded: suites that test PRIVATE repo tooling the public tree does not ship (they import
+      # scripts/check-pq-pinning.mjs, scripts/check-unsafe-trusted-root.mjs, scripts/pca-mpc-multihost.mjs, which the
+      # scrub gate keeps private). Tracked as a packaging finding: those suites should skip when the script is absent.
+      - name: Test
+        run: >
+          pnpm -r --no-bail $TEST_FILTER run test
+          --exclude src/pq-pinning-scan.test.ts --exclude src/scan-ast-evasions.test.ts
+          --exclude src/unsafe-trusted-root-scan.test.ts --exclude src/net/hardening.test.ts
+
+  model-conformance:
+    name: model-to-code conformance (smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Build (the harness loads the built packages)
+        run: pnpm -r --filter=@atlasauth/pca... run build
+      - name: Run (models vs packages/pca, then the harness self-test)
+        run: bash verify/run-conformance.sh smoke
+      - name: Every stage ran cases, 0 disagreements, model mutants killed (no vacuous pass)
+        run: python3 .github/scripts/formal-conformance-check.py .verify-work/conformance 0 smoke

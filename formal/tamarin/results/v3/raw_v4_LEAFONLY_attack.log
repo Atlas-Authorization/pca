@@ -1,0 +1,13 @@
+maude tool: 'maude'
+ checking version: 3.5.1. OK.
+ checking installation: OK.
+[Theory PCA_Budget_V4] Theory loaded
+[Theory PCA_Budget_V4] Theory translated
+[Theory PCA_Budget_V4] Derivation checks started
+[Theory PCA_Budget_V4] Derivation checks ended
+[Theory PCA_Budget_V4] Theory closed
+[Saturating Sources] Step 1 (Max 5)
+[Saturating Sources] Done
+tamarin-prover: Heap exhausted;
+tamarin-prover: Current maximum heap size is 10737418240 bytes (10240 MB).
+tamarin-prover: Use `+RTS -M<size>' to increase it.

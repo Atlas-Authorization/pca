@@ -1,0 +1,4 @@
+Starting query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) && event(KeyGen(lhol)) ==> event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol))
+RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) && event(KeyGen(lhol)) ==> event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol)) is true.
+Verification summary:
+Query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) && event(KeyGen(lhol)) ==> event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol)) is true.

@@ -1,0 +1,581 @@
+File "results/.t/NEG_no_leaf_sig.cv", line 57, characters 5-6:
+Warning: Replication uses the same parameter N with channel cA as replication at line 50, characters 5-6 with channel cP. Avoid reusing parameters for multiple replications with different channels to avoid losing precision in the probability bound.
+File "results/.t/NEG_no_leaf_sig.cv", line 64, characters 5-6:
+Warning: Replication uses the same parameter N with channel cV as replication at line 57, characters 5-6 with channel cA. Avoid reusing parameters for multiple replications with different channels to avoid losing precision in the probability bound.
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... No change.
+Doing remove assignments of findcond... No change.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Signed(a)) failed:
+  Found Accept(cb_1, gref_2, act_1, hol) at 120
+  but could not prove event(Signed(a))
+Proof of forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb)) failed:
+  Found Accept(cb_1, gref_2, act_1, hol) at 120
+  but could not prove event(Granted(cb))
+Applied collision k_2 <-R hashkey; forall x1, y1: capwire; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Proved query forall h2, h1: pkey, a2, cb2, a1, cb1: message, g: hashout; event(Accept(cb1, g, a1, h1)) && event(Accept(cb2, g, a2, h2)) ==> (cb1 = cb2) up to probability Phash(time + time(game [not shown yet]))
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder pkP... Done.
+Doing remove assignments of binder skP... Done.
+Trying equivalence uf_cma(sign) with rkP... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rkH inside simplify... At 14, returned message pkH depends on rkH.
+No change
+Doing global dependency analysis on rkH inside simplify... At 14, returned message pkH depends on rkH.
+No change
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Signed(a)) failed:
+  Found Accept(cb_1, gref_2, act_1, hol) at 129
+  but could not prove event(Signed(a))
+Proved query forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb))
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder pkH... Done.
+Doing remove assignments of binder skH... Done.
+Trying equivalence uf_cma(sign) with rkH... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rkH inside simplify... At 8, returned message pkgen2(rkH) depends on rkH.
+No change
+Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Signed(a)) failed:
+  Found Accept(cb_1, gref_2, act_1, hol) at 121
+  but could not prove event(Signed(a))
+Trying equivalence uf_cma(sign)... Failed.
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkP, pkH);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkH, cv_1);
+       event Granted(cb);
+       return(cb, sign(cb, skP))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       if check(cb_1, pkP, csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying move all binders
+  - Move assignment to act_1
+yields
+
+Game 2 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkP, pkH);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkH, cv_1);
+       event Granted(cb);
+       return(cb, sign(cb, skP))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       if check(cb_1, pkP, csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Proved forall h2, h1: pkey, a2, cb2, a1, cb1: message, g: hashout; event(Accept(cb1, g, a1, h1)) && event(Accept(cb2, g, a2, h2)) ==> (cb1 = cb2) in game 2 up to probability Phash(time_1)
+
+Applying remove assignments of binder pkP
+  - Remove assignments on pkP (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     skP: skey <- skgen(rkP);
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkgen(rkP), pkH);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkH, cv_1);
+       event Granted(cb);
+       return(cb, sign(cb, skP))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       if check(cb_1, pkgen(rkP), csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying remove assignments of binder skP
+  - Remove assignments on skP (definition removed, all usages removed)
+yields
+
+Game 4 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkgen(rkP), pkH);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkH, cv_1);
+       event Granted(cb);
+       return(cb, sign(cb, skgen(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       if check(cb_1, pkgen(rkP), csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rkP [probability Psign(time_2, N, maxlength(game 4: cb))]
+  - Equivalence uf_cma(sign) with variables: rkP -> r_1
+yields
+
+Game 5 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkgen2(rkP), pkH);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkH, cv_1);
+       event Granted(cb);
+       return(cb, (x: message <- cb; sign2(x, skgen2(rkP))))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+ {84}  if (m1: message <- cb_1; si1: signature <- csg; find u = ri <= N suchthat defined(x[ri]) && (m1 = x[ri]) && check2(m1, pkgen2(rkP), si1) then true else false) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+    - Test at 84 always false
+    - Test at 84 always true
+yields
+
+Game 6 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkgen2(rkP), pkH);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkH, cv_1);
+       event Granted(cb);
+       x: message <- cb;
+       return(cb, sign2(x, skgen2(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       m1: message <- cb_1;
+       si1: signature <- csg;
+       find u = ri <= N suchthat defined(x[ri]) && (m1 = x[ri]) && check2(m1, pkgen2(rkP), si1) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on m1 (definition removed, all usages removed)
+  - Remove assignments on si1 (definition removed, all usages removed)
+  - Remove assignments on x (definition removed, all usages removed)
+yields
+
+Game 7 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkgen2(rkP), pkH);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkH, cv_1);
+       event Granted(cb);
+       return(cb, sign2(cb, skgen2(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+ {81}  find u = ri <= N suchthat defined(cb[ri]) && {83}((cb_1 = cb[ri]) && check2(cb_1, pkgen2(rkP), csg)) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Replaced ((cb_1 = cb[ri]) && check2(cb_1, pkgen2(rkP), csg)) with ((hol = pkH) && (cv_2 = cv_1[ri]) && check2(cb_1, pkgen2(rkP), csg)) at 83
+    - Replaced defined condition cb[ri] with cv_1[ri] in find at 81
+yields
+
+Game 8 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkgen2(rkP), pkH);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkH, cv_1);
+       event Granted(cb);
+       return(cb, sign2(cb, skgen2(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       find u = ri <= N suchthat defined(cv_1[ri]) && (hol = pkH) && (cv_2 = cv_1[ri]) && check2(cb_1, pkgen2(rkP), csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Proved forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb)) in game 8
+
+Applying remove assignments of binder pkH
+  - Remove assignments on pkH (definition removed, all usages removed)
+yields
+
+Game 9 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     skH: skey <- skgen(rkH);
+     return(pkgen2(rkP), pkgen(rkH));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkgen(rkH), cv_1);
+       event Granted(cb);
+       return(cb, sign2(cb, skgen2(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skH))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       find u = ri <= N suchthat defined(cv_1[ri]) && (hol = pkgen(rkH)) && (cv_2 = cv_1[ri]) && check2(cb_1, pkgen2(rkP), csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying remove assignments of binder skH
+  - Remove assignments on skH (definition removed, all usages removed)
+yields
+
+Game 10 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     return(pkgen2(rkP), pkgen(rkH));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkgen(rkH), cv_1);
+       event Granted(cb);
+       return(cb, sign2(cb, skgen2(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign(act, skgen(rkH)))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       find u = ri <= N suchthat defined(cv_1[ri]) && (hol = pkgen(rkH)) && (cv_2 = cv_1[ri]) && check2(cb_1, pkgen2(rkP), csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rkH [probability Psign(time_3, N, maxlength(game 10: act))]
+  - Equivalence uf_cma(sign) with variables: rkH -> r_1
+yields
+
+Game 11 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     return(pkgen2(rkP), pkgen2(rkH));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkgen2(rkH), cv_1);
+       event Granted(cb);
+       return(cb, sign2(cb, skgen2(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return((x_1: message <- act; sign2(x_1, skgen2(rkH))))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       find u = ri <= N suchthat defined(cv_1[ri]) && (hol = pkgen2(rkH)) && (cv_2 = cv_1[ri]) && check2(cb_1, pkgen2(rkP), csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 12 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     return(pkgen2(rkP), pkgen2(rkH));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkgen2(rkH), cv_1);
+       return(cb, sign2(cb, skgen2(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       x_1: message <- act;
+       return(sign2(x_1, skgen2(rkH)))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       find u = ri <= N suchthat defined(cv_1[ri]) && (hol = pkgen2(rkH)) && (cv_2 = cv_1[ri]) && check2(cb_1, pkgen2(rkP), csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on x_1 (definition removed, all usages removed)
+yields
+
+Game 13 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkP <-R keyseed;
+     rkH <-R keyseed;
+     return(pkgen2(rkP), pkgen2(rkH));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach i <= N do
+       cP(cv_1: caveat) :=
+       cb: message <- mkcap(pkgen2(rkH), cv_1);
+       return(cb, sign2(cb, skgen2(rkP)))
+     ) | (
+       foreach i_1 <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: hashout, ctr_1: ctr_t, nonce_1: nonce_t, ex_1: exp_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(sign2(act, skgen2(rkH)))
+     ) | (
+       foreach i_2 <= N do
+       cV(cb_1: message, csg: signature, aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: hashout, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       let mkcap(hol: pkey, cv_2: caveat) = cb_1 in
+       find u = ri <= N suchthat defined(cv_1[ri]) && (hol = pkgen2(rkH)) && (cv_2 = cv_1[ri]) && check2(cb_1, pkgen2(rkP), csg) then
+       if gref_2 = hash(hk_1, mkcw(cb_1, csg)) then
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       event Accept(cb_1, gref_2, act_1, hol);
+       return()
+     ))
+
+Adv[Game 1: forall h2, h1: pkey, a2, cb2, a1, cb1: message, g: hashout; event(Accept(cb1, g, a1, h1)) && event(Accept(cb2, g, a2, h2)) ==> (cb1 = cb2)] <= Adv[Game 2: forall h2, h1: pkey, a2, cb2, a1, cb1: message, g: hashout; event(Accept(cb1, g, a1, h1)) && event(Accept(cb2, g, a2, h2)) ==> (cb1 = cb2)]
+Adv[Game 2: forall h2, h1: pkey, a2, cb2, a1, cb1: message, g: hashout; event(Accept(cb1, g, a1, h1)) && event(Accept(cb2, g, a2, h2)) ==> (cb1 = cb2)] <= Phash(time_1)
+RESULT Proved forall h2, h1: pkey, a2, cb2, a1, cb1: message, g: hashout; event(Accept(cb1, g, a1, h1)) && event(Accept(cb2, g, a2, h2)) ==> (cb1 = cb2) up to probability Phash(time_1)
+Adv[Game 1: forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb))] <= Psign(time_2, N, maxlength(game 4: cb)) + Adv[Game 8: forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb))]
+Adv[Game 8: forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb))] <= 0
+RESULT Proved forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Granted(cb)) up to probability Psign(time_2, N, maxlength(game 4: cb))
+RESULT time_1 = time + time(game 2) = time + 2 * time(pkgen) + 2 * time(skgen) + N * time(mkcap, maxlength(game 2: cv_1)) + N * time(sign, maxlength(game 2: cb)) + N * time(mkact, maxlength(game 2: aud_1), maxlength(game 2: vb_1), maxlength(game 2: rs_1), maxlength(game 2: ctr_1), maxlength(game 2: nonce_1), maxlength(game 2: ex_1)) + N * time(sign, maxlength(game 2: act)) + N * time(let mkcap, maxlength(game 2: cv_2)) + N * time(check, maxlength(game 2: cb_1), maxlength(game 2: csg)) + N * time(hash, length(mkcw, maxlength(game 2: cb_1), maxlength(game 2: csg))) + N * time(mkcw, maxlength(game 2: cb_1), maxlength(game 2: csg)) + N * time(mkact, maxlength(game 2: aud_2), maxlength(game 2: vb_2), maxlength(game 2: rs_2), maxlength(game 2: ctr_2), maxlength(game 2: nonce_2), maxlength(game 2: ex_2)) + 3 * N * time(([1,N]))
+RESULT time_2 = time(pkgen) + time(skgen) + N * time(mkcap, maxlength(game 4: cv_1)) + N * time(mkact, maxlength(game 4: aud_1), maxlength(game 4: vb_1), maxlength(game 4: rs_1), maxlength(game 4: ctr_1), maxlength(game 4: nonce_1), maxlength(game 4: ex_1)) + N * time(sign, maxlength(game 4: act)) + N * time(let mkcap, maxlength(game 4: cv_2)) + N * time(hash, length(mkcw, maxlength(game 4: cb_1), maxlength(game 4: csg))) + N * time(mkcw, maxlength(game 4: cb_1), maxlength(game 4: csg)) + N * time(mkact, maxlength(game 4: aud_2), maxlength(game 4: vb_2), maxlength(game 4: rs_2), maxlength(game 4: ctr_2), maxlength(game 4: nonce_2), maxlength(game 4: ex_2)) + 3 * N * time(([1,N])) + time + (N - 1) * time(check, maxlength(game 4: cb_1), maxlength(game 4: csg))
+RESULT time_3 = (1 + N^2) * time(pkgen) + N * time(mkcap, maxlength(game 10: cv_1)) + N * time(sign, maxlength(game 10: cb)) + N * time(skgen) + N * time(mkact, maxlength(game 10: aud_1), maxlength(game 10: vb_1), maxlength(game 10: rs_1), maxlength(game 10: ctr_1), maxlength(game 10: nonce_1), maxlength(game 10: ex_1)) + N * time(let mkcap, maxlength(game 10: cv_2)) + N^2 * time(= caveat, maxlength(game 10: cv_2), maxlength(game 10: cv_1)) + N^2 * time(check, maxlength(game 10: cb_1), maxlength(game 10: csg)) + N * time(hash, length(mkcw, maxlength(game 10: cb_1), maxlength(game 10: csg))) + N * time(mkcw, maxlength(game 10: cb_1), maxlength(game 10: csg)) + N * time(mkact, maxlength(game 10: aud_2), maxlength(game 10: vb_2), maxlength(game 10: rs_2), maxlength(game 10: ctr_2), maxlength(game 10: nonce_2), maxlength(game 10: ex_2)) + 3 * N * time(([1,N])) + time + -1 * time(check, -inf, -inf)
+RESULT Could not prove forall h: pkey, a, cb: message, g: hashout; event(Accept(cb, g, a, h)) ==> event(Signed(a)).

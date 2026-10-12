@@ -1,0 +1,92 @@
+{
+ "mutator": "edge-deep-nest-inputs",
+ "case": "c005251",
+ "bytes": 1461,
+ "allImplementationsAgree": false,
+ "context": {
+  "now": 1800000000000,
+  "aud": "rs-fuzz"
+ },
+ "results": {
+  "oracle": {
+   "allow": true,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "dotnet": {
+   "allow": true,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "go": {
+   "allow": true,
+   "checks": {
+    "audience": true,
+    "chain": true,
+    "counter": true,
+    "leaf_signature": true,
+    "plan_inclusion": true,
+    "validity": true,
+    "version": true,
+    "wire": true
+   }
+  },
+  "php": {
+   "allow": true,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "python": {
+   "allow": true,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "ruby": {
+   "allow": true,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  }
+ },
+ "pcactn_json": "{\"ver\":2,\"action\":{\"verb\":\"send\",\"resource\":\"mail/AYo\",\"params_digest\":\"RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o\",\"reversibility_class\":\"reversible\"},\"grant_ref\":\"LM5Vs8_mtG1oZRUqw6BfbPHu9FFlrQeqw5z7d62Ing4\",\"cap_chain\":[{\"id\":\"LM5Vs8_mtG1oZRUqw6BfbPHu9FFlrQeqw5z7d62Ing4\",\"issuer\":\"2eUi6Q5FXMVRzuzJhqI5Zm_oaXMBx8oEtcKhIzE51FY\",\"holder\":\"2eUi6Q5FXMVRzuzJhqI5Zm_oaXMBx8oEtcKhIzE51FY\",\"caveats\":[{\"type\":\"not_after\",\"%Y4#s\":506645},{\"type\":\" \",\"'\":[true,[null],\"[YY@P%8\"]}],\"body_digest\":\"LM5Vs8_mtG1oZRUqw6BfbPHu9FFlrQeqw5z7d62Ing4\",\"sig\":\"Fr9mrlK0_ySOq1ypnGi229dckwMB78Vp4zlpjkzrk47tdO0wKpNuPgq-WaFWfBlpNMdT-d38G3Yo8vsX8u9TDA\"}],\"plan\":{\"root\":\"6sci8TSusMOG41JfiRAYxBUcCc6TNmRp0cusRCSRDc4\",\"inclusion_proof\":{\"index\":1,\"size\":2,\"path\":[{\"side\":\"L\",\"hash\":\"bMxuP2b_t7fXIt0nm1gpJ4KesQ9qxG38etbZCQWNH_M\"}]},\"node_id\":\"n1~db/users\",\"conditions_digest\":\"2PXvy4HI3DA4bn9IXtfHcleaL9LuP-64JBZuZRV8VtI\"},\"attestation\":{\"quote_digest\":\"\",\"epoch\":0,\"model_id\":\"unattested\",\"measurement\":\"x\\\"y\",\"operator\":\"unattested\"},\"provenance\":{\"causal_hash\":\"\",\"taint_level\":0,\"trusted_refs\":[]},\"freshness\":{\"beacon_ref\":\"\",\"epoch\":420,\"accumulator_witness\":\"/\"},\"counter\":987,\"risk_claim\":{\"r\":0,\"inputs\":{\"v\":{\"a\":[{\"a\":[{\"a\":[{\"a\":[{\"a\":[{\"a\":[{\"a\":[{\"a\":[{\"a\":[{\"a\":[{\"a\":[{\"a\":[1]}]}]}]}]}]}]}]}]}]}]}]}}},\"aud\":\"rs-fuzz\",\"iat\":1799999999255,\"exp\":1800000000255,\"bond_ref\":\"<&>\",\"sig\":\"b2z-rz1ygHwvDtOgVG2XMKpYVFkSBHE9za-s8fvUcT8NLRe-PJTpHgJdzjNkeCHMsQk0Mbyr8XVgbJ9BknaIBg\"}",
+ "grant": "{\"body_digest\":\"LM5Vs8_mtG1oZRUqw6BfbPHu9FFlrQeqw5z7d62Ing4\",\"caveats\":[{\"%Y4#s\":506645,\"type\":\"not_after\"},{\"'\":[true,[null],\"[YY@P%8\"],\"type\":\" \"}],\"holder\":\"2eUi6Q5FXMVRzuzJhqI5Zm_oaXMBx8oEtcKhIzE51FY\",\"id\":\"LM5Vs8_mtG1oZRUqw6BfbPHu9FFlrQeqw5z7d62Ing4\",\"issuer\":\"2eUi6Q5FXMVRzuzJhqI5Zm_oaXMBx8oEtcKhIzE51FY\",\"sig\":\"Fr9mrlK0_ySOq1ypnGi229dckwMB78Vp4zlpjkzrk47tdO0wKpNuPgq-WaFWfBlpNMdT-d38G3Yo8vsX8u9TDA\"}"
+}

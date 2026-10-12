@@ -1,0 +1,51 @@
+== istioctl install (minimal profile + PCA extension provider) ==
+✔ Istio core installed ⛵️
+- Processing resources for Istiod.
+✔ Istiod installed 🧠
+- Pruning removed resources
+✔ Installation completedeployment "istiod" successfully rolled out
+client version: 1.31.1
+control plane version: 1.31.1
+data plane version: 1.31.1 (2 proxies)
+== workloads ==
+deployment "pca-authz" successfully rolled out
+deployment "upstream" successfully rolled out
+deployment "client" successfully rolled out
+NAME                      READY   STATUS    RESTARTS   AGE    IP          NODE       NOMINATED NODE   READINESS GATES
+client-54794c9f74-zr6gq   2/2     Running   0          2m8s   10.42.0.8   pcaistio   <none>           <none>
+upstream-54646d85-kck8k   2/2     Running   0          2m8s   10.42.0.7   pcaistio   <none>           <none>
+== scenarios (client sidecar -> upstream sidecar enforcing CUSTOM) ==
+PASS  allow valid proof, query string (got 200)
+PASS  upstream received the allowed request (got 1)
+      upstream saw: "url":"/refunds?currency=usd&note=a%20b"
+      injected: "x-pca-verb":"stripe.refund"
+PASS  deny missing proof (got 401)
+{"error":"no-proof","reason":"no PCA-Action header"}
+PASS  deny tampered proof (got 401)
+PASS  deny wrong audience (got 403)
+PASS  deny refund proof at payouts (got 403)
+PASS  deny unmapped-but-policed route /admin with a valid proof (got 403)
+PASS  replay: first use (got 200)
+PASS  replay: second use denied (got 403)
+PASS  denied requests never reached upstream (got 1)
+PASS  deny undecodable proof (header name upper-case) (got 401)
+== forged x-pca-* on a path the policy does not police ==
+PASS  unpoliced path passes without a proof (got 200)
+      upstream saw (forged header is NOT scrubbed by Istio on unpoliced paths): "x-pca-verdict":"{\"
+== path ambiguity vs the policy's path rules ==
+      POST //refunds -> 200 (upstream hit: 1)
+      POST /refunds/../refunds -> 401 (upstream hit: 0)
+      POST /%72efunds -> 401 (upstream hit: 0)
+      POST /./refunds -> 401 (upstream hit: 0)
+== mitigation: meshConfig.pathNormalization=MERGE_SLASHES (Istio's documented hardening for path-based policy) ==
+- Pruning removed resources
+✔ Installation completedeployment "istiod" successfully rolled out
+      POST //refunds -> 401 (upstream hit: 0)
+PASS  MERGE_SLASHES: //refunds without a proof is denied (got 401)
+      POST ///refunds -> 401 (upstream hit: 0)
+PASS  MERGE_SLASHES: ///refunds without a proof is denied (got 401)
+PASS  MERGE_SLASHES: //refunds with a valid proof is allowed (got 200)
+== what Istio's Envoy actually sent to the check service ==
+== fail closed: scale the check service to zero ==
+PASS  provider down -> denied (failOpen=false default) (got 403)
+FAILS=0

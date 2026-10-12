@@ -1,0 +1,48 @@
+-- Query not attacker(sh(g[],c2)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 113 rules (52 with conclusion selected). Queue: 6 rules.
+Starting query not attacker(sh(g[],c2))
+goal reachable: b-event(@p_act(@occ67_1,c2)) -> attacker(sh(g[],c2))
+Abbreviations:
+@occ67_1 = @occ67[!1 = @sid]
+
+Derivation:
+Abbreviations:
+@occ67_1 = @occ67[!1 = @sid]
+
+1. Using the function c2 the attacker may obtain c2.
+attacker(c2).
+
+2. The event @p_act(@occ67_1,c2) records how variables are instantiated at {67}.
+The message c2 that the attacker may have by 1 may be received at input {67}.
+So the message sh(g[],c2) may be sent to the attacker at output {69}.
+attacker(sh(g[],c2)).
+
+3. By 2, attacker(sh(g[],c2)).
+The goal is reached, represented in the following fact:
+attacker(sh(g[],c2)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+out(c, ~M) with ~M = pubk(g) at {1}
+
+in(c, c2) at {67} in copy a_3
+
+event RevealShare(c2) at {68} in copy a_3
+
+out(c, ~M_1) with ~M_1 = sh(g,c2) at {69} in copy a_3
+
+The attacker has the message ~M_1 = sh(g,c2).
+A trace has been found.
+RESULT not attacker(sh(g[],c2)) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not attacker(sh(g[],c2)) is false.
+
+--------------------------------------------------------------
+
