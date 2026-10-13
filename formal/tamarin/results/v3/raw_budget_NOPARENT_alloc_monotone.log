@@ -1,0 +1,494 @@
+maude tool: 'maude'
+ checking version: 3.5.1. OK.
+ checking installation: OK.
+[Theory PCA_Budget_V3] Theory loaded
+[Theory PCA_Budget_V3] Theory translated
+[Theory PCA_Budget_V3] Derivation checks started
+[Theory PCA_Budget_V3] Derivation checks ended
+[Theory PCA_Budget_V3] Theory closed
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0: Alloc( n, cl, p, pl ) @ #i
+1:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+0
+1
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+[Saturating Sources] Step 1 (Max 5)
+[Saturating Sources] Done
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( <pid, pp, r>, pl ) ▶₀ #i
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !IsRoot( p ) ▶₀ #i
+2: !Lim( p, pl ) ▶₁ #i
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+2
+0
+1
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( <pid, pp, r>, plim ) ▶₀ #vr
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( ~r, plim ) ▶₁ #vr
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( <pid, pp, r>, plim.1 ) ▶₀ #vr.1
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !IsRoot( <~id, <pid, pp, r>, r> ) ▶₀ #i
+2: !Lim( <pid, pp, r>, plim ) ▶₀ #vr
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+2
+0
+1
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !IsRoot( <~id, ~r, ~r> ) ▶₀ #i
+2: !Lim( ~r, plim ) ▶₁ #vr
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+2
+0
+1
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0: !IsRoot( ~r ) ▶₀ #i
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !IsRoot( <~id, ~r, ~r> ) ▶₀ #i
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+0
+1
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( <pid, pp, r>, plim.2 ) ▶₀ #vr.2
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( ~r, plim.2 ) ▶₁ #vr.2
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( ~r, plim.1 ) ▶₁ #vr.1
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( <pid, pp, r>, plim.3 ) ▶₀ #vr.3
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( ~r, plim.3 ) ▶₁ #vr.3
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( <pid, pp, r>, plim.4 ) ▶₀ #vr.4
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+1: !Lim( ~r, plim.4 ) ▶₁ #vr.4
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+1
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+>>>>>>>>>>>>>>>>>>>>>>>> START INPUT
+0:  ((cl = 'c1') ∧ (pl = 'c0'))  ∥ ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥ ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2'))))
+
+>>>>>>>>>>>>>>>>>>>>>>>> START OUTPUT
+0
+
+>>>>>>>>>>>>>>>>>>>>>>>> END Oracle call
+
+theory PCA_Budget_V3
+
+begin
+
+// Function signature and definition of the equational theory E
+
+functions: fst/1, pair/2, snd/1
+equations: fst(<x.1, x.2>) = x.1, snd(<x.1, x.2>) = x.2
+
+/* looping facts with injective instances: Debit/3 */
+
+rule (modulo E) Tables:
+   [ ]
+  -->
+   [
+   !Dec( 'c3', 'c2' ), !Dec( 'c2', 'c1' ), !Dec( 'c1', 'c0' ),
+   !Le( 'c0', 'c0' ), !Le( 'c0', 'c1' ), !Le( 'c0', 'c2' ),
+   !Le( 'c0', 'c3' ), !Le( 'c1', 'c1' ), !Le( 'c1', 'c2' ),
+   !Le( 'c1', 'c3' ), !Le( 'c2', 'c2' ), !Le( 'c2', 'c3' ),
+   !Le( 'c3', 'c3' )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Root_Grant:
+   [ Fr( ~r ) ]
+  --[ RootNode( ~r, 'c2' ) ]->
+   [ !IsRoot( ~r ), !Lim( ~r, 'c2' ), Cnt( ~r, 'c2' ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Alloc_Child_R:
+   [ !IsRoot( p ), !Lim( p, plim ), In( climit ), Fr( ~id ) ]
+  --[ Alloc( <~id, p, p>, climit, p, plim ) ]->
+   [
+   !Lim( <~id, p, p>, climit ), !Node( <~id, p, p> ),
+   Cnt( <~id, p, p>, climit )
+   ]
+
+  // loop breaker: [1]
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Alloc_Child_D:
+   [ !Lim( <pid, pp, r>, plim ), In( climit ), Fr( ~id ) ]
+  --[ Alloc( <~id, <pid, pp, r>, r>, climit, <pid, pp, r>, plim ) ]->
+   [
+   !Lim( <~id, <pid, pp, r>, r>, climit ), !Node( <~id, <pid, pp, r>, r> ),
+   Cnt( <~id, <pid, pp, r>, r>, climit )
+   ]
+
+  // loop breaker: [0]
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Spend_Begin_Root:
+   [ !IsRoot( r ), Fr( ~sid ) ]
+  --[ SpendBegin( ~sid, r ) ]->
+   [ Debit( ~sid, r, r ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Spend_Begin_Node:
+   [ !Node( <id, p, r> ), Fr( ~sid ) ]
+  --[ SpendBegin( ~sid, <id, p, r> ) ]->
+   [ Debit( ~sid, <id, p, r>, r ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Debit_Mid:
+   [ Debit( sid, <id, p, r>, r ), Cnt( <id, p, r>, c ), !Dec( c, c1 ) ]
+  --[ Debited( sid, <id, p, r>, r ), DebitFrom( <id, p, r>, c ) ]->
+   [ Cnt( <id, p, r>, c1 ), Debit( sid, p, r ) ]
+
+  // loop breakers: [1,0]
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Debit_Root:
+   [ Debit( sid, r, r ), !IsRoot( r ), Cnt( r, c ), !Dec( c, c1 ) ]
+  --[ Debited( sid, r, r ), DebitFrom( r, c ), Spent( sid, r ) ]->
+   [ Cnt( r, c1 ) ]
+
+  // loop breaker: [2]
+  /* has exactly the trivial AC variant */
+
+lemma executable_spend:
+  exists-trace "∃ s r #i. Spent( s, r ) @ #i"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ s r #i. (Spent( s, r ) @ #i)"
+*/
+by sorry
+
+lemma executable_two_spends:
+  exists-trace
+  "∃ s1 s2 r #i #j.
+    ((Spent( s1, r ) @ #i) ∧ (Spent( s2, r ) @ #j)) ∧ (¬(s1 = s2))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ s1 s2 r #i #j.
+  (Spent( s1, r ) @ #i) ∧ (Spent( s2, r ) @ #j) ∧ ¬(s1 = s2)"
+*/
+by sorry
+
+lemma executable_deep_spend:
+  exists-trace
+  "∃ s r n1 n2 n3 #a #b #c #d #e #f #x1 #x2 #x3 #x4.
+    (((((((((RootNode( r, 'c2' ) @ #a) ∧ (Alloc( n1, 'c2', r, 'c2' ) @ #b)) ∧
+           (Alloc( n2, 'c2', n1, 'c2' ) @ #c)) ∧
+          (Alloc( n3, 'c2', n2, 'c2' ) @ #d)) ∧
+         (SpendBegin( s, n3 ) @ #e)) ∧
+        (Debited( s, n3, r ) @ #x1)) ∧
+       (Debited( s, n2, r ) @ #x2)) ∧
+      (Debited( s, n1, r ) @ #x3)) ∧
+     (Debited( s, r, r ) @ #x4)) ∧
+    (Spent( s, r ) @ #f)"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ s r n1 n2 n3 #a #b #c #d #e #f #x1 #x2 #x3 #x4.
+  (RootNode( r, 'c2' ) @ #a) ∧
+  (Alloc( n1, 'c2', r, 'c2' ) @ #b) ∧
+  (Alloc( n2, 'c2', n1, 'c2' ) @ #c) ∧
+  (Alloc( n3, 'c2', n2, 'c2' ) @ #d) ∧
+  (SpendBegin( s, n3 ) @ #e) ∧
+  (Debited( s, n3, r ) @ #x1) ∧
+  (Debited( s, n2, r ) @ #x2) ∧
+  (Debited( s, n1, r ) @ #x3) ∧
+  (Debited( s, r, r ) @ #x4) ∧
+  (Spent( s, r ) @ #f)"
+*/
+by sorry
+
+lemma alloc_monotone:
+  all-traces
+  "∀ n cl p pl #i.
+    (Alloc( n, cl, p, pl ) @ #i) ⇒
+    (¬((((cl = 'c1') ∧ (pl = 'c0')) ∨
+        ((cl = 'c2') ∧ ((pl = 'c0') ∨ (pl = 'c1')))) ∨
+       ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1')) ∨ (pl = 'c2')))))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ n cl p pl #i.
+  (Alloc( n, cl, p, pl ) @ #i)
+ ∧
+  (((cl = 'c1') ∧ (pl = 'c0')) ∨
+   ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1')))) ∨
+   ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2')))))"
+*/
+simplify
+solve( Alloc( n, cl, p, pl ) @ #i )
+  case Alloc_Child_D
+  solve( !Lim( <pid, pp, r>, pl ) ▶₀ #i )
+    case Alloc_Child_D
+    solve( !Lim( <pid, pp, r>, plim ) ▶₀ #vr )
+      case Alloc_Child_D
+      solve( !Lim( <pid, pp, r>, plim.1 ) ▶₀ #vr.1 )
+        case Alloc_Child_R
+        solve( !Lim( ~r, plim.2 ) ▶₁ #vr.2 )
+          case Root_Grant
+          solve( ((cl = 'c1') ∧ (pl = 'c0'))  ∥
+                 ((cl = 'c2') ∧ (((pl = 'c0') ∨ (pl = 'c1'))))  ∥
+                 ((cl = 'c3') ∧ (((pl = 'c0') ∨ (pl = 'c1') ∨ (pl = 'c2')))) )
+            case case_1
+            SOLVED // trace found
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma root_bound:
+  all-traces
+  "∀ r s1 s2 s3 #i #j #k.
+    (((Spent( s1, r ) @ #i) ∧ (Spent( s2, r ) @ #j)) ∧
+     (Spent( s3, r ) @ #k)) ⇒
+    (((s1 = s2) ∨ (s1 = s3)) ∨ (s2 = s3))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ r s1 s2 s3 #i #j #k.
+  (Spent( s1, r ) @ #i) ∧ (Spent( s2, r ) @ #j) ∧ (Spent( s3, r ) @ #k)
+ ∧
+  (¬(s1 = s2)) ∧ (¬(s1 = s3)) ∧ (¬(s2 = s3))"
+*/
+by sorry
+
+lemma node_bound:
+  all-traces
+  "∀ n p pl s1 s2 r1 r2 #a #i #j.
+    (((Alloc( n, 'c1', p, pl ) @ #a) ∧ (Debited( s1, n, r1 ) @ #i)) ∧
+     (Debited( s2, n, r2 ) @ #j)) ⇒
+    (s1 = s2)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ n p pl s1 s2 r1 r2 #a #i #j.
+  (Alloc( n, 'c1', p, pl ) @ #a) ∧
+  (Debited( s1, n, r1 ) @ #i) ∧
+  (Debited( s2, n, r2 ) @ #j)
+ ∧
+  ¬(s1 = s2)"
+*/
+by sorry
+
+lemma spend_debits_root:
+  all-traces
+  "∀ s r #i. (Spent( s, r ) @ #i) ⇒ (∃ #d. Debited( s, r, r ) @ #d)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ s r #i. (Spent( s, r ) @ #i) ∧ ∀ #d. (Debited( s, r, r ) @ #d) ⇒ ⊥"
+*/
+by sorry
+
+lemma no_negative_spend:
+  all-traces "∀ n #i. (DebitFrom( n, 'c0' ) @ #i) ⇒ (⊥)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ n #i. (DebitFrom( n, 'c0' ) @ #i)"
+*/
+by sorry
+
+lemma spent_root_is_root_node:
+  all-traces
+  "∀ s r #i.
+    (Spent( s, r ) @ #i) ⇒
+    (∃ #a. (RootNode( r, 'c2' ) @ #a) ∨ (RootNode( r, 'c3' ) @ #a))"
+/*
+conversion to guarded formula failed:
+  unguarded variable(s) '#a' in the subformula
+    "∃ #a. (RootNode( r, 'c2' ) @ #a) ∨ (RootNode( r, 'c3' ) @ #a)"
+  in the formula
+    "∀ s r #i.
+      (Spent( s, r ) @ #i) ⇒
+      (∃ #a. (RootNode( r, 'c2' ) @ #a) ∨ (RootNode( r, 'c3' ) @ #a))"
+*/
+by sorry
+
+/*
+WARNING: the following wellformedness checks failed!
+
+ Formula guardedness
+====================
+
+  Lemma `spent_root_is_root_node' cannot be converted to a guarded formula:
+    unguarded variable(s) '#a' in the subformula
+      "∃ #a. (RootNode( r, 'c2' ) @ #a) ∨ (RootNode( r, 'c3' ) @ #a)"
+    in the formula
+      "∀ s r #i.
+        (Spent( s, r ) @ #i) ⇒
+        (∃ #a. (RootNode( r, 'c2' ) @ #a) ∨ (RootNode( r, 'c3' ) @ #a))"
+*/
+
+/*
+Generated from:
+Tamarin version 1.12.0
+Maude version 3.5.1
+Git revision: UNKNOWN, branch: UNKNOWN
+Compiled at: 2026-03-08 09:49:47.765662 UTC
+*/
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: pca_budget_v3.spthy
+
+  processing time: 3.00s
+  
+  WARNING: 1 wellformedness check failed!
+           The analysis results might be wrong!
+  
+  executable_spend (exists-trace): analysis incomplete (1 steps)
+  executable_two_spends (exists-trace): analysis incomplete (1 steps)
+  executable_deep_spend (exists-trace): analysis incomplete (1 steps)
+  alloc_monotone (all-traces): falsified - found trace (8 steps)
+  root_bound (all-traces): analysis incomplete (1 steps)
+  node_bound (all-traces): analysis incomplete (1 steps)
+  spend_debits_root (all-traces): analysis incomplete (1 steps)
+  no_negative_spend (all-traces): analysis incomplete (1 steps)
+  spent_root_is_root_node (all-traces): analysis incomplete (1 steps)
+
+==============================================================================

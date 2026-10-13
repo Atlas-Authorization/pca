@@ -1,0 +1,50 @@
+{
+ "mutator": "badjson-comment",
+ "case": "c007587",
+ "bytes": 1202,
+ "allImplementationsAgree": true,
+ "context": {
+  "now": 1800000000000,
+  "aud": "rs-fuzz"
+ },
+ "results": {
+  "oracle": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "dotnet": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "go": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "php": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "python": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "ruby": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  }
+ },
+ "pcactn_json": "{\"ver\":2/*c*/,\"action\":{\"verb\":\"write\",\"resource\":\"db//\",\"params_digest\":\"RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o\",\"reversibility_class\":\"reversible\"},\"grant_ref\":\"SydLAZXL1gSMrEcYvsL7wNw9HKRY0CmJub_Z9gF0Y7M\",\"cap_chain\":[{\"id\":\"SydLAZXL1gSMrEcYvsL7wNw9HKRY0CmJub_Z9gF0Y7M\",\"issuer\":\"uYBd4zfUm7PmKuw9s3Ma_oUMNMzsA2RIcUYiwzH01kg\",\"holder\":\"uYBd4zfUm7PmKuw9s3Ma_oUMNMzsA2RIcUYiwzH01kg\",\"caveats\":[],\"body_digest\":\"SydLAZXL1gSMrEcYvsL7wNw9HKRY0CmJub_Z9gF0Y7M\",\"sig\":\"qJ0UBpo0oJYObOUcrprYacOge9TeoL3XmFyrv7UI_chU8Ojww65s-mVeoHJfA353ooYCB_RmLj1RJnEO_38nBQ\"}],\"plan\":{\"root\":\"-IwSCFa_VUhHiQh0inwZ0r6Z8gvODT1_7KzS8BLgC3Y\",\"inclusion_proof\":{\"index\":0,\"size\":1,\"path\":[]},\"node_id\":\"n0\",\"conditions_digest\":\"YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY\"},\"attestation\":{\"quote_digest\":\"\",\"epoch\":0,\"model_id\":\"unattested\",\"measurement\":\"\",\"operator\":\"unattested\"},\"provenance\":{\"causal_hash\":\"\",\"taint_level\":0,\"trusted_refs\":[]},\"freshness\":{\"beacon_ref\":\" \",\"epoch\":0,\"accumulator_witness\":\"\"},\"counter\":1,\"risk_claim\":{\"r\":0,\"inputs\":{}},\"aud\":\"rs-fuzz\",\"iat\":1799999922681,\"exp\":1800000522681,\"nonce\":\"😀84\",\"sig\":\"-bRriPJM5V7ruRBx8Xi3Mr1p66aQ88jhS8E5reUfbCrk7H9KVkKVvgVKJDg2L1hDJn1FPV_ZFR_tbR30TQ6DAQ\"}",
+ "grant": "{\"body_digest\":\"SydLAZXL1gSMrEcYvsL7wNw9HKRY0CmJub_Z9gF0Y7M\",\"caveats\":[],\"holder\":\"uYBd4zfUm7PmKuw9s3Ma_oUMNMzsA2RIcUYiwzH01kg\",\"id\":\"SydLAZXL1gSMrEcYvsL7wNw9HKRY0CmJub_Z9gF0Y7M\",\"issuer\":\"uYBd4zfUm7PmKuw9s3Ma_oUMNMzsA2RIcUYiwzH01kg\",\"sig\":\"qJ0UBpo0oJYObOUcrprYacOge9TeoL3XmFyrv7UI_chU8Ojww65s-mVeoHJfA353ooYCB_RmLj1RJnEO_38nBQ\"}"
+}

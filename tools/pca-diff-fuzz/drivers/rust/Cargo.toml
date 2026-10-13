@@ -1,0 +1,8 @@
+[package]
+name = "pcadriver"
+version = "0.0.0"
+edition = "2021"
+[dependencies]
+atlas-pca = { path = "../../../../sdks/rust-pca" }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+[workspace]

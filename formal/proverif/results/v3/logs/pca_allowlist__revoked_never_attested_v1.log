@@ -1,0 +1,13 @@
+-- Query not event(AttOk(mB,v1)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+Starting query not event(AttOk(mB,v1))
+RESULT not event(AttOk(mB,v1)) is true.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not event(AttOk(mB,v1)) is true.
+
+--------------------------------------------------------------
+

@@ -1,0 +1,886 @@
+-- Query not event(Accept(t2,t2,n,hol)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 184 rules (77 with conclusion selected). Queue: 31 rules.
+400 rules inserted. Base: 283 rules (80 with conclusion selected). Queue: 66 rules.
+600 rules inserted. Base: 351 rules (93 with conclusion selected). Queue: 63 rules.
+800 rules inserted. Base: 370 rules (106 with conclusion selected). Queue: 23 rules.
+Starting query not event(Accept(t2,t2,n,hol))
+goal reachable: attacker(k_1) && attacker_p2(n) && attacker_p2(k_1) -> event(Accept(t2,t2,n,pk(k_1)))
+
+Derivation:
+Abbreviations:
+k_1 = k[!1 = @sid]
+
+1. The message pk(k_1) may be sent to the attacker at output {4}.
+attacker(pk(k_1)).
+
+2. By 1, the attacker may know pk(k_1).
+So the attacker may know pk(k_1) in phase 1.
+attacker_p1(pk(k_1)).
+
+3. By 2, the attacker may know pk(k_1) in phase 1.
+So the attacker may know pk(k_1) in phase 2.
+attacker_p2(pk(k_1)).
+
+4. The attacker has some term aaud_3 in phase 2.
+attacker_p2(aaud_3).
+
+5. By 4, the attacker may know aaud_3 in phase 2.
+By 3, the attacker may know pk(k_1) in phase 2.
+Using the function 2-tuple the attacker may obtain (aaud_3,pk(k_1)) in phase 2.
+attacker_p2((aaud_3,pk(k_1))).
+
+6. The entry keys(pk(k_1),k_1) may be inserted in a table at insert {3}.
+table(keys(pk(k_1),k_1)).
+
+7. By 6, a table may contain the entry keys(pk(k_1),k_1).
+So a table may contain the entry keys(pk(k_1),k_1) in phase 1.
+table_p1(keys(pk(k_1),k_1)).
+
+8. By 7, a table may contain the entry keys(pk(k_1),k_1) in phase 1.
+So a table may contain the entry keys(pk(k_1),k_1) in phase 2.
+table_p2(keys(pk(k_1),k_1)).
+
+9. We assume as hypothesis that
+attacker_p2(k_2).
+
+10. Using the function t2 the attacker may obtain t2 in phase 2.
+attacker_p2(t2).
+
+11. We assume as hypothesis that
+attacker_p2(n).
+
+12. The attacker has some term ctr_4 in phase 2.
+attacker_p2(ctr_4).
+
+13. Using the function anyc the attacker may obtain anyc.
+attacker(anyc).
+
+14. We assume as hypothesis that
+attacker(k_2).
+
+15. By 14, the attacker may know k_2.
+Using the function pk the attacker may obtain pk(k_2).
+attacker(pk(k_2)).
+
+16. By 1, the attacker may know pk(k_1).
+By 15, the attacker may know pk(k_2).
+By 13, the attacker may know anyc.
+Using the function 3-tuple the attacker may obtain (pk(k_1),pk(k_2),anyc).
+attacker((pk(k_1),pk(k_2),anyc)).
+
+17. The message (pk(k_1),pk(k_2),anyc) that the attacker may have by 16 may be received at input {6}.
+The entry keys(pk(k_1),k_1) that may be in a table by 6 may be read at get {11}.
+So the message ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)) may be sent to the attacker at output {10}.
+attacker(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))).
+
+18. By 17, the attacker may know ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+Using the function 2-proj-2-tuple the attacker may obtain sign((capT,none,pk(k_1),pk(k_2),anyc),k_1).
+attacker(sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+
+19. By 18, the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1).
+So the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1) in phase 1.
+attacker_p1(sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+
+20. By 19, the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1) in phase 1.
+So the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1) in phase 2.
+attacker_p2(sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+
+21. Using the function anyc the attacker may obtain anyc in phase 2.
+attacker_p2(anyc).
+
+22. By 9, the attacker may know k_2 in phase 2.
+Using the function pk the attacker may obtain pk(k_2) in phase 2.
+attacker_p2(pk(k_2)).
+
+23. Using the function none the attacker may obtain none in phase 2.
+attacker_p2(none).
+
+24. Using the function capT the attacker may obtain capT in phase 2.
+attacker_p2(capT).
+
+25. By 24, the attacker may know capT in phase 2.
+By 23, the attacker may know none in phase 2.
+By 3, the attacker may know pk(k_1) in phase 2.
+By 22, the attacker may know pk(k_2) in phase 2.
+By 21, the attacker may know anyc in phase 2.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_1),pk(k_2),anyc) in phase 2.
+attacker_p2((capT,none,pk(k_1),pk(k_2),anyc)).
+
+26. By 25, the attacker may know (capT,none,pk(k_1),pk(k_2),anyc) in phase 2.
+By 20, the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1) in phase 2.
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)) in phase 2.
+attacker_p2(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))).
+
+27. By 26, the attacker may know ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)) in phase 2.
+Using the function h the attacker may obtain h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))) in phase 2.
+attacker_p2(h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)))).
+
+28. The attacker has some term res_4 in phase 2.
+attacker_p2(res_4).
+
+29. The attacker has some term verb_4 in phase 2.
+attacker_p2(verb_4).
+
+30. Using the function actT the attacker may obtain actT in phase 2.
+attacker_p2(actT).
+
+31. By 30, the attacker may know actT in phase 2.
+By 4, the attacker may know aaud_3 in phase 2.
+By 29, the attacker may know verb_4 in phase 2.
+By 28, the attacker may know res_4 in phase 2.
+By 27, the attacker may know h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))) in phase 2.
+By 12, the attacker may know ctr_4 in phase 2.
+By 11, the attacker may know n in phase 2.
+By 10, the attacker may know t2 in phase 2.
+Using the function 8-tuple the attacker may obtain (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2) in phase 2.
+attacker_p2((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2)).
+
+32. By 31, the attacker may know (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2) in phase 2.
+By 9, the attacker may know k_2 in phase 2.
+Using the function sign the attacker may obtain sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2) in phase 2.
+attacker_p2(sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2)).
+
+33. Using the function endm the attacker may obtain endm in phase 2.
+attacker_p2(endm).
+
+34. By 26, the attacker may know ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)) in phase 2.
+By 33, the attacker may know endm in phase 2.
+Using the function 2-tuple the attacker may obtain (((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm) in phase 2.
+attacker_p2((((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm)).
+
+35. By 34, the attacker may know (((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm) in phase 2.
+By 31, the attacker may know (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2) in phase 2.
+By 32, the attacker may know sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2) in phase 2.
+Using the function 3-tuple the attacker may obtain ((((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2)) in phase 2.
+attacker_p2(((((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2))).
+
+36. The message (aaud_3,pk(k_1)) that the attacker may have in phase 2 by 5 may be received at input {56}.
+The entry keys(pk(k_1),k_1) that may be in a table in phase 2 by 8 may be read at get {71}.
+The message ((((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2)) that the attacker may have in phase 2 by 35 may be received at input {57}.
+We have verb_4 ≠ anyc.
+So event Accept(t2,t2,n,pk(k_2)) may be executed at {69}.
+event(Accept(t2,t2,n,pk(k_2))).
+
+37. By 36, event(Accept(t2,t2,n,pk(k_2))).
+The goal is reached, represented in the following fact:
+event(Accept(t2,t2,n,pk(k_2))).
+
+
+Could not find a trace corresponding to this derivation.
+goal reachable: verb_4 ≠ anyc && attacker_p2(verb_4) && attacker_p2(res_4) && attacker_p2(ctr_4) && attacker_p2(n) && attacker_p1(aaud_3) && attacker_p1(verb_4) && attacker_p1(res_4) && attacker(k_1) && attacker_p1(ctr_4) && attacker_p1(n) && attacker_p1(k_1) && attacker_p2(aaud_3) -> event(Accept(t2,t2,n,pk(k_1)))
+
+Derivation:
+Abbreviations:
+k_1 = k[!1 = @sid]
+
+1. The message pk(k_1) may be sent to the attacker at output {4}.
+attacker(pk(k_1)).
+
+2. By 1, the attacker may know pk(k_1).
+So the attacker may know pk(k_1) in phase 1.
+attacker_p1(pk(k_1)).
+
+3. By 2, the attacker may know pk(k_1) in phase 1.
+So the attacker may know pk(k_1) in phase 2.
+attacker_p2(pk(k_1)).
+
+4. We assume as hypothesis that
+attacker_p2(aaud_3).
+
+5. By 4, the attacker may know aaud_3 in phase 2.
+By 3, the attacker may know pk(k_1) in phase 2.
+Using the function 2-tuple the attacker may obtain (aaud_3,pk(k_1)) in phase 2.
+attacker_p2((aaud_3,pk(k_1))).
+
+6. The entry keys(pk(k_1),k_1) may be inserted in a table at insert {3}.
+table(keys(pk(k_1),k_1)).
+
+7. By 6, a table may contain the entry keys(pk(k_1),k_1).
+So a table may contain the entry keys(pk(k_1),k_1) in phase 1.
+table_p1(keys(pk(k_1),k_1)).
+
+8. By 7, a table may contain the entry keys(pk(k_1),k_1) in phase 1.
+So a table may contain the entry keys(pk(k_1),k_1) in phase 2.
+table_p2(keys(pk(k_1),k_1)).
+
+9. We assume as hypothesis that
+attacker_p1(k_2).
+
+10. Using the function t2 the attacker may obtain t2 in phase 1.
+attacker_p1(t2).
+
+11. We assume as hypothesis that
+attacker_p1(n).
+
+12. We assume as hypothesis that
+attacker_p1(ctr_4).
+
+13. Using the function anyc the attacker may obtain anyc.
+attacker(anyc).
+
+14. We assume as hypothesis that
+attacker(k_2).
+
+15. By 14, the attacker may know k_2.
+Using the function pk the attacker may obtain pk(k_2).
+attacker(pk(k_2)).
+
+16. By 1, the attacker may know pk(k_1).
+By 15, the attacker may know pk(k_2).
+By 13, the attacker may know anyc.
+Using the function 3-tuple the attacker may obtain (pk(k_1),pk(k_2),anyc).
+attacker((pk(k_1),pk(k_2),anyc)).
+
+17. The message (pk(k_1),pk(k_2),anyc) that the attacker may have by 16 may be received at input {6}.
+The entry keys(pk(k_1),k_1) that may be in a table by 6 may be read at get {11}.
+So the message ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)) may be sent to the attacker at output {10}.
+attacker(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))).
+
+18. By 17, the attacker may know ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+Using the function 2-proj-2-tuple the attacker may obtain sign((capT,none,pk(k_1),pk(k_2),anyc),k_1).
+attacker(sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+
+19. Using the function none the attacker may obtain none.
+attacker(none).
+
+20. Using the function capT the attacker may obtain capT.
+attacker(capT).
+
+21. By 20, the attacker may know capT.
+By 19, the attacker may know none.
+By 1, the attacker may know pk(k_1).
+By 15, the attacker may know pk(k_2).
+By 13, the attacker may know anyc.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_1),pk(k_2),anyc).
+attacker((capT,none,pk(k_1),pk(k_2),anyc)).
+
+22. By 21, the attacker may know (capT,none,pk(k_1),pk(k_2),anyc).
+By 18, the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1).
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+attacker(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))).
+
+23. By 22, the attacker may know ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+Using the function h the attacker may obtain h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))).
+attacker(h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)))).
+
+24. By 23, the attacker may know h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))).
+So the attacker may know h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))) in phase 1.
+attacker_p1(h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)))).
+
+25. We assume as hypothesis that
+attacker_p1(res_4).
+
+26. We assume as hypothesis that
+attacker_p1(verb_4).
+
+27. We assume as hypothesis that
+attacker_p1(aaud_3).
+
+28. Using the function actT the attacker may obtain actT in phase 1.
+attacker_p1(actT).
+
+29. By 28, the attacker may know actT in phase 1.
+By 27, the attacker may know aaud_3 in phase 1.
+By 26, the attacker may know verb_4 in phase 1.
+By 25, the attacker may know res_4 in phase 1.
+By 24, the attacker may know h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))) in phase 1.
+By 12, the attacker may know ctr_4 in phase 1.
+By 11, the attacker may know n in phase 1.
+By 10, the attacker may know t2 in phase 1.
+Using the function 8-tuple the attacker may obtain (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2) in phase 1.
+attacker_p1((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2)).
+
+30. By 29, the attacker may know (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2) in phase 1.
+By 9, the attacker may know k_2 in phase 1.
+Using the function sign the attacker may obtain sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2) in phase 1.
+attacker_p1(sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2)).
+
+31. By 30, the attacker may know sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2) in phase 1.
+So the attacker may know sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2) in phase 2.
+attacker_p2(sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2)).
+
+32. Using the function t2 the attacker may obtain t2 in phase 2.
+attacker_p2(t2).
+
+33. We assume as hypothesis that
+attacker_p2(n).
+
+34. We assume as hypothesis that
+attacker_p2(ctr_4).
+
+35. By 18, the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1).
+So the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1) in phase 1.
+attacker_p1(sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+
+36. By 35, the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1) in phase 1.
+So the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1) in phase 2.
+attacker_p2(sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)).
+
+37. Using the function anyc the attacker may obtain anyc in phase 2.
+attacker_p2(anyc).
+
+38. By 9, the attacker may know k_2 in phase 1.
+Using the function pk the attacker may obtain pk(k_2) in phase 1.
+attacker_p1(pk(k_2)).
+
+39. By 38, the attacker may know pk(k_2) in phase 1.
+So the attacker may know pk(k_2) in phase 2.
+attacker_p2(pk(k_2)).
+
+40. Using the function none the attacker may obtain none in phase 2.
+attacker_p2(none).
+
+41. Using the function capT the attacker may obtain capT in phase 2.
+attacker_p2(capT).
+
+42. By 41, the attacker may know capT in phase 2.
+By 40, the attacker may know none in phase 2.
+By 3, the attacker may know pk(k_1) in phase 2.
+By 39, the attacker may know pk(k_2) in phase 2.
+By 37, the attacker may know anyc in phase 2.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_1),pk(k_2),anyc) in phase 2.
+attacker_p2((capT,none,pk(k_1),pk(k_2),anyc)).
+
+43. By 42, the attacker may know (capT,none,pk(k_1),pk(k_2),anyc) in phase 2.
+By 36, the attacker may know sign((capT,none,pk(k_1),pk(k_2),anyc),k_1) in phase 2.
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)) in phase 2.
+attacker_p2(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))).
+
+44. By 43, the attacker may know ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)) in phase 2.
+Using the function h the attacker may obtain h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))) in phase 2.
+attacker_p2(h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)))).
+
+45. We assume as hypothesis that
+attacker_p2(res_4).
+
+46. We assume as hypothesis that
+attacker_p2(verb_4).
+
+47. Using the function actT the attacker may obtain actT in phase 2.
+attacker_p2(actT).
+
+48. By 47, the attacker may know actT in phase 2.
+By 4, the attacker may know aaud_3 in phase 2.
+By 46, the attacker may know verb_4 in phase 2.
+By 45, the attacker may know res_4 in phase 2.
+By 44, the attacker may know h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))) in phase 2.
+By 34, the attacker may know ctr_4 in phase 2.
+By 33, the attacker may know n in phase 2.
+By 32, the attacker may know t2 in phase 2.
+Using the function 8-tuple the attacker may obtain (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2) in phase 2.
+attacker_p2((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2)).
+
+49. Using the function endm the attacker may obtain endm in phase 2.
+attacker_p2(endm).
+
+50. By 43, the attacker may know ((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)) in phase 2.
+By 49, the attacker may know endm in phase 2.
+Using the function 2-tuple the attacker may obtain (((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm) in phase 2.
+attacker_p2((((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm)).
+
+51. By 50, the attacker may know (((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm) in phase 2.
+By 48, the attacker may know (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2) in phase 2.
+By 31, the attacker may know sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2) in phase 2.
+Using the function 3-tuple the attacker may obtain ((((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2)) in phase 2.
+attacker_p2(((((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2))).
+
+52. The message (aaud_3,pk(k_1)) that the attacker may have in phase 2 by 5 may be received at input {56}.
+The entry keys(pk(k_1),k_1) that may be in a table in phase 2 by 8 may be read at get {71}.
+The message ((((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_1),pk(k_2),anyc),sign((capT,none,pk(k_1),pk(k_2),anyc),k_1))),ctr_4,n,t2),k_2)) that the attacker may have in phase 2 by 51 may be received at input {57}.
+We have verb_4 ≠ anyc.
+So event Accept(t2,t2,n,pk(k_2)) may be executed at {69}.
+event(Accept(t2,t2,n,pk(k_2))).
+
+53. By 52, event(Accept(t2,t2,n,pk(k_2))).
+The goal is reached, represented in the following fact:
+event(Accept(t2,t2,n,pk(k_2))).
+
+
+Could not find a trace corresponding to this derivation.
+goal reachable: attacker_p2(res_4) && attacker_p2(cv1_3) && attacker_p2(ctr_4) && attacker_p2(n) && attacker_p1(aaud_3) && attacker_p1(cv1_3) && attacker_p1(res_4) && attacker(k_1) && attacker(cv1_3) && attacker_p1(ctr_4) && attacker_p1(n) && attacker_p1(k_1) && attacker_p2(aaud_3) -> event(Accept(t2,t2,n,pk(k_1)))
+
+Derivation:
+Abbreviations:
+k_1 = k[!1 = @sid]
+
+1. The message pk(k_1) may be sent to the attacker at output {4}.
+attacker(pk(k_1)).
+
+2. By 1, the attacker may know pk(k_1).
+So the attacker may know pk(k_1) in phase 1.
+attacker_p1(pk(k_1)).
+
+3. By 2, the attacker may know pk(k_1) in phase 1.
+So the attacker may know pk(k_1) in phase 2.
+attacker_p2(pk(k_1)).
+
+4. We assume as hypothesis that
+attacker_p2(aaud_3).
+
+5. By 4, the attacker may know aaud_3 in phase 2.
+By 3, the attacker may know pk(k_1) in phase 2.
+Using the function 2-tuple the attacker may obtain (aaud_3,pk(k_1)) in phase 2.
+attacker_p2((aaud_3,pk(k_1))).
+
+6. The entry keys(pk(k_1),k_1) may be inserted in a table at insert {3}.
+table(keys(pk(k_1),k_1)).
+
+7. By 6, a table may contain the entry keys(pk(k_1),k_1).
+So a table may contain the entry keys(pk(k_1),k_1) in phase 1.
+table_p1(keys(pk(k_1),k_1)).
+
+8. By 7, a table may contain the entry keys(pk(k_1),k_1) in phase 1.
+So a table may contain the entry keys(pk(k_1),k_1) in phase 2.
+table_p2(keys(pk(k_1),k_1)).
+
+9. We assume as hypothesis that
+attacker_p1(k_2).
+
+10. Using the function t2 the attacker may obtain t2 in phase 1.
+attacker_p1(t2).
+
+11. We assume as hypothesis that
+attacker_p1(n).
+
+12. We assume as hypothesis that
+attacker_p1(ctr_4).
+
+13. We assume as hypothesis that
+attacker(cv1_3).
+
+14. We assume as hypothesis that
+attacker(k_2).
+
+15. By 14, the attacker may know k_2.
+Using the function pk the attacker may obtain pk(k_2).
+attacker(pk(k_2)).
+
+16. By 1, the attacker may know pk(k_1).
+By 15, the attacker may know pk(k_2).
+By 13, the attacker may know cv1_3.
+Using the function 3-tuple the attacker may obtain (pk(k_1),pk(k_2),cv1_3).
+attacker((pk(k_1),pk(k_2),cv1_3)).
+
+17. The message (pk(k_1),pk(k_2),cv1_3) that the attacker may have by 16 may be received at input {6}.
+The entry keys(pk(k_1),k_1) that may be in a table by 6 may be read at get {11}.
+So the message ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)) may be sent to the attacker at output {10}.
+attacker(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+
+18. By 17, the attacker may know ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+Using the function 2-proj-2-tuple the attacker may obtain sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1).
+attacker(sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+
+19. Using the function none the attacker may obtain none.
+attacker(none).
+
+20. Using the function capT the attacker may obtain capT.
+attacker(capT).
+
+21. By 20, the attacker may know capT.
+By 19, the attacker may know none.
+By 1, the attacker may know pk(k_1).
+By 15, the attacker may know pk(k_2).
+By 13, the attacker may know cv1_3.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_1),pk(k_2),cv1_3).
+attacker((capT,none,pk(k_1),pk(k_2),cv1_3)).
+
+22. By 21, the attacker may know (capT,none,pk(k_1),pk(k_2),cv1_3).
+By 18, the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1).
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+attacker(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+
+23. By 22, the attacker may know ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+Using the function h the attacker may obtain h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+attacker(h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)))).
+
+24. By 23, the attacker may know h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+So the attacker may know h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))) in phase 1.
+attacker_p1(h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)))).
+
+25. We assume as hypothesis that
+attacker_p1(res_4).
+
+26. We assume as hypothesis that
+attacker_p1(cv1_3).
+
+27. We assume as hypothesis that
+attacker_p1(aaud_3).
+
+28. Using the function actT the attacker may obtain actT in phase 1.
+attacker_p1(actT).
+
+29. By 28, the attacker may know actT in phase 1.
+By 27, the attacker may know aaud_3 in phase 1.
+By 26, the attacker may know cv1_3 in phase 1.
+By 25, the attacker may know res_4 in phase 1.
+By 24, the attacker may know h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))) in phase 1.
+By 12, the attacker may know ctr_4 in phase 1.
+By 11, the attacker may know n in phase 1.
+By 10, the attacker may know t2 in phase 1.
+Using the function 8-tuple the attacker may obtain (actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2) in phase 1.
+attacker_p1((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2)).
+
+30. By 29, the attacker may know (actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2) in phase 1.
+By 9, the attacker may know k_2 in phase 1.
+Using the function sign the attacker may obtain sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2) in phase 1.
+attacker_p1(sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)).
+
+31. By 30, the attacker may know sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2) in phase 1.
+So the attacker may know sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2) in phase 2.
+attacker_p2(sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)).
+
+32. Using the function t2 the attacker may obtain t2 in phase 2.
+attacker_p2(t2).
+
+33. We assume as hypothesis that
+attacker_p2(n).
+
+34. We assume as hypothesis that
+attacker_p2(ctr_4).
+
+35. By 18, the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1).
+So the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1) in phase 1.
+attacker_p1(sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+
+36. By 35, the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1) in phase 1.
+So the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1) in phase 2.
+attacker_p2(sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+
+37. We assume as hypothesis that
+attacker_p2(cv1_3).
+
+38. By 9, the attacker may know k_2 in phase 1.
+Using the function pk the attacker may obtain pk(k_2) in phase 1.
+attacker_p1(pk(k_2)).
+
+39. By 38, the attacker may know pk(k_2) in phase 1.
+So the attacker may know pk(k_2) in phase 2.
+attacker_p2(pk(k_2)).
+
+40. Using the function none the attacker may obtain none in phase 2.
+attacker_p2(none).
+
+41. Using the function capT the attacker may obtain capT in phase 2.
+attacker_p2(capT).
+
+42. By 41, the attacker may know capT in phase 2.
+By 40, the attacker may know none in phase 2.
+By 3, the attacker may know pk(k_1) in phase 2.
+By 39, the attacker may know pk(k_2) in phase 2.
+By 37, the attacker may know cv1_3 in phase 2.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_1),pk(k_2),cv1_3) in phase 2.
+attacker_p2((capT,none,pk(k_1),pk(k_2),cv1_3)).
+
+43. By 42, the attacker may know (capT,none,pk(k_1),pk(k_2),cv1_3) in phase 2.
+By 36, the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1) in phase 2.
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)) in phase 2.
+attacker_p2(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+
+44. By 43, the attacker may know ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)) in phase 2.
+Using the function h the attacker may obtain h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))) in phase 2.
+attacker_p2(h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)))).
+
+45. We assume as hypothesis that
+attacker_p2(res_4).
+
+46. Using the function actT the attacker may obtain actT in phase 2.
+attacker_p2(actT).
+
+47. By 46, the attacker may know actT in phase 2.
+By 4, the attacker may know aaud_3 in phase 2.
+By 37, the attacker may know cv1_3 in phase 2.
+By 45, the attacker may know res_4 in phase 2.
+By 44, the attacker may know h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))) in phase 2.
+By 34, the attacker may know ctr_4 in phase 2.
+By 33, the attacker may know n in phase 2.
+By 32, the attacker may know t2 in phase 2.
+Using the function 8-tuple the attacker may obtain (actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2) in phase 2.
+attacker_p2((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2)).
+
+48. Using the function endm the attacker may obtain endm in phase 2.
+attacker_p2(endm).
+
+49. By 43, the attacker may know ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)) in phase 2.
+By 48, the attacker may know endm in phase 2.
+Using the function 2-tuple the attacker may obtain (((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm) in phase 2.
+attacker_p2((((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm)).
+
+50. By 49, the attacker may know (((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm) in phase 2.
+By 47, the attacker may know (actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2) in phase 2.
+By 31, the attacker may know sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2) in phase 2.
+Using the function 3-tuple the attacker may obtain ((((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm),(actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)) in phase 2.
+attacker_p2(((((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm),(actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2))).
+
+51. The message (aaud_3,pk(k_1)) that the attacker may have in phase 2 by 5 may be received at input {56}.
+The entry keys(pk(k_1),k_1) that may be in a table in phase 2 by 8 may be read at get {71}.
+The message ((((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm),(actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)) that the attacker may have in phase 2 by 50 may be received at input {57}.
+So event Accept(t2,t2,n,pk(k_2)) may be executed at {69}.
+event(Accept(t2,t2,n,pk(k_2))).
+
+52. By 51, event(Accept(t2,t2,n,pk(k_2))).
+The goal is reached, represented in the following fact:
+event(Accept(t2,t2,n,pk(k_2))).
+
+
+Could not find a trace corresponding to this derivation.
+goal reachable: attacker_p2(res_4) && attacker_p2(cv1_3) && attacker_p2(ctr_4) && attacker_p2(n) && attacker(aaud_3) && attacker(res_4) && attacker(cv1_3) && attacker(ctr_4) && attacker(n) && attacker(k_1) && attacker_p2(aaud_3) -> event(Accept(t2,t2,n,pk(k_1)))
+
+Derivation:
+Abbreviations:
+k_1 = k[!1 = @sid]
+
+1. The message pk(k_1) may be sent to the attacker at output {4}.
+attacker(pk(k_1)).
+
+2. By 1, the attacker may know pk(k_1).
+So the attacker may know pk(k_1) in phase 1.
+attacker_p1(pk(k_1)).
+
+3. By 2, the attacker may know pk(k_1) in phase 1.
+So the attacker may know pk(k_1) in phase 2.
+attacker_p2(pk(k_1)).
+
+4. We assume as hypothesis that
+attacker_p2(aaud_3).
+
+5. By 4, the attacker may know aaud_3 in phase 2.
+By 3, the attacker may know pk(k_1) in phase 2.
+Using the function 2-tuple the attacker may obtain (aaud_3,pk(k_1)) in phase 2.
+attacker_p2((aaud_3,pk(k_1))).
+
+6. The entry keys(pk(k_1),k_1) may be inserted in a table at insert {3}.
+table(keys(pk(k_1),k_1)).
+
+7. By 6, a table may contain the entry keys(pk(k_1),k_1).
+So a table may contain the entry keys(pk(k_1),k_1) in phase 1.
+table_p1(keys(pk(k_1),k_1)).
+
+8. By 7, a table may contain the entry keys(pk(k_1),k_1) in phase 1.
+So a table may contain the entry keys(pk(k_1),k_1) in phase 2.
+table_p2(keys(pk(k_1),k_1)).
+
+9. We assume as hypothesis that
+attacker(k_2).
+
+10. Using the function t2 the attacker may obtain t2.
+attacker(t2).
+
+11. We assume as hypothesis that
+attacker(n).
+
+12. We assume as hypothesis that
+attacker(ctr_4).
+
+13. We assume as hypothesis that
+attacker(cv1_3).
+
+14. By 9, the attacker may know k_2.
+Using the function pk the attacker may obtain pk(k_2).
+attacker(pk(k_2)).
+
+15. By 1, the attacker may know pk(k_1).
+By 14, the attacker may know pk(k_2).
+By 13, the attacker may know cv1_3.
+Using the function 3-tuple the attacker may obtain (pk(k_1),pk(k_2),cv1_3).
+attacker((pk(k_1),pk(k_2),cv1_3)).
+
+16. The message (pk(k_1),pk(k_2),cv1_3) that the attacker may have by 15 may be received at input {6}.
+The entry keys(pk(k_1),k_1) that may be in a table by 6 may be read at get {11}.
+So the message ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)) may be sent to the attacker at output {10}.
+attacker(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+
+17. By 16, the attacker may know ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+Using the function 2-proj-2-tuple the attacker may obtain sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1).
+attacker(sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+
+18. Using the function none the attacker may obtain none.
+attacker(none).
+
+19. Using the function capT the attacker may obtain capT.
+attacker(capT).
+
+20. By 19, the attacker may know capT.
+By 18, the attacker may know none.
+By 1, the attacker may know pk(k_1).
+By 14, the attacker may know pk(k_2).
+By 13, the attacker may know cv1_3.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_1),pk(k_2),cv1_3).
+attacker((capT,none,pk(k_1),pk(k_2),cv1_3)).
+
+21. By 20, the attacker may know (capT,none,pk(k_1),pk(k_2),cv1_3).
+By 17, the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1).
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+attacker(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+
+22. By 21, the attacker may know ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+Using the function h the attacker may obtain h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+attacker(h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)))).
+
+23. We assume as hypothesis that
+attacker(res_4).
+
+24. We assume as hypothesis that
+attacker(aaud_3).
+
+25. Using the function actT the attacker may obtain actT.
+attacker(actT).
+
+26. By 25, the attacker may know actT.
+By 24, the attacker may know aaud_3.
+By 13, the attacker may know cv1_3.
+By 23, the attacker may know res_4.
+By 22, the attacker may know h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+By 12, the attacker may know ctr_4.
+By 11, the attacker may know n.
+By 10, the attacker may know t2.
+Using the function 8-tuple the attacker may obtain (actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2).
+attacker((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2)).
+
+27. By 26, the attacker may know (actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2).
+By 9, the attacker may know k_2.
+Using the function sign the attacker may obtain sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2).
+attacker(sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)).
+
+28. By 27, the attacker may know sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2).
+So the attacker may know sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2) in phase 1.
+attacker_p1(sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)).
+
+29. By 28, the attacker may know sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2) in phase 1.
+So the attacker may know sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2) in phase 2.
+attacker_p2(sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)).
+
+30. Using the function t2 the attacker may obtain t2 in phase 2.
+attacker_p2(t2).
+
+31. We assume as hypothesis that
+attacker_p2(n).
+
+32. We assume as hypothesis that
+attacker_p2(ctr_4).
+
+33. By 17, the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1).
+So the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1) in phase 1.
+attacker_p1(sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+
+34. By 33, the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1) in phase 1.
+So the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1) in phase 2.
+attacker_p2(sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)).
+
+35. We assume as hypothesis that
+attacker_p2(cv1_3).
+
+36. By 14, the attacker may know pk(k_2).
+So the attacker may know pk(k_2) in phase 1.
+attacker_p1(pk(k_2)).
+
+37. By 36, the attacker may know pk(k_2) in phase 1.
+So the attacker may know pk(k_2) in phase 2.
+attacker_p2(pk(k_2)).
+
+38. Using the function none the attacker may obtain none in phase 2.
+attacker_p2(none).
+
+39. Using the function capT the attacker may obtain capT in phase 2.
+attacker_p2(capT).
+
+40. By 39, the attacker may know capT in phase 2.
+By 38, the attacker may know none in phase 2.
+By 3, the attacker may know pk(k_1) in phase 2.
+By 37, the attacker may know pk(k_2) in phase 2.
+By 35, the attacker may know cv1_3 in phase 2.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_1),pk(k_2),cv1_3) in phase 2.
+attacker_p2((capT,none,pk(k_1),pk(k_2),cv1_3)).
+
+41. By 40, the attacker may know (capT,none,pk(k_1),pk(k_2),cv1_3) in phase 2.
+By 34, the attacker may know sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1) in phase 2.
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)) in phase 2.
+attacker_p2(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))).
+
+42. By 41, the attacker may know ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)) in phase 2.
+Using the function h the attacker may obtain h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))) in phase 2.
+attacker_p2(h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)))).
+
+43. We assume as hypothesis that
+attacker_p2(res_4).
+
+44. Using the function actT the attacker may obtain actT in phase 2.
+attacker_p2(actT).
+
+45. By 44, the attacker may know actT in phase 2.
+By 4, the attacker may know aaud_3 in phase 2.
+By 35, the attacker may know cv1_3 in phase 2.
+By 43, the attacker may know res_4 in phase 2.
+By 42, the attacker may know h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))) in phase 2.
+By 32, the attacker may know ctr_4 in phase 2.
+By 31, the attacker may know n in phase 2.
+By 30, the attacker may know t2 in phase 2.
+Using the function 8-tuple the attacker may obtain (actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2) in phase 2.
+attacker_p2((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2)).
+
+46. Using the function endm the attacker may obtain endm in phase 2.
+attacker_p2(endm).
+
+47. By 41, the attacker may know ((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)) in phase 2.
+By 46, the attacker may know endm in phase 2.
+Using the function 2-tuple the attacker may obtain (((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm) in phase 2.
+attacker_p2((((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm)).
+
+48. By 47, the attacker may know (((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm) in phase 2.
+By 45, the attacker may know (actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2) in phase 2.
+By 29, the attacker may know sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2) in phase 2.
+Using the function 3-tuple the attacker may obtain ((((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm),(actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)) in phase 2.
+attacker_p2(((((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm),(actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2))).
+
+49. The message (aaud_3,pk(k_1)) that the attacker may have in phase 2 by 5 may be received at input {56}.
+The entry keys(pk(k_1),k_1) that may be in a table in phase 2 by 8 may be read at get {71}.
+The message ((((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1)),endm),(actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),sign((actT,aaud_3,cv1_3,res_4,h(((capT,none,pk(k_1),pk(k_2),cv1_3),sign((capT,none,pk(k_1),pk(k_2),cv1_3),k_1))),ctr_4,n,t2),k_2)) that the attacker may have in phase 2 by 48 may be received at input {57}.
+So event Accept(t2,t2,n,pk(k_2)) may be executed at {69}.
+event(Accept(t2,t2,n,pk(k_2))).
+
+50. By 49, event(Accept(t2,t2,n,pk(k_2))).
+The goal is reached, represented in the following fact:
+event(Accept(t2,t2,n,pk(k_2))).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new k: bitstring creating k_3 at {2} in copy a
+
+insert keys(pk(k_3),k_3) at {3} in copy a
+
+out(c, ~M) with ~M = pk(k_3) at {4} in copy a
+
+in(c, (~M,pk(a_1),a_2)) with ~M = pk(k_3) at {6} in copy a_3
+
+get keys(pk(k_3),k_3) at {11} in copy a_3
+
+event Granted(pk(k_3),pk(a_1),a_2,h(((capT,none,pk(k_3),pk(a_1),a_2),sign((capT,none,pk(k_3),pk(a_1),a_2),k_3)))) at {9} in copy a_3
+
+out(c, ((capT,none,~M_1,~M_2,~M_3),~M_4)) with ~M_1 = pk(k_3), ~M_2 = pk(a_1), ~M_3 = a_2, ~M_4 = sign((capT,none,pk(k_3),pk(a_1),a_2),k_3) at {10} in copy a_3
+
+in(c, (a_4,~M)) with ~M = pk(k_3) at {56} in copy a_5
+
+get keys(pk(k_3),k_3) at {71} in copy a_5
+
+in(c, ((((capT,none,~M,pk(a_1),a_2),~M_4),endm),(actT,a_4,a_2,a_6,h(((capT,none,~M,pk(a_1),a_2),~M_4)),a_7,a_8,t2),sign((actT,a_4,a_2,a_6,h(((capT,none,~M,pk(a_1),a_2),~M_4)),a_7,a_8,t2),a_1))) with ~M = pk(k_3), ~M_4 = sign((capT,none,pk(k_3),pk(a_1),a_2),k_3), h(((capT,none,~M,pk(a_1),a_2),~M_4)) = h(((capT,none,pk(k_3),pk(a_1),a_2),sign((capT,none,pk(k_3),pk(a_1),a_2),k_3))), sign((actT,a_4,a_2,a_6,h(((capT,none,~M,pk(a_1),a_2),~M_4)),a_7,a_8,t2),a_1) = sign((actT,a_4,a_2,a_6,h(((capT,none,pk(k_3),pk(a_1),a_2),sign((capT,none,pk(k_3),pk(a_1),a_2),k_3))),a_7,a_8,t2),a_1) at {57} in copy a_5
+
+get nonces(=(a_4,h(((capT,none,pk(k_3),pk(a_1),a_2),sign((capT,none,pk(k_3),pk(a_1),a_2),k_3))),pk(a_1),a_8)): else branch taken at {70} in copy a_5
+
+insert nonces((a_4,h(((capT,none,pk(k_3),pk(a_1),a_2),sign((capT,none,pk(k_3),pk(a_1),a_2),k_3))),pk(a_1),a_8)) at {68} in copy a_5
+
+event Accept(t2,t2,a_8,pk(a_1)) at {69} in copy a_5 (goal)
+
+The event Accept(t2,t2,a_8,pk(a_1)) is executed at {69} in copy a_5.
+A trace has been found.
+RESULT not event(Accept(t2,t2,n,hol)) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not event(Accept(t2,t2,n,hol)) is false.
+
+--------------------------------------------------------------
+

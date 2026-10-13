@@ -1,0 +1,188 @@
+-- Query event(Accepted(m,l_4)) ==> event(Aggregated(c1,c2,m,l_4)) || event(Aggregated(c1,c3,m,l_4)) || event(Aggregated(c2,c3,m,l_4)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 116 rules (51 with conclusion selected). Queue: 22 rules.
+Starting query event(Accepted(m,l_4)) ==> event(Aggregated(c1,c2,m,l_4)) || event(Aggregated(c1,c3,m,l_4)) || event(Aggregated(c2,c3,m,l_4))
+goal reachable: b-event(Aggregated(c1,c2,m,l_4)) && b-event(@p_act(@occ75_1,c1)) && attacker(d1_3) && attacker(e1_3) && b-event(@p_act(@occ75_2,c2)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l_4) && b-event(@p_act(@occ38_1,(zs(sh(g[],c1),d1_3,e1_3,m,l_4),zs(sh(g[],c2),d2_3,e2_3,m,l_4),l_4))) && b-event(@p_act(@occ63_1,(m,l_4,tsig(pubk(g[]),m,l_4)))) -> event(Accepted(m,l_4))
+Abbreviations:
+@occ75_1 = @occ75[!1 = @sid]
+@occ75_2 = @occ75[!1 = @sid_1]
+@occ38_1 = @occ38[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c3,m,l_4)) && b-event(@p_act(@occ75_1,c1)) && attacker(d1_3) && attacker(e1_3) && b-event(@p_act(@occ75_2,c3)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l_4) && b-event(@p_act(@occ47_1,(zs(sh(g[],c1),d1_3,e1_3,m,l_4),zs(sh(g[],c3),d2_3,e2_3,m,l_4),l_4))) && b-event(@p_act(@occ63_1,(m,l_4,tsig(pubk(g[]),m,l_4)))) -> event(Accepted(m,l_4))
+Abbreviations:
+@occ75_1 = @occ75[!1 = @sid]
+@occ75_2 = @occ75[!1 = @sid_1]
+@occ47_1 = @occ47[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c2,c3,m,l_4)) && b-event(@p_act(@occ75_1,c2)) && attacker(d1_3) && attacker(e1_3) && b-event(@p_act(@occ75_2,c3)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l_4) && b-event(@p_act(@occ56_1,(zs(sh(g[],c2),d1_3,e1_3,m,l_4),zs(sh(g[],c3),d2_3,e2_3,m,l_4),l_4))) && b-event(@p_act(@occ63_1,(m,l_4,tsig(pubk(g[]),m,l_4)))) -> event(Accepted(m,l_4))
+Abbreviations:
+@occ75_1 = @occ75[!1 = @sid]
+@occ75_2 = @occ75[!1 = @sid_1]
+@occ56_1 = @occ56[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: l1_7 ≠ cmt(c1,cm(d_3),cm(e_3)) && b-event(Aggregated(c1,c3,m,(l1_7,cmt(c1,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ8_1,(m,l1_7,cmt(c1,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ75_1,c3)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l1_7) && b-event(@p_act(@occ47_1,(zs(sh(g[],c1),d_3,e_3,m,(l1_7,cmt(c1,cm(d_3),cm(e_3)))),zs(sh(g[],c3),d2_3,e2_3,m,(l1_7,cmt(c1,cm(d_3),cm(e_3)))),(l1_7,cmt(c1,cm(d_3),cm(e_3)))))) && b-event(@p_act(@occ63_1,(m,(l1_7,cmt(c1,cm(d_3),cm(e_3))),tsig(pubk(g[]),m,(l1_7,cmt(c1,cm(d_3),cm(e_3))))))) -> event(Accepted(m,(l1_7,cmt(c1,cm(d_3),cm(e_3)))))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ8_1 = @occ8[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ47_1 = @occ47[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: l1_7 ≠ cmt(c1,cm(d_3),cm(e_3)) && b-event(Aggregated(c1,c2,m,(l1_7,cmt(c1,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ8_1,(m,l1_7,cmt(c1,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ75_1,c2)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l1_7) && b-event(@p_act(@occ38_1,(zs(sh(g[],c1),d_3,e_3,m,(l1_7,cmt(c1,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d2_3,e2_3,m,(l1_7,cmt(c1,cm(d_3),cm(e_3)))),(l1_7,cmt(c1,cm(d_3),cm(e_3)))))) && b-event(@p_act(@occ63_1,(m,(l1_7,cmt(c1,cm(d_3),cm(e_3))),tsig(pubk(g[]),m,(l1_7,cmt(c1,cm(d_3),cm(e_3))))))) -> event(Accepted(m,(l1_7,cmt(c1,cm(d_3),cm(e_3)))))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ8_1 = @occ8[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ38_1 = @occ38[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: l1_7 ≠ cmt(c2,cm(d_3),cm(e_3)) && b-event(Aggregated(c1,c2,m,(l1_7,cmt(c2,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ75_1,c1)) && attacker(d1_3) && attacker(e1_3) && attacker(m) && b-event(@p_act(@occ19_1,(m,l1_7,cmt(c2,cm(d_3),cm(e_3))))) && attacker(l1_7) && b-event(@p_act(@occ38_1,(zs(sh(g[],c1),d1_3,e1_3,m,(l1_7,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m,(l1_7,cmt(c2,cm(d_3),cm(e_3)))),(l1_7,cmt(c2,cm(d_3),cm(e_3)))))) && b-event(@p_act(@occ63_1,(m,(l1_7,cmt(c2,cm(d_3),cm(e_3))),tsig(pubk(g[]),m,(l1_7,cmt(c2,cm(d_3),cm(e_3))))))) -> event(Accepted(m,(l1_7,cmt(c2,cm(d_3),cm(e_3)))))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ19_1 = @occ19[!1 = @sid]
+@occ38_1 = @occ38[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: l1_7 ≠ cmt(c2,cm(d_3),cm(e_3)) && b-event(Aggregated(c2,c3,m,(l1_7,cmt(c2,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ19_1,(m,l1_7,cmt(c2,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ75_1,c3)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l1_7) && b-event(@p_act(@occ56_1,(zs(sh(g[],c2),d_3,e_3,m,(l1_7,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c3),d2_3,e2_3,m,(l1_7,cmt(c2,cm(d_3),cm(e_3)))),(l1_7,cmt(c2,cm(d_3),cm(e_3)))))) && b-event(@p_act(@occ63_1,(m,(l1_7,cmt(c2,cm(d_3),cm(e_3))),tsig(pubk(g[]),m,(l1_7,cmt(c2,cm(d_3),cm(e_3))))))) -> event(Accepted(m,(l1_7,cmt(c2,cm(d_3),cm(e_3)))))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+@occ19_1 = @occ19[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ56_1 = @occ56[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: l1_7 ≠ cmt(c3,cm(d_3),cm(e_3)) && b-event(Aggregated(c2,c3,m,(l1_7,cmt(c3,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ75_1,c2)) && attacker(d1_3) && attacker(e1_3) && attacker(m) && b-event(@p_act(@occ30_1,(m,l1_7,cmt(c3,cm(d_3),cm(e_3))))) && attacker(l1_7) && b-event(@p_act(@occ56_1,(zs(sh(g[],c2),d1_3,e1_3,m,(l1_7,cmt(c3,cm(d_3),cm(e_3)))),zs(sh(g[],c3),d_3,e_3,m,(l1_7,cmt(c3,cm(d_3),cm(e_3)))),(l1_7,cmt(c3,cm(d_3),cm(e_3)))))) && b-event(@p_act(@occ63_1,(m,(l1_7,cmt(c3,cm(d_3),cm(e_3))),tsig(pubk(g[]),m,(l1_7,cmt(c3,cm(d_3),cm(e_3))))))) -> event(Accepted(m,(l1_7,cmt(c3,cm(d_3),cm(e_3)))))
+Abbreviations:
+d_3 = d_2[!1 = @sid]
+e_3 = e_2[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ30_1 = @occ30[!1 = @sid]
+@occ56_1 = @occ56[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: l1_7 ≠ cmt(c3,cm(d_3),cm(e_3)) && b-event(Aggregated(c1,c3,m,(l1_7,cmt(c3,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ75_1,c1)) && attacker(d1_3) && attacker(e1_3) && attacker(m) && b-event(@p_act(@occ30_1,(m,l1_7,cmt(c3,cm(d_3),cm(e_3))))) && attacker(l1_7) && b-event(@p_act(@occ47_1,(zs(sh(g[],c1),d1_3,e1_3,m,(l1_7,cmt(c3,cm(d_3),cm(e_3)))),zs(sh(g[],c3),d_3,e_3,m,(l1_7,cmt(c3,cm(d_3),cm(e_3)))),(l1_7,cmt(c3,cm(d_3),cm(e_3)))))) && b-event(@p_act(@occ63_1,(m,(l1_7,cmt(c3,cm(d_3),cm(e_3))),tsig(pubk(g[]),m,(l1_7,cmt(c3,cm(d_3),cm(e_3))))))) -> event(Accepted(m,(l1_7,cmt(c3,cm(d_3),cm(e_3)))))
+Abbreviations:
+d_3 = d_2[!1 = @sid]
+e_3 = e_2[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ30_1 = @occ30[!1 = @sid]
+@occ47_1 = @occ47[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c3,m,(cmt(c1,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ8_1,(m,cmt(c1,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ75_1,c3)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l2_7) && b-event(@p_act(@occ47_1,(zs(sh(g[],c1),d_3,e_3,m,(cmt(c1,cm(d_3),cm(e_3)),l2_7)),zs(sh(g[],c3),d2_3,e2_3,m,(cmt(c1,cm(d_3),cm(e_3)),l2_7)),(cmt(c1,cm(d_3),cm(e_3)),l2_7)))) && b-event(@p_act(@occ63_1,(m,(cmt(c1,cm(d_3),cm(e_3)),l2_7),tsig(pubk(g[]),m,(cmt(c1,cm(d_3),cm(e_3)),l2_7))))) -> event(Accepted(m,(cmt(c1,cm(d_3),cm(e_3)),l2_7)))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ8_1 = @occ8[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ47_1 = @occ47[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c2,m,(cmt(c1,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ8_1,(m,cmt(c1,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ75_1,c2)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l2_7) && b-event(@p_act(@occ38_1,(zs(sh(g[],c1),d_3,e_3,m,(cmt(c1,cm(d_3),cm(e_3)),l2_7)),zs(sh(g[],c2),d2_3,e2_3,m,(cmt(c1,cm(d_3),cm(e_3)),l2_7)),(cmt(c1,cm(d_3),cm(e_3)),l2_7)))) && b-event(@p_act(@occ63_1,(m,(cmt(c1,cm(d_3),cm(e_3)),l2_7),tsig(pubk(g[]),m,(cmt(c1,cm(d_3),cm(e_3)),l2_7))))) -> event(Accepted(m,(cmt(c1,cm(d_3),cm(e_3)),l2_7)))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ8_1 = @occ8[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ38_1 = @occ38[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c2,m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ8_1,(m,cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))))) && attacker(m) && b-event(@p_act(@occ19_1,(m,cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ38_1,(zs(sh(g[],c1),d_3,e_3,m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4)))),zs(sh(g[],c2),d_4,e_4,m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4)))),(cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4)))))) && b-event(@p_act(@occ63_1,(m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))),tsig(pubk(g[]),m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))))))) -> event(Accepted(m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4)))))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+d_4 = d_1[!1 = @sid_1]
+e_4 = e_1[!1 = @sid_1]
+@occ8_1 = @occ8[!1 = @sid]
+@occ19_1 = @occ19[!1 = @sid_1]
+@occ38_1 = @occ38[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c3,m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ8_1,(m,cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))))) && attacker(m) && b-event(@p_act(@occ30_1,(m,cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ47_1,(zs(sh(g[],c1),d_3,e_3,m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4)))),zs(sh(g[],c3),d_4,e_4,m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4)))),(cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4)))))) && b-event(@p_act(@occ63_1,(m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))),tsig(pubk(g[]),m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))))))) -> event(Accepted(m,(cmt(c1,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4)))))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+d_4 = d_2[!1 = @sid_1]
+e_4 = e_2[!1 = @sid_1]
+@occ8_1 = @occ8[!1 = @sid]
+@occ30_1 = @occ30[!1 = @sid_1]
+@occ47_1 = @occ47[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c2,m,(cmt(c2,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ75_1,c1)) && attacker(d1_3) && attacker(e1_3) && attacker(m) && b-event(@p_act(@occ19_1,(m,cmt(c2,cm(d_3),cm(e_3)),l2_7))) && attacker(l2_7) && b-event(@p_act(@occ38_1,(zs(sh(g[],c1),d1_3,e1_3,m,(cmt(c2,cm(d_3),cm(e_3)),l2_7)),zs(sh(g[],c2),d_3,e_3,m,(cmt(c2,cm(d_3),cm(e_3)),l2_7)),(cmt(c2,cm(d_3),cm(e_3)),l2_7)))) && b-event(@p_act(@occ63_1,(m,(cmt(c2,cm(d_3),cm(e_3)),l2_7),tsig(pubk(g[]),m,(cmt(c2,cm(d_3),cm(e_3)),l2_7))))) -> event(Accepted(m,(cmt(c2,cm(d_3),cm(e_3)),l2_7)))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ19_1 = @occ19[!1 = @sid]
+@occ38_1 = @occ38[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c2,c3,m,(cmt(c2,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ19_1,(m,cmt(c2,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ75_1,c3)) && attacker(d2_3) && attacker(e2_3) && attacker(m) && attacker(l2_7) && b-event(@p_act(@occ56_1,(zs(sh(g[],c2),d_3,e_3,m,(cmt(c2,cm(d_3),cm(e_3)),l2_7)),zs(sh(g[],c3),d2_3,e2_3,m,(cmt(c2,cm(d_3),cm(e_3)),l2_7)),(cmt(c2,cm(d_3),cm(e_3)),l2_7)))) && b-event(@p_act(@occ63_1,(m,(cmt(c2,cm(d_3),cm(e_3)),l2_7),tsig(pubk(g[]),m,(cmt(c2,cm(d_3),cm(e_3)),l2_7))))) -> event(Accepted(m,(cmt(c2,cm(d_3),cm(e_3)),l2_7)))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+@occ19_1 = @occ19[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ56_1 = @occ56[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c2,m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ8_1,(m,cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))))) && attacker(m) && b-event(@p_act(@occ19_1,(m,cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ38_1,(zs(sh(g[],c1),d_4,e_4,m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4)))),zs(sh(g[],c2),d_3,e_3,m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4)))),(cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4)))))) && b-event(@p_act(@occ63_1,(m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))),tsig(pubk(g[]),m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))))))) -> event(Accepted(m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4)))))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+d_4 = d[!1 = @sid_1]
+e_4 = e[!1 = @sid_1]
+@occ8_1 = @occ8[!1 = @sid_1]
+@occ19_1 = @occ19[!1 = @sid]
+@occ38_1 = @occ38[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c2,c3,m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ19_1,(m,cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))))) && attacker(m) && b-event(@p_act(@occ30_1,(m,cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ56_1,(zs(sh(g[],c2),d_3,e_3,m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4)))),zs(sh(g[],c3),d_4,e_4,m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4)))),(cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4)))))) && b-event(@p_act(@occ63_1,(m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))),tsig(pubk(g[]),m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4))))))) -> event(Accepted(m,(cmt(c2,cm(d_3),cm(e_3)),cmt(c3,cm(d_4),cm(e_4)))))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+d_4 = d_2[!1 = @sid_1]
+e_4 = e_2[!1 = @sid_1]
+@occ19_1 = @occ19[!1 = @sid]
+@occ30_1 = @occ30[!1 = @sid_1]
+@occ56_1 = @occ56[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c2,c3,m,(cmt(c3,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ75_1,c2)) && attacker(d1_3) && attacker(e1_3) && attacker(m) && b-event(@p_act(@occ30_1,(m,cmt(c3,cm(d_3),cm(e_3)),l2_7))) && attacker(l2_7) && b-event(@p_act(@occ56_1,(zs(sh(g[],c2),d1_3,e1_3,m,(cmt(c3,cm(d_3),cm(e_3)),l2_7)),zs(sh(g[],c3),d_3,e_3,m,(cmt(c3,cm(d_3),cm(e_3)),l2_7)),(cmt(c3,cm(d_3),cm(e_3)),l2_7)))) && b-event(@p_act(@occ63_1,(m,(cmt(c3,cm(d_3),cm(e_3)),l2_7),tsig(pubk(g[]),m,(cmt(c3,cm(d_3),cm(e_3)),l2_7))))) -> event(Accepted(m,(cmt(c3,cm(d_3),cm(e_3)),l2_7)))
+Abbreviations:
+d_3 = d_2[!1 = @sid]
+e_3 = e_2[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ30_1 = @occ30[!1 = @sid]
+@occ56_1 = @occ56[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c3,m,(cmt(c3,cm(d_3),cm(e_3)),l2_7))) && b-event(@p_act(@occ75_1,c1)) && attacker(d1_3) && attacker(e1_3) && attacker(m) && b-event(@p_act(@occ30_1,(m,cmt(c3,cm(d_3),cm(e_3)),l2_7))) && attacker(l2_7) && b-event(@p_act(@occ47_1,(zs(sh(g[],c1),d1_3,e1_3,m,(cmt(c3,cm(d_3),cm(e_3)),l2_7)),zs(sh(g[],c3),d_3,e_3,m,(cmt(c3,cm(d_3),cm(e_3)),l2_7)),(cmt(c3,cm(d_3),cm(e_3)),l2_7)))) && b-event(@p_act(@occ63_1,(m,(cmt(c3,cm(d_3),cm(e_3)),l2_7),tsig(pubk(g[]),m,(cmt(c3,cm(d_3),cm(e_3)),l2_7))))) -> event(Accepted(m,(cmt(c3,cm(d_3),cm(e_3)),l2_7)))
+Abbreviations:
+d_3 = d_2[!1 = @sid]
+e_3 = e_2[!1 = @sid]
+@occ75_1 = @occ75[!1 = @sid_1]
+@occ30_1 = @occ30[!1 = @sid]
+@occ47_1 = @occ47[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c1,c3,m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ8_1,(m,cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))))) && attacker(m) && b-event(@p_act(@occ30_1,(m,cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ47_1,(zs(sh(g[],c1),d_4,e_4,m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4)))),zs(sh(g[],c3),d_3,e_3,m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4)))),(cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4)))))) && b-event(@p_act(@occ63_1,(m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))),tsig(pubk(g[]),m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4))))))) -> event(Accepted(m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c1,cm(d_4),cm(e_4)))))
+Abbreviations:
+d_3 = d_2[!1 = @sid]
+e_3 = e_2[!1 = @sid]
+d_4 = d[!1 = @sid_1]
+e_4 = e[!1 = @sid_1]
+@occ8_1 = @occ8[!1 = @sid_1]
+@occ30_1 = @occ30[!1 = @sid]
+@occ47_1 = @occ47[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+goal reachable: b-event(Aggregated(c2,c3,m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ19_1,(m,cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))))) && attacker(m) && b-event(@p_act(@occ30_1,(m,cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))))) && b-event(@p_act(@occ56_1,(zs(sh(g[],c2),d_4,e_4,m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4)))),zs(sh(g[],c3),d_3,e_3,m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4)))),(cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4)))))) && b-event(@p_act(@occ63_1,(m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))),tsig(pubk(g[]),m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4))))))) -> event(Accepted(m,(cmt(c3,cm(d_3),cm(e_3)),cmt(c2,cm(d_4),cm(e_4)))))
+Abbreviations:
+d_3 = d_2[!1 = @sid]
+e_3 = e_2[!1 = @sid]
+d_4 = d_1[!1 = @sid_1]
+e_4 = e_1[!1 = @sid_1]
+@occ19_1 = @occ19[!1 = @sid_1]
+@occ30_1 = @occ30[!1 = @sid]
+@occ56_1 = @occ56[!1 = @sid_2]
+@occ63_1 = @occ63[!1 = @sid_3]
+RESULT event(Accepted(m,l_4)) ==> event(Aggregated(c1,c2,m,l_4)) || event(Aggregated(c1,c3,m,l_4)) || event(Aggregated(c2,c3,m,l_4)) is true.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query event(Accepted(m,l_4)) ==> event(Aggregated(c1,c2,m,l_4)) || event(Aggregated(c1,c3,m,l_4)) || event(Aggregated(c2,c3,m,l_4)) is true.
+
+--------------------------------------------------------------
+

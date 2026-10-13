@@ -1,0 +1,13 @@
+-- Query not attacker(sh(g[],c2)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+Starting query not attacker(sh(g[],c2))
+RESULT not attacker(sh(g[],c2)) is true.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not attacker(sh(g[],c2)) is true.
+
+--------------------------------------------------------------
+
