@@ -1,0 +1,311 @@
+File "pca_replay_chosen_nonce.cv", line 44, characters 5-6:
+Warning: Replication uses the same parameter N with channel cV as replication at line 37, characters 5-6 with channel cA. Avoid reusing parameters for multiple replications with different channels to avoid losing precision in the probability bound.
+Doing expand get, insert and prove unique annotations... Done.
+Doing simplify (non-expanded game)... No change.
+Doing expand... No change.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall a: message; event(Accept(a)) ==> event(Signed(a)) failed:
+  Found Accept(act_1) at 96
+  but could not prove event(Signed(a))
+Proof of forall a: message; inj-event(Accept(a)) ==> inj-event(Signed(a)) failed:
+  Found Accept(act_1) at 96
+  but could not prove inj-event(Signed(a))
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder pkH... Done.
+Doing remove assignments of binder skH... Done.
+Trying equivalence uf_cma(sign) with rkH... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proved query forall a: message; event(Accept(a)) ==> event(Signed(a))
+Proved query forall a: message; inj-event(Accept(a)) ==> inj-event(Signed(a))
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkH);
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(act, sign(act, skH))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       if check(act_1, pkH, asg) then
+       get seen(=aud_2, =gref_2, =nonce_2) in
+         yield
+       else
+         insert seen(aud_2, gref_2, nonce_2);
+         event Accept(act_1);
+         return()
+     ))
+
+
+Applying expand get, insert and prove unique annotations
+  - Expand get/insert for table seen
+yields
+
+Game 2 is
+     c0() :=
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkH);
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(act, sign(act, skH))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       if check(act_1, pkH, asg) then
+       find u = u_1 <= N suchthat defined(seen_1[u_1], seen_2[u_1], seen_3[u_1]) && (seen_1[u_1] = aud_2) && (seen_2[u_1] = gref_2) && (seen_3[u_1] = nonce_2) then
+         yield
+       else
+         seen_1: audience <- aud_2;
+         seen_2: gref_t <- gref_2;
+         seen_3: nonce_t <- nonce_2;
+         event Accept(act_1);
+         return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on seen_1 (definition point kept, all usages removed)
+  - Remove assignments on seen_2 (definition removed, all usages removed)
+  - Remove assignments on seen_3 (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     rkH <-R keyseed;
+     pkH: pkey <- pkgen(rkH);
+     skH: skey <- skgen(rkH);
+     return(pkH);
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(act, sign(act, skH))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       if check(act_1, pkH, asg) then
+       find u = u_1 <= N suchthat defined(aud_2[u_1], gref_2[u_1], nonce_2[u_1], seen_1[u_1]) && (aud_2[u_1] = aud_2) && (gref_2[u_1] = gref_2) && (nonce_2[u_1] = nonce_2) then
+         yield
+       else
+         seen_1: audience <- cst_audience;
+         event Accept(act_1);
+         return()
+     ))
+
+
+Applying remove assignments of binder pkH
+  - Remove assignments on pkH (definition removed, all usages removed)
+yields
+
+Game 4 is
+     c0() :=
+     rkH <-R keyseed;
+     skH: skey <- skgen(rkH);
+     return(pkgen(rkH));
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(act, sign(act, skH))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       if check(act_1, pkgen(rkH), asg) then
+       find u = u_1 <= N suchthat defined(aud_2[u_1], gref_2[u_1], nonce_2[u_1], seen_1[u_1]) && (aud_2[u_1] = aud_2) && (gref_2[u_1] = gref_2) && (nonce_2[u_1] = nonce_2) then
+         yield
+       else
+         seen_1: audience <- cst_audience;
+         event Accept(act_1);
+         return()
+     ))
+
+
+Applying remove assignments of binder skH
+  - Remove assignments on skH (definition removed, all usages removed)
+yields
+
+Game 5 is
+     c0() :=
+     rkH <-R keyseed;
+     return(pkgen(rkH));
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(act, sign(act, skgen(rkH)))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       if check(act_1, pkgen(rkH), asg) then
+       find u = u_1 <= N suchthat defined(aud_2[u_1], gref_2[u_1], nonce_2[u_1], seen_1[u_1]) && (aud_2[u_1] = aud_2) && (gref_2[u_1] = gref_2) && (nonce_2[u_1] = nonce_2) then
+         yield
+       else
+         seen_1: audience <- cst_audience;
+         event Accept(act_1);
+         return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rkH [probability Psign(time_1, N, maxlength(game 5: act))]
+  - Equivalence uf_cma(sign) with variables: rkH -> r
+yields
+
+Game 6 is
+     c0() :=
+     rkH <-R keyseed;
+     return(pkgen2(rkH));
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(act, (x: message <- act; sign2(x, skgen2(rkH))))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+ {62}  if (m1: message <- act_1; si1: signature <- asg; find u_2 = ri <= N suchthat defined(x[ri]) && (m1 = x[ri]) && check2(m1, pkgen2(rkH), si1) then true else false) then
+       find u = u_1 <= N suchthat defined(aud_2[u_1], gref_2[u_1], nonce_2[u_1], seen_1[u_1]) && (aud_2[u_1] = aud_2) && (gref_2[u_1] = gref_2) && (nonce_2[u_1] = nonce_2) then
+         yield
+       else
+         seen_1: audience <- cst_audience;
+         event Accept(act_1);
+         return()
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+    - Test at 62 always false
+    - Test at 62 always true
+yields
+
+Game 7 is
+     c0() :=
+     rkH <-R keyseed;
+     return(pkgen2(rkH));
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       x: message <- act;
+       return(act, sign2(x, skgen2(rkH)))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       m1: message <- act_1;
+       si1: signature <- asg;
+       find u_2 = ri <= N suchthat defined(x[ri]) && (m1 = x[ri]) && check2(m1, pkgen2(rkH), si1) then
+       find u = u_1 <= N suchthat defined(aud_2[u_1], gref_2[u_1], nonce_2[u_1], seen_1[u_1]) && (aud_2[u_1] = aud_2) && (gref_2[u_1] = gref_2) && (nonce_2[u_1] = nonce_2) then
+         yield
+       else
+         seen_1: audience <- cst_audience;
+         event Accept(act_1);
+         return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on m1 (definition removed, all usages removed)
+  - Remove assignments on si1 (definition removed, all usages removed)
+  - Remove assignments on x (definition removed, all usages removed)
+yields
+
+Game 8 is
+     c0() :=
+     rkH <-R keyseed;
+     return(pkgen2(rkH));
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(act, sign2(act, skgen2(rkH)))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+ {59}  find u_2 = ri <= N suchthat defined(act[ri]) && {61}((act_1 = act[ri]) && check2(act_1, pkgen2(rkH), asg)) then
+       find u = u_1 <= N suchthat defined(aud_2[u_1], gref_2[u_1], nonce_2[u_1], seen_1[u_1]) && (aud_2[u_1] = aud_2) && (gref_2[u_1] = gref_2) && (nonce_2[u_1] = nonce_2) then
+         yield
+       else
+         seen_1: audience <- cst_audience;
+         event Accept(act_1);
+         return()
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Replaced ((act_1 = act[ri]) && check2(act_1, pkgen2(rkH), asg)) with ((aud_2 = aud_1[ri]) && (vb_2 = vb_1[ri]) && (rs_2 = rs_1[ri]) && (gref_2 = gref_1[ri]) && (ctr_2 = ctr_1[ri]) && (nonce_2 = nonce_1[ri]) && (ex_2 = ex_1[ri]) && check2(act_1, pkgen2(rkH), asg)) at 61
+    - Replaced defined condition act[ri] with ex_1[ri], nonce_1[ri], ctr_1[ri], gref_1[ri], rs_1[ri], vb_1[ri], aud_1[ri] in find at 59
+yields
+
+Game 9 is
+     c0() :=
+     rkH <-R keyseed;
+     return(pkgen2(rkH));
+     ((
+       foreach i <= N do
+       cA(aud_1: audience, vb_1: verb_t, rs_1: res_t, gref_1: gref_t, ctr_1: ctr_t, ex_1: exp_t, nonce_1: nonce_t) :=
+       act: message <- mkact(aud_1, vb_1, rs_1, gref_1, ctr_1, nonce_1, ex_1);
+       event Signed(act);
+       return(act, sign2(act, skgen2(rkH)))
+     ) | (
+       foreach i_1 <= N do
+       cV(aud_2: audience, vb_2: verb_t, rs_2: res_t, gref_2: gref_t, ctr_2: ctr_t, nonce_2: nonce_t, ex_2: exp_t, asg: signature) :=
+       act_1: message <- mkact(aud_2, vb_2, rs_2, gref_2, ctr_2, nonce_2, ex_2);
+       find u_2 = ri <= N suchthat defined(ex_1[ri], nonce_1[ri], ctr_1[ri], gref_1[ri], rs_1[ri], vb_1[ri], aud_1[ri]) && (aud_2 = aud_1[ri]) && (vb_2 = vb_1[ri]) && (rs_2 = rs_1[ri]) && (gref_2 = gref_1[ri]) && (ctr_2 = ctr_1[ri]) && (nonce_2 = nonce_1[ri]) && (ex_2 = ex_1[ri]) && check2(act_1, pkgen2(rkH), asg) then
+       find u = u_1 <= N suchthat defined(aud_2[u_1], gref_2[u_1], nonce_2[u_1], seen_1[u_1]) && (aud_2[u_1] = aud_2) && (gref_2[u_1] = gref_2) && (nonce_2[u_1] = nonce_2) then
+         yield
+       else
+         seen_1: audience <- cst_audience;
+         event Accept(act_1);
+         return()
+     ))
+
+
+Proved forall a: message; inj-event(Accept(a)) ==> inj-event(Signed(a)) in game 9
+Proved forall a: message; event(Accept(a)) ==> event(Signed(a)) in game 9
+Adv[Game 1: forall a: message; inj-event(Accept(a)) ==> inj-event(Signed(a))] <= Psign(time_1, N, maxlength(game 5: act)) + Adv[Game 9: forall a: message; inj-event(Accept(a)) ==> inj-event(Signed(a))]
+Adv[Game 9: forall a: message; inj-event(Accept(a)) ==> inj-event(Signed(a))] <= 0
+RESULT Proved forall a: message; inj-event(Accept(a)) ==> inj-event(Signed(a)) up to probability Psign(time_1, N, maxlength(game 5: act))
+Adv[Game 1: forall a: message; event(Accept(a)) ==> event(Signed(a))] <= Psign(time_1, N, maxlength(game 5: act)) + Adv[Game 9: forall a: message; event(Accept(a)) ==> event(Signed(a))]
+Adv[Game 9: forall a: message; event(Accept(a)) ==> event(Signed(a))] <= 0
+RESULT Proved forall a: message; event(Accept(a)) ==> event(Signed(a)) up to probability Psign(time_1, N, maxlength(game 5: act))
+RESULT time_1 = N * time(mkact, maxlength(game 5: aud_1), maxlength(game 5: vb_1), maxlength(game 5: rs_1), maxlength(game 5: gref_1), maxlength(game 5: ctr_1), maxlength(game 5: ex_1)) + N * time(mkact, maxlength(game 5: aud_2), maxlength(game 5: vb_2), maxlength(game 5: rs_2), maxlength(game 5: gref_2), maxlength(game 5: ctr_2), maxlength(game 5: ex_2)) + N^2 * time(= audience, maxlength(game 5: aud_2), maxlength(game 5: aud_2)) + N^2 * time(= gref_t, maxlength(game 5: gref_2), maxlength(game 5: gref_2)) + 2 * N * time(([1,N])) + time + (N - 1) * time(check, maxlength(game 5: act_1), maxlength(game 5: asg))
+All queries proved.

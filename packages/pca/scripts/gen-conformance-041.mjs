@@ -2,7 +2,8 @@
 //
 //   vectors[]  r041-share-*     threshold share signatures validated PER SUITE on the wire (a pure post-quantum share used to
 //                               be refused: `wire` demanded a 64-byte share `sig`). Full PCActns, core verdict, `requires`
-//                               naming the suite when it is not one every native implements.
+//                               naming the first non-ed25519 share suite of every positive (and, for a wire negative, a
+//                               suite that is not one every native implements).
 //   primitives.caveat_eval[]    root caveats are policy (SECURITY fix): caveats placed on the root grant outside the envelope
 //                               are evaluated exactly like the caveats delegation hops append. Each entry
 //                               { name, description, grant, chain, context, expect: { allow, failed } }: a runner evaluates
@@ -17,18 +18,18 @@
 //     node packages/pca/scripts/gen-conformance-041.mjs
 import { createHash } from 'node:crypto';
 import * as pca from '../dist/index.js';
-import { readCore, writeCore } from './conformance-io.mjs';
+import { cloneJson, readCore, writeCore } from './conformance-io.mjs';
 
 const seed = (l) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const mk = (l) => { const sk = seed(l); return { sk, pub: pca.b64u(pca.publicKeyOf(sk)) }; };
 const principal = mk('principal'), agent = mk('agent'), sub = mk('subagent');
 const g = mk('r041/guardian');
-const clone = (x) => JSON.parse(JSON.stringify(x));
+const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
 const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
 const KEYMAP = { chain: 'cap_chain' };
-/** suites every native implements; anything else is `requires: <alg>`. */
+/** suites every native implements (when its runtime has the backend); a wire negative under anything else is `requires: <alg>`. */
 const CROSS = new Set(['ed25519', 'ml-dsa-65', 'hybrid-ed25519-ml-dsa-65']);
 
 // ------------------------------------------------------------------ vectors[]: per-suite share wire
@@ -58,7 +59,12 @@ async function add(name, description, shares, must) {
   else { checks.wire = true; for (const k of CHECKS) checks[k] = c[KEYMAP[k] ?? k] === 'pass'; }
   const ok = must === 'allow' ? r.allow === true : checks.wire === false && r.allow === false;
   if (!ok) throw new Error(`vector r041-${name}: reference ${JSON.stringify(checks)} allow=${r.allow} does not meet intent ${must} (${r.reason ?? ''})`);
-  const algs = shares.map((s) => (s && typeof s.alg === 'string' && pca.isKnownSigAlg(s.alg) ? s.alg : 'ed25519')).filter((a) => !CROSS.has(a));
+  // Suite capability: a positive needs a genuine verdict under every suite its shares use, so it names the first non-ed25519
+  // one (a runner whose runtime lacks it - e.g. Ruby / Python / .NET on an OpenSSL without ML-DSA - asserts the
+  // unsupported_suite refusal instead of comparing). A terminal {wire:false} negative is compared everywhere, so it names
+  // only a suite outside CROSS.
+  const algs = shares.map((s) => (s && typeof s.alg === 'string' && pca.isKnownSigAlg(s.alg) ? s.alg : 'ed25519'))
+    .filter((a) => (must === 'allow' ? a !== 'ed25519' : !CROSS.has(a)));
   vectors.push({
     name: 'r041-share-' + name, ...(algs.length ? { requires: algs[0] } : {}), class: r.allow ? 'positive' : 'negative', description,
     grant: root, plan_nodes: plan, context: { now: NOW, aud: AUD }, pcactn, expect: { allow: r.allow === true, checks },

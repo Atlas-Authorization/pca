@@ -1,0 +1,379 @@
+# INTERIM (not the final gate run). Verbatim log of queue job q261012-155036-lqym (sp5, 2026-10-12), run before
+# #[verifier::rlimit(200)] was added to validate_signer_set. rust_pca_rules: 56 verified, 2 errors (both rlimit in
+# validate_signer_set); rust_pca_rules_controls: 14 verified, 10 errors = all 9 mutated controls rejected, as required.
+[pcaq] job q261012-155036-lqym on sp5 (attempt 1): cores=1 mem=2G wall=1200s prep=none
+[pcaq] workspace: 10543 files (7 fetched to the box cache)
+[pcaq] materialized 10543 files in 0.8s
+[pcaq] prep done in 1s
+[pcaq] running: V=$VERUS_HOME/verus; $V --version 2>&1 | head -3; for f in rust_pca_rules rust_pca_rules_controls; do echo "== $f"; $V --multiple-errors 20 tools/pca-implverif/verus/$f.rs 2>&1 | tail -400; done
+Verus
+  Version: 0.2026.10.04.426d8b0
+  Profile: release
+== rust_pca_rules
+note: while loop has been running for 2 seconds
+      reporting errors as they are discovered (they may not be in source order)
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:461:5
+    |
+461 |     while i < ss.len()
+    |     ^^^^^^^^^^^^^^^^^^
+
+note: while loop finished in 5 seconds
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:461:5
+    |
+461 |     while i < ss.len()
+    |     ^^^^^^^^^^^^^^^^^^
+
+error: while loop: Resource limit (rlimit) exceeded; consider rerunning with --profile for more details
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:461:5
+    |
+461 |     while i < ss.len()
+    |     ^^^^^^^^^^^^^^^^^^
+
+note: function body check has been running for 2 seconds
+      reporting errors as they are discovered (they may not be in source order)
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:450:1
+    |
+450 | pub fn validate_signer_set(ss: &Vec<Entry>) -> (r: Option<Vec<RegRow>>)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: function body check finished in 5 seconds
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:450:1
+    |
+450 | pub fn validate_signer_set(ss: &Vec<Entry>) -> (r: Option<Vec<RegRow>>)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: function body check: Resource limit (rlimit) exceeded; consider rerunning with --profile for more details
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:450:1
+    |
+450 | pub fn validate_signer_set(ss: &Vec<Entry>) -> (r: Option<Vec<RegRow>>)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:415:23
+    |
+415 |         r is None ==> forall|k: int| 0 <= k < reg@.len() ==> reg@[k].role != role,
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:415:62
+    |
+415 |         r is None ==> forall|k: int| 0 <= k < reg@.len() ==> reg@[k].role != role,
+    |                                                              ^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:419:40
+    |
+419 |         invariant 0 <= q <= reg.len(), forall|k: int| 0 <= k < q ==> reg@[k].role != role,
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:419:70
+    |
+419 |         invariant 0 <= q <= reg.len(), forall|k: int| 0 <= k < q ==> reg@[k].role != role,
+    |                                                                      ^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:435:40
+    |
+435 |         invariant 0 <= q <= reg.len(), forall|k: int| 0 <= k < q ==> reg@[k].pk != pk,
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:435:70
+    |
+435 |         invariant 0 <= q <= reg.len(), forall|k: int| 0 <= k < q ==> reg@[k].pk != pk,
+    |                                                                      ^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:457:13
+    |
+457 |             exists|k: int| 0 <= k < ss@.len() && #[trigger] r->Some_0@[j] == row_of(ss@[k]),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:457:85
+    |
+457 |             exists|k: int| 0 <= k < ss@.len() && #[trigger] r->Some_0@[j] == row_of(ss@[k]),
+    |                                                                                     ^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:480:33
+    |
+480 |                         let k = choose|k: int| 0 <= k < i && #[trigger] reg@[q as int] == row_of(ss@[k]);
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:480:98
+    |
+480 |                         let k = choose|k: int| 0 <= k < i && #[trigger] reg@[q as int] == row_of(ss@[k]);
+    |                                                                                                  ^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:492:33
+    |
+492 |                         let k = choose|k: int| 0 <= k < i && #[trigger] reg@[j] == row_of(ss@[k]);
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:492:91
+    |
+492 |                         let k = choose|k: int| 0 <= k < i && #[trigger] reg@[j] == row_of(ss@[k]);
+    |                                                                                           ^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:491:71
+    |
+491 | ...   assert forall|j: int| 0 <= j < reg@.len() implies exists|k: int| 0 <= k < i + 1 && #[trigger] reg@[j] == row_of(ss@[k]) by {
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:491:133
+    |
+491 | ...   assert forall|j: int| 0 <= j < reg@.len() implies exists|k: int| 0 <= k < i + 1 && #[trigger] reg@[j] == row_of(ss@[k]) by {
+    |                                                                                                                       ^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:500:33
+    |
+500 |                         let k = choose|k: int| 0 <= k < i && #[trigger] reg@[j] == row_of(ss@[k]);
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:500:91
+    |
+500 |                         let k = choose|k: int| 0 <= k < i && #[trigger] reg@[j] == row_of(ss@[k]);
+    |                                                                                           ^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:541:37
+    |
+541 | ...                   let k = choose|k: int| 0 <= k < i && #[trigger] old_reg[j] == row_of(ss@[k]);
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:541:98
+    |
+541 | ...                   let k = choose|k: int| 0 <= k < i && #[trigger] old_reg[j] == row_of(ss@[k]);
+    |                                                                                            ^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:536:71
+    |
+536 | ...   assert forall|j: int| 0 <= j < reg@.len() implies exists|k: int| 0 <= k < i + 1 && #[trigger] reg@[j] == row_of(ss@[k]) by {
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:536:133
+    |
+536 | ...   assert forall|j: int| 0 <= j < reg@.len() implies exists|k: int| 0 <= k < i + 1 && #[trigger] reg@[j] == row_of(ss@[k]) by {
+    |                                                                                                                       ^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:468:52
+    |
+468 |             forall|j: int| 0 <= j < reg@.len() ==> exists|k: int| 0 <= k < i && #[trigger] reg@[j] == row_of(ss@[k]),
+    |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:468:110
+    |
+468 |             forall|j: int| 0 <= j < reg@.len() ==> exists|k: int| 0 <= k < i && #[trigger] reg@[j] == row_of(ss@[k]),
+    |                                                                                                              ^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:636:17
+    |
+636 |         let k = choose|k: int| 0 <= k < ss@.len() && #[trigger] reg@[q as int] == row_of(ss@[k]);
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:636:90
+    |
+636 |         let k = choose|k: int| 0 <= k < ss@.len() && #[trigger] reg@[q as int] == row_of(ss@[k]);
+    |                                                                                          ^^^^^^
+
+note: Verus printed one or more automatically chosen quantifier triggers
+      because it had low confidence in the chosen triggers.
+      To suppress these messages, do one of the following:
+        (1) manually annotate a single desired trigger using #[trigger]
+            (example: forall|i: int, j: int| f(i) && #[trigger] g(i) && #[trigger] h(j)),
+        (2) manually annotate multiple desired triggers using #![trigger ...]
+            (example: forall|i: int| #![trigger f(i)] #![trigger g(i)] f(i) && g(i)),
+        (3) accept the automatically chosen trigger using #![auto]
+            (example: forall|i: int, j: int| #![auto] f(i) && g(i) && h(j))
+        (4) use the --triggers-mode silent command-line option to suppress all printing of triggers.
+      (Note: triggers are used by the underlying SMT theorem prover to instantiate quantifiers;
+      the theorem prover instantiates a quantifier whenever some expression matches the
+      pattern specified by one of the quantifier's triggers.)
+   --> tools/pca-implverif/verus/rust_pca_rules.rs:636:17
+    |
+636 |         let k = choose|k: int| 0 <= k < ss@.len() && #[trigger] reg@[q as int] == row_of(ss@[k]);
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 56 verified, 2 errors
+error: aborting due to 2 previous errors
+
+== rust_pca_rules_controls
+error: postcondition not satisfied
+  --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:37:9
+   |
+37 |         (r == 0) <==> (1 <= len && len <= 16),
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+41 |     if len == 0 { 1 } else if len > 17 { 2 } else { 0 }
+   |     --------------------------------------------------- at the end of the function body
+
+error: postcondition not satisfied
+  --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:39:9
+   |
+39 |         len > 16 ==> r == 2,
+   |         ^^^^^^^^^^^^^^^^^^^ failed this postcondition
+40 | {
+41 |     if len == 0 { 1 } else if len > 17 { 2 } else { 0 }
+   |     --------------------------------------------------- at the end of the function body
+
+error: postcondition not satisfied
+  --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:47:9
+   |
+47 |           r is Some <==> (t is Some && 1 <= t->Some_0 && t->Some_0 <= 3),
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+50 | /     match t {
+51 | |         Some(v) => { if 0 <= v && v <= 3 { Some(v as u8) } else { None } }
+52 | |         None => None,
+53 | |     }
+   | |_____- at the end of the function body
+
+error: postcondition not satisfied
+  --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:59:9
+   |
+59 |         r <==> (!has_policy || allowed@.contains(alg_name(*alg))),
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+63 |         return true;
+   |         ----------- at this exit
+
+error: postcondition not satisfied
+  --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:60:9
+   |
+60 |         has_policy && allowed@.len() == 0 ==> !r,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+63 |         return true;
+   |         ----------- at this exit
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:84:13
+    |
+ 84 |       ensures r <==> (needs_pq(*alg) ==> (pq_pk is Some && committed is Some && commit(pq_pk->Some_0) == committed->Some_0)),
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+ 92 | /     match su {
+ 93 | |         Some(su) => {
+ 94 | |             if su != SUITE_ED {
+ 95 | |                 match pq_pk {
+...   |
+103 | |         None => true,
+104 | |     }
+    | |_____- at the end of the function body
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:112:9
+    |
+112 | /         (r is Some && !has_trusted(trusted)) ==> (
+113 | |             artifact_pk == r && r->Some_0 != EMPTY_STR
+114 | |             && (pin is Some ==> pin == r)
+115 | |             && (pin is None ==> holder_pq == Some(commit(r->Some_0)))),
+    | |______________________________________________________________________^ failed this postcondition
+...
+131 | /     match holder_pq {
+132 | |         Some(c) => { if pk_commit == c { Some(pk) } else { None } }
+133 | |         None => None,
+134 | |     }
+    | |_____- at the end of the function body
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:116:9
+    |
+116 |           (!has_trusted(trusted) && pin is Some && pin != artifact_pk) ==> r is None,
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+131 | /     match holder_pq {
+132 | |         Some(c) => { if pk_commit == c { Some(pk) } else { None } }
+133 | |         None => None,
+134 | |     }
+    | |_____- at the end of the function body
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:140:9
+    |
+140 |         r <==> (aud is Some && aud->Some_0@ == audience@ && 0 < audience@.len() && audience@.len() <= 256),
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+152 |                 if a[i] != audience[i] { return false; }
+    |                                          ------------ at this exit
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:140:9
+    |
+140 |           r <==> (aud is Some && aud->Some_0@ == audience@ && 0 < audience@.len() && audience@.len() <= 256),
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+144 | /     match aud {
+145 | |         Some(a) => {
+146 | |             if a.len() != audience.len() { return false; }
+147 | |             let mut i: usize = 0;
+...   |
+158 | |         None => false,
+159 | |     }
+    | |_____- at the end of the function body
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:142:9
+    |
+142 |           audience@.len() == 0 ==> !r,
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+143 |   {
+144 | /     match aud {
+145 | |         Some(a) => {
+146 | |             if a.len() != audience.len() { return false; }
+147 | |             let mut i: usize = 0;
+...   |
+158 | |         None => false,
+159 | |     }
+    | |_____- at the end of the function body
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:167:9
+    |
+167 | /         r.1 is Some ==> (r.1->Some_0 < res@.len() && !res@[r.1->Some_0 as int]
+168 | |             && forall|k: int| 0 <= k < r.1->Some_0 ==> res@[k]),
+    | |_______________________________________________________________^ failed this postcondition
+...
+187 |       (allow, reason)
+    |       --------------- at the end of the function body
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:197:13
+    |
+197 |     ensures all_sat(r@) ==> forall|j: int| 0 <= j < cs@.len() && !cs@[j].env ==> (#[trigger] cs@[j]).sat,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+208 |     out
+    |     --- at the end of the function body
+
+error: postcondition not satisfied
+   --> tools/pca-implverif/verus/rust_pca_rules_controls.rs:216:13
+    |
+216 |       ensures r is Some ==> forall|a: int, b: int| #![trigger r->Some_0@[a], r->Some_0@[b]]
+    |  _____________^
+217 | |         0 <= a < r->Some_0@.len() && 0 <= b < r->Some_0@.len() && a != b ==> r->Some_0@[a].pk != r->Some_0@[b].pk,
+    | |_________________________________________________________________________________________________________________^ failed this postcondition
+...
+241 |       Some(reg)
+    |       --------- at the end of the function body
+
+verification results:: 14 verified, 10 errors
+error: aborting due to 14 previous errors
+
+[pcaq] exit 0

@@ -121,6 +121,27 @@ describe('WASM objects are released on every path', () => {
   }, TIMEOUT);
 });
 
+describe('event loop', () => {
+  it('every gate operation yields a macrotask before its synchronous WASM work (no starvation across chained calls)', async () => {
+    // A timer queued before the call fires before the call resolves only if the call yields to the event loop
+    // (SEAL is already loaded, so without the yield each call would complete on microtasks alone).
+    for (const op of [
+      () => encryptRiskInputs(keys.publicKey, inputs),
+      () => evalRiskGate(evalKeys, enc, policy),
+      () => decryptVerdict(keys.secretKey, gate.encRiskRaw, gate.encSlack, policy),
+    ]) {
+      let fired = false;
+      setTimeout(() => {
+        fired = true;
+      }, 0);
+      const p = op();
+      expect(fired).toBe(false);
+      await p;
+      expect(fired).toBe(true);
+    }
+  }, TIMEOUT);
+});
+
 describe('validation messages', () => {
   it('quantize / policy builder', () => {
     expect(() => quantizeRiskInputs({} as any, 0)).toThrow(new Error('scale must be a positive integer'));
@@ -156,7 +177,7 @@ describe('validation messages', () => {
     await rejects(evalRiskGate(evalKeys, 'bad', policy), 'encInputs: not a serialized SEAL object (bad encoding)');
     await rejects(decryptVerdict(keys.secretKey, 'bad', gate.encSlack, policy), 'encRiskRaw: not a serialized SEAL object (bad encoding)');
     await rejects(decryptVerdict(keys.secretKey, gate.encRiskRaw, 'bad', policy), 'encSlack: not a serialized SEAL object (bad encoding)');
-  });
+  }, TIMEOUT);
 });
 
 describe('SEAL blob envelope', () => {

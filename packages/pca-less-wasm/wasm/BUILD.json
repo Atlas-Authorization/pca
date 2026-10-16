@@ -1,0 +1,16 @@
+{
+ "artifact": "less_cat1.wasm",
+ "wasm_sha256": "473d20c2713ef30ab3b4cb3ac2b59c51f801501fa49ad046b999cb53afa77957",
+ "wasm_bytes": 96720,
+ "sources": "sdks/pca-less-c (Atlas-Authorization/LESS atlas-verifier-hardening 0b8b9a07ce029bd9af12d701f5093c5ca0d9418b) + packages/pca-less-wasm/scripts/less_wasm_glue.c",
+ "sources_sha256": "2304832390bfb2688e14471a2b7089465f48473207deb2279a089288c7ba9b8e",
+ "toolchain": "wasi-sdk 25.0 (clang version 19.1.5-wasi-sdk (https://github.com/llvm/llvm-project ab4b5a2db582958af1ee308a790cfdb42bd24720))",
+ "toolchain_tarballs_sha256": {
+  "wasi-sdk-25.0-x86_64-linux.tar.gz": "52640dde13599bf127a95499e61d6d640256119456d1af8897ab6725bcf3d89c",
+  "wasi-sdk-25.0-arm64-macos.tar.gz": "e1e529ea226b1db0b430327809deae9246b580fa3cae32d31c82dfe770233587"
+ },
+ "reproduced_on": [
+  "Linux-x86_64 (farm job q261012-203714-gvc8, 2026-10-12)",
+  "Darwin-arm64 (2026-10-12)"
+ ]
+}

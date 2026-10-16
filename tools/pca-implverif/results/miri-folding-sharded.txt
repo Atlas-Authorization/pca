@@ -17,9 +17,9 @@ decode_hostile_prefixes_p1    q261011-171409-npqu   ok      1706 s
 decode_boundary_bytes_p0      q261011-171409-5r4x   ok      3903 s
 decode_boundary_bytes_p1      q261011-171410-pv1t   ok      3261 s
 decode_boundary_bytes_p4      q261011-171413-rgz1   ok      3261 s
-decode_boundary_bytes_p2      q261011-171410-4y96   STILL RUNNING at write time (started 18:03:59 UTC)
-decode_boundary_bytes_p3      q261011-171411-q1rq   STILL RUNNING at write time (started 18:04:04 UTC)
-decode_boundary_bytes_p5      q261011-171414-ahbz   STILL RUNNING at write time (started 18:08:15 UTC)
-decode_boundary_bytes_p6      q261011-171414-lisy   STILL RUNNING at write time (started 18:11:25 UTC)
-decode_boundary_bytes_p7      q261011-171415-0kv7   STILL RUNNING at write time (started 18:11:27 UTC)
-12 of 17 pass, 0 fail, 0 UB reported; 5 boundary-byte parts unfinished (fetch with: cloud-box tooling/q logs <job>).
+decode_boundary_bytes_p2      q261011-171410-4y96   ok      3368 s
+decode_boundary_bytes_p3      q261011-171411-q1rq   ok      2727 s
+decode_boundary_bytes_p5      q261011-171414-ahbz   ok      3903 s
+decode_boundary_bytes_p6      q261011-171414-lisy   ok      3252 s
+decode_boundary_bytes_p7      q261011-171415-0kv7   ok      1569 s
+17 of 17 pass, 0 fail, no undefined behaviour reported.

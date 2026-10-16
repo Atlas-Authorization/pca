@@ -10,6 +10,7 @@ import {
   mintGrant,
   DEFAULT_RISK_POLICY,
   pcactnDigest,
+  paramsDigest,
   signShare,
   thresholdMessage,
   compactJwsAliases,
@@ -48,8 +49,11 @@ const { grant } = mintGrant({
 });
 const chain: CapabilityChain = [grant];
 
+/** The params a paying action commits to: a Payment Mandate built from it must state exactly this amount / currency. */
+const PAY = { amount: 50, currency: 'USD' };
 const plan: PlanNode[] = [
   { id: 'buy-1', verb: 'purchase', resource: 'merchant/acme/cart/42', reversibility_class: 'reversible' },
+  { id: 'pay-1', verb: 'purchase', resource: 'merchant/acme/cart/42', params_digest: paramsDigest(PAY), reversibility_class: 'reversible' },
 ];
 
 /** The resource server's authority + view for the full verifier: the stored grant, revocation, its plan, a budget, low risk. */
@@ -72,6 +76,10 @@ function makePcActn(overrides: Partial<Parameters<typeof buildPCActn>[0]> = {}):
     ...overrides,
   });
 }
+
+/** A PCActn for the paying plan node, and the verifier view that opens its params. */
+const payPcActn = (overrides: Partial<Parameters<typeof buildPCActn>[0]> = {}): PCActn => makePcActn({ nodeId: 'pay-1', params: PAY, ...overrides });
+const PAYFULL = { ...FULL, context: { ...FULL.context, params: PAY } };
 
 function bareTask(): A2ATask {
   return { id: 'task-1', status: { state: 'submitted' } };
@@ -307,25 +315,25 @@ describe('AP2 payment profile', () => {
   });
 
   it('verifies a mandate bound to a valid PCActn', async () => {
-    const pcActn = makePcActn();
+    const pcActn = payPcActn();
     const mandate = a2aPaymentMandateFromPca(pcActn, { amount: { currency: 'USD', value: 50 }, paymentMethod: { type: 'card' } });
-    const res = await verifyA2APaymentMandate(mandate, pcActn, { ...FULL, aud: AUD, now: NOW });
+    const res = await verifyA2APaymentMandate(mandate, pcActn, { ...PAYFULL, aud: AUD, now: NOW });
     expect(res.ok).toBe(true);
   });
 
   it('rejects a mandate whose binding does not match the supplied PCActn', async () => {
-    const pcActn = makePcActn();
+    const pcActn = payPcActn();
     const mandate = a2aPaymentMandateFromPca(pcActn, { amount: { currency: 'USD', value: 50 }, paymentMethod: { type: 'card' } });
-    const otherPcActn = makePcActn({ counter: 2 }); // a different proof ⇒ different digest
-    const res = await verifyA2APaymentMandate(mandate, otherPcActn, { ...FULL, aud: AUD, now: NOW });
+    const otherPcActn = payPcActn({ counter: 2 }); // a different proof ⇒ different digest
+    const res = await verifyA2APaymentMandate(mandate, otherPcActn, { ...PAYFULL, aud: AUD, now: NOW });
     expect(res.ok).toBe(false);
     expect(res.reason).toMatch(/pcactn_digest mismatch/);
   });
 
   it('rejects a mandate when the bound PCActn itself fails to verify (wrong audience)', async () => {
-    const pcActn = makePcActn();
+    const pcActn = payPcActn();
     const mandate = a2aPaymentMandateFromPca(pcActn, { amount: { currency: 'USD', value: 50 }, paymentMethod: { type: 'card' } });
-    const res = await verifyA2APaymentMandate(mandate, pcActn, { ...FULL, aud: 'wrong-instance', now: NOW });
+    const res = await verifyA2APaymentMandate(mandate, pcActn, { ...PAYFULL, aud: 'wrong-instance', now: NOW });
     expect(res.ok).toBe(false);
     expect(res.result?.checks.audience).toBe('fail');
   });

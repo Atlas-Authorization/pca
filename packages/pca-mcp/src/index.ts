@@ -91,3 +91,6 @@ export function guardToolResult(pca: PcaCall, result: McpToolResult): McpToolRes
 }
 
 export { bridgeToolCall, pcaHeaders, type PcaCall };
+
+// Intent Layer v2: MCP tools -> the site's signed action schema, and the closed-world check of a tool call.
+export * from './schema';

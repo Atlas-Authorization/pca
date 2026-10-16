@@ -197,4 +197,24 @@ d('LESS wasm: negative / robustness', () => {
     expect(Buffer.from(again).equals(Buffer.from(f.sig))).toBe(false);
     expect(verify(f.publicKey, f.msg, again)).toBe(true);
   }, 300_000);
+
+  it('refuses a seed-padded signature (extra 16-byte seed slot, seed count raised): malleation', () => {
+    const leaves = f.sig[f.sig.length - 1]!;
+    expect(leaves).toBeLessThan(MAX_PUBLISHED_SEEDS);
+    for (const fill of [0x00, 0xab]) {
+      const m = new Uint8Array(f.sig.length + sizes().seed);
+      m.set(f.sig.subarray(0, f.sig.length - 1), 0);
+      m.fill(fill, f.sig.length - 1, m.length - 1);
+      m[m.length - 1] = leaves + 1;
+      expect(verify(f.publicKey, f.msg, m)).toBe(false);
+      expect(open(f.publicKey, Uint8Array.from([...f.msg, ...m])).ok).toBe(false);
+    }
+  });
+
+  it('the canonical seed count check never refuses an honest signature', () => {
+    for (let i = 0; i < 8; i++) {
+      const m = enc.encode(`canonical ${i}`);
+      expect(verify(f.publicKey, m, signDetached(f.secretKey, m))).toBe(true);
+    }
+  }, 300_000);
 });

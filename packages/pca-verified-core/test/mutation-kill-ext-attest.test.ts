@@ -2,7 +2,7 @@
 // Mutation-kill tests for src/ext-attest.ts. Deterministic cases, each checked against the production implementation
 // (packages/pca/src/attestation.ts) AND against literal expected values so that a drift in both cannot hide.
 import { describe, expect, it } from 'vitest';
-import { createMultiRootVerifier, matchAgentBinding, memoryNonceStore, requiresAttestation } from '../../pca/src/attestation';
+import { createMultiRootVerifier, matchAgentBinding, memoryNonceStore, requiresAttestation } from './support/legacy/attestation';
 import {
   VerifiedMemoryNonceStore,
   allowlistGate,
@@ -42,11 +42,6 @@ describe('matchAgentBindingVerified', () => {
     same(id({ runtime_measurement: ' ' }), { min_measurement: { svn: 0 } }, 'runtime_measurement   is not an integer SVN (required min svn 0)');
     same(id({ runtime_measurement: '7.5' }), { min_measurement: { svn: 1 } }, 'runtime_measurement 7.5 is not an integer SVN (required min svn 1)');
     same(id({ runtime_measurement: 'anything' }), { min_measurement: '' }, null);
-    same(id({ runtime_measurement: 'anything' }), { min_measurement: { svn: Number.NaN } }, null);
-    same(id({ runtime_measurement: 'anything' }), { min_measurement: { svn: Number.POSITIVE_INFINITY } }, null);
-    same(id({ runtime_measurement: 'anything' }), { min_measurement: {} }, null);
-    same(id({ runtime_measurement: 'anything' }), { min_measurement: { svn: '5' } }, null);
-    same(id({ runtime_measurement: 'anything' }), { min_measurement: null }, null);
     same(id({ operator: 'anything' }), { operator: '' }, null);
     same(id({ operator: 'anything' }), { operator: 5 }, null);
     same(id({ weights_measured: false }), { require_measured_weights: false }, null);
@@ -83,14 +78,58 @@ describe('matchAgentBindingVerified', () => {
     }
     same(bad, cur, null);
   });
-  it('a throwing runtime type surfaces the production TypeError only when production would reach that stage', () => {
+  it('a non-string runtime type never throws: it is a non-integer SVN (the oracle threw a TypeError there)', () => {
     const idBad = id({ runtime_measurement: undefined });
-    const run = (f: any, i: any, b: any) => { try { return f(i, b); } catch (e) { return `THROW:${(e as Error).name}`; } };
-    for (const b of [{ min_measurement: { svn: 3 } }, { model_allowlist: ['zz'], min_measurement: { svn: 3 } }, { min_measurement: 'x' }, {}]) {
-      expect(run(matchAgentBindingVerified, idBad, b)).toBe(run(matchAgentBinding, idBad, b));
+    expect(matchAgentBindingVerified(idBad, { min_measurement: { svn: 3 } })).toBe('runtime_measurement undefined is not an integer SVN (required min svn 3)');
+    expect(() => matchAgentBinding(idBad, { min_measurement: { svn: 3 } })).toThrow(TypeError);
+    expect(matchAgentBindingVerified(id({ model_id: 'x', runtime_measurement: undefined }), { model_allowlist: ['m'], min_measurement: { svn: 3 } })).toBe('model_id x not in model_allowlist');
+    expect(matchAgentBindingVerified(idBad, { min_measurement: 'x' })).toBe('runtime_measurement does not match required min_measurement');
+    expect(matchAgentBindingVerified(idBad, {})).toBeNull();
+  });
+});
+
+// 0.4.2 (JS-semantics audit): min_measurement / SVN are STRICT. The hand-written code (frozen oracle) parsed the runtime SVN with Number()
+// ("0x10", "1e1", " 8 " counted) and silently ignored a malformed min_measurement ({svn: "5"} enforced nothing: fail OPEN). The proved
+// MatchBinding has a MinBad case that fails closed; these cases pin the new behaviour and that the oracle really differed.
+describe('matchAgentBindingVerified: strict SVN (fail closed)', () => {
+  const BAD = 'min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)';
+  const notInt = (rt: unknown, svn: number) => `runtime_measurement ${rt} is not an integer SVN (required min svn ${svn})`;
+  it('a malformed min_measurement fails closed (the hand-written oracle accepted these)', () => {
+    const malformed: unknown[] = [
+      { svn: '5' }, { svn: Number.NaN }, { svn: Number.POSITIVE_INFINITY }, { svn: -1 }, { svn: 1.5 }, { svn: -0 }, { svn: 2 ** 53 },
+      {}, { svn: 5, extra: 1 }, { svn: null }, null, 5, true, ['x'], Object.assign(Object.create({ inherited: 1 }), { svn: 5 }),
+    ];
+    for (const mm of malformed) {
+      expect(matchAgentBindingVerified(id({ runtime_measurement: '9' }), { min_measurement: mm } as any), JSON.stringify(mm)).toBe(BAD);
+      expect(requiresAttestationVerified({ min_measurement: mm } as any)).toBe(true);
     }
-    expect(run(matchAgentBindingVerified, idBad, { min_measurement: { svn: 3 } })).toBe('THROW:TypeError');
-    expect(run(matchAgentBindingVerified, id({ model_id: 'x', runtime_measurement: undefined }), { model_allowlist: ['m'], min_measurement: { svn: 3 } })).toBe('model_id x not in model_allowlist');
+    // what the oracle used to do (enforced nothing), kept to prove the change is real
+    expect(matchAgentBinding(id({ runtime_measurement: 'anything' }), { min_measurement: { svn: '5' } } as any)).toBeNull();
+    expect(requiresAttestation({ min_measurement: { svn: '5' } } as any)).toBe(false);
+  });
+  it('the model allowlist still decides first; well-formed shapes still work', () => {
+    expect(matchAgentBindingVerified(id({ model_id: 'x' }), { model_allowlist: ['m'], min_measurement: { svn: '5' } } as any)).toBe('model_id x not in model_allowlist');
+    expect(matchAgentBindingVerified(id({ runtime_measurement: '5' }), { min_measurement: Object.assign(Object.create(null), { svn: 5 }) } as any)).toBeNull();
+    expect(matchAgentBindingVerified(id({ runtime_measurement: '0' }), { min_measurement: { svn: 0 } })).toBeNull();
+    expect(matchAgentBindingVerified(id({ runtime_measurement: '9007199254740991' }), { min_measurement: { svn: 9007199254740991 } })).toBeNull();
+    expect(matchAgentBindingVerified(id({ runtime_measurement: 'anything' }), { min_measurement: '' })).toBeNull();
+    expect(matchAgentBindingVerified(id({ runtime_measurement: 'anything' }), { min_measurement: undefined })).toBeNull();
+    expect(requiresAttestationVerified({ min_measurement: '' })).toBe(false);
+    expect(requiresAttestationVerified({ min_measurement: undefined })).toBe(false);
+  });
+  it('the runtime SVN must be canonical decimal text of a safe integer (Number() spellings are refused)', () => {
+    for (const rt of ['0x10', '1e1', ' 8 ', '8 ', ' 8', '08', '+8', '-1', '7.0', '1_0', '９', '9007199254740993', '', ' ']) {
+      expect(matchAgentBindingVerified(id({ runtime_measurement: rt }), { min_measurement: { svn: 1 } }), rt).toBe(notInt(rt, 1));
+    }
+    for (const rt of [undefined, 8, null, ['8']]) {
+      expect(matchAgentBindingVerified(id({ runtime_measurement: rt }), { min_measurement: { svn: 1 } }), String(rt)).toBe(notInt(rt, 1));
+    }
+    // the oracle accepted these as SVN 16 / 10 / 8 (or threw on a non-string)
+    expect(matchAgentBinding(id({ runtime_measurement: '0x10' }), { min_measurement: { svn: 1 } })).toBeNull();
+    expect(matchAgentBinding(id({ runtime_measurement: '1e1' }), { min_measurement: { svn: 1 } })).toBeNull();
+    expect(matchAgentBinding(id({ runtime_measurement: ' 8 ' }), { min_measurement: { svn: 1 } })).toBeNull();
+    expect(matchAgentBindingVerified(id({ runtime_measurement: '10' }), { min_measurement: { svn: 11 } })).toBe('runtime_measurement svn 10 is below required min svn 11');
+    expect(matchAgentBindingVerified(id({ runtime_measurement: '11' }), { min_measurement: { svn: 11 } })).toBeNull();
   });
 });
 
@@ -99,7 +138,6 @@ describe('requiresAttestationVerified', () => {
     [undefined, false], [{}, false], [null, false],
     [{ model_allowlist: [] }, false], [{ model_allowlist: ['a'] }, true], [{ model_allowlist: 'a' }, false],
     [{ min_measurement: '' }, false], [{ min_measurement: 'a' }, true], [{ min_measurement: { svn: 1 } }, true], [{ min_measurement: { svn: 0 } }, true],
-    [{ min_measurement: { svn: Number.NaN } }, false], [{ min_measurement: { svn: Number.POSITIVE_INFINITY } }, false], [{ min_measurement: { svn: '1' } }, false], [{ min_measurement: {} }, false], [{ min_measurement: null }, false], [{ min_measurement: 5 }, false],
     [{ operator: '' }, false], [{ operator: 'o' }, true], [{ operator: 5 }, false],
     [{ weights_allowlist: [] }, false], [{ weights_allowlist: ['w'] }, true],
     [{ system_prompt_allowlist: [] }, false], [{ system_prompt_allowlist: ['s'] }, true],
@@ -366,11 +404,14 @@ describe('createMultiRootVerifierVerified', () => {
 });
 
 describe('typeof guards on structured min_measurement / pinned digests', () => {
-  it('a function carrying an svn property is not an { svn } bound', () => {
+  it('a function carrying an svn property is not an { svn } bound: it is MinBad (fail closed, 0.4.2 strict SVN)', () => {
     const fn: any = Object.assign(() => 0, { svn: 5 });
-    expect(matchAgentBindingVerified(id({ runtime_measurement: '3' }), { min_measurement: fn } as any)).toBe(matchAgentBinding(id({ runtime_measurement: '3' }), { min_measurement: fn } as any));
-    expect(matchAgentBindingVerified(id({ runtime_measurement: '3' }), { min_measurement: fn } as any)).toBeNull();
-    expect(requiresAttestationVerified({ min_measurement: fn } as any)).toBe(false);
+    expect(matchAgentBindingVerified(id({ runtime_measurement: '3' }), { min_measurement: fn } as any)).toBe(
+      'min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)',
+    );
+    expect(requiresAttestationVerified({ min_measurement: fn } as any)).toBe(true);
+    // the frozen oracle ignored it (fail open), kept to prove the change is real
+    expect(matchAgentBinding(id({ runtime_measurement: '3' }), { min_measurement: fn } as any)).toBeNull();
     expect(requiresAttestation({ min_measurement: fn } as any)).toBe(false);
   });
   it('an allowlist containing undefined does not admit an identity that omits the digest', () => {
@@ -429,10 +470,11 @@ describe('ext-attest glue: read order, integer guard, nonce type, rethrown messa
     now++;
     expect(s.consume('5')).toBe(false);
   });
-  it('a min_measurement evaluation that throws rethrows the production error unchanged (same message)', () => {
+  it('a non-string runtime SVN no longer throws: it is refused as not an integer SVN (0.4.2 strict SVN)', () => {
     const idBad = id({ runtime_measurement: undefined });
-    const msg = (f: any) => { try { f(idBad, { min_measurement: { svn: 3 } }); return 'no-throw'; } catch (e) { return `${(e as Error).name}: ${(e as Error).message}`; } };
-    expect(msg(matchAgentBindingVerified)).toBe(msg(matchAgentBinding));
-    expect(msg(matchAgentBindingVerified)).toMatch(/^TypeError: .*trim/);
+    const msg = (f: any) => { try { return f(idBad, { min_measurement: { svn: 3 } }) ?? 'null'; } catch (e) { return `${(e as Error).name}: ${(e as Error).message}`; } };
+    expect(msg(matchAgentBindingVerified)).toBe('runtime_measurement undefined is not an integer SVN (required min svn 3)');
+    // the frozen oracle threw a TypeError (.trim on undefined), kept to prove the change is real
+    expect(msg(matchAgentBinding)).toMatch(/^TypeError: .*trim/);
   });
 });

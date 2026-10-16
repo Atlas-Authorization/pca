@@ -2703,6 +2703,2738 @@ let Json = (function() {
   }
   return $module;
 })(); // end of module Json
+let Fast = (function() {
+  let $module = {};
+
+  $module.__default = class __default {
+    constructor () {
+      this._tname = "Fast._default";
+    }
+    _parentTraits() {
+      return [];
+    }
+    static SkipWs(t, i) {
+      let j = 0;
+      j = i;
+      let _0_n;
+      _0_n = (t).length;
+      while (((j) < (_0_n)) && ((((((t)[j]) === (32)) || (((t)[j]) === (9))) || (((t)[j]) === (10))) || (((t)[j]) === (13)))) {
+        j = (j) + (1);
+      }
+      return j;
+    }
+    static Utf8LenN(t) {
+      let r = 0;
+      let _0_i;
+      _0_i = 0;
+      let _1_n;
+      _1_n = (t).length;
+      r = 0;
+      while ((_0_i) < (_1_n)) {
+        let _2_c;
+        _2_c = (t)[_0_i];
+        if (((((55296) <= (_2_c)) && ((_2_c) <= (56319))) && (((_0_i) + (1)) < (_1_n))) && (((56320) <= ((t)[(_0_i) + (1)])) && (((t)[(_0_i) + (1)]) <= (57343)))) {
+          r = (r) + (4);
+          _0_i = (_0_i) + (2);
+        } else {
+          r = (r) + ((((_2_c) < (128)) ? (1) : ((((_2_c) < (2048)) ? (2) : (3)))));
+          _0_i = (_0_i) + (1);
+        }
+      }
+      return r;
+    }
+    static ScanDigitsN(t, i) {
+      let j = 0;
+      j = i;
+      let _0_n;
+      _0_n = (t).length;
+      while (((j) < (_0_n)) && (((48) <= ((t)[j])) && (((t)[j]) <= (57)))) {
+        j = (j) + (1);
+      }
+      return j;
+    }
+    static NumM(t, j) {
+      let ok = false;
+      let p = 0;
+      let _0_n;
+      _0_n = (t).length;
+      let _1_neg;
+      _1_neg = ((t)[j]) === (45);
+      let _2_k;
+      if (_1_neg) {
+        _2_k = (j) + (1);
+      } else {
+        _2_k = j;
+      }
+      let _3_e = 0;
+      if (((_2_k) < (_0_n)) && (((t)[_2_k]) === (48))) {
+        _3_e = (_2_k) + (1);
+      } else if (((_2_k) < (_0_n)) && (((49) <= ((t)[_2_k])) && (((t)[_2_k]) <= (57)))) {
+        let _out0;
+        _out0 = Fast.__default.ScanDigitsN(t, (_2_k) + (1));
+        _3_e = _out0;
+      } else {
+        let _rhs0 = false;
+        let _rhs1 = 0;
+        ok = _rhs0;
+        p = _rhs1;
+        return [ok, p];
+      }
+      let _4_hasFrac;
+      _4_hasFrac = ((((_3_e) + (1)) < (_0_n)) && (((t)[_3_e]) === (46))) && (((48) <= ((t)[(_3_e) + (1)])) && (((t)[(_3_e) + (1)]) <= (57)));
+      let _5_L;
+      _5_L = _3_e;
+      if (_4_hasFrac) {
+        let _out1;
+        _out1 = Fast.__default.ScanDigitsN(t, (_3_e) + (1));
+        _5_L = _out1;
+      }
+      let _pat_let_tv0 = _0_n;
+      let _pat_let_tv1 = t;
+      let _pat_let_tv2 = t;
+      let _6_expm;
+      _6_expm = (((_5_L) < (_0_n)) && ((((t)[_5_L]) === (101)) || (((t)[_5_L]) === (69)))) && (function (_pat_let1_0) {
+        return function (_7_m) {
+          return ((_7_m) < (_pat_let_tv0)) && (((48) <= ((_pat_let_tv1)[_7_m])) && (((_pat_let_tv2)[_7_m]) <= (57)));
+        }(_pat_let1_0);
+      }((((((_5_L) + (1)) < (_0_n)) && ((((t)[(_5_L) + (1)]) === (43)) || (((t)[(_5_L) + (1)]) === (45)))) ? ((_5_L) + (2)) : ((_5_L) + (1)))));
+      if (_6_expm) {
+        let _rhs2 = false;
+        let _rhs3 = 0;
+        ok = _rhs2;
+        p = _rhs3;
+        return [ok, p];
+      }
+      let _8_lead0;
+      _8_lead0 = ((t)[_2_k]) === (48);
+      if (_4_hasFrac) {
+        let _9_lastNz;
+        _9_lastNz = ((t)[(_5_L) - (1)]) !== (48);
+        if (!(_9_lastNz)) {
+          let _rhs4 = false;
+          let _rhs5 = 0;
+          ok = _rhs4;
+          p = _rhs5;
+          return [ok, p];
+        }
+        if (!(_8_lead0)) {
+          let _10_sig;
+          _10_sig = ((_3_e) - (_2_k)) + (((_5_L) - (_3_e)) - (1));
+          if ((_10_sig) > (15)) {
+            let _rhs6 = false;
+            let _rhs7 = 0;
+            ok = _rhs6;
+            p = _rhs7;
+            return [ok, p];
+          }
+          let _rhs8 = true;
+          let _rhs9 = _5_L;
+          ok = _rhs8;
+          p = _rhs9;
+          return [ok, p];
+        } else {
+          let _11_z;
+          _11_z = 0;
+          let _12_fl;
+          _12_fl = ((_5_L) - (_3_e)) - (1);
+          while (((_11_z) < (_12_fl)) && (((t)[((_3_e) + (1)) + (_11_z)]) === (48))) {
+            _11_z = (_11_z) + (1);
+          }
+          let _13_sig;
+          _13_sig = (_12_fl) - (_11_z);
+          let _14_magOk;
+          _14_magOk = (_11_z) < (6);
+          if (((_13_sig) > (15)) || (!(_14_magOk))) {
+            let _rhs10 = false;
+            let _rhs11 = 0;
+            ok = _rhs10;
+            p = _rhs11;
+            return [ok, p];
+          }
+          let _rhs12 = true;
+          let _rhs13 = _5_L;
+          ok = _rhs12;
+          p = _rhs13;
+          return [ok, p];
+        }
+      } else {
+        if (_8_lead0) {
+          if (_1_neg) {
+            let _rhs14 = false;
+            let _rhs15 = 0;
+            ok = _rhs14;
+            p = _rhs15;
+            return [ok, p];
+          }
+          let _rhs16 = true;
+          let _rhs17 = _5_L;
+          ok = _rhs16;
+          p = _rhs17;
+          return [ok, p];
+        }
+        let _15_c;
+        _15_c = (_3_e) - (_2_k);
+        if ((_15_c) >= (17)) {
+          let _rhs18 = false;
+          let _rhs19 = 0;
+          ok = _rhs18;
+          p = _rhs19;
+          return [ok, p];
+        }
+        let _16_lim;
+        if ((_15_c) < (15)) {
+          _16_lim = _15_c;
+        } else {
+          _16_lim = 15;
+        }
+        let _17_v;
+        _17_v = 0;
+        let _18_q;
+        _18_q = 0;
+        while ((_18_q) < (_16_lim)) {
+          let _19_dg;
+          _19_dg = (t)[(_2_k) + (_18_q)];
+          _17_v = ((_17_v) * (10)) + ((_19_dg) - (48));
+          _18_q = (_18_q) + (1);
+        }
+        if ((_15_c) <= (15)) {
+          let _rhs20 = true;
+          let _rhs21 = _5_L;
+          ok = _rhs20;
+          p = _rhs21;
+          return [ok, p];
+        }
+        let _20_k15;
+        _20_k15 = (_2_k) + (15);
+        let _21_dl;
+        _21_dl = (t)[_20_k15];
+        let _22_last;
+        _22_last = (_21_dl) - (48);
+        let _23_big;
+        _23_big = ((_17_v) > (900719925474099)) || (((_17_v) === (900719925474099)) && ((_22_last) > (1)));
+        if (_23_big) {
+          let _rhs22 = false;
+          let _rhs23 = 0;
+          ok = _rhs22;
+          p = _rhs23;
+          return [ok, p];
+        }
+        let _rhs24 = true;
+        let _rhs25 = _5_L;
+        ok = _rhs24;
+        p = _rhs25;
+        return [ok, p];
+      }
+      return [ok, p];
+    }
+    static HexDH(c) {
+      if (((48) <= (c)) && ((c) <= (57))) {
+        return (c) - (48);
+      } else if (((97) <= (c)) && ((c) <= (102))) {
+        return (c) - (87);
+      } else if (((65) <= (c)) && ((c) <= (70))) {
+        return (c) - (55);
+      } else {
+        return -1;
+      }
+    };
+    static Hex4N(t, i) {
+      let h = 0;
+      if (((i) + (4)) > ((t).length)) {
+        h = -1;
+        return h;
+      }
+      let _0_a;
+      _0_a = Fast.__default.HexDH((t)[i]);
+      let _1_b;
+      _1_b = Fast.__default.HexDH((t)[(i) + (1)]);
+      let _2_c;
+      _2_c = Fast.__default.HexDH((t)[(i) + (2)]);
+      let _3_d;
+      _3_d = Fast.__default.HexDH((t)[(i) + (3)]);
+      if (((((_0_a) < (0)) || ((_1_b) < (0))) || ((_2_c) < (0))) || ((_3_d) < (0))) {
+        h = -1;
+        return h;
+      }
+      h = ((((((_0_a) * (16)) + (_1_b)) * (16)) + (_2_c)) * (16)) + (_3_d);
+      return h;
+      return h;
+    }
+    static StrM(t, ar, i, cur) {
+      let ok = false;
+      let p = 0;
+      let c = 0;
+      let _0_k;
+      _0_k = i;
+      c = cur;
+      let _1_n;
+      _1_n = (t).length;
+      while (true) {
+        if ((_0_k) >= (_1_n)) {
+          let _rhs0 = false;
+          let _rhs1 = 0;
+          let _rhs2 = 0;
+          ok = _rhs0;
+          p = _rhs1;
+          c = _rhs2;
+          return [ok, p, c];
+        }
+        let _2_x;
+        _2_x = (t)[_0_k];
+        if ((_2_x) === (34)) {
+          let _rhs3 = true;
+          let _rhs4 = (_0_k) + (1);
+          let _rhs5 = c;
+          ok = _rhs3;
+          p = _rhs4;
+          c = _rhs5;
+          return [ok, p, c];
+        }
+        if ((_2_x) < (32)) {
+          let _rhs6 = false;
+          let _rhs7 = 0;
+          let _rhs8 = 0;
+          ok = _rhs6;
+          p = _rhs7;
+          c = _rhs8;
+          return [ok, p, c];
+        }
+        let _3_v = 0;
+        let _4_adv = 0;
+        if ((_2_x) === (92)) {
+          if (((_0_k) + (1)) >= (_1_n)) {
+            let _rhs9 = false;
+            let _rhs10 = 0;
+            let _rhs11 = 0;
+            ok = _rhs9;
+            p = _rhs10;
+            c = _rhs11;
+            return [ok, p, c];
+          }
+          let _5_e;
+          _5_e = (t)[(_0_k) + (1)];
+          if ((_5_e) === (34)) {
+            _3_v = 34;
+            _4_adv = 2;
+          } else if ((_5_e) === (92)) {
+            _3_v = 92;
+            _4_adv = 2;
+          } else if ((_5_e) === (47)) {
+            _3_v = 47;
+            _4_adv = 2;
+          } else if ((_5_e) === (98)) {
+            _3_v = 8;
+            _4_adv = 2;
+          } else if ((_5_e) === (102)) {
+            _3_v = 12;
+            _4_adv = 2;
+          } else if ((_5_e) === (110)) {
+            _3_v = 10;
+            _4_adv = 2;
+          } else if ((_5_e) === (114)) {
+            _3_v = 13;
+            _4_adv = 2;
+          } else if ((_5_e) === (116)) {
+            _3_v = 9;
+            _4_adv = 2;
+          } else if ((_5_e) === (117)) {
+            let _6_h;
+            let _out0;
+            _out0 = Fast.__default.Hex4N(t, (_0_k) + (2));
+            _6_h = _out0;
+            if ((_6_h) < (0)) {
+              let _rhs12 = false;
+              let _rhs13 = 0;
+              let _rhs14 = 0;
+              ok = _rhs12;
+              p = _rhs13;
+              c = _rhs14;
+              return [ok, p, c];
+            }
+            _3_v = _6_h;
+            _4_adv = 6;
+          } else {
+            let _rhs15 = false;
+            let _rhs16 = 0;
+            let _rhs17 = 0;
+            ok = _rhs15;
+            p = _rhs16;
+            c = _rhs17;
+            return [ok, p, c];
+          }
+        } else {
+          _3_v = _2_x;
+          _4_adv = 1;
+        }
+        (ar)[(c)] = _3_v;
+        c = (c) + (1);
+        _0_k = (_0_k) + (_4_adv);
+      }
+      return [ok, p, c];
+    }
+    static V16M(ar, a, b) {
+      let r = false;
+      let _0_k;
+      _0_k = a;
+      while ((_0_k) < (b)) {
+        let _1_x;
+        _1_x = (ar)[_0_k];
+        if (((55296) <= (_1_x)) && ((_1_x) <= (56319))) {
+          if ((((_0_k) + (1)) < (b)) && (((56320) <= ((ar)[(_0_k) + (1)])) && (((ar)[(_0_k) + (1)]) <= (57343)))) {
+            _0_k = (_0_k) + (2);
+          } else {
+            r = false;
+            return r;
+          }
+        } else if (((56320) <= (_1_x)) && ((_1_x) <= (57343))) {
+          r = false;
+          return r;
+        } else {
+          _0_k = (_0_k) + (1);
+        }
+      }
+      r = true;
+      return r;
+      return r;
+    }
+    static HStep(h, u, r) {
+      let _0_hr = (h) * (r);
+      return _dafny.EuclideanModuloNumber(((_0_hr) + (u)) + (1), Fast.__default.P);
+    };
+    static HashRange(ar, a, b, oid, r) {
+      let h = 0;
+      h = _dafny.EuclideanModuloNumber(oid, Fast.__default.P);
+      let _0_k;
+      _0_k = a;
+      while ((_0_k) < (b)) {
+        h = Fast.__default.HStep(h, (ar)[_0_k], r);
+        _0_k = (_0_k) + (1);
+      }
+      return h;
+    }
+    static Lookup(bucket, ar, oid, a, len) {
+      let found = false;
+      let _0_q;
+      _0_q = 0;
+      let _1_nb;
+      _1_nb = (bucket).length;
+      while ((_0_q) < (_1_nb)) {
+        let _2_e;
+        _2_e = (bucket)[_0_q];
+        if ((((_2_e).dtor_oid) === (oid)) && (((_2_e).dtor_len) === (len))) {
+          let _3_w;
+          _3_w = 0;
+          while (((_3_w) < (len)) && (((ar)[((_2_e).dtor_off) + (_3_w)]) === ((ar)[(a) + (_3_w)]))) {
+            _3_w = (_3_w) + (1);
+          }
+          if ((_3_w) === (len)) {
+            found = true;
+            return found;
+          }
+        }
+        _0_q = (_0_q) + (1);
+      }
+      found = false;
+      return found;
+      return found;
+    }
+    static LitM(t, j) {
+      let w = 0;
+      let _0_n;
+      _0_n = (t).length;
+      let _1_isT;
+      _1_isT = ((((((j) + (4)) <= (_0_n)) && (((t)[j]) === (116))) && (((t)[(j) + (1)]) === (114))) && (((t)[(j) + (2)]) === (117))) && (((t)[(j) + (3)]) === (101));
+      let _2_isF;
+      _2_isF = (((((((j) + (5)) <= (_0_n)) && (((t)[j]) === (102))) && (((t)[(j) + (1)]) === (97))) && (((t)[(j) + (2)]) === (108))) && (((t)[(j) + (3)]) === (115))) && (((t)[(j) + (4)]) === (101));
+      let _3_isN;
+      _3_isN = ((((((j) + (4)) <= (_0_n)) && (((t)[j]) === (110))) && (((t)[(j) + (1)]) === (117))) && (((t)[(j) + (2)]) === (108))) && (((t)[(j) + (3)]) === (108));
+      if (_1_isT) {
+        w = 1;
+      } else if (_2_isF) {
+        w = 2;
+      } else if (_3_isN) {
+        w = 3;
+      } else {
+        w = 0;
+      }
+      return w;
+    }
+    static ValueM(t, ar, tb, r, i, d, cur, nid) {
+      let ok = false;
+      let p = 0;
+      let cur2 = 0;
+      let nid2 = 0;
+      let _0_n;
+      _0_n = (t).length;
+      let _1_j;
+      let _out0;
+      _out0 = Fast.__default.SkipWs(t, i);
+      _1_j = _out0;
+      if ((_1_j) >= (_0_n)) {
+        let _rhs0 = false;
+        let _rhs1 = 0;
+        let _rhs2 = 0;
+        let _rhs3 = 0;
+        ok = _rhs0;
+        p = _rhs1;
+        cur2 = _rhs2;
+        nid2 = _rhs3;
+        return [ok, p, cur2, nid2];
+      }
+      let _2_c;
+      _2_c = (t)[_1_j];
+      if ((_2_c) === (123)) {
+        if ((d) > (32)) {
+          let _rhs4 = false;
+          let _rhs5 = 0;
+          let _rhs6 = 0;
+          let _rhs7 = 0;
+          ok = _rhs4;
+          p = _rhs5;
+          cur2 = _rhs6;
+          nid2 = _rhs7;
+          return [ok, p, cur2, nid2];
+        }
+        let _out1;
+        let _out2;
+        let _out3;
+        let _out4;
+        let _outcollector0 = Fast.__default.ObjM(t, ar, tb, r, (_1_j) + (1), d, cur, nid);
+        _out1 = _outcollector0[0];
+        _out2 = _outcollector0[1];
+        _out3 = _outcollector0[2];
+        _out4 = _outcollector0[3];
+        ok = _out1;
+        p = _out2;
+        cur2 = _out3;
+        nid2 = _out4;
+      } else if ((_2_c) === (91)) {
+        if ((d) > (32)) {
+          let _rhs8 = false;
+          let _rhs9 = 0;
+          let _rhs10 = 0;
+          let _rhs11 = 0;
+          ok = _rhs8;
+          p = _rhs9;
+          cur2 = _rhs10;
+          nid2 = _rhs11;
+          return [ok, p, cur2, nid2];
+        }
+        let _out5;
+        let _out6;
+        let _out7;
+        let _out8;
+        let _outcollector1 = Fast.__default.ArrM(t, ar, tb, r, (_1_j) + (1), d, cur, nid);
+        _out5 = _outcollector1[0];
+        _out6 = _outcollector1[1];
+        _out7 = _outcollector1[2];
+        _out8 = _outcollector1[3];
+        ok = _out5;
+        p = _out6;
+        cur2 = _out7;
+        nid2 = _out8;
+      } else if ((_2_c) === (34)) {
+        let _3_okS;
+        let _4_pS;
+        let _5_c2;
+        let _out9;
+        let _out10;
+        let _out11;
+        let _outcollector2 = Fast.__default.StrM(t, ar, (_1_j) + (1), cur);
+        _out9 = _outcollector2[0];
+        _out10 = _outcollector2[1];
+        _out11 = _outcollector2[2];
+        _3_okS = _out9;
+        _4_pS = _out10;
+        _5_c2 = _out11;
+        if (!(_3_okS)) {
+          let _rhs12 = false;
+          let _rhs13 = 0;
+          let _rhs14 = 0;
+          let _rhs15 = 0;
+          ok = _rhs12;
+          p = _rhs13;
+          cur2 = _rhs14;
+          nid2 = _rhs15;
+          return [ok, p, cur2, nid2];
+        }
+        let _6_v16;
+        let _out12;
+        _out12 = Fast.__default.V16M(ar, cur, _5_c2);
+        _6_v16 = _out12;
+        if (!(_6_v16)) {
+          let _rhs16 = false;
+          let _rhs17 = 0;
+          let _rhs18 = 0;
+          let _rhs19 = 0;
+          ok = _rhs16;
+          p = _rhs17;
+          cur2 = _rhs18;
+          nid2 = _rhs19;
+          return [ok, p, cur2, nid2];
+        }
+        let _rhs20 = true;
+        let _rhs21 = _4_pS;
+        let _rhs22 = _5_c2;
+        let _rhs23 = nid;
+        ok = _rhs20;
+        p = _rhs21;
+        cur2 = _rhs22;
+        nid2 = _rhs23;
+        return [ok, p, cur2, nid2];
+      } else if (((_2_c) === (45)) || (((48) <= (_2_c)) && ((_2_c) <= (57)))) {
+        let _7_okN;
+        let _8_pN;
+        let _out13;
+        let _out14;
+        let _outcollector3 = Fast.__default.NumM(t, _1_j);
+        _out13 = _outcollector3[0];
+        _out14 = _outcollector3[1];
+        _7_okN = _out13;
+        _8_pN = _out14;
+        if (!(_7_okN)) {
+          let _rhs24 = false;
+          let _rhs25 = 0;
+          let _rhs26 = 0;
+          let _rhs27 = 0;
+          ok = _rhs24;
+          p = _rhs25;
+          cur2 = _rhs26;
+          nid2 = _rhs27;
+          return [ok, p, cur2, nid2];
+        }
+        let _rhs28 = true;
+        let _rhs29 = _8_pN;
+        let _rhs30 = cur;
+        let _rhs31 = nid;
+        ok = _rhs28;
+        p = _rhs29;
+        cur2 = _rhs30;
+        nid2 = _rhs31;
+        return [ok, p, cur2, nid2];
+      } else {
+        let _9_w;
+        let _out15;
+        _out15 = Fast.__default.LitM(t, _1_j);
+        _9_w = _out15;
+        if ((_9_w) === (0)) {
+          let _rhs32 = false;
+          let _rhs33 = 0;
+          let _rhs34 = 0;
+          let _rhs35 = 0;
+          ok = _rhs32;
+          p = _rhs33;
+          cur2 = _rhs34;
+          nid2 = _rhs35;
+          return [ok, p, cur2, nid2];
+        }
+        let _rhs36 = true;
+        let _rhs37 = (((_9_w) === (2)) ? ((_1_j) + (5)) : ((_1_j) + (4)));
+        let _rhs38 = cur;
+        let _rhs39 = nid;
+        ok = _rhs36;
+        p = _rhs37;
+        cur2 = _rhs38;
+        nid2 = _rhs39;
+        return [ok, p, cur2, nid2];
+      }
+      return [ok, p, cur2, nid2];
+    }
+    static ArrM(t, ar, tb, r, i, d, cur, nid) {
+      let ok = false;
+      let p = 0;
+      let cur2 = 0;
+      let nid2 = 0;
+      let _0_n;
+      _0_n = (t).length;
+      let _1_j;
+      let _out0;
+      _out0 = Fast.__default.SkipWs(t, i);
+      _1_j = _out0;
+      if (((_1_j) < (_0_n)) && (((t)[_1_j]) === (93))) {
+        let _rhs0 = true;
+        let _rhs1 = (_1_j) + (1);
+        let _rhs2 = cur;
+        let _rhs3 = nid;
+        ok = _rhs0;
+        p = _rhs1;
+        cur2 = _rhs2;
+        nid2 = _rhs3;
+        return [ok, p, cur2, nid2];
+      }
+      let _2_k;
+      _2_k = i;
+      cur2 = cur;
+      nid2 = nid;
+      L0: {
+        while (true) {
+          C0: {
+            let _3_okV;
+            let _4_q;
+            let _5_c3;
+            let _6_n3;
+            let _out1;
+            let _out2;
+            let _out3;
+            let _out4;
+            let _outcollector0 = Fast.__default.ValueM(t, ar, tb, r, _2_k, (d) + (1), cur2, nid2);
+            _out1 = _outcollector0[0];
+            _out2 = _outcollector0[1];
+            _out3 = _outcollector0[2];
+            _out4 = _outcollector0[3];
+            _3_okV = _out1;
+            _4_q = _out2;
+            _5_c3 = _out3;
+            _6_n3 = _out4;
+            if (!(_3_okV)) {
+              let _rhs4 = false;
+              let _rhs5 = 0;
+              let _rhs6 = 0;
+              let _rhs7 = 0;
+              ok = _rhs4;
+              p = _rhs5;
+              cur2 = _rhs6;
+              nid2 = _rhs7;
+              return [ok, p, cur2, nid2];
+            }
+            let _rhs8 = _5_c3;
+            let _rhs9 = _6_n3;
+            cur2 = _rhs8;
+            nid2 = _rhs9;
+            let _7_j2;
+            let _out5;
+            _out5 = Fast.__default.SkipWs(t, _4_q);
+            _7_j2 = _out5;
+            if ((_7_j2) >= (_0_n)) {
+              let _rhs10 = false;
+              let _rhs11 = 0;
+              let _rhs12 = 0;
+              let _rhs13 = 0;
+              ok = _rhs10;
+              p = _rhs11;
+              cur2 = _rhs12;
+              nid2 = _rhs13;
+              return [ok, p, cur2, nid2];
+            }
+            if (((t)[_7_j2]) === (44)) {
+              _2_k = (_7_j2) + (1);
+              break C0;
+            }
+            if (((t)[_7_j2]) === (93)) {
+              let _rhs14 = true;
+              let _rhs15 = (_7_j2) + (1);
+              let _rhs16 = cur2;
+              let _rhs17 = nid2;
+              ok = _rhs14;
+              p = _rhs15;
+              cur2 = _rhs16;
+              nid2 = _rhs17;
+              return [ok, p, cur2, nid2];
+            }
+            let _rhs18 = false;
+            let _rhs19 = 0;
+            let _rhs20 = 0;
+            let _rhs21 = 0;
+            ok = _rhs18;
+            p = _rhs19;
+            cur2 = _rhs20;
+            nid2 = _rhs21;
+            return [ok, p, cur2, nid2];
+          }
+        }
+      }
+      return [ok, p, cur2, nid2];
+    }
+    static MemberM(t, ar, tb, r, k, d, cur, nid, oid) {
+      let ok = false;
+      let q = 0;
+      let cur2 = 0;
+      let nid2 = 0;
+      let _0_n;
+      _0_n = (t).length;
+      let _1_m;
+      _1_m = (tb).length;
+      let _2_j;
+      let _out0;
+      _out0 = Fast.__default.SkipWs(t, k);
+      _2_j = _out0;
+      if (((_2_j) >= (_0_n)) || (((t)[_2_j]) !== (34))) {
+        let _rhs0 = false;
+        let _rhs1 = 0;
+        let _rhs2 = 0;
+        let _rhs3 = 0;
+        ok = _rhs0;
+        q = _rhs1;
+        cur2 = _rhs2;
+        nid2 = _rhs3;
+        return [ok, q, cur2, nid2];
+      }
+      let _3_okS;
+      let _4_pS;
+      let _5_c2;
+      let _out1;
+      let _out2;
+      let _out3;
+      let _outcollector0 = Fast.__default.StrM(t, ar, (_2_j) + (1), cur);
+      _out1 = _outcollector0[0];
+      _out2 = _outcollector0[1];
+      _out3 = _outcollector0[2];
+      _3_okS = _out1;
+      _4_pS = _out2;
+      _5_c2 = _out3;
+      if (!(_3_okS)) {
+        let _rhs4 = false;
+        let _rhs5 = 0;
+        let _rhs6 = 0;
+        let _rhs7 = 0;
+        ok = _rhs4;
+        q = _rhs5;
+        cur2 = _rhs6;
+        nid2 = _rhs7;
+        return [ok, q, cur2, nid2];
+      }
+      let _6_v16;
+      let _out4;
+      _out4 = Fast.__default.V16M(ar, cur, _5_c2);
+      _6_v16 = _out4;
+      if (!(_6_v16)) {
+        let _rhs8 = false;
+        let _rhs9 = 0;
+        let _rhs10 = 0;
+        let _rhs11 = 0;
+        ok = _rhs8;
+        q = _rhs9;
+        cur2 = _rhs10;
+        nid2 = _rhs11;
+        return [ok, q, cur2, nid2];
+      }
+      let _7_h;
+      let _out5;
+      _out5 = Fast.__default.HashRange(ar, cur, _5_c2, oid, r);
+      _7_h = _out5;
+      let _8_b;
+      _8_b = _dafny.EuclideanModuloNumber(_7_h, _1_m);
+      let _9_dup;
+      let _out6;
+      _out6 = Fast.__default.Lookup((tb)[_8_b], ar, oid, cur, (_5_c2) - (cur));
+      _9_dup = _out6;
+      if (_9_dup) {
+        let _rhs12 = false;
+        let _rhs13 = 0;
+        let _rhs14 = 0;
+        let _rhs15 = 0;
+        ok = _rhs12;
+        q = _rhs13;
+        cur2 = _rhs14;
+        nid2 = _rhs15;
+        return [ok, q, cur2, nid2];
+      }
+      let _10_j2;
+      let _out7;
+      _out7 = Fast.__default.SkipWs(t, _4_pS);
+      _10_j2 = _out7;
+      if (((_10_j2) >= (_0_n)) || (((t)[_10_j2]) !== (58))) {
+        let _rhs16 = false;
+        let _rhs17 = 0;
+        let _rhs18 = 0;
+        let _rhs19 = 0;
+        ok = _rhs16;
+        q = _rhs17;
+        cur2 = _rhs18;
+        nid2 = _rhs19;
+        return [ok, q, cur2, nid2];
+      }
+      (tb)[(_8_b)] = _dafny.Seq.Concat((tb)[_8_b], _dafny.Seq.of(Fast.Ent.create_Ent(oid, cur, (_5_c2) - (cur))));
+      let _11_okV;
+      let _12_q0;
+      let _13_c3;
+      let _14_n3;
+      let _out8;
+      let _out9;
+      let _out10;
+      let _out11;
+      let _outcollector1 = Fast.__default.ValueM(t, ar, tb, r, (_10_j2) + (1), (d) + (1), _5_c2, (nid) + (1));
+      _out8 = _outcollector1[0];
+      _out9 = _outcollector1[1];
+      _out10 = _outcollector1[2];
+      _out11 = _outcollector1[3];
+      _11_okV = _out8;
+      _12_q0 = _out9;
+      _13_c3 = _out10;
+      _14_n3 = _out11;
+      if (!(_11_okV)) {
+        let _rhs20 = false;
+        let _rhs21 = 0;
+        let _rhs22 = 0;
+        let _rhs23 = 0;
+        ok = _rhs20;
+        q = _rhs21;
+        cur2 = _rhs22;
+        nid2 = _rhs23;
+        return [ok, q, cur2, nid2];
+      }
+      let _rhs24 = true;
+      let _rhs25 = _12_q0;
+      let _rhs26 = _13_c3;
+      let _rhs27 = _14_n3;
+      ok = _rhs24;
+      q = _rhs25;
+      cur2 = _rhs26;
+      nid2 = _rhs27;
+      return [ok, q, cur2, nid2];
+      return [ok, q, cur2, nid2];
+    }
+    static ObjM(t, ar, tb, r, i, d, cur, nid) {
+      let ok = false;
+      let p = 0;
+      let cur2 = 0;
+      let nid2 = 0;
+      let _0_n;
+      _0_n = (t).length;
+      let _1_j0;
+      let _out0;
+      _out0 = Fast.__default.SkipWs(t, i);
+      _1_j0 = _out0;
+      if (((_1_j0) < (_0_n)) && (((t)[_1_j0]) === (125))) {
+        let _rhs0 = true;
+        let _rhs1 = (_1_j0) + (1);
+        let _rhs2 = cur;
+        let _rhs3 = nid;
+        ok = _rhs0;
+        p = _rhs1;
+        cur2 = _rhs2;
+        nid2 = _rhs3;
+        return [ok, p, cur2, nid2];
+      }
+      let _2_oid;
+      _2_oid = nid;
+      let _3_k;
+      _3_k = i;
+      cur2 = cur;
+      nid2 = (nid) + (1);
+      L1: {
+        while (true) {
+          C1: {
+            let _4_okM;
+            let _5_q;
+            let _6_c3;
+            let _7_n3;
+            let _out1;
+            let _out2;
+            let _out3;
+            let _out4;
+            let _outcollector0 = Fast.__default.MemberM(t, ar, tb, r, _3_k, d, cur2, nid2, _2_oid);
+            _out1 = _outcollector0[0];
+            _out2 = _outcollector0[1];
+            _out3 = _outcollector0[2];
+            _out4 = _outcollector0[3];
+            _4_okM = _out1;
+            _5_q = _out2;
+            _6_c3 = _out3;
+            _7_n3 = _out4;
+            if (!(_4_okM)) {
+              let _rhs4 = false;
+              let _rhs5 = 0;
+              let _rhs6 = 0;
+              let _rhs7 = 0;
+              ok = _rhs4;
+              p = _rhs5;
+              cur2 = _rhs6;
+              nid2 = _rhs7;
+              return [ok, p, cur2, nid2];
+            }
+            let _rhs8 = _6_c3;
+            let _rhs9 = _7_n3;
+            cur2 = _rhs8;
+            nid2 = _rhs9;
+            let _8_j3;
+            let _out5;
+            _out5 = Fast.__default.SkipWs(t, _5_q);
+            _8_j3 = _out5;
+            if ((_8_j3) >= (_0_n)) {
+              let _rhs10 = false;
+              let _rhs11 = 0;
+              let _rhs12 = 0;
+              let _rhs13 = 0;
+              ok = _rhs10;
+              p = _rhs11;
+              cur2 = _rhs12;
+              nid2 = _rhs13;
+              return [ok, p, cur2, nid2];
+            }
+            if (((t)[_8_j3]) === (44)) {
+              _3_k = (_8_j3) + (1);
+              break C1;
+            }
+            if (((t)[_8_j3]) === (125)) {
+              let _rhs14 = true;
+              let _rhs15 = (_8_j3) + (1);
+              let _rhs16 = cur2;
+              let _rhs17 = nid2;
+              ok = _rhs14;
+              p = _rhs15;
+              cur2 = _rhs16;
+              nid2 = _rhs17;
+              return [ok, p, cur2, nid2];
+            }
+            let _rhs18 = false;
+            let _rhs19 = 0;
+            let _rhs20 = 0;
+            let _rhs21 = 0;
+            ok = _rhs18;
+            p = _rhs19;
+            cur2 = _rhs20;
+            nid2 = _rhs21;
+            return [ok, p, cur2, nid2];
+          }
+        }
+      }
+      return [ok, p, cur2, nid2];
+    }
+    static AcceptsU(t, seed) {
+      let _hresult = false;
+      if ((Json.__default.MaxBytes).isLessThan(new BigNumber((t).length))) {
+        _hresult = false;
+        return _hresult;
+      }
+      let _0_u8;
+      let _out0;
+      _out0 = Fast.__default.Utf8LenN(t);
+      _0_u8 = _out0;
+      if ((_0_u8) > ((Json.__default.MaxBytes).toNumber())) {
+        _hresult = false;
+        return _hresult;
+      }
+      let _1_n;
+      _1_n = (t).length;
+      let _2_ar;
+      let _nw0 = Array((BigNumber(_1_n)).toNumber()).fill(0);
+      _2_ar = _nw0;
+      let _3_m;
+      _3_m = (_dafny.EuclideanDivisionNumber(_1_n, 8)) + (16);
+      let _4_tb;
+      let _nw1 = Array((BigNumber(_3_m)).toNumber()).fill(_dafny.Seq.of());
+      _4_tb = _nw1;
+      let _5_empty;
+      _5_empty = _dafny.Seq.of();
+      let _6_b;
+      _6_b = 0;
+      while ((_6_b) < (_3_m)) {
+        (_4_tb)[(_6_b)] = _5_empty;
+        _6_b = (_6_b) + (1);
+      }
+      let _7_ok;
+      let _8_p;
+      let _9_c;
+      let _10_nid;
+      let _out1;
+      let _out2;
+      let _out3;
+      let _out4;
+      let _outcollector0 = Fast.__default.ValueM(t, _2_ar, _4_tb, _dafny.EuclideanModuloNumber(seed, Fast.__default.P), 0, 1, 0, 0);
+      _out1 = _outcollector0[0];
+      _out2 = _outcollector0[1];
+      _out3 = _outcollector0[2];
+      _out4 = _outcollector0[3];
+      _7_ok = _out1;
+      _8_p = _out2;
+      _9_c = _out3;
+      _10_nid = _out4;
+      if (!(_7_ok)) {
+        _hresult = false;
+        return _hresult;
+      }
+      let _11_q;
+      let _out5;
+      _out5 = Fast.__default.SkipWs(t, _8_p);
+      _11_q = _out5;
+      _hresult = (_11_q) === (_1_n);
+      return _hresult;
+      return _hresult;
+    }
+    static get P() {
+      return 67108859;
+    };
+  };
+
+  $module.U16 = class U16 {
+    constructor () {
+    }
+    _parentTraits() {
+      return [];
+    }
+    static *IntegerRange(lo, hi) {
+      while (lo.isLessThan(hi)) {
+        yield lo.toNumber();
+        lo = lo.plus(1);
+      }
+    }
+    static get Default() {
+      return 0;
+    }
+    static _Is(__source) {
+      let _0_x = new BigNumber(__source);
+      return ((_dafny.ZERO).isLessThanOrEqualTo(_0_x)) && ((_0_x).isLessThan(new BigNumber(65536)));
+    }
+  };
+
+  $module.N = class N {
+    constructor () {
+    }
+    _parentTraits() {
+      return [];
+    }
+    static *IntegerRange(lo, hi) {
+      while (lo.isLessThan(hi)) {
+        yield lo.toNumber();
+        lo = lo.plus(1);
+      }
+    }
+    static get Default() {
+      return 0;
+    }
+    static _Is(__source) {
+      let _1_x = new BigNumber(__source);
+      return ((_dafny.ZERO).isLessThanOrEqualTo(_1_x)) && ((_1_x).isLessThan(new BigNumber("9007199254740992")));
+    }
+  };
+
+  $module.Hx = class Hx {
+    constructor () {
+    }
+    _parentTraits() {
+      return [];
+    }
+    static *IntegerRange(lo, hi) {
+      while (lo.isLessThan(hi)) {
+        yield lo.toNumber();
+        lo = lo.plus(1);
+      }
+    }
+    static get Default() {
+      return 0;
+    }
+    static _Is(__source) {
+      let _2_x = new BigNumber(__source);
+      return ((new BigNumber(-1)).isLessThanOrEqualTo(_2_x)) && ((_2_x).isLessThan(new BigNumber(16)));
+    }
+  };
+
+  $module.H4 = class H4 {
+    constructor () {
+    }
+    _parentTraits() {
+      return [];
+    }
+    static *IntegerRange(lo, hi) {
+      while (lo.isLessThan(hi)) {
+        yield lo.toNumber();
+        lo = lo.plus(1);
+      }
+    }
+    static get Default() {
+      return 0;
+    }
+    static _Is(__source) {
+      let _3_x = new BigNumber(__source);
+      return ((new BigNumber(-1)).isLessThanOrEqualTo(_3_x)) && ((_3_x).isLessThan(new BigNumber(65536)));
+    }
+  };
+
+  $module.Ent = class Ent {
+    constructor(tag) {
+      this.$tag = tag;
+    }
+    static create_Ent(oid, off, len) {
+      let $dt = new Ent(0);
+      $dt.oid = oid;
+      $dt.off = off;
+      $dt.len = len;
+      return $dt;
+    }
+    get is_Ent() { return this.$tag === 0; }
+    get dtor_oid() { return this.oid; }
+    get dtor_off() { return this.off; }
+    get dtor_len() { return this.len; }
+    toString() {
+      if (this.$tag === 0) {
+        return "Fast.Ent.Ent" + "(" + _dafny.toString(this.oid) + ", " + _dafny.toString(this.off) + ", " + _dafny.toString(this.len) + ")";
+      } else  {
+        return "<unexpected>";
+      }
+    }
+    equals(other) {
+      if (this === other) {
+        return true;
+      } else if (this.$tag === 0) {
+        return other.$tag === 0 && this.oid === other.oid && this.off === other.off && this.len === other.len;
+      } else  {
+        return false; // unexpected
+      }
+    }
+    static Default() {
+      return Fast.Ent.create_Ent(0, 0, 0);
+    }
+    static Rtd() {
+      return class {
+        static get Default() {
+          return Ent.Default();
+        }
+      };
+    }
+  }
+  return $module;
+})(); // end of module Fast
+let FastP = (function() {
+  let $module = {};
+
+  $module.__default = class __default {
+    constructor () {
+      this._tname = "FastP._default";
+    }
+    _parentTraits() {
+      return [];
+    }
+    static Room(buf, n, k) {
+      let ok = false;
+      let b2 = [];
+      let _0_len;
+      _0_len = (buf).length;
+      if (((n) + (k)) <= (_0_len)) {
+        let _rhs0 = true;
+        let _rhs1 = buf;
+        ok = _rhs0;
+        b2 = _rhs1;
+        return [ok, b2];
+      }
+      if (((n) + (k)) > (FastP.__default.LIMIT)) {
+        let _rhs2 = false;
+        let _rhs3 = buf;
+        ok = _rhs2;
+        b2 = _rhs3;
+        return [ok, b2];
+      }
+      let _1_cap;
+      _1_cap = (((2) * (_0_len)) + (k)) + (16);
+      if ((_1_cap) > (FastP.__default.LIMIT)) {
+        _1_cap = FastP.__default.LIMIT;
+      }
+      let _nw0 = Array((BigNumber(_1_cap)).toNumber()).fill(0);
+      b2 = _nw0;
+      let _2_i;
+      _2_i = 0;
+      while ((_2_i) < (n)) {
+        (b2)[(_2_i)] = (buf)[_2_i];
+        _2_i = (_2_i) + (1);
+      }
+      let _rhs4 = true;
+      let _rhs5 = b2;
+      ok = _rhs4;
+      b2 = _rhs5;
+      return [ok, b2];
+      return [ok, b2];
+    }
+    static PutSeq(buf, n, x) {
+      let ok = false;
+      let b2 = [];
+      let n2 = 0;
+      let _out0;
+      let _out1;
+      let _outcollector0 = FastP.__default.Room(buf, n, (x).length);
+      _out0 = _outcollector0[0];
+      _out1 = _outcollector0[1];
+      ok = _out0;
+      b2 = _out1;
+      n2 = n;
+      if (!(ok)) {
+        return [ok, b2, n2];
+      }
+      let _0_i;
+      _0_i = 0;
+      while ((_0_i) < ((x).length)) {
+        (b2)[(n2)] = (x)[_0_i];
+        n2 = (n2) + (1);
+        _0_i = (_0_i) + (1);
+      }
+      return [ok, b2, n2];
+    }
+    static Put1(buf, n, x) {
+      let ok = false;
+      let b2 = [];
+      let n2 = 0;
+      let _out0;
+      let _out1;
+      let _outcollector0 = FastP.__default.Room(buf, n, 1);
+      _out0 = _outcollector0[0];
+      _out1 = _outcollector0[1];
+      ok = _out0;
+      b2 = _out1;
+      n2 = n;
+      if (!(ok)) {
+        return [ok, b2, n2];
+      }
+      (b2)[(n)] = x;
+      n2 = (n) + (1);
+      return [ok, b2, n2];
+    }
+    static Put2(buf, n, x, y) {
+      let ok = false;
+      let b2 = [];
+      let n2 = 0;
+      let _out0;
+      let _out1;
+      let _outcollector0 = FastP.__default.Room(buf, n, 2);
+      _out0 = _outcollector0[0];
+      _out1 = _outcollector0[1];
+      ok = _out0;
+      b2 = _out1;
+      n2 = n;
+      if (!(ok)) {
+        return [ok, b2, n2];
+      }
+      (b2)[(n)] = x;
+      let _index0 = (n) + (1);
+      (b2)[_index0] = y;
+      n2 = (n) + (2);
+      return [ok, b2, n2];
+    }
+    static DigM(v, buf, n) {
+      let ok = false;
+      let b2 = [];
+      let n2 = 0;
+      let _out0;
+      let _out1;
+      let _outcollector0 = FastP.__default.Room(buf, n, FastP.__default.DigLen(v));
+      _out0 = _outcollector0[0];
+      _out1 = _outcollector0[1];
+      ok = _out0;
+      b2 = _out1;
+      n2 = n;
+      if (!(ok)) {
+        return [ok, b2, n2];
+      }
+      let _out2;
+      _out2 = FastP.__default.DigW(v, b2, n);
+      n2 = _out2;
+      return [ok, b2, n2];
+    }
+    static DigW(v, b, n) {
+      let n2 = 0;
+      let _0_m;
+      _0_m = n;
+      if ((v) >= (10)) {
+        let _out0;
+        _out0 = FastP.__default.DigW(_dafny.EuclideanDivisionNumber(v, 10), b, n);
+        _0_m = _out0;
+      }
+      let _1_x;
+      _1_x = (48) + (_dafny.EuclideanModuloNumber(v, 10));
+      (b)[(_0_m)] = _1_x;
+      n2 = (_0_m) + (1);
+      return n2;
+      return n2;
+    }
+    static DigLen(v) {
+      let _0___accumulator = 0;
+      TAIL_CALL_START: while (true) {
+        if ((v) < (10)) {
+          return (1) + (_0___accumulator);
+        } else {
+          _0___accumulator = (1) + (_0___accumulator);
+          let _in0 = _dafny.EuclideanDivisionNumber(v, 10);
+          v = _in0;
+          continue TAIL_CALL_START;
+        }
+      }
+    };
+    static V16S(s) {
+      let r = false;
+      let _0_k;
+      _0_k = 0;
+      let _1_n;
+      _1_n = (s).length;
+      while ((_0_k) < (_1_n)) {
+        let _2_x;
+        _2_x = (s)[_0_k];
+        if (((55296) <= (_2_x)) && ((_2_x) <= (56319))) {
+          if ((((_0_k) + (1)) < (_1_n)) && (((56320) <= ((s)[(_0_k) + (1)])) && (((s)[(_0_k) + (1)]) <= (57343)))) {
+            _0_k = (_0_k) + (2);
+          } else {
+            r = false;
+            return r;
+          }
+        } else if (((56320) <= (_2_x)) && ((_2_x) <= (57343))) {
+          r = false;
+          return r;
+        } else {
+          _0_k = (_0_k) + (1);
+        }
+      }
+      r = true;
+      return r;
+      return r;
+    }
+    static HexLU(v) {
+      if ((v) < (10)) {
+        return (48) + (v);
+      } else {
+        return (97) + ((v) - (10));
+      }
+    };
+    static BodyM(s, buf, n) {
+      let ok = false;
+      let b2 = [];
+      let n2 = 0;
+      let _rhs0 = buf;
+      let _rhs1 = n;
+      b2 = _rhs0;
+      n2 = _rhs1;
+      let _0_q;
+      _0_q = 0;
+      let _1_len;
+      _1_len = (s).length;
+      while ((_0_q) < (_1_len)) {
+        let _2_x;
+        _2_x = (s)[_0_q];
+        let _3_r = false;
+        if ((((b2).length) - (n2)) < (6)) {
+          let _out0;
+          let _out1;
+          let _outcollector0 = FastP.__default.Room(b2, n2, 6);
+          _out0 = _outcollector0[0];
+          _out1 = _outcollector0[1];
+          _3_r = _out0;
+          b2 = _out1;
+          if (!(_3_r)) {
+            let _rhs2 = false;
+            let _rhs3 = b2;
+            let _rhs4 = n2;
+            ok = _rhs2;
+            b2 = _rhs3;
+            n2 = _rhs4;
+            return [ok, b2, n2];
+          }
+        }
+        if ((_2_x) === (34)) {
+          (b2)[(n2)] = 92;
+          let _index0 = (n2) + (1);
+          (b2)[_index0] = 34;
+          n2 = (n2) + (2);
+        } else if ((_2_x) === (92)) {
+          (b2)[(n2)] = 92;
+          let _index1 = (n2) + (1);
+          (b2)[_index1] = 92;
+          n2 = (n2) + (2);
+        } else if ((_2_x) === (8)) {
+          (b2)[(n2)] = 92;
+          let _index2 = (n2) + (1);
+          (b2)[_index2] = 98;
+          n2 = (n2) + (2);
+        } else if ((_2_x) === (12)) {
+          (b2)[(n2)] = 92;
+          let _index3 = (n2) + (1);
+          (b2)[_index3] = 102;
+          n2 = (n2) + (2);
+        } else if ((_2_x) === (10)) {
+          (b2)[(n2)] = 92;
+          let _index4 = (n2) + (1);
+          (b2)[_index4] = 110;
+          n2 = (n2) + (2);
+        } else if ((_2_x) === (13)) {
+          (b2)[(n2)] = 92;
+          let _index5 = (n2) + (1);
+          (b2)[_index5] = 114;
+          n2 = (n2) + (2);
+        } else if ((_2_x) === (9)) {
+          (b2)[(n2)] = 92;
+          let _index6 = (n2) + (1);
+          (b2)[_index6] = 116;
+          n2 = (n2) + (2);
+        } else if ((_2_x) < (32)) {
+          let _4_h;
+          _4_h = FastP.__default.HexLU(_dafny.EuclideanDivisionNumber(_2_x, 16));
+          let _5_l;
+          _5_l = FastP.__default.HexLU(_dafny.EuclideanModuloNumber(_2_x, 16));
+          (b2)[(n2)] = 92;
+          let _index7 = (n2) + (1);
+          (b2)[_index7] = 117;
+          let _index8 = (n2) + (2);
+          (b2)[_index8] = 48;
+          let _index9 = (n2) + (3);
+          (b2)[_index9] = 48;
+          let _index10 = (n2) + (4);
+          (b2)[_index10] = _4_h;
+          let _index11 = (n2) + (5);
+          (b2)[_index11] = _5_l;
+          n2 = (n2) + (6);
+        } else {
+          (b2)[(n2)] = _2_x;
+          n2 = (n2) + (1);
+        }
+        _0_q = (_0_q) + (1);
+      }
+      let _rhs5 = true;
+      let _rhs6 = b2;
+      let _rhs7 = n2;
+      ok = _rhs5;
+      b2 = _rhs6;
+      n2 = _rhs7;
+      return [ok, b2, n2];
+      return [ok, b2, n2];
+    }
+    static PrintM(u, d, buf, n) {
+      let st = FastP.St.Default();
+      let b2 = [];
+      let n2 = 0;
+      let _0_ok = false;
+      let _source0 = u;
+      Lmatch0: {
+        {
+          if (_source0.is_UNull) {
+            let _out0;
+            let _out1;
+            let _out2;
+            let _outcollector0 = FastP.__default.PutSeq(buf, n, _dafny.Seq.of(110, 117, 108, 108));
+            _out0 = _outcollector0[0];
+            _out1 = _outcollector0[1];
+            _out2 = _outcollector0[2];
+            _0_ok = _out0;
+            b2 = _out1;
+            n2 = _out2;
+            break Lmatch0;
+          }
+        }
+        {
+          if (_source0.is_UBool) {
+            let _1_bv = (_source0).b;
+            if (_1_bv) {
+              let _out3;
+              let _out4;
+              let _out5;
+              let _outcollector1 = FastP.__default.PutSeq(buf, n, _dafny.Seq.of(116, 114, 117, 101));
+              _out3 = _outcollector1[0];
+              _out4 = _outcollector1[1];
+              _out5 = _outcollector1[2];
+              _0_ok = _out3;
+              b2 = _out4;
+              n2 = _out5;
+            } else {
+              let _out6;
+              let _out7;
+              let _out8;
+              let _outcollector2 = FastP.__default.PutSeq(buf, n, _dafny.Seq.of(102, 97, 108, 115, 101));
+              _out6 = _outcollector2[0];
+              _out7 = _outcollector2[1];
+              _out8 = _outcollector2[2];
+              _0_ok = _out6;
+              b2 = _out7;
+              n2 = _out8;
+            }
+            break Lmatch0;
+          }
+        }
+        {
+          if (_source0.is_UInt) {
+            let _2_iv = (_source0).n;
+            let _out9;
+            let _out10;
+            let _out11;
+            let _outcollector3 = FastP.__default.IntM(_2_iv, buf, n);
+            _out9 = _outcollector3[0];
+            _out10 = _outcollector3[1];
+            _out11 = _outcollector3[2];
+            _0_ok = _out9;
+            b2 = _out10;
+            n2 = _out11;
+            break Lmatch0;
+          }
+        }
+        {
+          if (_source0.is_UBig) {
+            let _3_bv = (_source0).bn;
+            if (!((((_dafny.ZERO).minus(Json.__default.MaxSafe)).isLessThanOrEqualTo(_3_bv)) && ((_3_bv).isLessThanOrEqualTo(Json.__default.MaxSafe)))) {
+              let _rhs0 = FastP.St.create_Bad();
+              let _rhs1 = buf;
+              let _rhs2 = n;
+              st = _rhs0;
+              b2 = _rhs1;
+              n2 = _rhs2;
+              return [st, b2, n2];
+            }
+            let _out12;
+            let _out13;
+            let _out14;
+            let _outcollector4 = FastP.__default.IntM((_3_bv).toNumber(), buf, n);
+            _out12 = _outcollector4[0];
+            _out13 = _outcollector4[1];
+            _out14 = _outcollector4[2];
+            _0_ok = _out12;
+            b2 = _out13;
+            n2 = _out14;
+            break Lmatch0;
+          }
+        }
+        {
+          if (_source0.is_UDec) {
+            let _4_neg = (_source0).neg;
+            let _5_ip = (_source0).ip;
+            let _6_fr = (_source0).fr;
+            let _out15;
+            let _out16;
+            let _out17;
+            let _outcollector5 = FastP.__default.DecM(_4_neg, _5_ip, _6_fr, buf, n);
+            _out15 = _outcollector5[0];
+            _out16 = _outcollector5[1];
+            _out17 = _outcollector5[2];
+            st = _out15;
+            b2 = _out16;
+            n2 = _out17;
+            return [st, b2, n2];
+            break Lmatch0;
+          }
+        }
+        {
+          if (_source0.is_UStr) {
+            let _7_s = (_source0).s;
+            if ((new BigNumber(FastP.__default.LIMIT)).isLessThanOrEqualTo(new BigNumber((_7_s).length))) {
+              let _rhs3 = FastP.St.create_Exh();
+              let _rhs4 = buf;
+              let _rhs5 = n;
+              st = _rhs3;
+              b2 = _rhs4;
+              n2 = _rhs5;
+              return [st, b2, n2];
+            }
+            let _8_v16;
+            let _out18;
+            _out18 = FastP.__default.V16S(_7_s);
+            _8_v16 = _out18;
+            if (!(_8_v16)) {
+              let _rhs6 = FastP.St.create_Bad();
+              let _rhs7 = buf;
+              let _rhs8 = n;
+              st = _rhs6;
+              b2 = _rhs7;
+              n2 = _rhs8;
+              return [st, b2, n2];
+            }
+            let _out19;
+            let _out20;
+            let _out21;
+            let _outcollector6 = FastP.__default.Put1(buf, n, 34);
+            _out19 = _outcollector6[0];
+            _out20 = _outcollector6[1];
+            _out21 = _outcollector6[2];
+            _0_ok = _out19;
+            b2 = _out20;
+            n2 = _out21;
+            if (!(_0_ok)) {
+              let _rhs9 = FastP.St.create_Exh();
+              let _rhs10 = b2;
+              let _rhs11 = n2;
+              st = _rhs9;
+              b2 = _rhs10;
+              n2 = _rhs11;
+              return [st, b2, n2];
+            }
+            let _out22;
+            let _out23;
+            let _out24;
+            let _outcollector7 = FastP.__default.BodyM(_7_s, b2, n2);
+            _out22 = _outcollector7[0];
+            _out23 = _outcollector7[1];
+            _out24 = _outcollector7[2];
+            _0_ok = _out22;
+            b2 = _out23;
+            n2 = _out24;
+            if (!(_0_ok)) {
+              let _rhs12 = FastP.St.create_Exh();
+              let _rhs13 = b2;
+              let _rhs14 = n2;
+              st = _rhs12;
+              b2 = _rhs13;
+              n2 = _rhs14;
+              return [st, b2, n2];
+            }
+            let _out25;
+            let _out26;
+            let _out27;
+            let _outcollector8 = FastP.__default.Put1(b2, n2, 34);
+            _out25 = _outcollector8[0];
+            _out26 = _outcollector8[1];
+            _out27 = _outcollector8[2];
+            _0_ok = _out25;
+            b2 = _out26;
+            n2 = _out27;
+            break Lmatch0;
+          }
+        }
+        {
+          if (_source0.is_UArr) {
+            let _9_a = (_source0).a;
+            let _out28;
+            let _out29;
+            let _out30;
+            let _outcollector9 = FastP.__default.ArrPM(u, d, buf, n);
+            _out28 = _outcollector9[0];
+            _out29 = _outcollector9[1];
+            _out30 = _outcollector9[2];
+            st = _out28;
+            b2 = _out29;
+            n2 = _out30;
+            return [st, b2, n2];
+            break Lmatch0;
+          }
+        }
+        {
+          let _10_kv = (_source0).kv;
+          let _out31;
+          let _out32;
+          let _out33;
+          let _outcollector10 = FastP.__default.ObjPM(u, d, buf, n);
+          _out31 = _outcollector10[0];
+          _out32 = _outcollector10[1];
+          _out33 = _outcollector10[2];
+          st = _out31;
+          b2 = _out32;
+          n2 = _out33;
+          return [st, b2, n2];
+        }
+      }
+      if (_0_ok) {
+        st = FastP.St.create_Done();
+      } else {
+        st = FastP.St.create_Exh();
+      }
+      return [st, b2, n2];
+    }
+    static IntM(iv, buf, n) {
+      let ok = false;
+      let b2 = [];
+      let n2 = 0;
+      let _0_a;
+      if ((iv) < (0)) {
+        _0_a = (0) - (iv);
+      } else {
+        _0_a = iv;
+      }
+      let _rhs0 = buf;
+      let _rhs1 = n;
+      b2 = _rhs0;
+      n2 = _rhs1;
+      ok = true;
+      if ((((buf).length) - (n)) < (17)) {
+        let _out0;
+        let _out1;
+        let _outcollector0 = FastP.__default.Room(buf, n, 17);
+        _out0 = _outcollector0[0];
+        _out1 = _outcollector0[1];
+        ok = _out0;
+        b2 = _out1;
+        if (!(ok)) {
+          return [ok, b2, n2];
+        }
+      }
+      let _1_m;
+      _1_m = n;
+      if ((iv) < (0)) {
+        (b2)[(n)] = 45;
+        _1_m = (n) + (1);
+      } else {
+      }
+      let _out2;
+      _out2 = FastP.__default.DigW(_0_a, b2, _1_m);
+      n2 = _out2;
+      return [ok, b2, n2];
+    }
+    static DecM(neg, ip, fr, buf, n) {
+      let st = FastP.St.Default();
+      let b2 = [];
+      let n2 = 0;
+      if ((new BigNumber(FastP.__default.LIMIT)).isLessThanOrEqualTo(new BigNumber((fr).length))) {
+        let _rhs0 = FastP.St.create_Exh();
+        let _rhs1 = buf;
+        let _rhs2 = n;
+        st = _rhs0;
+        b2 = _rhs1;
+        n2 = _rhs2;
+        return [st, b2, n2];
+      }
+      let _0_fl;
+      _0_fl = (fr).length;
+      if ((_0_fl) === (0)) {
+        let _rhs3 = FastP.St.create_Bad();
+        let _rhs4 = buf;
+        let _rhs5 = n;
+        st = _rhs3;
+        b2 = _rhs4;
+        n2 = _rhs5;
+        return [st, b2, n2];
+      }
+      let _1_q;
+      _1_q = 0;
+      while (((_1_q) < (_0_fl)) && (((fr)[_1_q]) <= (9))) {
+        _1_q = (_1_q) + (1);
+      }
+      if ((_1_q) < (_0_fl)) {
+        let _rhs6 = FastP.St.create_Bad();
+        let _rhs7 = buf;
+        let _rhs8 = n;
+        st = _rhs6;
+        b2 = _rhs7;
+        n2 = _rhs8;
+        return [st, b2, n2];
+      }
+      if (((fr)[(_0_fl) - (1)]) === (0)) {
+        let _rhs9 = FastP.St.create_Bad();
+        let _rhs10 = buf;
+        let _rhs11 = n;
+        st = _rhs9;
+        b2 = _rhs10;
+        n2 = _rhs11;
+        return [st, b2, n2];
+      }
+      let _2_sig = 0;
+      let _3_magOk = false;
+      if ((ip) > (0)) {
+        _2_sig = (FastP.__default.DigLen(ip)) + (_0_fl);
+        _3_magOk = true;
+      } else {
+        let _4_z;
+        _4_z = 0;
+        while (((_4_z) < (_0_fl)) && (((fr)[_4_z]) === (0))) {
+          _4_z = (_4_z) + (1);
+        }
+        _2_sig = (_0_fl) - (_4_z);
+        _3_magOk = (_4_z) < (6);
+      }
+      if (((_2_sig) > (15)) || (!(_3_magOk))) {
+        let _rhs12 = FastP.St.create_Bad();
+        let _rhs13 = buf;
+        let _rhs14 = n;
+        st = _rhs12;
+        b2 = _rhs13;
+        n2 = _rhs14;
+        return [st, b2, n2];
+      }
+      let _5_ok = false;
+      if (neg) {
+        let _out0;
+        let _out1;
+        let _out2;
+        let _outcollector0 = FastP.__default.Put1(buf, n, 45);
+        _out0 = _outcollector0[0];
+        _out1 = _outcollector0[1];
+        _out2 = _outcollector0[2];
+        _5_ok = _out0;
+        b2 = _out1;
+        n2 = _out2;
+        if (!(_5_ok)) {
+          let _rhs15 = FastP.St.create_Exh();
+          let _rhs16 = b2;
+          let _rhs17 = n2;
+          st = _rhs15;
+          b2 = _rhs16;
+          n2 = _rhs17;
+          return [st, b2, n2];
+        }
+      } else {
+        let _rhs18 = buf;
+        let _rhs19 = n;
+        b2 = _rhs18;
+        n2 = _rhs19;
+      }
+      let _out3;
+      let _out4;
+      let _out5;
+      let _outcollector1 = FastP.__default.DigM(ip, b2, n2);
+      _out3 = _outcollector1[0];
+      _out4 = _outcollector1[1];
+      _out5 = _outcollector1[2];
+      _5_ok = _out3;
+      b2 = _out4;
+      n2 = _out5;
+      if (!(_5_ok)) {
+        let _rhs20 = FastP.St.create_Exh();
+        let _rhs21 = b2;
+        let _rhs22 = n2;
+        st = _rhs20;
+        b2 = _rhs21;
+        n2 = _rhs22;
+        return [st, b2, n2];
+      }
+      let _out6;
+      let _out7;
+      let _out8;
+      let _outcollector2 = FastP.__default.Put1(b2, n2, 46);
+      _out6 = _outcollector2[0];
+      _out7 = _outcollector2[1];
+      _out8 = _outcollector2[2];
+      _5_ok = _out6;
+      b2 = _out7;
+      n2 = _out8;
+      if (!(_5_ok)) {
+        let _rhs23 = FastP.St.create_Exh();
+        let _rhs24 = b2;
+        let _rhs25 = n2;
+        st = _rhs23;
+        b2 = _rhs24;
+        n2 = _rhs25;
+        return [st, b2, n2];
+      }
+      let _6_r = false;
+      let _out9;
+      let _out10;
+      let _outcollector3 = FastP.__default.Room(b2, n2, 0);
+      _out9 = _outcollector3[0];
+      _out10 = _outcollector3[1];
+      _6_r = _out9;
+      b2 = _out10;
+      let _7_i;
+      _7_i = 0;
+      while ((_7_i) < (_0_fl)) {
+        let _out11;
+        let _out12;
+        let _outcollector4 = FastP.__default.Room(b2, n2, 1);
+        _out11 = _outcollector4[0];
+        _out12 = _outcollector4[1];
+        _6_r = _out11;
+        b2 = _out12;
+        if (!(_6_r)) {
+          let _rhs26 = FastP.St.create_Exh();
+          let _rhs27 = b2;
+          let _rhs28 = n2;
+          st = _rhs26;
+          b2 = _rhs27;
+          n2 = _rhs28;
+          return [st, b2, n2];
+        }
+        (b2)[(n2)] = (48) + ((fr)[_7_i]);
+        n2 = (n2) + (1);
+        _7_i = (_7_i) + (1);
+      }
+      let _rhs29 = FastP.St.create_Done();
+      let _rhs30 = b2;
+      let _rhs31 = n2;
+      st = _rhs29;
+      b2 = _rhs30;
+      n2 = _rhs31;
+      return [st, b2, n2];
+      return [st, b2, n2];
+    }
+    static ArrPM(u, d, buf, n) {
+      let st = FastP.St.Default();
+      let b2 = [];
+      let n2 = 0;
+      let _0_a;
+      _0_a = (u).dtor_a;
+      if ((d) > (32)) {
+        let _rhs0 = FastP.St.create_Bad();
+        let _rhs1 = buf;
+        let _rhs2 = n;
+        st = _rhs0;
+        b2 = _rhs1;
+        n2 = _rhs2;
+        return [st, b2, n2];
+      }
+      if ((new BigNumber(FastP.__default.LIMIT)).isLessThanOrEqualTo(new BigNumber((_0_a).length))) {
+        let _rhs3 = FastP.St.create_Exh();
+        let _rhs4 = buf;
+        let _rhs5 = n;
+        st = _rhs3;
+        b2 = _rhs4;
+        n2 = _rhs5;
+        return [st, b2, n2];
+      }
+      let _1_len;
+      _1_len = (_0_a).length;
+      let _2_ok = false;
+      let _out0;
+      let _out1;
+      let _out2;
+      let _outcollector0 = FastP.__default.Put1(buf, n, 91);
+      _out0 = _outcollector0[0];
+      _out1 = _outcollector0[1];
+      _out2 = _outcollector0[2];
+      _2_ok = _out0;
+      b2 = _out1;
+      n2 = _out2;
+      if (!(_2_ok)) {
+        let _rhs6 = FastP.St.create_Exh();
+        let _rhs7 = b2;
+        let _rhs8 = n2;
+        st = _rhs6;
+        b2 = _rhs7;
+        n2 = _rhs8;
+        return [st, b2, n2];
+      }
+      let _3_q;
+      _3_q = 0;
+      while ((_3_q) < (_1_len)) {
+        if ((_3_q) > (0)) {
+          if ((((b2).length) - (n2)) < (1)) {
+            let _out3;
+            let _out4;
+            let _outcollector1 = FastP.__default.Room(b2, n2, 1);
+            _out3 = _outcollector1[0];
+            _out4 = _outcollector1[1];
+            _2_ok = _out3;
+            b2 = _out4;
+            if (!(_2_ok)) {
+              let _rhs9 = FastP.St.create_Exh();
+              let _rhs10 = b2;
+              let _rhs11 = n2;
+              st = _rhs9;
+              b2 = _rhs10;
+              n2 = _rhs11;
+              return [st, b2, n2];
+            }
+          }
+          (b2)[(n2)] = 44;
+          n2 = (n2) + (1);
+        }
+        let _4_s = FastP.St.Default();
+        let _out5;
+        let _out6;
+        let _out7;
+        let _outcollector2 = FastP.__default.PrintM((_0_a)[_3_q], (d) + (1), b2, n2);
+        _out5 = _outcollector2[0];
+        _out6 = _outcollector2[1];
+        _out7 = _outcollector2[2];
+        _4_s = _out5;
+        b2 = _out6;
+        n2 = _out7;
+        if ((_4_s).is_Bad) {
+          let _rhs12 = FastP.St.create_Bad();
+          let _rhs13 = b2;
+          let _rhs14 = n2;
+          st = _rhs12;
+          b2 = _rhs13;
+          n2 = _rhs14;
+          return [st, b2, n2];
+        }
+        if ((_4_s).is_Exh) {
+          let _rhs15 = FastP.St.create_Exh();
+          let _rhs16 = b2;
+          let _rhs17 = n2;
+          st = _rhs15;
+          b2 = _rhs16;
+          n2 = _rhs17;
+          return [st, b2, n2];
+        }
+        _3_q = (_3_q) + (1);
+      }
+      let _out8;
+      let _out9;
+      let _out10;
+      let _outcollector3 = FastP.__default.Put1(b2, n2, 93);
+      _out8 = _outcollector3[0];
+      _out9 = _outcollector3[1];
+      _out10 = _outcollector3[2];
+      _2_ok = _out8;
+      b2 = _out9;
+      n2 = _out10;
+      if (!(_2_ok)) {
+        let _rhs18 = FastP.St.create_Exh();
+        let _rhs19 = b2;
+        let _rhs20 = n2;
+        st = _rhs18;
+        b2 = _rhs19;
+        n2 = _rhs20;
+        return [st, b2, n2];
+      }
+      let _rhs21 = FastP.St.create_Done();
+      let _rhs22 = b2;
+      let _rhs23 = n2;
+      st = _rhs21;
+      b2 = _rhs22;
+      n2 = _rhs23;
+      return [st, b2, n2];
+      return [st, b2, n2];
+    }
+    static CpsM(s) {
+      let a = [];
+      let c = 0;
+      let _0_n;
+      _0_n = (s).length;
+      let _nw0 = Array((BigNumber(_0_n)).toNumber()).fill(0);
+      a = _nw0;
+      c = 0;
+      let _1_q;
+      _1_q = 0;
+      while ((_1_q) < (_0_n)) {
+        let _2_x;
+        _2_x = (s)[_1_q];
+        if (((((55296) <= (_2_x)) && ((_2_x) <= (56319))) && (((_1_q) + (1)) < (_0_n))) && (((56320) <= ((s)[(_1_q) + (1)])) && (((s)[(_1_q) + (1)]) <= (57343)))) {
+          let _3_cp;
+          _3_cp = ((65536) + (((_2_x) - (55296)) * (1024))) + (((s)[(_1_q) + (1)]) - (56320));
+          (a)[(c)] = _3_cp;
+          c = (c) + (1);
+          _1_q = (_1_q) + (2);
+        } else {
+          (a)[(c)] = _2_x;
+          c = (c) + (1);
+          _1_q = (_1_q) + (1);
+        }
+      }
+      return [a, c];
+    }
+    static LessM(x, xn, y, yn) {
+      let r = false;
+      let _0_i;
+      _0_i = 0;
+      while ((((_0_i) < (xn)) && ((_0_i) < (yn))) && (((x)[_0_i]) === ((y)[_0_i]))) {
+        _0_i = (_0_i) + (1);
+      }
+      if ((_0_i) === (yn)) {
+        r = false;
+        return r;
+      }
+      if ((_0_i) === (xn)) {
+        r = true;
+        return r;
+      }
+      r = ((x)[_0_i]) < ((y)[_0_i]);
+      return r;
+      return r;
+    }
+    static Merge(p, lo, mid, hi, tmp, cps) {
+      let _0_i;
+      let _1_j;
+      let _2_k;
+      let _rhs0 = lo;
+      let _rhs1 = mid;
+      let _rhs2 = lo;
+      _0_i = _rhs0;
+      _1_j = _rhs1;
+      _2_k = _rhs2;
+      while ((_2_k) < (hi)) {
+        let _3_takeLeft = false;
+        if ((_0_i) === (mid)) {
+          _3_takeLeft = false;
+        } else if ((_1_j) === (hi)) {
+          _3_takeLeft = true;
+        } else {
+          let _4_cy;
+          _4_cy = (cps)[(p)[_1_j]];
+          let _5_cx;
+          _5_cx = (cps)[(p)[_0_i]];
+          let _6_lt;
+          let _out0;
+          _out0 = FastP.__default.LessM((_4_cy).dtor_a, (_4_cy).dtor_c, (_5_cx).dtor_a, (_5_cx).dtor_c);
+          _6_lt = _out0;
+          _3_takeLeft = !(_6_lt);
+        }
+        let _7_x;
+        if (_3_takeLeft) {
+          _7_x = (p)[_0_i];
+        } else {
+          _7_x = (p)[_1_j];
+        }
+        (tmp)[(_2_k)] = _7_x;
+        if (_3_takeLeft) {
+          _0_i = (_0_i) + (1);
+        } else {
+          _1_j = (_1_j) + (1);
+        }
+        _2_k = (_2_k) + (1);
+      }
+      FastP.__default.CopyBack(p, tmp, lo, hi);
+      return;
+    }
+    static CopyBack(p, tmp, lo, hi) {
+      let _0_w;
+      _0_w = lo;
+      while ((_0_w) < (hi)) {
+        (p)[(_0_w)] = (tmp)[_0_w];
+        _0_w = (_0_w) + (1);
+      }
+      return;
+    }
+    static MSort(p, lo, hi, tmp, cps) {
+      if (((hi) - (lo)) <= (1)) {
+        return;
+      }
+      let _0_mid;
+      _0_mid = (lo) + (_dafny.EuclideanDivisionNumber((hi) - (lo), 2));
+      FastP.__default.MSort(p, lo, _0_mid, tmp, cps);
+      FastP.__default.MSort(p, _0_mid, hi, tmp, cps);
+      FastP.__default.Merge(p, lo, _0_mid, hi, tmp, cps);
+      return;
+    }
+    static ObjPM(u, d, buf, n) {
+      let st = FastP.St.Default();
+      let b2 = [];
+      let n2 = 0;
+      let _0_kv;
+      _0_kv = (u).dtor_kv;
+      if ((d) > (32)) {
+        let _rhs0 = FastP.St.create_Bad();
+        let _rhs1 = buf;
+        let _rhs2 = n;
+        st = _rhs0;
+        b2 = _rhs1;
+        n2 = _rhs2;
+        return [st, b2, n2];
+      }
+      if ((new BigNumber(FastP.__default.LIMIT)).isLessThanOrEqualTo(new BigNumber((_0_kv).length))) {
+        let _rhs3 = FastP.St.create_Exh();
+        let _rhs4 = buf;
+        let _rhs5 = n;
+        st = _rhs3;
+        b2 = _rhs4;
+        n2 = _rhs5;
+        return [st, b2, n2];
+      }
+      let _1_cnt;
+      _1_cnt = (_0_kv).length;
+      let _2_cps;
+      let _nw0 = Array((BigNumber(_1_cnt)).toNumber()).fill(FastP.CP.Default());
+      _2_cps = _nw0;
+      let _3_i;
+      _3_i = 0;
+      while ((_3_i) < (_1_cnt)) {
+        let _4_key;
+        _4_key = ((_0_kv)[_3_i]).dtor_k;
+        if ((new BigNumber(FastP.__default.LIMIT)).isLessThanOrEqualTo(new BigNumber((_4_key).length))) {
+          let _rhs6 = FastP.St.create_Exh();
+          let _rhs7 = buf;
+          let _rhs8 = n;
+          st = _rhs6;
+          b2 = _rhs7;
+          n2 = _rhs8;
+          return [st, b2, n2];
+        }
+        let _5_v16;
+        let _out0;
+        _out0 = FastP.__default.V16S(_4_key);
+        _5_v16 = _out0;
+        if (!(_5_v16)) {
+          let _rhs9 = FastP.St.create_Bad();
+          let _rhs10 = buf;
+          let _rhs11 = n;
+          st = _rhs9;
+          b2 = _rhs10;
+          n2 = _rhs11;
+          return [st, b2, n2];
+        }
+        let _6_a;
+        let _7_c;
+        let _out1;
+        let _out2;
+        let _outcollector0 = FastP.__default.CpsM(_4_key);
+        _out1 = _outcollector0[0];
+        _out2 = _outcollector0[1];
+        _6_a = _out1;
+        _7_c = _out2;
+        (_2_cps)[(_3_i)] = FastP.CP.create_CP(_6_a, _7_c);
+        _3_i = (_3_i) + (1);
+      }
+      let _8_perm;
+      let _nw1 = Array((BigNumber(_1_cnt)).toNumber()).fill(0);
+      _8_perm = _nw1;
+      let _9_tmp;
+      let _nw2 = Array((BigNumber(_1_cnt)).toNumber()).fill(0);
+      _9_tmp = _nw2;
+      _3_i = 0;
+      while ((_3_i) < (_1_cnt)) {
+        (_8_perm)[(_3_i)] = _3_i;
+        _3_i = (_3_i) + (1);
+      }
+      FastP.__default.MSort(_8_perm, 0, _1_cnt, _9_tmp, _2_cps);
+      _3_i = 0;
+      while (((_3_i) + (1)) < (_1_cnt)) {
+        let _10_x;
+        _10_x = (_2_cps)[(_8_perm)[_3_i]];
+        let _11_y;
+        _11_y = (_2_cps)[(_8_perm)[(_3_i) + (1)]];
+        let _12_lt;
+        let _out3;
+        _out3 = FastP.__default.LessM((_10_x).dtor_a, (_10_x).dtor_c, (_11_y).dtor_a, (_11_y).dtor_c);
+        _12_lt = _out3;
+        if (!(_12_lt)) {
+          let _rhs12 = FastP.St.create_Bad();
+          let _rhs13 = buf;
+          let _rhs14 = n;
+          st = _rhs12;
+          b2 = _rhs13;
+          n2 = _rhs14;
+          return [st, b2, n2];
+        }
+        _3_i = (_3_i) + (1);
+      }
+      let _13_ok = false;
+      let _out4;
+      let _out5;
+      let _out6;
+      let _outcollector1 = FastP.__default.Put1(buf, n, 123);
+      _out4 = _outcollector1[0];
+      _out5 = _outcollector1[1];
+      _out6 = _outcollector1[2];
+      _13_ok = _out4;
+      b2 = _out5;
+      n2 = _out6;
+      if (!(_13_ok)) {
+        let _rhs15 = FastP.St.create_Exh();
+        let _rhs16 = b2;
+        let _rhs17 = n2;
+        st = _rhs15;
+        b2 = _rhs16;
+        n2 = _rhs17;
+        return [st, b2, n2];
+      }
+      let _14_q;
+      _14_q = 0;
+      while ((_14_q) < (_1_cnt)) {
+        let _15_idx;
+        _15_idx = (_8_perm)[_14_q];
+        if ((_14_q) > (0)) {
+          let _out7;
+          let _out8;
+          let _out9;
+          let _outcollector2 = FastP.__default.Put2(b2, n2, 44, 34);
+          _out7 = _outcollector2[0];
+          _out8 = _outcollector2[1];
+          _out9 = _outcollector2[2];
+          _13_ok = _out7;
+          b2 = _out8;
+          n2 = _out9;
+          if (!(_13_ok)) {
+            let _rhs18 = FastP.St.create_Exh();
+            let _rhs19 = b2;
+            let _rhs20 = n2;
+            st = _rhs18;
+            b2 = _rhs19;
+            n2 = _rhs20;
+            return [st, b2, n2];
+          }
+        } else {
+          let _out10;
+          let _out11;
+          let _out12;
+          let _outcollector3 = FastP.__default.Put1(b2, n2, 34);
+          _out10 = _outcollector3[0];
+          _out11 = _outcollector3[1];
+          _out12 = _outcollector3[2];
+          _13_ok = _out10;
+          b2 = _out11;
+          n2 = _out12;
+          if (!(_13_ok)) {
+            let _rhs21 = FastP.St.create_Exh();
+            let _rhs22 = b2;
+            let _rhs23 = n2;
+            st = _rhs21;
+            b2 = _rhs22;
+            n2 = _rhs23;
+            return [st, b2, n2];
+          }
+        }
+        let _out13;
+        let _out14;
+        let _out15;
+        let _outcollector4 = FastP.__default.BodyM(((_0_kv)[_15_idx]).dtor_k, b2, n2);
+        _out13 = _outcollector4[0];
+        _out14 = _outcollector4[1];
+        _out15 = _outcollector4[2];
+        _13_ok = _out13;
+        b2 = _out14;
+        n2 = _out15;
+        if (!(_13_ok)) {
+          let _rhs24 = FastP.St.create_Exh();
+          let _rhs25 = b2;
+          let _rhs26 = n2;
+          st = _rhs24;
+          b2 = _rhs25;
+          n2 = _rhs26;
+          return [st, b2, n2];
+        }
+        let _out16;
+        let _out17;
+        let _out18;
+        let _outcollector5 = FastP.__default.Put2(b2, n2, 34, 58);
+        _out16 = _outcollector5[0];
+        _out17 = _outcollector5[1];
+        _out18 = _outcollector5[2];
+        _13_ok = _out16;
+        b2 = _out17;
+        n2 = _out18;
+        if (!(_13_ok)) {
+          let _rhs27 = FastP.St.create_Exh();
+          let _rhs28 = b2;
+          let _rhs29 = n2;
+          st = _rhs27;
+          b2 = _rhs28;
+          n2 = _rhs29;
+          return [st, b2, n2];
+        }
+        let _16_s = FastP.St.Default();
+        let _out19;
+        let _out20;
+        let _out21;
+        let _outcollector6 = FastP.__default.PrintM(((_0_kv)[_15_idx]).dtor_v, (d) + (1), b2, n2);
+        _out19 = _outcollector6[0];
+        _out20 = _outcollector6[1];
+        _out21 = _outcollector6[2];
+        _16_s = _out19;
+        b2 = _out20;
+        n2 = _out21;
+        if ((_16_s).is_Bad) {
+          let _rhs30 = FastP.St.create_Bad();
+          let _rhs31 = b2;
+          let _rhs32 = n2;
+          st = _rhs30;
+          b2 = _rhs31;
+          n2 = _rhs32;
+          return [st, b2, n2];
+        }
+        if ((_16_s).is_Exh) {
+          let _rhs33 = FastP.St.create_Exh();
+          let _rhs34 = b2;
+          let _rhs35 = n2;
+          st = _rhs33;
+          b2 = _rhs34;
+          n2 = _rhs35;
+          return [st, b2, n2];
+        }
+        _14_q = (_14_q) + (1);
+      }
+      let _out22;
+      let _out23;
+      let _out24;
+      let _outcollector7 = FastP.__default.Put1(b2, n2, 125);
+      _out22 = _outcollector7[0];
+      _out23 = _outcollector7[1];
+      _out24 = _outcollector7[2];
+      _13_ok = _out22;
+      b2 = _out23;
+      n2 = _out24;
+      if (!(_13_ok)) {
+        let _rhs36 = FastP.St.create_Exh();
+        let _rhs37 = b2;
+        let _rhs38 = n2;
+        st = _rhs36;
+        b2 = _rhs37;
+        n2 = _rhs38;
+        return [st, b2, n2];
+      }
+      let _rhs39 = FastP.St.create_Done();
+      let _rhs40 = b2;
+      let _rhs41 = n2;
+      st = _rhs39;
+      b2 = _rhs40;
+      n2 = _rhs41;
+      return [st, b2, n2];
+      return [st, b2, n2];
+    }
+    static CanonU(u) {
+      let st = FastP.St.Default();
+      let b = [];
+      let n = 0;
+      let _0_buf;
+      let _nw0 = Array((new BigNumber(64)).toNumber()).fill(0);
+      _0_buf = _nw0;
+      let _out0;
+      let _out1;
+      let _out2;
+      let _outcollector0 = FastP.__default.PrintM(u, 1, _0_buf, 0);
+      _out0 = _outcollector0[0];
+      _out1 = _outcollector0[1];
+      _out2 = _outcollector0[2];
+      st = _out0;
+      b = _out1;
+      n = _out2;
+      return [st, b, n];
+    }
+    static get LIMIT() {
+      return 1099511627776;
+    };
+  };
+
+  $module.I = class I {
+    constructor () {
+    }
+    _parentTraits() {
+      return [];
+    }
+    static *IntegerRange(lo, hi) {
+      while (lo.isLessThan(hi)) {
+        yield lo.toNumber();
+        lo = lo.plus(1);
+      }
+    }
+    static get Default() {
+      return 0;
+    }
+    static _Is(__source) {
+      let _0_x = new BigNumber(__source);
+      return ((new BigNumber(-9007199254740991)).isLessThanOrEqualTo(_0_x)) && ((_0_x).isLessThanOrEqualTo(new BigNumber(9007199254740991)));
+    }
+  };
+
+  $module.JU = class JU {
+    constructor(tag) {
+      this.$tag = tag;
+    }
+    static create_UNull() {
+      let $dt = new JU(0);
+      return $dt;
+    }
+    static create_UBool(b) {
+      let $dt = new JU(1);
+      $dt.b = b;
+      return $dt;
+    }
+    static create_UInt(n) {
+      let $dt = new JU(2);
+      $dt.n = n;
+      return $dt;
+    }
+    static create_UBig(bn) {
+      let $dt = new JU(3);
+      $dt.bn = bn;
+      return $dt;
+    }
+    static create_UDec(neg, ip, fr) {
+      let $dt = new JU(4);
+      $dt.neg = neg;
+      $dt.ip = ip;
+      $dt.fr = fr;
+      return $dt;
+    }
+    static create_UStr(s) {
+      let $dt = new JU(5);
+      $dt.s = s;
+      return $dt;
+    }
+    static create_UArr(a) {
+      let $dt = new JU(6);
+      $dt.a = a;
+      return $dt;
+    }
+    static create_UObj(kv) {
+      let $dt = new JU(7);
+      $dt.kv = kv;
+      return $dt;
+    }
+    get is_UNull() { return this.$tag === 0; }
+    get is_UBool() { return this.$tag === 1; }
+    get is_UInt() { return this.$tag === 2; }
+    get is_UBig() { return this.$tag === 3; }
+    get is_UDec() { return this.$tag === 4; }
+    get is_UStr() { return this.$tag === 5; }
+    get is_UArr() { return this.$tag === 6; }
+    get is_UObj() { return this.$tag === 7; }
+    get dtor_b() { return this.b; }
+    get dtor_n() { return this.n; }
+    get dtor_bn() { return this.bn; }
+    get dtor_neg() { return this.neg; }
+    get dtor_ip() { return this.ip; }
+    get dtor_fr() { return this.fr; }
+    get dtor_s() { return this.s; }
+    get dtor_a() { return this.a; }
+    get dtor_kv() { return this.kv; }
+    toString() {
+      if (this.$tag === 0) {
+        return "FastP.JU.UNull";
+      } else if (this.$tag === 1) {
+        return "FastP.JU.UBool" + "(" + _dafny.toString(this.b) + ")";
+      } else if (this.$tag === 2) {
+        return "FastP.JU.UInt" + "(" + _dafny.toString(this.n) + ")";
+      } else if (this.$tag === 3) {
+        return "FastP.JU.UBig" + "(" + _dafny.toString(this.bn) + ")";
+      } else if (this.$tag === 4) {
+        return "FastP.JU.UDec" + "(" + _dafny.toString(this.neg) + ", " + _dafny.toString(this.ip) + ", " + _dafny.toString(this.fr) + ")";
+      } else if (this.$tag === 5) {
+        return "FastP.JU.UStr" + "(" + _dafny.toString(this.s) + ")";
+      } else if (this.$tag === 6) {
+        return "FastP.JU.UArr" + "(" + _dafny.toString(this.a) + ")";
+      } else if (this.$tag === 7) {
+        return "FastP.JU.UObj" + "(" + _dafny.toString(this.kv) + ")";
+      } else  {
+        return "<unexpected>";
+      }
+    }
+    equals(other) {
+      if (this === other) {
+        return true;
+      } else if (this.$tag === 0) {
+        return other.$tag === 0;
+      } else if (this.$tag === 1) {
+        return other.$tag === 1 && this.b === other.b;
+      } else if (this.$tag === 2) {
+        return other.$tag === 2 && this.n === other.n;
+      } else if (this.$tag === 3) {
+        return other.$tag === 3 && _dafny.areEqual(this.bn, other.bn);
+      } else if (this.$tag === 4) {
+        return other.$tag === 4 && this.neg === other.neg && this.ip === other.ip && _dafny.areEqual(this.fr, other.fr);
+      } else if (this.$tag === 5) {
+        return other.$tag === 5 && _dafny.areEqual(this.s, other.s);
+      } else if (this.$tag === 6) {
+        return other.$tag === 6 && _dafny.areEqual(this.a, other.a);
+      } else if (this.$tag === 7) {
+        return other.$tag === 7 && _dafny.areEqual(this.kv, other.kv);
+      } else  {
+        return false; // unexpected
+      }
+    }
+    static Default() {
+      return FastP.JU.create_UNull();
+    }
+    static Rtd() {
+      return class {
+        static get Default() {
+          return JU.Default();
+        }
+      };
+    }
+  }
+
+  $module.KU = class KU {
+    constructor(tag) {
+      this.$tag = tag;
+    }
+    static create_KU(k, v) {
+      let $dt = new KU(0);
+      $dt.k = k;
+      $dt.v = v;
+      return $dt;
+    }
+    get is_KU() { return this.$tag === 0; }
+    get dtor_k() { return this.k; }
+    get dtor_v() { return this.v; }
+    toString() {
+      if (this.$tag === 0) {
+        return "FastP.KU.KU" + "(" + _dafny.toString(this.k) + ", " + _dafny.toString(this.v) + ")";
+      } else  {
+        return "<unexpected>";
+      }
+    }
+    equals(other) {
+      if (this === other) {
+        return true;
+      } else if (this.$tag === 0) {
+        return other.$tag === 0 && _dafny.areEqual(this.k, other.k) && _dafny.areEqual(this.v, other.v);
+      } else  {
+        return false; // unexpected
+      }
+    }
+    static Default() {
+      return FastP.KU.create_KU(_dafny.Seq.of(), FastP.JU.Default());
+    }
+    static Rtd() {
+      return class {
+        static get Default() {
+          return KU.Default();
+        }
+      };
+    }
+  }
+
+  $module.St = class St {
+    constructor(tag) {
+      this.$tag = tag;
+    }
+    static create_Done() {
+      let $dt = new St(0);
+      return $dt;
+    }
+    static create_Bad() {
+      let $dt = new St(1);
+      return $dt;
+    }
+    static create_Exh() {
+      let $dt = new St(2);
+      return $dt;
+    }
+    get is_Done() { return this.$tag === 0; }
+    get is_Bad() { return this.$tag === 1; }
+    get is_Exh() { return this.$tag === 2; }
+    static get AllSingletonConstructors() {
+      return this.AllSingletonConstructors_();
+    }
+    static *AllSingletonConstructors_() {
+      yield St.create_Done();
+      yield St.create_Bad();
+      yield St.create_Exh();
+    }
+    toString() {
+      if (this.$tag === 0) {
+        return "FastP.St.Done";
+      } else if (this.$tag === 1) {
+        return "FastP.St.Bad";
+      } else if (this.$tag === 2) {
+        return "FastP.St.Exh";
+      } else  {
+        return "<unexpected>";
+      }
+    }
+    equals(other) {
+      if (this === other) {
+        return true;
+      } else if (this.$tag === 0) {
+        return other.$tag === 0;
+      } else if (this.$tag === 1) {
+        return other.$tag === 1;
+      } else if (this.$tag === 2) {
+        return other.$tag === 2;
+      } else  {
+        return false; // unexpected
+      }
+    }
+    static Default() {
+      return FastP.St.create_Done();
+    }
+    static Rtd() {
+      return class {
+        static get Default() {
+          return St.Default();
+        }
+      };
+    }
+  }
+
+  $module.CP = class CP {
+    constructor(tag) {
+      this.$tag = tag;
+    }
+    static create_CP(a, c) {
+      let $dt = new CP(0);
+      $dt.a = a;
+      $dt.c = c;
+      return $dt;
+    }
+    get is_CP() { return this.$tag === 0; }
+    get dtor_a() { return this.a; }
+    get dtor_c() { return this.c; }
+    toString() {
+      if (this.$tag === 0) {
+        return "FastP.CP.CP" + "(" + _dafny.toString(this.a) + ", " + _dafny.toString(this.c) + ")";
+      } else  {
+        return "<unexpected>";
+      }
+    }
+    equals(other) {
+      if (this === other) {
+        return true;
+      } else if (this.$tag === 0) {
+        return other.$tag === 0 && this.a === other.a && this.c === other.c;
+      } else  {
+        return false; // unexpected
+      }
+    }
+    static Default() {
+      return FastP.CP.create_CP(null, 0);
+    }
+    static Rtd() {
+      return class {
+        static get Default() {
+          return CP.Default();
+        }
+      };
+    }
+  }
+  return $module;
+})(); // end of module FastP
 let Api = (function() {
   let $module = {};
 
@@ -2749,6 +5481,25 @@ let Api = (function() {
     static HexEncode(b) {
       return B64.__default.HexEnc(b);
     };
+    static ParseAcceptsU(t, seed) {
+      return Fast.__default.AcceptsU(t, seed);
+    };
+    static CanonicalOfValueU(u) {
+      let st = FastP.St.Default();
+      let b = [];
+      let n = 0;
+      let _out0;
+      let _out1;
+      let _out2;
+      let _outcollector0 = FastP.__default.CanonU(u);
+      _out0 = _outcollector0[0];
+      _out1 = _outcollector0[1];
+      _out2 = _outcollector0[2];
+      st = _out0;
+      b = _out1;
+      n = _out2;
+      return [st, b, n];
+    }
   };
   return $module;
 })(); // end of module Api
@@ -2759,4 +5510,4 @@ let _module = (function() {
 })(); // end of module _module
 
 // ---- exports (appended by formal/dafny/build-ext.sh) ----
-module.exports = { _dafny, Utf, B64, Json, Api };
+module.exports = { _dafny, Utf, B64, Json, Fast, FastP, Api };

@@ -48,6 +48,8 @@ import {
 } from '@atlasauth/pca';
 
 export { PCA_HEADER } from '@atlasauth/pca';
+// RFC 9530 Content-Digest: cover `content-digest` in the signature to protect the request body.
+export * from './content-digest';
 export type { KeyPair, PCActn } from '@atlasauth/pca';
 
 // --------------------------------------------------------------------------------------------------
@@ -523,6 +525,8 @@ interface RequestContext {
   targetUri: string;
   scheme: string;
   query: string;
+  /** RFC 9421 §2.2.5 `@request-target`: the origin-form request target (path plus the query, if any). */
+  requestTarget: string;
   headers: Map<string, string>;
 }
 
@@ -547,6 +551,7 @@ function buildContext(method: string, url: string, headers: Map<string, string>)
     targetUri: u.href,
     scheme: u.protocol.replace(/:$/, '').toLowerCase(),
     query: u.search === '' ? '?' : u.search,
+    requestTarget: (u.pathname === '' ? '/' : u.pathname) + u.search,
     headers,
   };
 }
@@ -567,6 +572,8 @@ function deriveComponentValue(component: ParsedComponent, ctx: RequestContext): 
       return ctx.scheme;
     case '@query':
       return ctx.query;
+    case '@request-target':
+      return ctx.requestTarget;
     default: {
       if (id.startsWith('@')) throw new WebBotAuthParseError(`unsupported derived component "${id}"`);
       const v = ctx.headers.get(id);

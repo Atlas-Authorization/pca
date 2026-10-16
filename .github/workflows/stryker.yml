@@ -1,0 +1,73 @@
+name: Mutation testing (Stryker)
+
+# Stryker over every non-test source file of the audited TypeScript packages (the packages that appear in the
+# equivalent-mutant ledger tools/pca-audit/mutation-equivalents.json), with the audited configuration
+# (tools/pca-audit/stryker/run.sh: vitest runner, perTest coverage). The files are cut into 16 shards of about equal size
+# (.github/scripts/ts-stryker-plan.mjs); the merge job checks every report is present, prints the mutation score and runs
+# the ledger check: every survivor must be a listed, justified equivalent and no listed equivalent may be stale.
+# Heavy: manual dispatch, or a push to a ci/** branch (release-candidate checks).
+on:
+  workflow_dispatch:
+  push:
+    branches: ['ci/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SHARDS: '16'
+
+jobs:
+  shard:
+    name: shard ${{ matrix.shard }}/16
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Shard plan
+        run: |
+          node .github/scripts/ts-stryker-plan.mjs ${{ matrix.shard }} $SHARDS | tee "$RUNNER_TEMP/plan.txt"
+          f=""; for p in $(cut -d' ' -f1 "$RUNNER_TEMP/plan.txt"); do f="$f --filter={./packages/$p}..."; done
+          echo "FILTER=$f" >> "$GITHUB_ENV"
+      - name: Install (shard packages + dependencies) and the pinned Stryker
+        run: |
+          pnpm install --frozen-lockfile --filter=. $FILTER
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      - name: Build
+        run: pnpm -r $FILTER run build
+      - name: Stryker
+        run: bash .github/scripts/ts-stryker-shard.sh ${{ matrix.shard }} $SHARDS "$RUNNER_TEMP/reports"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stryker-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+  merge:
+    needs: shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          path: reports
+      - name: Completeness, score, equivalence ledger
+        run: node .github/scripts/ts-stryker-merge.mjs reports $SHARDS

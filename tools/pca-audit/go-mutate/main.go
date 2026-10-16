@@ -1,5 +1,5 @@
 // go-mutate: minimal AST-guided mutation tester for sdks/go-pca (go-mutesting/gremlins stand-in; uses `go test -overlay`
-// so shards run in parallel on one tree). Usage: go-mutate -dir <module dir> [-shard i/n] [-list] [-files a.go,b.go] [-out f.json]
+// so shards run in parallel on one tree). Usage: go-mutate -dir <module dir> [-shard i/n] [-list] [-files a.go,b.go] [-tags t1,t2] [-out f.json]
 package main
 
 import (
@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"os"
@@ -129,6 +130,7 @@ func main() {
 	timeout := flag.Duration("timeout", 90*time.Second, "")
 	ids := flag.String("ids", "", "comma list of mutant ids to run (default all)")
 	par := flag.Int("j", 1, "parallel workers within shard")
+	tags := flag.String("tags", "", "comma list of build tags passed to `go test -tags` (and used to select the mutated files)")
 	flag.Parse()
 	var si, sn int
 	fmt.Sscanf(*shard, "%d/%d", &si, &sn)
@@ -137,7 +139,18 @@ func main() {
 	var names []string
 	if *files != "" { names = strings.Split(*files, ",") } else {
 		g, _ := filepath.Glob(filepath.Join(abs, "*.go"))
-		for _, p := range g { if !strings.HasSuffix(p, "_test.go") { names = append(names, filepath.Base(p)) } }
+		// only files the test build compiles under -tags: a file excluded by its build constraint (e.g. less_cgo.go without
+		// -tags less) is never compiled, so every mutant in it would "survive" without being tested
+		bc := build.Default
+		if *tags != "" { bc.BuildTags = strings.Split(*tags, ",") }
+		for _, p := range g {
+			if strings.HasSuffix(p, "_test.go") { continue }
+			if ok, err := bc.MatchFile(abs, filepath.Base(p)); err != nil || !ok {
+				fmt.Fprintf(os.Stderr, "go-mutate: skipping %s (excluded by its build constraint under tags %q)\n", filepath.Base(p), *tags)
+				continue
+			}
+			names = append(names, filepath.Base(p))
+		}
 	}
 	sort.Strings(names)
 	for _, n := range names { all = append(all, gen(filepath.Join(abs, n))...) }
@@ -165,7 +178,9 @@ func main() {
 				op := filepath.Join(tmp, fmt.Sprintf("o%d.json", m.ID))
 				os.WriteFile(op, ov, 0o644)
 				ctx, cancel := context.WithTimeout(context.Background(), *timeout)
-				cmd := exec.Command("go", "test", "-count=1", "-timeout", "40s", "-overlay", op, ".")
+				targs := []string{"test", "-count=1", "-timeout", "40s", "-overlay", op}
+				if *tags != "" { targs = append(targs, "-tags", *tags) }
+				cmd := exec.Command("go", append(targs, ".")...)
 				cmd.Dir = abs
 				cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 				var ob strings.Builder

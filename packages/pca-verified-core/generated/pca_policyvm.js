@@ -2407,12 +2407,51 @@ let PolicyVm = (function() {
             } else if (_dafny.areEqual(_2_t, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("budget_alloc")))) {
               let _16_l = PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("limit")));
               return ((_16_l).is_VNum) && ((new _dafny.BigRational(new BigNumber("0"))).isAtMost((_16_l).dtor_r));
+            } else if (_dafny.areEqual(_2_t, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("intent_session")))) {
+              return PolicyVm.__default.SessionCaveatOk(cv);
             } else {
               return false;
             }
           }
         }
       }
+    };
+    static B64Index(c) {
+      let _0_x = new BigNumber(c);
+      if (((new BigNumber(65)).isLessThanOrEqualTo(_0_x)) && ((_0_x).isLessThanOrEqualTo(new BigNumber(90)))) {
+        return (_0_x).minus(new BigNumber(65));
+      } else if (((new BigNumber(97)).isLessThanOrEqualTo(_0_x)) && ((_0_x).isLessThanOrEqualTo(new BigNumber(122)))) {
+        return (_0_x).minus(new BigNumber(71));
+      } else if (((new BigNumber(48)).isLessThanOrEqualTo(_0_x)) && ((_0_x).isLessThanOrEqualTo(new BigNumber(57)))) {
+        return (_0_x).plus(new BigNumber(4));
+      } else if ((_0_x).isEqualTo(new BigNumber(45))) {
+        return new BigNumber(62);
+      } else if ((_0_x).isEqualTo(new BigNumber(95))) {
+        return new BigNumber(63);
+      } else {
+        return new BigNumber(-1);
+      }
+    };
+    static B64u32(v) {
+      return ((((v).is_VStr) && ((new BigNumber(((v).dtor_s).length)).isEqualTo(new BigNumber(43)))) && (_dafny.Quantifier(_dafny.IntegerRange(_dafny.ZERO, new BigNumber(43)), true, function (_forall_var_0) {
+        let _0_i = _forall_var_0;
+        return !(((_dafny.ZERO).isLessThanOrEqualTo(_0_i)) && ((_0_i).isLessThan(new BigNumber(43)))) || ((_dafny.ZERO).isLessThanOrEqualTo(PolicyVm.__default.B64Index(((v).dtor_s)[_0_i])));
+      }))) && (((PolicyVm.__default.B64Index(((v).dtor_s)[new BigNumber(42)])).mod(new BigNumber(4))).isEqualTo(_dafny.ZERO));
+    };
+    static SessionKeysOk(es) {
+      return _dafny.Quantifier(_dafny.IntegerRange(_dafny.ZERO, new BigNumber((es).length)), true, function (_forall_var_0) {
+        let _0_i = _forall_var_0;
+        return !(((_dafny.ZERO).isLessThanOrEqualTo(_0_i)) && ((_0_i).isLessThan(new BigNumber((es).length)))) || ((_dafny.Set.fromElements(PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("type")), PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("session")), PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("seq")), PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("root")), PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("prev")))).contains(((es)[_0_i]).dtor_k));
+      });
+    };
+    static SessionSeqOk(v) {
+      return (((((v).is_VNum) && (!((v).dtor_negz))) && ((new _dafny.BigRational(new BigNumber("0"))).isAtMost((v).dtor_r))) && (((v).dtor_r).isAtMost(PolicyVm.__default.MaxSessionSeq))) && ((new _dafny.BigRational((((v).dtor_r).toBigNumber()), new BigNumber(1))).equals((v).dtor_r));
+    };
+    static NegZeroWf(v) {
+      return !(((v).is_VNum) && ((v).dtor_negz)) || (((v).dtor_r).equals(new _dafny.BigRational(new BigNumber("0"))));
+    };
+    static SessionCaveatOk(cv) {
+      return (((((((((cv).is_VObj) && ((cv).dtor_plain)) && (_dafny.areEqual(PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("type"))), PolicyVm.Value.create_VStr(PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("intent_session")))))) && (PolicyVm.__default.SessionKeysOk((cv).dtor_es))) && (PolicyVm.__default.B64u32(PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("session")))))) && (PolicyVm.__default.B64u32(PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("root")))))) && (PolicyVm.__default.SessionSeqOk(PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("seq")))))) && ((((PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("seq")))).dtor_r).equals(new _dafny.BigRational(new BigNumber("0")))) === (_dafny.areEqual(PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("prev"))), PolicyVm.Value.create_VUndef())))) && (!(!_dafny.areEqual(PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("prev"))), PolicyVm.Value.create_VUndef())) || (PolicyVm.__default.B64u32(PolicyVm.__default.Field(cv, PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("prev"))))));
     };
     static ExistsPred(xs, a, rx) {
       return ((_dafny.ZERO).isLessThan(new BigNumber((xs).length))) && ((PolicyVm.__default.PredicateMatches((xs)[_dafny.ZERO], a, rx)) || (PolicyVm.__default.ExistsPred((xs).slice(_dafny.ONE), a, rx)));
@@ -2634,6 +2673,9 @@ let PolicyVm = (function() {
     static get MaxReResourceLen() {
       return new BigNumber(512);
     };
+    static get MaxSessionSeq() {
+      return new _dafny.BigRational(new BigNumber("2147483647"));
+    };
     static get MalformedName() {
       return PolicyVm.__default.S(_dafny.Seq.UnicodeFromString("<malformed>"));
     };
@@ -2725,9 +2767,10 @@ let PolicyVm = (function() {
       $dt.b = b;
       return $dt;
     }
-    static create_VNum(r) {
+    static create_VNum(r, negz) {
       let $dt = new Value(3);
       $dt.r = r;
+      $dt.negz = negz;
       return $dt;
     }
     static create_VNonFinite() {
@@ -2765,6 +2808,7 @@ let PolicyVm = (function() {
     get is_VObj() { return this.$tag === 8; }
     get dtor_b() { return this.b; }
     get dtor_r() { return this.r; }
+    get dtor_negz() { return this.negz; }
     get dtor_s() { return this.s; }
     get dtor_xs() { return this.xs; }
     get dtor_es() { return this.es; }
@@ -2777,7 +2821,7 @@ let PolicyVm = (function() {
       } else if (this.$tag === 2) {
         return "PolicyVm.Value.VBool" + "(" + _dafny.toString(this.b) + ")";
       } else if (this.$tag === 3) {
-        return "PolicyVm.Value.VNum" + "(" + _dafny.toString(this.r) + ")";
+        return "PolicyVm.Value.VNum" + "(" + _dafny.toString(this.r) + ", " + _dafny.toString(this.negz) + ")";
       } else if (this.$tag === 4) {
         return "PolicyVm.Value.VNonFinite";
       } else if (this.$tag === 5) {
@@ -2802,7 +2846,7 @@ let PolicyVm = (function() {
       } else if (this.$tag === 2) {
         return other.$tag === 2 && this.b === other.b;
       } else if (this.$tag === 3) {
-        return other.$tag === 3 && _dafny.areEqual(this.r, other.r);
+        return other.$tag === 3 && _dafny.areEqual(this.r, other.r) && this.negz === other.negz;
       } else if (this.$tag === 4) {
         return other.$tag === 4;
       } else if (this.$tag === 5) {

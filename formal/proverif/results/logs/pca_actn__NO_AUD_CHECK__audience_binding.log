@@ -1,0 +1,191 @@
+-- Query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> vaud_1 = aaud_3 in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 131 rules (29 with conclusion selected). Queue: 28 rules.
+Starting query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> vaud_1 = aaud_3
+goal reachable: verb_4 ≠ anyc && b-event(AdvanceC((vaud_1,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3)),cc,sid1_1)) && b-event(ConsumeN((vaud_1,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3),n),sid1_1)) && attacker(aaud_3) && attacker(verb_4) && attacker(res_4) && attacker(cc) && attacker(n) && attacker(e) && attacker(k_3) && attacker(vaud_1) -> event(Accept(vaud_1,aaud_3,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3),n,cc,verb_4,pk(k_2),e))
+Abbreviations:
+k_2 = k[!1 = @sid]
+sid1_1 = sid1[asig = sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),k_3),exp_1 = e,nonce_1 = n,ctr_1 = cc,gref_1 = h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),res_1 = res_4,verb_1 = verb_4,aaud = aaud_3,c1 = ((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)),ltkT = k_2,pkT = pk(k_2),vaud = vaud_1,!1 = @sid_1]
+
+Derivation:
+Abbreviations:
+k_2 = k[!1 = @sid]
+sid1_1 = sid1[asig = sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),k_3),exp_1 = e,nonce_1 = n,ctr_1 = cc,gref_1 = h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),res_1 = res_4,verb_1 = verb_4,aaud = aaud_3,c1 = ((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)),ltkT = k_2,pkT = pk(k_2),vaud = vaud_1,!1 = @sid_1]
+
+1. The message pk(k_2) may be sent to the attacker at output {5}.
+attacker(pk(k_2)).
+
+2. We assume as hypothesis that
+attacker(vaud_1).
+
+3. By 2, the attacker may know vaud_1.
+By 1, the attacker may know pk(k_2).
+Using the function 2-tuple the attacker may obtain (vaud_1,pk(k_2)).
+attacker((vaud_1,pk(k_2))).
+
+4. The entry keys(pk(k_2),k_2) may be inserted in a table at insert {3}.
+table(keys(pk(k_2),k_2)).
+
+5. We assume as hypothesis that
+attacker(k_3).
+
+6. We assume as hypothesis that
+attacker(e).
+
+7. We assume as hypothesis that
+attacker(n).
+
+8. We assume as hypothesis that
+attacker(cc).
+
+9. The message pk(k_2) that the attacker may have by 1 may be received at input {116}.
+The entry keys(pk(k_2),k_2) that may be in a table by 4 may be read at get {119}.
+So the message k_2 may be sent to the attacker at output {118}.
+attacker(k_2).
+
+10. Using the function anyc the attacker may obtain anyc.
+attacker(anyc).
+
+11. By 5, the attacker may know k_3.
+Using the function pk the attacker may obtain pk(k_3).
+attacker(pk(k_3)).
+
+12. Using the function none the attacker may obtain none.
+attacker(none).
+
+13. Using the function capT the attacker may obtain capT.
+attacker(capT).
+
+14. By 13, the attacker may know capT.
+By 12, the attacker may know none.
+By 1, the attacker may know pk(k_2).
+By 11, the attacker may know pk(k_3).
+By 10, the attacker may know anyc.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_2),pk(k_3),anyc).
+attacker((capT,none,pk(k_2),pk(k_3),anyc)).
+
+15. By 14, the attacker may know (capT,none,pk(k_2),pk(k_3),anyc).
+By 9, the attacker may know k_2.
+Using the function sign the attacker may obtain sign((capT,none,pk(k_2),pk(k_3),anyc),k_2).
+attacker(sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)).
+
+16. By 14, the attacker may know (capT,none,pk(k_2),pk(k_3),anyc).
+By 15, the attacker may know sign((capT,none,pk(k_2),pk(k_3),anyc),k_2).
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)).
+attacker(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))).
+
+17. By 16, the attacker may know ((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)).
+Using the function h the attacker may obtain h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))).
+attacker(h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)))).
+
+18. We assume as hypothesis that
+attacker(res_4).
+
+19. We assume as hypothesis that
+attacker(verb_4).
+
+20. We assume as hypothesis that
+attacker(aaud_3).
+
+21. Using the function actT the attacker may obtain actT.
+attacker(actT).
+
+22. By 21, the attacker may know actT.
+By 20, the attacker may know aaud_3.
+By 19, the attacker may know verb_4.
+By 18, the attacker may know res_4.
+By 17, the attacker may know h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))).
+By 8, the attacker may know cc.
+By 7, the attacker may know n.
+By 6, the attacker may know e.
+Using the function 8-tuple the attacker may obtain (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e).
+attacker((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e)).
+
+23. By 22, the attacker may know (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e).
+By 5, the attacker may know k_3.
+Using the function sign the attacker may obtain sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),k_3).
+attacker(sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),k_3)).
+
+24. Using the function endm the attacker may obtain endm.
+attacker(endm).
+
+25. By 16, the attacker may know ((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)).
+By 24, the attacker may know endm.
+Using the function 2-tuple the attacker may obtain (((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)),endm).
+attacker((((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)),endm)).
+
+26. By 25, the attacker may know (((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)),endm).
+By 22, the attacker may know (actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e).
+By 23, the attacker may know sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),k_3).
+Using the function 3-tuple the attacker may obtain ((((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),k_3)).
+attacker(((((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),k_3))).
+
+27. The message (vaud_1,pk(k_2)) that the attacker may have by 3 may be received at input {41}.
+The entry keys(pk(k_2),k_2) that may be in a table by 4 may be read at get {114}.
+The message ((((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2)),endm),(actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),sign((actT,aaud_3,verb_4,res_4,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),cc,n,e),k_3)) that the attacker may have by 26 may be received at input {42}.
+The event ConsumeN((vaud_1,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3),n),sid1_1) may be executed at {52}.
+The event AdvanceC((vaud_1,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3)),cc,sid1_1) may be executed at {53}.
+We have verb_4 ≠ anyc.
+So event Accept(vaud_1,aaud_3,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3),n,cc,verb_4,pk(k_2),e) may be executed at {57}.
+event(Accept(vaud_1,aaud_3,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3),n,cc,verb_4,pk(k_2),e)).
+
+28. By 27, event(Accept(vaud_1,aaud_3,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3),n,cc,verb_4,pk(k_2),e)).
+The goal is reached, represented in the following fact:
+event(Accept(vaud_1,aaud_3,h(((capT,none,pk(k_2),pk(k_3),anyc),sign((capT,none,pk(k_2),pk(k_3),anyc),k_2))),pk(k_3),n,cc,verb_4,pk(k_2),e)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new k: bitstring creating k_4 at {2} in copy a
+
+insert keys(pk(k_4),k_4) at {3} in copy a
+
+event KeyGen(pk(k_4)) at {4} in copy a
+
+out(c, ~M) with ~M = pk(k_4) at {5} in copy a
+
+in(c, (a_1,~M)) with ~M = pk(k_4) at {41} in copy a_2
+
+get keys(pk(k_4),k_4) at {114} in copy a_2
+
+in(c, ~M) with ~M = pk(k_4) at {116} in copy a_3
+
+get keys(pk(k_4),k_4) at {119} in copy a_3
+
+event Reveal(pk(k_4)) at {117} in copy a_3
+
+out(c, ~M_1) with ~M_1 = k_4 at {118} in copy a_3
+
+in(c, ((((capT,none,~M,pk(a_4),anyc),sign((capT,none,~M,pk(a_4),anyc),~M_1)),endm),(actT,a_5,a_6,a_7,h(((capT,none,~M,pk(a_4),anyc),sign((capT,none,~M,pk(a_4),anyc),~M_1))),a_8,a_9,a_10),sign((actT,a_5,a_6,a_7,h(((capT,none,~M,pk(a_4),anyc),sign((capT,none,~M,pk(a_4),anyc),~M_1))),a_8,a_9,a_10),a_4))) with ~M = pk(k_4), sign((capT,none,~M,pk(a_4),anyc),~M_1) = sign((capT,none,pk(k_4),pk(a_4),anyc),k_4), h(((capT,none,~M,pk(a_4),anyc),sign((capT,none,~M,pk(a_4),anyc),~M_1))) = h(((capT,none,pk(k_4),pk(a_4),anyc),sign((capT,none,pk(k_4),pk(a_4),anyc),k_4))), sign((actT,a_5,a_6,a_7,h(((capT,none,~M,pk(a_4),anyc),sign((capT,none,~M,pk(a_4),anyc),~M_1))),a_8,a_9,a_10),a_4) = sign((actT,a_5,a_6,a_7,h(((capT,none,pk(k_4),pk(a_4),anyc),sign((capT,none,pk(k_4),pk(a_4),anyc),k_4))),a_8,a_9,a_10),a_4) at {42} in copy a_2
+
+new sid1: bitstring creating sid1_2 at {51} in copy a_2
+
+event ConsumeN((a_1,h(((capT,none,pk(k_4),pk(a_4),anyc),sign((capT,none,pk(k_4),pk(a_4),anyc),k_4))),pk(a_4),a_9),sid1_2) at {52} in copy a_2
+
+event AdvanceC((a_1,h(((capT,none,pk(k_4),pk(a_4),anyc),sign((capT,none,pk(k_4),pk(a_4),anyc),k_4))),pk(a_4)),a_8,sid1_2) at {53} in copy a_2
+
+event ReachD1 at {54} in copy a_2
+
+event HopWalk(h(((capT,none,pk(k_4),pk(a_4),anyc),sign((capT,none,pk(k_4),pk(a_4),anyc),k_4))),a_6) at {55} in copy a_2
+
+event AcceptS(a_1,h(((capT,none,pk(k_4),pk(a_4),anyc),sign((capT,none,pk(k_4),pk(a_4),anyc),k_4))),pk(a_4),a_9,a_8,sid1_2) at {56} in copy a_2
+
+event Accept(a_1,a_5,h(((capT,none,pk(k_4),pk(a_4),anyc),sign((capT,none,pk(k_4),pk(a_4),anyc),k_4))),pk(a_4),a_9,a_8,a_6,pk(k_4),a_10) at {57} in copy a_2 (goal)
+
+The event Accept(a_1,a_5,h(((capT,none,pk(k_4),pk(a_4),anyc),sign((capT,none,pk(k_4),pk(a_4),anyc),k_4))),pk(a_4),a_9,a_8,a_6,pk(k_4),a_10) is executed at {57} in copy a_2.
+A trace has been found.
+RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> vaud_1 = aaud_3 is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query(ies):
+ - Query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> vaud_1 = aaud_3 is false.
+Associated restriction(s):
+ - Restriction event(ConsumeN(k_2,a)) && event(ConsumeN(k_2,b)) ==> a = b in process 1.
+ - Restriction event(AdvanceC(s,ct,a)) && event(AdvanceC(s,ct,b)) ==> a = b in process 1.
+
+--------------------------------------------------------------
+

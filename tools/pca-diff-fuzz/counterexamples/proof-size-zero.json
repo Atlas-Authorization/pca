@@ -1,0 +1,92 @@
+{
+ "mutator": "proof-size-zero",
+ "case": "c006021",
+ "bytes": 1326,
+ "allImplementationsAgree": false,
+ "context": {
+  "now": 1800000000000,
+  "aud": "rs-fuzz"
+ },
+ "results": {
+  "oracle": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": false,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "dotnet": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": false,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "go": {
+   "allow": false,
+   "checks": {
+    "audience": true,
+    "chain": true,
+    "counter": true,
+    "leaf_signature": true,
+    "plan_inclusion": false,
+    "validity": true,
+    "version": true,
+    "wire": true
+   }
+  },
+  "php": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": false,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "python": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": false,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "ruby": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": true,
+    "plan_inclusion": false,
+    "leaf_signature": true,
+    "counter": true
+   }
+  }
+ },
+ "pcactn_json": "{\"ver\":2,\"action\":{\"verb\":\"send\",\"resource\":\"db/{\",\"params_digest\":\"RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o\",\"reversibility_class\":\"reversible\"},\"grant_ref\":\"65LPCq0eUptDQmTC63LZAGp6Yoj3-07hoMrVi9OtqVQ\",\"cap_chain\":[{\"id\":\"65LPCq0eUptDQmTC63LZAGp6Yoj3-07hoMrVi9OtqVQ\",\"issuer\":\"uYBd4zfUm7PmKuw9s3Ma_oUMNMzsA2RIcUYiwzH01kg\",\"holder\":\"EFIkTaQvVC4IxOsLM2XH3AtrlnbPLOUtoPTeXYA30ME\",\"caveats\":[{\"type\":\"max_spend\",\"\":762586,\"<&>\":\"日本語\"}],\"body_digest\":\"65LPCq0eUptDQmTC63LZAGp6Yoj3-07hoMrVi9OtqVQ\",\"sig\":\"RMd9xsw5O4s9gRDm4om1r3vlqagytygucf6CN1mmqJyDhI3QPsLGyBZ45oG3rspWZWK7YhE-Mzf9_kLeNFqzDg\"}],\"plan\":{\"root\":\"zxNykikVNN3nwk5J0VDlMTag1qjt76h4B647z53cBks\",\"inclusion_proof\":{\"index\":1,\"size\":0,\"path\":[{\"side\":\"L\",\"hash\":\"9z7XVUKLpMPgArq8N2J-tNDeXcGatNaYHbkoGuvf_P8\"}]},\"node_id\":\"n1~G5\",\"conditions_digest\":\"YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY\"},\"attestation\":{\"quote_digest\":\"\",\"epoch\":0,\"model_id\":\"unattested\",\"measurement\":\"\",\"operator\":\"M5I\"},\"provenance\":{\"causal_hash\":\"/\",\"taint_level\":0,\"trusted_refs\":[]},\"freshness\":{\"beacon_ref\":\"(['\",\"epoch\":0,\"accumulator_witness\":\"\"},\"counter\":0,\"risk_claim\":{\"r\":0,\"inputs\":{\"a\":77}},\"aud\":\"rs-fuzz\",\"iat\":1799999994742,\"exp\":1800000054742,\"prohibition_evidence\":[72,null],\"sig\":\"kshfX_A86DVGk4dAV0SeUfAC5-v3aZfeLM9nIObdYqGj0OJ3zJzY7Apu4u4qAdHryXEJaeyOpvkpDdsqYP5IAw\"}",
+ "grant": "{\"body_digest\":\"65LPCq0eUptDQmTC63LZAGp6Yoj3-07hoMrVi9OtqVQ\",\"caveats\":[{\"\":762586,\"<&>\":\"日本語\",\"type\":\"max_spend\"}],\"holder\":\"EFIkTaQvVC4IxOsLM2XH3AtrlnbPLOUtoPTeXYA30ME\",\"id\":\"65LPCq0eUptDQmTC63LZAGp6Yoj3-07hoMrVi9OtqVQ\",\"issuer\":\"uYBd4zfUm7PmKuw9s3Ma_oUMNMzsA2RIcUYiwzH01kg\",\"sig\":\"RMd9xsw5O4s9gRDm4om1r3vlqagytygucf6CN1mmqJyDhI3QPsLGyBZ45oG3rspWZWK7YhE-Mzf9_kLeNFqzDg\"}"
+}

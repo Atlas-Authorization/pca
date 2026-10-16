@@ -417,7 +417,10 @@ module Regex {
     case Cat(l) => SizeL(l)
     case Alt(l) => AltSize(l)
     case Rep(inner, mn, mx) =>
-      mn * Size(inner) + (if mx == -1 then Size(inner) + 2 else (mx - mn) * (Size(inner) + 1))
+      // ONE evaluation of Size(inner): written with three, the compiled function is exponential in the nesting depth of
+      // repeats ('(?:'.repeat(30) + 'a?' + ')?'.repeat(30) took 2^30 calls)
+      var S := Size(inner);
+      mn * S + (if mx == -1 then S + 2 else (mx - mn) * (S + 1))
   }
   function SizeL(l: NList): int
     decreases l, 0

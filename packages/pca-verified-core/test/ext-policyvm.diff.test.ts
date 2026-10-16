@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import * as prod from '../../pca/src/predicates';
 import { safeRegexFullMatch } from '../../pca/src/safe-regex';
 import { agentNativeCaveatEvaluator, toolSchemaEvaluator } from '../../pca/src/agent-native';
-import { decide, type DecideInput } from '../../pca/src/policy-vm';
+import { decide, type DecideInput } from './support/legacy/policy-vm';
 import { admit as prodAdmit, escalateThreshold as prodEscalate, requiredThreshold as prodRequired, cost as prodCost } from '../../pca/src/risk';
 import {
   admitVerified,
@@ -342,7 +342,7 @@ describe('PolicyVm differential: predicates', () => {
 });
 
 // ---------------------------------------------------------------- caveats
-const CAV_TYPES = ['expires', 'not_before', 'rate', 'max_blast_radius', 'reversibility_max', 'delegation_depth', 'budget_alloc', 'predicates', 'tool_schema', 'envelope', 'bogus', 'max_spend', 'note'];
+const CAV_TYPES = ['expires', 'not_before', 'rate', 'max_blast_radius', 'reversibility_max', 'delegation_depth', 'budget_alloc', 'predicates', 'tool_schema', 'envelope', 'bogus', 'max_spend', 'note', 'intent_session'];
 function caveat(r: R, ctx: any, ps: string[]): any {
   const t = r.b(0.97) ? r.p(CAV_TYPES) : r.p([5, null, undefined, {}, [], 'toString'] as any[]);
   const c: any = { type: t };
@@ -372,6 +372,9 @@ function caveat(r: R, ctx: any, ps: string[]): any {
     case 'predicates':
       c.allow = r.b(0.93) ? Array.from({ length: r.i(3) }, () => predicate(r, ctx, ps)) : r.p([null, 5, {}, 'x']);
       break;
+    case 'intent_session':
+      Object.assign(c, sessionCaveat(r));
+      break;
     case 'tool_schema':
       c.tool = r.p(['GET', 'POST', 'a']);
       c.schema = r.b() ? { props: {}, required: [] } : r.p([null, 5]);
@@ -381,6 +384,21 @@ function caveat(r: R, ctx: any, ps: string[]): any {
   }
   if (r.b(0.02)) return r.p([null, 5, 'x', [] as any, undefined]);
   return c;
+}
+// Intent Layer v2 (rule 13) session caveat members: mostly well-formed, with every way of being malformed (including `seq: -0`, which
+// both the TypeScript isNonNeg and the model's SessionSeqOk refuse: the extraction boundary carries the -0 flag).
+const B32 = ['A'.repeat(43), 'A'.repeat(42) + 'E', 'abcdefghijklmnopqrstuvwxyz0123456789-_ABCDE', 'z'.repeat(42) + 'w'];
+const BAD32 = ['A'.repeat(42), 'A'.repeat(44), 'A'.repeat(42) + 'B', 'A'.repeat(42) + '=', 'A'.repeat(42) + '+', 'A'.repeat(41) + '/A', '', 5, null, ['A'.repeat(43)]];
+function sessionCaveat(r: R): Record<string, unknown> {
+  const b32 = (): unknown => (r.b(0.85) ? r.p(B32) : r.p(BAD32));
+  const seq = r.b(0.8) ? r.p([0, 1, 2, 2147483647]) : r.p([2147483648, -1, -0, 1.5, NaN, Infinity, '1', null, 2 ** 53]);
+  const out: Record<string, unknown> = { session: b32(), root: b32(), seq };
+  const wantPrev = r.b(0.85) ? seq !== 0 : seq === 0;
+  if (wantPrev) out.prev = b32();
+  if (r.b(0.05)) out.prev = undefined;
+  if (r.b(0.05)) delete out[r.p(['session', 'root', 'seq'])];
+  if (r.b(0.05)) out[r.p(['extra', 'Type', 'note'])] = 1;
+  return out;
 }
 const NOW = 1700000000000;
 function cavContext(r: R, ctx: any): any {
@@ -395,6 +413,63 @@ function cavContext(r: R, ctx: any): any {
   if (r.b(0.02)) return r.p([null, 5, 'x', [] as any, undefined]);
   return c;
 }
+
+describe('PolicyVm differential: intent_session caveat (rule 13)', () => {
+  const ctx = { now: NOW, action: { action: { verb: 'v', resource: 'r' } } };
+  const ok = { type: 'intent_session', session: B32[0], root: B32[1], seq: 0 };
+  it('a well-formed caveat is satisfied, a malformed one is not, and the proved evaluators agree with production', () => {
+    const cases: unknown[] = [
+      ok,
+      { ...ok, seq: 3, prev: B32[2] },
+      { ...ok, seq: 2147483647, prev: B32[3] },
+      { ...ok, seq: 1 },
+      { ...ok, prev: B32[2] },
+      { ...ok, seq: 2147483648, prev: B32[2] },
+      { ...ok, seq: 1.5, prev: B32[2] },
+      { ...ok, seq: -1 },
+      { ...ok, seq: -0 },
+      { ...ok, session: BAD32[2] },
+      { ...ok, root: BAD32[0] },
+      { ...ok, seq: 2, prev: BAD32[4] },
+      { ...ok, extra: 1 },
+      { ...ok, prev: undefined },
+      Object.assign(Object.create(null), ok),
+      Object.assign(Object.create({ inherited: 1 }), ok),
+      [ok],
+    ];
+    const verdicts = cases.map((cv) => {
+      const a = prod.envelopeCaveatEvaluator(cv as any, ctx);
+      expect(vm.envelopeCaveatEvaluator(cv, ctx)).toBe(a);
+      expect(vm.agentNativeCaveatEvaluator(cv, ctx)).toBe(agentNativeCaveatEvaluator(cv as any, ctx));
+      return a;
+    });
+    expect(verdicts).toEqual([true, true, true, false, false, false, false, false, false, false, false, false, false, true, true, false, false]);
+    // negative zero: refused by both (and +0 accepted by both), in either evaluator
+    expect(prod.envelopeCaveatEvaluator({ ...ok, seq: -0 } as any, ctx)).toBe(false);
+    expect(vm.envelopeCaveatEvaluator({ ...ok, seq: -0 }, ctx)).toBe(false);
+    expect(vm.agentNativeCaveatEvaluator({ ...ok, seq: -0 }, ctx)).toBe(false);
+    expect(vm.envelopeCaveatEvaluator({ ...ok, seq: 0 }, ctx)).toBe(true);
+    // -0 elsewhere still compares as 0 (eq / lte / expires), exactly like the TypeScript
+    expect(vm.envelopeCaveatEvaluator({ type: 'delegation_depth', max: -0 }, { ...ctx, delegationDepth: 0 })).toBe(prod.envelopeCaveatEvaluator({ type: 'delegation_depth', max: -0 } as any, { ...ctx, delegationDepth: 0 } as any));
+    // no clock: unsatisfied like every stock caveat
+    expect(vm.envelopeCaveatEvaluator(ok, { action: ctx.action })).toBe(false);
+    expect(prod.envelopeCaveatEvaluator(ok as any, { action: ctx.action } as any)).toBe(false);
+  });
+  it('random session caveats agree (envelope and agent-native evaluators)', () => {
+    const r = new R(SEED * 31 + 13);
+    let sat = 0;
+    for (let i = 0; i < N * 3; i++) {
+      const cv = { type: 'intent_session', ...sessionCaveat(r) };
+      const a = prod.envelopeCaveatEvaluator(cv as any, ctx);
+      const b = vm.envelopeCaveatEvaluator(cv, ctx);
+      if (a !== b) throw new Error(`intent_session differs prod=${a} verified=${b} cv=${JSON.stringify(cv)}`);
+      if (agentNativeCaveatEvaluator(cv as any, ctx) !== vm.agentNativeCaveatEvaluator(cv, ctx)) throw new Error(`agent differs cv=${JSON.stringify(cv)}`);
+      if (a) sat++;
+    }
+    expect(sat).toBeGreaterThan(N / 2);
+    expect(sat).toBeLessThan(N * 3);
+  });
+});
 
 describe('PolicyVm differential: caveats', () => {
   it('envelopeCaveatEvaluator and agentNativeCaveatEvaluator agree on every single caveat', () => {

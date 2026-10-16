@@ -1,4 +1,6 @@
-import { snapshotConfig } from './config-snapshot';
+import { VerifiedMemoryNonceStore, createMultiRootVerifierVerified, matchAgentBindingVerified, requiresAttestationVerified } from '@atlasauth/pca-verified-core';
+import { verifiedCoreOptIn } from './verified-core-mode';
+import { createAttestationVerifierProved, verifyAttestationProved } from './attest-proved';
 /**
  * L0 — Attestation-derived workload identity for AI agents (spec §6 L0, Deep Dive I rows
  * "Model swap / malicious fine-tune" and "Agent RCE / key extraction").
@@ -410,6 +412,9 @@ export const DEFAULT_NONCE_RETENTION_MS = 60 * 60 * 1000;
  * replay protection, so `max < 1` / non-integer throws at construction).
  */
 export function memoryNonceStore(max = 100_000, opts: MemoryNonceStoreOptions = {}): AttestationNonceStore {
+  // OPT-IN (`PCA_VERIFIED_CORE=noncestore`): the Dafny-proved store model (Attest.dfy MsConsume: SingleUse, LiveNeverEvicted,
+  // FullOfLiveRefuses), verified-core `VerifiedMemoryNonceStore`; same construction checks and messages.
+  if (verifiedCoreOptIn('noncestore')) return new VerifiedMemoryNonceStore(max, opts);
   if (typeof max !== 'number' || !Number.isSafeInteger(max) || max < 1) {
     throw new TypeError('memoryNonceStore: max must be a positive integer (a store that retains nothing gives no replay protection)');
   }
@@ -512,17 +517,7 @@ export interface AttestationVerdict {
 
 /** True iff the grant's agent_binding constrains anything (=> an attestation is REQUIRED). */
 export function requiresAttestation(binding: AgentBinding | undefined): boolean {
-  const b = binding ?? {};
-  return (
-    (Array.isArray(b.model_allowlist) && b.model_allowlist.length > 0) ||
-    hasMinMeasurement(b.min_measurement) ||
-    (typeof b.operator === 'string' && b.operator.length > 0) ||
-    (Array.isArray(b.weights_allowlist) && b.weights_allowlist.length > 0) ||
-    (Array.isArray(b.system_prompt_allowlist) && b.system_prompt_allowlist.length > 0) ||
-    (Array.isArray(b.tool_manifest_allowlist) && b.tool_manifest_allowlist.length > 0) ||
-    b.require_hardware === true ||
-    b.require_measured_weights === true
-  );
+  return requiresAttestationVerified(binding); // PROVED CODE: Attest.dfy RequiresAttestation (verified-core)
 }
 
 /** True iff `doc.nonce` is the nonce the PCActn declares in `attestation.quote_digest`. */
@@ -530,78 +525,9 @@ export function nonceBinds(doc: AttestationDocument, ctx: VerifyContext): boolea
   return typeof doc?.nonce === 'string' && doc.nonce === ctx?.pcactn?.attestation?.quote_digest;
 }
 
-/** True iff `min_measurement` actually constrains anything (non-empty string, or an `{ svn }` lower bound). */
-function hasMinMeasurement(mm: AgentBinding['min_measurement']): boolean {
-  if (typeof mm === 'string') return mm.length > 0;
-  return !!mm && typeof mm === 'object' && typeof (mm as { svn?: unknown }).svn === 'number' && Number.isFinite((mm as { svn: number }).svn);
-}
-
-/**
- * Check the measured `runtime_measurement` against a `min_measurement` constraint. Two shapes:
- *   - string: EQUALITY against the pinned opaque digest (unchanged, default path);
- *   - `{ svn: number }`: MONOTONE ladder — the measurement is parsed as an integer SVN and must be
- *     `>= svn`, so an upgraded enclave at a higher SVN passes without re-minting, a downgrade fails.
- * Returns a reason on failure, else null.
- */
-function checkMinMeasurement(mm: AgentBinding['min_measurement'], runtimeMeasurement: string): string | null {
-  if (typeof mm === 'string') {
-    if (mm.length > 0 && runtimeMeasurement !== mm) return `runtime_measurement does not match required min_measurement`;
-    return null;
-  }
-  if (mm && typeof mm === 'object' && typeof (mm as { svn?: unknown }).svn === 'number') {
-    const min = (mm as { svn: number }).svn;
-    if (!Number.isFinite(min)) return null; // malformed lower bound: nothing to enforce
-    const accepted = Number(runtimeMeasurement);
-    if (runtimeMeasurement.trim() === '' || !Number.isInteger(accepted)) {
-      return `runtime_measurement ${runtimeMeasurement} is not an integer SVN (required min svn ${min})`;
-    }
-    if (accepted < min) return `runtime_measurement svn ${accepted} is below required min svn ${min}`;
-  }
-  return null;
-}
-
 /** Match a measured identity against the grant's agent_binding. Returns a reason on failure, else null. */
 export function matchAgentBinding(id: MeasuredIdentity, binding: AgentBinding | undefined): string | null {
-  const b = binding ?? {};
-  if (Array.isArray(b.model_allowlist) && b.model_allowlist.length > 0 && !b.model_allowlist.includes(id.model_id)) {
-    return `model_id ${id.model_id} not in model_allowlist`;
-  }
-  // `min_measurement` is an opaque launch measurement pinned for EQUALITY (default), OR a monotone
-  // `{ svn }` lower bound compared `>=` so an upgraded enclave need not re-mint the grant. Opaque
-  // hashes keep "min" == "the required value"; only the structured form admits a numeric ordering.
-  const mmErr = checkMinMeasurement(b.min_measurement, id.runtime_measurement);
-  if (mmErr) return mmErr;
-  if (typeof b.operator === 'string' && b.operator.length > 0 && id.operator !== b.operator) {
-    return `operator ${id.operator} is not the bound operator`;
-  }
-  // WEIGHTS-LEVEL ATTESTATION. `weights_allowlist` pins acceptable weights digests; a model swap or
-  // malicious fine-tune changes the digest. `require_measured_weights` additionally demands the digest
-  // be HARDWARE-MEASURED (silicon-rooted) rather than self-asserted (software) or host-asserted
-  // (e.g. SEV-SNP HOST_DATA): under it the match runs ONLY against a digest the verifier measured
-  // (`weights_measured === true`), so whoever signed the document — or a lying host — cannot assert a
-  // weights digest into the allowlist. Fail-closed when required but the digest is not measured. Without
-  // the flag the allowlist is matched by value regardless of provenance (unchanged, backward-compatible).
-  if (b.require_measured_weights === true && id.weights_measured !== true) {
-    return `weights_digest is not hardware-measured (require_measured_weights: self-asserted or host-asserted weights rejected)`;
-  }
-  if (Array.isArray(b.weights_allowlist) && b.weights_allowlist.length > 0 && !b.weights_allowlist.includes(id.weights_digest)) {
-    return `weights_digest not in weights_allowlist (model swap / fine-tune?)`;
-  }
-  // "Provenance beyond weights": the system prompt and tool manifest are part of the agent's identity.
-  // Each is gated exactly like `weights_allowlist`, and FAILS CLOSED when the binding pins it but the
-  // measured identity carries no such digest (absent-when-required), so a document that simply omits
-  // the measurement cannot slip past a prompt/tools pin.
-  if (Array.isArray(b.system_prompt_allowlist) && b.system_prompt_allowlist.length > 0) {
-    if (typeof id.system_prompt_digest !== 'string' || !b.system_prompt_allowlist.includes(id.system_prompt_digest)) {
-      return `system_prompt_digest not in system_prompt_allowlist (instructions changed / prompt injection?)`;
-    }
-  }
-  if (Array.isArray(b.tool_manifest_allowlist) && b.tool_manifest_allowlist.length > 0) {
-    if (typeof id.tool_manifest_digest !== 'string' || !b.tool_manifest_allowlist.includes(id.tool_manifest_digest)) {
-      return `tool_manifest_digest not in tool_manifest_allowlist (tools changed?)`;
-    }
-  }
-  return null;
+  return matchAgentBindingVerified(id, binding); // PROVED CODE: Attest.dfy MatchBinding (verified-core); same reasons
 }
 
 export type AttestationHookResult = HookResult & { present: boolean; bound: boolean };
@@ -634,104 +560,7 @@ export async function verifyAttestation(input: {
   maxNonceAgeMs?: number;
   clockSkewMs?: number;
 }): Promise<AttestationVerdict> {
-  const doc = input.document;
-  const present = !!doc && typeof doc === 'object';
-  const fail = (reason: string): AttestationVerdict => ({ ok: false, present, bound: false, reason });
-  try {
-    if (!present || !doc) return fail('no attestation document for this action');
-    const { ctx, expected, nowMs } = input;
-    const trusted = new Set(input.trustedAttestorKeys);
-    const skew = Number.isFinite(input.clockSkewMs) ? Math.max(0, input.clockSkewMs as number) : 0;
-    const maxAge = Math.min(
-      Number.isFinite(input.maxNonceAgeMs) && (input.maxNonceAgeMs as number) > 0 ? (input.maxNonceAgeMs as number) : MAX_ATTESTATION_AGE_MS,
-      MAX_ATTESTATION_AGE_MS,
-    );
-
-    // (2) the PCActn must itself commit to the expected binding
-    let expectedBinding: string;
-    try {
-      expectedBinding = attestationBindingB64u(expected);
-    } catch (e) {
-      return fail(`attestation binding not constructible: ${e instanceof Error ? e.message : 'invalid'}`);
-    }
-    if (ctx?.pcactn?.grant_ref !== expected.grantRef) return fail('attestation binding: PCActn grant_ref differs from expected grant');
-    if (ctx?.pcactn?.attestation?.epoch !== expected.epoch) return fail('attestation binding: PCActn attestation epoch differs from expected epoch');
-    if (ctx?.pcactn?.attestation?.quote_digest !== expected.nonce) return fail('attestation nonce does not bind to this PCActn');
-
-    // (3) document nonce
-    if (doc.nonce !== expected.nonce) return fail('attestation nonce does not match the server-issued nonce');
-
-    // (5a) nonce age (server clock) — mandatory in hardware mode
-    const nonceAgeCheck = (): string | null => {
-      if (typeof expected.nonceIssuedAt !== 'number' || !Number.isFinite(expected.nonceIssuedAt)) {
-        return 'server nonce issue time unknown (cannot establish freshness)';
-      }
-      if (nowMs + skew < expected.nonceIssuedAt) return 'nonce issued in the future';
-      if (nowMs - expected.nonceIssuedAt > maxAge + skew) return 'attestation nonce expired (stale quote)';
-      return null;
-    };
-
-    // (4) identity + binding
-    //
-    // (4-pre) require_hardware: a grant may DEMAND a TEE-rooted attestation. When set we fail closed
-    // unless a hardware verifier is present AND the document claims hardware mode — a software-mode
-    // document, or no hardware verifier, is rejected regardless of trusted software attestor keys.
-    const env = readEnvelope(ctx.grant);
-    if (env?.agent_binding?.require_hardware === true) {
-      if (!input.hardwareVerifier) return fail('agent_binding.require_hardware: no hardware verifier is configured (fail closed)');
-      if (doc.mode !== 'hardware') return fail('agent_binding.require_hardware: attestation document is not hardware-rooted (software mode)');
-    }
-
-    let identity: MeasuredIdentity;
-    if (input.hardwareVerifier) {
-      const nErr = nonceAgeCheck();
-      if (nErr) return fail(nErr);
-      const hw = await input.hardwareVerifier.verify({ document: doc, ctx, nowMs, expected });
-      if (!hw.ok) return fail(`hardware attestation rejected: ${hw.reason ?? 'invalid'}`);
-      if (hw.bound !== true) return fail('hardware verifier did not confirm report_data binding');
-      if (!hw.measured) return fail('hardware verifier returned no measured identity');
-      identity = hw.measured; // document fields and dates are self-asserted: never consulted
-    } else {
-      if (doc.mode !== 'software') return fail(`document mode ${String(doc.mode)} needs a hardwareVerifier`);
-      if (typeof doc.attestor !== 'string' || !trusted.has(doc.attestor)) return fail('attestor key is not trusted');
-      if (resolveSigAlg(doc.alg) === null) return fail('attestation declares an unknown signature alg');
-      const { sig, pq_sig, ...body } = doc; // signed body keeps alg/pq_pk, drops both signatures
-      // Suite-agile (ed25519 == verifyB64u(attestor, …, sig)); hybrid requires BOTH; pure ml-dsa under pq_pk.
-      if (typeof sig !== 'string' || !verifyPinnedSuite(doc.alg, doc.attestor, doc.pq_pk, attestMessage(body), { sig, pq_sig }, input)) {
-        return fail('attestation signature does not verify');
-      }
-      if (typeof doc.binding !== 'string' || doc.binding.length === 0) return fail('attestation is not bound (binding absent)');
-      if (doc.binding !== expectedBinding) return fail('attestation binding mismatch (holder/grant/epoch/nonce)');
-      if (!Number.isFinite(doc.issued_at) || !Number.isFinite(doc.expires_at) || doc.expires_at < doc.issued_at) {
-        return fail('malformed attestation validity window');
-      }
-      if (nowMs + skew < doc.issued_at) return fail('attestation not yet valid');
-      if (nowMs - skew > doc.expires_at) return fail('attestation expired');
-      if (typeof expected.nonceIssuedAt === 'number') {
-        const nErr = nonceAgeCheck();
-        if (nErr) return fail(nErr);
-      }
-      identity = {
-        model_id: doc.model_id,
-        weights_digest: doc.weights_digest,
-        runtime_measurement: doc.runtime_measurement,
-        operator: doc.operator,
-        // Carried only when the (signed) document measured them, so an unpinned grant is unchanged.
-        // Under require_hardware the software path is already rejected above, so these self-asserted
-        // values can never satisfy a hardware-rooted grant.
-        ...(typeof doc.system_prompt_digest === 'string' ? { system_prompt_digest: doc.system_prompt_digest } : {}),
-        ...(typeof doc.tool_manifest_digest === 'string' ? { tool_manifest_digest: doc.tool_manifest_digest } : {}),
-      };
-    }
-
-    // (6) agent_binding
-    const bindErr = matchAgentBinding(identity, env?.agent_binding);
-    if (bindErr) return fail(bindErr);
-
-    return { ok: true, present: true, bound: true, identity };
-  } catch (e) {
-    return fail(`attestation verification error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
-  }
+  return verifyAttestationProved(input); // PROVED CODE: stage order + first failure = Attest.dfy Order / GateStep (attest-proved.ts)
 }
 
 /**
@@ -743,62 +572,7 @@ export async function verifyAttestation(input: {
 export function createAttestationVerifier(
   opts: AttestationVerifierOpts,
 ): (ctx: VerifyContext) => Promise<AttestationHookResult> {
-  opts = snapshotConfig(opts, { keep: ['nonceStore', 'hardwareVerifier', 'resolveDocument'] }); // freeze the configuration: later edits by the caller must not change what this verifier enforces
-  const trusted = Array.isArray(opts.trustedAttestorKeys) ? opts.trustedAttestorKeys : [];
-  const resolve = opts.resolveDocument ?? attestationRegistry([]);
-  const clock = opts.now ?? (() => Date.now());
-
-  return async (ctx: VerifyContext): Promise<AttestationHookResult> => {
-    const fin = (v: AttestationVerdict): AttestationHookResult => ({
-      enforced: true,
-      ok: v.ok,
-      ...(v.reason ? { reason: v.reason } : {}),
-      present: v.present,
-      bound: v.bound,
-    });
-    try {
-      const document = resolve(ctx);
-      let expected: ExpectedAttestationBinding | undefined;
-      if (opts.expectedBinding) {
-        expected = await opts.expectedBinding(ctx);
-      } else if (opts.insecure_selfDeclaredNonce === true) {
-        const chain = ctx?.pcactn?.cap_chain;
-        const leaf = Array.isArray(chain) && chain.length > 0 ? chain[chain.length - 1] : ctx?.grant;
-        expected = {
-          holderPub: typeof leaf?.holder === 'string' ? leaf.holder : '',
-          grantRef: ctx?.pcactn?.grant_ref,
-          epoch: ctx?.pcactn?.attestation?.epoch,
-          nonce: ctx?.pcactn?.attestation?.quote_digest,
-        };
-      }
-      if (!expected) {
-        return fin({ ok: false, present: !!document, bound: false, reason: 'no server-issued attestation nonce/binding available (fail closed)' });
-      }
-      if (opts.insecure_selfDeclaredNonce !== true && !nonceEntropyOk(expected.nonce, opts.minNonceBytes)) {
-        return fin({ ok: false, present: !!document, bound: false, reason: 'attestation nonce has less than 128 bits of entropy (F-5; use a CSPRNG nonce of >= 16 bytes)' });
-      }
-      const verdict = await verifyAttestation({
-          document,
-          ctx,
-          expected,
-          nowMs: clock(),
-          trustedAttestorKeys: trusted,
-          pqPins: opts.pqPins,
-          allowUnboundPq: opts.allowUnboundPq,
-          hardwareVerifier: opts.hardwareVerifier,
-          maxNonceAgeMs: opts.maxNonceAgeMs,
-          clockSkewMs: opts.clockSkewMs,
-        });
-      if (verdict.ok && verdict.bound && opts.nonceStore) {
-        if (!(await opts.nonceStore.consume(expected.nonce))) {
-          return fin({ ok: false, present: verdict.present, bound: false, reason: 'attestation nonce already consumed (replay)' });
-        }
-      }
-      return fin(verdict);
-    } catch (e) {
-      return fin({ ok: false, present: false, bound: false, reason: `attestation verification error (fail closed): ${e instanceof Error ? e.message : 'unknown'}` });
-    }
-  };
+  return createAttestationVerifierProved(opts); // PROVED CODE: Attest.dfy NeedsConsume / HookFinal (attest-proved.ts)
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
@@ -905,63 +679,8 @@ function reconcileMeasuredIdentities(
  * Throws at CONSTRUCTION on an empty root set, a non-integer/out-of-range threshold, or duplicate ids.
  */
 export function createMultiRootVerifier(policy: MultiRootAttestationPolicy): HardwareAttestationVerifier {
-  // Freeze the configuration: later edits by the caller must not change what this verifier enforces. Each root is copied
-  // shallowly (its verifier stays the caller's object: behaviour, not data).
-  policy = Object.freeze({ threshold: policy?.threshold, roots: Array.isArray(policy?.roots) ? Object.freeze(policy.roots.map((r) => (r !== null && typeof r === 'object' ? Object.freeze({ ...r }) : r))) : policy?.roots }) as MultiRootAttestationPolicy;
-
-  if (!policy || !Array.isArray(policy.roots) || policy.roots.length === 0) {
-    throw new TypeError('createMultiRootVerifier: at least one attestation root is required');
-  }
-  if (!Number.isInteger(policy.threshold) || policy.threshold < 1 || policy.threshold > policy.roots.length) {
-    throw new TypeError('createMultiRootVerifier: threshold must be an integer in [1, roots.length]');
-  }
-  const ids = new Set<string>();
-  for (const r of policy.roots) {
-    if (!r || typeof r.id !== 'string' || r.id.length === 0) throw new TypeError('createMultiRootVerifier: each root needs a non-empty id');
-    if (ids.has(r.id)) throw new TypeError(`createMultiRootVerifier: duplicate root id '${r.id}'`);
-    ids.add(r.id);
-  }
-
-  return {
-    async verify(input): Promise<HardwareAttestationResult> {
-      const fail = (reason: string): HardwareAttestationResult => ({ ok: false, reason });
-      try {
-        const passed: Array<{ id: string; m: MeasuredIdentity }> = [];
-        const hostAsserted: Record<string, string> = {};
-        for (const root of policy.roots) {
-          let res: HardwareAttestationResult;
-          try {
-            res = await root.verifier.verify(input);
-          } catch (e) {
-            res = { ok: false, reason: `root '${root.id}' threw (fail closed): ${e instanceof Error ? e.message : 'unknown'}` };
-          }
-          // A null / undefined / non-object result is a FAILED root (like `{ ok: false }`), not an abort of the whole
-          // verification: an optional root that misbehaves is skipped and N-of-M still decides; a required one denies.
-          if (res === null || typeof res !== 'object') res = { ok: false, reason: `root '${root.id}' returned a malformed result (fail closed)` };
-          const ok = res.ok === true && res.bound === true && !!res.measured;
-          if (!ok) {
-            if (root.required === true) return fail(`required attestation root '${root.id}' failed: ${res.reason ?? 'invalid'}`);
-            continue;
-          }
-          passed.push({ id: root.id, m: res.measured! });
-          if (res.hostAsserted) {
-            for (const [k, v] of Object.entries(res.hostAsserted)) hostAsserted[`${root.id}.${k}`] = v;
-          }
-        }
-
-        if (passed.length < policy.threshold) {
-          return fail(`multi-root attestation below threshold (${passed.length}/${policy.threshold} independent roots corroborated)`);
-        }
-
-        const merged = reconcileMeasuredIdentities(passed);
-        if ('conflict' in merged) return fail(`multi-root attestation identity conflict: ${merged.conflict}`);
-
-        return { ok: true, bound: true, measured: merged, ...(Object.keys(hostAsserted).length > 0 ? { hostAsserted } : {}) };
-      } catch (e) {
-        return fail(`multi-root attestation error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
-      }
-    },
-  };
+  // The adapter's structural types are the package-local mirror of these (verified-core cannot import @atlasauth/pca).
+  return createMultiRootVerifierVerified(policy as unknown as Parameters<typeof createMultiRootVerifierVerified>[0]) as unknown as HardwareAttestationVerifier; // PROVED CODE: Attest.dfy RunIff (verified-core); same construction errors and reasons
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════

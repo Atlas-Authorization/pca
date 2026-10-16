@@ -8,7 +8,9 @@ require 'atlas_pca/rack_middleware'
 require_relative '../../../sdks/ruby-pca/test/support/corpus'
 
 module Oracle
-  SUPPORTED = %w[ed25519 ml-dsa-65 hybrid-ed25519-ml-dsa-65].freeze
+  # This runtime's capability manifest, read ONCE from the unmutated library (the same rule as conformance.rb's
+  # SUPPORTED_SIG_SUITES; a hard-coded Ed25519/ML-DSA-65 list went stale when 0.4.x added ML-DSA-87, SLH-DSA and LESS).
+  SUPPORTED = AtlasPca.supported_suites.freeze
   ROOT = File.expand_path('../../../sdks/ruby-pca', __dir__)
 
   module_function
@@ -40,7 +42,8 @@ module Oracle
     Corpus.snapshot
     @tests = []
     Dir[File.join(ROOT, 'test', 'kill', '*.rb')].sort.each { |f| load f }
-    @tests.concat(MutationKill::TESTS) if defined?(MutationKill::TESTS)
+    # a test that `needs` a suite this runtime lacks is skipped, as run_kill.rb does (it would fail on the unmutated source)
+    @tests.concat(MutationKill::TESTS.select { |_, _, needs| needs.nil? || SUPPORTED.include?(needs) }) if defined?(MutationKill::TESTS)
     # MUT_FIRST=<prefix>: run the kill tests whose name starts with <prefix> first (a scoped pass reaches its own tests without
     # sitting through every slow earlier one per mutant). Order only: every test still has to pass, so verdicts are unchanged.
     if (pre = ENV['MUT_FIRST']) && !pre.empty?
@@ -52,21 +55,29 @@ module Oracle
 
   # The mutant REPLACES the library: the loaded module is dropped first, so a deleted def / constant / module_function
   # is really gone (evaluating on top of the loaded module kept the original definition and every deletion "survived").
-  # The Rack middleware (which reopens AtlasPca) is then re-evaluated against the mutated module.
-  # When the mutated FILE is the middleware itself, the library is re-evaluated unmutated and the mutated text is the middleware.
+  # atlas_pca.rb ends with `require_relative` lines for the files that reopen AtlasPca (the Intent Layer v2 files:
+  # safe_regex, predicates, intent_layers, intent_wb, intent_v2). Those are already in $LOADED_FEATURES, so evaluating the
+  # library text again does NOT reload them: without the step below every v2 method would vanish with the dropped module
+  # (and a mutant of one of those files would never be exercised). So after the library each extension is re-evaluated
+  # explicitly, in the library's require order, then the Rack middleware. Whichever of these FILES is being mutated is
+  # evaluated from the mutated text; every other one from disk, unmutated.
   LIB = File.join(ROOT, 'lib', 'atlas_pca.rb')
   MW = File.join(ROOT, 'lib', 'atlas_pca', 'rack_middleware.rb')
+  EXTENSIONS = File.read(LIB).scan(/^require_relative '(atlas_pca\/[a-z0-9_]+)'$/).flatten
+                   .map { |rel| File.join(ROOT, 'lib', "#{rel}.rb") }.freeze
   def apply(text, file)
     @text = text
-    mw_mut = File.expand_path(file) == File.expand_path(MW)
+    target = File.expand_path(file)
+    src = ->(path) { File.expand_path(path) == target ? text : File.read(path) }
     Object.send(:remove_const, :AtlasPca) if Object.const_defined?(:AtlasPca)
-    eval(mw_mut ? File.read(LIB) : text, TOPLEVEL_BINDING, mw_mut ? LIB : file) # rubocop:disable Security/Eval
-    eval(mw_mut ? text : File.read(MW), TOPLEVEL_BINDING, MW) # rubocop:disable Security/Eval
+    [LIB, *EXTENSIONS, MW].each { |path| eval(src.call(path), TOPLEVEL_BINDING, path) } # rubocop:disable Security/Eval
   end
 
-  def skip?(v)
+  # The suite a vector needs that this runtime lacks (conformance.rb's unsupported_suite), or nil. A terminal
+  # {wire:false} negative is suite-agnostic and is compared as usual.
+  def unsupported(v)
     p = v['pcactn']
-    return false unless p.is_a?(Hash)
+    return nil unless p.is_a?(Hash)
 
     alg = ->(o) { o.is_a?(Hash) && o['alg'].is_a?(String) ? o['alg'] : 'ed25519' }
     sus = case v['requires']
@@ -76,14 +87,35 @@ module Oracle
           when String then (r = v['requires']; r.empty? || SUPPORTED.include?(r) ? nil : r)
           end
     c = v['expect']['checks']
-    sus && !(c.keys == ['wire'] && c['wire'] == false)
+    sus && !(c.keys == ['wire'] && c['wire'] == false) ? sus : nil
+  end
+
+  # Intent Layer v2 `requires_suite` naming a suite this runtime lacks (fn-dsa-*): Corpus.prim_failures checks those
+  # (a deny, unsupported_suite when a v2 check fails first), exactly as conformance.rb does.
+  def v2_unsupported?(v)
+    rs = v['requires_suite']
+    rs.is_a?(String) && !SUPPORTED.include?(rs)
+  end
+
+  def skip?(v)
+    !unsupported(v).nil? || v2_unsupported?(v)
   end
 
   def check_vectors(doc, tag)
     exp = Corpus.snapshot
     doc['vectors'].each do |v|
-      next if skip?(v)
+      next if v2_unsupported?(v)
 
+      if unsupported(v)
+        # conformance.rb: a vector needing a suite this runtime lacks must be DENIED with unsupported_suite (never skipped)
+        next unless v['pcactn'].is_a?(Hash)
+
+        ctx = v['context']
+        got = AtlasPca.verify_pcactn(v['pcactn'], v['grant'], now: ctx['now'], audience: ctx['aud'])
+        return false unless got.allow == false && got.reason.to_s.include?(AtlasPca::UNSUPPORTED_SUITE)
+
+        next
+      end
       key = Corpus.esc("#{tag}:v:#{v['name']}")
       got = Corpus.verify_one(v)
       return false unless got.allow == v['expect']['allow']

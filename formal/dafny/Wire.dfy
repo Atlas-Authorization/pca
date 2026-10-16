@@ -549,6 +549,7 @@ module Json {
   function ValSeq(d: S): int decreases |d| { if |d| == 0 then 0 else ValSeq(d[..|d| - 1]) * 10 + (d[|d| - 1] - 48) }
   function FrTxt(fr: seq<int>): S { seq(|fr|, i requires 0 <= i < |fr| => 48 + fr[i]) }
   function FrOf(t: S, a: int, b: int): seq<int> requires 0 <= a <= b <= |t| { seq(b - a, i requires 0 <= i < b - a => t[a + i] - 48) }
+  lemma FrOfAt(t: S, a: int, b: int, q: int) requires 0 <= a <= b <= |t| && 0 <= q < b - a ensures FrOf(t, a, b)[q] == t[a + q] - 48 {}
 
   predicate Digits09(f: seq<int>) { forall i :: 0 <= i < |f| ==> 0 <= f[i] <= 9 }
   function LeadZeros(f: seq<int>): int decreases |f| { if |f| > 0 && f[0] == 0 then 1 + LeadZeros(f[1..]) else 0 }
@@ -1091,10 +1092,15 @@ module Json {
     assert a == [a[0]] + a[1..] && b == [b[0]] + b[1..];
     assert multiset(a) == multiset{a[0]} + multiset(a[1..]);
     assert multiset(b) == multiset{b[0]} + multiset(b[1..]);
-    assert forall e :: multiset(a[1..])[e] == multiset(b[1..])[e] by {
-      forall e ensures multiset(a[1..])[e] == multiset(b[1..])[e] { assert multiset(a)[e] == multiset{a[0]}[e] + multiset(a[1..])[e]; assert multiset(b)[e] == multiset{b[0]}[e] + multiset(b[1..])[e]; }
+    // drop the shared head from both multisets (stated as a calc: one small step each)
+    calc {
+      multiset(a[1..]);
+      == (multiset{a[0]} + multiset(a[1..])) - multiset{a[0]};
+      == multiset(a) - multiset{a[0]};
+      == multiset(b) - multiset{b[0]};
+      == (multiset{b[0]} + multiset(b[1..])) - multiset{b[0]};
+      == multiset(b[1..]);
     }
-    assert multiset(a[1..]) == multiset(b[1..]);
     SortedUnique(a[1..], b[1..]);
   }
 
@@ -1297,7 +1303,15 @@ module Json {
 
   lemma WsNone(t: S, i: int) requires 0 <= i < |t| && !IsWs(t[i]) ensures Ws(t, i) == i {}
 
-  lemma ParseNumPrint(v: J, t: S, j: int, rest: S)
+  // t[i..] == a + b splits at |a| (stated once so the long proofs below do not leave it to the solver)
+  lemma SliceAfter(t: S, i: int, a: S, b: S)
+    requires 0 <= i <= |t| && t[i..] == a + b
+    ensures i + |a| <= |t| && t[i + |a|..] == b && t[i..i + |a|] == a
+  { assert t[i..][|a|..] == b; assert t[i..][..|a|] == a; }
+  lemma SliceTake(t: S, k: int, n: int) requires 0 <= k && 0 <= n && k + n <= |t| ensures t[k..k + n] == t[k..][..n] {}
+  lemma SliceSplit(t: S, a: int, b: int, c: int) requires 0 <= a <= b <= c <= |t| ensures t[a..c] == t[a..b] + t[b..c] {}
+
+  lemma {:isolate_assertions} {:fuel ScanDigits, 0, 0} {:fuel IntEnd, 0, 0} {:fuel Dig, 0, 0} {:fuel ValSeq, 0, 0} ParseNumPrint(v: J, t: S, j: int, rest: S)
     requires 0 <= j <= |t| && (v.Int? || v.Dec?) && Valid(v, 1) && t[j..] == Print(v) + rest && Delim(rest)
     ensures j < |t| && ParseNum(t, j) == Ok(v, j + |Print(v)|)
   {
@@ -1318,6 +1332,7 @@ module Json {
       assert t[e..] == rest;
       assert !(e + 1 < |t| && t[e] == 46 && IsDig(t[e + 1]));
       assert !ExpMatches(t, e);
+      SliceTake(t, k, |Dig(m)|);
       assert t[k..e] == t[k..][..|Dig(m)|];
       assert t[k..e] == Dig(m);
       assert (t[j] == 45) == neg;
@@ -1337,6 +1352,7 @@ module Json {
       assert t[L..] == rest;
       if L < |t| { assert t[L] == rest[0]; }
       assert !ExpMatches(t, L);
+      SliceTake(t, k, |Dig(ip)|);
       assert t[k..e] == t[k..][..|Dig(ip)|];
       assert t[k..e] == Dig(ip);
       assert |FrOf(t, e + 1, L)| == |fr|;
@@ -1360,6 +1376,7 @@ module Json {
     var p := Print(v);
     assert i < |t| && t[i] == p[0];
     WsNone(t, i);
+    SliceAfter(t, i, p, rest);
     match v
     case Null => assert t[i..i + 4] == LitNull; assert LitNull != LitTrue && LitNull != LitFalse;
     case Bool(b) =>
@@ -1440,7 +1457,16 @@ module Json {
   lemma ValidElemsTail(a: seq<J>, d: int) requires |a| >= 1 && ValidElems(a, d) ensures ValidElems(a[1..], d)
   { forall x | 0 <= x < |a| - 1 ensures Valid(a[1..][x], d) { assert a[1..][x] == a[x + 1]; } }
 
-  lemma {:isolate_assertions} ObjLoopPrint(kv: seq<KV>, d: int, t: S, i: int, acc: seq<KV>, rest: S)
+  // one member of ObjLoop, given the results of its parts
+  lemma {:fuel ParseValue, 0, 0} {:fuel ParseStr, 0, 0} ObjLoopStep(t: S, i: int, d: int, acc: seq<KV>, k: S, p: int, v: J, q: int)
+    requires 0 <= i < |t| && Ws(t, i) == i && t[i] == 34 && ParseStr(t, i) == Ok(k, p) && !HasKey(acc, k)
+    requires 0 <= p < |t| && Ws(t, p) == p && t[p] == 58 && ParseValue(t, p + 1, d + 1) == Ok(v, q)
+    requires 0 <= q < |t| && Ws(t, q) == q
+    ensures ObjLoop(t, i, d, acc) ==
+      (if t[q] == 44 then ObjLoop(t, q + 1, d, acc + [KV(k, v)]) else if t[q] == 125 then Ok(Obj(acc + [KV(k, v)]), q + 1) else Fail)
+  {}
+
+  lemma {:isolate_assertions} {:fuel ParseValue, 0, 0} {:fuel ParseStr, 0, 0} {:fuel ObjLoop, 0, 0} ObjLoopPrint(kv: seq<KV>, d: int, t: S, i: int, acc: seq<KV>, rest: S)
     requires |kv| >= 1 && 0 <= i <= |t| && d <= MaxDepth && ValidMembers(kv, d + 1) && DistinctKeys(acc + kv) && Delim(rest)
     requires t[i..] == PrintMembers(kv) + [125] + rest
     ensures ObjLoop(t, i, d, acc) == Ok(Obj(acc + kv), i + |PrintMembers(kv)| + 1)
@@ -1470,14 +1496,33 @@ module Json {
     var q := p + 1 + |Print(v)|;
     assert q < |t| && t[q] == rest2[0];
     WsNone(t, q);
+    // the one unfolding of ObjLoop at i, in a small lemma; then the postcondition is stated per branch
+    assert Ws(t, i) == i && ParseStr(t, i) == Ok(k, p);
+    assert !HasKey(acc, k);
+    assert Ws(t, p) == p;
+    assert ParseValue(t, p + 1, d + 1) == Ok(v, q);
+    assert Ws(t, q) == q;
+    ObjLoopStep(t, i, d, acc, k, p, v, q);
+    assert q == i + |pk| + 3 + |Print(v)|;
     if |kv| == 1 {
       assert PrintMembers(kv) == [34] + pk + [34, 58] + Print(v);
+      assert |PrintMembers(kv)| == |pk| + 3 + |Print(v)|;
+      assert t[q] == 125;
       assert acc + kv == acc + [KV(k, v)];
+      assert ObjLoop(t, i, d, acc) == Ok(Obj(acc + kv), i + |PrintMembers(kv)| + 1);
     } else {
+      assert t[q] == 44;
+      assert tail == [44] + PrintMembers(kv[1..]);
+      assert rest2 == [44] + (PrintMembers(kv[1..]) + [125] + rest);
+      SliceAfter(t, p + 1, Print(v), rest2);
+      SliceAfter(t, q, [44], PrintMembers(kv[1..]) + [125] + rest);
       assert t[q + 1..] == PrintMembers(kv[1..]) + [125] + rest;
       ValidMembersTail(kv, d + 1);
       assert (acc + [KV(k, v)]) + kv[1..] == acc + kv;
       ObjLoopPrint(kv[1..], d, t, q + 1, acc + [KV(k, v)], rest);
+      assert |PrintMembers(kv)| == |pk| + 3 + |Print(v)| + 1 + |PrintMembers(kv[1..])|;
+      assert ObjLoop(t, i, d, acc) == ObjLoop(t, q + 1, d, acc + [KV(k, v)]);
+      assert ObjLoop(t, i, d, acc) == Ok(Obj(acc + kv), i + |PrintMembers(kv)| + 1);
     }
   }
 
@@ -1562,7 +1607,7 @@ module Json {
     }
   }
 
-  lemma ParseNumSpelling(t: S, j: int)
+  lemma {:isolate_assertions} {:fuel ScanDigits, 0, 0} {:fuel Dig, 0, 0} {:fuel ValSeq, 0, 0} ParseNumSpelling(t: S, j: int)
     requires 0 <= j < |t| && ParseNum(t, j).Ok?
     ensures var r := ParseNum(t, j); t[j..r.pos] == Print(r.v)
   {
@@ -1582,6 +1627,8 @@ module Json {
       var ip := ValSeq(ds); var fr := FrOf(t, e + 1, L);
       assert FrTxt(fr) == t[e + 1..L];
       assert PrintNat(ip) == Dig(ip);
+      SliceSplit(t, j, k, L); SliceSplit(t, k, e, L); SliceSplit(t, e, e + 1, L);
+      assert t[j..k] == (if neg then [45] else []) && t[e..e + 1] == [46];
       assert t[j..L] == (if neg then [45] else []) + ds + [46] + t[e + 1..L];
     } else {
       var m := ValSeq(ds);
@@ -1609,10 +1656,1812 @@ module Json {
 }
 
 // Thin entry points compiled for the TypeScript adapter (ext-wire.ts).
+module Fast {
+  import opened Utf
+  import opened Json
+
+  newtype U16 = x: int | 0 <= x < 0x10000
+  newtype N = x: int | 0 <= x < 0x20_0000_0000_0000
+
+  ghost function W(t: seq<U16>): S { seq(|t|, i requires 0 <= i < |t| => t[i] as int) }
+
+  lemma WInj(a: seq<U16>, b: seq<U16>) requires W(a) == W(b) ensures a == b
+  {
+    assert |a| == |W(a)| == |W(b)| == |b|;
+    forall i | 0 <= i < |a| ensures a[i] == b[i] { assert W(a)[i] == W(b)[i]; }
+  }
+
+  lemma WSnoc(a: seq<U16>, x: U16) ensures W(a + [x]) == W(a) + [x as int] {}
+
+  // ---- whitespace ----
+  method SkipWs(t: seq<U16>, ghost T: S, i: N) returns (j: N)
+    requires T == W(t) && |t| <= MaxBytes && i as int <= |t|
+    ensures j as int == Ws(T, i as int) && i <= j && j as int <= |t|
+  {
+    j := i;
+    var n := |t| as N;
+    while j < n && (t[j] == 0x20 || t[j] == 0x09 || t[j] == 0x0A || t[j] == 0x0D)
+      invariant i <= j <= n && Ws(T, i as int) == Ws(T, j as int)
+      decreases n - j
+    { j := j + 1; }
+  }
+
+  // ---- UTF-8 length bound ----
+  lemma Utf8LenGe(s: S, i: int, acc: int)
+    requires 0 <= i <= |s|
+    ensures Utf8LenFrom(s, i, acc) >= acc + (|s| - i)
+    decreases |s| - i
+  {
+    if i < |s| {
+      if IsHigh(s[i]) && i + 1 < |s| && IsLow(s[i + 1]) { Utf8LenGe(s, i + 2, acc + 4); } else { Utf8LenGe(s, i + 1, acc + (if s[i] < 0x80 then 1 else if s[i] < 0x800 then 2 else 3)); }
+    }
+  }
+
+  method Utf8LenN(t: seq<U16>, ghost T: S) returns (r: N)
+    requires T == W(t) && |t| <= MaxBytes
+    ensures r as int == Utf8LenLoose(T)
+  {
+    var i: N := 0;
+    var n := |t| as N;
+    r := 0;
+    while i < n
+      invariant i <= n && r as int <= 4 * i as int && Utf8LenLoose(T) == Utf8LenFrom(T, i as int, r as int)
+      decreases n - i
+    {
+      var c := t[i];
+      if 0xD800 <= c <= 0xDBFF && i + 1 < n && 0xDC00 <= t[i + 1] <= 0xDFFF { r := r + 4; i := i + 2; }
+      else { r := r + (if c < 0x80 then 1 else if c < 0x800 then 2 else 3); i := i + 1; }
+    }
+  }
+
+  // ---- numbers ----
+  method ScanDigitsN(t: seq<U16>, ghost T: S, i: N) returns (j: N)
+    requires T == W(t) && |t| <= MaxBytes && i as int <= |t|
+    ensures j as int == ScanDigits(T, i as int) && i <= j && j as int <= |t|
+  {
+    j := i;
+    var n := |t| as N;
+    while j < n && 48 <= t[j] <= 57
+      invariant i <= j <= n && ScanDigits(T, i as int) == ScanDigits(T, j as int)
+      decreases n - j
+    { j := j + 1; }
+  }
+
+  ghost function Pow10(k: nat): int { if k == 0 then 1 else 10 * Pow10(k - 1) }
+  lemma Pow10At16() ensures Pow10(16) == 10000000000000000
+  {
+    assert Pow10(1) == 10; assert Pow10(2) == 100; assert Pow10(3) == 1000; assert Pow10(4) == 10000;
+    assert Pow10(5) == 100000; assert Pow10(6) == 1000000; assert Pow10(7) == 10000000; assert Pow10(8) == 100000000;
+    assert Pow10(9) == 1000000000; assert Pow10(10) == 10000000000; assert Pow10(11) == 100000000000;
+    assert Pow10(12) == 1000000000000; assert Pow10(13) == 10000000000000; assert Pow10(14) == 100000000000000;
+    assert Pow10(15) == 1000000000000000;
+  }
+  lemma Pow10Mono(a: nat, b: nat) requires a <= b ensures 1 <= Pow10(a) <= Pow10(b) decreases b { if b > a { Pow10Mono(a, b - 1); } }
+
+  lemma ValSeqSnoc(d: S, q: int)
+    requires 0 <= q < |d|
+    ensures ValSeq(d[..q + 1]) == ValSeq(d[..q]) * 10 + (d[q] - 48)
+  { assert d[..q + 1][..q] == d[..q]; }
+
+  // ValSeq of a digit string with a non-zero lead digit is at least 10^(len-1)
+  lemma ValSeqLow(d: S)
+    requires |d| >= 1 && AllDig(d) && d[0] != 48
+    ensures ValSeq(d) >= Pow10(|d| - 1)
+    decreases |d|
+  {
+    if |d| > 1 {
+      var p := d[..|d| - 1];
+      assert p[0] == d[0] && AllDig(p);
+      ValSeqLow(p);
+    }
+  }
+
+  lemma ValSeqPrefixLe(d: S, q: int)
+    requires 0 <= q <= |d| && AllDig(d)
+    ensures 0 <= ValSeq(d[..q]) <= ValSeq(d)
+    decreases |d| - q
+  {
+    ValSeqNonneg(d[..q]);
+    if q < |d| {
+      ValSeqPrefixLe(d, q + 1);
+      ValSeqSnoc(d, q);
+      assert AllDig(d[..q]);
+      ValSeqNonneg(d[..q]);
+    } else { assert d[..q] == d; }
+  }
+
+  lemma DigValSeq(d: S)
+    requires |d| >= 1 && AllDig(d) && d[0] != 48
+    ensures ValSeq(d) >= 1 && Dig(ValSeq(d)) == d
+    decreases |d|
+  {
+    if |d| == 1 {
+    } else {
+      var p := d[..|d| - 1];
+      assert p[0] == d[0] && AllDig(p);
+      DigValSeq(p);
+      var v := ValSeq(d);
+      assert v == ValSeq(p) * 10 + (d[|d| - 1] - 48);
+      assert v >= 10;
+      assert v / 10 == ValSeq(p) && v % 10 == d[|d| - 1] - 48;
+      assert d == p + [d[|d| - 1]];
+    }
+  }
+
+  // LeadZeros by a forward count
+  lemma LeadZerosStep(f: seq<int>, z: int)
+    requires 0 <= z < |f| && f[z] == 0
+    ensures LeadZeros(f[z..]) == 1 + LeadZeros(f[z + 1..])
+  { assert f[z..][1..] == f[z + 1..]; }
+
+  lemma Pow10Lits() ensures Pow10(15) == 1000000000000000 && Pow10(16) == 10000000000000000
+  { Pow10At16(); assert Pow10(16) == 10 * Pow10(15); }
+
+  // ParseNum unfolded once with its intermediate values named (NumM reasons through these, not the definition)
+  lemma ParseNumNoInt(T: S, j: int, k: int)
+    requires 0 <= j < |T| && k == (if T[j] == 45 then j + 1 else j) && IntEnd(T, k) < 0
+    ensures ParseNum(T, j) == Fail
+  {}
+  lemma ParseNumAt(T: S, j: int, k: int, e: int, hasFrac: bool, L: int)
+    requires 0 <= j < |T| && k == (if T[j] == 45 then j + 1 else j) && e == IntEnd(T, k) && e >= 0
+    requires hasFrac == (e + 1 < |T| && T[e] == 46 && IsDig(T[e + 1]))
+    requires L == (if hasFrac then ScanDigits(T, e + 1) else e)
+    ensures ParseNum(T, j) ==
+      if ExpMatches(T, L) then Fail
+      else if hasFrac then
+        (var ip := ValSeq(T[k..e]); var fr := FrOf(T, e + 1, L);
+         if ValidDec(T[j] == 45, ip, fr) then Ok(Dec(T[j] == 45, ip, fr), L) else Fail)
+      else
+        (var n := ValSeq(T[k..e]);
+         if (T[j] == 45 && n == 0) || n > MaxSafe then Fail else Ok(Int(if T[j] == 45 then -n else n), L))
+  {}
+
+  method {:isolate_assertions} {:fuel ParseNum, 0, 0} NumM(t: seq<U16>, ghost T: S, j: N) returns (ok: bool, p: N)
+    requires T == W(t) && |t| <= MaxBytes && j as int < |t|
+    ensures ok == ParseNum(T, j as int).Ok? && (ok ==> p as int == ParseNum(T, j as int).pos && j < p && p as int <= |t|)
+  {
+    var n := |t| as N;
+    var neg := t[j] == 45;
+    var k := if neg then j + 1 else j;
+    // IntEnd
+    var e: N;
+    if k < n && t[k] == 48 { e := k + 1; }
+    else if k < n && 49 <= t[k] <= 57 { e := ScanDigitsN(t, T, k + 1); }
+    else { assert IntEnd(T, k as int) < 0; ParseNumNoInt(T, j as int, k as int); return false, 0; }
+    assert e as int == IntEnd(T, k as int);
+    IntEndDigits(T, k as int);
+    ghost var D := T[k as int .. e as int];
+    assert |D| == (e - k) as int && forall w :: 0 <= w < |D| ==> D[w] == T[k as int + w];
+    var hasFrac := e + 1 < n && t[e] == 46 && 48 <= t[e + 1] <= 57;
+    var L: N := e;
+    if hasFrac { L := ScanDigitsN(t, T, e + 1); }
+    var expm := L < n && (t[L] == 101 || t[L] == 69) &&
+      (var m := if L + 1 < n && (t[L + 1] == 43 || t[L + 1] == 45) then L + 2 else L + 1; m < n && 48 <= t[m] <= 57);
+    assert expm == ExpMatches(T, L as int);
+    assert hasFrac == (e as int + 1 < |T| && T[e] == 46 && IsDig(T[e as int + 1]));
+    ParseNumAt(T, j as int, k as int, e as int, hasFrac, L as int);
+    if expm { return false, 0; }
+    var lead0 := t[k] == 48;
+    assert D[0] == T[k];
+    if lead0 { assert D == [48]; assert ValSeq(D) == 0; } else { DigValSeq(D); }
+    if hasFrac {
+      ghost var fr := FrOf(T, e as int + 1, L as int);
+      ScanAllDig(T, e as int + 1);
+      assert L as int >= e as int + 2;
+      assert |fr| == L as int - e as int - 1 >= 1;
+      assert AllDig(T[e as int + 1 .. L as int]);
+      forall q | 0 <= q < |fr| ensures 0 <= fr[q] <= 9 {
+        FrOfAt(T, e as int + 1, L as int, q);
+        assert T[e as int + 1 .. L as int][q] == T[e as int + 1 + q];
+        assert IsDig(T[e as int + 1 .. L as int][q]);
+      }
+      assert Digits09(fr);
+      var lastNz := t[L - 1] != 48;
+      // the last fractional digit is T[L - 1] - 48, spelled out (FrOf index arithmetic + T == W(t))
+      ghost var li := |fr| - 1;
+      assert e as int + 1 + li == L as int - 1;
+      assert fr[li] == T[e as int + 1 + li] - 48;
+      assert T[L as int - 1] == t[L - 1] as int;
+      assert lastNz == (fr[li] != 0);
+      assert lastNz == (fr[|fr| - 1] != 0);
+      if !lastNz { return false, 0; }
+      if !lead0 {
+        // ip > 0: Sig = |Dig(ip)| + |fr| = (e - k) + (L - e - 1)
+        var sig := (e - k) + (L - e - 1);
+        assert Sig(ValSeq(D), fr) == sig as int;
+        if sig > 15 { return false, 0; }
+        assert ValidDec(neg, ValSeq(D), fr);
+        return true, L;
+      } else {
+        // ip == 0: count leading fractional zeros
+        var z: N := 0;
+        var fl := L - e - 1;
+        while z < fl && t[e + 1 + z] == 48
+          invariant z <= fl && LeadZeros(fr) == z as int + LeadZeros(fr[z..])
+          invariant forall q :: 0 <= q < z as int ==> fr[q] == 0
+          decreases fl - z
+        { LeadZerosStep(fr, z as int); z := z + 1; }
+        assert z < fl;   // the last digit is non-zero
+        assert fl as int == L as int - (e as int + 1) == |fr|;
+        assert 0 <= z as int < |fr|;
+        FrOfAt(T, e as int + 1, L as int, z as int);
+        assert T[e as int + 1 + z as int] == t[e + 1 + z] as int != 48;
+        assert fr[z] != 0;
+        assert fr[z..][0] == fr[z];
+        assert LeadZeros(fr[z..]) == 0;
+        var sig := fl - z;
+        assert Sig(ValSeq(D), fr) == sig as int;
+        var magOk := z < 6;
+        assert magOk ==> MagOk(ValSeq(D), fr);
+        assert MagOk(ValSeq(D), fr) ==> magOk by {
+          if MagOk(ValSeq(D), fr) { var w :| 0 <= w < 6 && w < |fr| && fr[w] != 0; assert w >= z as int; }
+        }
+        if sig > 15 || !magOk { return false, 0; }
+        assert ValidDec(neg, ValSeq(D), fr);
+        return true, L;
+      }
+    } else {
+      assert L == e;
+      if lead0 {
+        if neg { return false, 0; }
+        return true, L;
+      }
+      // non-zero integer: compare with MaxSafe
+      var c := e - k;
+      if c >= 17 {
+        ValSeqLow(D);
+        Pow10Mono(16, |D| - 1);
+        Pow10Lits();
+        assert Pow10(16) == 10000000000000000;
+        return false, 0;
+      }
+      // value of the first min(c, 15) digits, natively (< 10^15)
+      var lim := if c < 15 then c else 15;
+      var v: N := 0;
+      var q: N := 0;
+      while q < lim
+        invariant q <= lim <= 15 && v as int == ValSeq(D[..q]) && v as int < Pow10(q as nat)
+        decreases lim - q
+      {
+        ValSeqSnoc(D, q as int);
+        Pow10Mono(q as nat, 14);
+        assert Pow10(14) == 100000000000000;
+        var dg := t[k + q] as N;
+        assert D[q] == T[k as int + q as int] == t[k + q] as int;
+        assert dg as int == D[q] && IsDig(D[q]);
+        v := v * 10 + (dg - 48);
+        q := q + 1;
+      }
+      if c <= 15 {
+        assert D[..q] == D;
+        Pow10Mono(q as nat, 15);
+        Pow10Lits();
+        assert Pow10(15) == 1000000000000000;
+        return true, L;
+      }
+      // c == 16
+      ValSeqSnoc(D, 15);
+      assert D[..16] == D;
+      assert c == 16 && |D| == 16 && k as int + 15 < |t|;
+      var k15 := k + 15;
+      var dl := t[k15] as N;
+      assert T[k15 as int] == t[k15] as int;
+      assert D[15] == T[k15 as int];
+      assert dl as int == D[15] && IsDig(D[15]);
+      var last := dl - 48;
+      var big := v > 900719925474099 || (v == 900719925474099 && last > 1);
+      assert big == (ValSeq(D) > MaxSafe);
+      if big { return false, 0; }
+      return true, L;
+    }
+  }
+
+  // ---- strings ----
+  newtype Hx = x: int | -1 <= x < 16
+  newtype H4 = x: int | -1 <= x < 0x10000
+  function HexDH(c: U16): Hx ensures HexDH(c) as int == HexD(c as int)
+  { if 48 <= c <= 57 then (c - 48) as Hx else if 97 <= c <= 102 then (c - 87) as Hx else if 65 <= c <= 70 then (c - 55) as Hx else -1 }
+
+  method Hex4N(t: seq<U16>, ghost T: S, i: N) returns (h: H4)
+    requires T == W(t) && |t| <= MaxBytes && i as int <= |t|
+    ensures h as int == Hex4(T, i as int)
+  {
+    if i + 4 > |t| as N { return -1; }
+    var a := HexDH(t[i]); var b := HexDH(t[i + 1]); var c := HexDH(t[i + 2]); var d := HexDH(t[i + 3]);
+    if a < 0 || b < 0 || c < 0 || d < 0 { return -1; }
+    return ((a as H4 * 16 + b as H4) * 16 + c as H4) * 16 + d as H4;
+  }
+
+  // Decode the string body that starts at source index i (just after the opening quote) into ar[cur..c).
+  method StrM(t: seq<U16>, ghost T: S, ar: array<U16>, i: N, cur: N) returns (ok: bool, p: N, c: N)
+    requires T == W(t) && |t| <= MaxBytes && ar.Length == |t| && i as int <= |t| && cur <= i
+    modifies ar
+    ensures ar[..cur] == old(ar[..cur])
+    ensures ok == StrBody(T, i as int, []).Ok?
+    ensures ok ==> p as int == StrBody(T, i as int, []).pos && cur <= c <= p && p as int <= |t| && W(ar[cur..c]) == StrBody(T, i as int, []).v
+  {
+    var k := i;
+    c := cur;
+    ghost var acc: S := [];
+    var n := |t| as N;
+    while true
+      invariant i <= k <= n && cur <= c <= k
+      invariant ar[..cur] == old(ar[..cur])
+      invariant W(ar[cur..c]) == acc
+      invariant StrBody(T, i as int, []) == StrBody(T, k as int, acc)
+      decreases n - k
+    {
+      if k >= n { return false, 0, 0; }
+      var x := t[k];
+      if x == 34 { return true, k + 1, c; }
+      if x < 0x20 { return false, 0, 0; }
+      var v: U16;
+      var adv: N;
+      if x == 92 {
+        if k + 1 >= n { return false, 0, 0; }
+        var e := t[k + 1];
+        if e == 34 { v := 34; adv := 2; }
+        else if e == 92 { v := 92; adv := 2; }
+        else if e == 47 { v := 47; adv := 2; }
+        else if e == 98 { v := 8; adv := 2; }
+        else if e == 102 { v := 12; adv := 2; }
+        else if e == 110 { v := 10; adv := 2; }
+        else if e == 114 { v := 13; adv := 2; }
+        else if e == 116 { v := 9; adv := 2; }
+        else if e == 117 {
+          var h := Hex4N(t, T, k + 2);
+          if h < 0 { return false, 0, 0; }
+          v := h as U16; adv := 6;
+          assert Hex4(T, k as int + 2) >= 0 ==> k as int + 6 <= |t|;
+        } else { return false, 0, 0; }
+      } else { v := x; adv := 1; }
+      ghost var before := ar[cur..c];
+      ar[c] := v;
+      assert ar[cur..c + 1] == before + [v];
+      WSnoc(before, v);
+      acc := acc + [v as int];
+      c := c + 1;
+      k := k + adv;
+    }
+  }
+
+  // Valid16 of the decoded units ar[a..b)
+  method V16M(ar: array<U16>, a: N, b: N) returns (r: bool)
+    requires a <= b && b as int <= ar.Length <= MaxBytes
+    ensures r == Valid16(W(ar[a..b]))
+  {
+    ghost var s := W(ar[a..b]);
+    var k := a;
+    while k < b
+      invariant a <= k <= b && Valid16(s) == Valid16From(s, (k - a) as int)
+      decreases b - k
+    {
+      var x := ar[k];
+      if 0xD800 <= x <= 0xDBFF {
+        if k + 1 < b && 0xDC00 <= ar[k + 1] <= 0xDFFF { k := k + 2; } else { return false; }
+      } else if 0xDC00 <= x <= 0xDFFF { return false; }
+      else { k := k + 1; }
+    }
+    return true;
+  }
+
+  // ---- the per-document key table (object id, key) ----
+  const P: N := 67108859   // prime < 2^26
+  datatype Ent = Ent(oid: N, off: N, len: N)
+
+  lemma MulNonneg(x: int, y: int) requires x >= 0 && y >= 0 ensures x * y >= 0 {}
+  lemma MulBound(h: N, r: N) requires h < P && r < P ensures (h as int) * (r as int) <= 4503598822064164
+  {
+    var H := h as int; var R := r as int;
+    assert H <= 67108858 && R <= 67108858;
+    MulNonneg(H, 67108858 - R);
+    assert H * (67108858 - R) == H * 67108858 - H * R;
+    MulNonneg(67108858 - H, 67108858);
+    assert (67108858 - H) * 67108858 == 4503598822064164 - H * 67108858;
+  }
+  function HStep(h: N, u: U16, r: N): N requires h < P && r < P ensures HStep(h, u, r) < P
+  {
+    assert 0 <= (h as int) * (r as int) <= 4503598822064164 by { MulBound(h, r); MulNonneg(h as int, r as int); }
+    var hr: N := h * r;
+    (hr + u as N + 1) % P
+  }
+  ghost function HSeq(x: seq<U16>, h: N, r: N): N requires h < P && r < P ensures HSeq(x, h, r) < P decreases |x|
+  { if |x| == 0 then h else HSeq(x[1..], HStep(h, x[0], r), r) }
+  ghost function Bk(oid: N, x: seq<U16>, r: N, m: N): N requires r < P && m > 0 { HSeq(x, oid % P, r) % m }
+
+  ghost function KeyOf(A: seq<U16>, e: Ent): seq<U16> requires e.off as int + e.len as int <= |A| { A[e.off as int .. e.off as int + e.len as int] }
+
+  ghost predicate TblOk(tb: seq<seq<Ent>>, A: seq<U16>, nid: N, r: N)
+  {
+    r < P && 0 < |tb| < 0x20_0000_0000_0000 &&
+    (forall b :: 0 <= b < |tb| ==> |tb[b]| <= nid as int) &&
+    forall b, q :: 0 <= b < |tb| && 0 <= q < |tb[b]| ==>
+      tb[b][q].off as int + tb[b][q].len as int <= |A| && tb[b][q].oid < nid &&
+      Bk(tb[b][q].oid, KeyOf(A, tb[b][q]), r, |tb| as N) as int == b
+  }
+
+  lemma KeyOfPrefix(A: seq<U16>, B: seq<U16>, e: Ent)
+    requires |A| <= |B| && B[..|A|] == A && e.off as int + e.len as int <= |A|
+    ensures KeyOf(B, e) == KeyOf(A, e)
+  {
+    var a := e.off as int; var b := a + e.len as int;
+    SlicePrefix(A, B, a, b);
+  }
+  lemma SlicePrefix<X>(A: seq<X>, B: seq<X>, a: int, b: int)
+    requires |A| <= |B| && B[..|A|] == A && 0 <= a <= b <= |A|
+    ensures B[a..b] == A[a..b]
+  {
+    forall q | 0 <= q < b - a ensures B[a..b][q] == A[a..b][q] { assert B[a + q] == B[..|A|][a + q]; }
+  }
+
+  lemma TblOkExtend(tb: seq<seq<Ent>>, A: seq<U16>, B: seq<U16>, nid: N, nid2: N, r: N)
+    requires TblOk(tb, A, nid, r) && |A| <= |B| && B[..|A|] == A && nid <= nid2
+    ensures TblOk(tb, B, nid2, r)
+  {
+    forall b, q | 0 <= b < |tb| && 0 <= q < |tb[b]| ensures Bk(tb[b][q].oid, KeyOf(B, tb[b][q]), r, |tb| as N) as int == b { KeyOfPrefix(A, B, tb[b][q]); }
+  }
+
+  method HashRange(ar: array<U16>, a: N, b: N, oid: N, r: N) returns (h: N)
+    requires a <= b && b as int <= ar.Length <= MaxBytes && r < P
+    ensures h == HSeq(ar[a..b], oid % P, r)
+  {
+    ghost var x := ar[a..b];
+    h := oid % P;
+    var k := a;
+    while k < b
+      invariant a <= k <= b && h < P && HSeq(x, oid % P, r) == HSeq(x[(k - a)..], h, r)
+      decreases b - k
+    {
+      assert x[(k - a)..][1..] == x[(k - a) + 1..];
+      h := HStep(h, ar[k], r);
+      k := k + 1;
+    }
+  }
+
+  // Is (oid, ar[a..a+len)) in the bucket?
+  method Lookup(bucket: seq<Ent>, ar: array<U16>, oid: N, a: N, len: N, ghost A: seq<U16>) returns (found: bool)
+    requires a as int + len as int <= ar.Length <= MaxBytes && |A| <= ar.Length && ar[..|A|] == A && |bucket| <= MaxBytes
+    requires forall q :: 0 <= q < |bucket| ==> bucket[q].off as int + bucket[q].len as int <= |A|
+    ensures found <==> exists q :: 0 <= q < |bucket| && bucket[q].oid == oid && KeyOf(A, bucket[q]) == ar[a .. a as int + len as int]
+  {
+    var q: N := 0;
+    var nb := |bucket| as N;
+    while q < nb
+      invariant q <= nb && forall w :: 0 <= w < q as int ==> !(bucket[w].oid == oid && KeyOf(A, bucket[w]) == ar[a .. a as int + len as int])
+      decreases nb - q
+    {
+      var e := bucket[q];
+      assert KeyOf(A, e) == ar[e.off as int .. e.off as int + e.len as int] by { SlicePrefix(A, ar[..], e.off as int, e.off as int + e.len as int); }
+      if e.oid == oid && e.len == len {
+        var w: N := 0;
+        while w < len && ar[e.off + w] == ar[a + w]
+          invariant w <= len && ar[e.off .. e.off + w] == ar[a .. a + w]
+          decreases len - w
+        { w := w + 1; }
+        if w == len { return true; }
+        assert ar[e.off as int .. e.off as int + len as int][w] != ar[a as int .. a as int + len as int][w];
+      }
+      q := q + 1;
+    }
+    return false;
+  }
+
+  // ---- literals ----
+  lemma StartsWithAt(t: S, j: int, lit: S, q: int) requires StartsWith(t, j, lit) && 0 <= q < |lit| ensures t[j + q] == lit[q]
+  { assert t[j..j + |lit|][q] == t[j + q]; }
+  lemma StartsWithIntro(t: S, j: int, lit: S)
+    requires 0 <= j && j + |lit| <= |t| && forall q :: 0 <= q < |lit| ==> t[j + q] == lit[q]
+    ensures StartsWith(t, j, lit)
+  { assert t[j..j + |lit|] == lit; }
+  // which literal starts at j: 1 true, 2 false, 3 null, 0 none
+  method LitM(t: seq<U16>, ghost T: S, j: N) returns (w: N)
+    requires T == W(t) && |t| <= MaxBytes && j as int < |t|
+    ensures w <= 3
+    ensures w == 1 <==> StartsWith(T, j as int, LitTrue)
+    ensures w == 2 <==> (StartsWith(T, j as int, LitFalse) && !StartsWith(T, j as int, LitTrue))
+    ensures w == 3 <==> (StartsWith(T, j as int, LitNull) && !StartsWith(T, j as int, LitTrue) && !StartsWith(T, j as int, LitFalse))
+    ensures w == 0 <==> (!StartsWith(T, j as int, LitTrue) && !StartsWith(T, j as int, LitFalse) && !StartsWith(T, j as int, LitNull))
+  {
+    var n := |t| as N;
+    var isT := j + 4 <= n && t[j] == 116 && t[j + 1] == 114 && t[j + 2] == 117 && t[j + 3] == 101;
+    var isF := j + 5 <= n && t[j] == 102 && t[j + 1] == 97 && t[j + 2] == 108 && t[j + 3] == 115 && t[j + 4] == 101;
+    var isN := j + 4 <= n && t[j] == 110 && t[j + 1] == 117 && t[j + 2] == 108 && t[j + 3] == 108;
+    assert isT <==> StartsWith(T, j as int, LitTrue) by {
+      if isT { StartsWithIntro(T, j as int, LitTrue); }
+      if StartsWith(T, j as int, LitTrue) { StartsWithAt(T, j as int, LitTrue, 0); StartsWithAt(T, j as int, LitTrue, 1); StartsWithAt(T, j as int, LitTrue, 2); StartsWithAt(T, j as int, LitTrue, 3); }
+    }
+    assert isF <==> StartsWith(T, j as int, LitFalse) by {
+      if isF { StartsWithIntro(T, j as int, LitFalse); }
+      if StartsWith(T, j as int, LitFalse) { StartsWithAt(T, j as int, LitFalse, 0); StartsWithAt(T, j as int, LitFalse, 1); StartsWithAt(T, j as int, LitFalse, 2); StartsWithAt(T, j as int, LitFalse, 3); StartsWithAt(T, j as int, LitFalse, 4); }
+    }
+    assert isN <==> StartsWith(T, j as int, LitNull) by {
+      if isN { StartsWithIntro(T, j as int, LitNull); }
+      if StartsWith(T, j as int, LitNull) { StartsWithAt(T, j as int, LitNull, 0); StartsWithAt(T, j as int, LitNull, 1); StartsWithAt(T, j as int, LitNull, 2); StartsWithAt(T, j as int, LitNull, 3); }
+    }
+    w := if isT then 1 else if isF then 2 else if isN then 3 else 0;
+  }
+
+  // ---- values ----
+  ghost predicate Ctx(t: seq<U16>, T: S, ar: array<U16>, tb: array<seq<Ent>>, r: N)
+    reads ar, tb
+  { T == W(t) && |t| <= MaxBytes && ar.Length == |t| && r < P && 0 < tb.Length < 0x20_0000_0000_0000 }
+
+  ghost predicate Grown(o: seq<seq<Ent>>, n: seq<seq<Ent>>, nid: N)
+  {
+    |o| == |n| && forall b :: 0 <= b < |o| ==>
+      (forall e :: e in o[b] ==> e in n[b]) && (forall e :: e in n[b] && e.oid < nid ==> e in o[b])
+  }
+  lemma GrownTrans(a: seq<seq<Ent>>, b: seq<seq<Ent>>, c: seq<seq<Ent>>, n1: N, n2: N)
+    requires Grown(a, b, n1) && Grown(b, c, n2) && n1 <= n2 ensures Grown(a, c, n1) {}
+
+  method ValueM(t: seq<U16>, ghost T: S, ar: array<U16>, tb: array<seq<Ent>>, r: N, i: N, d: N, cur: N, nid: N)
+    returns (ok: bool, p: N, cur2: N, nid2: N)
+    requires Ctx(t, T, ar, tb, r) && i as int <= |t| && cur <= i && nid <= i && 1 <= d <= 33
+    requires TblOk(tb[..], ar[..cur], nid, r)
+    modifies ar, tb
+    ensures ok == ParseValue(T, i as int, d as int).Ok?
+    ensures ok ==> p as int == ParseValue(T, i as int, d as int).pos && cur <= cur2 <= p && nid <= nid2 <= p && p as int <= |t|
+    ensures ok ==> ar[..cur] == old(ar[..cur]) && TblOk(tb[..], ar[..cur2], nid2, r) && Grown(old(tb[..]), tb[..], nid)
+    decreases |t| - i as int, 0
+  {
+    var n := |t| as N;
+    var j := SkipWs(t, T, i);
+    if j >= n { return false, 0, 0, 0; }
+    var c := t[j];
+    if c == 123 {
+      if d > 32 { return false, 0, 0, 0; }
+      ok, p, cur2, nid2 := ObjM(t, T, ar, tb, r, j + 1, d, cur, nid);
+    } else if c == 91 {
+      if d > 32 { return false, 0, 0, 0; }
+      ok, p, cur2, nid2 := ArrM(t, T, ar, tb, r, j + 1, d, cur, nid);
+    } else if c == 34 {
+      var okS, pS, c2 := StrM(t, T, ar, j + 1, cur);
+      StrBodyFEq(T, j as int + 1, []);
+      if !okS { return false, 0, 0, 0; }
+      var v16 := V16M(ar, cur, c2);
+      if !v16 { return false, 0, 0, 0; }
+      assert ar[..c2][..cur] == ar[..cur];
+      TblOkExtend(tb[..], ar[..cur], ar[..c2], nid, nid, r);
+      return true, pS, c2, nid;
+    } else if c == 45 || (48 <= c <= 57) {
+      var okN, pN := NumM(t, T, j);
+      if !okN { return false, 0, 0, 0; }
+      return true, pN, cur, nid;
+    } else {
+      var w := LitM(t, T, j);
+      if w == 0 { return false, 0, 0, 0; }
+      return true, if w == 2 then j + 5 else j + 4, cur, nid;
+    }
+  }
+
+  method ArrM(t: seq<U16>, ghost T: S, ar: array<U16>, tb: array<seq<Ent>>, r: N, i: N, d: N, cur: N, nid: N)
+    returns (ok: bool, p: N, cur2: N, nid2: N)
+    requires Ctx(t, T, ar, tb, r) && i as int <= |t| && cur <= i && nid <= i && 1 <= d <= 32
+    requires TblOk(tb[..], ar[..cur], nid, r)
+    modifies ar, tb
+    ensures ok == ArrStart(T, i as int, d as int).Ok?
+    ensures ok ==> p as int == ArrStart(T, i as int, d as int).pos && cur <= cur2 <= p && nid <= nid2 <= p && p as int <= |t|
+    ensures ok ==> ar[..cur] == old(ar[..cur]) && TblOk(tb[..], ar[..cur2], nid2, r) && Grown(old(tb[..]), tb[..], nid)
+    decreases |t| - i as int, 2
+  {
+    var n := |t| as N;
+    var j := SkipWs(t, T, i);
+    if j < n && t[j] == 93 { return true, j + 1, cur, nid; }
+    ghost var acc: seq<J> := [];
+    var k := i;
+    cur2 := cur; nid2 := nid;
+    while true
+      invariant i <= k <= n && cur <= cur2 <= k && nid <= nid2 <= k
+      invariant ArrStart(T, i as int, d as int) == ArrLoop(T, k as int, d as int, acc)
+      invariant ar[..cur] == old(ar[..cur]) && TblOk(tb[..], ar[..cur2], nid2, r) && Grown(old(tb[..]), tb[..], nid)
+      decreases n - k
+    {
+      ghost var tb0 := tb[..];
+      ghost var A0 := ar[..cur2];
+      var okV, q, c3, n3 := ValueM(t, T, ar, tb, r, k, d + 1, cur2, nid2);
+      if !okV { return false, 0, 0, 0; }
+      assert ar[..cur2] == A0;
+      assert ar[..cur] == A0[..cur];
+      GrownTrans(old(tb[..]), tb0, tb[..], nid, nid2);
+      acc := acc + [ParseValue(T, k as int, d as int + 1).v];
+      cur2, nid2 := c3, n3;
+      var j2 := SkipWs(t, T, q);
+      if j2 >= n { return false, 0, 0, 0; }
+      if t[j2] == 44 { k := j2 + 1; continue; }
+      if t[j2] == 93 { return true, j2 + 1, cur2, nid2; }
+      return false, 0, 0, 0;
+    }
+  }
+
+  // ---- per-object key bookkeeping (the entries of object `oid` are exactly `ents`, one per key of `acc`) ----
+  ghost predicate ObjInv(tb: seq<seq<Ent>>, A: seq<U16>, oid: N, ents: seq<Ent>, acc: seq<KV>, r: N)
+  {
+    r < P && 0 < |tb| < 0x20_0000_0000_0000 && |ents| == |acc| &&
+    (forall w :: 0 <= w < |ents| ==> (ents[w].oid == oid && ents[w].off as int + ents[w].len as int <= |A| &&
+       W(KeyOf(A, ents[w])) == acc[w].k && ents[w] in tb[Bk(oid, KeyOf(A, ents[w]), r, |tb| as N)])) &&
+    (forall b, e :: 0 <= b < |tb| && e in tb[b] && e.oid == oid ==> e in ents)
+  }
+
+  lemma DupCheck(tb: seq<seq<Ent>>, A: seq<U16>, oid: N, ents: seq<Ent>, acc: seq<KV>, r: N, nid: N, key: seq<U16>, b: N)
+    requires ObjInv(tb, A, oid, ents, acc, r) && TblOk(tb, A, nid, r) && b == Bk(oid, key, r, |tb| as N)
+    ensures (exists q :: 0 <= q < |tb[b]| && tb[b][q].oid == oid && KeyOf(A, tb[b][q]) == key) <==> HasKey(acc, W(key))
+  {
+    if exists q :: 0 <= q < |tb[b]| && tb[b][q].oid == oid && KeyOf(A, tb[b][q]) == key {
+      var q :| 0 <= q < |tb[b]| && tb[b][q].oid == oid && KeyOf(A, tb[b][q]) == key;
+      var e := tb[b][q];
+      assert e in tb[b];
+      assert e in ents;
+      var w :| 0 <= w < |ents| && ents[w] == e;
+      assert acc[w].k == W(key);
+    }
+    if HasKey(acc, W(key)) {
+      var w :| 0 <= w < |acc| && acc[w].k == W(key);
+      WInj(KeyOf(A, ents[w]), key);
+      var e := ents[w];
+      assert e in tb[b];
+      var q :| 0 <= q < |tb[b]| && tb[b][q] == e;
+      assert tb[b][q].oid == oid && KeyOf(A, tb[b][q]) == key;
+    }
+  }
+
+  lemma InsertKey(tb: seq<seq<Ent>>, A0: seq<U16>, A1: seq<U16>, oid: N, ents: seq<Ent>, acc: seq<KV>, r: N, nid: N, key: seq<U16>, b: N, v: J, tb2: seq<seq<Ent>>)
+    requires ObjInv(tb, A0, oid, ents, acc, r) && TblOk(tb, A0, nid, r) && oid < nid
+    requires |A0| <= |A1| && A1[..|A0|] == A0 && key == A1[|A0|..] && b == Bk(oid, key, r, |tb| as N)
+    requires !HasKey(acc, W(key)) && |A1| < 0x20_0000_0000_0000 && nid as int + 1 < 0x20_0000_0000_0000
+    requires tb2 == tb[b := tb[b] + [Ent(oid, |A0| as N, |key| as N)]]
+    ensures ObjInv(tb2, A1, oid, ents + [Ent(oid, |A0| as N, |key| as N)], acc + [KV(W(key), v)], r)
+    ensures TblOk(tb2, A1, nid + 1, r) && Grown(tb, tb2, oid)
+  {
+    var ne := Ent(oid, |A0| as N, |key| as N);
+    assert KeyOf(A1, ne) == key;
+    TblOkExtend(tb, A0, A1, nid, nid, r);
+    forall w | 0 <= w < |ents| ensures KeyOf(A1, ents[w]) == KeyOf(A0, ents[w]) { KeyOfPrefix(A0, A1, ents[w]); }
+    var ents2 := ents + [ne];
+    var acc2 := acc + [KV(W(key), v)];
+    forall w | 0 <= w < |ents2|
+      ensures ents2[w].oid == oid && ents2[w].off as int + ents2[w].len as int <= |A1| && W(KeyOf(A1, ents2[w])) == acc2[w].k && ents2[w] in tb2[Bk(oid, KeyOf(A1, ents2[w]), r, |tb2| as N)]
+    {
+      if w < |ents| { assert ents2[w] == ents[w]; assert ents[w] in tb[Bk(oid, KeyOf(A0, ents[w]), r, |tb| as N)]; }
+    }
+    forall bb, e | 0 <= bb < |tb2| && e in tb2[bb] && e.oid == oid ensures e in ents2 {
+      if bb != b as int || e in tb[bb] { assert e in tb[bb]; } else { assert e == ne; }
+    }
+    forall bb, q | 0 <= bb < |tb2| && 0 <= q < |tb2[bb]|
+      ensures tb2[bb][q].off as int + tb2[bb][q].len as int <= |A1| && tb2[bb][q].oid < nid + 1 && Bk(tb2[bb][q].oid, KeyOf(A1, tb2[bb][q]), r, |tb2| as N) as int == bb
+    {
+      if bb != b as int || q < |tb[b]| { assert tb2[bb][q] == tb[bb][q]; }
+    }
+  }
+
+  lemma AfterNested(tb1: seq<seq<Ent>>, tb2: seq<seq<Ent>>, A2: seq<U16>, A3: seq<U16>, oid: N, ents: seq<Ent>, acc: seq<KV>, r: N, nid: N, v: J)
+    requires ObjInv(tb1, A2, oid, ents, acc, r) && Grown(tb1, tb2, nid) && oid < nid
+    requires |A2| <= |A3| && A3[..|A2|] == A2
+    ensures ObjInv(tb2, A3, oid, ents, acc, r)
+  {
+    forall w | 0 <= w < |ents| ensures KeyOf(A3, ents[w]) == KeyOf(A2, ents[w]) { KeyOfPrefix(A2, A3, ents[w]); }
+    forall bb, e | 0 <= bb < |tb2| && e in tb2[bb] && e.oid == oid ensures e in ents { assert e in tb1[bb]; }
+  }
+
+  // what ObjLoop does after a member's value ends at q
+  ghost function ObjTail(T: S, q: int, d: int, acc: seq<KV>): R<J>
+    requires 0 <= q
+    decreases |T| - q, 0
+  {
+    var j3 := Ws(T, q);
+    if j3 >= |T| then Fail
+    else if T[j3] == 44 then ObjLoop(T, j3 + 1, d, acc)
+    else if T[j3] == 125 then Ok(Obj(acc), j3 + 1)
+    else Fail
+  }
+
+  // one object member: key, ':', value (the body of ObjLoop up to the separator)
+  method {:isolate_assertions} MemberM(t: seq<U16>, ghost T: S, ar: array<U16>, tb: array<seq<Ent>>, r: N, k: N, d: N, cur: N, nid: N, oid: N,
+                    ghost acc: seq<KV>, ghost ents: seq<Ent>)
+    returns (ok: bool, q: N, cur2: N, nid2: N, ghost acc2: seq<KV>, ghost ents2: seq<Ent>)
+    requires Ctx(t, T, ar, tb, r) && k as int <= |t| && cur <= k && oid < nid <= k && 1 <= d <= 32
+    requires TblOk(tb[..], ar[..cur], nid, r) && ObjInv(tb[..], ar[..cur], oid, ents, acc, r)
+    modifies ar, tb
+    ensures !ok ==> ObjLoop(T, k as int, d as int, acc).Fail?
+    ensures ok ==> k < q && q as int <= |t| && ObjLoop(T, k as int, d as int, acc) == ObjTail(T, q as int, d as int, acc2)
+    ensures ok ==> cur <= cur2 <= q && nid < nid2 <= q
+    ensures ok ==> ar[..cur] == old(ar[..cur]) && TblOk(tb[..], ar[..cur2], nid2, r) && Grown(old(tb[..]), tb[..], oid)
+    ensures ok ==> ObjInv(tb[..], ar[..cur2], oid, ents2, acc2, r)
+    decreases |t| - k as int, 1
+  {
+    var n := |t| as N;
+    var m := tb.Length as N;
+    var j := SkipWs(t, T, k);
+    if j >= n || t[j] != 34 { return false, 0, 0, 0, [], []; }
+    ghost var A0 := ar[..cur];
+    ghost var tb0 := tb[..];
+    var okS, pS, c2 := StrM(t, T, ar, j + 1, cur);
+    StrBodyFEq(T, j as int + 1, []);
+    if !okS { return false, 0, 0, 0, [], []; }
+    var v16 := V16M(ar, cur, c2);
+    if !v16 { return false, 0, 0, 0, [], []; }
+    ghost var key := ar[cur..c2];
+    assert ParseStr(T, j as int) == Ok(W(key), pS as int);
+    ghost var A1 := ar[..c2];
+    assert A1[..cur] == A0 && key == A1[cur..];
+    var h := HashRange(ar, cur, c2, oid, r);
+    var b := h % m;
+    DupCheck(tb0, A0, oid, ents, acc, r, nid, key, b);
+    var dup := Lookup(tb[b], ar, oid, cur, c2 - cur, A0);
+    if dup { return false, 0, 0, 0, [], []; }
+    var j2 := SkipWs(t, T, pS);
+    if j2 >= n || t[j2] != 58 { return false, 0, 0, 0, [], []; }
+    ghost var pv := ParseValue(T, j2 as int + 1, d as int + 1);
+    ghost var vv := if pv.Ok? then pv.v else Null;
+    tb[b] := tb[b] + [Ent(oid, cur, c2 - cur)];
+    InsertKey(tb0, A0, A1, oid, ents, acc, r, nid, key, b, vv, tb[..]);
+    ents2 := ents + [Ent(oid, cur, c2 - cur)];
+    acc2 := acc + [KV(W(key), vv)];
+    ghost var tb1 := tb[..];
+    ghost var A2 := ar[..c2];
+    var okV, q0, c3, n3 := ValueM(t, T, ar, tb, r, j2 + 1, d + 1, c2, nid + 1);
+    if !okV { return false, 0, 0, 0, [], []; }
+    assert ar[..c2] == A2;
+    assert ar[..c3][..c2] == A2;
+    AfterNested(tb1, tb[..], A2, ar[..c3], oid, ents2, acc2, r, nid + 1, vv);
+    GrownTrans(tb0, tb1, tb[..], oid, nid + 1);
+    assert ar[..cur] == A2[..cur];
+    return true, q0, c3, n3, acc2, ents2;
+  }
+
+  method {:isolate_assertions} ObjM(t: seq<U16>, ghost T: S, ar: array<U16>, tb: array<seq<Ent>>, r: N, i: N, d: N, cur: N, nid: N)
+    returns (ok: bool, p: N, cur2: N, nid2: N)
+    requires Ctx(t, T, ar, tb, r) && i as int <= |t| && cur <= i && nid < i && 1 <= d <= 32
+    requires TblOk(tb[..], ar[..cur], nid, r)
+    modifies ar, tb
+    ensures ok == ObjStart(T, i as int, d as int).Ok?
+    ensures ok ==> p as int == ObjStart(T, i as int, d as int).pos && cur <= cur2 <= p && nid <= nid2 <= p && p as int <= |t|
+    ensures ok ==> ar[..cur] == old(ar[..cur]) && TblOk(tb[..], ar[..cur2], nid2, r) && Grown(old(tb[..]), tb[..], nid)
+    decreases |t| - i as int, 2
+  {
+    var n := |t| as N;
+    var j0 := SkipWs(t, T, i);
+    if j0 < n && t[j0] == 125 { return true, j0 + 1, cur, nid; }
+    var oid := nid;
+    ghost var acc: seq<KV> := [];
+    ghost var ents: seq<Ent> := [];
+    var k := i;
+    cur2 := cur; nid2 := nid + 1;
+    TblOkExtend(tb[..], ar[..cur], ar[..cur], nid, nid2, r);
+    while true
+      invariant i <= k <= n && cur <= cur2 <= k && oid < nid2 <= k
+      invariant ObjStart(T, i as int, d as int) == ObjLoop(T, k as int, d as int, acc)
+      invariant ar[..cur] == old(ar[..cur]) && TblOk(tb[..], ar[..cur2], nid2, r) && Grown(old(tb[..]), tb[..], oid)
+      invariant ObjInv(tb[..], ar[..cur2], oid, ents, acc, r)
+      decreases n - k
+    {
+      ghost var tbB := tb[..];
+      ghost var AB := ar[..cur2];
+      var okM, q, c3, n3, acc2, ents2 := MemberM(t, T, ar, tb, r, k, d, cur2, nid2, oid, acc, ents);
+      if !okM { return false, 0, 0, 0; }
+      GrownTrans(old(tb[..]), tbB, tb[..], oid, oid);
+      assert ar[..cur] == AB[..cur];
+      acc, ents := acc2, ents2;
+      cur2, nid2 := c3, n3;
+      var j3 := SkipWs(t, T, q);
+      if j3 >= n { return false, 0, 0, 0; }
+      if t[j3] == 44 { k := j3 + 1; continue; }
+      if t[j3] == 125 { return true, j3 + 1, cur2, nid2; }
+      return false, 0, 0, 0;
+    }
+  }
+
+  // ---- strictParse acceptance, proved equal to the specification ----
+  function AcceptsU(t: seq<U16>, seed: N): bool { ParseTop(W(t)).Some? } by method {
+    if |t| > MaxBytes { Utf8LenGe(W(t), 0, 0); return false; }
+    var u8 := Utf8LenN(t, W(t));
+    if u8 > MaxBytes as N { return false; }
+    var n := |t| as N;
+    var ar := new U16[n];
+    var m: N := n / 8 + 16;
+    var tb := new seq<Ent>[m];
+    var empty: seq<Ent> := [];
+    var b: N := 0;
+    while b < m
+      invariant b <= m && forall q :: 0 <= q < b as int ==> tb[q] == []
+      decreases m - b
+    { tb[b] := empty; b := b + 1; }
+    var ok, p, c, nid := ValueM(t, W(t), ar, tb, seed % P, 0, 1, 0, 0);
+    if !ok { return false; }
+    var q := SkipWs(t, W(t), p);
+    return q == n;
+  }
+}
+
+// =====================================================================================================================
+// canonicalizeStrict fast path: CanonU == Json.CanonText on the imported value (see the comment on module Fast)
+// =====================================================================================================================
+module FastP {
+  import opened Utf
+  import opened Json
+  import opened Fast
+
+  newtype I = x: int | -0x1F_FFFF_FFFF_FFFF <= x <= 0x1F_FFFF_FFFF_FFFF
+
+  // An imported JS value with native strings. UBig carries an integer outside the native range (never profile-valid);
+  // UDec is a non-integer number as its plain decimal spelling (integer part, fractional digits).
+  datatype JU = UNull | UBool(b: bool) | UInt(n: I) | UBig(bn: int) | UDec(neg: bool, ip: N, fr: seq<U16>) | UStr(s: seq<U16>)
+              | UArr(a: seq<JU>) | UObj(kv: seq<KU>)
+  datatype KU = KU(k: seq<U16>, v: JU)
+
+  ghost function ToJ(u: JU): J decreases u
+  {
+    match u
+    case UNull => Null
+    case UBool(b) => Bool(b)
+    case UInt(n) => Int(n as int)
+    case UBig(n) => Int(n)
+    case UDec(neg, ip, fr) => Dec(neg, ip as int, W(fr))
+    case UStr(s) => Str(W(s))
+    case UArr(a) => Arr(seq(|a|, i requires 0 <= i < |a| => ToJ(a[i])))
+    case UObj(kv) => Obj(seq(|kv|, i requires 0 <= i < |kv| => KV(W(kv[i].k), ToJ(kv[i].v))))
+  }
+
+  datatype St = Done | Bad | Exh   // Done: printed; Bad: outside the profile; Exh: past the 2^40-unit output limit (no verdict)
+
+  const LIMIT: N := 0x100_0000_0000
+
+  // ---- the output buffer ----
+  method Room(buf: array<U16>, n: N, k: N) returns (ok: bool, b2: array<U16>)
+    requires n as int <= buf.Length <= LIMIT as int && k <= 64
+    ensures n as int <= b2.Length <= LIMIT as int && b2[..n] == buf[..n] && (b2 == buf || fresh(b2))
+    ensures ok ==> n as int + k as int <= b2.Length
+  {
+    var len := buf.Length as N;
+    if n + k <= len { return true, buf; }
+    if n + k > LIMIT { return false, buf; }
+    var cap := 2 * len + k + 16;
+    if cap > LIMIT { cap := LIMIT; }
+    b2 := new U16[cap];
+    var i: N := 0;
+    while i < n
+      invariant i <= n && b2[..i] == buf[..i]
+      decreases n - i
+    { b2[i] := buf[i]; i := i + 1; }
+    return true, b2;
+  }
+
+  // Append a short literal.
+  method PutSeq(buf: array<U16>, n: N, x: seq<U16>) returns (ok: bool, b2: array<U16>, n2: N)
+    requires n as int <= buf.Length <= LIMIT as int && |x| <= 64
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures ok ==> b2[..n2] == old(buf[..n]) + x
+  {
+    ok, b2 := Room(buf, n, |x| as N);
+    n2 := n;
+    if !ok { return; }
+    var i: N := 0;
+    while i < |x| as N
+      invariant i as int <= |x| && n2 == n + i && n2 as int <= b2.Length && b2[..n2] == old(buf[..n]) + x[..i]
+      decreases |x| - i as int
+    {
+      b2[n2] := x[i];
+      assert x[..i + 1] == x[..i] + [x[i]];
+      n2 := n2 + 1;
+      i := i + 1;
+    }
+    assert x[..i] == x;
+  }
+
+  // Append one / two units (no literal sequence allocated at run time).
+  method Put1(buf: array<U16>, n: N, x: U16) returns (ok: bool, b2: array<U16>, n2: N)
+    requires n as int <= buf.Length <= LIMIT as int
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures ok ==> b2[..n2] == old(buf[..n]) + [x]
+  {
+    ok, b2 := Room(buf, n, 1);
+    n2 := n;
+    if !ok { return; }
+    b2[n] := x;
+    n2 := n + 1;
+  }
+  method Put2(buf: array<U16>, n: N, x: U16, y: U16) returns (ok: bool, b2: array<U16>, n2: N)
+    requires n as int <= buf.Length <= LIMIT as int
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures ok ==> b2[..n2] == old(buf[..n]) + [x, y]
+  {
+    ok, b2 := Room(buf, n, 2);
+    n2 := n;
+    if !ok { return; }
+    b2[n] := x;
+    b2[n + 1] := y;
+    n2 := n + 2;
+  }
+
+  lemma WCat(a: seq<U16>, b: seq<U16>) ensures W(a + b) == W(a) + W(b) {}
+
+  // ---- digits ----
+  method DigM(v: N, buf: array<U16>, n: N) returns (ok: bool, b2: array<U16>, n2: N)
+    requires n as int <= buf.Length <= LIMIT as int
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures ok ==> W(b2[..n2]) == W(old(buf[..n])) + Dig(v as int)
+  {
+    DigLenLe16(v);
+    ok, b2 := Room(buf, n, DigLen(v));
+    n2 := n;
+    if !ok { return; }
+    n2 := DigW(v, b2, n);
+  }
+
+  // the digits of v written in place (room already made)
+  method DigW(v: N, b: array<U16>, n: N) returns (n2: N)
+    requires n as int + DigLen(v) as int <= b.Length <= LIMIT as int
+    modifies b
+    ensures n2 as int == n as int + DigLen(v) as int && b[..n] == old(b[..n]) && W(b[..n2]) == W(old(b[..n])) + Dig(v as int)
+    decreases v
+  {
+    var m := n;
+    if v >= 10 { m := DigW(v / 10, b, n); }
+    ghost var before := b[..m];
+    var x := (48 + v % 10) as U16;
+    b[m] := x;
+    assert b[..m + 1] == before + [x];
+    WCat(before, [x]);
+    assert b[..n] == before[..n];
+    return m + 1;
+  }
+
+  lemma DigLenLe(v: N, k: nat) requires 1 <= k && v as int < Pow10(k) ensures DigLen(v) as int <= k decreases k
+  {
+    if v >= 10 {
+      if k == 1 { assert Pow10(1) == 10; }
+      DigLenLe(v / 10, k - 1);
+    }
+  }
+  lemma DigLenLe16(v: N) ensures DigLen(v) <= 16
+  { Pow10At16(); DigLenLe(v, 16); }
+
+  function DigLen(v: N): N ensures DigLen(v) as int == |Dig(v as int)| && 1 <= DigLen(v) as int <= v as int + 1 decreases v
+  { if v < 10 then 1 else DigLen(v / 10) + 1 }
+
+  // ---- strings ----
+  method V16S(s: seq<U16>) returns (r: bool)
+    requires |s| < 0x20_0000_0000_0000
+    ensures r == Valid16(W(s))
+  {
+    ghost var S0 := W(s);
+    var k: N := 0;
+    var n := |s| as N;
+    while k < n
+      invariant k <= n && Valid16(S0) == Valid16From(S0, k as int)
+      decreases n - k
+    {
+      var x := s[k];
+      if 0xD800 <= x <= 0xDBFF {
+        if k + 1 < n && 0xDC00 <= s[k + 1] <= 0xDFFF { k := k + 2; } else { return false; }
+      } else if 0xDC00 <= x <= 0xDFFF { return false; }
+      else { k := k + 1; }
+    }
+    return true;
+  }
+
+  lemma PrintBodySnoc(a: S, x: int) ensures PrintBody(a + [x]) == PrintBody(a) + PrintU(x) decreases |a|
+  {
+    if |a| == 0 { assert [x][1..] == []; }
+    else { assert (a + [x])[1..] == a[1..] + [x]; PrintBodySnoc(a[1..], x); assert PrintBody(a) == PrintU(a[0]) + PrintBody(a[1..]); }
+  }
+
+  function HexLU(v: U16): U16 requires v < 16 { if v < 10 then 48 + v else 97 + (v - 10) }
+
+  // the quoted, escaped string body (no quotes)
+  method {:isolate_assertions} BodyM(s: seq<U16>, buf: array<U16>, n: N) returns (ok: bool, b2: array<U16>, n2: N)
+    requires n as int <= buf.Length <= LIMIT as int && |s| < 0x20_0000_0000_0000
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures ok ==> W(b2[..n2]) == W(old(buf[..n])) + PrintBody(W(s))
+  {
+    b2, n2 := buf, n;
+    ghost var out0 := W(old(buf[..n]));
+    var q: N := 0;
+    var len := |s| as N;
+    while q < len
+      invariant q <= len && n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+      invariant W(b2[..n2]) == out0 + PrintBody(W(s[..q]))
+      decreases len - q
+    {
+      var x := s[q];
+      var r: bool;
+      ghost var before := b2[..n2];
+      if (b2.Length as N) - n2 < 6 {
+        r, b2 := Room(b2, n2, 6);
+        if !r { return false, b2, n2; }
+      }
+      // every branch writes e at [n0, n0 + |e|) and closes the slice equality on its own path (one 8-way VC was flaky)
+      ghost var n0 := n2;
+      assert b2[..n0] == before;
+      ghost var e: seq<U16>;
+      if x == 34 { b2[n2] := 92; b2[n2 + 1] := 34; n2 := n2 + 2; e := [92, 34]; assert b2[..n2] == before + e; }
+      else if x == 92 { b2[n2] := 92; b2[n2 + 1] := 92; n2 := n2 + 2; e := [92, 92]; assert b2[..n2] == before + e; }
+      else if x == 8 { b2[n2] := 92; b2[n2 + 1] := 98; n2 := n2 + 2; e := [92, 98]; assert b2[..n2] == before + e; }
+      else if x == 12 { b2[n2] := 92; b2[n2 + 1] := 102; n2 := n2 + 2; e := [92, 102]; assert b2[..n2] == before + e; }
+      else if x == 10 { b2[n2] := 92; b2[n2 + 1] := 110; n2 := n2 + 2; e := [92, 110]; assert b2[..n2] == before + e; }
+      else if x == 13 { b2[n2] := 92; b2[n2 + 1] := 114; n2 := n2 + 2; e := [92, 114]; assert b2[..n2] == before + e; }
+      else if x == 9 { b2[n2] := 92; b2[n2 + 1] := 116; n2 := n2 + 2; e := [92, 116]; assert b2[..n2] == before + e; }
+      else if x < 0x20 {
+        var h := HexLU(x / 16); var l := HexLU(x % 16);
+        b2[n2] := 92; b2[n2 + 1] := 117; b2[n2 + 2] := 48; b2[n2 + 3] := 48; b2[n2 + 4] := h; b2[n2 + 5] := l;
+        n2 := n2 + 6; e := [92, 117, 48, 48, h, l];
+        assert b2[..n0] == before;
+        assert b2[n0..n2] == e;
+        assert b2[..n2] == b2[..n0] + b2[n0..n2];
+        assert b2[..n2] == before + e;
+        assert W(e) == PrintU(x as int) by { assert (x as int) / 16 == (x / 16) as int && (x as int) % 16 == (x % 16) as int; }
+      } else { b2[n2] := x; n2 := n2 + 1; e := [x]; assert b2[..n2] == before + e; }
+      assert b2[..n2] == before + e;
+      assert W(e) == PrintU(x as int);
+      WCat(before, e);
+      assert s[..q + 1] == s[..q] + [x];
+      WSnoc(s[..q], x);
+      PrintBodySnoc(W(s[..q]), x as int);
+      q := q + 1;
+    }
+    assert s[..q] == s;
+    return true, b2, n2;
+  }
+
+  // ---- the canonical printer ----
+  lemma PrintElemsSnoc(a: seq<J>, y: J)
+    ensures PrintElems(a + [y]) == (if |a| == 0 then Print(y) else PrintElems(a) + [44] + Print(y))
+    decreases |a|
+  {
+    if |a| == 0 { assert a + [y] == [y]; }
+    else if |a| == 1 { assert (a + [y])[1..] == [y]; }
+    else { assert (a + [y])[1..] == a[1..] + [y]; PrintElemsSnoc(a[1..], y); }
+  }
+  ghost function Mem(kv: KV): S { [34] + PrintBody(kv.k) + [34, 58] + Print(kv.v) }
+  lemma PrintMembersSnoc(a: seq<KV>, y: KV)
+    ensures PrintMembers(a + [y]) == (if |a| == 0 then Mem(y) else PrintMembers(a) + [44] + Mem(y))
+    decreases |a|
+  {
+    if |a| == 0 { assert a + [y] == [y]; }
+    else if |a| == 1 { assert (a + [y])[1..] == [y]; }
+    else { assert (a + [y])[1..] == a[1..] + [y]; PrintMembersSnoc(a[1..], y); }
+  }
+
+  method PrintM(u: JU, d: N, buf: array<U16>, n: N) returns (st: St, b2: array<U16>, n2: N)
+    requires 1 <= d <= 33 && n as int <= buf.Length <= LIMIT as int
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures st.Done? ==> Valid(ToJ(u), d as int) && W(b2[..n2]) == W(old(buf[..n])) + Print(NormJ(ToJ(u)))
+    ensures st.Bad? ==> !Valid(ToJ(u), d as int)
+    decreases u, 1
+  {
+    ghost var out0 := W(old(buf[..n]));
+    var ok: bool;
+    match u {
+      case UNull =>
+        ok, b2, n2 := PutSeq(buf, n, [110, 117, 108, 108]);
+        if ok { WCat(old(buf[..n]), [110, 117, 108, 108]); }
+      case UBool(bv) =>
+        if bv { ok, b2, n2 := PutSeq(buf, n, [116, 114, 117, 101]); if ok { WCat(old(buf[..n]), [116, 114, 117, 101]); } }
+        else { ok, b2, n2 := PutSeq(buf, n, [102, 97, 108, 115, 101]); if ok { WCat(old(buf[..n]), [102, 97, 108, 115, 101]); } }
+      case UInt(iv) =>
+        ok, b2, n2 := IntM(iv, buf, n);
+      case UBig(bv) =>
+        if !(-MaxSafe <= bv <= MaxSafe) { return Bad, buf, n; }
+        ok, b2, n2 := IntM(bv as I, buf, n);
+      case UDec(neg, ip, fr) =>
+        st, b2, n2 := DecM(neg, ip, fr, buf, n);
+        return;
+      case UStr(s) =>
+        if |s| >= LIMIT as int { return Exh, buf, n; }
+        var v16 := V16S(s);
+        if !v16 { return Bad, buf, n; }
+        ok, b2, n2 := Put1(buf, n, 34);
+        if !ok { return Exh, b2, n2; }
+        WCat(old(buf[..n]), [34]);
+        ok, b2, n2 := BodyM(s, b2, n2);
+        if !ok { return Exh, b2, n2; }
+        ghost var mid := b2[..n2];
+        ok, b2, n2 := Put1(b2, n2, 34);
+        if ok { WCat(mid, [34]); }
+      case UArr(a) =>
+        st, b2, n2 := ArrPM(u, d, buf, n);
+        return;
+      case UObj(kv) =>
+        st, b2, n2 := ObjPM(u, d, buf, n);
+        return;
+    }
+    st := if ok then Done else Exh;
+  }
+
+  method IntM(iv: I, buf: array<U16>, n: N) returns (ok: bool, b2: array<U16>, n2: N)
+    requires n as int <= buf.Length <= LIMIT as int
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures ok ==> W(b2[..n2]) == W(old(buf[..n])) + Print(Int(iv as int))
+  {
+    var a: N := if iv < 0 then (-iv) as N else iv as N;
+    DigLenLe16(a);
+    b2, n2 := buf, n;
+    ok := true;
+    if (buf.Length as N) - n < 17 {
+      ok, b2 := Room(buf, n, 17);
+      if !ok { return; }
+    }
+    ghost var B0 := b2[..n];
+    assert B0 == old(buf[..n]);
+    var m := n;
+    if iv < 0 {
+      b2[n] := 45;
+      m := n + 1;
+      assert b2[..m] == B0 + [45];
+      WCat(B0, [45]);
+    } else {
+      assert b2[..m] == B0;
+    }
+    ghost var B1 := b2[..m];
+    n2 := DigW(a, b2, m);
+    assert W(b2[..n2]) == W(B1) + Dig(a as int);
+  }
+
+  method {:isolate_assertions} DecM(neg: bool, ip: N, fr: seq<U16>, buf: array<U16>, n: N) returns (st: St, b2: array<U16>, n2: N)
+    requires n as int <= buf.Length <= LIMIT as int
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures st.Done? ==> ValidDec(neg, ip as int, W(fr)) && W(b2[..n2]) == W(old(buf[..n])) + Print(Dec(neg, ip as int, W(fr)))
+    ensures st.Bad? ==> !ValidDec(neg, ip as int, W(fr))
+  {
+    ghost var F := W(fr);
+    if |fr| >= LIMIT as int { return Exh, buf, n; }
+    var fl := |fr| as N;
+    if fl == 0 { return Bad, buf, n; }
+    // all fractional digits 0..9
+    var q: N := 0;
+    while q < fl && fr[q] <= 9
+      modifies {}
+      invariant q <= fl && forall w :: 0 <= w < q as int ==> 0 <= F[w] <= 9
+      decreases fl - q
+    { q := q + 1; }
+    if q < fl { assert !Digits09(F) by { assert !(0 <= F[q] <= 9); } return Bad, buf, n; }
+    assert Digits09(F);
+    if fr[fl - 1] == 0 { return Bad, buf, n; }
+    // significant digits and magnitude
+    var sig: N;
+    var magOk: bool;
+    if ip > 0 {
+      DigLenLe16(ip);
+      sig := DigLen(ip) + fl;
+      magOk := true;
+    } else {
+      var z: N := 0;
+      while z < fl && fr[z] == 0
+        modifies {}
+        invariant z <= fl && LeadZeros(F) == z as int + LeadZeros(F[z..])
+        invariant forall w :: 0 <= w < z as int ==> F[w] == 0
+        decreases fl - z
+      { LeadZerosStep(F, z as int); z := z + 1; }
+      // z == fl would make the last digit 0, which was refused above
+      assert F[fl as int - 1] == fr[fl - 1] as int != 0;
+      if z == fl { assert F[fl as int - 1] == 0; }
+      assert z < fl;
+      assert |F| == fl as int;
+      assert 0 <= z as int < |F|;
+      assert F[z..][0] == F[z];
+      assert LeadZeros(F[z..]) == 0;
+      sig := fl - z;
+      magOk := z < 6;
+      assert magOk ==> MagOk(ip as int, F);
+      assert MagOk(ip as int, F) ==> magOk by {
+        if MagOk(ip as int, F) { var w :| 0 <= w < 6 && w < |F| && F[w] != 0; assert w >= z as int; }
+      }
+    }
+    assert sig as int == Sig(ip as int, F);
+    if sig > 15 || !magOk { return Bad, buf, n; }
+    assert ValidDec(neg, ip as int, F);
+    // print: [-] Dig(ip) . fr
+    var ok: bool;
+    ghost var pre: S := if neg then [45] else [];
+    if neg {
+      ok, b2, n2 := Put1(buf, n, 45);
+      if !ok { return Exh, b2, n2; }
+      WCat(old(buf[..n]), [45]);
+      assert W(b2[..n2]) == W(old(buf[..n])) + pre;
+    } else {
+      b2, n2 := buf, n;
+      assert b2[..n2] == old(buf[..n]);
+      assert W(b2[..n2]) == W(old(buf[..n])) + pre;
+    }
+    ok, b2, n2 := DigM(ip, b2, n2);
+    if !ok { return Exh, b2, n2; }
+    ghost var mid := b2[..n2];
+    ok, b2, n2 := Put1(b2, n2, 46);
+    if !ok { return Exh, b2, n2; }
+    WCat(mid, [46]);
+    ghost var base := W(b2[..n2]);
+    var r: bool;
+    r, b2 := Room(b2, n2, 0);
+    var i: N := 0;
+    while i < fl
+      invariant i <= fl && n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+      invariant W(b2[..n2]) == base + FrTxt(F[..i])
+      decreases fl - i
+    {
+      ghost var before := b2[..n2];
+      r, b2 := Room(b2, n2, 1);
+      if !r { return Exh, b2, n2; }
+      assert F[i] == fr[i] as int && 0 <= F[i] <= 9;
+      b2[n2] := 48 + fr[i];
+      assert b2[..n2 + 1] == before + [48 + fr[i]];
+      WCat(before, [48 + fr[i]]);
+      assert FrTxt(F[..i + 1]) == FrTxt(F[..i]) + [48 + F[i]];
+      n2 := n2 + 1;
+      i := i + 1;
+    }
+    assert F[..i] == F;
+    return Done, b2, n2;
+  }
+
+  method ArrPM(u: JU, d: N, buf: array<U16>, n: N) returns (st: St, b2: array<U16>, n2: N)
+    requires u.UArr? && 1 <= d <= 33 && n as int <= buf.Length <= LIMIT as int
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures st.Done? ==> Valid(ToJ(u), d as int) && W(b2[..n2]) == W(old(buf[..n])) + Print(NormJ(ToJ(u)))
+    ensures st.Bad? ==> !Valid(ToJ(u), d as int)
+    decreases u, 0
+  {
+    var a := u.a;
+    ghost var ja := seq(|a|, i requires 0 <= i < |a| => ToJ(a[i]));
+    assert ToJ(u) == Arr(ja);
+    if d > 32 { return Bad, buf, n; }
+    if |a| >= LIMIT as int { return Exh, buf, n; }
+    var len := |a| as N;
+    var ok: bool;
+    ok, b2, n2 := Put1(buf, n, 91);
+    if !ok { return Exh, b2, n2; }
+    WCat(old(buf[..n]), [91]);
+    ghost var base := W(b2[..n2]);
+    NormElemsIdx(ja);
+    ghost var ne := NormElems(ja);
+    var q: N := 0;
+    while q < len
+      invariant q <= len && n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+      invariant W(b2[..n2]) == base + PrintElems(ne[..q])
+      invariant forall w :: 0 <= w < q as int ==> Valid(ja[w], d as int + 1)
+      decreases len - q
+    {
+      ghost var before := W(b2[..n2]);
+      if q > 0 {
+        ghost var bb := b2[..n2];
+        if (b2.Length as N) - n2 < 1 {
+          ok, b2 := Room(b2, n2, 1);
+          if !ok { return Exh, b2, n2; }
+        }
+        b2[n2] := 44;
+        n2 := n2 + 1;
+        assert b2[..n2] == bb + [44];
+        WCat(bb, [44]);
+      }
+      var s: St;
+      ghost var bb2 := b2[..n2];
+      s, b2, n2 := PrintM(a[q], d + 1, b2, n2);
+      if s.Bad? { assert !ValidElems(ja, d as int + 1) by { assert !Valid(ja[q], d as int + 1); } return Bad, b2, n2; }
+      if s.Exh? { return Exh, b2, n2; }
+      assert ne[..q + 1] == ne[..q] + [ne[q]];
+      PrintElemsSnoc(ne[..q], ne[q]);
+      q := q + 1;
+    }
+    assert ne[..q] == ne;
+    ghost var mid := b2[..n2];
+    ok, b2, n2 := Put1(b2, n2, 93);
+    if !ok { return Exh, b2, n2; }
+    WCat(mid, [93]);
+    assert ValidElems(ja, d as int + 1);
+    return Done, b2, n2;
+  }
+
+  // ---- object members: code points of the keys, merge sort, duplicate check ----
+  ghost function WN(s: seq<N>): seq<int> { seq(|s|, i requires 0 <= i < |s| => s[i] as int) }
+  datatype CP = CP(a: array?<N>, c: N)
+
+  method CpsM(s: seq<U16>) returns (a: array<N>, c: N)
+    requires |s| < LIMIT as int
+    ensures fresh(a) && c as int <= a.Length && WN(a[..c]) == Cps(W(s))
+  {
+    ghost var S0 := W(s);
+    var n := |s| as N;
+    a := new N[n];
+    c := 0;
+    var q: N := 0;
+    while q < n
+      invariant q <= n && c <= q && WN(a[..c]) + Cps(S0[q..]) == Cps(S0)
+      decreases n - q
+    {
+      var x := s[q];
+      ghost var before := a[..c];
+      if 0xD800 <= x <= 0xDBFF && q + 1 < n && 0xDC00 <= s[q + 1] <= 0xDFFF {
+        var cp := 0x10000 + (x as N - 0xD800) * 0x400 + (s[q + 1] as N - 0xDC00);
+        assert S0[q..][2..] == S0[q + 2..];
+        a[c] := cp;
+        assert a[..c + 1] == before + [cp];
+        c := c + 1; q := q + 2;
+      } else {
+        assert S0[q..][1..] == S0[q + 1..];
+        a[c] := x as N;
+        assert a[..c + 1] == before + [x as N];
+        c := c + 1; q := q + 1;
+      }
+    }
+    assert S0[q..] == [];
+  }
+
+  // LexLess on two code point arrays
+  method LessM(x: array<N>, xn: N, y: array<N>, yn: N) returns (r: bool)
+    requires xn as int <= x.Length && yn as int <= y.Length
+    ensures r == LexLess(WN(x[..xn]), WN(y[..yn]))
+  {
+    ghost var X := WN(x[..xn]);
+    ghost var Y := WN(y[..yn]);
+    var i: N := 0;
+    while i < xn && i < yn && x[i] == y[i]
+      invariant i <= xn && i <= yn && LexLess(X, Y) == LexLess(X[i..], Y[i..])
+      decreases xn - i
+    {
+      assert X[i..][1..] == X[i + 1..] && Y[i..][1..] == Y[i + 1..];
+      i := i + 1;
+    }
+    if i == yn { return false; }
+    if i == xn { return true; }
+    return x[i] < y[i];
+  }
+
+  ghost predicate CpsOk(cps: array<CP>, K: seq<seq<int>>)
+    reads cps, set j | 0 <= j < cps.Length && cps[j].a != null :: cps[j].a
+  { cps.Length == |K| && forall j :: 0 <= j < cps.Length ==> cps[j].a != null && cps[j].c as int <= cps[j].a.Length && WN(cps[j].a[..cps[j].c]) == K[j] }
+
+  ghost predicate Le(K: seq<seq<int>>, x: N, y: N) requires x as int < |K| && y as int < |K| { !LexLess(K[y], K[x]) }
+  ghost predicate SortedK(s: seq<N>, K: seq<seq<int>>)
+  { (forall q :: 0 <= q < |s| ==> s[q] as int < |K|) && forall a, b :: 0 <= a < b < |s| ==> Le(K, s[a], s[b]) }
+
+  lemma LeTrans(K: seq<seq<int>>, x: N, y: N, z: N)
+    requires x as int < |K| && y as int < |K| && z as int < |K| && Le(K, x, y) && Le(K, y, z) ensures Le(K, x, z)
+  {
+    LexTotal(K[x], K[y]); LexTotal(K[y], K[z]);
+    if LexLess(K[z], K[x]) {
+      if K[x] == K[y] { } else { LexTrans(K[z], K[x], K[y]); }
+    }
+  }
+  lemma LeTotal(K: seq<seq<int>>, x: N, y: N) requires x as int < |K| && y as int < |K| ensures Le(K, x, y) || Le(K, y, x)
+  { if LexLess(K[y], K[x]) { LexAsym(K[y], K[x]); } }
+
+  method {:isolate_assertions} Merge(p: array<N>, lo: N, mid: N, hi: N, tmp: array<N>, cps: array<CP>, ghost K: seq<seq<int>>)
+    requires CpsOk(cps, K) && p != tmp && lo <= mid <= hi && hi as int <= p.Length && p.Length == tmp.Length
+    requires forall j :: 0 <= j < cps.Length ==> cps[j].a != p && cps[j].a != tmp
+    requires SortedK(p[lo..mid], K) && SortedK(p[mid..hi], K)
+    modifies p, tmp
+    ensures multiset(p[lo..hi]) == multiset(old(p[lo..hi])) && SortedK(p[lo..hi], K)
+    ensures p[..lo] == old(p[..lo]) && p[hi..] == old(p[hi..]) && CpsOk(cps, K)
+  {
+    ghost var P0 := p[..];
+    // absolute-index forms of the two sorted runs
+    forall b | lo as int <= b < hi as int ensures P0[b] as int < |K| {
+      if b < mid as int { assert p[lo..mid][b - lo as int] == p[b]; } else { assert p[mid..hi][b - mid as int] == p[b]; }
+    }
+    forall a, b | lo as int <= a < b < mid as int ensures Le(K, P0[a], P0[b]) { assert p[lo..mid][a - lo as int] == p[a] && p[lo..mid][b - lo as int] == p[b]; }
+    forall a, b | mid as int <= a < b < hi as int ensures Le(K, P0[a], P0[b]) { assert p[mid..hi][a - mid as int] == p[a] && p[mid..hi][b - mid as int] == p[b]; }
+    var i, j, k := lo, mid, lo;
+    while k < hi
+      invariant lo <= i <= mid <= j <= hi && k as int == lo as int + (i - lo) as int + (j - mid) as int
+      invariant p[..] == P0 && CpsOk(cps, K)
+      invariant multiset(tmp[lo..k]) == multiset(P0[lo..i]) + multiset(P0[mid..j])
+      invariant forall a :: lo as int <= a < k as int ==> tmp[a] as int < |K|
+      invariant forall a, b :: lo as int <= a < b < k as int ==> Le(K, tmp[a], tmp[b])
+      invariant forall a, b :: lo as int <= a < k as int && i as int <= b < mid as int ==> Le(K, tmp[a], P0[b])
+      invariant forall a, b :: lo as int <= a < k as int && j as int <= b < hi as int ==> Le(K, tmp[a], P0[b])
+      decreases hi - k
+    {
+      var takeLeft: bool;
+      if i == mid { takeLeft := false; }
+      else if j == hi { takeLeft := true; }
+      else {
+        var cy := cps[p[j]]; var cx := cps[p[i]];
+        var lt := LessM(cy.a, cy.c, cx.a, cx.c);
+        takeLeft := !lt;
+        if lt { LexAsym(K[P0[j]], K[P0[i]]); }
+      }
+      var x := if takeLeft then p[i] else p[j];
+      assert x as int < |K|;
+      forall b | (if takeLeft then i as int + 1 else i as int) <= b < mid as int ensures Le(K, x, P0[b]) {
+        if takeLeft { } else { if b > i as int { LeTrans(K, x, P0[i], P0[b]); } }
+      }
+      forall b | (if takeLeft then j as int else j as int + 1) <= b < hi as int ensures Le(K, x, P0[b]) {
+        if !takeLeft { } else { if b > j as int { LeTrans(K, x, P0[j], P0[b]); } }
+      }
+      ghost var before := tmp[lo..k];
+      tmp[k] := x;
+      assert tmp[lo..k + 1] == before + [x];
+      if takeLeft {
+        assert P0[lo..i + 1] == P0[lo..i] + [P0[i]];
+        i := i + 1;
+      } else {
+        assert P0[mid..j + 1] == P0[mid..j] + [P0[j]];
+        j := j + 1;
+      }
+      k := k + 1;
+    }
+    assert i == mid && j == hi;
+    SliceSplit(P0, lo as int, mid as int, hi as int);
+    ghost var T0 := tmp[lo..hi];
+    forall a | 0 <= a < |T0| ensures T0[a] as int < |K| { assert T0[a] == tmp[lo as int + a]; }
+    forall a, b | 0 <= a < b < |T0| ensures Le(K, T0[a], T0[b]) { assert T0[a] == tmp[lo as int + a] && T0[b] == tmp[lo as int + b]; }
+    assert SortedK(T0, K);
+    CopyBack(p, tmp, lo, hi);
+  }
+
+  lemma SliceSplit<X>(s: seq<X>, a: int, b: int, c: int)
+    requires 0 <= a <= b <= c <= |s|
+    ensures s[a..c] == s[a..b] + s[b..c]
+  {
+    forall q | 0 <= q < c - a ensures s[a..c][q] == (s[a..b] + s[b..c])[q] { if q < b - a { } else { } }
+  }
+
+  method CopyBack(p: array<N>, tmp: array<N>, lo: N, hi: N)
+    requires p != tmp && lo <= hi && hi as int <= p.Length && p.Length == tmp.Length
+    modifies p
+    ensures p[lo..hi] == tmp[lo..hi] && p[..lo] == old(p[..lo]) && p[hi..] == old(p[hi..])
+  {
+    var w := lo;
+    while w < hi
+      invariant lo <= w <= hi
+      invariant forall q :: lo as int <= q < w as int ==> p[q] == tmp[q]
+      invariant forall q :: 0 <= q < lo as int || hi as int <= q < p.Length ==> p[q] == old(p[q])
+      decreases hi - w
+    { p[w] := tmp[w]; w := w + 1; }
+  }
+
+  method {:isolate_assertions} MSort(p: array<N>, lo: N, hi: N, tmp: array<N>, cps: array<CP>, ghost K: seq<seq<int>>)
+    requires CpsOk(cps, K) && p != tmp && lo <= hi && hi as int <= p.Length && p.Length == tmp.Length
+    requires forall j :: 0 <= j < cps.Length ==> cps[j].a != p && cps[j].a != tmp
+    requires forall q :: lo as int <= q < hi as int ==> p[q] as int < |K|
+    modifies p, tmp
+    ensures multiset(p[lo..hi]) == multiset(old(p[lo..hi])) && SortedK(p[lo..hi], K)
+    ensures p[..lo] == old(p[..lo]) && p[hi..] == old(p[hi..]) && CpsOk(cps, K)
+    decreases hi - lo
+  {
+    if hi - lo <= 1 {
+      forall a | 0 <= a < |p[lo..hi]| ensures p[lo..hi][a] as int < |K| { assert p[lo..hi][a] == p[lo as int + a]; }
+      return;
+    }
+    var mid := lo + (hi - lo) / 2;
+    ghost var P0 := p[..];
+    MSort(p, lo, mid, tmp, cps, K);
+    ghost var P1 := p[..];
+    assert p[mid..hi] == P0[mid..hi] by { assert p[mid..] == P0[mid..]; assert p[mid..hi] == p[mid..][..hi - mid]; assert P0[mid..hi] == P0[mid..][..hi - mid]; }
+    forall q | mid as int <= q < hi as int ensures p[q] as int < |K| {
+      assert p[q] == p[mid..hi][q - mid as int] == P0[mid..hi][q - mid as int] == P0[q];
+    }
+    MSort(p, mid, hi, tmp, cps, K);
+    ghost var P2 := p[..];
+    assert p[lo..mid] == P1[lo..mid] by { assert p[..mid] == P1[..mid]; assert p[lo..mid] == p[..mid][lo..]; assert P1[lo..mid] == P1[..mid][lo..]; }
+    assert p[..lo] == P0[..lo] by { assert p[..lo] == p[..mid][..lo]; assert P1[..lo] == P1[..mid][..lo]; }
+    assert P1[mid..] == P0[mid..];
+    assert P1[hi..] == P1[mid..][hi - mid..] && P0[hi..] == P0[mid..][hi - mid..];
+    assert p[hi..] == P0[hi..];
+    SliceSplit(P0, lo as int, mid as int, hi as int);
+    SliceSplit(P2, lo as int, mid as int, hi as int);
+    assert multiset(P2[mid..hi]) == multiset(P1[mid..hi]) == multiset(P0[mid..hi]);
+    assert multiset(P2[lo..mid]) == multiset(P1[lo..mid]) == multiset(P0[lo..mid]);
+    assert multiset(P2[lo..hi]) == multiset(P0[lo..hi]);
+    Merge(p, lo, mid, hi, tmp, cps, K);
+    assert multiset(p[lo..hi]) == multiset(P2[lo..hi]);
+  }
+
+  // ---- permutations and the canonical member order ----
+  ghost function Range(n: nat): seq<N> requires n < 0x20_0000_0000_0000 { seq(n, i requires 0 <= i < n => i as N) }
+
+  lemma DistinctCount<T>(s: seq<T>, x: T)
+    requires forall a, b :: 0 <= a < b < |s| ==> s[a] != s[b]
+    ensures multiset(s)[x] <= 1
+    decreases |s|
+  {
+    if |s| > 0 {
+      var h := s[..|s| - 1];
+      assert s == h + [s[|s| - 1]];
+      DistinctCount(h, x);
+      if s[|s| - 1] == x { assert x !in h; }
+    }
+  }
+
+  lemma DupCount<T>(s: seq<T>, a: int, b: int)
+    requires 0 <= a < b < |s| && s[a] == s[b]
+    ensures multiset(s)[s[a]] >= 2
+  {
+    assert s == s[..b] + s[b..];
+    assert s[a] in s[..b];
+    assert s[b] in s[b..];
+  }
+
+  lemma PermFacts(ord: seq<N>, n: nat)
+    requires n < 0x20_0000_0000_0000 && multiset(ord) == multiset(Range(n))
+    ensures |ord| == n
+    ensures forall q :: 0 <= q < |ord| ==> ord[q] as int < n
+    ensures forall i: N :: 0 <= i as int < n ==> i in ord
+    ensures forall a, b :: 0 <= a < b < |ord| ==> ord[a] != ord[b]
+  {
+    assert |ord| == |multiset(ord)| == |multiset(Range(n))| == n;
+    forall q | 0 <= q < |ord| ensures ord[q] as int < n { assert ord[q] in multiset(Range(n)); assert ord[q] in Range(n); }
+    forall i: N | 0 <= i as int < n ensures i in ord {
+      assert Range(n)[i] == i; assert i in multiset(Range(n)); assert i in multiset(ord);
+    }
+    forall a, b | 0 <= a < b < |ord| ensures ord[a] != ord[b] {
+      if ord[a] == ord[b] { DupCount(ord, a, b); DistinctCount(Range(n), ord[a]); }
+    }
+  }
+
+  ghost function MapS<B>(f: N -> B, x: seq<N>): seq<B> { seq(|x|, i requires 0 <= i < |x| => f(x[i])) }
+
+  lemma MapMS<B>(f: N -> B, x: seq<N>, y: seq<N>)
+    requires multiset(x) == multiset(y)
+    ensures multiset(MapS(f, x)) == multiset(MapS(f, y))
+    decreases |x|
+  {
+    if |x| == 0 { assert |y| == |multiset(y)| == 0; assert MapS(f, x) == [] && MapS(f, y) == []; }
+    else {
+      var a := x[0];
+      assert a in multiset(y);
+      var j :| 0 <= j < |y| && y[j] == a;
+      var y' := y[..j] + y[j + 1..];
+      assert y == y[..j] + [a] + y[j + 1..];
+      assert x == [a] + x[1..];
+      assert multiset(y) == multiset(y[..j]) + multiset{a} + multiset(y[j + 1..]);
+      assert multiset(y') == multiset(y[..j]) + multiset(y[j + 1..]);
+      assert multiset(x) == multiset{a} + multiset(x[1..]);
+      forall e ensures multiset(x[1..])[e] == multiset(y')[e] {
+        assert multiset(x)[e] == multiset{a}[e] + multiset(x[1..])[e];
+        assert multiset(y)[e] == multiset(y[..j])[e] + multiset{a}[e] + multiset(y[j + 1..])[e];
+      }
+      assert multiset(x[1..]) == multiset(y');
+      MapMS(f, x[1..], y');
+      assert MapS(f, x) == [f(a)] + MapS(f, x[1..]);
+      assert MapS(f, y) == MapS(f, y[..j]) + [f(a)] + MapS(f, y[j + 1..]);
+      assert MapS(f, y') == MapS(f, y[..j]) + MapS(f, y[j + 1..]);
+    }
+  }
+
+  ghost function Ordered(jkv: seq<KV>, ord: seq<N>): seq<KV>
+    requires forall q :: 0 <= q < |ord| ==> ord[q] as int < |jkv|
+  { seq(|ord|, q requires 0 <= q < |ord| => KV(jkv[ord[q]].k, NormJ(jkv[ord[q]].v))) }
+
+  lemma AdjStrict(s: seq<KV>)
+    requires forall q :: 0 <= q < |s| - 1 ==> KLess(s[q].k, s[q + 1].k)
+    ensures StrictSorted(s)
+  {
+    forall a, b | 0 <= a < b < |s| ensures KLess(s[a].k, s[b].k) { AdjStrictFrom(s, a, b); }
+  }
+  lemma AdjStrictFrom(s: seq<KV>, a: int, b: int)
+    requires forall q :: 0 <= q < |s| - 1 ==> KLess(s[q].k, s[q + 1].k)
+    requires 0 <= a < b < |s|
+    ensures KLess(s[a].k, s[b].k)
+    decreases b - a
+  { if b > a + 1 { AdjStrictFrom(s, a, b - 1); KLessTrans(s[a].k, s[b - 1].k, s[b].k); } }
+
+  lemma OrderedDistinct(jkv: seq<KV>, ord: seq<N>)
+    requires |jkv| < 0x20_0000_0000_0000 && multiset(ord) == multiset(Range(|jkv|))
+    requires forall q :: 0 <= q < |ord| ==> ord[q] as int < |jkv|
+    requires StrictSorted(Ordered(jkv, ord))
+    ensures DistinctKeys(jkv)
+  {
+    var n := |jkv|;
+    PermFacts(ord, n);
+    var O := Ordered(jkv, ord);
+    forall i, j | 0 <= i < j < n ensures jkv[i].k != jkv[j].k {
+      assert (i as N) in ord && (j as N) in ord;
+      var qi :| 0 <= qi < |ord| && ord[qi] == i as N;
+      var qj :| 0 <= qj < |ord| && ord[qj] == j as N;
+      assert O[qi].k == jkv[i].k && O[qj].k == jkv[j].k;
+      KLessIrrefl(jkv[i].k);
+      if qi < qj { assert KLess(O[qi].k, O[qj].k); } else { assert KLess(O[qj].k, O[qi].k); }
+    }
+  }
+
+  lemma OrderedPerm(jkv: seq<KV>, ord: seq<N>)
+    requires |jkv| < 0x20_0000_0000_0000 && multiset(ord) == multiset(Range(|jkv|))
+    requires forall q :: 0 <= q < |ord| ==> ord[q] as int < |jkv|
+    ensures multiset(Ordered(jkv, ord)) == multiset(NormMembers(jkv))
+  {
+    var n := |jkv|;
+    var M := NormMembers(jkv);
+    NormMembersIdx(jkv);
+    var f: N -> KV := (i: N) => if i as int < n then M[i] else KV([], Null);
+    MapMS(f, ord, Range(n));
+    assert MapS(f, ord) == Ordered(jkv, ord);
+    assert MapS(f, Range(n)) == M;
+  }
+
+  lemma ObjSorted(jkv: seq<KV>, K: seq<seq<int>>, ord: seq<N>)
+    requires |K| == |jkv| < 0x20_0000_0000_0000 && forall i :: 0 <= i < |jkv| ==> Valid16(jkv[i].k) && K[i] == Cps(jkv[i].k)
+    requires multiset(ord) == multiset(Range(|jkv|))
+    requires forall q :: 0 <= q < |ord| ==> ord[q] as int < |jkv|
+    requires forall q :: 0 <= q < |ord| - 1 ==> LexLess(K[ord[q]], K[ord[q + 1]])
+    ensures DistinctKeys(jkv) && SortKV(NormMembers(jkv)) == Ordered(jkv, ord)
+  {
+    var O := Ordered(jkv, ord);
+    forall q | 0 <= q < |O| - 1 ensures KLess(O[q].k, O[q + 1].k) { assert O[q].k == jkv[ord[q]].k && O[q + 1].k == jkv[ord[q + 1]].k; }
+    AdjStrict(O);
+    OrderedDistinct(jkv, ord);
+    OrderedPerm(jkv, ord);
+    var M := NormMembers(jkv);
+    assert KeysValid(jkv);
+    NormKeysDistinct(jkv);
+    SortSorted(M);
+    SortMultiset(M);
+    SortedUnique(SortKV(M), O);
+  }
+
+  lemma ObjDup(jkv: seq<KV>, K: seq<seq<int>>, ord: seq<N>, q: int)
+    requires |K| == |jkv| < 0x20_0000_0000_0000 && forall i :: 0 <= i < |jkv| ==> Valid16(jkv[i].k) && K[i] == Cps(jkv[i].k)
+    requires multiset(ord) == multiset(Range(|jkv|)) && SortedK(ord, K)
+    requires 0 <= q < |ord| - 1 && !LexLess(K[ord[q]], K[ord[q + 1]])
+    ensures !DistinctKeys(jkv)
+  {
+    PermFacts(ord, |jkv|);
+    assert ord[q] as int < |K| && ord[q + 1] as int < |K|;
+    var a := ord[q] as int; var b := ord[q + 1] as int;
+    assert Le(K, ord[q], ord[q + 1]);
+    LexTotal(K[a], K[b]);
+    assert K[a] == K[b];
+    CpsInjective(jkv[a].k, jkv[b].k);
+    assert a != b;
+    if a < b { assert jkv[a].k == jkv[b].k; } else { assert jkv[b].k == jkv[a].k; }
+  }
+
+  method {:isolate_assertions} ObjPM(u: JU, d: N, buf: array<U16>, n: N) returns (st: St, b2: array<U16>, n2: N)
+    requires u.UObj? && 1 <= d <= 33 && n as int <= buf.Length <= LIMIT as int
+    modifies buf
+    ensures n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+    ensures st.Done? ==> Valid(ToJ(u), d as int) && W(b2[..n2]) == W(old(buf[..n])) + Print(NormJ(ToJ(u)))
+    ensures st.Bad? ==> !Valid(ToJ(u), d as int)
+    decreases u, 0
+  {
+    var kv := u.kv;
+    ghost var jkv := seq(|kv|, i requires 0 <= i < |kv| => KV(W(kv[i].k), ToJ(kv[i].v)));
+    assert ToJ(u) == Obj(jkv);
+    if d > 32 { return Bad, buf, n; }
+    if |kv| >= LIMIT as int { return Exh, buf, n; }
+    var cnt := |kv| as N;
+    // keys: well-formed UTF-16, code points
+    var cps := new CP[cnt];
+    ghost var K: seq<seq<int>> := [];
+    var i: N := 0;
+    while i < cnt
+      invariant i <= cnt && |K| == i as int
+      invariant forall j :: 0 <= j < i as int ==> Valid16(jkv[j].k) && K[j] == Cps(jkv[j].k)
+      invariant forall j :: 0 <= j < i as int ==> cps[j].a != null && cps[j].c as int <= cps[j].a.Length && WN(cps[j].a[..cps[j].c]) == K[j]
+      invariant forall j :: 0 <= j < i as int ==> fresh(cps[j].a) && |kv[j].k| < LIMIT as int
+      modifies cps
+      decreases cnt - i
+    {
+      var key := kv[i].k;
+      if |key| >= LIMIT as int { return Exh, buf, n; }
+      var v16 := V16S(key);
+      if !v16 { assert !ValidMembers(jkv, d as int + 1) by { assert !Valid16(jkv[i].k); } return Bad, buf, n; }
+      var a, c := CpsM(key);
+      cps[i] := CP(a, c);
+      K := K + [Cps(W(key))];
+      i := i + 1;
+    }
+    // sort member indices by key code points
+    assert CpsOk(cps, K);
+    var perm := new N[cnt];
+    var tmp := new N[cnt];
+    assert forall j :: 0 <= j < cps.Length ==> cps[j].a != perm && cps[j].a != tmp;
+    i := 0;
+    while i < cnt
+      invariant i <= cnt && perm[..i] == Range(i as nat) && CpsOk(cps, K)
+      invariant forall j :: 0 <= j < cps.Length ==> cps[j].a != perm && cps[j].a != tmp
+      modifies perm
+      decreases cnt - i
+    { perm[i] := i; i := i + 1; }
+    assert perm[..] == Range(cnt as nat);
+    MSort(perm, 0, cnt, tmp, cps, K);
+    assert perm[..cnt] == perm[..];
+    ghost var ord := perm[..];
+    assert multiset(ord) == multiset(Range(|jkv|));
+    PermFacts(ord, |jkv|);
+    assert SortedK(ord, K);
+    // adjacent keys strictly increasing <=> no duplicate key
+    i := 0;
+    while i + 1 < cnt
+      modifies {}
+      invariant i <= cnt && cnt < LIMIT && (i < cnt || cnt == 0)
+      invariant perm[..] == ord && CpsOk(cps, K)
+      invariant forall q :: 0 <= q < i as int && q + 1 < cnt as int ==> LexLess(K[ord[q]], K[ord[q + 1]])
+      decreases cnt - i
+    {
+      var x := cps[perm[i]]; var y := cps[perm[i + 1]];
+      var lt := LessM(x.a, x.c, y.a, y.c);
+      if !lt { ObjDup(jkv, K, ord, i as int); return Bad, buf, n; }
+      i := i + 1;
+    }
+    ObjSorted(jkv, K, ord);
+    ghost var O := Ordered(jkv, ord);
+    // print: { members in key order }
+    var ok: bool;
+    ok, b2, n2 := Put1(buf, n, 123);
+    if !ok { return Exh, b2, n2; }
+    WCat(old(buf[..n]), [123]);
+    ghost var base := W(b2[..n2]);
+    var q: N := 0;
+    while q < cnt
+      invariant q <= cnt && n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+      invariant perm[..] == ord
+      invariant W(b2[..n2]) == base + PrintMembers(O[..q])
+      invariant forall w :: 0 <= w < q as int ==> Valid(jkv[ord[w]].v, d as int + 1)
+      decreases cnt - q
+    {
+      var idx := perm[q];
+      ghost var before := W(b2[..n2]);
+      ghost var bb := b2[..n2];
+      if q > 0 {
+        ok, b2, n2 := Put2(b2, n2, 44, 34);
+        if !ok { return Exh, b2, n2; }
+        WCat(bb, [44, 34]);
+      } else {
+        ok, b2, n2 := Put1(b2, n2, 34);
+        if !ok { return Exh, b2, n2; }
+        WCat(bb, [34]);
+      }
+      ok, b2, n2 := BodyM(kv[idx].k, b2, n2);
+      if !ok { return Exh, b2, n2; }
+      bb := b2[..n2];
+      ok, b2, n2 := Put2(b2, n2, 34, 58);
+      if !ok { return Exh, b2, n2; }
+      WCat(bb, [34, 58]);
+      var s: St;
+      s, b2, n2 := PrintM(kv[idx].v, d + 1, b2, n2);
+      if s.Bad? { assert !ValidMembers(jkv, d as int + 1) by { assert !Valid(jkv[idx].v, d as int + 1); } return Bad, b2, n2; }
+      if s.Exh? { return Exh, b2, n2; }
+      assert O[q] == KV(jkv[idx].k, NormJ(jkv[idx].v));
+      assert O[..q + 1] == O[..q] + [O[q]];
+      PrintMembersSnoc(O[..q], O[q]);
+      q := q + 1;
+    }
+    assert O[..q] == O;
+    ghost var mid := b2[..n2];
+    ok, b2, n2 := Put1(b2, n2, 125);
+    if !ok { return Exh, b2, n2; }
+    WCat(mid, [125]);
+    PermFacts(ord, |jkv|);
+    assert NormJ(ToJ(u)) == Obj(O);
+    assert Print(Obj(O)) == [123] + PrintMembers(O) + [125];
+    assert W(b2[..n2]) == W(old(buf[..n])) + ([123] + PrintMembers(O) + [125]);
+    assert ValidMembers(jkv, d as int + 1) by {
+      forall x | 0 <= x < |jkv| ensures Valid16(jkv[x].k) && Valid(jkv[x].v, d as int + 1) {
+        assert (x as N) in ord;
+        var w :| 0 <= w < |ord| && ord[w] == x as N;
+      }
+    }
+    return Done, b2, n2;
+  }
+
+  // ---- canonicalizeStrict, proved equal to the specification (Exh: the 2^40-unit output limit, no verdict) ----
+  method CanonU(u: JU) returns (st: St, b: array<U16>, n: N)
+    ensures st.Done? ==> n as int <= b.Length && CanonText(ToJ(u)) == Some(W(b[..n]))
+    ensures st.Bad? ==> CanonText(ToJ(u)) == None
+  {
+    var buf := new U16[64];
+    ghost var e := buf[..0];
+    assert W(e) == [];
+    st, b, n := PrintM(u, 1, buf, 0);
+    if st.Done? { assert W(b[..n]) == W(e) + Print(NormJ(ToJ(u))); assert W(b[..n]) == Print(NormJ(ToJ(u))); assert Valid(ToJ(u), 1); }
+  }
+}
+
+// Thin entry points compiled for the TypeScript adapter (ext-wire.ts).
 module Api {
   import Utf
   import Json
   import B64
+  import Fast
+  import FastP
 
   // strictParse then canonicalizeStrict, on UTF-16 code units. None <=> strictParse would throw.
   function CanonicalOfText(t: Utf.S): Json.Option<Utf.S>
@@ -1651,4 +3500,17 @@ module Api {
   function B64Encode(b: Utf.S): Utf.S requires B64.AllBytes(b) { B64.Enc(b) }
   function HexDecode(s: Utf.S): B64.Option<Utf.S> { B64.HexDec(s) }
   function HexEncode(b: Utf.S): Utf.S requires B64.AllBytes(b) { B64.HexEnc(b) }
+
+  // ---- compiled fast paths (modules Fast / FastP), each PROVED equal to the specification above ----
+  // strictParse acceptance on native UTF-16 units. `seed` only salts the duplicate-key table's buckets.
+  function ParseAcceptsU(t: seq<Fast.U16>, seed: Fast.N): bool { Fast.AcceptsU(t, seed) }
+  lemma ParseAcceptsUSpec(t: seq<Fast.U16>, seed: Fast.N) ensures ParseAcceptsU(t, seed) == Json.ParseTop(Fast.W(t)).Some? {}
+
+  // canonicalizeStrict on an imported value: Done -> b[..n] is the canonical text; Bad -> outside the profile;
+  // Exh -> the output would pass 2^40 units (no verdict; the adapter treats it as resource exhaustion).
+  method CanonicalOfValueU(u: FastP.JU) returns (st: FastP.St, b: array<Fast.U16>, n: Fast.N)
+    ensures st.Done? ==> n as int <= b.Length && Json.CanonText(FastP.ToJ(u)) == Json.Some(Fast.W(b[..n]))
+    ensures st.Bad? ==> Json.CanonText(FastP.ToJ(u)) == Json.None
+  { st, b, n := FastP.CanonU(u); }
+
 }

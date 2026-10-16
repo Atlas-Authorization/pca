@@ -16,12 +16,15 @@ module PolicyVm {
   }
 
   // ------------------------------------------------------------------ JSON-like JS values
-  // VNum holds the EXACT rational value of a finite double (comparisons on doubles are exact, so this is faithful);
+  // VNum holds the EXACT rational value of a finite double (comparisons on doubles are exact, so this is faithful) and `negz`,
+  // set by the extraction boundary exactly when the double is -0 (Object.is(x, -0)): every comparison and the lenient canonical
+  // text ignore it (-0 === 0, JSON.stringify(-0) is "0"), but the integer-member checks that the TypeScript runs with
+  // Object.is / isNonNeg (intent_session `seq`) see it. A VNum with negz has r == 0.0 (NegZeroWf);
   // VNonFinite = typeof number but NaN / +-Infinity; VFn = function / symbol / bigint (not 'object', not serialisable);
   // VObj(plain=false) = a non-plain object (class instance, Date, ...): an object for typeof/has, but canonicalisation throws.
   // Cyclic data, sparse-array holes (other than as VUndef elements), getters and proxies are OUT of the model (the adapter refuses them).
   datatype Value =
-    | VNull | VUndef | VBool(b: bool) | VNum(r: real) | VNonFinite | VFn
+    | VNull | VUndef | VBool(b: bool) | VNum(r: real, negz: bool) | VNonFinite | VFn
     | VStr(s: Str) | VArr(xs: seq<Value>) | VObj(es: seq<Entry>, plain: bool)
   datatype Entry = Entry(k: Str, v: Value)
 
@@ -236,7 +239,7 @@ module PolicyVm {
     match v
     case VNull => true
     case VBool(_) => true
-    case VNum(_) => true
+    case VNum(_, _) => true
     case VStr(_) => true
     case VArr(xs) => CanonL(xs)
     case VObj(es, plain) => plain && CanonE(es)
@@ -318,7 +321,7 @@ module PolicyVm {
     match v
     case VNull => [TNullT]
     case VBool(b) => [if b then TTrueT else TFalseT]
-    case VNum(r) => [TNumT(r)]
+    case VNum(r, _) => [TNumT(r)]
     case VStr(s) => [TStrT(s)]
     case VArr(xs) => [TOpenA] + SerL(xs) + [TCloseA]
     case VObj(es, _) =>
@@ -1303,8 +1306,74 @@ module PolicyVm {
           else if t == S("delegation_depth") then
             (var mx := Field(cv, S("max")); var d := Field(ctx, S("delegationDepth")); mx.VNum? && d.VNum? && d.r <= mx.r)
           else if t == S("budget_alloc") then (var l := Field(cv, S("limit")); l.VNum? && l.r >= 0.0)
+          else if t == S("intent_session") then SessionCaveatOk(cv)
           else false
   }
+
+  // ---- intent_session (Intent Layer v2, conformance rule 13; intent-session-caveat.ts intentSessionCaveatError) --------------------
+  // `{type: "intent_session", session, seq, root, prev?}`, closed member set, session / root / prev canonical base64url of 32 bytes,
+  // seq a safe integer in [0, 2^31 - 1], prev present exactly when seq > 0. It constrains nothing per action: a WELL-FORMED one is
+  // satisfied, a malformed one is not. `seq: -0` is malformed (TypeScript isNonNeg refuses it via Object.is): see SessionSeqOk.
+  function B64Index(c: U): int {
+    var x := c as int;
+    if 65 <= x <= 90 then x - 65
+    else if 97 <= x <= 122 then x - 71
+    else if 48 <= x <= 57 then x + 4
+    else if x == 45 then 62
+    else if x == 95 then 63
+    else -1
+  }
+  // decodeB64uStrict(v, 32) !== null: a string of 43 base64url characters whose last one carries no set padding bits (256 of 258 bits)
+  predicate B64u32(v: Value) {
+    v.VStr? && |v.s| == 43 && (forall i | 0 <= i < 43 :: B64Index(v.s[i]) >= 0) && B64Index(v.s[42]) % 4 == 0
+  }
+  predicate SessionKeysOk(es: seq<Entry>) {
+    forall i | 0 <= i < |es| :: es[i].k in {S("type"), S("session"), S("seq"), S("root"), S("prev")}
+  }
+  const MaxSessionSeq: real := 2147483647.0
+  predicate SessionSeqOk(v: Value) { v.VNum? && !v.negz && v.r >= 0.0 && v.r <= MaxSessionSeq && v.r.Floor as real == v.r }
+  // well-formedness of the -0 flag (what the extraction boundary produces)
+  predicate NegZeroWf(v: Value) { v.VNum? && v.negz ==> v.r == 0.0 }
+  // negative zero is never a session sequence number, so a caveat whose `seq` is -0 is malformed and unsatisfied (TS agrees)
+  lemma SessionNegZeroRefused(cv: Value, ctx: Value, fl: Fl)
+    requires Field(cv, S("type")) == VStr(S("intent_session")) && Field(cv, S("seq")).VNum? && Field(cv, S("seq")).negz
+    ensures !SessionCaveatOk(cv) && !EnvelopeEv(cv, ctx, fl)
+  { SessionCaveatMalformedUnsatisfied(cv, ctx, fl); }
+  lemma SessionNegZeroRefusedAgent(cv: Value, ctx: Value, rx: Rx, fl: Fl, tool: ToolEv)
+    requires Field(cv, S("type")) == VStr(S("intent_session")) && Field(cv, S("seq")).VNum? && Field(cv, S("seq")).negz
+    ensures !AgentEv(cv, ctx, rx, fl, tool)
+  { SessionNameDistinct(); SessionNegZeroRefused(cv, ctx, fl); }
+  // +0 with the same members is accepted: the flag, not the value 0, is what is refused
+  lemma SessionPosZeroAccepted(cv: Value)
+    requires SessionCaveatOk(cv)
+    ensures Field(cv, S("seq")).VNum? && !Field(cv, S("seq")).negz {}
+  predicate SessionCaveatOk(cv: Value) {
+    cv.VObj? && cv.plain && Field(cv, S("type")) == VStr(S("intent_session")) && SessionKeysOk(cv.es)
+    && B64u32(Field(cv, S("session"))) && B64u32(Field(cv, S("root")))
+    && SessionSeqOk(Field(cv, S("seq")))
+    && ((Field(cv, S("seq")).r == 0.0) == (Field(cv, S("prev")) == VUndef))
+    && (Field(cv, S("prev")) != VUndef ==> B64u32(Field(cv, S("prev"))))
+  }
+  // rule 13: in the policy layer a well-formed intent_session caveat is satisfied (given a clock and an object context, as for every
+  // stock caveat), a malformed one never is; the agent-native evaluator agrees (it defers to the envelope evaluator for this type)
+  lemma SessionCaveatSatisfied(cv: Value, ctx: Value, fl: Fl)
+    requires SessionCaveatOk(cv) && IsObjLike(ctx) && Field(ctx, S("now")).VNum?
+    ensures EnvelopeEv(cv, ctx, fl) { SessionNameDistinct(); }
+  lemma SessionCaveatMalformedUnsatisfied(cv: Value, ctx: Value, fl: Fl)
+    requires Field(cv, S("type")) == VStr(S("intent_session")) && !SessionCaveatOk(cv)
+    ensures !EnvelopeEv(cv, ctx, fl) { SessionNameDistinct(); }
+  lemma SessionNameDistinct()
+    ensures S("intent_session") !in {S("expires"), S("not_before"), S("rate"), S("max_blast_radius"), S("reversibility_max"), S("delegation_depth"), S("budget_alloc")}
+    ensures S("intent_session") != S("tool_schema") && S("intent_session") != S("predicates") && S("intent_session") != S("max_spend")
+  {
+    assert S("intent_session")[0] != S("expires")[0] && S("intent_session")[0] != S("not_before")[0] && S("intent_session")[0] != S("rate")[0];
+    assert S("intent_session")[0] != S("max_blast_radius")[0] && S("intent_session")[0] != S("reversibility_max")[0];
+    assert S("intent_session")[0] != S("delegation_depth")[0] && S("intent_session")[0] != S("budget_alloc")[0];
+    assert S("intent_session")[0] != S("tool_schema")[0] && S("intent_session")[0] != S("predicates")[0] && S("intent_session")[0] != S("max_spend")[0];
+  }
+  lemma SessionCaveatAgentSatisfied(cv: Value, ctx: Value, rx: Rx, fl: Fl, tool: ToolEv)
+    requires SessionCaveatOk(cv) && IsObjRec(ctx) && Field(ctx, S("now")).VNum?
+    ensures AgentEv(cv, ctx, rx, fl, tool) { SessionNameDistinct(); }
 
   type ToolEv = (Value, Value) -> bool
   // agentNativeCaveatEvaluator: stock caveats + `predicates` (the action must match one `allow` predicate) + `tool_schema` (oracle)
@@ -1406,7 +1475,7 @@ module PolicyVm {
   }
   // fail closed: an unknown / non-string type, a missing clock, a non-object caveat or context is never satisfied
   lemma EnvelopeUnknownTypeUnsatisfied(cv: Value, ctx: Value, fl: Fl)
-    requires Field(cv, S("type")).VStr? ==> Field(cv, S("type")).s !in {S("expires"), S("not_before"), S("rate"), S("max_blast_radius"), S("reversibility_max"), S("delegation_depth"), S("budget_alloc")}
+    requires Field(cv, S("type")).VStr? ==> Field(cv, S("type")).s !in {S("expires"), S("not_before"), S("rate"), S("max_blast_radius"), S("reversibility_max"), S("delegation_depth"), S("budget_alloc"), S("intent_session")}
     ensures !EnvelopeEv(cv, ctx, fl) {}
   lemma EnvelopeNoClockUnsatisfied(cv: Value, ctx: Value, fl: Fl) requires !Field(ctx, S("now")).VNum? ensures !EnvelopeEv(cv, ctx, fl) {}
   lemma EnvelopeMalformedUnsatisfied(cv: Value, ctx: Value, fl: Fl) requires !IsObjLike(cv) || !IsObjLike(ctx) ensures !EnvelopeEv(cv, ctx, fl) {}
@@ -1663,13 +1732,27 @@ module PolicyVm {
     if Field(cs[0], S("type")) == VStr(S("envelope")) { assert cs[i] == cs[1..][i - 1]; }
     else if i > 0 { RootCaveatsCover(cs[1..], i - 1); }
   }
-  lemma RootCaveatsLaterEnvelopes(cs: seq<Value>, j: int, i: int)
+  // Every step is spelled out (and each assertion is its own VC): left implicit, the solver had to discover j != 0, the index shift
+  // into cs[1..] and the one-step unfolding of RootCaveats by itself, among every Value / Field axiom of the module, and the lemma
+  // timed out at 120 s on the 4-vCPU CI runner (run 38436318175). Same statement, same induction.
+  lemma {:isolate_assertions} RootCaveatsLaterEnvelopes(cs: seq<Value>, j: int, i: int)
     requires 0 <= j < i < |cs| && Field(cs[j], S("type")) == VStr(S("envelope"))
     ensures cs[i] in RootCaveats(cs)
     decreases cs
   {
-    if Field(cs[0], S("type")) == VStr(S("envelope")) { assert cs[i] == cs[1..][i - 1]; }
-    else { RootCaveatsLaterEnvelopes(cs[1..], j - 1, i - 1); }
+    var tail := cs[1..];
+    assert tail[i - 1] == cs[i];
+    if Field(cs[0], S("type")) == VStr(S("envelope")) {
+      assert RootCaveats(cs) == tail;
+      assert cs[i] in tail;
+    } else {
+      assert j != 0;
+      assert tail[j - 1] == cs[j];
+      assert Field(tail[j - 1], S("type")) == VStr(S("envelope"));
+      RootCaveatsLaterEnvelopes(tail, j - 1, i - 1);
+      assert cs[i] in RootCaveats(tail);
+      assert RootCaveats(cs) == [cs[0]] + RootCaveats(tail);
+    }
   }
 
   // release = predicates allow AND every envelope caveat AND every ROOT caveat AND every delegated caveat holds AND the chain is well formed

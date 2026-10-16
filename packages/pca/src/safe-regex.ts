@@ -1,3 +1,5 @@
+import { safeRegexFullMatchVerified } from '@atlasauth/pca-verified-core';
+import { verifiedCoreOptIn } from './verified-core-mode';
 import { regexCacheGet } from './regex-cache';
 /**
  * A linear-time, budgeted regular-expression matcher for untrusted `re:` / `matches` patterns (R3-02).
@@ -525,6 +527,9 @@ export function compileSafeRegexCached(src: string): CompiledRegex | null {
  * outside the subset (or too large) or the work budget is exceeded; the caller fails closed.
  */
 export function safeRegexFullMatch(src: string, subject: string): boolean | null {
+  // OPT-IN (`PCA_VERIFIED_CORE=regex`): the Dafny-proved engine (formal/dafny/Regex.dfy, verified-core
+  // `safeRegexFullMatchVerified`). Off by default: about two orders of magnitude slower (docs/pca/security/verified-core.md).
+  if (verifiedCoreOptIn('regex')) return safeRegexFullMatchVerified(src, subject);
   const re = compileSafeRegexCached(src);
   if (re === null) return null;
   return runSafeRegex(re, subject);

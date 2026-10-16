@@ -23,11 +23,21 @@ OptionParser.new do |o|
   # shift when the source changes) that SURVIVED in a previous results file, plus every mutant that file never saw.
   o.on('--debug') { opts[:debug] = true }
   o.on('--survivors FILE') { |f| opts[:survivors] = f }
+  # Carry-forward (the CI's targeted mode, as PIT's history in pca-java): --carry A.json,B.json,... = the results files of an
+  # earlier run of THIS file (every shard's, results carried there included), --carry-src OLD.rb = the source that run
+  # mutated. Re-run only: mutants that run did not see, its non-kills (SURVIVED: new kill tests may kill them), and every
+  # mutant of a def containing a line changed since (git diff OLD FILE); a change outside every def (constants, requires,
+  # class bodies) re-runs everything. Every other mutant keeps its earlier KILLED* status, so the output still covers the
+  # whole selection (--only). A mutant is matched by op + orig + repl + def + line text + occurrence + column, never by id.
+  # Changes in OTHER files are not followed (as in PIT); a full run (no --carry) re-checks everything.
+  o.on('--carry LIST') { |l| opts[:carry] = l.split(',').reject(&:empty?) }
+  o.on('--carry-src FILE') { |f| opts[:carry_src] = f }
 end.parse!
 FILE = File.expand_path(ARGV.fetch(0))
 SRC = File.read(FILE)
 
-Mutant = Struct.new(:id, :line, :op, :orig, :repl, :text, :fn)
+Mutant = Struct.new(:id, :line, :op, :orig, :repl, :text, :fn, :col, :frange, :carried)
+DEF_RANGES = [] # the line range of every def / defs (carry-forward: which def a changed line belongs to)
 
 def parse_src(src)
   buf = Parser::Source::Buffer.new(FILE, source: src)
@@ -44,6 +54,7 @@ def mutants_for(src)
   ast = parse_src(src)
   out = []
   fns = [] # enclosing def names (the site's `fn`)
+  franges = [] # their line ranges
   add = lambda do |node_or_range, repl, op|
     r = node_or_range.respond_to?(:loc) ? node_or_range.loc.expression : node_or_range
     orig = r.source
@@ -54,7 +65,7 @@ def mutants_for(src)
     # vs characters) or a stale buffer can never silently mutate the wrong place again.
     abort "splice self-check failed at line #{r.line}: #{src[r.begin_pos...r.end_pos].inspect} != #{orig.inspect}" unless src[r.begin_pos...r.end_pos] == orig
     text = src[0...r.begin_pos] + repl + src[r.end_pos..]
-    out << Mutant.new(out.size, r.line, op, orig, repl, text, fns.last)
+    out << Mutant.new(out.size, r.line, op, orig, repl, text, fns.last, r.column, franges.last)
   end
   walk = lambda do |n, parent|
     next unless n.is_a?(Parser::AST::Node)
@@ -139,9 +150,16 @@ def mutants_for(src)
       body = n.children.last
       add.call(body, 'nil', 'body-delete') if body.is_a?(Parser::AST::Node) && ![:begin].include?(body.type)
     end
-    fns.push(n.type == :def ? n.children[0].to_s : n.children[1].to_s) if %i[def defs].include?(n.type)
+    if %i[def defs].include?(n.type)
+      fns.push(n.type == :def ? n.children[0].to_s : n.children[1].to_s)
+      franges.push(n.loc.expression.line..n.loc.expression.last_line)
+      DEF_RANGES << franges.last
+    end
     n.children.each { |c| walk.call(c, n) }
-    fns.pop if %i[def defs].include?(n.type)
+    if %i[def defs].include?(n.type)
+      fns.pop
+      franges.pop
+    end
   end
   walk.call(ast, nil)
   out
@@ -169,6 +187,10 @@ mutants = mutants.select do |m|
   end
 end
 mutants.each_with_index { |m, i| m.id = i }
+def mutant_label(m)
+  sq = ->(s) { s.gsub(/\s+/, ' ')[0, 100] }
+  "#{m.op}: #{sq.call(m.orig)} => #{sq.call(m.repl)}"
+end
 mutants = mutants.select { |m| opts[:only].include?(m.id) } if opts[:only]
 mutants = mutants.select { |m| opts[:lines].cover?(m.line) } if opts[:lines]
 if opts[:survivors]
@@ -190,9 +212,48 @@ OCC = begin
   seen = Hash.new(0)
   SRC_LINES.each_with_index.to_h { |l, i| [i + 1, seen[l.strip] += 1] }
 end
-def mutant_label(m)
-  sq = ->(s) { s.gsub(/\s+/, ' ')[0, 100] }
-  "#{m.op}: #{sq.call(m.orig)} => #{sq.call(m.repl)}"
+
+def record(m, status)
+  { id: m.id, line: m.line, col: m.col, op: m.op, orig: m.orig, repl: m.repl, status: status,
+    fn: m.fn, occurrence: OCC[m.line], line_text: SRC_LINES[m.line - 1].to_s.strip, mutant: mutant_label(m) }
+end
+
+carried = []
+if opts[:carry]
+  ckey = ->(op, orig, repl, fn, lt, occ, col) { JSON.generate([op, orig, repl, fn.to_s, lt, occ, col]) }
+  prev = {}
+  opts[:carry].each do |f|
+    JSON.parse(File.read(f)).each { |x| prev[ckey.call(x['op'], x['orig'], x['repl'], x['fn'], x['line_text'], x['occurrence'], x['col'])] = x['status'] }
+  end
+  # the lines of FILE changed since the carried run: every new-side line of a hunk; a pure deletion marks both neighbours
+  old = opts[:carry_src]
+  abort "--carry needs --carry-src (the source the carried run mutated): #{old.inspect}" unless old && File.file?(old)
+  diff = IO.popen(['git', 'diff', '--no-index', '--no-color', '-U0', '--', old, FILE], &:read)
+  changed = diff.scan(/^@@ -\S+ \+(\d+)(?:,(\d+))? @@/).flat_map do |a, b|
+    s0 = a.to_i
+    c = (b || '1').to_i
+    c.zero? ? [s0, s0 + 1] : (s0...(s0 + c)).to_a
+  end
+  # an added / edited blank or comment-only line is no code change (a pure deletion's neighbours always count: what was
+  # deleted is unknown here)
+  dels = diff.scan(/^@@ -\S+ \+(\d+),0 @@/).flat_map { |(a)| [a.to_i, a.to_i + 1] }
+  changed = changed.select { |l| dels.include?(l) || !(t = SRC_LINES[l - 1].to_s.strip).empty? && !t.start_with?('#') }
+  everything = changed.any? { |l| DEF_RANGES.none? { |r| r.cover?(l) } }
+  touched = ->(m) { changed.any? { |l| m.frange ? m.frange.cover?(l) : l == m.line } }
+  rerun, keep = mutants.partition do |m|
+    st = prev[ckey.call(m.op, m.orig, m.repl, m.fn, SRC_LINES[m.line - 1].to_s.strip, OCC[m.line], m.col)]
+    m.carried = st
+    everything || st.nil? || !st.start_with?('KILLED') || touched.call(m)
+  end
+  carried = keep.map { |m| record(m, m.carried).merge(carried: true) }
+  $stderr.puts "carry: #{changed.size} changed line(s)#{everything ? ' (outside any def: everything re-runs)' : ''}; " \
+               "#{carried.size} result(s) carried, #{rerun.size} to run (#{rerun.count { |m| m.carried.nil? }} unseen, " \
+               "#{rerun.count { |m| m.carried && !m.carried.start_with?('KILLED') }} earlier non-kills)"
+  mutants = rerun
+  if mutants.empty?
+    puts JSON.pretty_generate(carried.sort_by { |x| x[:id] })
+    exit
+  end
 end
 
 require_relative 'oracle'
@@ -208,7 +269,22 @@ rescue Exception # rubocop:disable Lint/RescueException
   exit!(2)
 end
 Process.wait(base)
-abort "baseline oracle FAILED on the unmutated source (status #{$?.exitstatus})" unless $?.success?
+unless $?.success?
+  st = $?.exitstatus
+  # say WHICH oracle stage fails on the unmutated source (a bare "FAILED" cost a whole CI round)
+  dbg = fork do
+    $VERBOSE = nil
+    Oracle.apply(SRC, FILE)
+    $stderr.puts "baseline oracle stages: #{JSON.generate(Oracle.stages)}"
+    $stderr.puts "baseline fresh-load probe: #{Oracle.fresh_load_ok?}"
+    exit!(0)
+  rescue Exception => e # rubocop:disable Lint/RescueException
+    $stderr.puts "baseline oracle raised #{e.class}: #{e.message}\n  #{e.backtrace&.first(8)&.join("\n  ")}"
+    exit!(1)
+  end
+  Process.wait(dbg)
+  abort "baseline oracle FAILED on the unmutated source (status #{st})"
+end
 if opts[:debug]
   mutants.each do |m|
     pid = fork do
@@ -254,10 +330,9 @@ until queue.empty? && running.empty?
   out = r.read
   r.close
   status = out.empty? ? (st.signaled? ? 'KILLED(timeout/crash)' : 'KILLED(crash)') : out
-  results[m.id] = { id: m.id, line: m.line, op: m.op, orig: m.orig, repl: m.repl, status: status,
-                   fn: m.fn, occurrence: OCC[m.line], line_text: SRC_LINES[m.line - 1].to_s.strip, mutant: mutant_label(m) }
+  results[m.id] = record(m, status)
   # MUT_STREAM=<file>: append each result as one JSON line the moment it completes (survives a wall-clock kill)
   File.open(ENV['MUT_STREAM'], 'a') { |f| f.puts(JSON.generate(results[m.id])) } if ENV['MUT_STREAM']
   $stderr.puts "#{results.size}/#{mutants.size} survivors=#{results.values.count { |x| x[:status] == 'SURVIVED' }} elapsed=#{(Time.now - t0).to_i}s" if (results.size % 50).zero?
 end
-puts JSON.pretty_generate(results.values.sort_by { |x| x[:id] })
+puts JSON.pretty_generate((results.values + carried).sort_by { |x| x[:id] })

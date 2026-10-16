@@ -1,0 +1,82 @@
+-- Query not event(Acc(v1)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+Starting query not event(Acc(v1))
+goal reachable: event(Acc(v1))
+
+Derivation:
+
+1. The message sign(v1,kl[]) may be sent to the attacker at output {7}.
+attacker(sign(v1,kl[])).
+
+2. By 1, the attacker may know sign(v1,kl[]).
+So the attacker may know sign(v1,kl[]) in phase 1.
+attacker_p1(sign(v1,kl[])).
+
+3. By 2, the attacker may know sign(v1,kl[]) in phase 1.
+So the attacker may know sign(v1,kl[]) in phase 2.
+attacker_p2(sign(v1,kl[])).
+
+4. The message sign(mfk(v1),kop[]) may be sent to the attacker at output {4}.
+attacker(sign(mfk(v1),kop[])).
+
+5. By 4, the attacker may know sign(mfk(v1),kop[]).
+So the attacker may know sign(mfk(v1),kop[]) in phase 1.
+attacker_p1(sign(mfk(v1),kop[])).
+
+6. By 5, the attacker may know sign(mfk(v1),kop[]) in phase 1.
+So the attacker may know sign(mfk(v1),kop[]) in phase 2.
+attacker_p2(sign(mfk(v1),kop[])).
+
+7. By 6, the attacker may know sign(mfk(v1),kop[]) in phase 2.
+By 3, the attacker may know sign(v1,kl[]) in phase 2.
+Using the function 2-tuple the attacker may obtain (sign(mfk(v1),kop[]),sign(v1,kl[])) in phase 2.
+attacker_p2((sign(mfk(v1),kop[]),sign(v1,kl[]))).
+
+8. The message (sign(mfk(v1),kop[]),sign(v1,kl[])) that the attacker may have in phase 2 by 7 may be received at input {22}.
+So event Acc(v1) may be executed at {26}.
+event(Acc(v1)).
+
+9. By 8, event(Acc(v1)).
+The goal is reached, represented in the following fact:
+event(Acc(v1)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new kop: bitstring creating kop_1 at {1}
+
+new kl: bitstring creating kl_1 at {2}
+
+out(c, (~M,~M_1)) with ~M = pk(kop_1), ~M_1 = pk(kl_1) at {3}
+
+out(c, ~M_2) with ~M_2 = sign(v1,kl_1) at {7}
+
+out(c, ~M_3) with ~M_3 = sign(mfk(v1),kop_1) at {4}
+
+out(c, ~M_4) with ~M_4 = sign(v2,kl_1) at {12}
+
+out(c, ~M_5) with ~M_5 = sign(mfk(v2),kop_1) at {9}
+
+new n: bitstring creating n_1 at {20} in copy a
+
+out(c, ~M_6) with ~M_6 = n_1 at {21} in copy a
+
+out(c, ~M_7) with ~M_7 = sign(v2,kl_1) at {16}
+
+in(c, (~M_3,~M_2)) with ~M_3 = sign(mfk(v1),kop_1), ~M_2 = sign(v1,kl_1) at {22} in copy a
+
+event Acc(v1) at {26} in copy a (goal)
+
+The event Acc(v1) is executed at {26} in copy a.
+A trace has been found.
+RESULT not event(Acc(v1)) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not event(Acc(v1)) is false.
+
+--------------------------------------------------------------
+
