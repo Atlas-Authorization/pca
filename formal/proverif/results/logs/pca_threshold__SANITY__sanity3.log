@@ -1,0 +1,294 @@
+-- Query not (event(Accept(m_7,ss_7,three,a,g,p)) && event(Issued(principalR,p,m_7,ss_7,three))) in process 0.
+Translating the process into Horn clauses...
+Completing...
+Starting query not (event(Accept(m_7,ss_7,three,a,g,p)) && event(Issued(principalR,p,m_7,ss_7,three)))
+goal reachable: @sid ≠ @sid_1 && @sid_2 ≠ @sid_1 && @sid_2 ≠ @sid && attacker(m_7) -> event(Accept(m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three,pk(k_1),pk(k_2),pk(k_3))) && event(Issued(principalR,pk(k_3),m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three))
+Abbreviations:
+k_1 = k[!1 = @sid_2]
+k_2 = k[!1 = @sid]
+k_3 = k[!1 = @sid_1]
+
+Derivation:
+Abbreviations:
+k_1 = k[!1 = @sid]
+k_2 = k[!1 = @sid_1]
+k_3 = k[!1 = @sid_2]
+
+1. The message pk(k_3) may be sent to the attacker at output {5}.
+attacker(pk(k_3)).
+
+2. The message pk(k_2) may be sent to the attacker at output {5}.
+attacker(pk(k_2)).
+
+3. The message pk(k_1) may be sent to the attacker at output {5}.
+attacker(pk(k_1)).
+
+4. Using the function ssT the attacker may obtain ssT.
+attacker(ssT).
+
+5. By 4, the attacker may know ssT.
+By 3, the attacker may know pk(k_1).
+By 2, the attacker may know pk(k_2).
+By 1, the attacker may know pk(k_3).
+Using the function 4-tuple the attacker may obtain (ssT,pk(k_1),pk(k_2),pk(k_3)).
+attacker((ssT,pk(k_1),pk(k_2),pk(k_3))).
+
+6. By 5, the attacker may know (ssT,pk(k_1),pk(k_2),pk(k_3)).
+Using the function h the attacker may obtain h((ssT,pk(k_1),pk(k_2),pk(k_3))).
+attacker(h((ssT,pk(k_1),pk(k_2),pk(k_3)))).
+
+7. Using the function three the attacker may obtain three.
+attacker(three).
+
+8. We assume as hypothesis that
+attacker(m_7).
+
+9. By 8, the attacker may know m_7.
+By 7, the attacker may know three.
+By 6, the attacker may know h((ssT,pk(k_1),pk(k_2),pk(k_3))).
+Using the function 3-tuple the attacker may obtain (m_7,three,h((ssT,pk(k_1),pk(k_2),pk(k_3)))).
+attacker((m_7,three,h((ssT,pk(k_1),pk(k_2),pk(k_3))))).
+
+10. By 3, the attacker may know pk(k_1).
+By 2, the attacker may know pk(k_2).
+By 1, the attacker may know pk(k_3).
+Using the function 3-tuple the attacker may obtain (pk(k_1),pk(k_2),pk(k_3)).
+attacker((pk(k_1),pk(k_2),pk(k_3))).
+
+11. The entry keys(pk(k_1),k_1) may be inserted in a table at insert {3}.
+table(keys(pk(k_1),k_1)).
+
+12. The entry keys(pk(k_2),k_2) may be inserted in a table at insert {3}.
+table(keys(pk(k_2),k_2)).
+
+13. The entry keys(pk(k_3),k_3) may be inserted in a table at insert {3}.
+table(keys(pk(k_3),k_3)).
+
+14. The message (pk(k_1),pk(k_2),pk(k_3)) that the attacker may have by 10 may be received at input {7}.
+The entry keys(pk(k_1),k_1) that may be in a table by 11 may be read at get {14}.
+The entry keys(pk(k_2),k_2) that may be in a table by 12 may be read at get {13}.
+The entry keys(pk(k_3),k_3) that may be in a table by 13 may be read at get {12}.
+We have pk(k_2) ≠ pk(k_3) && pk(k_1) ≠ pk(k_3) && pk(k_1) ≠ pk(k_2).
+So the entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) may be inserted in a table at insert {11}.
+table(sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3))).
+
+15. The message (m_7,three,h((ssT,pk(k_1),pk(k_2),pk(k_3)))) that the attacker may have by 9 may be received at input {28}.
+The entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) that may be in a table by 14 may be read at get {32}.
+The entry keys(pk(k_3),k_3) that may be in a table by 13 may be read at get {31}.
+So event Issued(principalR,pk(k_3),m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three) may be executed at {29}.
+event(Issued(principalR,pk(k_3),m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three)).
+
+16. The message (pk(k_1),pk(k_2),pk(k_3)) that the attacker may have by 10 may be received at input {7}.
+The entry keys(pk(k_1),k_1) that may be in a table by 11 may be read at get {14}.
+The entry keys(pk(k_2),k_2) that may be in a table by 12 may be read at get {13}.
+The entry keys(pk(k_3),k_3) that may be in a table by 13 may be read at get {12}.
+We have pk(k_2) ≠ pk(k_3) && pk(k_1) ≠ pk(k_3) && pk(k_1) ≠ pk(k_2).
+So the entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) may be inserted in a table at insert {11}.
+table(sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3))).
+
+17. The message (m_7,three,h((ssT,pk(k_1),pk(k_2),pk(k_3)))) that the attacker may have by 9 may be received at input {28}.
+The entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) that may be in a table by 16 may be read at get {32}.
+The entry keys(pk(k_3),k_3) that may be in a table by 13 may be read at get {31}.
+So the message sign((shareT,principalR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_3) may be sent to the attacker at output {30}.
+attacker(sign((shareT,principalR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_3)).
+
+18. The message (pk(k_1),pk(k_2),pk(k_3)) that the attacker may have by 10 may be received at input {7}.
+The entry keys(pk(k_1),k_1) that may be in a table by 11 may be read at get {14}.
+The entry keys(pk(k_2),k_2) that may be in a table by 12 may be read at get {13}.
+The entry keys(pk(k_3),k_3) that may be in a table by 13 may be read at get {12}.
+We have pk(k_2) ≠ pk(k_3) && pk(k_1) ≠ pk(k_3) && pk(k_1) ≠ pk(k_2).
+So the entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) may be inserted in a table at insert {11}.
+table(sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3))).
+
+19. The message (m_7,three,h((ssT,pk(k_1),pk(k_2),pk(k_3)))) that the attacker may have by 9 may be received at input {22}.
+The entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) that may be in a table by 18 may be read at get {26}.
+The entry keys(pk(k_2),k_2) that may be in a table by 12 may be read at get {25}.
+So the message sign((shareT,guardianR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_2) may be sent to the attacker at output {24}.
+attacker(sign((shareT,guardianR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_2)).
+
+20. The message (pk(k_1),pk(k_2),pk(k_3)) that the attacker may have by 10 may be received at input {7}.
+The entry keys(pk(k_1),k_1) that may be in a table by 11 may be read at get {14}.
+The entry keys(pk(k_2),k_2) that may be in a table by 12 may be read at get {13}.
+The entry keys(pk(k_3),k_3) that may be in a table by 13 may be read at get {12}.
+We have pk(k_2) ≠ pk(k_3) && pk(k_1) ≠ pk(k_3) && pk(k_1) ≠ pk(k_2).
+So the entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) may be inserted in a table at insert {11}.
+table(sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3))).
+
+21. The message (m_7,three,h((ssT,pk(k_1),pk(k_2),pk(k_3)))) that the attacker may have by 9 may be received at input {16}.
+The entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) that may be in a table by 20 may be read at get {20}.
+The entry keys(pk(k_1),k_1) that may be in a table by 11 may be read at get {19}.
+So the message sign((shareT,agentR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_1) may be sent to the attacker at output {18}.
+attacker(sign((shareT,agentR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_1)).
+
+22. By 8, the attacker may know m_7.
+By 6, the attacker may know h((ssT,pk(k_1),pk(k_2),pk(k_3))).
+By 21, the attacker may know sign((shareT,agentR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_1).
+By 19, the attacker may know sign((shareT,guardianR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_2).
+By 17, the attacker may know sign((shareT,principalR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_3).
+Using the function 5-tuple the attacker may obtain (m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),sign((shareT,agentR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_1),sign((shareT,guardianR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_2),sign((shareT,principalR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_3)).
+attacker((m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),sign((shareT,agentR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_1),sign((shareT,guardianR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_2),sign((shareT,principalR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_3))).
+
+23. The message (pk(k_1),pk(k_2),pk(k_3)) that the attacker may have by 10 may be received at input {7}.
+The entry keys(pk(k_1),k_1) that may be in a table by 11 may be read at get {14}.
+The entry keys(pk(k_2),k_2) that may be in a table by 12 may be read at get {13}.
+The entry keys(pk(k_3),k_3) that may be in a table by 13 may be read at get {12}.
+We have pk(k_2) ≠ pk(k_3) && pk(k_1) ≠ pk(k_3) && pk(k_1) ≠ pk(k_2).
+So the entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) may be inserted in a table at insert {11}.
+table(sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3))).
+
+24. The message (m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),sign((shareT,agentR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_1),sign((shareT,guardianR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_2),sign((shareT,principalR,h(m_7),h((ssT,pk(k_1),pk(k_2),pk(k_3))),three),k_3)) that the attacker may have by 22 may be received at input {53}.
+The entry sets(h((ssT,pk(k_1),pk(k_2),pk(k_3))),pk(k_1),pk(k_2),pk(k_3)) that may be in a table by 23 may be read at get {56}.
+So event Accept(m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three,pk(k_1),pk(k_2),pk(k_3)) may be executed at {55}.
+event(Accept(m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three,pk(k_1),pk(k_2),pk(k_3))).
+
+25. By 24, event(Accept(m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three,pk(k_1),pk(k_2),pk(k_3))).
+By 15, event(Issued(principalR,pk(k_3),m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three)).
+The goals are reached, combined in the following fact:
+event(Accept(m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three,pk(k_1),pk(k_2),pk(k_3))) && event(Issued(principalR,pk(k_3),m_7,h((ssT,pk(k_1),pk(k_2),pk(k_3))),three)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new k: bitstring creating k_4 at {2} in copy a
+
+insert keys(pk(k_4),k_4) at {3} in copy a
+
+event KeyGen(pk(k_4)) at {4} in copy a
+
+out(c, ~M) with ~M = pk(k_4) at {5} in copy a
+
+new k: bitstring creating k_5 at {2} in copy a_1
+
+insert keys(pk(k_5),k_5) at {3} in copy a_1
+
+event KeyGen(pk(k_5)) at {4} in copy a_1
+
+out(c, ~M_1) with ~M_1 = pk(k_5) at {5} in copy a_1
+
+new k: bitstring creating k_6 at {2} in copy a_2
+
+insert keys(pk(k_6),k_6) at {3} in copy a_2
+
+event KeyGen(pk(k_6)) at {4} in copy a_2
+
+out(c, ~M_2) with ~M_2 = pk(k_6) at {5} in copy a_2
+
+in(c, (~M_2,~M_1,~M)) with ~M_2 = pk(k_6), ~M_1 = pk(k_5), ~M = pk(k_4) at {7} in copy a_3
+
+get keys(pk(k_6),k_6) at {14} in copy a_3
+
+get keys(pk(k_5),k_5) at {13} in copy a_3
+
+get keys(pk(k_4),k_4) at {12} in copy a_3
+
+event SetReg(h((ssT,pk(k_6),pk(k_5),pk(k_4)))) at {10} in copy a_3
+
+insert sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {11} in copy a_3
+
+in(c, (~M_2,~M_1,~M)) with ~M_2 = pk(k_6), ~M_1 = pk(k_5), ~M = pk(k_4) at {7} in copy a_4
+
+get keys(pk(k_6),k_6) at {14} in copy a_4
+
+get keys(pk(k_5),k_5) at {13} in copy a_4
+
+get keys(pk(k_4),k_4) at {12} in copy a_4
+
+event SetReg(h((ssT,pk(k_6),pk(k_5),pk(k_4)))) at {10} in copy a_4
+
+insert sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {11} in copy a_4
+
+in(c, (~M_2,~M_1,~M)) with ~M_2 = pk(k_6), ~M_1 = pk(k_5), ~M = pk(k_4) at {7} in copy a_5
+
+get keys(pk(k_6),k_6) at {14} in copy a_5
+
+get keys(pk(k_5),k_5) at {13} in copy a_5
+
+get keys(pk(k_4),k_4) at {12} in copy a_5
+
+event SetReg(h((ssT,pk(k_6),pk(k_5),pk(k_4)))) at {10} in copy a_5
+
+insert sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {11} in copy a_5
+
+in(c, (~M_2,~M_1,~M)) with ~M_2 = pk(k_6), ~M_1 = pk(k_5), ~M = pk(k_4) at {7} in copy a_6
+
+get keys(pk(k_6),k_6) at {14} in copy a_6
+
+get keys(pk(k_5),k_5) at {13} in copy a_6
+
+get keys(pk(k_4),k_4) at {12} in copy a_6
+
+event SetReg(h((ssT,pk(k_6),pk(k_5),pk(k_4)))) at {10} in copy a_6
+
+insert sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {11} in copy a_6
+
+in(c, (~M_2,~M_1,~M)) with ~M_2 = pk(k_6), ~M_1 = pk(k_5), ~M = pk(k_4) at {7} in copy a_7
+
+get keys(pk(k_6),k_6) at {14} in copy a_7
+
+get keys(pk(k_5),k_5) at {13} in copy a_7
+
+get keys(pk(k_4),k_4) at {12} in copy a_7
+
+event SetReg(h((ssT,pk(k_6),pk(k_5),pk(k_4)))) at {10} in copy a_7
+
+insert sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {11} in copy a_7
+
+in(c, (a_8,three,h((ssT,~M_2,~M_1,~M)))) with h((ssT,~M_2,~M_1,~M)) = h((ssT,pk(k_6),pk(k_5),pk(k_4))) at {16} in copy a_9
+
+get sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {20} in copy a_9
+
+get keys(pk(k_6),k_6) at {19} in copy a_9
+
+event Issued(agentR,pk(k_6),a_8,h((ssT,pk(k_6),pk(k_5),pk(k_4))),three) at {17} in copy a_9
+
+out(c, ~M_3) with ~M_3 = sign((shareT,agentR,h(a_8),h((ssT,pk(k_6),pk(k_5),pk(k_4))),three),k_6) at {18} in copy a_9
+
+in(c, (a_8,three,h((ssT,~M_2,~M_1,~M)))) with h((ssT,~M_2,~M_1,~M)) = h((ssT,pk(k_6),pk(k_5),pk(k_4))) at {22} in copy a_10
+
+get sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {26} in copy a_10
+
+get keys(pk(k_5),k_5) at {25} in copy a_10
+
+event Issued(guardianR,pk(k_5),a_8,h((ssT,pk(k_6),pk(k_5),pk(k_4))),three) at {23} in copy a_10
+
+out(c, ~M_4) with ~M_4 = sign((shareT,guardianR,h(a_8),h((ssT,pk(k_6),pk(k_5),pk(k_4))),three),k_5) at {24} in copy a_10
+
+in(c, (a_8,three,h((ssT,~M_2,~M_1,~M)))) with h((ssT,~M_2,~M_1,~M)) = h((ssT,pk(k_6),pk(k_5),pk(k_4))) at {28} in copy a_11
+
+get sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {32} in copy a_11
+
+get keys(pk(k_4),k_4) at {31} in copy a_11
+
+event Issued(principalR,pk(k_4),a_8,h((ssT,pk(k_6),pk(k_5),pk(k_4))),three) at {29} in copy a_11 (goal)
+
+out(c, ~M_5) with ~M_5 = sign((shareT,principalR,h(a_8),h((ssT,pk(k_6),pk(k_5),pk(k_4))),three),k_4) at {30} in copy a_11
+
+in(c, (a_8,three,h((ssT,~M_2,~M_1,~M)))) with h((ssT,~M_2,~M_1,~M)) = h((ssT,pk(k_6),pk(k_5),pk(k_4))) at {28} in copy a_12
+
+get sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {32} in copy a_12
+
+get keys(pk(k_4),k_4) at {31} in copy a_12
+
+event Issued(principalR,pk(k_4),a_8,h((ssT,pk(k_6),pk(k_5),pk(k_4))),three) at {29} in copy a_12
+
+out(c, ~M_6) with ~M_6 = sign((shareT,principalR,h(a_8),h((ssT,pk(k_6),pk(k_5),pk(k_4))),three),k_4) at {30} in copy a_12
+
+in(c, (a_8,h((ssT,~M_2,~M_1,~M)),~M_3,~M_4,~M_5)) with h((ssT,~M_2,~M_1,~M)) = h((ssT,pk(k_6),pk(k_5),pk(k_4))), ~M_3 = sign((shareT,agentR,h(a_8),h((ssT,pk(k_6),pk(k_5),pk(k_4))),three),k_6), ~M_4 = sign((shareT,guardianR,h(a_8),h((ssT,pk(k_6),pk(k_5),pk(k_4))),three),k_5), ~M_5 = sign((shareT,principalR,h(a_8),h((ssT,pk(k_6),pk(k_5),pk(k_4))),three),k_4) at {53} in copy a_13
+
+get sets(h((ssT,pk(k_6),pk(k_5),pk(k_4))),pk(k_6),pk(k_5),pk(k_4)) at {56} in copy a_13
+
+event Accept(a_8,h((ssT,pk(k_6),pk(k_5),pk(k_4))),three,pk(k_6),pk(k_5),pk(k_4)) at {55} in copy a_13 (goal)
+
+The event Accept(a_8,h((ssT,pk(k_6),pk(k_5),pk(k_4))),three,pk(k_6),pk(k_5),pk(k_4)) is executed at {55} in copy a_13.
+The event Issued(principalR,pk(k_4),a_8,h((ssT,pk(k_6),pk(k_5),pk(k_4))),three) is executed at {29} in copy a_11.
+A trace has been found.
+RESULT not (event(Accept(m_7,ss_7,three,a,g,p)) && event(Issued(principalR,p,m_7,ss_7,three))) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not (event(Accept(m_7,ss_7,three,a,g,p)) && event(Issued(principalR,p,m_7,ss_7,three))) is false.
+
+--------------------------------------------------------------
+

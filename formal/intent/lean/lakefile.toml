@@ -1,0 +1,18 @@
+# PCA Intent Layer: machine-checked theory (Lean 4 + Mathlib), companion to docs/specs/pca-intent-formal.md.
+# Pinned to the same Mathlib tag as formal/computational/leanmath so the farm can share its prebuilt packages.
+name = "pca-intent"
+defaultTargets = ["PcaIntent"]
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.34.1"
+
+[[lean_lib]]
+name = "PcaIntent"
+
+# The core PCA proofs (no Mathlib), read-only: PcaIntent.Link connects intent risk to Theorem 2 (attenuation).
+[[require]]
+name = "pca-proof"
+path = "../../pca-lean"

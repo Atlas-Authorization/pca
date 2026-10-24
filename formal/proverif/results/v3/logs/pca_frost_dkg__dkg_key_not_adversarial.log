@@ -1,0 +1,13 @@
+-- Query not event(Bad(y_1)) in process 0.
+Translating the process into Horn clauses...
+Completing...
+Starting query not event(Bad(y_1))
+RESULT not event(Bad(y_1)) is true.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not event(Bad(y_1)) is true.
+
+--------------------------------------------------------------
+

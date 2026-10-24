@@ -1,6 +1,8 @@
 import { sha256 as nobleSha256 } from '@noble/hashes/sha256';
 import { sha384 as nobleSha384 } from '@noble/hashes/sha512';
 import { base64urlnopad } from '@scure/base';
+import { wireCanonicalizeStrict } from '@atlasauth/pca-verified-core';
+import { verifiedCoreOptIn } from './verified-core-mode';
 
 const enc = new TextEncoder();
 
@@ -156,6 +158,23 @@ export const canonicalize = __canonicalizeLenientServerOnly;
  * THROWS a TypeError on any violation.
  */
 export function canonicalizeStrict(value: unknown): string {
+  if (verifiedCoreOptIn('wire')) {
+    // OPT-IN (`PCA_VERIFIED_CORE=wire`): the canonical text is computed by the Dafny-proved encoder (formal/dafny/Wire.dfy,
+    // verified-core `wireCanonicalizeStrict`: the compiled fast path `FastP.CanonU`, proved equal to `Json.CanonText`; linear apart
+    // from the per-object key sort). On a refusal, the hand-written encoder's TypeError is thrown when it agrees. A RangeError is
+    // not a refusal but resource exhaustion (output past the proved printer's 2^40-unit limit): that input is encoded by the
+    // hand-written encoder, i.e. exactly as with the opt-in off, never rejected for a reason the profile does not have and never
+    // encoded more leniently.
+    let out: string;
+    try {
+      out = wireCanonicalizeStrict(value);
+    } catch (e) {
+      if (e instanceof RangeError) return ser(value, new Set(), true, 1);
+      ser(value, new Set(), true, 1);
+      throw new TypeError('canonicalize: rejected by the verified canonical encoder');
+    }
+    return out;
+  }
   return ser(value, new Set(), true, 1);
 }
 

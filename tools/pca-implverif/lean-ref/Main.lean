@@ -21,6 +21,10 @@ def runFile (path : String) (text : String) : IO (Nat × Nat × Nat × Nat) := d
     let now : Int := ((ctx.get? "now").bind safeInt).getD 0
     let aud := (strOf (ctx.get? "aud")).getD ""
     let allowed : Option (List String) := ((ctx.get? "allowed_suites").bind J.asArr?).map (fun a => a.toList.filterMap (fun x => x.asStr?))
+    -- `intent_policy_json` (raw JSON text, lexical forms preserved) wins over `intent_policy`
+    let intent := match strOf (ctx.get? "intent_policy_json") with
+      | some raw => IntentPolicy.ofJ (match parseText raw false with | .ok j => some j | .error _ => none)
+      | none => IntentPolicy.ofJ (ctx.get? "intent_policy")
     let grant := (v.get? "grant").getD .null
     let exp := (v.get? "expect").getD .null
     let expAllow := boolOf (exp.get? "allow")
@@ -28,11 +32,11 @@ def runFile (path : String) (text : String) : IO (Nat × Nat × Nat × Nat) := d
     let verdict : Verdict :=
       match (v.get? "pcactn_json").bind J.asStr? with
       | some raw => match parseText raw true with
-          | .ok p => verifyCore p grant now aud allowed
+          | .ok p => verifyCore p grant now aud allowed intent
           | .error _ => ⟨false, [("wire", false)], false⟩
       | none =>
         let p := (v.get? "pcactn").getD .null
-        if hasSentinel p then ⟨false, [("wire", false)], false⟩ else verifyCore p grant now aud allowed
+        if hasSentinel p then ⟨false, [("wire", false)], false⟩ else verifyCore p grant now aud allowed intent
     let terminalWire := expChecks.length == 1 && expChecks.any (fun (e : String × Bool) => e.1 == "wire" && !e.2)
     let needsPq := (strOf (v.get? "requires")).isSome
     if (verdict.pq || needsPq) && !terminalWire then

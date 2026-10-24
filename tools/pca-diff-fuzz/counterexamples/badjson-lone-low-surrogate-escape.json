@@ -1,0 +1,50 @@
+{
+ "mutator": "badjson-lone-low-surrogate-escape",
+ "case": "c005439",
+ "bytes": 1324,
+ "allImplementationsAgree": true,
+ "context": {
+  "now": 1800000000000,
+  "aud": "rs-fuzz"
+ },
+ "results": {
+  "oracle": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "dotnet": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "go": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "php": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "python": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "ruby": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  }
+ },
+ "pcactn_json": "{\"ver\":2,\"action\":{\"verb\":\"read\",\"resource\":\"mail/é\",\"params_digest\":\"RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o\",\"reversibility_class\":\"reversible\"},\"grant_ref\":\"ZYaF3V_FYMBIA8YkIoxmsiDJM8jhNTjcVsQE5EiI79g\",\"cap_chain\":[{\"id\":\"ZYaF3V_FYMBIA8YkIoxmsiDJM8jhNTjcVsQE5EiI79g\",\"issuer\":\"664DtjPOxss8Bk1TB6M6CdoaDUS7sS_xC163Hqq6huM\",\"holder\":\"2eUi6Q5FXMVRzuzJhqI5Zm_oaXMBx8oEtcKhIzE51FY\",\"caveats\":[],\"body_digest\":\"ZYaF3V_FYMBIA8YkIoxmsiDJM8jhNTjcVsQE5EiI79g\",\"sig\":\"HY497juPiSUyVvvnrqCAtYRO5czW7RzYEY9wky6KLQXvKoMF9V3hkwYwUrOtO0WnhzZKvbli6htYzwhxQvxuBw\"}],\"plan\":{\"root\":\"r3CP6iH8thKAlLMDzZ5U8MBe6W0Bj5Rb3i4BpKYAKPs\",\"inclusion_proof\":{\"index\":1,\"size\":4,\"path\":[{\"side\":\"L\",\"hash\":\"XXi8TzUWHDHVFq7uZtge-dw4Jr6ijkrnEZJaE2qnDYk\"},{\"side\":\"R\",\"hash\":\"9H9a5OvVXdnrRRzAHHyKwkwzkJsKVsqvok8hPv8DA6U\"}]},\"node_id\":\"n1\",\"conditions_digest\":\"YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY\"},\"attestation\":{\"quote_digest\":\"\",\"epoch\":0,\"model_id\":\"unattested\",\"measurement\":\"\",\"operator\":\"\\udc00\"},\"provenance\":{\"causal_hash\":\"\",\"taint_level\":0,\"trusted_refs\":[]},\"freshness\":{\"beacon_ref\":\"\",\"epoch\":0,\"accumulator_witness\":\"\"},\"counter\":7,\"risk_claim\":{\"r\":0,\"inputs\":{\"a\":\"mail/out\"}},\"aud\":\"rs-fuzz\",\"iat\":1799999661063,\"exp\":1800003261063,\"sig\":\"95IA5RzDmISbBFb7UDGPvXg-hgxjqIpk1djwq7jEGnoyL5G2XdtEsm0fCEjCNX1PCKz-enXgMm2Etv2MjKCNDQ\"}",
+ "grant": "{\"body_digest\":\"ZYaF3V_FYMBIA8YkIoxmsiDJM8jhNTjcVsQE5EiI79g\",\"caveats\":[],\"holder\":\"2eUi6Q5FXMVRzuzJhqI5Zm_oaXMBx8oEtcKhIzE51FY\",\"id\":\"ZYaF3V_FYMBIA8YkIoxmsiDJM8jhNTjcVsQE5EiI79g\",\"issuer\":\"664DtjPOxss8Bk1TB6M6CdoaDUS7sS_xC163Hqq6huM\",\"sig\":\"HY497juPiSUyVvvnrqCAtYRO5czW7RzYEY9wky6KLQXvKoMF9V3hkwYwUrOtO0WnhzZKvbli6htYzwhxQvxuBw\"}"
+}

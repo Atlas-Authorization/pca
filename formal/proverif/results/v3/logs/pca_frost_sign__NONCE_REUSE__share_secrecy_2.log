@@ -1,0 +1,171 @@
+-- Query not attacker(sh(g[],c2)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 132 rules (64 with conclusion selected). Queue: 174 rules.
+400 rules inserted. Base: 214 rules (114 with conclusion selected). Queue: 308 rules.
+600 rules inserted. Base: 373 rules (270 with conclusion selected). Queue: 149 rules.
+800 rules inserted. Base: 521 rules (417 with conclusion selected). Queue: 1 rules.
+Starting query not attacker(sh(g[],c2))
+goal reachable: l1_7 ≠ cmt(c2,cm(d_3),cm(e_3)) && l1_8 ≠ cmt(c2,cm(d_3),cm(e_3)) && l1_9 ≠ cmt(c2,cm(d_3),cm(e_3)) && (m2_4 ≠ m3_1 | l1_7 ≠ l1_8) && (l1_7 ≠ l1_9 | m1_4 ≠ m3_1) && (m1_4 ≠ m2_4 | l1_8 ≠ l1_9) && attacker(m1_4) && attacker(l1_9) && b-event(@p_act(@occ21_1,(m1_4,l1_9,cmt(c2,cm(d_3),cm(e_3))))) && attacker(m2_4) && attacker(l1_8) && b-event(@p_act(@occ21_2,(m2_4,l1_8,cmt(c2,cm(d_3),cm(e_3))))) && attacker(m3_1) && attacker(l1_7) && b-event(@p_act(@occ21_3,(m3_1,l1_7,cmt(c2,cm(d_3),cm(e_3))))) && b-event(@p_act(@occ70_1,(zs(sh(g[],c2),d_3,e_3,m1_4,(l1_9,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m2_4,(l1_8,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m3_1,(l1_7,cmt(c2,cm(d_3),cm(e_3))))))) -> attacker(sh(g[],c2))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+@occ21_1 = @occ21[!2 = @sid_1,!1 = @sid]
+@occ21_2 = @occ21[!2 = @sid_2,!1 = @sid]
+@occ21_3 = @occ21[!2 = @sid_3,!1 = @sid]
+@occ70_1 = @occ70[!1 = @sid_4]
+
+Derivation:
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+@occ21_1 = @occ21[!2 = @sid_1,!1 = @sid]
+@occ21_2 = @occ21[!2 = @sid_2,!1 = @sid]
+@occ21_3 = @occ21[!2 = @sid_3,!1 = @sid]
+@occ70_1 = @occ70[!1 = @sid_4]
+
+1. The message cmt(c2,cm(d_3),cm(e_3)) may be sent to the attacker at output {19}.
+attacker(cmt(c2,cm(d_3),cm(e_3))).
+
+2. By 1, the attacker may know cmt(c2,cm(d_3),cm(e_3)).
+Using the function 3-proj-cmt the attacker may obtain cm(e_3).
+attacker(cm(e_3)).
+
+3. By 1, the attacker may know cmt(c2,cm(d_3),cm(e_3)).
+Using the function 2-proj-cmt the attacker may obtain cm(d_3).
+attacker(cm(d_3)).
+
+4. Using the function c2 the attacker may obtain c2.
+attacker(c2).
+
+5. By 4, the attacker may know c2.
+By 3, the attacker may know cm(d_3).
+By 2, the attacker may know cm(e_3).
+Using the function cmt the attacker may obtain cmt(c2,cm(d_3),cm(e_3)).
+attacker(cmt(c2,cm(d_3),cm(e_3))).
+
+6. We assume as hypothesis that
+attacker(l1_7).
+
+7. We assume as hypothesis that
+attacker(m3_1).
+
+8. By 7, the attacker may know m3_1.
+By 6, the attacker may know l1_7.
+By 5, the attacker may know cmt(c2,cm(d_3),cm(e_3)).
+Using the function 3-tuple the attacker may obtain (m3_1,l1_7,cmt(c2,cm(d_3),cm(e_3))).
+attacker((m3_1,l1_7,cmt(c2,cm(d_3),cm(e_3)))).
+
+9. The event @p_act(@occ21_3,(m3_1,l1_7,cmt(c2,cm(d_3),cm(e_3)))) records how variables are instantiated at {21}.
+The message (m3_1,l1_7,cmt(c2,cm(d_3),cm(e_3))) that the attacker may have by 8 may be received at input {21}.
+We have l1_7 ≠ cmt(c2,cm(d_3),cm(e_3)).
+So the message zs(sh(g[],c2),d_3,e_3,m3_1,(l1_7,cmt(c2,cm(d_3),cm(e_3)))) may be sent to the attacker at output {25}.
+attacker(zs(sh(g[],c2),d_3,e_3,m3_1,(l1_7,cmt(c2,cm(d_3),cm(e_3))))).
+
+10. We assume as hypothesis that
+attacker(l1_8).
+
+11. We assume as hypothesis that
+attacker(m2_4).
+
+12. By 11, the attacker may know m2_4.
+By 10, the attacker may know l1_8.
+By 5, the attacker may know cmt(c2,cm(d_3),cm(e_3)).
+Using the function 3-tuple the attacker may obtain (m2_4,l1_8,cmt(c2,cm(d_3),cm(e_3))).
+attacker((m2_4,l1_8,cmt(c2,cm(d_3),cm(e_3)))).
+
+13. The event @p_act(@occ21_2,(m2_4,l1_8,cmt(c2,cm(d_3),cm(e_3)))) records how variables are instantiated at {21}.
+The message (m2_4,l1_8,cmt(c2,cm(d_3),cm(e_3))) that the attacker may have by 12 may be received at input {21}.
+We have l1_8 ≠ cmt(c2,cm(d_3),cm(e_3)).
+So the message zs(sh(g[],c2),d_3,e_3,m2_4,(l1_8,cmt(c2,cm(d_3),cm(e_3)))) may be sent to the attacker at output {25}.
+attacker(zs(sh(g[],c2),d_3,e_3,m2_4,(l1_8,cmt(c2,cm(d_3),cm(e_3))))).
+
+14. We assume as hypothesis that
+attacker(l1_9).
+
+15. We assume as hypothesis that
+attacker(m1_4).
+
+16. By 15, the attacker may know m1_4.
+By 14, the attacker may know l1_9.
+By 5, the attacker may know cmt(c2,cm(d_3),cm(e_3)).
+Using the function 3-tuple the attacker may obtain (m1_4,l1_9,cmt(c2,cm(d_3),cm(e_3))).
+attacker((m1_4,l1_9,cmt(c2,cm(d_3),cm(e_3)))).
+
+17. The event @p_act(@occ21_1,(m1_4,l1_9,cmt(c2,cm(d_3),cm(e_3)))) records how variables are instantiated at {21}.
+The message (m1_4,l1_9,cmt(c2,cm(d_3),cm(e_3))) that the attacker may have by 16 may be received at input {21}.
+We have l1_9 ≠ cmt(c2,cm(d_3),cm(e_3)).
+So the message zs(sh(g[],c2),d_3,e_3,m1_4,(l1_9,cmt(c2,cm(d_3),cm(e_3)))) may be sent to the attacker at output {25}.
+attacker(zs(sh(g[],c2),d_3,e_3,m1_4,(l1_9,cmt(c2,cm(d_3),cm(e_3))))).
+
+18. By 17, the attacker may know zs(sh(g[],c2),d_3,e_3,m1_4,(l1_9,cmt(c2,cm(d_3),cm(e_3)))).
+By 13, the attacker may know zs(sh(g[],c2),d_3,e_3,m2_4,(l1_8,cmt(c2,cm(d_3),cm(e_3)))).
+By 9, the attacker may know zs(sh(g[],c2),d_3,e_3,m3_1,(l1_7,cmt(c2,cm(d_3),cm(e_3)))).
+Using the function 3-tuple the attacker may obtain (zs(sh(g[],c2),d_3,e_3,m1_4,(l1_9,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m2_4,(l1_8,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m3_1,(l1_7,cmt(c2,cm(d_3),cm(e_3))))).
+attacker((zs(sh(g[],c2),d_3,e_3,m1_4,(l1_9,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m2_4,(l1_8,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m3_1,(l1_7,cmt(c2,cm(d_3),cm(e_3)))))).
+
+19. The event @p_act(@occ70_1,(zs(sh(g[],c2),d_3,e_3,m1_4,(l1_9,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m2_4,(l1_8,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m3_1,(l1_7,cmt(c2,cm(d_3),cm(e_3)))))) records how variables are instantiated at {70}.
+The message (zs(sh(g[],c2),d_3,e_3,m1_4,(l1_9,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m2_4,(l1_8,cmt(c2,cm(d_3),cm(e_3)))),zs(sh(g[],c2),d_3,e_3,m3_1,(l1_7,cmt(c2,cm(d_3),cm(e_3))))) that the attacker may have by 18 may be received at input {70}.
+We have ((l1_8,cmt(c2,cm(d_3),cm(e_3))) ≠ (l1_7,cmt(c2,cm(d_3),cm(e_3))) | m2_4 ≠ m3_1) && (m1_4 ≠ m3_1 | (l1_9,cmt(c2,cm(d_3),cm(e_3))) ≠ (l1_7,cmt(c2,cm(d_3),cm(e_3)))) && ((l1_9,cmt(c2,cm(d_3),cm(e_3))) ≠ (l1_8,cmt(c2,cm(d_3),cm(e_3))) | m1_4 ≠ m2_4).
+So the message sh(g[],c2) may be sent to the attacker at output {76}.
+attacker(sh(g[],c2)).
+
+20. By 19, attacker(sh(g[],c2)).
+The goal is reached, represented in the following fact:
+attacker(sh(g[],c2)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+out(c, ~M) with ~M = pubk(g) at {1}
+
+new d_1: bitstring creating d_4 at {16} in copy a_4
+
+new e_1: bitstring creating e_4 at {17} in copy a_4
+
+event Created(c2,d_4,e_4) at {18} in copy a_4
+
+out(c, cmt(c2,~M_1,~M_2)) with ~M_1 = cm(d_4), ~M_2 = cm(e_4) at {19} in copy a_4
+
+in(c, (a_5,a_6,cmt(c2,~M_1,~M_2))) with ~M_1 = cm(d_4), ~M_2 = cm(e_4) at {21} in copy a_4, a_7
+
+event Signed(c2,a_5,(a_6,cmt(c2,cm(d_4),cm(e_4)))) at {23} in copy a_4, a_7
+
+event Used(c2,d_4,e_4,a_5) at {24} in copy a_4, a_7
+
+out(c, ~M_3) with ~M_3 = zs(sh(g,c2),d_4,e_4,a_5,(a_6,cmt(c2,cm(d_4),cm(e_4)))) at {25} in copy a_4, a_7
+
+in(c, (a_8,a_9,cmt(c2,~M_1,~M_2))) with ~M_1 = cm(d_4), ~M_2 = cm(e_4) at {21} in copy a_4, a_10
+
+event Signed(c2,a_8,(a_9,cmt(c2,cm(d_4),cm(e_4)))) at {23} in copy a_4, a_10
+
+event Used(c2,d_4,e_4,a_8) at {24} in copy a_4, a_10
+
+out(c, ~M_4) with ~M_4 = zs(sh(g,c2),d_4,e_4,a_8,(a_9,cmt(c2,cm(d_4),cm(e_4)))) at {25} in copy a_4, a_10
+
+in(c, (a_11,a_12,cmt(c2,~M_1,~M_2))) with ~M_1 = cm(d_4), ~M_2 = cm(e_4) at {21} in copy a_4, a_13
+
+event Signed(c2,a_11,(a_12,cmt(c2,cm(d_4),cm(e_4)))) at {23} in copy a_4, a_13
+
+event Used(c2,d_4,e_4,a_11) at {24} in copy a_4, a_13
+
+out(c, ~M_5) with ~M_5 = zs(sh(g,c2),d_4,e_4,a_11,(a_12,cmt(c2,cm(d_4),cm(e_4)))) at {25} in copy a_4, a_13
+
+in(c, (~M_3,~M_4,~M_5)) with ~M_3 = zs(sh(g,c2),d_4,e_4,a_5,(a_6,cmt(c2,cm(d_4),cm(e_4)))), ~M_4 = zs(sh(g,c2),d_4,e_4,a_8,(a_9,cmt(c2,cm(d_4),cm(e_4)))), ~M_5 = zs(sh(g,c2),d_4,e_4,a_11,(a_12,cmt(c2,cm(d_4),cm(e_4)))) at {70} in copy a_14
+
+event Extracted(sh(g,c2)) at {75} in copy a_14
+
+out(c, ~M_6) with ~M_6 = sh(g,c2) at {76} in copy a_14
+
+The attacker has the message ~M_6 = sh(g,c2).
+A trace has been found.
+RESULT not attacker(sh(g[],c2)) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not attacker(sh(g[],c2)) is false.
+
+--------------------------------------------------------------
+

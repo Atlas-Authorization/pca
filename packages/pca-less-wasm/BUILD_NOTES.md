@@ -98,7 +98,7 @@ number. **NIST Category 1 == `CATEGORY=252`** (N=252, K=126, q=127,
 **Chosen default: `-DCATEGORY=252 -DTARGET=45`** — the short-signature corner
 (the one the upstream README showcases, `LESS_benchmark_cat_252_45`). Smallest
 signature is the property that matters when a code-based signature travels
-inside a PCA proof/token. The build script (`lessbuild.sh`) takes
+inside a PCA proof/token. The original build script took
 `LESS_CATEGORY`/`LESS_TARGET` env overrides so switching to the balanced `192`
 (small pubkey) or `68` is a one-flag change with no other edits.
 
@@ -142,7 +142,7 @@ The entire library funnels randomness through a **single global SHAKE CSPRNG**
   verify is fully deterministic and needs no entropy at all.
 
 So the wasm randomness strategy is clean and needs **no source edits** — just a
-tiny glue file (emitted by `lessbuild.sh` as `less_wasm_glue.c`) that seeds the
+tiny glue file (`scripts/less_wasm_glue.c`) that seeds the
 existing global state:
 - `less_autoseed()` → `uint8_t s[32]; getentropy(s, sizeof s); init_randombytes(s, sizeof s);`
   `getentropy` is provided by **wasi-libc** and lowers to the WASI
@@ -158,7 +158,7 @@ The caller (KAT harness / TS wrapper) MUST call `less_autoseed()` or
 
 ---
 
-## Build knobs the VM script applies (summary, see `~/.pca-vm-state/lessbuild.sh`)
+## Build knobs (summary; the build is now `scripts/build-wasm.sh` over the patched sources in `sdks/pca-less-c`)
 
 - Toolchain: `wasi-sdk-25.0` (`clang --target=wasm32-wasi`, its bundled
   `wasi-sysroot`). `getentropy` resolves from wasi-libc; no `--allow-undefined`.

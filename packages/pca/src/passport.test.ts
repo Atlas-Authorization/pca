@@ -68,6 +68,18 @@ describe('matchesBinding', () => {
     expect(matchesBinding(p, { min_measurement: { svn: 43 } }).ok).toBe(false); // SVN too low
   });
 
+  it('min_measurement svn is strict and fails closed (0.4.2)', () => {
+    for (const mm of [{ svn: '42' }, { svn: Number.NaN }, { svn: -1 }, { svn: 1.5 }, { svn: -0 }, {}, { svn: 1, x: 1 }, null, 5, ['x']] as never[]) {
+      expect(matchesBinding(p, { min_measurement: mm })).toEqual({ ok: false, reasons: ['min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)'] });
+    }
+    for (const rm of ['0x2a', '4.2e1', ' 42 ', '042', '+42', '42.0']) {
+      const q = issuePassport({ ...base, runtime_measurement: rm });
+      expect(matchesBinding(q, { min_measurement: { svn: 1 } }).reasons, rm).toEqual([`runtime SVN ${rm} < required 1`]);
+    }
+    expect(matchesBinding(issuePassport({ ...base, runtime_measurement: '0' }), { min_measurement: { svn: 0 } }).ok).toBe(true);
+    expect(matchesBinding(p, { min_measurement: Object.assign(Object.create(null), { svn: 42 }) }).ok).toBe(true);
+  });
+
   it('an empty binding accepts anything', () => {
     expect(matchesBinding(p, {}).ok).toBe(true);
   });

@@ -1,0 +1,5 @@
+# copies of sdks/rust-pca/src/*.rs laid down by build.sh (lib.rs is the tracked, proof-module-appended copy)
+/src/*.rs
+!/src/kroot.rs
+!/src/lib.rs
+!/src/proofs.rs

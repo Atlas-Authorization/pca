@@ -1,0 +1,26 @@
+# formal-kani-tiers.txt : which Kani harnesses run on the hosted runners (4 vCPU, 16 GB, 6 h per job).
+#   <tier> <kani-crate dir> <harness regex (matched against the fully qualified name)>  <reason>
+# tier exclude : never scheduled here (does not fit; runs on a bigger machine)
+# tier probe   : scheduled only by a manual run with kani_probe=true, result not gating (fit unknown / being measured)
+# tier long    : one NON-GATING job per harness on every run (timeout-minutes 355, ulimit -v below 16 GB, B-tree
+#                unwindset probe as in run-iv-close.sh); outcome PROVED / FAILED / NOT-CONCLUDED in the run summary
+# tier broken  : (crate) a compile failure of this harness crate is reported as a warning, not a failure; retried on every run
+# Every other listed harness is REQUIRED: it must report VERIFICATION SUCCESSFUL within the job limit.
+exclude kani-rust-pca decision_logic_abstract$        did not finish in 8 h 23 m (CaDiCaL) / 4 h 57 m (kissat, 16 vCPU)
+exclude kani-rust-pca json_abs_pcactn_shape$          did not finish in 8 h 17 m / 3 h 05 m on 16 vCPU
+exclude kani-rust-pca b64u_wrapper_contract_le64$     about 4 h 50 m on 16 vCPU; over 6 h expected on 4 vCPU
+probe   kani-rust-pca json_field1_                    bounded-2 variants ran out of memory at 12 GB
+long    kani-rust-pca ::d_                            decomposed decision harnesses: about 3 h 30 m each on the farm (0.4.2 freeze) without a verdict; B-tree unwinding
+probe   kani-rust-pca decode_b64u_no_panic_bounded$   lengths 4..7 ran out of memory at 12 GB
+probe   kani-rust-pca decision_aggregation$           monolithic decision harness (same B-tree loops)
+probe   kani-zkvm-core zk_decode_b64u_strict_bounded6$  exhausted the 16 GB runner after 13 min
+# Resource moves after run 38495915078 (0.4.2 RC). None of these had a failed check: Kani printed "0 of N failed" with
+# VERIFICATION FAILED (a property in CBMC state ERROR: the solver gave up, which under ulimit -v is out of memory), "CBMC
+# failed with status 6" (an exception, bad_alloc under the cap), or kani-driver panicked on truncated CBMC output.
+long    kani-rust-pca decision_aggregation_(ints|chain_cap)$  CBMC status 6 at 15 GB after 16 / 30 min (also after 25 min before same_strict_hash was stubbed); the real Verdict.checks BTreeMap (9 String-key inserts) and per-hop serde_json maps unroll the B-tree loops (same cost as the d_* harnesses)
+probe   kani-rust-pca decode_b64u_no_panic_bounded4_l[0234]$  solver ERROR at 15 GB within 2 min for every length that reaches the real base64 decode+encode chain (l0 too: CBMC symex does not fold heap contents; the concrete b64u_decode_metadata_mirror takes 229 s for the decoding loop alone); l1 is rejected before the crate and stays required; the property is covered compositionally (b64u_spec_vs_crate_le4..6 + the b64wrap shards)
+probe   kani-rust-pca wrap::b_(length_rules|roundtrip)_le64$  unsharded forms of the b_len_* / b_rt_* shards (their union is exactly this domain); larger than the largest shard, which already needs 90 GB
+probe   kani-rust-pca wrap::b_len_n(48_51|52_55|56_59|60_64)$  solver ERROR at 15 GB on the runner; PROVED on the farm at 28 GB in the 0.4.2 freeze run (results/kani-compositional.txt; wrapper and harness unchanged since)
+probe   kani-rust-pca wrap::b_rt_n(36_39|40_43|44_47|48_51|52_55|56_59|60_64)$  solver ERROR / CBMC status 6 at 15 GB; PROVED on the farm at 28 GB (n36..n55) and 90 GB (n56..n64) in the 0.4.2 freeze run (results/kani-compositional.txt)
+probe   kani-rust-pca b64_encoder::b64e_contract_n(09|12|27)$  real b64_encode over the proved loop contract at longer lengths (12 reaches from_utf8's 16-byte ASCII block path); fit on the runner not yet measured (the required shards are n00..n06)
+probe   kani-rust-pca b64_encoder::b64e_real_n0[0-3]$  the real end-to-end encoder, nothing stubbed: measures whether the full chain fits (the required proof is compositional: b64e_len_arith_any_n + b64e_loop_* + b64e_contract_n00..n06)

@@ -1,6 +1,8 @@
 // STAGE 3 of the conformance pipeline: generates >= 4000 ADVERSARIAL parser-differential vectors into
 // conformance/vectors-adversarial.json.gz (FULL set) and splices a deterministic representative SAMPLE into the curated core
 // conformance/vectors.json (idempotent: every vector this script owns is named `adv-*` and is dropped/re-added).
+// `--check` writes nothing and exits 1 if the committed .gz (fixed gzip header + decompressed bytes) or the core's adv-* sample /
+// adversarial primitives differ from a fresh generation. Needs `node --stack-size=4000`.
 //
 //   pnpm --filter @atlasauth/pca build \
 //     && node packages/pca/scripts/gen-conformance.mjs \
@@ -22,7 +24,7 @@
 import { createHash } from 'node:crypto';
 import * as pca from '../dist/index.js';
 import * as W from './ed25519-weak.mjs';
-import { CORE_PATH, readCore, writeAdversarial, writeCore } from './conformance-io.mjs';
+import { checkAdversarial, cloneJson, CORE_PATH, readCore, serializeCorpus, writeAdversarial, writeCore } from './conformance-io.mjs';
 
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
@@ -32,7 +34,7 @@ const KEYMAP = { chain: 'cap_chain' };
 const seed = (label) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${label}`).digest());
 const mk = (label) => { const secretKey = seed(label); return { label, secretKey, publicKey: pca.publicKeyOf(secretKey) }; };
 const principal = mk('principal'), agent = mk('agent'), sub = mk('subagent'), rogue = mk('rogue');
-const clone = (x) => JSON.parse(JSON.stringify(x));
+const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const te = new TextEncoder();
 const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 
@@ -715,10 +717,10 @@ const canonical = [];
 
 // ================================================================= standalone chain API vectors (R4-01): primitives.chain_pin
 // The standalone `verify_chain` / `VerifyChain` entry point of every verifier (NOT the PCActn path, which already pins hop 0
-// via chain[0] == grant). A vector is { name, description, chain, expected_root_issuer, pq_pins?, trusted_root?,
+// via chain[0] == grant). A vector is { name, requires?, description, chain, expected_root_issuer, pq_pins?, trusted_root?,
 // allowed_suites?, expect: { ok, reason? } }. A non-ed25519 ROOT is accepted only when the verifier supplies `pq_pins[root.issuer]`
-// equal to the root's `pq_pk`, or `trusted_root` is the root itself (same content hash); otherwise `reason` is the exact R3-01
-// string (runners compare `ok` always, and `reason` exactly whenever it starts with "hop 0: root suite"). Reference: pca.verifyChain.
+// equal to the root's `pq_pk`, or `trusted_root` is the root itself (same content hash) and no supplied pin for the issuer
+// disagrees; otherwise `reason` is the exact R3-01 (or pin-mismatch) string (runners compare `ok` always, and `reason` exactly whenever it starts with "hop 0: root suite"). Reference: pca.verifyChain.
 const chainPin = [];
 {
   const sd = (l) => seed('chainpin/' + l);
@@ -743,6 +745,8 @@ const chainPin = [];
   const tamper = (c) => { const x = clone(c); const b = pca.unb64u(x.pq_sig ?? x.sig); b[7] ^= 1; if (x.pq_sig !== undefined) x.pq_sig = pca.b64u(b); else x.sig = pca.b64u(b); return x; };
   const pin = (id, k) => ({ [id]: pk(k) });
   const REASON_PIN = (alg) => `hop 0: root suite '${alg}' needs a PQ key pinned for the root issuer (policy.pqPins) or the verifier's stored grant (policy.trustedRoot); the root's own pq_pk proves nothing about who issued it (R3-01)`;
+  // 0.4.2: with BOTH a stored grant and a pin for the root issuer, both must agree (the stored grant never overrides a pin).
+  const REASON_PIN_MISMATCH = (alg) => `hop 0: root suite '${alg}': the server-side PQ pin for the root issuer (policy.pqPins) does not match the stored grant's pq_pk (fail closed)`;
   const add = (name, description, chain, o = {}, wantOk, wantReason) => {
     const eri = o.expected_root_issuer === undefined ? victimPub : o.expected_root_issuer;
     const policy = {};
@@ -752,8 +756,11 @@ const chainPin = [];
     const r = pca.verifyChain(chain, eri, policy);
     if (r.ok !== wantOk) throw new Error(`chain_pin ${name}: reference ok=${r.ok} (${r.reason}) != intended ${wantOk}`);
     if (wantReason !== undefined && r.reason !== wantReason) throw new Error(`chain_pin ${name}: reference reason ${JSON.stringify(r.reason)} != intended ${JSON.stringify(wantReason)}`);
+    // Suite capability: the first non-ed25519 suite the chain uses. A runner whose runtime lacks it does not compare the
+    // entry: it asserts ok:false (with unsupported_suite in the reason when the reference accepts) and counts it.
+    const requires = chain.map((c) => c.alg ?? 'ed25519').find((a) => a !== 'ed25519');
     chainPin.push({
-      name: 'chainpin-' + name, class: wantOk ? 'positive' : 'negative', description, chain, expected_root_issuer: eri,
+      name: 'chainpin-' + name, ...(requires !== undefined ? { requires } : {}), class: wantOk ? 'positive' : 'negative', description, chain, expected_root_issuer: eri,
       ...(o.pq_pins !== undefined ? { pq_pins: o.pq_pins } : {}), ...(o.trusted_root !== undefined ? { trusted_root: o.trusted_root } : {}),
       ...(o.allowed_suites !== undefined ? { allowed_suites: o.allowed_suites } : {}),
       expect: { ok: r.ok, ...(r.ok ? {} : { reason: r.reason }) },
@@ -773,6 +780,9 @@ const chainPin = [];
   add('hybrid-root-pinned', 'A genuine hybrid root with pq_pins[issuer] equal to its pq_pk: accepted.', [hybGen], { pq_pins: pin(victimPub, victimMl) }, true);
   add('pure-pq-root-trusted-root', 'The verifier\'s stored grant (trusted_root) is this very root: accepted without a pin.', [pureGen], { trusted_root: pureGen }, true);
   add('hybrid-root-trusted-root', 'trusted_root is this hybrid root: accepted without a pin.', [hybGen], { trusted_root: hybGen }, true);
+  add('pure-pq-root-trusted-root-and-matching-pin', 'trusted_root is this root AND pq_pins[issuer] equals its pq_pk: both authorities agree, accepted.', [pureGen], { trusted_root: pureGen, pq_pins: pin(victimPub, victimMl) }, true);
+  add('pure-pq-root-trusted-root-wrong-pin', 'trusted_root is this very root, but the verifier ALSO pins a different key for the issuer: the two authorities disagree, refused (the stored grant never overrides a disagreeing pin).', [pureGen], { trusted_root: pureGen, pq_pins: pin(victimPub, atkMl) }, false, REASON_PIN_MISMATCH('ml-dsa-65'));
+  add('hybrid-root-trusted-root-wrong-pin', 'trusted_root is this hybrid root, but the pin for the issuer is another key: refused (fail closed).', [hybGen], { trusted_root: hybGen, pq_pins: pin(victimPub, atkMl) }, false, REASON_PIN_MISMATCH('hybrid-ed25519-ml-dsa-65'));
   add('hybrid-root-wrong-pin', 'A genuine hybrid root, but the pin for the issuer is another key: refused.', [hybGen], { pq_pins: pin(victimPub, atkMl) }, false, REASON_PIN('hybrid-ed25519-ml-dsa-65'));
   add('pure-pq-root-pinned-bad-signature', 'The pin matches the root\'s pq_pk but the PQ signature is corrupt: the pin only authorises the key, the signature must still verify.', [tamper(pureGen)], { pq_pins: pin(victimPub, victimMl) }, false);
   add('hybrid-root-pinned-bad-pq-signature', 'The pin matches but the hybrid root\'s pq_sig is corrupt: refused.', [tamper(hybGen)], { pq_pins: pin(victimPub, victimMl) }, false);
@@ -830,7 +840,10 @@ file.primitives.json_parse = [...file.primitives.json_parse.slice(0, baseCounts.
 file.primitives.b64u = [...file.primitives.b64u.slice(0, baseCounts.b64u), ...primSample.b64u];
 file.primitives.canonical = [...file.primitives.canonical.slice(0, baseCounts.canonical), ...primSample.canonical];
 file.primitives.chain_pin = chainPin;
-writeCore(file);
+const CHECK = process.argv.includes('--check');
+let committedCore;
+if (CHECK) committedCore = readCore();
+else writeCore(file);
 const advFile = {
   format: file.format, ver: file.ver,
   description: 'FULL adversarial parser-differential corpus (a superset of the adv-* sample embedded in vectors.json). Same vector schema as vectors.json; `primitives` holds ONLY the adversarial json_parse/b64u/canonical entries (the base ones live in vectors.json). Generated by packages/pca/scripts/gen-conformance-adv.mjs.',
@@ -838,6 +851,20 @@ const advFile = {
   vectors: advVectors,
   primitives: { json_parse: jsonParse, b64u, canonical },
 };
+if (CHECK) {
+  // --check writes nothing. The full set: the committed .gz must carry the fixed header and decompress to exactly a fresh
+  // serialisation. The core: only what THIS stage owns is compared (the adv-* sample, in order, and the adversarial /
+  // chain_pin primitives); vectors.json's other entries and their position belong to the later pipeline stages.
+  const problems = [];
+  const advWhy = checkAdversarial(advFile);
+  if (advWhy) problems.push(`vectors-adversarial: ${advWhy}`);
+  const fresh = JSON.parse(serializeCorpus(file));
+  const owned = (f) => JSON.stringify({ adv: f.vectors.filter((v) => v.name.startsWith('adv-')), json_parse: f.primitives.json_parse, b64u: f.primitives.b64u, canonical: f.primitives.canonical, chain_pin: f.primitives.chain_pin });
+  if (owned(committedCore) !== owned(fresh)) problems.push(`${CORE_PATH}: the adv-* sample / adversarial primitives / chain_pin differ from a fresh generation`);
+  if (problems.length) { console.error('DRIFT:\n  ' + problems.join('\n  ')); process.exit(1); }
+  console.log(`ok: ${advVectors.length} adversarial vectors + the core's adv-* sample regenerate identically (fixed gzip header, decompressed content compared)`);
+  process.exit(0);
+}
 const advPath = writeAdversarial(advFile, { plain: process.argv.includes('--plain') });
 const prim = jsonParse.length + b64u.length + canonical.length;
 console.log(`wrote ${advVectors.length} adversarial vectors + ${prim} adversarial primitive vectors (json_parse ${jsonParse.length}, b64u ${b64u.length}, canonical ${canonical.length}) -> ${advPath}`);

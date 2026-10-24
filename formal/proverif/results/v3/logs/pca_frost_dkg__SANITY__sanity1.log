@@ -1,0 +1,71 @@
+-- Query not event(DKGDone(y_1)) in process 0.
+Translating the process into Horn clauses...
+Completing...
+Starting query not event(DKGDone(y_1))
+goal reachable: attacker(a) -> event(DKGDone(agg((pub(a1[]),pub(a2[])),pub(a))))
+
+Derivation:
+
+1. Using the function id3 the attacker may obtain id3.
+attacker(id3).
+
+2. The attacker has some term sid_3.
+attacker(sid_3).
+
+3. By 2, the attacker may know sid_3.
+By 1, the attacker may know id3.
+Using the function 2-tuple the attacker may obtain (sid_3,id3).
+attacker((sid_3,id3)).
+
+4. We assume as hypothesis that
+attacker(a).
+
+5. By 4, the attacker may know a.
+Using the function pub the attacker may obtain pub(a).
+attacker(pub(a)).
+
+6. By 4, the attacker may know a.
+By 5, the attacker may know pub(a).
+By 3, the attacker may know (sid_3,id3).
+Using the function pop the attacker may obtain pop(a,pub(a),(sid_3,id3)).
+attacker(pop(a,pub(a),(sid_3,id3))).
+
+7. By 2, the attacker may know sid_3.
+By 5, the attacker may know pub(a).
+By 6, the attacker may know pop(a,pub(a),(sid_3,id3)).
+Using the function 3-tuple the attacker may obtain (sid_3,pub(a),pop(a,pub(a),(sid_3,id3))).
+attacker((sid_3,pub(a),pop(a,pub(a),(sid_3,id3)))).
+
+8. The message (sid_3,pub(a),pop(a,pub(a),(sid_3,id3))) that the attacker may have by 7 may be received at input {8}.
+So event DKGDone(agg((pub(a1[]),pub(a2[])),pub(a))) may be executed at {11}.
+event(DKGDone(agg((pub(a1[]),pub(a2[])),pub(a)))).
+
+9. By 8, event(DKGDone(agg((pub(a1[]),pub(a2[])),pub(a)))).
+The goal is reached, represented in the following fact:
+event(DKGDone(agg((pub(a1[]),pub(a2[])),pub(a)))).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new a1: bitstring creating a1_1 at {1}
+
+new a2: bitstring creating a2_1 at {2}
+
+out(c, (~M,~M_1)) with ~M = pub(a1_1), ~M_1 = pub(a2_1) at {3}
+
+in(c, (a_1,pub(a_2),pop(a_2,pub(a_2),(a_1,id3)))) at {8} in copy a_3
+
+event DKGDone(agg((pub(a1_1),pub(a2_1)),pub(a_2))) at {11} in copy a_3 (goal)
+
+The event DKGDone(agg((pub(a1_1),pub(a2_1)),pub(a_2))) is executed at {11} in copy a_3.
+A trace has been found.
+RESULT not event(DKGDone(y_1)) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not event(DKGDone(y_1)) is false.
+
+--------------------------------------------------------------
+

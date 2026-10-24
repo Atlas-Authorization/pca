@@ -42,6 +42,7 @@ import {
   DEFAULT_REQUIRED_CHECKS,
   canonicalBytes,
   createThresholdVerifier,
+  hashCanonical,
   pcactnDigest,
   verifyPCActn,
 } from '@atlasauth/pca';
@@ -137,12 +138,16 @@ export function attachPcaToA2AMessage(message: A2AMessage, pcActn: PCActn): A2AM
  * when no well-formed proof is present (the verify step then fails closed).
  */
 export function extractPca(task: A2ATask): PCActn | undefined {
+  // Total over hostile shapes: a missing `status` used to throw, and a non-array `history` with a large own `length`
+  // (`{"length": 1e9}`) was walked index by index.
+  if (task === null || task === undefined) return undefined;
   const onTask = readPca(task.metadata);
   if (onTask) return onTask;
-  const onStatus = readPca(task.status.message?.metadata);
+  const status: unknown = task.status;
+  const onStatus = status !== null && typeof status === 'object' ? readPca((status as A2ATaskStatus).message?.metadata) : undefined;
   if (onStatus) return onStatus;
-  const history = task.history;
-  if (history && history.length > 0) {
+  const history: unknown = task.history;
+  if (Array.isArray(history) && history.length > 0) {
     for (let i = history.length - 1; i >= 0; i--) {
       const m = history[i];
       const onMsg = readPca(m?.metadata);
@@ -154,7 +159,7 @@ export function extractPca(task: A2ATask): PCActn | undefined {
 
 /** Extract the PCActn carried on a single Message (fail-closed). */
 export function extractPcaFromMessage(message: A2AMessage): PCActn | undefined {
-  return readPca(message.metadata);
+  return message === null || message === undefined ? undefined : readPca(message.metadata);
 }
 
 /** Options shared by every PCActn verification surface in this module. */
@@ -222,6 +227,7 @@ function chainRoot(chain: CapabilityChain | undefined): Capability | undefined {
  */
 async function verifyPcActn(pcActn: PCActn, opts: PcaVerifyOptions): Promise<A2AVerification> {
   assertAuthority(opts);
+  if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };
   const root = chainRoot(pcActn.cap_chain);
   if (!root) return { ok: false, reason: 'PCActn carries no capability chain', pcActn };
 
@@ -427,6 +433,7 @@ export async function verifyAgentCard(
   card: AgentCard,
   opts: VerifyAgentCardOptions,
 ): Promise<AgentCardVerification> {
+  if (card === null || typeof card !== 'object') return { ok: false, reason: 'agent card is not an object' };
   const signatures = card.signatures;
   if (!Array.isArray(signatures) || signatures.length === 0) {
     return { ok: false, reason: 'agent card carries no signatures' };
@@ -445,7 +452,13 @@ export async function verifyAgentCard(
     return { ok: false, reason: `could not resolve verification key: ${(e as Error).message}` };
   }
 
-  const payload = cardSigningBytes(card);
+  // A card value with no strict canonical form (a float like 1e21, a lone surrogate, ...) is a refusal, not an exception.
+  let payload: Uint8Array;
+  try {
+    payload = cardSigningBytes(card);
+  } catch (e) {
+    return { ok: false, reason: `agent card has no canonical form: ${(e as Error).message}` };
+  }
   let passportRef: string | undefined;
 
   for (let i = 0; i < signatures.length; i++) {
@@ -629,21 +642,103 @@ export function pcaBindingFromA2APaymentMandate(mandate: A2APaymentMandate): Pca
   return { ...mandate.credentialSubject.x_pca };
 }
 
+/** Options for {@link verifyA2APaymentMandate}: the shared verifier options plus the human-present evidence. */
+export interface PaymentMandateVerifyOptions extends PcaVerifyOptions {
+  /**
+   * The signer set (agent + guardian + principal) a `human_present: true` mandate is checked against: the PCActn's threshold
+   * shares must verify at t=3. Without it a mandate claiming `human_present: true` is refused (the claim is unsigned).
+   */
+  humanSignerSet?: Signer[];
+}
+
+const own = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
+const isRecord = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
+
 /**
- * Verify an AP2 Payment Mandate against the PCActn it references. Fail-closed: the mandate's
- * `x_pca.pcactn_digest` MUST equal `pcactnDigest(pcActn)` (so the mandate is bound to THIS proof), and
- * the PCActn itself must verify (signature, audience, validity, chain, plan inclusion). This is what makes
- * the AP2 payment mandate PCA-verifiable rather than a bare assertion.
+ * The fields of an (unsigned) Payment Mandate that the PCActn must authorize, checked against the PCActn and against the
+ * params it commits to (`params`, already opened against `action.params_digest` by the caller). Returns the first
+ * mismatch, or undefined.
+ */
+function mandateBindingError(m: A2APaymentMandateContents, pcActn: PCActn, params: Record<string, unknown>, opts: PaymentMandateVerifyOptions): string | undefined {
+  const x = m.x_pca as unknown;
+  if (!isRecord(x)) return 'payment mandate carries no x_pca binding';
+  const chain = pcActn.cap_chain;
+  const leaf: unknown = Array.isArray(chain) && chain.length > 0 ? chain[chain.length - 1] : undefined;
+  const leafHolder = isRecord(leaf) ? leaf.holder : undefined;
+  const bound: [string, unknown][] = [
+    ['aud', pcActn.aud],
+    ['verb', pcActn.action?.verb],
+    ['resource', pcActn.action?.resource],
+    ['params_digest', pcActn.action?.params_digest],
+    ['grant_ref', pcActn.grant_ref],
+    ['leaf_holder', leafHolder],
+  ];
+  for (const [k, v] of bound) if (!own(x, k) || typeof x[k] !== 'string' || x[k] !== v) return `payment mandate x_pca.${k} is not the PCActn's`;
+  // amount + currency: the authorized params MUST carry both, and the mandate must state exactly them
+  const amt = m.amount as unknown;
+  if (!isRecord(amt) || typeof amt.value !== 'number' || !Number.isFinite(amt.value) || typeof amt.currency !== 'string') return 'payment mandate amount is malformed';
+  if (!own(params, 'amount') || typeof params.amount !== 'number' || !Number.isFinite(params.amount)) return 'the PCActn params carry no numeric amount to bind the mandate amount to';
+  if (!own(params, 'currency') || typeof params.currency !== 'string') return 'the PCActn params carry no currency to bind the mandate currency to';
+  if (amt.value !== params.amount || amt.currency !== params.currency) return 'payment mandate amount / currency differ from the authorized PCActn params';
+  // payee and instrument: bound whenever either side names one (a mandate cannot widen or drop what the action fixed)
+  const merchant = own(m, 'merchant') ? m.merchant : undefined;
+  const pMerchant = own(params, 'merchant') ? params.merchant : undefined;
+  if (merchant !== pMerchant) return 'payment mandate merchant differs from the authorized PCActn params';
+  if (own(params, 'payment_method')) {
+    let same = false;
+    try {
+      same = hashCanonical(m.payment_method) === hashCanonical(params.payment_method);
+    } catch {
+      same = false;
+    }
+    if (!same) return 'payment mandate payment_method differs from the authorized PCActn params';
+  }
+  // human_present is an unsigned claim: true only with a verified t=3 principal co-signature on the PCActn
+  if (typeof m.human_present !== 'boolean') return 'payment mandate human_present must be a boolean';
+  if (m.human_present && !(Array.isArray(opts.humanSignerSet) && verifiedHumanPresent(pcActn, opts.humanSignerSet))) {
+    return 'payment mandate claims human_present but no verified principal co-signature backs it (pass humanSignerSet)';
+  }
+  return undefined;
+}
+
+/**
+ * Verify an AP2 Payment Mandate against the PCActn it references. The mandate is NOT signed: every field a payer acts on
+ * must be authorized by the PCActn. Fail-closed:
+ *  - `x_pca.pcactn_digest` equals `pcactnDigest(pcActn)`, and every other `x_pca` field (`aud`, `verb`, `resource`,
+ *    `params_digest`, `grant_ref`, `leaf_holder`) equals the PCActn's own;
+ *  - the verifier's `context.params` (the action's plaintext params) is REQUIRED and must open `action.params_digest`
+ *    (the `params_digest` check is required on this path);
+ *  - `amount.value` / `amount.currency` equal the params' own `amount` / `currency` exactly (both required in the params);
+ *  - `merchant` equals the params' own `merchant` (both absent is the only other accepted case); when the params carry a
+ *    `payment_method`, the mandate's equals it canonically;
+ *  - `human_present: true` needs `humanSignerSet` and a PCActn whose threshold shares verify at t=3;
+ *  - the PCActn itself verifies with the full verifier (signature, audience, validity, chain, plan, policy, ...).
  */
 export async function verifyA2APaymentMandate(
   mandate: A2APaymentMandate,
   pcActn: PCActn,
-  opts: PcaVerifyOptions,
+  opts: PaymentMandateVerifyOptions,
 ): Promise<A2AVerification> {
   assertAuthority(opts);
-  const bound = mandate.credentialSubject.x_pca.pcactn_digest;
-  if (bound !== pcactnDigest(pcActn)) {
+  // A malformed mandate (no credentialSubject / x_pca) or a PCActn with no strict canonical form is a refusal, not an exception.
+  let bound: unknown;
+  let digest: string;
+  try {
+    bound = mandate.credentialSubject.x_pca.pcactn_digest;
+    digest = pcactnDigest(pcActn);
+  } catch (e) {
+    return { ok: false, reason: `malformed payment mandate or PCActn: ${(e as Error).message}` };
+  }
+  if (bound !== digest) {
     return { ok: false, reason: 'payment mandate is not bound to this PCActn (pcactn_digest mismatch)', pcActn };
   }
-  return verifyPcActn(pcActn, opts);
+  if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };
+  const context = typeof opts.context === 'function' ? await opts.context(pcActn) : (opts.context ?? {});
+  const params: unknown = context.params;
+  if (!isRecord(params)) return { ok: false, reason: 'context.params (the PCActn params plaintext) is required to bind the payment mandate', pcActn };
+  const why = mandateBindingError(mandate.credentialSubject, pcActn, params, opts);
+  if (why !== undefined) return { ok: false, reason: why, pcActn };
+  const require = [...(opts.requireChecks ?? DEFAULT_REQUIRED_CHECKS)];
+  if (!require.includes('params_digest')) require.push('params_digest');
+  return verifyPcActn(pcActn, { ...opts, context, requireChecks: require });
 }

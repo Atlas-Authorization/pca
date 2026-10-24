@@ -15,6 +15,60 @@
 
 export const WELL_KNOWN_PCA_PATH = '/.well-known/pca-configuration';
 
+/**
+ * Intent Layer v2 discovery block (docs/specs/pca-intent-layer-v2.md §4.1 M1, §8): the intent versions the site
+ * verifies, where its signed action schema lives and the keys that sign it (and its `intent_required` bodies), whether
+ * it relays questions to the wallet, the access tier per verb, and its evidence endpoint. An agent sends
+ * `intent_session` only to a site whose `intent.versions` contains 2 (a v1 verifier rejects the unknown member).
+ */
+export interface PcaDiscoveryIntent {
+  versions: number[];
+  actions_uri?: string;
+  schema_keys?: { kid: string; alg: string; pk: string; pq_pk?: string }[];
+  question_relay?: boolean;
+  /** verb -> access tier 0..4 (§3.15). */
+  tiers?: Record<string, number>;
+  evidence_uri?: string;
+}
+
+/** Validate an `intent` discovery block (throws on anything malformed: fail closed). */
+export function parseDiscoveryIntent(v: unknown): PcaDiscoveryIntent {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) throw new Error('parseDiscoveryDocument: intent must be an object');
+  const o = v as Record<string, unknown>;
+  for (const k of Object.keys(o)) {
+    if (!['versions', 'actions_uri', 'schema_keys', 'question_relay', 'tiers', 'evidence_uri'].includes(k)) throw new Error(`parseDiscoveryDocument: intent has unknown member '${k}'`);
+  }
+  if (!Array.isArray(o.versions) || o.versions.length === 0 || !o.versions.every((n) => n === 1 || n === 2)) throw new Error('parseDiscoveryDocument: intent.versions must list 1 and/or 2');
+  const out: PcaDiscoveryIntent = { versions: [...(o.versions as number[])] };
+  for (const k of ['actions_uri', 'evidence_uri'] as const) {
+    if (o[k] !== undefined) {
+      if (typeof o[k] !== 'string' || (o[k] as string).length === 0) throw new Error(`parseDiscoveryDocument: intent.${k} must be a non-empty string`);
+      out[k] = o[k] as string;
+    }
+  }
+  if (o.schema_keys !== undefined) {
+    if (!Array.isArray(o.schema_keys)) throw new Error('parseDiscoveryDocument: intent.schema_keys must be an array');
+    out.schema_keys = o.schema_keys.map((x) => {
+      const e = x as Record<string, unknown>;
+      if (e === null || typeof e !== 'object' || typeof e.kid !== 'string' || typeof e.alg !== 'string' || typeof e.pk !== 'string' || (e.pq_pk !== undefined && typeof e.pq_pk !== 'string')) {
+        throw new Error('parseDiscoveryDocument: intent.schema_keys entries are {kid, alg, pk, pq_pk?}');
+      }
+      return { kid: e.kid, alg: e.alg, pk: e.pk, ...(e.pq_pk !== undefined ? { pq_pk: e.pq_pk as string } : {}) };
+    });
+  }
+  if (o.question_relay !== undefined) {
+    if (typeof o.question_relay !== 'boolean') throw new Error('parseDiscoveryDocument: intent.question_relay must be a boolean');
+    out.question_relay = o.question_relay;
+  }
+  if (o.tiers !== undefined) {
+    if (o.tiers === null || typeof o.tiers !== 'object' || Array.isArray(o.tiers)) throw new Error('parseDiscoveryDocument: intent.tiers must be an object');
+    const t = o.tiers as Record<string, unknown>;
+    if (!Object.values(t).every((n) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 4)) throw new Error('parseDiscoveryDocument: intent.tiers values must be integers 0..4');
+    out.tiers = { ...(t as Record<string, number>) };
+  }
+  return out;
+}
+
 export interface PcaDiscoveryDocument {
   /** The resource-server / instance id a PCActn's signed `aud` must equal. REQUIRED. */
   audience: string;
@@ -38,6 +92,8 @@ export interface PcaDiscoveryDocument {
   trusted_roots?: string[];
   /** Freeform, versioned extension bag. */
   metadata?: Record<string, unknown>;
+  /** Intent Layer v2 block (see {@link PcaDiscoveryIntent}). */
+  intent?: PcaDiscoveryIntent;
 }
 
 export interface BuildDiscoveryOptions {
@@ -49,6 +105,7 @@ export interface BuildDiscoveryOptions {
   endpoints?: PcaDiscoveryDocument['endpoints'];
   trustedRoots?: string[];
   metadata?: Record<string, unknown>;
+  intent?: PcaDiscoveryIntent;
 }
 
 const DEFAULT_SUITES = ['ed25519', 'ml-dsa-65', 'hybrid-ed25519-ml-dsa-65'];
@@ -68,6 +125,7 @@ export function buildDiscoveryDocument(opts: BuildDiscoveryOptions): PcaDiscover
     ...(opts.endpoints ? { endpoints: opts.endpoints } : {}),
     ...(opts.trustedRoots ? { trusted_roots: opts.trustedRoots } : {}),
     ...(opts.metadata ? { metadata: opts.metadata } : {}),
+    ...(opts.intent ? { intent: parseDiscoveryIntent(opts.intent) } : {}),
   };
 }
 
@@ -93,6 +151,7 @@ export function parseDiscoveryDocument(value: unknown): PcaDiscoveryDocument {
   if (v.endpoints !== null && typeof v.endpoints === 'object') doc.endpoints = v.endpoints as PcaDiscoveryDocument['endpoints'];
   if (Array.isArray(v.trusted_roots) && v.trusted_roots.every((s) => typeof s === 'string')) doc.trusted_roots = v.trusted_roots as string[];
   if (v.metadata !== null && typeof v.metadata === 'object') doc.metadata = v.metadata as Record<string, unknown>;
+  if (v.intent !== undefined) doc.intent = parseDiscoveryIntent(v.intent);
   return doc;
 }
 

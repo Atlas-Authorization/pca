@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { strictParse } from '../../pca/src/strict-json';
 import { canonicalizeStrict, compareUtf8, decodeB64uStrict, b64u } from '../../pca/src/hash';
-import { wireCanonicalOfText, wireCanonicalizeStrict, wireCompareUtf8, wireDecodeB64uStrict, wireB64uEncode, wireHexDecode, wireHexEncode } from '../src/ext-wire';
+import { wireAcceptsText, wireCanonicalOfText, wireCanonicalizeStrict, wireCompareUtf8, wireDecodeB64uStrict, wireB64uEncode, wireHexDecode, wireHexEncode } from '../src/ext-wire';
 import { loadCorpus } from './support/corpus';
 
 const N = Number(process.env.WIRE_FUZZ_N ?? 6000);
@@ -26,6 +26,7 @@ class R {
 }
 
 const tsCanon = (text: string): string | undefined => { try { return canonicalizeStrict(strictParse(text)); } catch { return undefined; } };
+const tsAccepts = (text: string): boolean => { try { strictParse(text); return true; } catch { return false; } };
 const tsCanonVal = (v: unknown): string | undefined => { try { return canonicalizeStrict(v); } catch { return undefined; } };
 const wCanonVal = (v: unknown): string | undefined => { try { return wireCanonicalizeStrict(v); } catch { return undefined; } };
 
@@ -41,6 +42,8 @@ describe('wire layer: proved code == production TS', () => {
       if (v.pcactn !== undefined) cands.push(JSON.stringify(v.pcactn));
       if (v.grant !== undefined) cands.push(JSON.stringify(v.grant));
       for (const c of cands) {
+        // the compiled fast path (wireAcceptsText) is linear: every text, uncapped
+        expect(wireAcceptsText(c), c.slice(0, 120)).toBe(tsAccepts(c));
         if (c.length > CAP) { skipped++; continue; }
         texts++;
         const a = tsCanon(c), b = wireCanonicalOfText(c);
@@ -116,6 +119,7 @@ describe('wire layer: proved code == production TS', () => {
       if (r.p(0.5)) t = mutate(r, t);
       const a = tsCanon(t), b = wireCanonicalOfText(t);
       if (a !== b) { bad.push(JSON.stringify(t) + ' ts=' + JSON.stringify(a) + ' wire=' + JSON.stringify(b)); if (bad.length > 5) break; }
+      if (wireAcceptsText(t) !== (a !== undefined)) { bad.push('accepts ' + JSON.stringify(t)); if (bad.length > 5) break; }
       if (a === undefined) rej++; else acc++;
     }
     console.log(`[wire texts] n=${N} accepted=${acc} rejected=${rej}`);
@@ -133,6 +137,7 @@ describe('wire layer: proved code == production TS', () => {
       for (let k = 0; k < L; k++) t += r.pick(TOK);
       const a = tsCanon(t), b = wireCanonicalOfText(t);
       if (a !== b) { bad.push(JSON.stringify(t) + ' ts=' + JSON.stringify(a) + ' wire=' + JSON.stringify(b)); if (bad.length > 5) break; }
+      if (wireAcceptsText(t) !== (a !== undefined)) { bad.push('accepts ' + JSON.stringify(t)); if (bad.length > 5) break; }
     }
     expect(bad).toEqual([]);
   }, 7_200_000);
@@ -182,7 +187,32 @@ describe('wire layer: proved code == production TS', () => {
       '{"a":1}{"b":1}', '[1]x', '', ' ', '"', '"abc', '\\', '{"a"}', '{"a":}', '{1:2}', '{"a" 1}',
     ];
     for (const c of cases) expect(wireCanonicalOfText(c), JSON.stringify(c)).toBe(tsCanon(c));
+    for (const c of cases) expect(wireAcceptsText(c), JSON.stringify(c)).toBe(tsCanon(c) !== undefined);
   });
+
+  it('compiled fast paths at scale: many members, far-apart / escaped / per-object duplicate keys, long strings', () => {
+    const keys = (n: number, f: (i: number) => string) => Array.from({ length: n }, (_, i) => `"${f(i)}":${i}`).join(',');
+    const texts = [
+      `{${keys(50_000, (i) => 'k' + i)}}`,
+      `{${keys(50_000, (i) => 'k' + i)},"k0":1}`, // duplicate of the first key, 50,000 members later
+      `{"a":1,${keys(1000, (i) => 'b' + i)},"\\u0061":2}`, // the same key spelled with an escape
+      `{"\\ud83d\\ude00":1,"\u{1F600}":2}`, // surrogate-pair escape vs raw
+      `[${Array.from({ length: 20_000 }, () => '{"a":1,"b":2}').join(',')}]`, // the same keys in different objects
+      `{"a":{"a":{"a":1},"b":{"a":2}},"b":{"a":3}}`,
+      `{"a":{"x":1},"a":{"y":1}}`,
+      `[${'1,'.repeat(200_000)}1]`,
+      `"${'\\n'.repeat(100_000)}"`,
+      `"${'é'.repeat(300_000)}"`,
+      `["${'a'.repeat(300_000)}",${'-0.5,'.repeat(1000)}12345678901234.5]`,
+    ];
+    for (const t of texts) expect(wireAcceptsText(t), t.slice(0, 60)).toBe(tsAccepts(t));
+    const o = Object.fromEntries(Array.from({ length: 20_000 }, (_, i) => [`k${(i * 7919) % 20_000}\u{1F600}${i % 3 ? 'é' : ''}`, [i, i + 0.5, 'v'.repeat(i % 50)]]));
+    expect(wireCanonicalizeStrict(o)).toBe(canonicalizeStrict(o));
+    const s = { a: 'A'.repeat(1 << 20), b: '\n"\u0001\ud800x'.repeat(10_000) };
+    expect(() => wireCanonicalizeStrict(s)).toThrow(TypeError); // lone surrogate: outside the profile
+    const s2 = { a: 'A'.repeat(1 << 20), b: '\n"\u0001\u{1F600}'.repeat(10_000) };
+    expect(wireCanonicalizeStrict(s2)).toBe(canonicalizeStrict(s2));
+  }, 600_000);
 
   it('depth boundary (32 ok, 33 rejected) and size boundary', () => {
     for (const depth of [30, 31, 32, 33, 34]) {
@@ -191,6 +221,14 @@ describe('wire layer: proved code == production TS', () => {
       const o = '{"a":'.repeat(depth) + '1' + '}'.repeat(depth);
       expect(wireCanonicalOfText(o)).toBe(tsCanon(o));
     }
+    for (const depth of [31, 32, 33]) {
+      const t = '['.repeat(depth) + ']'.repeat(depth), o = '{"a":'.repeat(depth) + '1' + '}'.repeat(depth);
+      expect(wireAcceptsText(t)).toBe(tsAccepts(t));
+      expect(wireAcceptsText(o)).toBe(tsAccepts(o));
+    }
+    const atCap = '"' + 'a'.repeat((1 << 20) - 2) + '"';
+    expect(wireAcceptsText(atCap)).toBe(true);
+    expect(wireAcceptsText(atCap + ' ')).toBe(false);
     expect(wireCanonicalOfText('[' .repeat(32) + ']'.repeat(32))).toBeDefined();
     expect(wireCanonicalOfText('['.repeat(33) + ']'.repeat(33))).toBeUndefined();
   });

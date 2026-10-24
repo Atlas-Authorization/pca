@@ -47,9 +47,42 @@ function sortKeys(v: unknown): unknown {
   return v;
 }
 
-function parseInstant(s: string): number | undefined {
-  const t = Date.parse(s);
-  return Number.isFinite(t) ? t : undefined;
+const RFC3339 = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?(Z|([+-])(\d{2}):(\d{2})))?$/;
+
+/**
+ * Epoch ms of an RFC 3339 instant, or undefined. STRICT, and independent of the host: `YYYY-MM-DD` (UTC midnight, as
+ * ECMAScript reads a date-only form) or `YYYY-MM-DDTHH:MM:SS[.fraction](Z|+HH:MM|-HH:MM)`, with every component in range
+ * (real calendar day, hour <= 23, no leap second; the fraction is truncated to ms). `Date.parse` used to decide this: it
+ * reads a date-time without an offset in the HOST time zone, accepts implementation-defined forms ("Jun 1 2026", "1" =
+ * the year 2001) and rolls an impossible day over ("2026-02-30" = March 2), so the same mandate could pass or fail an
+ * execution window depending on where it was verified.
+ */
+function parseInstant(s: unknown): number | undefined {
+  if (typeof s !== 'string') return undefined;
+  const m = RFC3339.exec(s);
+  if (!m) return undefined;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const day = new Date(0);
+  day.setUTCFullYear(y, mo - 1, d); // not Date.UTC: it maps the years 0..99 to 1900..1999
+  // A month or day outside the calendar (00, 13, 2026-02-30, ...) rolls into another month: refuse it rather than roll it.
+  if (day.getUTCMonth() !== mo - 1) return undefined;
+  const [, , , , hh, mm, ss, frac, zone, sign, zh, zm] = m;
+  if (hh === undefined) return day.getTime();
+  const h = Number(hh);
+  const mi = Number(mm);
+  const se = Number(ss);
+  if (h > 23 || mi > 59 || se > 59) return undefined;
+  const ms = frac === undefined ? 0 : Number(frac.slice(0, 3).padEnd(3, '0'));
+  let offset = 0;
+  if (zone !== 'Z') {
+    const oh = Number(zh);
+    const om = Number(zm);
+    if (oh > 23 || om > 59) return undefined;
+    offset = (sign === '+' ? 1 : -1) * (oh * 60 + om) * 60_000;
+  }
+  return day.getTime() + ((h * 60 + mi) * 60 + se) * 1000 + ms - offset;
 }
 
 /** Start (epoch ms, UTC) of the calendar period of `frequency` that contains `ms`. */

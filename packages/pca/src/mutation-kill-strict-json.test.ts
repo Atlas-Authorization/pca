@@ -41,7 +41,7 @@ describe('inputs and size', () => {
     // 3-byte characters: fewer than MAX UTF-16 units but more than MAX bytes
     expect(err('"' + '€'.repeat(349526) + '"')).toBe(E('input too large', 0));
     expect(strictParse('"' + '€'.repeat(349524) + '"')).toHaveLength(349524);
-  });
+  }, 60_000); // with PCA_VERIFIED_CORE=wire the proved parser takes a few seconds per maximum-size text
   it('strictParseBytes: type, UTF-8 validity, BOM is not stripped', () => {
     expect(strictParseBytes(new TextEncoder().encode('{"a":[1,"é"]}'))).toEqual({ a: [1, 'é'] });
     expect(strictParseBytes(Buffer.from('[1]'))).toEqual([1]);

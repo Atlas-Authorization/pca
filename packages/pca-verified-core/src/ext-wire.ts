@@ -2,14 +2,17 @@
 // ext-wire.ts - typed adapter over the PROVED wire layer (formal/dafny/Wire.dfy -> generated/pca_wire.js):
 // strict JSON parse + canonical printer, UTF-8 key order, strict base64url, canonical hex.
 // Only this file touches Dafny runtime values; everything exported is plain JS (string / number / Uint8Array / null).
-// NOT wired into production (performance is quadratic on very large inputs; see docs/pca/security/verified-core.md, "Wire layer").
+// strictParse acceptance (wireAcceptsText) and canonicalizeStrict (wireCanonicalizeStrict) run the compiled FAST PATHS (Wire.dfy
+// modules Fast / FastP: native 16-bit units and indices, linear, each proved equal to the specification functions); the other
+// entry points run the specification functions themselves (BigNumber per unit; quadratic on large inputs).
+import { hardenDafnyRuntime } from './runtime';
 import BigNumber from 'bignumber.js';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const W = require('../generated/pca_wire.js') as { _dafny: any; Utf: any; B64: any; Json: any; Api: any };
-const D = W._dafny;
+const W = require('../generated/pca_wire.js') as { _dafny: any; Utf: any; B64: any; Json: any; Fast: any; FastP: any; Api: any };
+const D = hardenDafnyRuntime(W._dafny);
 const Api = W.Api.__default;
-const J = W.Json.J;
-const KV = W.Json.KV;
+const JU = W.FastP.JU;
+const KU = W.FastP.KU;
 
 const bn = (n: number | bigint | string): BigNumber => new BigNumber(n as any);
 
@@ -18,6 +21,22 @@ function units(s: string): any {
   const q = D.Seq.of();
   for (let i = 0; i < s.length; i++) q.push(bn(s.charCodeAt(i)));
   return q;
+}
+/**
+ * UTF-16 code units of a JS string as a Dafny seq of NATIVE numbers (the input of the compiled fast paths, modules Fast / FastP,
+ * whose 16-bit unit type compiles to a plain number): one conversion per call, no BigNumber per unit.
+ */
+function units16(s: string): any {
+  const q = new D.Seq();
+  q.length = s.length; // sized once (a push per unit is ~10x slower on a 1 MiB text)
+  for (let i = 0; i < s.length; i++) q[i] = s.charCodeAt(i);
+  return q;
+}
+/** A fresh salt for the proved parser's duplicate-key table (the proof holds for every value; the salt only spreads its buckets). */
+function seed(): number {
+  const c = (globalThis as { crypto?: { getRandomValues?: (a: Uint32Array) => Uint32Array } }).crypto;
+  if (c?.getRandomValues) return c.getRandomValues(new Uint32Array(1))[0]!;
+  return Math.floor(Math.random() * 0x1_0000_0000);
 }
 function bytesSeq(b: Uint8Array): any {
   const q = D.Seq.of();
@@ -47,26 +66,41 @@ export function wireCanonicalOfText(text: string): string | undefined {
   return r.is_Some ? unitsToString(r.dtor_v) : undefined;
 }
 
+/**
+ * Does the proved strict-JSON profile accept `text`? (`Json.ParseTop(text).Some?`, i.e. `strictParse` would not throw.) Same
+ * decision as `wireCanonicalOfText(text) !== undefined` (Wire.dfy `CanonicalOfTextTotalOnAccepted`: the canonical printer is total
+ * on every accepted text) without running that printer, whose compiled form copies its accumulator once per character: a
+ * maximum-size (1 MiB) string would take ~5 x 10^11 element copies to print, while the parse copies a run of plain characters once.
+ */
+export function wireAcceptsText(text: string): boolean {
+  // Api.ParseAcceptsU == Json.ParseTop(text).Some? (Wire.dfy ParseAcceptsUSpec): the compiled fast path, linear in the text.
+  return Api.ParseAcceptsU(units16(text), seed()) === true;
+}
+
 const SEEN_DEPTH_GUARD = 4096;
-/** JS value -> Dafny J (glue; the profile checks themselves are made by the proved `Valid`). Throws TypeError for unrepresentable values. */
-function toJ(v: unknown, seen: Set<object>, depth: number): any {
-  if (v === null) return J.create_Null();
+/**
+ * JS value -> FastP.JU (glue; the profile checks themselves are made by the proved printer). Throws TypeError for unrepresentable
+ * values. Strings become native code-unit sequences; a safe integer is UInt, any other integer UBig (never in the profile); a
+ * non-integer is UDec with its plain decimal spelling (|v| < 2^52, so the integer part is a safe native number).
+ */
+function toJU(v: unknown, seen: Set<object>, depth: number): any {
+  if (v === null) return JU.create_UNull();
   switch (typeof v) {
     case 'string':
-      return J.create_Str(units(v));
+      return JU.create_UStr(units16(v));
     case 'boolean':
-      return J.create_Bool(v);
+      return JU.create_UBool(v);
     case 'number': {
       if (!Number.isFinite(v)) throw new TypeError('canonicalize: non-finite number');
       if (Object.is(v, -0)) throw new TypeError('canonicalize: negative zero');
-      if (Number.isInteger(v)) return J.create_Int(bn(v));
+      if (Number.isInteger(v)) return Number.isSafeInteger(v) ? JU.create_UInt(v) : JU.create_UBig(bn(v));
       const s = String(v);
       if (/e/i.test(s)) throw new TypeError('canonicalize: exponent form');
       const neg = s.startsWith('-');
       const [ip, fr] = (neg ? s.slice(1) : s).split('.') as [string, string];
       const frd = D.Seq.of();
-      for (const c of fr) frd.push(bn(c.charCodeAt(0) - 48));
-      return J.create_Dec(neg, bn(ip), frd);
+      for (let i = 0; i < fr.length; i++) frd.push(fr.charCodeAt(i) - 48);
+      return JU.create_UDec(neg, Number(ip), frd);
     }
     case 'object':
       break;
@@ -80,25 +114,38 @@ function toJ(v: unknown, seen: Set<object>, depth: number): any {
   try {
     if (Array.isArray(o)) {
       const q = D.Seq.of();
-      for (let i = 0; i < o.length; i++) q.push(toJ(o[i], seen, depth + 1));
-      return J.create_Arr(q);
+      for (let i = 0; i < o.length; i++) q.push(toJU(o[i], seen, depth + 1));
+      return JU.create_UArr(q);
     }
     const proto = Object.getPrototypeOf(o);
     if (proto !== Object.prototype && proto !== null) throw new TypeError('canonicalize: non-plain object');
     const rec = o as Record<string, unknown>;
     const q = D.Seq.of();
-    for (const k of Object.keys(rec)) q.push(KV.create_KV(units(k), toJ(rec[k], seen, depth + 1)));
-    return J.create_Obj(q);
+    for (const k of Object.keys(rec)) q.push(KU.create_KU(units16(k), toJU(rec[k], seen, depth + 1)));
+    return JU.create_UObj(q);
   } finally {
     seen.delete(o);
   }
 }
 
-/** Equivalent of `canonicalizeStrict(value)` via the proved printer (sorted keys, strict number/string/depth profile). Throws TypeError otherwise. */
+/** Native-number code units [0, n) of an output buffer -> string. */
+function nativeUnitsToString(b: number[], n: number): string {
+  let out = '';
+  const CH = 4096;
+  for (let i = 0; i < n; i += CH) out += String.fromCharCode.apply(null, b.slice(i, Math.min(n, i + CH)));
+  return out;
+}
+
+/**
+ * Equivalent of `canonicalizeStrict(value)` via the proved printer (Api.CanonicalOfValueU == Json.CanonText: sorted keys, strict
+ * number/string/depth profile; linear apart from the O(m log m) key sort per object). Throws TypeError outside the profile, and a
+ * RangeError if the output would pass 2^40 code units (resource exhaustion, no verdict; unreachable in practice).
+ */
 export function wireCanonicalizeStrict(value: unknown): string {
-  const r = Api.CanonicalOfValue(toJ(value, new Set(), 1));
-  if (!r.is_Some) throw new TypeError('canonicalize: value outside the strict profile');
-  return unitsToString(r.dtor_v);
+  const [st, b, n] = Api.CanonicalOfValueU(toJU(value, new Set(), 1)) as [any, number[], number];
+  if (st.is_Done) return nativeUnitsToString(b, n);
+  if (st.is_Bad) throw new TypeError('canonicalize: value outside the strict profile');
+  throw new RangeError('canonicalize: output exceeds the verified printer limit');
 }
 
 /** compareUtf8 for WELL-FORMED strings: sign of the UTF-8 bytewise comparison (-1 | 0 | 1). */

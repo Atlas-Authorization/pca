@@ -357,6 +357,9 @@ function makeAgent(args: {
       blastRadius: spec.blastRadius,
       reversibilityClass: spec.reversibility,
       delegationDepth: args.chain.length - 1,
+      // The local handle has no admitted-action history (the server meters it). Without this the `rate` caveat a
+      // single count limit compiles to could never be satisfied locally, so every dry run of such a grant denied.
+      recentActionTimes: [],
     });
     if (!cav.ok) return { allowed: false, reason: `caveat(s) failed: ${cav.failed.join(', ')}` };
     const r = riskFor(policy, spec, params);

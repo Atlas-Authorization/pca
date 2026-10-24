@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { useSingleThreadSnarkCurvesInWorkerThreads } from './test-support/snarkjs-single-thread';
 import {
   type PolicyVmComplianceProof,
   type PolicyVmComplianceProofBls12381,
@@ -15,6 +16,9 @@ import {
 } from './zk';
 import type { PCActn, VerifyContext } from './pcactn';
 import type { Capability } from './capability';
+
+// snarkjs single-threaded when this file runs in a worker thread (Stryker's vitest runner): see test-support/snarkjs-single-thread.ts
+beforeAll(useSingleThreadSnarkCurvesInWorkerThreads);
 
 // FULL Policy-VM Groth16 proof migrated to the BLS12-381 curve (128-bit security, the end-game P2
 // "BN254 -> BLS12-381"). The trusted setup was run fresh on a dedicated compute VM; these tests verify

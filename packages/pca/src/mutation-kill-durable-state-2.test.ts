@@ -491,6 +491,15 @@ describe('generation locks: remaining decisions', () => {
     expect(gens(d).length).toBe(17);
   });
 
+  it('only the pid that leads the temp-file name counts: a dead pid embedded later in a name whose own pid field is malformed is left alone', async () => {
+    const d = tmp();
+    const s = await open(d);
+    const odd = [`state.lock.tmp-x-state.lock.tmp-${DEAD_PID}-a`, `state.lock.tmp-oops-state.lock.tmp-${DEAD_PID}-b`];
+    for (const f of odd) writeFileSync(join(d, f), 'x');
+    await s.get('zz');
+    for (const f of odd) expect(existsSync(join(d, f)), f).toBe(true);
+  });
+
   it('a malformed temp-file name does not stop the collection of dead temp files', async () => {
     const d = tmp();
     const s = await open(d);

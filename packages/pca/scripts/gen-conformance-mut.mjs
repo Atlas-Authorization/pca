@@ -10,12 +10,12 @@
 //     node packages/pca/scripts/gen-conformance-mut.mjs
 import { createHash } from 'node:crypto';
 import * as pca from '../dist/index.js';
-import { readCore, writeCore } from './conformance-io.mjs';
+import { cloneJson, readCore, writeCore } from './conformance-io.mjs';
 
 const seed = (l) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const mk = (l) => { const sk = seed(l); return { sk, pk: pca.publicKeyOf(sk), pub: pca.b64u(pca.publicKeyOf(sk)) }; };
 const principal = mk('principal'), agent = mk('agent'), sub = mk('subagent'), rogue = mk('rogue');
-const clone = (x) => JSON.parse(JSON.stringify(x));
+const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
 const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];

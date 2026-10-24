@@ -1,0 +1,139 @@
+name: Mutation testing (Stryker)
+
+# Stryker over every non-test source file of the audited TypeScript packages (the packages that appear in the
+# equivalent-mutant ledger tools/pca-audit/mutation-equivalents.json), with the audited configuration
+# (tools/pca-audit/stryker/run.sh: vitest runner, perTest coverage). The files are cut into 16 shards of about equal size
+# (.github/scripts/ts-stryker-plan.mjs); the merge job checks every report is present, prints the mutation score and runs
+# the ledger check: every survivor must be a listed, justified equivalent and no listed equivalent may be stale.
+# Heavy: manual dispatch, or a push to a ci/** branch (release-candidate checks).
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'comma-separated shard numbers to run (empty = all 16)'
+        default: ''
+      shards:
+        description: 'number of shards to cut the plan into (default 16; a different count needs a full run: list every shard in only, no baselines)'
+        default: '16'
+      baseline_run:
+        description: 'run id whose shard reports fill in the shards not run here (for the merge)'
+        default: ''
+      baseline_run_2:
+        description: 'optional newer run whose shard reports override baseline_run (for partial re-runs)'
+        default: ''
+      baseline_run_3:
+        description: 'optional run newer still, whose shard reports override baseline_run_2'
+        default: ''
+  push:
+    branches: ['ci/**']
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  # a push supersedes an earlier push run; dispatched runs each get their own group (they run in parallel, never cancelled)
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}${{ github.event_name == 'workflow_dispatch' && format('-{0}', github.run_id) || '' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+env:
+  SHARDS: ${{ inputs.shards || '16' }}
+
+jobs:
+  shard:
+    name: shard ${{ matrix.shard }}/${{ inputs.shards || '16' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(inputs.only != '' && format('[{0}]', inputs.only) || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Shard plan
+        run: |
+          node .github/scripts/ts-stryker-plan.mjs ${{ matrix.shard }} $SHARDS | tee "$RUNNER_TEMP/plan.txt"
+          f=""; for p in $(cut -d' ' -f1 "$RUNNER_TEMP/plan.txt"); do f="$f --filter={./packages/$p}..."; done
+          echo "FILTER=$f" >> "$GITHUB_ENV"
+      - name: Install the whole workspace (a filtered install missed transitive deps at 48 shards) and the pinned Stryker
+        run: |
+          pnpm install --frozen-lockfile
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      - name: Build
+        run: pnpm -r $FILTER run build
+      # The core package's Groth16 tests (src/zk.test.ts) need the compliance circuit's build outputs (not tracked; ci.yml
+      # builds them the same way). Without them those tests cannot run, which is why src/zk*.test.ts were once excluded from
+      # the mutation run and every zk.ts mutant only they reach was NoCoverage. Every shard that mutates the core package
+      # needs it: vitest's related-test selection pulls zk.test.ts into the dry run of any shard mutating a module it imports.
+      # Stryker copies circuits/build into its sandbox (it does not read .gitignore).
+      - name: Compliance circuit (shards that mutate the core package only)
+        run: |
+          if grep -qE '^pca ' "$RUNNER_TEMP/plan.txt"; then
+            curl -fsSL -o "$RUNNER_TEMP/circom" https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
+            chmod +x "$RUNNER_TEMP/circom"
+            CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
+          else
+            echo "this shard does not mutate packages/pca: no circuit build needed"
+          fi
+      - name: Stryker
+        run: bash .github/scripts/ts-stryker-shard.sh ${{ matrix.shard }} $SHARDS "$RUNNER_TEMP/reports"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stryker-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+  merge:
+    needs: shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        if: inputs.baseline_run != ''
+        with:
+          path: reports
+          pattern: stryker-shard-*
+          run-id: ${{ inputs.baseline_run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        if: inputs.baseline_run_2 != ''
+        with:
+          path: reports-b2
+          pattern: stryker-shard-*
+          run-id: ${{ inputs.baseline_run_2 }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        if: inputs.baseline_run_3 != ''
+        with:
+          path: reports-b3
+          pattern: stryker-shard-*
+          run-id: ${{ inputs.baseline_run_3 }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: reports-new
+      - name: This run's shard reports replace the baseline's
+        run: |
+          mkdir -p reports
+          for d in reports-b2/*/; do [ -d "$d" ] || continue; n=$(basename "$d"); rm -rf "reports/$n"; mv "$d" "reports/$n"; done
+          for d in reports-b3/*/; do [ -d "$d" ] || continue; n=$(basename "$d"); rm -rf "reports/$n"; mv "$d" "reports/$n"; done
+          for d in reports-new/*/; do n=$(basename "$d"); rm -rf "reports/$n"; mv "$d" "reports/$n"; done
+      - name: Completeness, score, equivalence ledger
+        run: node .github/scripts/ts-stryker-merge.mjs reports $SHARDS
+      - name: Full ledger-check output (every unlisted / stale site)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ledger-check
+          path: reports/ledger-check-*.txt
+          if-no-files-found: ignore

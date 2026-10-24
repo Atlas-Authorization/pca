@@ -31,15 +31,20 @@ describe('PCActn conformance vectors (TS reference verifier = @atlasauth/pca)', 
       'plan_non_inclusion',
       'bad_leaf_signature',
       'counter_invalid',
+      'intent_bound',
+      'intent_required_absent',
+      'intent_binding_mismatch',
+      'intent_fidelity_below_min',
+      'intent_residual_above_max',
+      'intent_bad_wire',
       'stale_freshness',
       'taint_blocked',
       'missing_attestation',
     ]);
     // ids are unique
     expect(new Set(VECTORS.map((v) => v.id)).size).toBe(VECTORS.length);
-    // exactly one vector verifies
-    expect(VECTORS.filter((v) => v.expect.ok)).toHaveLength(1);
-    expect(VECTORS.find((v) => v.expect.ok)?.id).toBe('valid');
+    // exactly two vectors verify: the canonical action and its intent-bound twin (Intent Layer M2)
+    expect(VECTORS.filter((v) => v.expect.ok).map((v) => v.id)).toEqual(['valid', 'intent_bound']);
   });
 
   // The CORE verifier must produce EXACTLY the authored per-check outcome for every vector.
@@ -51,6 +56,7 @@ describe('PCActn conformance vectors (TS reference verifier = @atlasauth/pca)', 
         nowEpoch: v.verifyOptions.nowEpoch,
         audience: v.aud,
         ...(v.verifyOptions.enforce ? { enforce: materializeEnforce(v.verifyOptions.enforce) } : {}),
+        ...(v.verifyOptions.intent ? { intent: v.verifyOptions.intent } : {}),
       });
       expect(r.allow).toBe(v.expect.ok);
       expect(r.checks).toEqual(v.expect.perCheck);

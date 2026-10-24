@@ -6,8 +6,9 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { RegexBudget, chargeRegex, safeRegexFullMatch } from './index';
+import { __setVerifiedCoreModeForTests, VERIFIED_CORE_OPT_IN_MODULES, verifiedCoreOptIn } from './verified-core-mode';
 import { REGEX_CACHE_MAX_ENTRIES, REGEX_CACHE_MAX_PER_SOURCE, regexCacheHas, regexCacheStats } from './regex-cache';
 
 const asSource = <T>(source: string, fn: () => T): T => RegexBudget.request(source).run(fn);
@@ -15,6 +16,12 @@ let uniq = 0;
 const fresh = () => `abc${uniq++}x[0-9]+`;
 
 describe('R5-API-05/06: bounded regex cache with per-source admission', () => {
+  // The cache belongs to the hand-written engine: with PCA_VERIFIED_CORE=regex, safeRegexFullMatch runs the proved engine, which
+  // compiles per call and never touches this cache, so these tests pin the hand-written engine (every other opt-in module stays as
+  // configured). The proved engine's own bound is its step budget (docs/pca/security/verified-core.md, regex), tested elsewhere.
+  beforeAll(() => __setVerifiedCoreModeForTests(VERIFIED_CORE_OPT_IN_MODULES.filter((m) => m !== 'regex' && verifiedCoreOptIn(m)).join(',') || 'none'));
+  afterAll(() => __setVerifiedCoreModeForTests(undefined));
+
   it('a flood of distinct patterns from ONE source never evicts another source\'s hot pattern', () => {
     const hot = 'victim-[a-z]{1,8}';
     expect(asSource('10.0.0.1', () => safeRegexFullMatch(hot, 'victim-abc'))).toBe(true);
@@ -57,5 +64,17 @@ describe('R5-API-05/06: bounded regex cache with per-source admission', () => {
     expect(safeRegexFullMatch(p, 'lib-42')).toBe(true);
     expect(regexCacheHas(p)).toBe(true);
     expect(safeRegexFullMatch('(a', 'a')).toBeNull(); // an unsupported pattern still fails closed
+  });
+});
+
+describe('regex cache key is injective over JS strings (lone surrogates)', () => {
+  it("'x\\ud800', 'x\\udc00' and 'x\\ufffd' never share a compiled program, whatever was compiled first", () => {
+    // TextEncoder maps every lone surrogate to U+FFFD: a UTF-8 key made these three ONE cache entry
+    expect(safeRegexFullMatch('x�', 'x�')).toBe(true);
+    expect(safeRegexFullMatch('x\ud800', 'x\ud800')).toBe(true);
+    expect(safeRegexFullMatch('x\ud800', 'x�')).toBe(false);
+    expect(safeRegexFullMatch('x\udc00', 'x\ud800')).toBe(false);
+    expect(safeRegexFullMatch('x\udc00', 'x\udc00')).toBe(true);
+    expect(safeRegexFullMatch('x�', 'x\udc00')).toBe(false);
   });
 });

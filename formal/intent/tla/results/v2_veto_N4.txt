@@ -1,0 +1,39 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 112 and seed 946540137184943961 with 2 workers on 2 cores with 1820MB heap and 64MB offheap memory [pid: 4180] (Linux 7.0.0-1017-azure amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/jobs/q261012-194047-f133/ws/formal/intent/tla/ElicitationLoop.tla
+Parsing file /tmp/tlc-17945686588362128945/Naturals.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-17945686588362128945/FiniteSets.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-17945686588362128945/_TLCTrace.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-17945686588362128945/Sequences.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-17945686588362128945/TLC.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-17945686588362128945/TLCExt.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Parsing file /tmp/tlc-17945686588362128945/Integers.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Integers
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module ElicitationLoop
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module ElicitationLoop
+Starting... (2026-10-12 19:42:48)
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Computed 2 initial states...
+Computed 4 initial states...
+Computed 8 initial states...
+Finished computing initial states: 11 distinct states generated at 2026-10-12 19:42:49.
+Progress(10) at 2026-10-12 19:42:49: 674 states generated, 294 distinct states found, 0 states left on queue.
+Checking temporal properties for the complete state space with 294 total distinct states at (2026-10-12 19:42:49)
+Finished checking temporal properties in 00s at 2026-10-12 19:42:49
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 6.1E-15
+674 states generated, 294 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 10.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 4 and the 95th percentile is 3).
+Finished in 01s at (2026-10-12 19:42:49)

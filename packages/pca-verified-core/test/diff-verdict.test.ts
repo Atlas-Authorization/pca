@@ -1,15 +1,21 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { mintGrant } from '../../pca/src/envelope';
+import { intentGoal } from '../../pca/src/intent-binding';
 import { encodeKey, generateKeyPair } from '../../pca/src/keys';
 import { ARTIFACT_SIZE_REASON, MAX_ARTIFACT_BYTES, buildPCActn as buildLegacy, decodePCActn, verifyPCActnCore as coreWired, type PCActn, type VerifyHooks } from '../../pca/src/pcactn';
 import { DEFAULT_RISK_POLICY } from '../../pca/src/risk';
 import { enforceRequired as enforceWired, verifyPCActn as verifyWired, type PcaVerdict } from '../../pca/src/server/verify';
 import { verifyPCActnCore as coreLegacy } from './support/legacy/pcactn';
 import { enforceRequired as enforceLegacy, verifyPCActn as verifyLegacy } from './support/legacy/verify';
-import { Rng, loadCorpus, overCaveatCap, vectorChain } from './support/corpus';
+import { Rng, carriesIntentSession, loadCorpus, overCaveatCap, vectorChain } from './support/corpus';
 
 const NOW = 1_800_000_000_000;
+/** A vector's intent policy: `intent_policy_json` (raw text) wins over `intent_policy` (conformance rule 12). */
+const intentPolicyOf = (c: unknown): unknown => {
+  const x = c as { intent_policy?: unknown; intent_policy_json?: string };
+  return x.intent_policy_json !== undefined ? JSON.parse(x.intent_policy_json) : x.intent_policy;
+};
 const P = generateKeyPair();
 const A = generateKeyPair();
 const nodes = [
@@ -27,13 +33,29 @@ const mk = (agent_binding: Record<string, unknown>) =>
 const GRANTS = [mk({}), mk({ model: 'm1' })];
 const build = (grant: any, node: string, counter: number, extra: Record<string, unknown> = {}): PCActn =>
   buildLegacy({ aud: 'rs', now: NOW, grant, chain: [grant], plan: nodes, nodeId: node, counter, signerSecret: A.secretKey, riskClaim: { r: 0, inputs: {} }, ...extra } as never);
-const BASES = GRANTS.flatMap((g) => ['n1', 'n2'].map((n) => ({ grant: g, p: build(g, n, 3, { nonce: 'x1' }) })));
+// Intent Layer M2: a grant minted for an intent goal and actions carrying the bound (or a mis-bound) `intent` member.
+const IREF = encodeKey(new Uint8Array(32).fill(7));
+const IMAP = encodeKey(new Uint8Array(32).fill(9));
+const INTENT = { ref: IREF, map_digest: IMAP, goal_salt: 'salt-1', fidelity_ppm: 900_000, residual_risk_ppm: 1_000 };
+const GI = mintGrant({
+  principalSecret: P.secretKey,
+  principalPublic: encodeKey(P.publicKey),
+  holder: encodeKey(A.publicKey),
+  goal: intentGoal(IREF, IMAP),
+  salt: 'salt-1',
+  envelope: { predicates: [{ verb: '*' }], caveats: [], agent_binding: {}, risk_policy: DEFAULT_RISK_POLICY },
+}).grant;
+const BASES = [
+  ...GRANTS.flatMap((g) => ['n1', 'n2'].map((n) => ({ grant: g, p: build(g, n, 3, { nonce: 'x1' }) }))),
+  { grant: GI, p: build(GI, 'n1', 3, { intent: INTENT }) },
+  { grant: GI, p: build(GI, 'n2', 3, { intent: { ...INTENT, goal_salt: 'other' } }) },
+];
 
 const JUNK: unknown[] = [undefined, null, 0, 1, -1, 1.5, NaN, '', 'x', [], {}, true, false, 2 ** 60, 'rs'];
 function mutate(p: any, r: Rng): any {
   const x = structuredClone(p);
   for (let k = 0, n = r.next(3); k < n; k++) {
-    switch (r.next(10)) {
+    switch (r.next(11)) {
       case 0:
         x[r.pick(['ver', 'grant_ref', 'counter', 'aud', 'iat', 'exp', 'sig', 'alg', 'pq_pk', 'pq_sig', 'nonce', 'tool_binding', 'caution'])] = r.pick(JUNK);
         break;
@@ -65,6 +87,9 @@ function mutate(p: any, r: Rng): any {
         break;
       case 9:
         x.bond_ref = 'bond';
+        break;
+      case 10:
+        x.intent = r.pick([INTENT, { ...INTENT, fidelity_ppm: 1_000_001 }, { ...INTENT, extra: 1 }, { ...INTENT, ref: IMAP }, 'x', null, [], undefined]);
         break;
     }
   }
@@ -121,6 +146,7 @@ function options(r: Rng, grant: any) {
   };
   if (r.next(4) === 0) opts.allowedSuites = r.pick([['ed25519'], [], ['ml-dsa-65']]);
   if (r.next(8) === 0) opts.allowUnboundPq = true;
+  if (r.next(5) === 0) opts.intent = r.pick([{ require: true }, { min_fidelity_ppm: 900_000 }, { max_residual_risk_ppm: 999 }, { min_fidelity_ppm: -1 }, { require: false }]);
   if (r.next(3) === 0) opts.require = r.pick([['counter'], ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'], ['threshold', 'attestation', 'nonexistent'], ['policy', 'budget']]);
   return opts;
 }
@@ -147,6 +173,7 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
     const { core, adversarial } = loadCorpus();
     let n = 0;
     let overCap = 0;
+    let intentV2 = 0;
     for (const v of [...core, ...adversarial]) {
       let p: any = v.pcactn;
       if (v.pcactn_json !== undefined) {
@@ -156,7 +183,8 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
           continue;
         }
       }
-      const o = { grant: v.grant, nowEpoch: v.context.now, audience: v.context.aud };
+      const ip = intentPolicyOf(v.context);
+      const o = { grant: v.grant, nowEpoch: v.context.now, audience: v.context.aud, ...(ip !== undefined ? { intent: ip as never } : {}) };
       if (overCaveatCap(vectorChain(p))) {
         // legacy predates the caveat cap: production must deny on cap_chain with the cap reason
         const b: any = await coreWired(p, o);
@@ -164,6 +192,14 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
         expect(b.checks.cap_chain, v.name).toBe('fail');
         expect(String(b.reason), v.name).toContain('chain exceeds caveat limit');
         overCap++;
+        n++;
+        continue;
+      }
+      if (carriesIntentSession(p)) {
+        // Intent v2 (support/corpus.ts carriesIntentSession): without the verifier's v2 state production refuses
+        const b: any = await coreWired(p, o);
+        expect(b.allow, v.name).toBe(false);
+        intentV2++;
         n++;
         continue;
       }
@@ -179,6 +215,7 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
     }
     expect(n).toBeGreaterThan(3000);
     expect(overCap).toBeGreaterThan(0);
+    expect(intentV2).toBeGreaterThan(0);
   });
 
   it('agrees on every conformance vector at the full verifyPCActn level (default-deny context, with require lists)', async () => {
@@ -195,11 +232,17 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
         }
       }
       for (const extra of n % 3 === 0 ? [{}, { require: ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'] }] : [{}]) {
-        const o = { grant: v.grant, now: v.context.now, audience: v.context.aud, ...extra } as never;
+        const ip = intentPolicyOf(v.context);
+        const o = { grant: v.grant, now: v.context.now, audience: v.context.aud, ...(ip !== undefined ? { intent: ip } : {}), ...extra } as never;
         if (overCaveatCap(vectorChain(p))) {
           const b: any = await verifyWired(p, o);
           expect(b.allow, v.name).toBe(false);
           expect(JSON.stringify(b), v.name).toContain('chain exceeds caveat limit');
+          continue;
+        }
+        if (carriesIntentSession(p)) {
+          // Intent v2: out of the legacy oracle's scope (support/corpus.ts); production refuses without the v2 state
+          expect((await verifyWired(p, o)).allow, v.name).toBe(false);
           continue;
         }
         const a = await verifyLegacy(p, o);
@@ -224,7 +267,8 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
       } catch {
         /* parse failure: the interesting case */
       }
-      const o = { grant: v.grant, now: v.context.now, audience: v.context.aud } as never;
+      const ip = intentPolicyOf(v.context);
+      const o = { grant: v.grant, now: v.context.now, audience: v.context.aud, ...(ip !== undefined ? { intent: ip } : {}) } as never;
       if (overCaveatCap(vectorChain(undefined, v.pcactn_json))) {
         const b: any = await verifyWired(v.pcactn_json, o);
         expect(b.allow, v.name).toBe(false);

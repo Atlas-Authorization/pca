@@ -69,7 +69,9 @@ export function chargeActionContext(mandate: PaymentMandate, charge: Charge): Ac
       resource: `merchant:${charge.merchant}`,
       params: {
         amount: charge.amount,
-        currency: charge.currency ?? mandate.terms.currency,
+        // Only an ABSENT currency defaults to the mandate's: `null` (or any other value) is carried as is and fails the
+        // currency predicate (`??` used to read `null` as absent and substitute the mandate currency).
+        currency: charge.currency === undefined ? mandate.terms.currency : charge.currency,
         ...(charge.category !== undefined ? { category: charge.category } : {}),
       },
       reversibility_class: CHARGE_REVERSIBILITY_CLASS,

@@ -1,0 +1,21 @@
+pca_frost_sign:   executable_two_sessions (exists-trace): verified (12 steps)
+pca_frost_sign:   executable_threshold_signature (exists-trace): verified (16 steps)
+pca_frost_sign: no-result rc=0 after 600s budget (NOT proved): shares_bound_to_session
+pca_frost_sign:   nonce_one_shot (all-traces): verified (76 steps)
+pca_frost_sign__NONCE_REUSE:   share_secrecy (all-traces): falsified - found trace (10 steps)
+pca_frost_sign: TIMEOUT after 600s budget (NOT proved): share_secrecy
+pca_frost_sign__NONCE_REUSE:   nonce_one_shot (all-traces): falsified - found trace (11 steps)
+pca_frost_sign: TIMEOUT after 600s budget (NOT proved): sig_needs_t_signers
+pca_frost_sign__NO_BINDING: no-result rc=0 after 600s budget (NOT proved): shares_bound_to_session
+pca_frost_dkg:   executable_dkg (exists-trace): verified (6 steps)
+pca_frost_dkg:   dkg_key_not_adversarial (all-traces): verified (1 steps)
+pca_frost_dkg__NO_POP:   dkg_key_not_adversarial (all-traces): falsified - found trace (8 steps)
+pca_frost_dkg__NO_POP:   executable_dkg (exists-trace): verified (5 steps)
+pca_frost_sign__NONCE_REUSE:   sig_needs_t_signers (all-traces): falsified - found trace (16 steps)
+pca_frost_sign__NO_BINDING:   sig_needs_t_signers (all-traces): falsified - found trace (11 steps)
+pca_attest_allowlist:   executable_attest_v1 (exists-trace): verified (16 steps)
+pca_attest_allowlist:   weights_allowlisted (all-traces): verified (4 steps)
+pca_attest_allowlist:   operator_allowlisted (all-traces): verified (4 steps)
+pca_attest_allowlist: TIMEOUT after 600s budget (NOT proved): executable_attest_after_revocation
+pca_attest_allowlist: TIMEOUT after 600s budget (NOT proved): attestation_authentic
+pca_attest_allowlist: TIMEOUT after 600s budget (NOT proved): measurement_in_projection

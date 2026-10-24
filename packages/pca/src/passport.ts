@@ -94,8 +94,17 @@ export function matchesBinding(p: AgentPassport, b: AgentBinding): BindingMatch 
     if (typeof b.min_measurement === 'string') {
       if (p.runtime_measurement !== b.min_measurement) reasons.push('runtime_measurement does not equal the pinned measurement');
     } else {
-      const svn = Number(p.runtime_measurement);
-      if (!Number.isFinite(svn) || svn < b.min_measurement.svn) reasons.push(`runtime SVN ${String(p.runtime_measurement)} < required ${b.min_measurement.svn}`);
+      // Strict (0.4.2, same rule as matchAgentBinding): the bound is exactly {svn: n} with n a safe non-negative integer JSON number
+      // (anything else fails closed), and the runtime SVN is the canonical decimal text of a safe integer ("0x10", "1e1", " 8 " are not).
+      const mm = b.min_measurement as unknown;
+      const bound = mm !== null && typeof mm === 'object' && !Array.isArray(mm) && Object.keys(mm).length === 1 ? (mm as { svn?: unknown }).svn : undefined;
+      if (typeof bound !== 'number' || !Number.isSafeInteger(bound) || bound < 0 || Object.is(bound, -0)) {
+        reasons.push('min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)');
+      } else {
+        const rm = p.runtime_measurement as unknown;
+        const svn = typeof rm === 'string' && /^(?:0|[1-9][0-9]*)$/.test(rm) ? Number(rm) : Number.NaN;
+        if (!Number.isSafeInteger(svn) || svn < bound) reasons.push(`runtime SVN ${String(rm)} < required ${bound}`);
+      }
     }
   }
 
