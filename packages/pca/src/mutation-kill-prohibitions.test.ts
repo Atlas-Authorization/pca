@@ -48,6 +48,7 @@ import {
   type ProhibitionEvidence,
   type SignedConstitution,
 } from './prohibitions';
+import { verifiedCoreOptIn } from './verified-core-mode';
 
 const K = generateKeyPair();
 const PRIN = encodeKey(K.publicKey);
@@ -1346,7 +1347,10 @@ describe('prohibitions: residual boundaries and late failures', () => {
       Object.defineProperty(ev, 'constitution', { enumerable: true, get: () => { if (reads++ >= 4) throw new Error('boom'); return E.constitution; } });
       const r = vs({ ...SIGNED, evidence: ev }, { signer: SIGNER_PUB, action: A, constitution: C, state: S });
       expect(r).toStrictEqual({ ok: false, reason: 'verification error (fail closed)' });
-      expect(reads).toBe(5);
+      // 5 reads on the hand-written encoder. With PCA_VERIFIED_CORE=wire the proved encoder reads the getter first and, on any
+      // exception, the hand-written encoder runs once more to render its error (hash.ts canonicalizeStrict), so the throwing
+      // read is repeated once: same outcome (the getter's error, then the fail-closed reason above), one more read.
+      expect(reads).toBe(verifiedCoreOptIn('wire') ? 6 : 5);
     });
 
     it('action + state given with only a constitution ID (and the symmetric case) still verifies by digest', () => {

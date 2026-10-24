@@ -92,6 +92,9 @@ describe('untrusted policy: every coefficient is validated (a truncated / wrappe
 });
 
 describe('malformed, swapped and truncated SEAL objects', () => {
+  // Each case deserializes real keys / ciphertexts and builds a SEAL context (seconds of synchronous WASM on a CI
+  // runner); since every gate operation yields to the event loop, vitest's 5 s default timer can now fire mid-test,
+  // so these carry the same SEAL-sized budget as the rest of the file.
   it('non-strings, empty, short, non-base64, bad header, truncated and padded blobs are rejected with a typed error', async () => {
     const blobs: unknown[] = [undefined, null, 5, {}, [], '', 'AAAA', '!!!!'.repeat(10), 'A'.repeat(100), enc.slice(0, enc.length - 8), enc.slice(0, 40), enc + 'AAAA', enc.replace(/^..../, 'AAAA')];
     for (const b of blobs) {
@@ -100,7 +103,7 @@ describe('malformed, swapped and truncated SEAL objects', () => {
       await expect(decryptVerdict(b as string, gate.encRiskRaw, gate.encSlack, policy)).rejects.toThrow();
       await expect(decryptVerdict(ks.secretKey, b as string, gate.encSlack, policy)).rejects.toThrow();
     }
-  });
+  }, TIMEOUT);
 
   it('an object of the wrong KIND (public key where a ciphertext is expected, ciphertext where a key is expected) is rejected', async () => {
     await expect(evalRiskGate(ev, ks.publicKey, policy)).rejects.toThrow();
@@ -109,7 +112,7 @@ describe('malformed, swapped and truncated SEAL objects', () => {
     await expect(decryptVerdict(enc, gate.encRiskRaw, gate.encSlack, policy)).rejects.toThrow();
     await expect(decryptVerdict(ks.secretKey, ks.publicKey, gate.encSlack, policy)).rejects.toThrow();
     await expect(encryptRiskInputs(enc, inputs)).rejects.toThrow();
-  });
+  }, TIMEOUT);
 });
 
 describe('decryption fails closed on anything that is not a gate output under THIS key', () => {

@@ -4,7 +4,8 @@
  * x + p, with leading zeros, a `0x` public signal, an unreduced z, or extra keys (many encodings per proof).
  */
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { useSingleThreadSnarkCurvesInWorkerThreads } from './test-support/snarkjs-single-thread';
 import {
   POLICYVM_BLS12381_SAMPLE_PROOF_PATH,
   POLICYVM_BLS12381_VKEY_PATH,
@@ -13,6 +14,9 @@ import {
   isCanonicalGroth16Envelope,
   verifyPolicyVmProof,
 } from './zk';
+
+// snarkjs single-threaded when this file runs in a worker thread (Stryker's vitest runner): see test-support/snarkjs-single-thread.ts
+beforeAll(useSingleThreadSnarkCurvesInWorkerThreads);
 
 const FQ = { bn254: 21888242871839275222246405745257275088696311157297823662689037894645226208583n, bls: 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaabn };
 type Env = { system: string; circuit: string; proof: { pi_a: string[]; pi_b: string[][]; [k: string]: unknown }; publicSignals: string[] } & Record<string, unknown>;

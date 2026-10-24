@@ -1,0 +1,157 @@
+name: Assertion-only mutant check
+# How each mutant of the core package is DETECTED, not just whether it is: every mutant (Stryker's own instrumenter, exact code)
+# is hand-applied and the related tests run; a kill counts only when a test fails on an AssertionError. Mutants that only make
+# a test crash / throw / time out, and survivors without a ledger entry, are reported. Report-only (the gate is stryker.yml);
+# the same runner as tools/pca-audit/assert-runner/README.md, cut into slices of about SLICE mutants over many runners.
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: 'space-separated packages/pca source files (e.g. "src/zk.ts src/kem.ts"); empty = tools/pca-audit/assert-runner/r13-files.txt'
+        default: ''
+      slice:
+        description: 'mutants per job'
+        default: '150'
+  # a new workflow cannot be dispatched until it is on the default branch: creating an assert/* branch at a commit runs it
+  # there with the defaults (every file of r13-files.txt)
+  push:
+    branches: ['assert/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --prefix tools/pca-audit --no-audit --no-fund
+      - id: plan
+        env:
+          FILES: ${{ inputs.files }}
+          SLICE: ${{ inputs.slice }}
+        run: |
+          files="$FILES"; [ -n "$files" ] || files="$(cat tools/pca-audit/assert-runner/r13-files.txt)"
+          : > "$RUNNER_TEMP/plan.tsv"
+          for f in $files; do
+            node tools/pca-audit/assert-runner/gen-mutants.mjs --pkg-dir packages/pca --src "$f" --out "$RUNNER_TEMP/m.jsonl" >/dev/null
+            echo -e "$f\t$(grep -c . "$RUNNER_TEMP/m.jsonl")" >> "$RUNNER_TEMP/plan.tsv"
+          done
+          node -e '
+            const fs=require("fs");const slice=Math.max(20,+process.argv[2]||150);
+            const rows=fs.readFileSync(process.argv[1],"utf8").trim().split("\n").map(l=>l.split("\t")).filter(r=>+r[1]>0);
+            let s=slice;const jobs=()=>rows.reduce((a,r)=>a+Math.ceil(+r[1]/s),0);while(jobs()>250)s+=25;
+            const inc=rows.flatMap(([f,c])=>{const n=Math.ceil(+c/s);return Array.from({length:n},(_,i)=>({file:f,k:i+1,n,slug:f.replace(/[^A-Za-z0-9]+/g,"_")}))});
+            console.log(`${rows.length} files, ${rows.reduce((a,r)=>a+ +r[1],0)} mutants, ${inc.length} jobs of <= ${s}`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,"matrix="+JSON.stringify({include:inc})+"\n");
+          ' "$RUNNER_TEMP/plan.tsv" "$SLICE"
+
+  measure:
+    needs: plan
+    name: ${{ matrix.file }} ${{ matrix.k }}/${{ matrix.n }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build the core package
+        run: |
+          pnpm install --frozen-lockfile
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+          pnpm -r --filter='{./packages/pca}...' run build
+      - name: Compliance circuit (the Groth16 tests need it)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/circom" https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
+          chmod +x "$RUNNER_TEMP/circom"
+          CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
+      - name: Slim workspace, mutants, test lists
+        env:
+          SRC: ${{ matrix.file }}
+          K: ${{ matrix.k }}
+          N: ${{ matrix.n }}
+        run: |
+          W="$RUNNER_TEMP/ws"; mkdir -p "$W/packages"
+          rsync -a --exclude node_modules packages/pca "$W/packages/"
+          cp tsconfig.base.json "$W/"
+          ln -s "$GITHUB_WORKSPACE/node_modules" "$W/node_modules"
+          ln -s "$GITHUB_WORKSPACE/packages/pca/node_modules" "$W/packages/pca/node_modules"
+          AR=tools/pca-audit/assert-runner
+          node $AR/gen-mutants.mjs --pkg-dir "$W/packages/pca" --src "$SRC" --out "$RUNNER_TEMP/all.jsonl"
+          awk -v k="$K" -v n="$N" '(NR-1)%n==k-1' "$RUNNER_TEMP/all.jsonl" > "$RUNNER_TEMP/m.jsonl"
+          echo "slice: $(grep -c . "$RUNNER_TEMP/m.jsonl") mutants"
+          # only test files that pass on the unmodified source (a test needing a network / secret is left out, and said so)
+          keep() {
+            [ -n "$1" ] || { echo ""; return; }
+            ( cd "$W/packages/pca" && ./node_modules/.bin/vitest run --pool=forks --reporter=json --outputFile="$RUNNER_TEMP/base.json" $1 >/dev/null 2>&1 ) || true
+            node -e 'const fs=require("fs"),p=require("path");let j={testResults:[]};try{j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"))}catch{}
+              const ok=new Set(j.testResults.filter(f=>f.status==="passed").map(f=>p.relative(process.argv[2],f.name)));
+              const want=process.argv[3].split(" ").filter(Boolean);const bad=want.filter(f=>!ok.has(f));
+              if(bad.length)console.error("left out (fails on the unmodified source): "+bad.join(" "));
+              console.log(want.filter(f=>ok.has(f)).join(" "))' "$RUNNER_TEMP/base.json" "$W/packages/pca" "$1"
+          }
+          T1="$(keep "$(node $AR/related-tests.mjs "$W/packages/pca" "$SRC" direct)")"
+          TA="$(keep "$(node $AR/related-tests.mjs "$W/packages/pca" "$SRC" all)")"
+          [ -n "$T1" ] || T1="$TA"
+          echo "phase 1: $(echo $T1 | wc -w) test files; phase 2: $(echo $TA | wc -w)"
+          { echo "W=$W"; echo "T1=$T1"; echo "TA=$TA"; } >> "$GITHUB_ENV"
+      - name: Phase 1 (direct tests)
+        env:
+          SRC: ${{ matrix.file }}
+        run: |
+          [ -n "$T1" ] || { echo "no test file reaches $SRC"; cp "$RUNNER_TEMP/m.jsonl" "$RUNNER_TEMP/rest.jsonl"; exit 0; }
+          bash tools/pca-audit/assert-runner/assert-runner.sh -w "$W" -s "$SRC" -t "$T1" -j 3 -m "$RUNNER_TEMP/m.jsonl" -o "$RUNNER_TEMP/p1" -T 300000
+          node -e 'const fs=require("fs");const r=new Map(fs.readFileSync(process.argv[1],"utf8").trim().split("\n").filter(Boolean).map(l=>{const x=JSON.parse(l);return [x.id,x.result]}));
+            fs.writeFileSync(process.argv[3],fs.readFileSync(process.argv[2],"utf8").trim().split("\n").filter(l=>l&&r.get(JSON.parse(l).id)!=="KILLED_ASSERT").join("\n")+"\n")' \
+            "$RUNNER_TEMP/p1/results.jsonl" "$RUNNER_TEMP/m.jsonl" "$RUNNER_TEMP/rest.jsonl"
+      - name: Phase 2 (every related test, for the mutants phase 1 did not kill by assertion)
+        env:
+          SRC: ${{ matrix.file }}
+        run: |
+          if ! grep -q . "$RUNNER_TEMP/rest.jsonl" || [ -z "$TA" ] || [ "$TA" = "$T1" ]; then echo "phase 2 not needed"; exit 0; fi
+          bash tools/pca-audit/assert-runner/assert-runner.sh -w "$W" -s "$SRC" -t "$TA" -j 3 -m "$RUNNER_TEMP/rest.jsonl" -o "$RUNNER_TEMP/p2" -T 600000
+      - name: Results
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/res"
+          node -e 'const fs=require("fs");const rd=f=>fs.existsSync(f)?fs.readFileSync(f,"utf8").trim().split("\n").filter(Boolean).map(JSON.parse):[];
+            const T=process.env.RUNNER_TEMP;const r=new Map();for(const x of rd(T+"/p1/results.jsonl"))r.set(x.id,x);for(const x of rd(T+"/p2/results.jsonl"))r.set(x.id,x);
+            const out=rd(T+"/m.jsonl").map(m=>{const x=r.get(m.id)??{result:"NOT_RUN"};return {...m,result:x.result,ms:x.ms,assert:x.assert,error:x.error,file:process.argv[1]}});
+            fs.writeFileSync(T+"/res/results.jsonl",out.map(x=>JSON.stringify(x)).join("\n")+"\n");
+            const c={};for(const x of out)c[x.result]=(c[x.result]||0)+1;console.log(JSON.stringify(c));' "${{ matrix.file }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ar-${{ matrix.slug }}-${{ matrix.k }}
+          path: ${{ runner.temp }}/res/results.jsonl
+
+  report:
+    needs: measure
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: ar
+          pattern: ar-*
+      - name: Report (every mutant not killed by an assertion; survivors checked against the ledger)
+        run: node tools/pca-audit/assert-runner/ci-report.mjs ar tools/pca-audit/mutation-equivalents.json | tee report.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: assert-report
+          path: report.txt

@@ -1,0 +1,3402 @@
+maude tool: 'maude'
+ checking version: 3.5.1. OK.
+ checking installation: OK.
+[Theory PCA_Scope_Resource] Theory loaded
+[Theory PCA_Scope_Resource] Theory translated
+[Theory PCA_Scope_Resource] Derivation checks started
+[Theory PCA_Scope_Resource] Derivation checks ended
+[Theory PCA_Scope_Resource] Theory closed
+[Saturating Sources] Step 1 (Max 5)
+[Saturating Sources] Done
+theory PCA_Scope_Resource
+
+begin
+
+// Function signature and definition of the equational theory E
+
+functions: fst/1, h/1, pair/2, pk/1, sign/2, snd/1, true/0, verify/3
+equations:
+    fst(<x.1, x.2>) = x.1,
+    snd(<x.1, x.2>) = x.2,
+    verify(sign(x.1, x.2), x.1, pk(x.2)) = true
+
+/* looping facts with injective instances: Walk/3 */
+
+rule (modulo E) Mem_Any:
+   [ In( v ) ] --[ MemEv( 'any', v ) ]-> [ !Mem( 'any', v ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Mem_Here:
+   [ In( v ), In( rest ) ]
+  --[ MemEv( <v, rest>, v ) ]->
+   [ !Mem( <v, rest>, v ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Mem_Later:
+   [ !Mem( rest, v ), In( x ) ]
+  --[ MemEv( <x, rest>, v ) ]->
+   [ !Mem( <x, rest>, v ) ]
+
+  // loop breaker: [0]
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Pre_Nil:
+   [ In( r ) ] --[ PreEv( 'nil', r ) ]-> [ !Pre( 'nil', r ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Pre_Cons:
+   [ !Pre( p, r ), In( a ) ]
+  --[ PreEv( <a, p>, <a, r> ) ]->
+   [ !Pre( <a, p>, <a, r> ) ]
+
+  // loop breaker: [0]
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Gen_Key:
+   [ Fr( ~ltk ) ]
+  --[ KeyGen( pk(~ltk) ) ]->
+   [ !Ltk( pk(~ltk), ~ltk ), Out( pk(~ltk) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reveal:
+   [ !Ltk( pkx, ltk ) ] --[ Reveal( pkx ) ]-> [ Out( ltk ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Verifier_Setup:
+   [ !Ltk( pkT, ltkT ) ] --[ Trust( pkT ) ]-> [ !VCfg( pkT ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Principal_Grant:
+   [ !Ltk( pk(ltkP), ltkP ), !Ltk( pkH, ltkH ), In( sc ), In( rp ) ]
+  --[
+  Granted( pk(ltkP), pkH, sc, rp,
+           h(<<'cap', 'none', pk(ltkP), pkH, sc, rp>, 
+              sign(<'cap', 'none', pk(ltkP), pkH, sc, rp>, ltkP)>)
+  )
+  ]->
+   [
+   Out( <<'cap', 'none', pk(ltkP), pkH, sc, rp>, 
+         sign(<'cap', 'none', pk(ltkP), pkH, sc, rp>, ltkP)>
+   )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Delegate:
+   [
+   !Ltk( pk(ltkD), ltkD ), In( <<'cap', ppar, piss, pk(ltkD), pcv>, psg> ),
+   In( pkE ), In( sc ), In( rp )
+   ]
+  --[
+  Eq( verify(psg, <'cap', ppar, piss, pk(ltkD), pcv>, piss), true ),
+  HonestDelegated( h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>),
+                   h(<
+                      <'cap', h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>), pk(ltkD), pkE, sc, 
+                       rp>, 
+                      sign(<'cap', h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>), pk(ltkD), 
+                            pkE, sc, rp>,
+                           ltkD)
+                     >),
+                   sc, rp
+  )
+  ]->
+   [
+   Out( <
+         <'cap', h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>), pk(ltkD), pkE, sc, 
+          rp>, 
+         sign(<'cap', h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>), pk(ltkD), 
+               pkE, sc, rp>,
+              ltkD)
+        >
+   )
+   ]
+
+  /*
+  rule (modulo AC) Delegate:
+     [
+     !Ltk( pk(ltkD), ltkD ), In( <<'cap', ppar, piss, pk(ltkD), pcv>, psg> ),
+     In( pkE ), In( sc ), In( rp )
+     ]
+    --[
+    Eq( z, true ),
+    HonestDelegated( h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>),
+                     h(<
+                        <'cap', h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>), pk(ltkD), pkE, sc, 
+                         rp>, 
+                        sign(<'cap', h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>), pk(ltkD), 
+                              pkE, sc, rp>,
+                             ltkD)
+                       >),
+                     sc, rp
+    )
+    ]->
+     [
+     Out( <
+           <'cap', h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>), pk(ltkD), pkE, sc, 
+            rp>, 
+           sign(<'cap', h(<<'cap', ppar, piss, pk(ltkD), pcv>, psg>), pk(ltkD), 
+                 pkE, sc, rp>,
+                ltkD)
+          >
+     )
+     ]
+    variants (modulo AC)
+    1. ltkD  = ltkD.12
+       pcv   = pcv.13
+       piss  = piss.14
+       ppar  = ppar.16
+       psg   = psg.17
+       z     = verify(psg.17, <'cap', ppar.16, piss.14, pk(ltkD.12), pcv.13>,
+                      piss.14)
+    
+    2. ltkD  = ltkD.16
+       pcv   = pcv.17
+       piss  = pk(x.28)
+       ppar  = ppar.20
+       psg   = sign(<'cap', ppar.20, pk(x.28), pk(ltkD.16), pcv.17>, x.28)
+       z     = true
+  */
+
+rule (modulo E) Agent_Act:
+   [ !Ltk( pk(ltkH), ltkH ), In( <chain, 'act', verb, res> ) ]
+  --[ AgentSigned( pk(ltkH), verb, res ) ]->
+   [ Out( <chain, <'act', verb, res>, sign(<'act', verb, res>, ltkH)> ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Walk_Start:
+   [
+   In( <<<<'cap', par1, iss1, hol1, sc1, rp1>, sg1>, rest>, 
+        <'act', verb, res>, asig>
+   ),
+   !VCfg( pkT ), Fr( ~wid ), !Mem( sc1, verb ), !Pre( rp1, res )
+   ]
+  --[
+  Eq( verify(asig, <'act', verb, res>, hol1), true ),
+  Eq( verify(sg1, <'cap', par1, iss1, hol1, sc1, rp1>, iss1), true ),
+  WalkStart( ~wid, verb, res ),
+  HopWalk( ~wid, h(<<'cap', par1, iss1, hol1, sc1, rp1>, sg1>), sc1, rp1,
+           verb, res, iss1
+  )
+  ]->
+   [
+   Walk( ~wid, h(<<'cap', par1, iss1, hol1, sc1, rp1>, sg1>), rest ),
+   !Hop( ~wid, h(<<'cap', par1, iss1, hol1, sc1, rp1>, sg1>), par1, iss1 ),
+   !Ctx( ~wid, <pkT, verb, res, hol1> )
+   ]
+
+  /*
+  rule (modulo AC) Walk_Start:
+     [
+     In( <<<<'cap', par1, iss1, hol1, sc1, rp1>, sg1>, rest>, 
+          <'act', verb, res>, asig>
+     ),
+     !VCfg( pkT ), Fr( ~wid ), !Mem( sc1, verb ), !Pre( rp1, res )
+     ]
+    --[
+    Eq( z, true ), Eq( z.1, true ), WalkStart( ~wid, verb, res ),
+    HopWalk( ~wid, h(<<'cap', par1, iss1, hol1, sc1, rp1>, sg1>), sc1, rp1,
+             verb, res, iss1
+    )
+    ]->
+     [
+     Walk( ~wid, h(<<'cap', par1, iss1, hol1, sc1, rp1>, sg1>), rest ),
+     !Hop( ~wid, h(<<'cap', par1, iss1, hol1, sc1, rp1>, sg1>), par1, iss1 ),
+     !Ctx( ~wid, <pkT, verb, res, hol1> )
+     ]
+    variants (modulo AC)
+    1. asig  = asig.28
+       hol1  = hol1.29
+       iss1  = iss1.30
+       par1  = par1.31
+       res   = res.33
+       rp1   = rp1.35
+       sc1   = sc1.36
+       sg1   = sg1.37
+       verb  = verb.38
+       z     = verify(asig.28, <'act', verb.38, res.33>, hol1.29)
+       z.1   = verify(sg1.37,
+                      <'cap', par1.31, iss1.30, hol1.29, sc1.36, rp1.35>, iss1.30)
+    
+    2. asig  = asig.34
+       hol1  = hol1.35
+       iss1  = pk(x.65)
+       par1  = par1.37
+       res   = res.39
+       rp1   = rp1.41
+       sc1   = sc1.42
+       sg1   = sign(<'cap', par1.37, pk(x.65), hol1.35, sc1.42, rp1.41>, x.65)
+       verb  = verb.44
+       z     = verify(asig.34, <'act', verb.44, res.39>, hol1.35)
+       z.1   = true
+    
+    3. asig  = sign(<'act', verb.40, res.35>, x.59)
+       hol1  = pk(x.59)
+       iss1  = pk(x.60)
+       par1  = par1.33
+       res   = res.35
+       rp1   = rp1.37
+       sc1   = sc1.38
+       sg1   = sign(<'cap', par1.33, pk(x.60), pk(x.59), sc1.38, rp1.37>, x.60)
+       verb  = verb.40
+       z     = true
+       z.1   = true
+    
+    4. asig  = sign(<'act', verb.41, res.36>, x.61)
+       hol1  = pk(x.61)
+       iss1  = iss1.33
+       par1  = par1.34
+       res   = res.36
+       rp1   = rp1.38
+       sc1   = sc1.39
+       sg1   = sg1.40
+       verb  = verb.41
+       z     = true
+       z.1   = verify(sg1.40,
+                      <'cap', par1.34, iss1.33, pk(x.61), sc1.39, rp1.38>, iss1.33)
+  */
+
+rule (modulo E) Walk_Step:
+   [
+   Walk( wid, cid, <<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>, rest> ),
+   !Hop( wid, cid, par, iss ), !Ctx( wid, <pkT, verb, res, hol1> ),
+   !Mem( sc2, verb ), !Pre( rp2, res )
+   ]
+  --[
+  Eq( par, h(<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>) ),
+  Eq( iss, hol2 ),
+  Eq( verify(sg2, <'cap', par2, iss2, hol2, sc2, rp2>, iss2), true ),
+  HopWalk( wid, h(<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>), sc2, rp2,
+           verb, res, iss2
+  )
+  ]->
+   [
+   Walk( wid, h(<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>), rest ),
+   !Hop( wid, h(<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>), par2, iss2 )
+   ]
+
+  // loop breakers: [0,1]
+  /*
+  rule (modulo AC) Walk_Step:
+     [
+     Walk( wid, cid, <<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>, rest> ),
+     !Hop( wid, cid, par, iss ), !Ctx( wid, <pkT, verb, res, hol1> ),
+     !Mem( sc2, verb ), !Pre( rp2, res )
+     ]
+    --[
+    Eq( par, h(<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>) ),
+    Eq( iss, hol2 ), Eq( z, true ),
+    HopWalk( wid, h(<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>), sc2, rp2,
+             verb, res, iss2
+    )
+    ]->
+     [
+     Walk( wid, h(<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>), rest ),
+     !Hop( wid, h(<<'cap', par2, iss2, hol2, sc2, rp2>, sg2>), par2, iss2 )
+     ]
+    variants (modulo AC)
+    1. hol2  = hol2.19
+       iss2  = iss2.21
+       par2  = par2.23
+       rp2   = rp2.27
+       sc2   = sc2.28
+       sg2   = sg2.29
+       z     = verify(sg2.29,
+                      <'cap', par2.23, iss2.21, hol2.19, sc2.28, rp2.27>, iss2.21)
+    
+    2. hol2  = hol2.28
+       iss2  = pk(x.45)
+       par2  = par2.32
+       rp2   = rp2.36
+       sc2   = sc2.37
+       sg2   = sign(<'cap', par2.32, pk(x.45), hol2.28, sc2.37, rp2.36>, x.45)
+       z     = true
+    // loop breakers: [0,1]
+  */
+
+rule (modulo E) Walk_Finish:
+   [
+   Walk( wid, cid, 'end' ), !Hop( wid, cid, 'none', iss ),
+   !Ctx( wid, <pkT, verb, res, hol1> )
+   ]
+  --[ Eq( iss, pkT ), Accept( wid, cid, hol1, verb, res, iss ) ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+restriction Equality:
+  "∀ x y #i. (Eq( x, y ) @ #i) ⇒ (x = y)"
+  // safety formula
+
+  /*
+  expanded formula:
+  "∀ x y #i. (Eq( x, y ) @ #i) ⇒ (x = y)"
+  */
+
+lemma executable_accept:
+  exists-trace
+  "∃ w rid lhol v r iss pkD sc rp #g #s #m #p #i.
+    (((((Granted( iss, pkD, sc, rp, rid ) @ #g) ∧
+        (AgentSigned( lhol, v, r ) @ #s)) ∧
+       (MemEv( sc, v ) @ #m)) ∧
+      (PreEv( rp, r ) @ #p)) ∧
+     (Accept( w, rid, lhol, v, r, iss ) @ #i)) ∧
+    (∀ x #q. (Reveal( x ) @ #q) ⇒ (⊥))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ w rid lhol v r iss pkD sc rp #g #s #m #p #i.
+  (Granted( iss, pkD, sc, rp, rid ) @ #g) ∧
+  (AgentSigned( lhol, v, r ) @ #s) ∧
+  (MemEv( sc, v ) @ #m) ∧
+  (PreEv( rp, r ) @ #p) ∧
+  (Accept( w, rid, lhol, v, r, iss ) @ #i)
+ ∧
+  ∀ x #q. (Reveal( x ) @ #q) ⇒ ⊥"
+*/
+by sorry
+
+lemma executable_delegated:
+  exists-trace
+  "∃ w rid hc lhol v r iss pkD sc rp sc2 rp2 #g #d #s #m #p #m2 #p2 #i.
+    ((((((((Granted( iss, pkD, sc, rp, rid ) @ #g) ∧
+           (HonestDelegated( rid, hc, sc2, rp2 ) @ #d)) ∧
+          (AgentSigned( lhol, v, r ) @ #s)) ∧
+         (MemEv( sc, v ) @ #m)) ∧
+        (PreEv( rp, r ) @ #p)) ∧
+       (MemEv( sc2, v ) @ #m2)) ∧
+      (PreEv( rp2, r ) @ #p2)) ∧
+     (Accept( w, rid, lhol, v, r, iss ) @ #i)) ∧
+    (∀ x #q. (Reveal( x ) @ #q) ⇒ (⊥))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ w rid hc lhol v r iss pkD sc rp sc2 rp2 #g #d #s #m #p #m2 #p2 #i.
+  (Granted( iss, pkD, sc, rp, rid ) @ #g) ∧
+  (HonestDelegated( rid, hc, sc2, rp2 ) @ #d) ∧
+  (AgentSigned( lhol, v, r ) @ #s) ∧
+  (MemEv( sc, v ) @ #m) ∧
+  (PreEv( rp, r ) @ #p) ∧
+  (MemEv( sc2, v ) @ #m2) ∧
+  (PreEv( rp2, r ) @ #p2) ∧
+  (Accept( w, rid, lhol, v, r, iss ) @ #i)
+ ∧
+  ∀ x #q. (Reveal( x ) @ #q) ⇒ ⊥"
+*/
+by sorry
+
+lemma executable_deeper_resource:
+  exists-trace
+  "∃ w rid lhol v iss pkD sc #g #s #m #p #i.
+    (((((Granted( iss, pkD, sc, <'a', 'nil'>, rid ) @ #g) ∧
+        (AgentSigned( lhol, v, <'a', 'b', 'nil'> ) @ #s)) ∧
+       (MemEv( sc, v ) @ #m)) ∧
+      (PreEv( <'a', 'nil'>, <'a', 'b', 'nil'> ) @ #p)) ∧
+     (Accept( w, rid, lhol, v, <'a', 'b', 'nil'>, iss ) @ #i)) ∧
+    (∀ x #q. (Reveal( x ) @ #q) ⇒ (⊥))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ w rid lhol v iss pkD sc #g #s #m #p #i.
+  (Granted( iss, pkD, sc, <'a', 'nil'>, rid ) @ #g) ∧
+  (AgentSigned( lhol, v, <'a', 'b', 'nil'> ) @ #s) ∧
+  (MemEv( sc, v ) @ #m) ∧
+  (PreEv( <'a', 'nil'>, <'a', 'b', 'nil'> ) @ #p) ∧
+  (Accept( w, rid, lhol, v, <'a', 'b', 'nil'>, iss ) @ #i)
+ ∧
+  ∀ x #q. (Reveal( x ) @ #q) ⇒ ⊥"
+*/
+by sorry
+
+lemma scope_narrowing_all_hops:
+  all-traces
+  "∀ w rid lhol v r iss h sc rp v2 r2 iss2 #i #x.
+    ((Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+     (HopWalk( w, h, sc, rp, v2, r2, iss2 ) @ #x)) ⇒
+    ((v2 = v) ∧ (∃ #m. MemEv( sc, v ) @ #m))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ w rid lhol v r iss h sc rp v2 r2 iss2 #i #x.
+  (Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+  (HopWalk( w, h, sc, rp, v2, r2, iss2 ) @ #x)
+ ∧
+  ((¬(v2 = v)) ∨ (∀ #m. (MemEv( sc, v ) @ #m) ⇒ ⊥))"
+*/
+by sorry
+
+lemma resource_narrowing_all_hops:
+  all-traces
+  "∀ w rid lhol v r iss h sc rp v2 r2 iss2 #i #x.
+    ((Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+     (HopWalk( w, h, sc, rp, v2, r2, iss2 ) @ #x)) ⇒
+    ((r2 = r) ∧ (∃ #m. PreEv( rp, r ) @ #m))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ w rid lhol v r iss h sc rp v2 r2 iss2 #i #x.
+  (Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+  (HopWalk( w, h, sc, rp, v2, r2, iss2 ) @ #x)
+ ∧
+  ((¬(r2 = r)) ∨ (∀ #m. (PreEv( rp, r ) @ #m) ⇒ ⊥))"
+*/
+by sorry
+
+lemma root_scope_bounds_action:
+  all-traces
+  "∀ w rid lhol v r iss pkH sc rp #i #g.
+    ((Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+     (Granted( iss, pkH, sc, rp, rid ) @ #g)) ⇒
+    ((∃ #m. MemEv( sc, v ) @ #m) ∨ (∃ #q. Reveal( iss ) @ #q))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ w rid lhol v r iss pkH sc rp #i #g.
+  (Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+  (Granted( iss, pkH, sc, rp, rid ) @ #g)
+ ∧
+  (∀ #m. (MemEv( sc, v ) @ #m) ⇒ ⊥) ∧ (∀ #q. (Reveal( iss ) @ #q) ⇒ ⊥)"
+*/
+by sorry
+
+lemma root_resource_bounds_action:
+  all-traces
+  "∀ w rid lhol v r iss pkH sc rp #i #g.
+    ((Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+     (Granted( iss, pkH, sc, rp, rid ) @ #g)) ⇒
+    ((∃ #m. PreEv( rp, r ) @ #m) ∨ (∃ #q. Reveal( iss ) @ #q))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ w rid lhol v r iss pkH sc rp #i #g.
+  (Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+  (Granted( iss, pkH, sc, rp, rid ) @ #g)
+ ∧
+  (∀ #m. (PreEv( rp, r ) @ #m) ⇒ ⊥) ∧ (∀ #q. (Reveal( iss ) @ #q) ⇒ ⊥)"
+*/
+by sorry
+
+lemma honest_hop_scope_bounds_action:
+  all-traces
+  "∀ w rid lhol v r iss hp hc sc rp v2 r2 iss2 #i #d #x.
+    (((Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+      (HonestDelegated( hp, hc, sc, rp ) @ #d)) ∧
+     (HopWalk( w, hc, sc, rp, v2, r2, iss2 ) @ #x)) ⇒
+    (∃ #m. MemEv( sc, v ) @ #m)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ w rid lhol v r iss hp hc sc rp v2 r2 iss2 #i #d #x.
+  (Accept( w, rid, lhol, v, r, iss ) @ #i) ∧
+  (HonestDelegated( hp, hc, sc, rp ) @ #d) ∧
+  (HopWalk( w, hc, sc, rp, v2, r2, iss2 ) @ #x)
+ ∧
+  ∀ #m. (MemEv( sc, v ) @ #m) ⇒ ⊥"
+*/
+by sorry
+
+lemma authorization:
+  all-traces
+  "∀ w rid lhol v r iss #i.
+    (Accept( w, rid, lhol, v, r, iss ) @ #i) ⇒
+    ((∃ pkH sc rp #g. Granted( iss, pkH, sc, rp, rid ) @ #g) ∨
+     (∃ #q. Reveal( iss ) @ #q))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ w rid lhol v r iss #i.
+  (Accept( w, rid, lhol, v, r, iss ) @ #i)
+ ∧
+  (∀ pkH sc rp #g. (Granted( iss, pkH, sc, rp, rid ) @ #g) ⇒ ⊥) ∧
+  (∀ #q. (Reveal( iss ) @ #q) ⇒ ⊥)"
+*/
+by sorry
+
+lemma attack_scope_escalation:
+  exists-trace
+  "∃ w rid hc lhol iss pkD rp sc2 rp2 r #g #d #i.
+    (((Granted( iss, pkD, <'read', 'nil'>, rp, rid ) @ #g) ∧
+      (HonestDelegated( rid, hc, sc2, rp2 ) @ #d)) ∧
+     (Accept( w, rid, lhol, 'write', r, iss ) @ #i)) ∧
+    (∀ x #q. (Reveal( x ) @ #q) ⇒ (⊥))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ w rid hc lhol iss pkD rp sc2 rp2 r #g #d #i.
+  (Granted( iss, pkD, <'read', 'nil'>, rp, rid ) @ #g) ∧
+  (HonestDelegated( rid, hc, sc2, rp2 ) @ #d) ∧
+  (Accept( w, rid, lhol, 'write', r, iss ) @ #i)
+ ∧
+  ∀ x #q. (Reveal( x ) @ #q) ⇒ ⊥"
+*/
+simplify
+solve( !Ltk( pk(ltkP), ltkP ) ▶₀ #g )
+  case Gen_Key
+  solve( !Ltk( pk(ltkD), ltkH ) ▶₁ #g )
+    case Gen_Key
+    solve( !Ltk( pk(~ltk), ~ltk ) ▶₀ #d )
+      case Gen_Key
+      solve( Walk( w,
+                   h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, rp>, 
+                      sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, rp>, ~ltk.1)
+                     >),
+                   'end'
+             ) ▶₀ #i )
+        case Walk_Start_case_1
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_1
+          by contradiction /* cyclic */
+        next
+          case Walk_Step_case_2
+          by contradiction /* cyclic */
+        qed
+      next
+        case Walk_Start_case_2
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_1
+          by contradiction /* cyclic */
+        next
+          case Walk_Step_case_2
+          by contradiction /* cyclic */
+        qed
+      next
+        case Walk_Start_case_3
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( !KU( sign(<'act', 'write', r>, ~ltk) ) @ #vk.26 )
+              case Agent_Act
+              by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+            next
+              case c_sign
+              solve( !KU( ~ltk ) @ #vk.27 )
+                case Reveal
+                by contradiction /* from formulas */
+              qed
+            qed
+          qed
+        next
+          case Walk_Step_case_1
+          by contradiction /* cyclic */
+        next
+          case Walk_Step_case_2
+          by contradiction /* cyclic */
+        qed
+      next
+        case Walk_Start_case_4
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( !KU( sign(<'act', 'write', a, r>, ~ltk) ) @ #vk.27 )
+              case Agent_Act
+              by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+            next
+              case c_sign
+              solve( !KU( ~ltk ) @ #vk.31 )
+                case Reveal
+                by contradiction /* from formulas */
+              qed
+            qed
+          qed
+        next
+          case Walk_Step_case_1
+          by contradiction /* cyclic */
+        next
+          case Walk_Step_case_2
+          by contradiction /* cyclic */
+        qed
+      next
+        case Walk_Step_case_01
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_02
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_03
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_04
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_05
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_06
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_07
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_08
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_09
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_10
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_11
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_12
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        qed
+      next
+        case Walk_Step_case_13
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), 'any', 'nil'>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), 'any', 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.38 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), 'any', 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.28 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.37 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_14
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), 'any', a, p>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), 'any', a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), 'any', a, p>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.42 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), 'any', a, p>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.41 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_15
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), <'write', rest>, 'nil'>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.39 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by contradiction /* cyclic */
+              next
+                case Walk_Step_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.28 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.38 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.28 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.38 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_16
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), <'write', rest>, a, p>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), <'write', rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, a, p>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.43 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by contradiction /* cyclic */
+              next
+                case Walk_Step_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, a, p>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.42 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, a, p>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.42 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_17
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( !KU( sign(<'act', 'write', r>, ~ltk) ) @ #vk.26 )
+              case Agent_Act
+              solve( Walk( ~wid, cid,
+                           <
+                            <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                             sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                  ~ltk.1)
+                            >, 
+                            'end'>
+                     ) ▶₀ #vr.2 )
+                case Walk_Start
+                by solve( !Hop( ~wid,
+                                h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                   sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                        ~ltk.1)
+                                  >),
+                                h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                   sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                        ~ltk.1)
+                                  >),
+                                pk(~ltk)
+                          ) ▶₁ #vr.2 )
+              next
+                case Walk_Step_case_1
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, 'any', 'nil'>, 
+                                sign(<'cap', par2, pk(x), hol2, 'any', 'nil'>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_2
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, 'any', a, p>, 
+                                sign(<'cap', par2, pk(x), hol2, 'any', a, p>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_3
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, <'write', rest>, 'nil'>, 
+                                sign(<'cap', par2, pk(x), hol2, <'write', rest>, 'nil'>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step_case_1
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case Walk_Step_case_2
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_4
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, <'write', rest>, a, p>, 
+                                sign(<'cap', par2, pk(x), hol2, <'write', rest>, a, p>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step_case_1
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case Walk_Step_case_2
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_5
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, <x.1, rest>, 'nil'>, 
+                                sign(<'cap', par2, pk(x), hol2, <x.1, rest>, 'nil'>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step_case_1
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case Walk_Step_case_2
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_6
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, <x.1, rest>, a, p>, 
+                                sign(<'cap', par2, pk(x), hol2, <x.1, rest>, a, p>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step_case_1
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case Walk_Step_case_2
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              qed
+            next
+              case c_sign
+              solve( !KU( ~ltk ) @ #vk.27 )
+                case Reveal
+                by contradiction /* from formulas */
+              qed
+            qed
+          qed
+        next
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <x.1, rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.40 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by contradiction /* cyclic */
+              next
+                case Walk_Step_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.28 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.38 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <x.1, rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.28 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.39 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_18
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), <x.2, rest>, a, p>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), <x.2, rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <x.1, rest>, a, p>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.44 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by contradiction /* cyclic */
+              next
+                case Walk_Step_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, a, p>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.42 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, 'nil'>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <x.1, rest>, a, p>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.43 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_19
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), 'any', 'nil'>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), 'any', 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.42 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), 'any', 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.41 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_20
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), 'any', a, p.1>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), 'any', a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), 'any', a, p.1>,
+                                 ~ltk)
+                       ) @ #vk.31 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.44 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), 'any', a, p.1>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.43 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_21
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), <'write', rest>, 'nil'>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.43 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by contradiction /* cyclic */
+              next
+                case Walk_Step_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.42 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.42 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_22
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), <'write', rest>, a, p.1>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), <'write', rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, a, p.1>,
+                                 ~ltk)
+                       ) @ #vk.31 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.45 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by contradiction /* cyclic */
+              next
+                case Walk_Step_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, a, p.1>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.44 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, a, p.1>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.44 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_23
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <x.1, rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.44 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by contradiction /* cyclic */
+              next
+                case Walk_Step_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.42 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <x.1, rest>, 'nil'>,
+                                 ~ltk)
+                       ) @ #vk.29 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.43 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      next
+        case Walk_Step_case_24
+        solve( !Hop( ~wid,
+                     h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                        sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                             ~ltk.1)
+                       >),
+                     'none', pk(~ltk.1)
+               ) ▶₁ #i )
+          case Walk_Start
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( !KU( sign(<'act', 'write', a, r>, ~ltk) ) @ #vk.27 )
+              case Agent_Act
+              solve( Walk( ~wid, cid,
+                           <
+                            <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                             sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                  ~ltk.1)
+                            >, 
+                            'end'>
+                     ) ▶₀ #vr.2 )
+                case Walk_Start
+                by solve( !Hop( ~wid,
+                                h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                   sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                        ~ltk.1)
+                                  >),
+                                h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                   sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                        ~ltk.1)
+                                  >),
+                                pk(~ltk)
+                          ) ▶₁ #vr.2 )
+              next
+                case Walk_Step_case_1
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, 'any', 'nil'>, 
+                                sign(<'cap', par2, pk(x), hol2, 'any', 'nil'>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_2
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, 'any', a, p.1>, 
+                                sign(<'cap', par2, pk(x), hol2, 'any', a, p.1>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_3
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, <'write', rest>, 'nil'>, 
+                                sign(<'cap', par2, pk(x), hol2, <'write', rest>, 'nil'>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step_case_1
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case Walk_Step_case_2
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_4
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, <'write', rest>, a, p.1>, 
+                                sign(<'cap', par2, pk(x), hol2, <'write', rest>, a, p.1>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step_case_1
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case Walk_Step_case_2
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_5
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, <x.1, rest>, 'nil'>, 
+                                sign(<'cap', par2, pk(x), hol2, <x.1, rest>, 'nil'>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step_case_1
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case Walk_Step_case_2
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              next
+                case Walk_Step_case_6
+                solve( !Hop( ~wid,
+                             h(<<'cap', par2, pk(x), hol2, <x.1, rest>, a, p.1>, 
+                                sign(<'cap', par2, pk(x), hol2, <x.1, rest>, a, p.1>, x)>),
+                             h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                     ~ltk.1)
+                               >),
+                             pk(~ltk)
+                       ) ▶₁ #vr.2 )
+                  case Walk_Step_case_1
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case Walk_Step_case_2
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                qed
+              qed
+            next
+              case c_sign
+              solve( !KU( ~ltk ) @ #vk.31 )
+                case Reveal
+                by contradiction /* from formulas */
+              qed
+            qed
+          qed
+        next
+          case Walk_Step_case_1
+          by solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+        next
+          case Walk_Step_case_2
+          solve( !Ctx( ~wid, <pk(~ltk.1), 'write', r, lhol> ) ▶₂ #i )
+            case Walk_Start
+            solve( Walk( ~wid, cid,
+                         <
+                          <<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                           sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                ~ltk.1)
+                          >, 
+                          'end'>
+                   ) ▶₀ #vr.2 )
+              case Walk_Start
+              solve( !Hop( ~wid,
+                           h(<<'cap', par1, pk(x.1), pk(x), <x.2, rest>, a, p.1>, 
+                              sign(<'cap', par1, pk(x.1), pk(x), <x.2, rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <x.1, rest>, a, p.1>,
+                                 ~ltk)
+                       ) @ #vk.31 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.46 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by contradiction /* cyclic */
+              next
+                case Walk_Step_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case Walk_Step_case_1
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_2
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, 'any', a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_3
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_4
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <'write', rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <'write', rest>, a, p.1>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.44 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_5
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, 'nil'>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            next
+              case Walk_Step_case_6
+              solve( !Hop( ~wid,
+                           h(<<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, 
+                              sign(<'cap', par2, pk(x.1), hol2, <x.2, rest>, a, p.1>, x.1)>),
+                           h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                              sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                   ~ltk.1)
+                             >),
+                           pk(~ltk)
+                     ) ▶₁ #vr.2 )
+                case Walk_Start
+                solve( !KU( sign(<'cap', 
+                                  h(<<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>, 
+                                     sign(<'cap', 'none', pk(~ltk.1), pk(~ltk), <'read', 'nil'>, a, p>,
+                                          ~ltk.1)
+                                    >), 
+                                  pk(~ltk), pk(x), <x.1, rest>, a, p.1>,
+                                 ~ltk)
+                       ) @ #vk.30 )
+                  case Delegate
+                  by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+                next
+                  case c_sign
+                  solve( !KU( ~ltk ) @ #vk.45 )
+                    case Reveal
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case Walk_Step_case_1
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              next
+                case Walk_Step_case_2
+                by solve( !Mem( 'nil', 'write' ) ▶₀ #vr.4 )
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma attack_resource_escalation:
+  exists-trace
+  "∃ w rid hc lhol iss pkD sc sc2 rp2 v #g #d #i.
+    (((Granted( iss, pkD, sc, <'a', 'nil'>, rid ) @ #g) ∧
+      (HonestDelegated( rid, hc, sc2, rp2 ) @ #d)) ∧
+     (Accept( w, rid, lhol, v, <'b', 'nil'>, iss ) @ #i)) ∧
+    (∀ x #q. (Reveal( x ) @ #q) ⇒ (⊥))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ w rid hc lhol iss pkD sc sc2 rp2 v #g #d #i.
+  (Granted( iss, pkD, sc, <'a', 'nil'>, rid ) @ #g) ∧
+  (HonestDelegated( rid, hc, sc2, rp2 ) @ #d) ∧
+  (Accept( w, rid, lhol, v, <'b', 'nil'>, iss ) @ #i)
+ ∧
+  ∀ x #q. (Reveal( x ) @ #q) ⇒ ⊥"
+*/
+by sorry
+
+/* All wellformedness checks were successful. */
+
+/*
+Generated from:
+Tamarin version 1.12.0
+Maude version 3.5.1
+Git revision: 82780bbaf3328a45f624ddb41e51bf75425f851c (with uncommited changes), branch: master
+Compiled at: 2026-03-07 14:22:39.174278293 UTC
+*/
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: pca_scope_resource.spthy
+
+  processing time: 47.51s
+  
+  executable_accept (exists-trace): analysis incomplete (1 steps)
+  executable_delegated (exists-trace): analysis incomplete (1 steps)
+  executable_deeper_resource (exists-trace): analysis incomplete (1 steps)
+  scope_narrowing_all_hops (all-traces): analysis incomplete (1 steps)
+  resource_narrowing_all_hops (all-traces): analysis incomplete (1 steps)
+  root_scope_bounds_action (all-traces): analysis incomplete (1 steps)
+  root_resource_bounds_action (all-traces): analysis incomplete (1 steps)
+  honest_hop_scope_bounds_action (all-traces): analysis incomplete (1 steps)
+  authorization (all-traces): analysis incomplete (1 steps)
+  attack_scope_escalation (exists-trace): falsified - no trace found (515 steps)
+  attack_resource_escalation (exists-trace): analysis incomplete (1 steps)
+
+==============================================================================

@@ -30,7 +30,7 @@ fi
 if [ "$what" = lean ] || [ "$what" = all ]; then
   echo "== lake build (lean/)"
   (cd lean && lake build) || rc=1
-  printf 'import PcaComp\n#print axioms PcaComp.Chain.chain_attenuation\n#print axioms PcaComp.Chain.no_widening_after\n' \
+  printf 'import PcaComp\n#print axioms PcaComp.Chain.chain_attenuation\n#print axioms PcaComp.Chain.no_widening_after\n#print axioms PcaComp.NonMember.nonmember_sound\n' \
     | (cd lean && lake env lean --stdin) || rc=1
 fi
 if [ "$what" = leanmath ] || [ "$what" = all ]; then

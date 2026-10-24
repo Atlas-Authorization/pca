@@ -21,7 +21,7 @@
 //     node packages/pca/scripts/gen-conformance-r6.mjs
 import { createHash } from 'node:crypto';
 import * as pca from '../dist/index.js';
-import { readCore, writeCore } from './conformance-io.mjs';
+import { cloneJson, readCore, writeCore } from './conformance-io.mjs';
 
 const seed = (l) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/r6/${l}`).digest());
 const ed = (l) => { const s = seed(l); return { sk: s, pub: pca.b64u(pca.publicKeyOf(s)) }; };
@@ -186,7 +186,7 @@ const mChain = (name, description, chain) => {
   if (r.ok) throw new Error(`malformed chain ${name}: reference ACCEPTED`);
   malformed.push({ name: 'r6-chain-' + name, description, api: 'chain', input: { chain, expected_root_issuer: principal.pub }, ts_reason: r.reason });
 };
-const clone = (x) => JSON.parse(JSON.stringify(x));
+const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const withHop = (f) => { const c = clone([root, hop1]); f(c); return c; };
 mChain('hop1-string', 'hop 1 is a string.', [root, 'x']);
 mChain('hop1-null', 'hop 1 is null.', [root, null]);

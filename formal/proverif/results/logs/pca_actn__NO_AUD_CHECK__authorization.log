@@ -1,0 +1,8 @@
+Starting query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> event(Granted(iss,pkH_2,cv_3,rid)) || event(Reveal(iss))
+RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> event(Granted(iss,pkH_2,cv_3,rid)) || event(Reveal(iss)) is true.
+Verification summary:
+Query(ies):
+ - Query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> event(Granted(iss,pkH_2,cv_3,rid)) || event(Reveal(iss)) is true.
+Associated restriction(s):
+ - Restriction event(ConsumeN(k_2,a)) && event(ConsumeN(k_2,b)) ==> a = b in process 1.
+ - Restriction event(AdvanceC(s,ct,a)) && event(AdvanceC(s,ct,b)) ==> a = b in process 1.

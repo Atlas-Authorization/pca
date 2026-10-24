@@ -1,0 +1,106 @@
+-- Query not event(ReachDelegated) in process 1.
+Translating the process into Horn clauses...
+Completing...
+Starting query not event(ReachDelegated)
+goal reachable: event(ReachDelegated)
+
+Derivation:
+Abbreviations:
+k_1 = k[!1 = @sid]
+
+1. The attacker has some term cv_3.
+attacker(cv_3).
+
+2. The attacker has some term pkE_2.
+attacker(pkE_2).
+
+3. The attacker has some term k_2.
+attacker(k_2).
+
+4. The attacker has some term pcv_2.
+attacker(pcv_2).
+
+5. The message pk(k_1) may be sent to the attacker at output {5}.
+attacker(pk(k_1)).
+
+6. By 3, the attacker may know k_2.
+Using the function pk the attacker may obtain pk(k_2).
+attacker(pk(k_2)).
+
+7. Using the function none the attacker may obtain none.
+attacker(none).
+
+8. Using the function capT the attacker may obtain capT.
+attacker(capT).
+
+9. By 8, the attacker may know capT.
+By 7, the attacker may know none.
+By 6, the attacker may know pk(k_2).
+By 5, the attacker may know pk(k_1).
+By 4, the attacker may know pcv_2.
+Using the function 5-tuple the attacker may obtain (capT,none,pk(k_2),pk(k_1),pcv_2).
+attacker((capT,none,pk(k_2),pk(k_1),pcv_2)).
+
+10. By 9, the attacker may know (capT,none,pk(k_2),pk(k_1),pcv_2).
+By 3, the attacker may know k_2.
+Using the function sign the attacker may obtain sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2).
+attacker(sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2)).
+
+11. By 9, the attacker may know (capT,none,pk(k_2),pk(k_1),pcv_2).
+By 10, the attacker may know sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2).
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(k_2),pk(k_1),pcv_2),sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2)).
+attacker(((capT,none,pk(k_2),pk(k_1),pcv_2),sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2))).
+
+12. By 11, the attacker may know ((capT,none,pk(k_2),pk(k_1),pcv_2),sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2)).
+By 2, the attacker may know pkE_2.
+By 1, the attacker may know cv_3.
+Using the function 3-tuple the attacker may obtain (((capT,none,pk(k_2),pk(k_1),pcv_2),sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2)),pkE_2,cv_3).
+attacker((((capT,none,pk(k_2),pk(k_1),pcv_2),sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2)),pkE_2,cv_3)).
+
+13. The entry keys(pk(k_1),k_1) may be inserted in a table at insert {3}.
+table(keys(pk(k_1),k_1)).
+
+14. The message (((capT,none,pk(k_2),pk(k_1),pcv_2),sign((capT,none,pk(k_2),pk(k_1),pcv_2),k_2)),pkE_2,cv_3) that the attacker may have by 12 may be received at input {15}.
+The entry keys(pk(k_1),k_1) that may be in a table by 13 may be read at get {23}.
+So event ReachDelegated may be executed at {21}.
+event(ReachDelegated).
+
+15. By 14, event(ReachDelegated).
+The goal is reached, represented in the following fact:
+event(ReachDelegated).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new k: bitstring creating k_3 at {2} in copy a
+
+insert keys(pk(k_3),k_3) at {3} in copy a
+
+event KeyGen(pk(k_3)) at {4} in copy a
+
+out(c, ~M) with ~M = pk(k_3) at {5} in copy a
+
+in(c, (((capT,none,pk(a_1),~M,a_2),sign((capT,none,pk(a_1),~M,a_2),a_1)),a_3,a_4)) with ~M = pk(k_3), sign((capT,none,pk(a_1),~M,a_2),a_1) = sign((capT,none,pk(a_1),pk(k_3),a_2),a_1) at {15} in copy a_5
+
+get keys(pk(k_3),k_3) at {23} in copy a_5
+
+event HonestDelegated(h(((capT,none,pk(a_1),pk(k_3),a_2),sign((capT,none,pk(a_1),pk(k_3),a_2),a_1))),h(((capT,h(((capT,none,pk(a_1),pk(k_3),a_2),sign((capT,none,pk(a_1),pk(k_3),a_2),a_1))),pk(k_3),a_3,a_4),sign((capT,h(((capT,none,pk(a_1),pk(k_3),a_2),sign((capT,none,pk(a_1),pk(k_3),a_2),a_1))),pk(k_3),a_3,a_4),k_3))),a_4) at {20} in copy a_5
+
+event ReachDelegated at {21} in copy a_5 (goal)
+
+The event ReachDelegated is executed at {21} in copy a_5.
+A trace has been found.
+RESULT not event(ReachDelegated) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query(ies):
+ - Query not event(ReachDelegated) is false.
+Associated restriction(s):
+ - Restriction event(ConsumeN(k_1,a)) && event(ConsumeN(k_1,b)) ==> a = b in process 1.
+ - Restriction event(AdvanceC(s,ct,a)) && event(AdvanceC(s,ct,b)) ==> a = b in process 1.
+
+--------------------------------------------------------------
+

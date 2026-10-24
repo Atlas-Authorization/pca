@@ -72,7 +72,10 @@ export function checkEntrySite(lines, e, label) {
  *   units:     Set of units the reports cover (an entry outside them is not checked for staleness)
  * Returns errors[].
  */
-export function checkSites(entries, survivors, units) {
+// `timedOut` (optional): site key -> how many mutants at that site ended in Timeout this run. A timeout counts as a kill in
+// the score, but an equivalent mutant that only slows the code down (a removed memo, an extra loop pass) times out on a loaded
+// runner and survives on a quiet one: its entry is neither STALE nor short of its multiplicity because of a timeout.
+export function checkSites(entries, survivors, units, timedOut = new Map()) {
   const errors = [];
   const groups = new Map();
   for (const s of survivors) {
@@ -90,13 +93,13 @@ export function checkSites(entries, survivors, units) {
     if (cand.length > 1) { errors.push(`survivor site matches ${cand.length} ledger entries: ${g.list[0].label}`); continue; }
     const e = cand[0];
     const want = e.multiplicity ?? 1;
-    if (g.list.length !== want) errors.push(`multiplicity: ${g.list.length} identical survivor(s) at this site, entry covers ${want}: ${e.label}`);
+    if (g.list.length !== want && g.list.length + (timedOut.get(k) ?? 0) !== want) errors.push(`multiplicity: ${g.list.length} identical survivor(s) at this site, entry covers ${want}: ${e.label}`);
     matched.set(e, (matched.get(e) ?? 0) + 1);
   }
   for (const e of entries) {
     if (!units.has(e.unit)) continue;
     const n = matched.get(e) ?? 0;
-    if (n === 0) errors.push(`STALE (no survivor at this site; killed or changed, remove it): ${e.label}`);
+    if (n === 0 && !timedOut.has(e.key)) errors.push(`STALE (no survivor at this site; killed or changed, remove it): ${e.label}`);
   }
   return errors;
 }

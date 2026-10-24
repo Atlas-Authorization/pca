@@ -1,0 +1,4 @@
+Starting query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> vaud_1 = aaud_3
+RESULT event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> vaud_1 = aaud_3 is true.
+Verification summary:
+Query event(Accept(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> vaud_1 = aaud_3 is true.

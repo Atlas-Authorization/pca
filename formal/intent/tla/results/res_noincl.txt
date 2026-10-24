@@ -1,0 +1,66 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 67 and seed -711643379434538561 with 2 workers on 2 cores with 1820MB heap and 64MB offheap memory [pid: 4374] (Linux 7.0.0-1017-azure amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/jobs/q261012-194047-f133/ws/formal/intent/tla/Reservation.tla
+Parsing file /tmp/tlc-9822291673251536358/Integers.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-9822291673251536358/FiniteSets.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-9822291673251536358/_TLCTrace.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-9822291673251536358/Naturals.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-9822291673251536358/Sequences.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-9822291673251536358/TLC.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-9822291673251536358/TLCExt.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module Reservation
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module Reservation
+Starting... (2026-10-12 19:42:58)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-12 19:42:58.
+Error: Invariant EquivocationDetected is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ crashed = {}
+/\ nextId = 1
+/\ snap = [s1 |-> -1, s2 |-> -1]
+/\ rsv = << [amt |-> 0, st |-> "none", site |-> "-"],
+   [amt |-> 0, st |-> "none", site |-> "-"] >>
+/\ issued = {}
+/\ log = {}
+
+State 2: <Reserve("s1",1) line 45, col 3 to line 53, col 22 of module Reservation>
+/\ crashed = {}
+/\ nextId = 2
+/\ snap = [s1 |-> -1, s2 |-> -1]
+/\ rsv = << [amt |-> 1, st |-> "reserved", site |-> "s1"],
+   [amt |-> 0, st |-> "none", site |-> "-"] >>
+/\ issued = {<<1, "s1">>}
+/\ log = {}
+
+State 3: <Reserve("s1",1) line 45, col 3 to line 53, col 22 of module Reservation>
+/\ crashed = {}
+/\ nextId = 3
+/\ snap = [s1 |-> -1, s2 |-> -1]
+/\ rsv = << [amt |-> 1, st |-> "reserved", site |-> "s1"],
+   [amt |-> 1, st |-> "reserved", site |-> "s1"] >>
+/\ issued = {<<1, "s1">>, <<2, "s1">>}
+/\ log = {}
+
+State 4: <Equivocate(1,"s2") line 56, col 21 to line 59, col 63 of module Reservation>
+/\ crashed = {}
+/\ nextId = 3
+/\ snap = [s1 |-> -1, s2 |-> -1]
+/\ rsv = << [amt |-> 1, st |-> "reserved", site |-> "s1"],
+   [amt |-> 1, st |-> "reserved", site |-> "s1"] >>
+/\ issued = {<<1, "s1">>, <<1, "s2">>, <<2, "s1">>}
+/\ log = {}
+
+13 states generated, 13 distinct states found, 8 states left on queue.
+The depth of the complete state graph search is 4.
+Finished in 00s at (2026-10-12 19:42:58)
+Trace exploration spec path: ./Reservation_TTrace_1791834178.tla

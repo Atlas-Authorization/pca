@@ -158,9 +158,13 @@ describe('test hooks are not reachable from the production path', () => {
   });
 });
 
-describe('multi-host runner validates host entries before running anything', () => {
-  // Under a Stryker sandbox (packages/pca-mpc/.stryker-tmp-*/sandbox-*/src/net) the repo root is two levels deeper.
-  const script = [resolve(__dirname, '../../../../scripts/pca-mpc-multihost.mjs'), resolve(__dirname, '../../../../../../scripts/pca-mpc-multihost.mjs')].find(existsSync) ?? resolve(__dirname, '../../../../scripts/pca-mpc-multihost.mjs');
+// Under a Stryker sandbox (packages/pca-mpc/.stryker-tmp-*/sandbox-*/src/net) the repo root is two levels deeper. The runner is
+// repository tooling (scripts/): absent from trees that ship this package without it (the public package repository), where
+// this suite skips instead of failing.
+const MULTIHOST = [resolve(__dirname, '../../../../scripts/pca-mpc-multihost.mjs'), resolve(__dirname, '../../../../../../scripts/pca-mpc-multihost.mjs')].find(existsSync);
+
+describe.skipIf(!MULTIHOST)('multi-host runner validates host entries before running anything', () => {
+  const script = MULTIHOST!;
   const runWith = (host: object, extra: string[] = []) => {
     const dir = mkdtempSync(join(tmpdir(), 'pca-mpc-mh-test-'));
     const f = join(dir, 'hosts.json');

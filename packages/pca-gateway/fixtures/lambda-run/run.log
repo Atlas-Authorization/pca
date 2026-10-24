@@ -1,0 +1,72 @@
+docker 29.1.3 amd64
+driver node v18.19.1
+public.ecr.aws/lambda/nodejs:22 digest: public.ecr.aws/lambda/nodejs@sha256:30584cf5ce0fe543ce34fe3eddbd6177b3d1aa6b5f437a5f60a8b1a8702085f0
+lambda image nodejs:22 runtime node v22.23.3
+minted 8 proofs
+PASS  [nodejs:22/rest] REST REQUEST allow (http 200, 361 ms)
+PASS  [nodejs:22/rest] REST REQUEST no proof (http 200, 8 ms)
+PASS  [nodejs:22/rest] REST REQUEST tampered proof (http 200, 39 ms)
+PASS  [nodejs:22/rest] REST REQUEST wrong audience (http 200, 28 ms)
+PASS  [nodejs:22/rest] REST REQUEST payout-verb proof at refund route (http 200, 27 ms)
+PASS  [nodejs:22/rest] REST REQUEST unmapped route (POST /unknown) (http 200, 4 ms)
+PASS  [nodejs:22/rest] REST REQUEST POST /refunds allow (http 200, 22 ms)
+PASS  [nodejs:22/rest] REST REQUEST POST /payouts with refund proof (http 200, 20 ms)
+PASS  [nodejs:22/rest] REST REQUEST path traversal /refunds/../payouts (http 200, 5 ms)
+PASS  [nodejs:22/rest] HTTP API payload 1.0 allow (http 200, 21 ms)
+PASS  [nodejs:22/rest] HTTP API payload 1.0 no proof (http 200, 4 ms)
+PASS  [nodejs:22/rest] HTTP API payload 2.0 allow (IAM policy response) (http 200, 19 ms)
+PASS  [nodejs:22/rest] HTTP API payload 2.0 no proof (http 200, 3 ms)
+PASS  [nodejs:22/rest] REST TOKEN-type event with a valid proof as authorizationToken (not supported: fail closed) (http 200, 3 ms)
+PASS  [nodejs:22/rest] empty event {} (fail closed) (http 200, 3 ms)
+PASS  [nodejs:22/simple] HTTP API 2.0 simple response allow (http 200, 348 ms)
+PASS  [nodejs:22/simple] HTTP API 2.0 simple response no proof (http 200, 7 ms)
+PASS  [nodejs:22/simple] HTTP API 2.0 simple response tampered (http 200, 31 ms)
+PASS  [nodejs:22/simple] HTTP API 2.0 simple response wrong audience (http 200, 25 ms)
+PASS  [nodejs:22/simple] empty event {} (fail closed) (http 200, 4 ms)
+PASS  [nodejs:22/restReplay] replay guard: first presentation of a proof (http 200, 345 ms)
+PASS  [nodejs:22/restReplay] replay guard: second presentation, same warm container (http 200, 37 ms)
+PASS  [nodejs:22/restReplay] replay guard: a different fresh proof is still allowed (http 200, 28 ms)
+PASS  [nodejs:22/restReplay] 8 sequential presentations of one proof -> 1 Allow
+public.ecr.aws/lambda/nodejs:20 digest: public.ecr.aws/lambda/nodejs@sha256:a4440274d6f0fb4e6cb92cd5f2a97254efe6612f631d9974b197ecbd4a61fcab
+lambda image nodejs:20 runtime node v20.20.2
+minted 8 proofs
+PASS  [nodejs:20/rest] REST REQUEST allow (http 200, 359 ms)
+PASS  [nodejs:20/rest] REST REQUEST no proof (http 200, 7 ms)
+PASS  [nodejs:20/rest] REST REQUEST tampered proof (http 200, 30 ms)
+PASS  [nodejs:20/rest] REST REQUEST wrong audience (http 200, 22 ms)
+PASS  [nodejs:20/rest] REST REQUEST payout-verb proof at refund route (http 200, 26 ms)
+PASS  [nodejs:20/rest] REST REQUEST unmapped route (POST /unknown) (http 200, 4 ms)
+PASS  [nodejs:20/rest] REST REQUEST POST /refunds allow (http 200, 27 ms)
+PASS  [nodejs:20/rest] REST REQUEST POST /payouts with refund proof (http 200, 30 ms)
+PASS  [nodejs:20/rest] REST REQUEST path traversal /refunds/../payouts (http 200, 5 ms)
+PASS  [nodejs:20/rest] HTTP API payload 1.0 allow (http 200, 20 ms)
+PASS  [nodejs:20/rest] HTTP API payload 1.0 no proof (http 200, 3 ms)
+PASS  [nodejs:20/rest] HTTP API payload 2.0 allow (IAM policy response) (http 200, 18 ms)
+PASS  [nodejs:20/rest] HTTP API payload 2.0 no proof (http 200, 3 ms)
+PASS  [nodejs:20/rest] REST TOKEN-type event with a valid proof as authorizationToken (not supported: fail closed) (http 200, 3 ms)
+PASS  [nodejs:20/rest] empty event {} (fail closed) (http 200, 3 ms)
+PASS  [nodejs:20/simple] HTTP API 2.0 simple response allow (http 200, 346 ms)
+PASS  [nodejs:20/simple] HTTP API 2.0 simple response no proof (http 200, 7 ms)
+PASS  [nodejs:20/simple] HTTP API 2.0 simple response tampered (http 200, 35 ms)
+PASS  [nodejs:20/simple] HTTP API 2.0 simple response wrong audience (http 200, 22 ms)
+PASS  [nodejs:20/simple] empty event {} (fail closed) (http 200, 4 ms)
+PASS  [nodejs:20/restReplay] replay guard: first presentation of a proof (http 200, 355 ms)
+PASS  [nodejs:20/restReplay] replay guard: second presentation, same warm container (http 200, 35 ms)
+PASS  [nodejs:20/restReplay] replay guard: a different fresh proof is still allowed (http 200, 27 ms)
+PASS  [nodejs:20/restReplay] 8 sequential presentations of one proof -> 1 Allow
+STAGE1 failed-handlers=0
+== stage 2: SAM CLI local API Gateway emulation ==
+SAM CLI, version 1.167.0
+minted 8 proofs
+PASS  REST REQUEST authorizer: valid proof -> backend reached (got 200, want 200)  body: {"reached":true,"authorizer":{"pcaVerdict":"{\"allow\":true,\"checks\":{\"wire\":\"pass\",\"version\":\"pass\",\"audience\":\"pass\",\"validity\":\"pass\",\"cap_chain\":\"pass\",\"grant_ref_bound\":\"pass\",\"plan_inclusion\":\"pass\",\"plan_root_authorized\":\"not-enforced\",\"leaf_signature\":\"pa
+PASS  REST REQUEST authorizer: no proof -> 403 (got 401, want 401)  body: {"message":"Unauthorized"}
+PASS  REST REQUEST authorizer: tampered -> 403 (got 403, want 403)  body: {"message":"User is not authorized to access this resource"}
+PASS  REST REQUEST authorizer: payout-verb proof at /rest/payouts ok (got 200, want 200)  body: {"reached":true,"authorizer":{"pcaVerdict":"{\"allow\":true,\"checks\":{\"wire\":\"pass\",\"version\":\"pass\",\"audience\":\"pass\",\"validity\":\"pass\",\"cap_chain\":\"pass\",\"grant_ref_bound\":\"pass\",\"plan_inclusion\":\"pass\",\"plan_root_authorized\":\"not-enforced\",\"leaf_signature\":\"pa
+PASS  REST REQUEST authorizer: refund proof at /rest/payouts -> 403 (got 403, want 403)  body: {"message":"User is not authorized to access this resource"}
+PASS  REST TOKEN authorizer: valid proof (unsupported event type, fail closed) (got 403, want 403)  body: {"message":"User is not authorized to access this resource"}
+PASS  HTTP API 2.0 simple: valid -> backend reached (got 200, want 200)  body: {"reached":true,"authorizer":{"lambda":{"pcaVerdict":"{\"allow\":true,\"checks\":{\"wire\":\"pass\",\"version\":\"pass\",\"audience\":\"pass\",\"validity\":\"pass\",\"cap_chain\":\"pass\",\"grant_ref_bound\":\"pass\",\"plan_inclusion\":\"pass\",\"plan_root_authorized\":\"not-enforced\",\"leaf_signat
+PASS  HTTP API 2.0 simple: no proof -> 401/403 (got 401, want 401)  body: {"message":"Unauthorized"}
+PASS  HTTP API 2.0 simple: tampered -> 403 (got 403, want 403)  body: {"message":"User is not authorized to access this resource"}
+PASS  HTTP API 1.0 IAM: valid -> backend reached (got 200, want 200)  body: {"reached":true,"authorizer":{"lambda":{"pcaVerdict":"{\"allow\":true,\"checks\":{\"wire\":\"pass\",\"version\":\"pass\",\"audience\":\"pass\",\"validity\":\"pass\",\"cap_chain\":\"pass\",\"grant_ref_bound\":\"pass\",\"plan_inclusion\":\"pass\",\"plan_root_authorized\":\"not-enforced\",\"leaf_signat
+PASS  HTTP API 1.0 IAM: wrong audience -> 403 (got 403, want 403)  body: {"message":"User is not authorized to access this resource"}
+sam traced authorizer events: 9

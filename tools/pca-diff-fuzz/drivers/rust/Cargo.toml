@@ -1,0 +1,9 @@
+[package]
+name = "pcadriver"
+version = "0.0.0"
+edition = "2021"
+[dependencies]
+# `less`: the LESS suites through the patched reference C (sdks/pca-less-c), so the gate compares them too.
+atlas-pca = { path = "../../../../sdks/rust-pca", features = ["less"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+[workspace]

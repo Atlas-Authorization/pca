@@ -9,12 +9,17 @@ path = "src/lib.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "=0.10.8"
 base64 = "0.22"
 regex = "1"
 ed25519-dalek = "2"
 curve25519-dalek = "4"
+# the post-quantum suite verifiers of sdks/zkvm-pca/core (src/pq_suites.rs, PCA 0.4.2), same versions and features as
+# that crate's Cargo.toml: the copied sources do not compile without them
+fips204 = { version = "0.4", default-features = false, features = ["ml-dsa-65", "ml-dsa-87"] }
+fips205 = { version = "0.4", default-features = false, features = ["slh_dsa_sha2_128f", "slh_dsa_sha2_256s"] }
+fn-dsa-vrfy = "0.4"
 
 [lints.rust]
 unexpected_cfgs = { level = "allow" }

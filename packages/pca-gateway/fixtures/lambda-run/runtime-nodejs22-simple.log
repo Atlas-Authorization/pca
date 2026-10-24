@@ -1,0 +1,31 @@
+09 Oct 2026 12:29:33,552 [INFO] (rapid) exec '/var/runtime/bootstrap' (cwd=/var/task, handler=)
+START RequestId: 13092780-b4ae-4737-945e-a64fb557da84 Version: $LATEST
+09 Oct 2026 12:29:33,762 [INFO] (rapid) INIT START(type: on-demand, phase: init)
+09 Oct 2026 12:29:33,762 [INFO] (rapid) The extension's directory "/opt/extensions" does not exist, assuming no extensions to be loaded.
+09 Oct 2026 12:29:33,762 [INFO] (rapid) Starting runtime without AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN , Expected?: false
+09 Oct 2026 12:29:33,921 [INFO] (rapid) INIT RTDONE(status: success)
+09 Oct 2026 12:29:33,921 [INFO] (rapid) INIT REPORT(durationMs: 158.454000)
+09 Oct 2026 12:29:33,921 [INFO] (rapid) INVOKE START(requestId: 13092780-b4ae-4737-945e-a64fb557da84)
+09 Oct 2026 12:29:34,021 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 100.473000ms)
+END RequestId: 13092780-b4ae-4737-945e-a64fb557da84
+REPORT RequestId: 13092780-b4ae-4737-945e-a64fb557da84	Init Duration: 0.04 ms	Duration: 259.12 ms	Billed Duration: 260 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: 847e1d88-6a11-4c9e-ba5e-6c6192f44f5f Version: $LATEST
+09 Oct 2026 12:29:34,038 [INFO] (rapid) INVOKE START(requestId: 847e1d88-6a11-4c9e-ba5e-6c6192f44f5f)
+09 Oct 2026 12:29:34,040 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 1.696000ms)
+END RequestId: 847e1d88-6a11-4c9e-ba5e-6c6192f44f5f
+REPORT RequestId: 847e1d88-6a11-4c9e-ba5e-6c6192f44f5f	Duration: 2.02 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: 99fb11d7-b1f1-4db6-b064-a743757fb60c Version: $LATEST
+09 Oct 2026 12:29:34,045 [INFO] (rapid) INVOKE START(requestId: 99fb11d7-b1f1-4db6-b064-a743757fb60c)
+09 Oct 2026 12:29:34,069 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 23.047000ms)
+END RequestId: 99fb11d7-b1f1-4db6-b064-a743757fb60c
+REPORT RequestId: 99fb11d7-b1f1-4db6-b064-a743757fb60c	Duration: 23.21 ms	Billed Duration: 24 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+09 Oct 2026 12:29:34,076 [INFO] (rapid) INVOKE START(requestId: b8ed81e2-7189-42db-8b3b-222c4102d703)
+START RequestId: b8ed81e2-7189-42db-8b3b-222c4102d703 Version: $LATEST
+09 Oct 2026 12:29:34,097 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 20.977000ms)
+END RequestId: b8ed81e2-7189-42db-8b3b-222c4102d703
+REPORT RequestId: b8ed81e2-7189-42db-8b3b-222c4102d703	Duration: 21.13 ms	Billed Duration: 22 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: 59831c07-49c9-441e-92f8-60d6189c62da Version: $LATEST
+09 Oct 2026 12:29:34,101 [INFO] (rapid) INVOKE START(requestId: 59831c07-49c9-441e-92f8-60d6189c62da)
+09 Oct 2026 12:29:34,102 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 0.866000ms)
+END RequestId: 59831c07-49c9-441e-92f8-60d6189c62da
+REPORT RequestId: 59831c07-49c9-441e-92f8-60d6189c62da	Duration: 1.06 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	

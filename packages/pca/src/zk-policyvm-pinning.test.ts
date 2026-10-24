@@ -3,7 +3,8 @@
 // context the prover chose unless the verifier says what it expects. PoC:
 // proof-of-concept from the red-team round (not published)
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { useSingleThreadSnarkCurvesInWorkerThreads } from './test-support/snarkjs-single-thread';
 import {
   POLICYVM_PUBLIC_SIGNAL,
   POLICYVM_SAMPLE_PROOF_PATH,
@@ -13,6 +14,9 @@ import {
   verifyPolicyVmProof,
   type PolicyVmComplianceProof,
 } from './zk';
+
+// snarkjs single-threaded when this file runs in a worker thread (Stryker's vitest runner): see test-support/snarkjs-single-thread.ts
+beforeAll(useSingleThreadSnarkCurvesInWorkerThreads);
 
 const vkey = JSON.parse(readFileSync(POLICYVM_VKEY_PATH(), 'utf8')) as object;
 const sample = JSON.parse(readFileSync(POLICYVM_SAMPLE_PROOF_PATH(), 'utf8')) as PolicyVmComplianceProof;

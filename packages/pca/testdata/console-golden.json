@@ -1,0 +1,121 @@
+{
+ "view": {
+  "agents": [
+   {
+    "agent": "a1",
+    "actions": 6,
+    "autos": 1,
+    "stepUps": 2,
+    "denies": 3,
+    "executed": 0,
+    "totalRisk": 4.69,
+    "firstSeen": 5,
+    "lastSeen": 32,
+    "threat": {
+     "level": "high",
+     "score": 0.9999998074591474,
+     "signals": [
+      "elevated step-up rate (2.0)",
+      "repeated policy violations (3.0)"
+     ],
+     "components": {
+      "drift": 0.03220434174586847,
+      "volatility": 0.3999986907243204,
+      "violation": 0.9999998074591474
+     }
+    }
+   },
+   {
+    "agent": "a4",
+    "actions": 1,
+    "autos": 0,
+    "stepUps": 0,
+    "denies": 0,
+    "executed": 1,
+    "totalRisk": 0,
+    "firstSeen": 40,
+    "lastSeen": 40,
+    "threat": {
+     "level": "calm",
+     "score": 0,
+     "signals": [],
+     "components": {
+      "drift": 0,
+      "volatility": 0,
+      "violation": 0
+     }
+    }
+   },
+   {
+    "agent": "a3",
+    "actions": 2,
+    "autos": 1,
+    "stepUps": 0,
+    "denies": 0,
+    "executed": 1,
+    "totalRisk": 0.35,
+    "firstSeen": 7,
+    "lastSeen": 8,
+    "threat": {
+     "level": "calm",
+     "score": 0,
+     "signals": [],
+     "components": {
+      "drift": 0,
+      "volatility": 0,
+      "violation": 0
+     }
+    }
+   },
+   {
+    "agent": "a2",
+    "actions": 2,
+    "autos": 2,
+    "stepUps": 0,
+    "denies": 0,
+    "executed": 0,
+    "totalRisk": 0.1,
+    "firstSeen": 5,
+    "lastSeen": 6,
+    "threat": {
+     "level": "calm",
+     "score": 0,
+     "signals": [],
+     "components": {
+      "drift": 0,
+      "volatility": 0,
+      "violation": 0
+     }
+    }
+   }
+  ],
+  "totals": {
+   "actions": 11,
+   "autos": 4,
+   "stepUps": 2,
+   "denies": 3,
+   "executed": 2
+  },
+  "window": {
+   "from": 5,
+   "to": 40
+  }
+ },
+ "anomalies": [
+  "a1"
+ ],
+ "empty": {
+  "agents": [],
+  "totals": {
+   "actions": 0,
+   "autos": 0,
+   "stepUps": 0,
+   "denies": 0,
+   "executed": 0
+  },
+  "window": {
+   "from": 0,
+   "to": 0
+  }
+ }
+}
