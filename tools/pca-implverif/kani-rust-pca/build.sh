@@ -7,5 +7,9 @@ cd "$(dirname "$0")"
 SRC=../../../sdks/rust-pca/src/lib.rs
 cp "$SRC" src/lib.rs
 printf '\n#[cfg(kani)]\nmod proofs;\n' >> src/lib.rs
+# the crate's other source modules (lib.rs declares them: action_schema, intent_*, predicates, safe_regex, ...), unchanged
+for m in ../../../sdks/rust-pca/src/*.rs; do
+  case "$(basename "$m")" in lib.rs) ;; *) cp "$m" src/ ;; esac
+done
 cp ../../../sdks/rust-pca/Cargo.lock . 2>/dev/null || true
 echo "lib.rs sha256 (source): $(shasum -a 256 $SRC 2>/dev/null || sha256sum $SRC)"

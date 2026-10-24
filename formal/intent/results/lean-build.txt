@@ -1,0 +1,359 @@
+✔ [8924/8947] Built PcaProof.Attenuation (347ms)
+✔ [8926/8947] Built PcaIntent.Measure (5.7s)
+⚠ [8927/8947] Built PcaIntent.Hull (5.9s)
+warning: PcaIntent/Hull.lean:37:11: Variable name `d` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _d
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: PcaIntent/Hull.lean:80:28: `Set.mem_setOf_eq` has been deprecated: Use `Set.mem_ofPred_eq` instead
+warning: PcaIntent/Hull.lean:121:0: automatically included section variable(s) unused in theorem `PcaIntent.Hull.lift_subset_iff`:
+  [(d : ι) → LinearOrder (X d)]
+  [(d : ι) → LinearOrder (Xf d)]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [(d : ι) → LinearOrder (X d)] [(d : ι) → LinearOrder (Xf d)] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+⚠ [8928/8947] Built PcaIntent.Model (5.9s)
+warning: PcaIntent/Model.lean:124:4: Try this: 
+  haveI̵
+
+The goal is a proposition, so `have` is preferred over `haveI`.
+The difference between `have` and `haveI` is that `haveI` inlines the value.
+But this is not relevant for proofs because of proof irrelevance.
+
+Note: This linter can be disabled with `set_option linter.style.haveILetI false`
+✔ [8929/8947] Built PcaIntent.Link (4.0s)
+⚠ [8930/8947] Built PcaIntent.Compose (3.9s)
+warning: PcaIntent/Compose.lean:47:0: automatically included section variable(s) unused in theorem `PcaIntent.agg_min`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+⚠ [8931/8947] Built PcaIntent.VersionSpace (4.1s)
+warning: PcaIntent/VersionSpace.lean:50:0: automatically included section variable(s) unused in theorem `PcaIntent.mem_VS`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/VersionSpace.lean:202:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/VersionSpace.lean:208:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/VersionSpace.lean:222:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/VersionSpace.lean:222:19: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/VersionSpace.lean:223:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/VersionSpace.lean:243:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+⚠ [8932/8947] Built PcaIntent.Audit (5.8s)
+warning: PcaIntent/Audit.lean:58:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Audit.lean:59:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+✔ [8933/8947] Built PcaIntent.Aggregate (6.4s)
+⚠ [8934/8947] Built PcaIntent.Halving (6.3s)
+warning: PcaIntent/Halving.lean:34:0: automatically included section variable(s) unused in theorem `PcaIntent.answer_subset`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Halving.lean:48:0: automatically included section variable(s) unused in theorem `PcaIntent.card_answer_add`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+⚠ [8935/8947] Built PcaIntent.Ramp (6.5s)
+warning: PcaIntent/Ramp.lean:29:0: automatically included section variable(s) unused in theorem `PcaIntent.R1_mono`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Ramp.lean:30:30: Variable name `t` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _t
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: PcaIntent/Ramp.lean:33:0: automatically included section variable(s) unused in theorem `PcaIntent.R1_disjoint`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Ramp.lean:45:0: automatically included section variable(s) unused in theorem `PcaIntent.R2_freeze`:
+  [DecidableEq Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [DecidableEq Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Ramp.lean:61:4: Variable name `t` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _t
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [8936/8947] Built PcaIntent.Credence (6.5s)
+warning: PcaIntent/Credence.lean:60:0: automatically included section variable(s) unused in theorem `PcaIntent.pAcc_nonneg`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Credence.lean:64:0: automatically included section variable(s) unused in theorem `PcaIntent.pAcc_le_one`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Credence.lean:71:0: automatically included section variable(s) unused in theorem `PcaIntent.one_sub_pAcc`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Credence.lean:163:0: automatically included section variable(s) unused in theorem `PcaIntent.consistent_cons`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Credence.lean:167:0: automatically included section variable(s) unused in theorem `PcaIntent.lik_nonneg`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Credence.lean:201:62: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/Credence.lean:213:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Credence.lean:223:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+⚠ [8937/8947] Built PcaIntent.Examples (4.3s)
+warning: PcaIntent/Examples.lean:48:22: This simp argument is unused:
+  Fintype.sum_bool
+
+Hint: Omit it from the simp argument list.
+  [apply] simp
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [8938/8947] Built PcaIntent.Hoeffding (4.9s)
+warning: PcaIntent/Hoeffding.lean:37:0: automatically included section variable(s) unused in theorem `PcaIntent.MC.sum_tail`:
+  [IsProbabilityMeasure P]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [IsProbabilityMeasure P] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Hoeffding.lean:78:0: automatically included section variable(s) unused in theorem `PcaIntent.MC.mean_sub_eq`:
+  [MeasurableSpace S]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace S] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Hoeffding.lean:93:15: `Set.mem_setOf_eq` has been deprecated: Use `Set.mem_ofPred_eq` instead
+warning: PcaIntent/Hoeffding.lean:112:15: `Set.mem_setOf_eq` has been deprecated: Use `Set.mem_ofPred_eq` instead
+warning: PcaIntent/Hoeffding.lean:131:15: `Set.mem_setOf_eq` has been deprecated: Use `Set.mem_ofPred_eq` instead
+warning: PcaIntent/Hoeffding.lean:184:0: automatically included section variable(s) unused in theorem `PcaIntent.MC.mcTerm_mem_Icc`:
+  [MeasurableSpace Ω]
+  [DiscreteMeasurableSpace Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace Ω] [DiscreteMeasurableSpace Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Hoeffding.lean:197:0: automatically included section variable(s) unused in theorem `PcaIntent.MC.mcTerm_expect`:
+  [MeasurableSpace Ω]
+  [DiscreteMeasurableSpace Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [MeasurableSpace Ω] [DiscreteMeasurableSpace Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+⚠ [8939/8947] Built PcaIntent.Cells (5.2s)
+warning: PcaIntent/Cells.lean:81:13: `Set.mem_setOf_eq` has been deprecated: Use `Set.mem_ofPred_eq` instead
+warning: PcaIntent/Cells.lean:109:2: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+⚠ [8940/8947] Built PcaIntent.Regions (5.4s)
+warning: PcaIntent/Regions.lean:33:0: automatically included section variable(s) unused in theorem `PcaIntent.accR_true`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Regions.lean:148:0: automatically included section variable(s) unused in theorem `PcaIntent.dlAcc_boxDL`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Regions.lean:155:0: automatically included section variable(s) unused in theorem `PcaIntent.boxDL_length`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Regions.lean:158:0: automatically included section variable(s) unused in theorem `PcaIntent.boxDL_injective`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Regions.lean:205:55: Variable name `hc` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hc
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: PcaIntent/Regions.lean:205:79: Variable name `hj` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hj
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: PcaIntent/Regions.lean:206:5: Variable name `hb` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hb
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [8941/8947] Built PcaIntent.Trajectory (3.8s)
+warning: PcaIntent/Trajectory.lean:117:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+⚠ [8942/8947] Built PcaIntent.Lazy (4.0s)
+warning: PcaIntent/Lazy.lean:57:0: automatically included section variable(s) unused in theorem `PcaIntent.T13_expected`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Lazy.lean:130:0: automatically included section variable(s) unused in theorem `PcaIntent.likAsym_nonneg`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Lazy.lean:171:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/Lazy.lean:174:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Lazy.lean:184:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Lazy.lean:190:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+⚠ [8943/8947] Built PcaIntent.Refine (4.2s)
+warning: PcaIntent/Refine.lean:73:5: Variable name `hμ` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hμ
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: PcaIntent/Refine.lean:110:0: automatically included section variable(s) unused in theorem `PcaIntent.accR_lift`:
+  [Fintype Ωc]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ωc] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Refine.lean:179:0: automatically included section variable(s) unused in theorem `PcaIntent.err_eq_zero_iff`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Refine.lean:189:0: automatically included section variable(s) unused in theorem `PcaIntent.mem_Cand`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Refine.lean:197:22: Variable name `θ'` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _θ'
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [8944/8947] Built PcaIntent.V2Misc (3.7s)
+warning: PcaIntent/V2Misc.lean:19:0: automatically included section variable(s) unused in theorem `PcaIntent.T12_closed_world`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/V2Misc.lean:33:0: automatically included section variable(s) unused in theorem `PcaIntent.T18_no_bypass`:
+  [Fintype Ω]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Ω] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/V2Misc.lean:73:4: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+⚠ [8945/8947] Built PcaIntent.Stats (4.8s)
+warning: PcaIntent/Stats.lean:123:4: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+warning: PcaIntent/Stats.lean:161:32: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+warning: PcaIntent/Stats.lean:232:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/Stats.lean:232:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/Stats.lean:233:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Stats.lean:233:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Stats.lean:237:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/Stats.lean:237:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/Stats.lean:238:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Stats.lean:238:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Stats.lean:257:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+warning: PcaIntent/Stats.lean:261:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Stats.lean:287:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+warning: PcaIntent/Stats.lean:324:21: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+warning: PcaIntent/Stats.lean:334:4: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+warning: PcaIntent/Stats.lean:327:64: Variable name `hb1` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hb1
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: PcaIntent/Stats.lean:358:68: Variable name `v` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _v
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: PcaIntent/Stats.lean:374:0: automatically included section variable(s) unused in theorem `PcaIntent.Stats.GammaSet_mono`:
+  [Fintype Xc]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Fintype Xc] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Stats.lean:436:2: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+warning: PcaIntent/Stats.lean:489:33: `Set.mem_setOf_eq` has been deprecated: Use `Set.mem_ofPred_eq` instead
+warning: PcaIntent/Stats.lean:477:0: automatically included section variable(s) unused in theorem `PcaIntent.Stats.rank_event_eq`:
+  [IsProbabilityMeasure P]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [IsProbabilityMeasure P] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: PcaIntent/Stats.lean:559:4: `push_neg` has been deprecated. Prefer using `push Not` instead.
+If you'd rather continue using `push_neg` in your project, you can implement it as follows:
+```
+open Lean.Parser.Tactic in
+macro "push_neg" cfg:optConfig loc:(location)? : tactic =>
+  `(tactic| push $cfg:optConfig Not $[$loc]?)
+```
+✔ [8946/8947] Built PcaIntent (3.1s)
+Build completed successfully (8947 jobs).
+build rc=0 (43s)

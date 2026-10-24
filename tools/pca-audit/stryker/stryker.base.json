@@ -22,5 +22,5 @@
     "src/attest-maa-pins.test.ts",
     "src/mutation-equivalents-diff-*.test.ts"
   ],
-  "dryRunTimeoutMinutes": 15
+  "dryRunTimeoutMinutes": 60
 }

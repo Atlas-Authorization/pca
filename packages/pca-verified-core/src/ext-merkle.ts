@@ -5,10 +5,12 @@
 // TRUSTED GLUE (not proved; exercised by test/ext-merkle.diff.test.ts): the hash primitive (SHA-256 / SHA-384 via node:crypto),
 // strict base64url decoding of roots / siblings, the JS-number <-> Dafny-int conversions, the proof-object shape checks
 // (hash_suite, side tags, safe-integer index/size). Everything after that - tree shape, the verify loop, root comparison - is the proved code.
+import { hardenDafnyRuntime } from './runtime';
 import { createHash } from 'node:crypto';
 import BigNumber from 'bignumber.js';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const mk = require('../generated/pca_merkle.js') as { _dafny: any; Merkle: any };
+hardenDafnyRuntime(mk._dafny);
 const M = mk.Merkle.__default;
 const D = mk._dafny;
 

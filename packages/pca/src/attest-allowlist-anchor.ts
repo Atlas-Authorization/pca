@@ -52,6 +52,7 @@ import {
   type WitnessPolicy,
 } from './ledger';
 import type { InclusionProof } from './merkle';
+import { verifyAllowlistAnchoredProved } from './attest-proved';
 import type { VerifyAllowlistResult } from './attest-allowlist';
 
 const DOMAIN = 'pca-attest-allowlist-anchor/v1';
@@ -241,71 +242,7 @@ export function verifyAllowlistAnchored(
   evidence: AllowlistAnchorEvidence | undefined,
   opts: VerifyAnchoredOptions,
 ): AnchoredResult {
-  const no = (code: AnchorErrorCode, reason: string): AnchoredResult => ({ ok: false, code, reason });
-  try {
-    if (evidence === undefined || evidence === null || typeof evidence !== 'object' || evidence.proof === undefined || evidence.head === undefined || !Array.isArray(evidence.entries)) {
-      return no('missing-proof', 'no anchor evidence (head + entries + inclusion proof) supplied');
-    }
-    const { trust } = opts;
-    if (!Number.isSafeInteger(opts.nowMs)) return no('bad-head', 'nowMs must be an integer');
-    const head = evidence.head;
-    if (!verifyTreeHead(head, trust.logKey, trust.witnesses, trust)) return no('bad-head', 'tree head is not signed by the pinned log key (or lacks the required witness cosignatures)');
-    if (head.instance_id !== trust.instanceId || head.principal !== trust.principal) return no('bad-head', 'tree head is for a different log');
-    // Validated, not coerced: NaN / Infinity would make the future-head and staleness comparisons vacuously false.
-    if (opts.clockSkewMs !== undefined && !(typeof opts.clockSkewMs === 'number' && Number.isFinite(opts.clockSkewMs))) {
-      return no('bad-head', 'clockSkewMs must be a finite number');
-    }
-    if (opts.maxHeadAgeMs !== undefined && !(typeof opts.maxHeadAgeMs === 'number' && Number.isFinite(opts.maxHeadAgeMs))) {
-      return no('bad-head', 'maxHeadAgeMs must be a finite number');
-    }
-    const skew = Math.max(0, opts.clockSkewMs ?? 60_000);
-    const maxAge = opts.maxHeadAgeMs ?? DAY;
-    if (!Number.isSafeInteger(head.timestamp) || head.timestamp > opts.nowMs + skew) return no('stale-head', 'tree head is timestamped in the future');
-    if (opts.nowMs - head.timestamp > maxAge) return no('stale-head', `tree head is older than maxHeadAgeMs (${maxAge})`);
-
-    const cached = opts.cachedHead;
-    if (cached !== undefined) {
-      if (!verifyTreeHead(cached, trust.logKey, trust.witnesses, trust) || cached.instance_id !== trust.instanceId || cached.principal !== trust.principal) {
-        return no('bad-cache', 'the cached head does not verify under the pinned log key');
-      }
-      if (head.size < cached.size) return no('log-rollback', `head size ${head.size} < cached ${cached.size}: the log shrank`);
-      if (head.size === cached.size) {
-        if (head.root !== cached.root) return no('split-view', 'two different roots at the same size: split view / fork');
-      } else {
-        const c = evidence.consistency;
-        if (c === undefined || !verifyHeadConsistency(cached, head, c, trust.logKey, trust.witnesses, trust)) {
-          return no('inconsistent-with-cache', 'no valid consistency proof from the cached head: forked or truncated log');
-        }
-      }
-    }
-
-    // The supplied content must reproduce the SIGNED root exactly: nothing omitted, nothing added.
-    const entries = evidence.entries;
-    if (entries.length > MAX_FEED || entries.length !== head.size || !entries.every(validEntry)) return no('feed-mismatch', 'entries do not match the signed tree size');
-    const commits = entries.map(allowlistAnchorCommit);
-    if (ledgerRootOf(commits) !== head.root) return no('feed-mismatch', 'entries do not reproduce the signed root');
-
-    // Operator-equivocation scan + highest anchored version for this issuer.
-    const byVersion = new Map<number, string>();
-    let highest = 0;
-    for (const e of entries) {
-      if (e.issuer !== verified.issuer) continue;
-      const prior = byVersion.get(e.version);
-      if (prior !== undefined && prior !== e.digest) return no('log-conflict', `log anchors two different digests for version ${e.version}`);
-      byVersion.set(e.version, e.digest);
-      highest = Math.max(highest, e.version);
-    }
-    const mine: AllowlistAnchorEntry = { issuer: verified.issuer, version: verified.version, digest: verified.digest };
-    const myCommit = allowlistAnchorCommit(mine);
-    // The inclusion primitive does not authenticate proof.size (only the signed head does): bind it so a relabelled proof is refused.
-    if (evidence.proof.size !== head.size) return no('bad-proof', 'inclusion proof size does not match the signed head size');
-    if (!verifyLedgerInclusion(head.root, evidence.proof, myCommit)) return no('bad-proof', 'inclusion proof does not place this manifest under the signed root');
-    if (verified.version < highest) return no('anchored-rollback', `manifest version ${verified.version} < highest anchored ${highest} for '${verified.issuer}'`);
-    if (byVersion.get(verified.version) !== verified.digest) return no('not-anchored', 'this manifest digest is not the one anchored for its version');
-    return { ok: true, issuer: verified.issuer, version: verified.version, digest: verified.digest, highestAnchoredVersion: highest, head };
-  } catch (e) {
-    return no('bad-head', e instanceof Error ? e.message : 'anchor verification error');
-  }
+  return verifyAllowlistAnchoredProved(verified, evidence, opts); // PROVED CODE: Attest.dfy HeadFreshness / CacheStage / AnchorScan (attest-proved.ts)
 }
 
 /** Convenience: the digest/hex helpers re-exported for callers that build entries by hand. */

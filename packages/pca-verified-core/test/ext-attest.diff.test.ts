@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Differential tests: production attestation code (packages/pca/src) vs the verified Attest.dfy code (src/ext-attest.ts and
-// test/support/attest-dropins.ts). Scale with ATTEST_N (multiplier, default 1); the cloud runs use ATTEST_N=50 and more.
+// Differential tests: the hand-written attestation code (frozen in test/support/legacy) vs the verified Attest.dfy code, which is
+// now the PRODUCTION path (src/ext-attest.ts and packages/pca/src/attest-proved.ts, re-exported by test/support/attest-dropins.ts). Scale with ATTEST_N (multiplier, default 1); the cloud runs use ATTEST_N=50 and more.
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
@@ -14,7 +14,7 @@ import {
   verifyAttestation,
   type AttestationDocument,
   type HardwareAttestationResult,
-} from '../../pca/src/attestation';
+} from './support/legacy/attestation';
 import { mintGrant, type AgentBinding } from '../../pca/src/envelope';
 import { buildPCActn } from '../../pca/src/pcactn';
 import { encodeKey, generateKeyPair } from '../../pca/src/keys';
@@ -26,8 +26,8 @@ import {
   verifyAllowlistManifest,
   verifyAllowlistDurable,
   type AllowlistIssuerKey,
-} from '../../pca/src/attest-allowlist';
-import { allowlistAnchorCommit, verifyAllowlistAnchored, type AllowlistAnchorEntry } from '../../pca/src/attest-allowlist-anchor';
+} from './support/legacy/attest-allowlist';
+import { allowlistAnchorCommit, verifyAllowlistAnchored, type AllowlistAnchorEntry } from './support/legacy/attest-allowlist-anchor';
 import { TransparencyLedger, ledgerRootOf, signTreeHead } from '../../pca/src/ledger';
 import {
   VerifiedMemoryNonceStore,
@@ -157,22 +157,40 @@ describe('multi-root N-of-M: production vs verified', () => {
 // ---------------------------------------------------------------------------------------------
 // B. binding
 // ---------------------------------------------------------------------------------------------
+/** Literal transcription of the 0.4.2 min_measurement rule (null = passes this stage). */
+function strictMin(mm: unknown, rt: unknown): string | null {
+  if (mm === undefined || mm === '') return null;
+  if (typeof mm === 'string') return rt === mm ? null : 'runtime_measurement does not match required min_measurement';
+  const plain = mm !== null && typeof mm === 'object' && !Array.isArray(mm) && [Object.prototype, null].includes(Object.getPrototypeOf(mm));
+  const svn = plain ? (mm as { svn?: unknown }).svn : undefined;
+  const okSpec = plain && Object.keys(mm as object).join(',') === 'svn' && typeof svn === 'number' && Number.isSafeInteger(svn) && svn >= 0 && !Object.is(svn, -0);
+  if (!okSpec) return 'min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)';
+  const n = typeof rt === 'string' && /^(0|[1-9]\d*)$/.test(rt) ? Number(rt) : NaN;
+  if (!Number.isSafeInteger(n)) return `runtime_measurement ${rt} is not an integer SVN (required min svn ${svn})`;
+  return n < (svn as number) ? `runtime_measurement svn ${n} is below required min svn ${svn}` : null;
+}
 describe('matchAgentBinding / requiresAttestation: production vs verified', () => {
   const V = ['a', 'b', 'c', '', '7', '12', ' ', 'x1', undefined, null, 5, NaN, true] as unknown[];
   const list = (r: Rng): unknown => r.pick([undefined, [], ['a'], ['a', 'b'], ['b', 'c', 7 as unknown], [NaN], [undefined], 'a', { length: 1 }, ['x1', '7']]);
-  const mm = (r: Rng): unknown => r.pick([undefined, '', 'a', 'b', '7', { svn: 5 }, { svn: 7 }, { svn: 12.5 }, { svn: NaN }, { svn: Infinity }, { svn: '5' }, {}, null, 5]);
+  const mm = (r: Rng): unknown => r.pick([undefined, '', 'a', 'b', '7', { svn: 5 }, { svn: 7 }, { svn: 0 }, { svn: 12.5 }, { svn: NaN }, { svn: Infinity }, { svn: '5' }, { svn: -0 }, { svn: -1 }, { svn: 5, x: 1 }, {}, null, 5]);
   run('random identities and bindings (incl. junk, thrown runtime types)', 3000, (r) => {
     const id: any = {
       model_id: r.pick(V), weights_digest: r.pick(V), weights_measured: r.pick([true, false, undefined, 'true']),
-      runtime_measurement: r.pick(['a', 'b', '7', '5', '4', '12', ' ', '', '1e1', '0x10', ' 8 ', '7.0', '7.5', 'x', undefined, 5]),
+      runtime_measurement: r.pick(['a', 'b', '7', '5', '4', '0', '12', ' ', '', '1e1', '0x10', ' 8 ', '08', '+8', '7.0', '7.5', 'x', undefined, 5]),
       operator: r.pick(V), system_prompt_digest: r.pick(V), tool_manifest_digest: r.pick(V),
     };
     const b: any = r.pick([undefined, {}, null, 5]) ?? {};
     const binding: any = r.bool() ? { model_allowlist: list(r), min_measurement: mm(r), operator: r.pick(V), weights_allowlist: list(r), system_prompt_allowlist: list(r), tool_manifest_allowlist: list(r), require_hardware: r.pick([true, false, undefined, 1]), require_measured_weights: r.pick([true, false, undefined, 'x']) } : b;
-    // the TypeError message names a local variable, so only the error type is compared
-    const run1 = (f: (i: any, b: any) => string | null) => { try { return J(f(id, binding)); } catch (e) { return 'THROW:' + (e as Error).name; } };
-    expect(run1(matchAgentBindingVerified as never)).toBe(run1(matchAgentBinding as never));
-    expect(requiresAttestationVerified(binding)).toBe(requiresAttestation(binding));
+    // 0.4.2: min_measurement / SVN are strict (fail closed). The expected verdict is the frozen oracle's for every other stage and an
+    // independent transcription of the new min rule (strictMin) for the min stage; the oracle itself is no longer the reference there.
+    const bo = binding !== null && typeof binding === 'object' ? binding : {};
+    const withoutMin = { ...bo, min_measurement: undefined };
+    const modelFails = Array.isArray(bo.model_allowlist) && bo.model_allowlist.length > 0 && !bo.model_allowlist.includes(id.model_id);
+    const minVerdict = strictMin(bo.min_measurement, id.runtime_measurement);
+    const expected = modelFails ? matchAgentBinding(id, withoutMin) : minVerdict !== null ? minVerdict : matchAgentBinding(id, withoutMin);
+    expect(J(matchAgentBindingVerified(id, binding))).toBe(J(expected));
+    const mmPresent = bo.min_measurement !== undefined && bo.min_measurement !== '';
+    expect(requiresAttestationVerified(binding)).toBe(requiresAttestation(withoutMin) || mmPresent);
   });
 });
 

@@ -1,0 +1,26 @@
+{
+  "name": "@atlasauth/pca-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PCA Intent Layer v2 site adoption kit: access tiers 0-4 with presets, a framework-neutral site guard combining Web Bot Auth (RFC 9421) identification, requirePCA accountability, intent-bound checks with intent_required problems, and dispute-grade evidence/bond gating; drop-in adapters for Express, Fastify, Hono, Next.js and Web Fetch runtimes; agent-side tier selection and graceful degradation.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-wallet": "workspace:*",
+    "@atlasauth/pca-webbotauth": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

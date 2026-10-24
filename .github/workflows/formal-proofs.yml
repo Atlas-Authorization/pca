@@ -1,0 +1,214 @@
+name: Formal - proofs
+
+# Re-checks the machine-checked artefacts that fit a GitHub-hosted runner (4 vCPU, 16 GB, 6 h): Dafny (decision core,
+# extension components, glue contract; hash-pinned toolchain), TLA+/TLC (every model incl. the deliberate-failure
+# configs, which must FAIL) + Apalache, Lean 4 (core, computational, Mathlib, reference model, cross-check, Intent Layer),
+# Verus, EasyCrypt, the trusted-base pipeline (diverse compilation, SBOM) and the linearizability checker's unit tests.
+# Runs on ci/** pushes (the release-candidate check) and on demand; never on main pushes. Any proof failure or timeout
+# fails the job: a timeout is not a proof.
+on:
+  push:
+    branches: ['ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dafny:
+    name: Dafny (full)
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Install the hash-pinned Dafny
+        run: bash verify/install-toolchain.sh dafny
+      - name: Verify (core + extensions + glue contract; forbidden-construct audit)
+        run: |
+          set +e
+          DAFNY_DIR="$HOME/.pca-tools/dafny" bash verify/run-dafny.sh full 2>&1 | tee "$RUNNER_TEMP/dafny.txt"; exit "${PIPESTATUS[0]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-dafny
+          path: ${{ runner.temp }}/dafny.txt
+
+  tla:
+    name: TLA+ (TLC + Apalache)
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'   # Apalache 0.62 needs class file version 65
+      - name: Tools (tla2tools 1.8.0, Apalache from TOOLCHAIN.lock)
+        run: |
+          . ./TOOLCHAIN.lock
+          curl -fsSL -o "$HOME/tla2tools.jar" https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          mkdir -p "$HOME/apalache"
+          curl -fsSL "https://github.com/apalache-mc/apalache/releases/download/v${APALACHE_VERSION}/apalache-${APALACHE_VERSION}.tgz" | tar xz -C "$HOME/apalache" --strip-components=1
+          echo "$HOME/apalache/bin" >> "$GITHUB_PATH"
+      - name: Model-check every model (expected-fail configs must produce their counterexample)
+        run: bash .github/scripts/formal-tla.sh "$RUNNER_TEMP/tla"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-tla
+          path: ${{ runner.temp }}/tla
+
+  lean:
+    name: Lean (${{ matrix.part }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [pca-lean, computational, leanmath, implverif, intent]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Present in this tree?
+        id: have
+        run: |
+          case "${{ matrix.part }}" in
+            pca-lean) p=formal/pca-lean/lakefile.toml ;; computational) p=formal/computational/lean/lakefile.toml ;;
+            leanmath) p=formal/computational/leanmath/lakefile.toml ;; implverif) p=tools/pca-implverif/lean-ref/lakefile.toml ;;
+            intent) p=formal/intent/lean/lakefile.toml ;;
+          esac
+          if [ -f "$p" ]; then echo "run=1" >> "$GITHUB_OUTPUT"; else echo "::notice::${{ matrix.part }}: $p not in this tree, skipped"; echo "run=0" >> "$GITHUB_OUTPUT"; fi
+      - name: elan
+        if: steps.have.outputs.run == '1'
+        run: |
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-java@v4
+        if: steps.have.outputs.run == '1' && matrix.part == 'intent'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Mathlib package cache
+        if: steps.have.outputs.run == '1' && (matrix.part == 'leanmath' || matrix.part == 'intent')
+        uses: actions/cache@v4
+        with:
+          path: |
+            formal/computational/leanmath/.lake/packages
+            formal/intent/lean/.lake/packages
+          key: mathlib-${{ matrix.part }}-${{ hashFiles('formal/computational/leanmath/lake-manifest.json', 'formal/intent/lean/lake-manifest.json') }}
+      - name: Build + axiom audit
+        if: steps.have.outputs.run == '1'
+        run: bash .github/scripts/formal-lean.sh "${{ matrix.part }}" "$RUNNER_TEMP/lean"
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.have.outputs.run == '1'
+        with:
+          name: formal-lean-${{ matrix.part }}
+          path: ${{ runner.temp }}/lean
+
+  verus:
+    name: Verus
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verus release + its Rust toolchain (TOOLCHAIN.lock)
+        run: |
+          . ./TOOLCHAIN.lock
+          rustup toolchain install "$VERUS_RUSTC" --profile minimal
+          curl -fsSL -o "$RUNNER_TEMP/verus.zip" "https://github.com/verus-lang/verus/releases/download/release/${VERUS_RELEASE}/verus-${VERUS_RELEASE}-x86-linux.zip"
+          unzip -q "$RUNNER_TEMP/verus.zip" -d "$HOME/verus"
+          echo "$(dirname "$(find "$HOME/verus" -type f -name verus | head -1)")" >> "$GITHUB_PATH"
+      - name: Verify every fragment; every negative control (*_controls.rs) must be rejected
+        run: bash tools/pca-implverif/verus-check.sh "$RUNNER_TEMP/verus"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-verus
+          path: ${{ runner.temp }}/verus
+
+  easycrypt:
+    name: EasyCrypt
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - name: opam cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.opam
+          key: opam-easycrypt-${{ hashFiles('TOOLCHAIN.lock') }}
+      - name: EasyCrypt + Why3 + Alt-Ergo (opam), Z3 + CVC5 (pinned releases)
+        run: bash .github/scripts/formal-easycrypt-setup.sh
+      - name: Check every EasyCrypt file (no admit)
+        run: |
+          set +e
+          eval "$(opam env --switch=ec)"; export PATH="$HOME/smt:$PATH"
+          bash formal/computational/check.sh ec 2>&1 | tee "$RUNNER_TEMP/easycrypt.txt"; exit "${PIPESTATUS[0]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-easycrypt
+          path: |
+            ${{ runner.temp }}/easycrypt.txt
+            /tmp/ec-*.log
+
+  trustbase:
+    name: Trusted base (pin, proofs, generated JS, diverse compilation, SBOM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+      - name: Install (the diverse-compilation case generator + SBOM inputs)
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-verified-core...
+      - name: Install the hash-pinned Dafny
+        run: bash verify/install-toolchain.sh dafny
+      - name: Run the pipeline
+        run: |
+          set +e
+          # the js target and the production bridge resolve bignumber.js / tsx from the verified-core package
+          export NODE_PATH="$PWD/packages/pca-verified-core/node_modules" TSX="$PWD/packages/pca-verified-core/node_modules/.bin/tsx"
+          [ -x "$TSX" ] || TSX="$(ls -d "$PWD"/node_modules/.bin/tsx 2>/dev/null || true)"; export TSX
+          DAFNY_DIR="$HOME/.pca-tools/dafny" OUT="$RUNNER_TEMP/difft" bash tools/pca-trustbase/run-all.sh 2>&1 | tee "$RUNNER_TEMP/trustbase.txt"
+          exit "${PIPESTATUS[0]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-trustbase
+          path: ${{ runner.temp }}/trustbase.txt
+
+  linearizability:
+    name: Linearizability checker (unit tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/pca-linearizability/go.mod
+          cache: false
+      - working-directory: tools/pca-linearizability
+        run: go test -count=1 ./...

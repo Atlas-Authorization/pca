@@ -2,11 +2,12 @@
 // ext-taint.ts - typed adapter over the PROVED taint decisions (formal/dafny/Taint.dfy -> generated/pca_taint.js).
 // The glue here only evaluates primitives (typeof checks, registry lookup, resource-graph lookup, string length) and hands FACTS to the
 // proved code; the join, classification, fail-closed pre-checks and gate are the Dafny functions.
+import { hardenDafnyRuntime } from './runtime';
 import BigNumber from 'bignumber.js';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const T = (require('../generated/pca_taint.js') as { _dafny: any; Taint: any }).Taint;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const dafny = (require('../generated/pca_taint.js') as { _dafny: any }) ._dafny;
+const dafny = hardenDafnyRuntime((require('../generated/pca_taint.js') as { _dafny: any })._dafny);
 
 export const TAINT_LEVELS = ['trusted', 'first_party', 'tool', 'web', 'agent'] as const;
 export type TaintLevel = (typeof TAINT_LEVELS)[number];

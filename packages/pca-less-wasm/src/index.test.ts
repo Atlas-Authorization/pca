@@ -2,8 +2,7 @@
  * Round-trip tests for the EXPERIMENTAL LESS code-based signature backend, exercised through the
  * WebAssembly binding (keypair -> sign -> open/verify, plus tamper rejection).
  *
- * The `.wasm` artifact is produced off-box by `~/.pca-vm-state/lessbuild.sh` (this Mac has no
- * wasi-sdk). When it is absent, the whole suite is SKIPPED rather than failed — this is a non-default
+ * The `.wasm` artifact is produced by `scripts/build-wasm.sh` (pinned wasi-sdk 25.0, see wasm/BUILD.json). When it is absent, the whole suite is SKIPPED rather than failed — this is a non-default
  * experimental package and CI must not break on a missing artifact. Once `wasm/less_cat1.wasm` is
  * dropped in, the suite runs for real.
  */

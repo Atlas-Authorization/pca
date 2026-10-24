@@ -61,18 +61,24 @@ let survivors = 0;
 if (reports.length) {
   const surv = [];
   const units = new Set();
+  const timedOut = new Map();
   for (const r of reports) {
     const rep = JSON.parse(fs.readFileSync(r, 'utf8'));
     for (const [file, f] of Object.entries(rep.files)) {
       units.add(`${pkg}\u0000${file}`);
       const src = f.source.split('\n');
       for (const m of f.mutants) {
-        if (m.status !== 'Survived' && m.status !== 'NoCoverage') continue;
-        survivors++;
+        if (m.status !== 'Survived' && m.status !== 'NoCoverage' && m.status !== 'Timeout') continue;
         const l = m.location;
         const lineText = src[l.start.line - 1].trim();
         const original = l.start.line === l.end.line ? src[l.start.line - 1].slice(l.start.column - 1, l.end.column - 1) : '<multiline>';
         const occ = occurrenceAt(src, l.start.line);
+        if (m.status === 'Timeout') {
+          const k = siteKey(pkg, file, m.mutatorName, original, String(m.replacement), lineText, occ);
+          timedOut.set(k, (timedOut.get(k) ?? 0) + 1);
+          continue;
+        }
+        survivors++;
         surv.push({
           key: siteKey(pkg, file, m.mutatorName, original, String(m.replacement), lineText, occ),
           unit: `${pkg}\u0000${file}`,
@@ -81,7 +87,7 @@ if (reports.length) {
       }
     }
   }
-  errors.push(...checkSites(entries, surv, units));
+  errors.push(...checkSites(entries, surv, units, timedOut));
 }
 const nEq = ledger.equivalents.length;
 if (errors.length) { console.error(errors.join('\n')); console.error(`FAIL: ${errors.length} problem(s); ${nEq} listed equivalents`); process.exit(1); }

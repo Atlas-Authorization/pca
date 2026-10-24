@@ -1,0 +1,26 @@
+pca_actn_time_store: TIMEOUT after 900s budget (NOT proved): executable_accept
+pca_actn_time_store: TIMEOUT after 900s budget (NOT proved): executable_two_actions
+pca_actn_time_store: TIMEOUT after 900s budget (NOT proved): clock_no_regress
+pca_actn_time_store: TIMEOUT after 900s budget (NOT proved): executable_after_tick
+pca_actn_time_store:   attenuation_root (all-traces): verified (67 steps)
+pca_actn_time_store:   audience_binding (all-traces): verified (5 steps)
+pca_actn_time_store:   replay_freedom_nonce (all-traces): verified (16 steps)
+pca_actn_time_store:   authorization (all-traces): verified (253 steps)
+pca_actn_time_store: TIMEOUT after 900s budget (NOT proved): replay_freedom_counter
+pca_actn_time_store: TIMEOUT after 900s budget (NOT proved): no_accept_after_expiry
+pca_actn_time_store__NO_EXPIRY_CHECK: KILLED(memory) after 900s budget (NOT proved): no_accept_after_expiry
+pca_actn_time_store__STORE_RACE_NONCE: TIMEOUT after 900s budget (NOT proved): replay_freedom_nonce
+pca_actn_time_store__NO_GREF_CHECK:   replay_freedom_nonce (all-traces): verified (16 steps)
+pca_actn_time_store__STORE_RACE_CTR: TIMEOUT after 900s budget (NOT proved): replay_freedom_counter
+pca_actn_time_store__NO_GREF_CHECK: TIMEOUT after 900s budget (NOT proved): replay_freedom_counter
+pca_actn_time_store__NO_AUD_CHECK: TIMEOUT after 900s budget (NOT proved): audience_binding
+pca_actn_time_store__NO_ANCESTOR_CAV: TIMEOUT after 900s budget (NOT proved): attenuation_root
+pca_frost_sign:   executable_two_sessions (exists-trace): verified (12 steps)
+pca_frost_sign:   executable_threshold_signature (exists-trace): verified (16 steps)
+pca_frost_sign: TIMEOUT after 900s budget (NOT proved): share_secrecy
+pca_frost_sign: no-result rc=0 after 900s budget (NOT proved): shares_bound_to_session
+pca_frost_sign:   nonce_one_shot (all-traces): verified (76 steps)
+pca_frost_sign: TIMEOUT after 900s budget (NOT proved): sig_needs_t_signers
+pca_frost_sign__NONCE_REUSE:   share_secrecy (all-traces): falsified - found trace (10 steps)
+pca_frost_sign__NONCE_REUSE:   nonce_one_shot (all-traces): falsified - found trace (11 steps)
+pca_frost_sign__NO_BINDING: no-result rc=0 after 900s budget (NOT proved): shares_bound_to_session

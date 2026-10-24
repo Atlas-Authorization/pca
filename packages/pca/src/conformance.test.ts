@@ -10,6 +10,7 @@ import {
   verifyInclusion,
   verifyPCActnCore,
   type Capability,
+  type IntentPolicy,
   type PCActn,
 } from './index';
 import { verifyWithSuite } from './pq-test-support';
@@ -48,10 +49,10 @@ const file = JSON.parse(readFileSync(join(__dirname, '..', 'conformance', 'vecto
   vectors: {
     name: string;
     grant: Capability;
-    context: { now: number; aud: string; allowed_suites?: string[] };
+    context: { now: number; aud: string; allowed_suites?: string[]; intent_policy?: IntentPolicy; intent_policy_json?: string; intent_v2?: unknown };
     pcactn?: PCActn;
     pcactn_json?: string;
-    expect: { allow: boolean; checks: Record<string, boolean> };
+    expect: { allow: boolean; checks: Record<string, boolean>; reason_contains?: string };
   }[];
 };
 
@@ -74,11 +75,17 @@ describe('conformance vectors (wire v2)', () => {
         expect(v.expect).toEqual({ allow: false, checks: { wire: false } });
         return;
       }
-      const r = await verifyPCActnCore(p!, { grant: v.grant, nowEpoch: v.context.now, audience: v.context.aud, ...(v.context.allowed_suites !== undefined ? { allowedSuites: v.context.allowed_suites as never } : {}) });
+      // Intent Layer v2 (rules 13-15, 19): `context.intent_v2` is the VERIFIER state (schemas, session root, accumulators,
+      // map disclosure), passed as-is, exactly as the generator (scripts/gen-conformance-intent-v2.mjs) and every native
+      // driver do. Without it every v2 check reports "no ... configured".
+      const r = await verifyPCActnCore(p!, { grant: v.grant, nowEpoch: v.context.now, audience: v.context.aud, ...(v.context.allowed_suites !== undefined ? { allowedSuites: v.context.allowed_suites as never } : {}), ...(v.context.intent_policy_json !== undefined ? { intent: JSON.parse(v.context.intent_policy_json) as IntentPolicy } : v.context.intent_policy !== undefined ? { intent: v.context.intent_policy } : {}), ...(v.context.intent_v2 !== undefined ? { intentV2: v.context.intent_v2 as never } : {}) });
       expect(r.allow).toBe(v.expect.allow);
+      if (v.expect.reason_contains !== undefined) expect(String(r.reason ?? '')).toContain(v.expect.reason_contains);
       const got: Record<string, boolean> = {};
       for (const k of Object.keys(v.expect.checks)) got[k] = r.checks[KEY[k] ?? k] === 'pass';
       expect(got).toEqual(v.expect.checks);
+      // Intent Layer M2: the `intent` check is reported iff the vector expects it (absent == pre-M2 verdict).
+      expect('intent' in r.checks).toBe('intent' in v.expect.checks);
       if (v.expect.checks.wire === false) expect(Object.keys(r.checks)).toEqual(['wire']);
     });
   }

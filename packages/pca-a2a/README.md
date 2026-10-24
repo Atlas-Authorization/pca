@@ -46,12 +46,20 @@ const card = await issueSignedAgentCard({ name: 'Buyer', url: 'https://a.example
                                         { passport: { id: 'pp_1' } });
 await verifyAgentCard(card, { key: publicKey });  // { ok: true, passportRef: 'pp_1', ... }
 
-// Payment mandate that points at the PCActn.
+// Payment mandate that points at the PCActn. The PCActn's params must be { amount: 120, currency: 'USD', merchant: 'acme' }.
 const mandate = a2aPaymentMandateFromPca(pcActn, {
   amount: { currency: 'USD', value: 120 }, paymentMethod: { type: 'card' }, merchant: 'acme',
 });
+// context.params (the params plaintext) is required: the mandate is checked against what the PCActn authorized.
 await verifyA2APaymentMandate(mandate, pcActn, { aud: 'my-rs', grant: storedGrant, hooks, context });
 ```
+
+**The mandate is bound field by field (breaking).** A Payment Mandate is unsigned, so `verifyA2APaymentMandate` refuses it
+unless every field a payer acts on is what the PCActn authorized: the `x_pca` backreference (`pcactn_digest`, `aud`, `verb`,
+`resource`, `params_digest`, `grant_ref`, `leaf_holder`) equals the PCActn's; `context.params` is required and must open
+`action.params_digest`; `amount.value` / `amount.currency` equal the params' own `amount` / `currency` exactly; `merchant`
+equals the params' `merchant` (or both are absent); a `payment_method` in the params must equal the mandate's; and
+`human_present: true` needs `humanSignerSet` and a PCActn whose threshold shares verify at t=3.
 
 By default a guard requires a proof (`require: true`); with `require: false` a task without a proof passes, but a proof that is present and invalid is still rejected.
 

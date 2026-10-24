@@ -1,0 +1,79 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 41 and seed -6455351355404544534 with 2 workers on 2 cores with 1820MB heap and 64MB offheap memory [pid: 4675] (Linux 7.0.0-1017-azure amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/jobs/q261012-194047-f133/ws/formal/intent/tla/Revocation.tla
+Parsing file /tmp/tlc-13463243313827542501/Naturals.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-13463243313827542501/_TLCTrace.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-13463243313827542501/TLC.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-13463243313827542501/TLCExt.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Parsing file /tmp/tlc-13463243313827542501/Sequences.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-13463243313827542501/FiniteSets.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-13463243313827542501/Integers.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Integers
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module Revocation
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module Revocation
+Starting... (2026-10-12 19:43:03)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-12 19:43:03.
+Error: Invariant ExposureBound is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ now = 0
+/\ bad = FALSE
+/\ tr = 111
+/\ pubTime = 0
+/\ pubRevoked = FALSE
+
+State 2: <Tick line 22, col 12 to line 22, col 85 of module Revocation>
+/\ now = 1
+/\ bad = FALSE
+/\ tr = 111
+/\ pubTime = 0
+/\ pubRevoked = FALSE
+
+State 3: <Revoke line 23, col 12 to line 23, col 80 of module Revocation>
+/\ now = 1
+/\ bad = FALSE
+/\ tr = 1
+/\ pubTime = 0
+/\ pubRevoked = FALSE
+
+State 4: <Tick line 22, col 12 to line 22, col 85 of module Revocation>
+/\ now = 2
+/\ bad = FALSE
+/\ tr = 1
+/\ pubTime = 0
+/\ pubRevoked = FALSE
+
+State 5: <Tick line 22, col 12 to line 22, col 85 of module Revocation>
+/\ now = 3
+/\ bad = FALSE
+/\ tr = 1
+/\ pubTime = 0
+/\ pubRevoked = FALSE
+
+State 6: <Tick line 22, col 12 to line 22, col 85 of module Revocation>
+/\ now = 4
+/\ bad = FALSE
+/\ tr = 1
+/\ pubTime = 0
+/\ pubRevoked = FALSE
+
+State 7: <Admit(5) line 26, col 14 to line 30, col 58 of module Revocation>
+/\ now = 4
+/\ bad = TRUE
+/\ tr = 1
+/\ pubTime = 0
+/\ pubRevoked = FALSE
+
+301 states generated, 112 distinct states found, 44 states left on queue.
+The depth of the complete state graph search is 8.
+Finished in 00s at (2026-10-12 19:43:03)
+Trace exploration spec path: ./Revocation_TTrace_1791834183.tla

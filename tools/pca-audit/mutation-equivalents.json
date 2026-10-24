@@ -4764,17 +4764,6 @@
    "original": "<multiline>",
    "replacement": "{}",
    "line": "} catch {",
-   "occurrence": 3,
-   "lineno": 218,
-   "reason": "In verifyPresentation an empty first catch leaves pk/header/proof undefined; proofVerifyDetailed rejects an undefined proof or pk as malformed, and an undefined header throws at header.length in calculateDomain, caught by the outer try's return false, so the result is false either way."
-  },
-  {
-   "package": "pca-bbs",
-   "file": "src/credential.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
-   "line": "} catch {",
    "occurrence": 5,
    "lineno": 262,
    "reason": "In safeDecode an empty catch returns undefined instead of null; verifyPresentation's ph === null check is then skipped, but with ph undefined every path in proofVerifyDetailed either returns false early or throws at ph.length in calculateChallenge (caught -> false), so verifyPresentation still returns false."
@@ -6081,46 +6070,6 @@
   },
   {
    "file": "src/attest-allowlist-anchor.ts",
-   "mutator": "StringLiteral",
-   "original": "'not-anchored'",
-   "replacement": "\"\"",
-   "line": "if (byVersion.get(verified.version) !== verified.digest) return no('not-anchored', 'this manifest digest is not the one anchored for its version');",
-   "occurrence": 1,
-   "lineno": 304,
-   "reason": "Unreachable: the inclusion proof for this exact entry verified against a root the supplied entries reproduce, and conflicting digests per version were refused earlier, so byVersion always holds this digest."
-  },
-  {
-   "file": "src/attest-allowlist-anchor.ts",
-   "mutator": "StringLiteral",
-   "original": "'this manifest digest is not the one anchored for its version'",
-   "replacement": "\"\"",
-   "line": "if (byVersion.get(verified.version) !== verified.digest) return no('not-anchored', 'this manifest digest is not the one anchored for its version');",
-   "occurrence": 1,
-   "lineno": 304,
-   "reason": "Unreachable: the inclusion proof for this exact entry verified against a root the supplied entries reproduce, and conflicting digests per version were refused earlier, so byVersion always holds this digest."
-  },
-  {
-   "file": "src/attest-allowlist-anchor.ts",
-   "mutator": "ConditionalExpression",
-   "original": "byVersion.get(verified.version) !== verified.digest",
-   "replacement": "false",
-   "line": "if (byVersion.get(verified.version) !== verified.digest) return no('not-anchored', 'this manifest digest is not the one anchored for its version');",
-   "occurrence": 1,
-   "lineno": 304,
-   "reason": "Unreachable: the inclusion proof for this exact entry verified against a root the supplied entries reproduce, and conflicting digests per version were refused earlier, so byVersion always holds this digest."
-  },
-  {
-   "file": "src/attest-allowlist-anchor.ts",
-   "mutator": "StringLiteral",
-   "original": "'anchor verification error'",
-   "replacement": "\"\"",
-   "line": "return no('bad-head', e instanceof Error ? e.message : 'anchor verification error');",
-   "occurrence": 1,
-   "lineno": 307,
-   "reason": "Every error thrown inside the try is an Error instance, so the non-Error fallback text is unreachable."
-  },
-  {
-   "file": "src/attest-allowlist-anchor.ts",
    "mutator": "ConditionalExpression",
    "original": "typeof e !== 'object'",
    "replacement": "false",
@@ -6148,36 +6097,6 @@
    "occurrence": 1,
    "lineno": 167,
    "reason": "An entry with version equal to the issuer's max is always the already-anchored version (handled by the same-version branch), so < and <= agree."
-  },
-  {
-   "file": "src/attest-allowlist-anchor.ts",
-   "mutator": "ConditionalExpression",
-   "original": "evidence === undefined",
-   "replacement": "false",
-   "line": "if (evidence === undefined || evidence === null || typeof evidence !== 'object' || evidence.proof === undefined || evidence.head === undefined || !Array.isArray(evidence.entries)) {",
-   "occurrence": 1,
-   "lineno": 246,
-   "reason": "A non-object or undefined evidence has no proof/head and is refused by the later operands with the same missing-proof result."
-  },
-  {
-   "file": "src/attest-allowlist-anchor.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof evidence !== 'object'",
-   "replacement": "false",
-   "line": "if (evidence === undefined || evidence === null || typeof evidence !== 'object' || evidence.proof === undefined || evidence.head === undefined || !Array.isArray(evidence.entries)) {",
-   "occurrence": 1,
-   "lineno": 246,
-   "reason": "A non-object or undefined evidence has no proof/head and is refused by the later operands with the same missing-proof result."
-  },
-  {
-   "file": "src/attest-allowlist-anchor.ts",
-   "mutator": "ConditionalExpression",
-   "original": "c === undefined",
-   "replacement": "false",
-   "line": "if (c === undefined || !verifyHeadConsistency(cached, head, c, trust.logKey, trust.witnesses, trust)) {",
-   "occurrence": 1,
-   "lineno": 276,
-   "reason": "verifyHeadConsistency returns false (never throws) for an undefined proof, so the explicit undefined test returns the same result."
   },
   {
    "file": "src/durable-state.ts",
@@ -6940,16 +6859,6 @@
    "reason": "Defensive ?? fallback on a reason that verifyChain / computeTaint always supply when they report failure, so the literal is never selected."
   },
   {
-   "file": "src/pcactn.ts",
-   "mutator": "StringLiteral",
-   "original": "'provenance lineage is not server-verifiable (fail closed)'",
-   "replacement": "\"\"",
-   "line": "if (!t.valid) fail('taint_gate', t.reason ?? 'provenance lineage is not server-verifiable (fail closed)');",
-   "occurrence": 1,
-   "lineno": 679,
-   "reason": "Defensive ?? fallback on a reason that verifyChain / computeTaint always supply when they report failure, so the literal is never selected."
-  },
-  {
    "file": "src/ledger.ts",
    "mutator": "ConditionalExpression",
    "original": "path.length === 0",
@@ -7342,94 +7251,6 @@
   {
    "package": "pca-vdf",
    "file": "src/vdf.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint'",
-   "replacement": "false",
-   "line": "if (typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint') {",
-   "occurrence": 2,
-   "lineno": 458,
-   "reason": "Type guards inside try/catch: a non-bigint reaches arithmetic that throws and is mapped to 'malformed-input' (or another refusal) with ok:false; asserted in mutation-kill.test.ts."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "LogicalOperator",
-   "original": "typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint'",
-   "replacement": "(typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint') && typeof N !== 'bigint'",
-   "line": "if (typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint') {",
-   "occurrence": 2,
-   "lineno": 458,
-   "reason": "Type guards inside try/catch: a non-bigint reaches arithmetic that throws and is mapped to 'malformed-input' (or another refusal) with ok:false; asserted in mutation-kill.test.ts."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint'",
-   "replacement": "false",
-   "line": "if (typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint') {",
-   "occurrence": 2,
-   "lineno": 458,
-   "reason": "Type guards inside try/catch: a non-bigint reaches arithmetic that throws and is mapped to 'malformed-input' (or another refusal) with ok:false; asserted in mutation-kill.test.ts."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "LogicalOperator",
-   "original": "typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint'",
-   "replacement": "(typeof x !== 'bigint' || typeof y !== 'bigint') && typeof pi !== 'bigint'",
-   "line": "if (typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint') {",
-   "occurrence": 2,
-   "lineno": 458,
-   "reason": "Type guards inside try/catch: a non-bigint reaches arithmetic that throws and is mapped to 'malformed-input' (or another refusal) with ok:false; asserted in mutation-kill.test.ts."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof x !== 'bigint' || typeof y !== 'bigint'",
-   "replacement": "false",
-   "line": "if (typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint') {",
-   "occurrence": 2,
-   "lineno": 458,
-   "reason": "Type guards inside try/catch: a non-bigint reaches arithmetic that throws and is mapped to 'malformed-input' (or another refusal) with ok:false; asserted in mutation-kill.test.ts."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "LogicalOperator",
-   "original": "typeof x !== 'bigint' || typeof y !== 'bigint'",
-   "replacement": "typeof x !== 'bigint' && typeof y !== 'bigint'",
-   "line": "if (typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint') {",
-   "occurrence": 2,
-   "lineno": 458,
-   "reason": "Type guards inside try/catch: a non-bigint reaches arithmetic that throws and is mapped to 'malformed-input' (or another refusal) with ok:false; asserted in mutation-kill.test.ts."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof y !== 'bigint'",
-   "replacement": "false",
-   "line": "if (typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint') {",
-   "occurrence": 2,
-   "lineno": 458,
-   "reason": "Type guards inside try/catch: a non-bigint reaches arithmetic that throws and is mapped to 'malformed-input' (or another refusal) with ok:false; asserted in mutation-kill.test.ts."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
-   "line": "if (typeof x !== 'bigint' || typeof y !== 'bigint' || typeof pi !== 'bigint' || typeof N !== 'bigint') {",
-   "occurrence": 2,
-   "lineno": 458,
-   "reason": "Type guards inside try/catch: a non-bigint reaches arithmetic that throws and is mapped to 'malformed-input' (or another refusal) with ok:false; asserted in mutation-kill.test.ts."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
    "mutator": "EqualityOperator",
    "original": "y > N - y",
    "replacement": "y >= N - y",
@@ -7672,94 +7493,6 @@
   {
    "package": "pca-vdf",
    "file": "src/vdf.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
-   "line": "} catch {",
-   "occurrence": 1,
-   "lineno": 419,
-   "reason": "In vdfVerifyDetailed the catch is only reachable if something after the typeof/modulus/steps/unit guards throws; with bigint x,y,pi, odd N>3 and a safe non-negative T, hashToPrime (normalizeSteps, non-negative bigIntToBytes inputs), modpow (positive moduli, non-negative exponents) and isUnit cannot throw, so the 'malformed-input' fallback is dead code (the only theoretical trigger is exceeding the engine's BigInt size limit with an astronomically large N, infeasible to evaluate)."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
-   "line": "} catch {",
-   "occurrence": 2,
-   "lineno": 471,
-   "reason": "In vdfVerifyCanonicalDetailed the catch is only reachable if something after the typeof/modulus/steps/unit guards throws; with bigint x,y,pi, odd N>3 and a safe non-negative T, hashToPrime (normalizeSteps, non-negative bigIntToBytes inputs), modpow (positive moduli, non-negative exponents) and isUnit cannot throw, so the 'malformed-input' fallback is dead code (the only theoretical trigger is exceeding the engine's BigInt size limit with an astronomically large N, infeasible to evaluate)."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "ObjectLiteral",
-   "original": "{ ok: false, reason: 'malformed-input' }",
-   "replacement": "{}",
-   "line": "return { ok: false, reason: 'malformed-input' };",
-   "occurrence": 2,
-   "lineno": 420,
-   "reason": "In vdfVerifyDetailed the catch is only reachable if something after the typeof/modulus/steps/unit guards throws; with bigint x,y,pi, odd N>3 and a safe non-negative T, hashToPrime (normalizeSteps, non-negative bigIntToBytes inputs), modpow (positive moduli, non-negative exponents) and isUnit cannot throw, so the 'malformed-input' fallback is dead code (the only theoretical trigger is exceeding the engine's BigInt size limit with an astronomically large N, infeasible to evaluate)."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "ObjectLiteral",
-   "original": "{ ok: false, reason: 'malformed-input' }",
-   "replacement": "{}",
-   "line": "return { ok: false, reason: 'malformed-input' };",
-   "occurrence": 4,
-   "lineno": 472,
-   "reason": "In vdfVerifyCanonicalDetailed the catch is only reachable if something after the typeof/modulus/steps/unit guards throws; with bigint x,y,pi, odd N>3 and a safe non-negative T, hashToPrime (normalizeSteps, non-negative bigIntToBytes inputs), modpow (positive moduli, non-negative exponents) and isUnit cannot throw, so the 'malformed-input' fallback is dead code (the only theoretical trigger is exceeding the engine's BigInt size limit with an astronomically large N, infeasible to evaluate)."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "BooleanLiteral",
-   "original": "false",
-   "replacement": "true",
-   "line": "return { ok: false, reason: 'malformed-input' };",
-   "occurrence": 2,
-   "lineno": 420,
-   "reason": "In vdfVerifyDetailed the catch is only reachable if something after the typeof/modulus/steps/unit guards throws; with bigint x,y,pi, odd N>3 and a safe non-negative T, hashToPrime (normalizeSteps, non-negative bigIntToBytes inputs), modpow (positive moduli, non-negative exponents) and isUnit cannot throw, so the 'malformed-input' fallback is dead code (the only theoretical trigger is exceeding the engine's BigInt size limit with an astronomically large N, infeasible to evaluate)."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "BooleanLiteral",
-   "original": "false",
-   "replacement": "true",
-   "line": "return { ok: false, reason: 'malformed-input' };",
-   "occurrence": 4,
-   "lineno": 472,
-   "reason": "In vdfVerifyCanonicalDetailed the catch is only reachable if something after the typeof/modulus/steps/unit guards throws; with bigint x,y,pi, odd N>3 and a safe non-negative T, hashToPrime (normalizeSteps, non-negative bigIntToBytes inputs), modpow (positive moduli, non-negative exponents) and isUnit cannot throw, so the 'malformed-input' fallback is dead code (the only theoretical trigger is exceeding the engine's BigInt size limit with an astronomically large N, infeasible to evaluate)."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "StringLiteral",
-   "original": "'malformed-input'",
-   "replacement": "\"\"",
-   "line": "return { ok: false, reason: 'malformed-input' };",
-   "occurrence": 2,
-   "lineno": 420,
-   "reason": "In vdfVerifyDetailed the catch is only reachable if something after the typeof/modulus/steps/unit guards throws; with bigint x,y,pi, odd N>3 and a safe non-negative T, hashToPrime (normalizeSteps, non-negative bigIntToBytes inputs), modpow (positive moduli, non-negative exponents) and isUnit cannot throw, so the 'malformed-input' fallback is dead code (the only theoretical trigger is exceeding the engine's BigInt size limit with an astronomically large N, infeasible to evaluate)."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "StringLiteral",
-   "original": "'malformed-input'",
-   "replacement": "\"\"",
-   "line": "return { ok: false, reason: 'malformed-input' };",
-   "occurrence": 4,
-   "lineno": 472,
-   "reason": "In vdfVerifyCanonicalDetailed the catch is only reachable if something after the typeof/modulus/steps/unit guards throws; with bigint x,y,pi, odd N>3 and a safe non-negative T, hashToPrime (normalizeSteps, non-negative bigIntToBytes inputs), modpow (positive moduli, non-negative exponents) and isUnit cannot throw, so the 'malformed-input' fallback is dead code (the only theoretical trigger is exceeding the engine's BigInt size limit with an astronomically large N, infeasible to evaluate)."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
    "mutator": "StringLiteral",
    "original": "'randomPrime: bits too small'",
    "replacement": "\"\"",
@@ -7963,16 +7696,6 @@
   {
    "file": "src/attest-allowlist.ts",
    "mutator": "ConditionalExpression",
-   "original": "typeof x['version'] !== 'number'",
-   "replacement": "false",
-   "line": "if (!isRecord(x) || typeof x['version'] !== 'number' || !Number.isSafeInteger(x['version']) || typeof x['digest'] !== 'string' || !B64U_DIGEST.test(x['digest'])) return undefined;",
-   "occurrence": 1,
-   "lineno": 323,
-   "reason": "Number.isSafeInteger is false for every non-number, so the typeof test is redundant."
-  },
-  {
-   "file": "src/attest-allowlist.ts",
-   "mutator": "ConditionalExpression",
    "original": "typeof x === 'number'",
    "replacement": "true",
    "line": "return typeof x === 'number' && Number.isSafeInteger(x) && x >= 0;",
@@ -7989,26 +7712,6 @@
    "occurrence": 1,
    "lineno": 214,
    "reason": "Number.isSafeInteger is false for every non-number, so the typeof test is redundant."
-  },
-  {
-   "file": "src/attest-allowlist.ts",
-   "mutator": "ConditionalExpression",
-   "original": "raw === undefined",
-   "replacement": "false",
-   "line": "const prior = raw === undefined ? undefined : parseHighWater(raw);",
-   "occurrence": 1,
-   "lineno": 343,
-   "reason": "parseHighWater(undefined) is undefined, exactly what the guarded branch yields."
-  },
-  {
-   "file": "src/attest-allowlist.ts",
-   "mutator": "ConditionalExpression",
-   "original": "cur === undefined",
-   "replacement": "false",
-   "line": "const c = cur === undefined ? undefined : parseHighWater(cur);",
-   "occurrence": 1,
-   "lineno": 349,
-   "reason": "parseHighWater(undefined) is undefined, exactly what the guarded branch yields."
   },
   {
    "file": "src/attest-allowlist.ts",
@@ -8452,16 +8155,6 @@
    "occurrence": 1,
    "lineno": 666,
    "reason": "Memoisation only: rootPq() is pure, recomputing gives the same result."
-  },
-  {
-   "file": "src/capability.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof c.pq_pk === 'string'",
-   "replacement": "true",
-   "line": "policy?.trustedRoot !== undefined && typeof c.pq_pk === 'string' && capHash(policy.trustedRoot) === capHash(c)",
-   "occurrence": 1,
-   "lineno": 669,
-   "reason": "wellTyped guarantees pq_pk is a string or undefined; with undefined, resolvePqVerifyKey(trustedPk: undefined) returns null exactly like the pin path."
   },
   {
    "file": "src/capability.ts",
@@ -9484,39 +9177,6 @@
    "reason": "exposure == 0 maps to e = 0 either way"
   },
   {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
-   "line": "for (const p of SMALL_PRIMES) {",
-   "occurrence": 1,
-   "lineno": 248,
-   "reason": "isProbablePrime's small-prime trial division is a redundant fast path: for n == p the Miller-Rabin base p % n == 0 is skipped (returns true), and a composite multiple of a small prime p is rejected by the p-base round anyway."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "ConditionalExpression",
-   "original": "n % p === 0n",
-   "replacement": "false",
-   "line": "if (n % p === 0n) return false;",
-   "occurrence": 1,
-   "lineno": 250,
-   "reason": "isProbablePrime's small-prime trial division is a redundant fast path: for n == p the Miller-Rabin base p % n == 0 is skipped (returns true), and a composite multiple of a small prime p is rejected by the p-base round anyway."
-  },
-  {
-   "package": "pca-vdf",
-   "file": "src/vdf.ts",
-   "mutator": "ArithmeticOperator",
-   "original": "n % p",
-   "replacement": "n * p",
-   "line": "if (n % p === 0n) return false;",
-   "occurrence": 1,
-   "lineno": 250,
-   "reason": "isProbablePrime's small-prime trial division is a redundant fast path: for n == p the Miller-Rabin base p % n == 0 is skipped (returns true), and a composite multiple of a small prime p is rejected by the p-base round anyway."
-  },
-  {
    "file": "src/objective-risk.ts",
    "mutator": "EqualityOperator",
    "original": "x < 0",
@@ -9544,7 +9204,8 @@
    "line": "const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);",
    "occurrence": 1,
    "lineno": 20,
-   "reason": "cmp: the equal-key branch is only hit for identical strings (sets/maps/identical edges) so any return for a==b is unobservable; a>b->false/<= returns 0 instead of 1 which V8's TimSort cannot distinguish (verified empirically on 400-element shuffles)"
+   "reason": "cmp only orders distinct canonical strings (sets, maps, edges), so the equal-key return is never an input to a decision, and the \"a > b\" variants (true / false / >= / <=) change only whether a greater element reports 1 or 0 (or 1 for equal). V8 Array.prototype.sort (TimSort) uses a comparator result only as `order < 0` versus not (binary insertion, run detection and gallop/merge all branch on that), so the sorted output is identical. Because that is a property of the engine, it is pinned by a differential test that fails if it ever changes.",
+   "differential": "src/objective-risk-cmp-sort.test.ts#depends on the comparator"
   },
   {
    "file": "src/objective-risk.ts",
@@ -9554,7 +9215,8 @@
    "line": "const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);",
    "occurrence": 1,
    "lineno": 20,
-   "reason": "cmp: the equal-key branch is only hit for identical strings (sets/maps/identical edges) so any return for a==b is unobservable; a>b->false/<= returns 0 instead of 1 which V8's TimSort cannot distinguish (verified empirically on 400-element shuffles)"
+   "reason": "cmp only orders distinct canonical strings (sets, maps, edges), so the equal-key return is never an input to a decision, and the \"a > b\" variants (true / false / >= / <=) change only whether a greater element reports 1 or 0 (or 1 for equal). V8 Array.prototype.sort (TimSort) uses a comparator result only as `order < 0` versus not (binary insertion, run detection and gallop/merge all branch on that), so the sorted output is identical. Because that is a property of the engine, it is pinned by a differential test that fails if it ever changes.",
+   "differential": "src/objective-risk-cmp-sort.test.ts#depends on the comparator"
   },
   {
    "file": "src/objective-risk.ts",
@@ -9564,7 +9226,8 @@
    "line": "const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);",
    "occurrence": 1,
    "lineno": 20,
-   "reason": "cmp: the equal-key branch is only hit for identical strings (sets/maps/identical edges) so any return for a==b is unobservable; a>b->false/<= returns 0 instead of 1 which V8's TimSort cannot distinguish (verified empirically on 400-element shuffles)"
+   "reason": "cmp only orders distinct canonical strings (sets, maps, edges), so the equal-key return is never an input to a decision, and the \"a > b\" variants (true / false / >= / <=) change only whether a greater element reports 1 or 0 (or 1 for equal). V8 Array.prototype.sort (TimSort) uses a comparator result only as `order < 0` versus not (binary insertion, run detection and gallop/merge all branch on that), so the sorted output is identical. Because that is a property of the engine, it is pinned by a differential test that fails if it ever changes.",
+   "differential": "src/objective-risk-cmp-sort.test.ts#depends on the comparator"
   },
   {
    "file": "src/objective-risk.ts",
@@ -9574,7 +9237,8 @@
    "line": "const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);",
    "occurrence": 1,
    "lineno": 20,
-   "reason": "cmp: the equal-key branch is only hit for identical strings (sets/maps/identical edges) so any return for a==b is unobservable; a>b->false/<= returns 0 instead of 1 which V8's TimSort cannot distinguish (verified empirically on 400-element shuffles)"
+   "reason": "cmp only orders distinct canonical strings (sets, maps, edges), so the equal-key return is never an input to a decision, and the \"a > b\" variants (true / false / >= / <=) change only whether a greater element reports 1 or 0 (or 1 for equal). V8 Array.prototype.sort (TimSort) uses a comparator result only as `order < 0` versus not (binary insertion, run detection and gallop/merge all branch on that), so the sorted output is identical. Because that is a property of the engine, it is pinned by a differential test that fails if it ever changes.",
+   "differential": "src/objective-risk-cmp-sort.test.ts#depends on the comparator"
   },
   {
    "file": "src/objective-risk.ts",
@@ -9584,7 +9248,8 @@
    "line": "const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);",
    "occurrence": 1,
    "lineno": 20,
-   "reason": "cmp: the equal-key branch is only hit for identical strings (sets/maps/identical edges) so any return for a==b is unobservable; a>b->false/<= returns 0 instead of 1 which V8's TimSort cannot distinguish (verified empirically on 400-element shuffles)"
+   "reason": "cmp only orders distinct canonical strings (sets, maps, edges), so the equal-key return is never an input to a decision, and the \"a > b\" variants (true / false / >= / <=) change only whether a greater element reports 1 or 0 (or 1 for equal). V8 Array.prototype.sort (TimSort) uses a comparator result only as `order < 0` versus not (binary insertion, run detection and gallop/merge all branch on that), so the sorted output is identical. Because that is a property of the engine, it is pinned by a differential test that fails if it ever changes.",
+   "differential": "src/objective-risk-cmp-sort.test.ts#depends on the comparator"
   },
   {
    "file": "src/objective-risk.ts",
@@ -9595,16 +9260,6 @@
    "occurrence": 1,
    "lineno": 227,
    "reason": "graph.size===0 implies no nodes so reachable() is already empty and the preceding reachable.length===0 test returns the same record"
-  },
-  {
-   "file": "src/objective-risk.ts",
-   "mutator": "OptionalChaining",
-   "original": "graph.node(id)?.harm",
-   "replacement": "graph.node(id).harm",
-   "line": "for (const [d, v] of Object.entries(graph.node(id)?.harm ?? {})) if (Number.isFinite(v) && v > 0) harm[d] = (harm[d] ?? 0) + v;",
-   "occurrence": 1,
-   "lineno": 230,
-   "reason": "ids in reachable are always graph nodes (BFS only follows edges between existing nodes), so node(id) is never undefined; optional chain is defensive"
   },
   {
    "file": "src/objective-risk.ts",
@@ -10995,16 +10650,6 @@
    "occurrence": 3,
    "lineno": 176,
    "reason": "nonMembershipProof only reaches this search for an id that is NOT in the set (has(id) throws first), so compareUtf8 never returns 0 and < 0 vs <= 0 are the same branch"
-  },
-  {
-   "file": "src/revocation.ts",
-   "mutator": "ConditionalExpression",
-   "original": "proof.size < 0",
-   "replacement": "false",
-   "line": "if (!proof || !Number.isInteger(proof.size) || proof.size < 0) return false;",
-   "occurrence": 1,
-   "lineno": 195,
-   "reason": "negative proof.size always fails later: leafOk requires 0 <= index < size, and with no leaves the !lo && !hi guard returns false, so the size < 0 operand is redundant"
   },
   {
    "file": "src/revocation.ts",
@@ -15418,7 +15063,8 @@
    "line": "} catch {",
    "occurrence": 2,
    "lineno": 312,
-   "reason": "The new RegExp(...) compile check is unreachable defence in depth: isSafeRegexSource rejects every source that does not compile (verified for out-of-order quantifier, duplicate/invalid group names, bad class range, invalid escapes, dangling groups, quantified lookarounds), so validateWhen returns 'unsafe regex resource' first and the catch is never entered."
+   "reason": "The compile check is dead: validateWhen only reaches it after isSafeRegexSource(src) accepted, and that guard ends in compileSafeRegex(src) !== null. The linear-time parser admits only: literals, `.`, classes whose ranges it checks are ordered, the escapes d D w W s S t n v f r 0 xHH uHHHH cX and escaped punctuation (no octal, backreference, \\k, \\p, \\b, \\B), balanced (...) and (?:...) groups, `|`, quantifiers * + ? {n} {n,} {n,m} with m >= n and at most one lazy `?`, never on an assertion or another quantifier, and ^ $. Each of these is also a production of the ECMAScript (Annex B, no u/v flag) pattern grammar, and none of the early errors V8 raises (out-of-order range or quantifier, invalid group name, dangling group, quantified lookaround, invalid escape) can arise from them; wrapping in ^(?: )$ keeps the group balanced because the parser required src itself to be balanced. Checked differentially, not only argued: src/regex-guard-compiles.test.ts asserts guard-accepts implies new RegExp compiles over 300k seeded token-grammar sources and the edge list (6M run once, no counterexample).",
+   "differential": "src/regex-guard-compiles.test.ts#seeded token fuzz"
   },
   {
    "file": "src/prohibitions.ts",
@@ -15428,7 +15074,8 @@
    "line": "return `${label}: invalid regex resource`;",
    "occurrence": 1,
    "lineno": 313,
-   "reason": "The new RegExp(...) compile check is unreachable defence in depth: isSafeRegexSource rejects every source that does not compile (verified for out-of-order quantifier, duplicate/invalid group names, bad class range, invalid escapes, dangling groups, quantified lookarounds), so validateWhen returns 'unsafe regex resource' first and the catch is never entered."
+   "reason": "The compile check is dead: validateWhen only reaches it after isSafeRegexSource(src) accepted, and that guard ends in compileSafeRegex(src) !== null. The linear-time parser admits only: literals, `.`, classes whose ranges it checks are ordered, the escapes d D w W s S t n v f r 0 xHH uHHHH cX and escaped punctuation (no octal, backreference, \\k, \\p, \\b, \\B), balanced (...) and (?:...) groups, `|`, quantifiers * + ? {n} {n,} {n,m} with m >= n and at most one lazy `?`, never on an assertion or another quantifier, and ^ $. Each of these is also a production of the ECMAScript (Annex B, no u/v flag) pattern grammar, and none of the early errors V8 raises (out-of-order range or quantifier, invalid group name, dangling group, quantified lookaround, invalid escape) can arise from them; wrapping in ^(?: )$ keeps the group balanced because the parser required src itself to be balanced. Checked differentially, not only argued: src/regex-guard-compiles.test.ts asserts guard-accepts implies new RegExp compiles over 300k seeded token-grammar sources and the edge list (6M run once, no counterexample).",
+   "differential": "src/regex-guard-compiles.test.ts#seeded token fuzz"
   },
   {
    "file": "src/prohibitions.ts",
@@ -15438,7 +15085,8 @@
    "line": "try {",
    "occurrence": 2,
    "lineno": 310,
-   "reason": "The new RegExp(...) compile check is unreachable defence in depth: isSafeRegexSource rejects every source that does not compile (verified for out-of-order quantifier, duplicate/invalid group names, bad class range, invalid escapes, dangling groups, quantified lookarounds), so validateWhen returns 'unsafe regex resource' first and the catch is never entered."
+   "reason": "The compile check is dead: validateWhen only reaches it after isSafeRegexSource(src) accepted, and that guard ends in compileSafeRegex(src) !== null. The linear-time parser admits only: literals, `.`, classes whose ranges it checks are ordered, the escapes d D w W s S t n v f r 0 xHH uHHHH cX and escaped punctuation (no octal, backreference, \\k, \\p, \\b, \\B), balanced (...) and (?:...) groups, `|`, quantifiers * + ? {n} {n,} {n,m} with m >= n and at most one lazy `?`, never on an assertion or another quantifier, and ^ $. Each of these is also a production of the ECMAScript (Annex B, no u/v flag) pattern grammar, and none of the early errors V8 raises (out-of-order range or quantifier, invalid group name, dangling group, quantified lookaround, invalid escape) can arise from them; wrapping in ^(?: )$ keeps the group balanced because the parser required src itself to be balanced. Checked differentially, not only argued: src/regex-guard-compiles.test.ts asserts guard-accepts implies new RegExp compiles over 300k seeded token-grammar sources and the edge list (6M run once, no counterexample).",
+   "differential": "src/regex-guard-compiles.test.ts#seeded token fuzz"
   },
   {
    "file": "src/prohibitions.ts",
@@ -15990,28 +15638,6 @@
    "occurrence": 1,
    "lineno": 814,
    "reason": "Every branch below assigns satisfied or throws before it is read."
-  },
-  {
-   "package": "pca-a2a",
-   "file": "src/index.ts",
-   "mutator": "ConditionalExpression",
-   "original": "history.length > 0",
-   "replacement": "true",
-   "line": "if (history && history.length > 0) {",
-   "occurrence": 1,
-   "lineno": 145,
-   "reason": "An empty history makes the loop run zero times (i starts at -1), so history.length > 0 and >= 0 give the same result."
-  },
-  {
-   "package": "pca-a2a",
-   "file": "src/index.ts",
-   "mutator": "EqualityOperator",
-   "original": "history.length > 0",
-   "replacement": "history.length >= 0",
-   "line": "if (history && history.length > 0) {",
-   "occurrence": 1,
-   "lineno": 145,
-   "reason": "An empty history makes the loop run zero times (i starts at -1), so history.length > 0 and >= 0 give the same result."
   },
   {
    "package": "pca-a2a",
@@ -19779,17 +19405,6 @@
   {
    "package": "pca-policy-bridge",
    "file": "src/cedar.ts",
-   "mutator": "EqualityOperator",
-   "original": "close < 0",
-   "replacement": "close <= 0",
-   "line": "if (close < 0) throw new Error(`unterminated ${kind} block`);",
-   "occurrence": 1,
-   "lineno": 230,
-   "reason": "The closing delimiter is found after the opening one, so its index is never 0; '< 0' and '<= 0' agree."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
    "mutator": "ConditionalExpression",
    "original": "matchParen(t, 0) === t.length - 1",
    "replacement": "true",
@@ -19808,28 +19423,6 @@
    "occurrence": 2,
    "lineno": 270,
    "reason": "Every caller passes an already trimmed string (statements, scope clauses, list items and operands are trimmed before use), so the extra trim is a no-op."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "Regex",
-   "original": "/^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/",
-   "replacement": "/^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)/",
-   "line": "const wm = /^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/.exec(t);",
-   "occurrence": 1,
-   "lineno": 291,
-   "reason": "The trailing $ is redundant after a greedy group, [\\S\\S] only matters for left-hand sides containing spaces (never valid paths), and the trailing operand is trimmed again on the next line."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "Regex",
-   "original": "/^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/",
-   "replacement": "/^([\\S\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/",
-   "line": "const wm = /^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/.exec(t);",
-   "occurrence": 1,
-   "lineno": 291,
-   "reason": "The trailing $ is redundant after a greedy group, [\\S\\S] only matters for left-hand sides containing spaces (never valid paths), and the trailing operand is trimmed again on the next line."
   },
   {
    "package": "pca-policy-bridge",
@@ -20025,17 +19618,6 @@
    "original": "i < text.length",
    "replacement": "i <= text.length",
    "line": "for (let i = 0; i < text.length; i++) {",
-   "occurrence": 1,
-   "lineno": 472,
-   "reason": "In indexOfTopLevel the extra i = text.length iteration sees ch = '' (no quote/bracket), and text.startsWith(token, text.length) is false because every caller (parseAtom) passes a non-empty token, so it returns the same index/-1."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "EqualityOperator",
-   "original": "i < text.length",
-   "replacement": "i <= text.length",
-   "line": "for (let i = 0; i < text.length; i++) {",
    "occurrence": 2,
    "lineno": 495,
    "reason": "In splitTopLevel the extra i = text.length iteration sees ch = '': it appends '' to buf (no-op) and startsWith(delim, text.length) is false since all callers pass non-empty delimiters (';', ',', '||', '&&'), so output is unchanged."
@@ -20142,61 +19724,6 @@
   {
    "package": "pca-policy-bridge",
    "file": "src/cedar.ts",
-   "mutator": "ConditionalExpression",
-   "original": "ch === '['",
-   "replacement": "false",
-   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
-   "occurrence": 1,
-   "lineno": 482,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "StringLiteral",
-   "original": "'['",
-   "replacement": "\"\"",
-   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
-   "occurrence": 1,
-   "lineno": 482,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "ConditionalExpression",
-   "original": "ch === '{'",
-   "replacement": "false",
-   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
-   "occurrence": 1,
-   "lineno": 482,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "UpdateOperator",
-   "original": "depth++",
-   "replacement": "depth--",
-   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
-   "occurrence": 1,
-   "lineno": 482,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "StringLiteral",
-   "original": "'{'",
-   "replacement": "\"\"",
-   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
-   "occurrence": 1,
-   "lineno": 482,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
    "mutator": "LogicalOperator",
    "original": "ch === ')' || ch === ']' || ch === '}'",
    "replacement": "(ch === ')' || ch === ']') && ch === '}'",
@@ -20210,39 +19737,6 @@
    "file": "src/cedar.ts",
    "mutator": "ConditionalExpression",
    "original": "ch === ')' || ch === ']' || ch === '}'",
-   "replacement": "false",
-   "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
-   "occurrence": 1,
-   "lineno": 483,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "ConditionalExpression",
-   "original": "ch === ')' || ch === ']'",
-   "replacement": "false",
-   "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
-   "occurrence": 1,
-   "lineno": 483,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "LogicalOperator",
-   "original": "ch === ')' || ch === ']'",
-   "replacement": "ch === ')' && ch === ']'",
-   "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
-   "occurrence": 1,
-   "lineno": 483,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "ConditionalExpression",
-   "original": "ch === ')'",
    "replacement": "false",
    "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
    "occurrence": 1,
@@ -20288,17 +19782,6 @@
    "mutator": "UpdateOperator",
    "original": "depth--",
    "replacement": "depth++",
-   "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
-   "occurrence": 1,
-   "lineno": 483,
-   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
-  },
-  {
-   "package": "pca-policy-bridge",
-   "file": "src/cedar.ts",
-   "mutator": "ConditionalExpression",
-   "original": "ch === '}'",
-   "replacement": "false",
    "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
    "occurrence": 1,
    "lineno": 483,
@@ -21771,28 +21254,6 @@
    "occurrence": 1,
    "lineno": 56,
    "reason": "g.length === bits.length is enforced above, so bits[g.length] is undefined and never equals 1: the extra iteration adds nothing."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/compose.ts",
-   "mutator": "EqualityOperator",
-   "original": "v.t > t",
-   "replacement": "v.t >= t",
-   "line": "if (v.t > t) t = v.t;",
-   "occurrence": 1,
-   "lineno": 48,
-   "reason": "Assigning v.t to t (or v.rQuant to rQuant) when they are equal is a no-op."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/compose.ts",
-   "mutator": "EqualityOperator",
-   "original": "v.rQuant > rQuant",
-   "replacement": "v.rQuant >= rQuant",
-   "line": "if (v.rQuant > rQuant) rQuant = v.rQuant;",
-   "occurrence": 1,
-   "lineno": 49,
-   "reason": "Assigning v.t to t (or v.rQuant to rQuant) when they are equal is a no-op."
   },
   {
    "package": "pca-mpc",
@@ -24126,16 +23587,6 @@
   },
   {
    "file": "src/durable-state.ts",
-   "mutator": "Regex",
-   "original": "/^state\\.lock\\.tmp-(\\d+)-/",
-   "replacement": "/state\\.lock\\.tmp-(\\d+)-/",
-   "line": "const pid = Number(/^state\\.lock\\.tmp-(\\d+)-/.exec(f)?.[1]);",
-   "occurrence": 1,
-   "lineno": 944,
-   "reason": "Only dead-pid temp files are deleted; a non-matching name yields NaN/0 pid which the following 'pid &&' guard rejects, and names lacking the anchor never get the dead-pid pattern in practice (probe files are matched elsewhere)."
-  },
-  {
-   "file": "src/durable-state.ts",
    "mutator": "StringLiteral",
    "original": "'probe'",
    "replacement": "\"\"",
@@ -24695,17 +24146,6 @@
   {
    "package": "pca-abe",
    "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "isString(mpk?.h) && isString(mpk?.f) && isString(mpk?.egga)",
-   "replacement": "false",
-   "line": "const memoKey = isString(mpk?.h) && isString(mpk?.f) && isString(mpk?.egga) ? `${mpk.h}|${mpk.f}|${mpk.egga}` : null;",
-   "occurrence": 1,
-   "lineno": 209,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
    "mutator": "OptionalChaining",
    "original": "mpk?.f",
    "replacement": "mpk.f",
@@ -24730,43 +24170,10 @@
    "file": "src/abe.ts",
    "mutator": "ConditionalExpression",
    "original": "memoKey === null",
-   "replacement": "true",
-   "line": "const hit = memoKey === null ? undefined : mpkMemo.get(memoKey);",
-   "occurrence": 1,
-   "lineno": 210,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "memoKey === null",
    "replacement": "false",
    "line": "const hit = memoKey === null ? undefined : mpkMemo.get(memoKey);",
    "occurrence": 1,
    "lineno": 210,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "EqualityOperator",
-   "original": "memoKey === null",
-   "replacement": "memoKey !== null",
-   "line": "const hit = memoKey === null ? undefined : mpkMemo.get(memoKey);",
-   "occurrence": 1,
-   "lineno": 210,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "hit !== undefined",
-   "replacement": "false",
-   "line": "if (hit !== undefined) return hit;",
-   "occurrence": 1,
-   "lineno": 211,
    "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
   },
   {
@@ -24775,39 +24182,6 @@
    "mutator": "ConditionalExpression",
    "original": "memoKey !== null",
    "replacement": "true",
-   "line": "if (memoKey !== null) {",
-   "occurrence": 1,
-   "lineno": 222,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "memoKey !== null",
-   "replacement": "false",
-   "line": "if (memoKey !== null) {",
-   "occurrence": 1,
-   "lineno": 222,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "EqualityOperator",
-   "original": "memoKey !== null",
-   "replacement": "memoKey === null",
-   "line": "if (memoKey !== null) {",
-   "occurrence": 1,
-   "lineno": 222,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
    "line": "if (memoKey !== null) {",
    "occurrence": 1,
    "lineno": 222,
@@ -24866,17 +24240,6 @@
    "line": "if (mpkMemo.size >= MPK_MEMO_MAX) mpkMemo.delete(mpkMemo.keys().next().value as string);",
    "occurrence": 1,
    "lineno": 223,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "CallExpression",
-   "original": "mpkMemo.set(memoKey, parsed);",
-   "replacement": ";",
-   "line": "mpkMemo.set(memoKey, parsed);",
-   "occurrence": 1,
-   "lineno": 224,
    "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
   },
   {
@@ -25538,17 +24901,6 @@
    "occurrence": 1,
    "lineno": 192,
    "reason": "Defence in depth already enforced by @noble/curves: fromHex asserts validity and subgroup, canonical re-encoding check is subsumed by the length+hex check, GT parse rejects wrong length/non-subgroup via Fp12.fromBytes; bytesEqual loop bounds read undefined as 0. Rejections asserted per input class in mutation-kill-attrs.test.ts."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/wire.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof s !== 'string'",
-   "replacement": "false",
-   "line": "if (typeof s !== 'string') return null;",
-   "occurrence": 1,
-   "lineno": 14,
-   "reason": "unb64u: non-strings are rejected by Buffer.from throwing -> caught -> null; the alphabet regex is subsumed by the canonical round-trip comparison below it."
   },
   {
    "package": "pca-abe",
@@ -26894,30 +26246,8 @@
    "package": "pca-mpc",
    "file": "src/mascot.ts",
    "mutator": "ArithmeticOperator",
-   "original": "BigInt(i + 1) * 0x100000001b3n",
-   "replacement": "BigInt(i + 1) / 0x100000001b3n",
-   "line": "? otRandom(splitMix64(this.seed ^ (BigInt(i + 1) * 0x100000001b3n) ^ (BigInt(j + 1) * 0x1000000000n)))",
-   "occurrence": 1,
-   "lineno": 236,
-   "reason": "These only derive the seed of the per-pair OT-internal randomness (pads, base-OT scalars); the OT delivers the chosen messages under any stream, and nothing observable (triples, MACs, aborts) depends on which stream it is."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/mascot.ts",
-   "mutator": "ArithmeticOperator",
    "original": "i + 1",
    "replacement": "i - 1",
-   "line": "? otRandom(splitMix64(this.seed ^ (BigInt(i + 1) * 0x100000001b3n) ^ (BigInt(j + 1) * 0x1000000000n)))",
-   "occurrence": 1,
-   "lineno": 236,
-   "reason": "These only derive the seed of the per-pair OT-internal randomness (pads, base-OT scalars); the OT delivers the chosen messages under any stream, and nothing observable (triples, MACs, aborts) depends on which stream it is."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/mascot.ts",
-   "mutator": "ArithmeticOperator",
-   "original": "BigInt(j + 1) * 0x1000000000n",
-   "replacement": "BigInt(j + 1) / 0x1000000000n",
    "line": "? otRandom(splitMix64(this.seed ^ (BigInt(i + 1) * 0x100000001b3n) ^ (BigInt(j + 1) * 0x1000000000n)))",
    "occurrence": 1,
    "lineno": 236,
@@ -27326,28 +26656,6 @@
   {
    "package": "pca-mpc",
    "file": "src/net/launch-local.ts",
-   "mutator": "ConditionalExpression",
-   "original": "id < n",
-   "replacement": "true",
-   "line": "input: id < n ? o.vectors[id] : undefined,",
-   "occurrence": 1,
-   "lineno": 87,
-   "reason": "Only the dealer has id >= n (id === n), and o.vectors[n] is undefined because exactly n vectors are passed, so the dealer's input is undefined either way."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "EqualityOperator",
-   "original": "id < n",
-   "replacement": "id <= n",
-   "line": "input: id < n ? o.vectors[id] : undefined,",
-   "occurrence": 1,
-   "lineno": 87,
-   "reason": "Only the dealer has id >= n (id === n), and o.vectors[n] is undefined because exactly n vectors are passed, so the dealer's input is undefined either way."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
    "mutator": "MethodExpression",
    "original": "so.trim().split('\\n').filter(Boolean)",
    "replacement": "so.trim().split('\\n')",
@@ -27370,28 +26678,6 @@
   {
    "package": "pca-mpc",
    "file": "src/net/launch-local.ts",
-   "mutator": "StringLiteral",
-   "original": "'close'",
-   "replacement": "\"\"",
-   "line": "child.on('close', () => clearTimeout(killer));",
-   "occurrence": 1,
-   "lineno": 121,
-   "reason": "Clearing the kill timer only matters if the timer could fire after the child closed: then child.kill() on an exited process is a no-op, so the outcome (already resolved) is unchanged."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "ArrowFunction",
-   "original": "() => clearTimeout(killer)",
-   "replacement": "() => undefined",
-   "line": "child.on('close', () => clearTimeout(killer));",
-   "occurrence": 1,
-   "lineno": 121,
-   "reason": "Clearing the kill timer only matters if the timer could fire after the child closed: then child.kill() on an exited process is a no-op, so the outcome (already resolved) is unchanged."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
    "mutator": "CallExpression",
    "original": "clearTimeout(killer);",
    "replacement": ";",
@@ -27399,17 +26685,6 @@
    "occurrence": 1,
    "lineno": 169,
    "reason": "Clearing the kill timer only matters if the timer could fire after the child closed: then child.kill() on an exited process is a no-op, so the outcome (already resolved) is unchanged."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "BooleanLiteral",
-   "original": "true",
-   "replacement": "false",
-   "line": "rmSync(dir, { recursive: true, force: true });",
-   "occurrence": 1,
-   "lineno": 127,
-   "reason": "In launchLocal the run directory was created by mkdtempSync and populated (identities, cfg files) and nothing removes it before this rmSync, so force (which only suppresses ENOENT) has no effect."
   },
   {
    "package": "pca-mpc",
@@ -27494,61 +26769,6 @@
    "reason": "One extra loop turn at i == n slices an empty chunk; String.fromCharCode() of nothing appends ''."
   },
   {
-   "package": "pca-verified-core",
-   "file": "src/ext-wire.ts",
-   "mutator": "StringLiteral",
-   "original": "'canonicalize: nesting too deep'",
-   "replacement": "\"\"",
-   "line": "if (depth > SEEN_DEPTH_GUARD) throw new TypeError('canonicalize: nesting too deep');",
-   "occurrence": 1,
-   "lineno": 77,
-   "reason": "Depth backstop unreachable on V8's default stack: toJ recursion overflows (RangeError) before depth 4097 (measured: 4200-deep input throws 'Maximum call stack size exceeded'), so removing/shifting the guard or changing the depth step cannot change any observable result."
-  },
-  {
-   "package": "pca-verified-core",
-   "file": "src/ext-wire.ts",
-   "mutator": "ConditionalExpression",
-   "original": "depth > SEEN_DEPTH_GUARD",
-   "replacement": "false",
-   "line": "if (depth > SEEN_DEPTH_GUARD) throw new TypeError('canonicalize: nesting too deep');",
-   "occurrence": 1,
-   "lineno": 77,
-   "reason": "Depth backstop unreachable on V8's default stack: toJ recursion overflows (RangeError) before depth 4097 (measured: 4200-deep input throws 'Maximum call stack size exceeded'), so removing/shifting the guard or changing the depth step cannot change any observable result."
-  },
-  {
-   "package": "pca-verified-core",
-   "file": "src/ext-wire.ts",
-   "mutator": "EqualityOperator",
-   "original": "depth > SEEN_DEPTH_GUARD",
-   "replacement": "depth >= SEEN_DEPTH_GUARD",
-   "line": "if (depth > SEEN_DEPTH_GUARD) throw new TypeError('canonicalize: nesting too deep');",
-   "occurrence": 1,
-   "lineno": 77,
-   "reason": "Depth backstop unreachable on V8's default stack: toJ recursion overflows (RangeError) before depth 4097 (measured: 4200-deep input throws 'Maximum call stack size exceeded'), so removing/shifting the guard or changing the depth step cannot change any observable result."
-  },
-  {
-   "package": "pca-verified-core",
-   "file": "src/ext-wire.ts",
-   "mutator": "ArithmeticOperator",
-   "original": "depth + 1",
-   "replacement": "depth - 1",
-   "line": "for (let i = 0; i < o.length; i++) q.push(toJ(o[i], seen, depth + 1));",
-   "occurrence": 1,
-   "lineno": 83,
-   "reason": "Depth backstop unreachable on V8's default stack: toJ recursion overflows (RangeError) before depth 4097 (measured: 4200-deep input throws 'Maximum call stack size exceeded'), so removing/shifting the guard or changing the depth step cannot change any observable result."
-  },
-  {
-   "package": "pca-verified-core",
-   "file": "src/ext-wire.ts",
-   "mutator": "ArithmeticOperator",
-   "original": "depth + 1",
-   "replacement": "depth - 1",
-   "line": "for (const k of Object.keys(rec)) q.push(KV.create_KV(units(k), toJ(rec[k], seen, depth + 1)));",
-   "occurrence": 1,
-   "lineno": 90,
-   "reason": "Depth backstop unreachable on V8's default stack: toJ recursion overflows (RangeError) before depth 4097 (measured: 4200-deep input throws 'Maximum call stack size exceeded'), so removing/shifting the guard or changing the depth step cannot change any observable result."
-  },
-  {
    "package": "pca-mpc",
    "file": "src/net/wire.ts",
    "mutator": "ConditionalExpression",
@@ -27580,16 +26800,6 @@
    "occurrence": 1,
    "lineno": 241,
    "reason": "typeof o.v !== 'number' is subsumed by !Number.isSafeInteger(o.v), which is true for every non-number."
-  },
-  {
-   "file": "src/policy-vm.ts",
-   "mutator": "OptionalChaining",
-   "original": "grant?.issuer",
-   "replacement": "grant.issuer",
-   "line": "const cr = verifyChain(toVerify, grant?.issuer, { pqPins: input.pqPins });",
-   "occurrence": 1,
-   "lineno": 195,
-   "reason": "grant?.issuer is reached only after readEnvelope(grant) returned an envelope; readEnvelope(null/undefined) returns null (grant?.caveats) and decide denies with 'grant carries no valid envelope' first, so grant is always defined here."
   },
   {
    "file": "src/policy-vm.ts",
@@ -28132,26 +27342,6 @@
    "reason": "Without a resourceGraph the mutant 'ctx.resourceGraph.node(ref)' throws a TypeError inside the surrounding try, whose catch falls through to the same worst-case 'agent' label as the undefined optional call."
   },
   {
-   "file": "src/taint.ts",
-   "mutator": "ConditionalExpression",
-   "original": "!Number.isFinite(taint)",
-   "replacement": "false",
-   "line": "if (!Number.isFinite(taint)) return fail('taint: non-finite taint value (fail closed)');",
-   "occurrence": 1,
-   "lineno": 239,
-   "reason": "taintValue is labelRank / MAX_RANK where labelRank is always one of 0..4 (unknown kinds map to MAX_RANK = 4), so the value is always one of 0, 0.25, 0.5, 0.75, 1 and never non-finite; the guard and its reason are unreachable."
-  },
-  {
-   "file": "src/taint.ts",
-   "mutator": "StringLiteral",
-   "original": "'taint: non-finite taint value (fail closed)'",
-   "replacement": "\"\"",
-   "line": "if (!Number.isFinite(taint)) return fail('taint: non-finite taint value (fail closed)');",
-   "occurrence": 1,
-   "lineno": 239,
-   "reason": "taintValue is labelRank / MAX_RANK where labelRank is always one of 0..4 (unknown kinds map to MAX_RANK = 4), so the value is always one of 0, 0.25, 0.5, 0.75, 1 and never non-finite; the guard and its reason are unreachable."
-  },
-  {
    "package": "pca-mpc",
    "file": "src/net/launch-support.ts",
    "mutator": "StringLiteral",
@@ -28384,36 +27574,6 @@
    "occurrence": 1,
    "lineno": 406,
    "reason": "Reason rendering only: r.entry / r.share index an element that decideThreshold just reported on, so it exists and is an object (two-keys-for-role needs a well-formed entry with a known role; role-not-in-set / key-not-registered / unknown-alg / invalid-sig need a well-formed share object, else malformed-share is reported first); the optional chain never short-circuits."
-  },
-  {
-   "file": "src/merkle.ts",
-   "mutator": "ConditionalExpression",
-   "original": "proof.size < 1",
-   "replacement": "false",
-   "line": "if (proof.size < 1 || proof.index < 0 || proof.index >= proof.size) return false;",
-   "occurrence": 1,
-   "lineno": 144,
-   "reason": "Redundant: the remaining 'proof.index < 0 || proof.index >= proof.size' already refuses every size < 1 (an integer index >= 0 is >= any size <= 0)."
-  },
-  {
-   "file": "src/merkle.ts",
-   "mutator": "ConditionalExpression",
-   "original": "rawSuite === undefined",
-   "replacement": "false",
-   "line": "const suite: HashSuite = rawSuite === undefined ? DEFAULT_HASH_SUITE : rawSuite;",
-   "occurrence": 1,
-   "lineno": 140,
-   "reason": "Equivalent under SHA-256 collision resistance: with the mutant an absent hash_suite yields suite undefined, so hashWithSuite falls back to sha256 (identical hashing) and only the sibling LENGTH check is lost (HASH_LEN[undefined] lets decodeB64uStrict accept any canonical length). A sibling of the wrong length changes the node-hash input 0x01||l||r, so reaching the signed root with it needs a SHA-256 collision / second preimage."
-  },
-  {
-   "file": "src/merkle.ts",
-   "mutator": "ConditionalExpression",
-   "original": "!sib",
-   "replacement": "false",
-   "line": "if (!sib) return false;",
-   "occurrence": 1,
-   "lineno": 152,
-   "reason": "decodeB64uStrict returns null for a malformed sibling; with the guard removed nodeHash(null, ...) throws inside the surrounding try and the catch returns false, the same verdict."
   },
   {
    "file": "src/keys.ts",
@@ -29489,28 +28649,6 @@
    "occurrence": 1,
    "lineno": 227,
    "reason": "weightsMeasured of a root without a measured identity is never read: such a root does not Pass, and only passing identities are reconciled."
-  },
-  {
-   "package": "pca-verified-core",
-   "file": "src/ext-attest.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof (mm as { svn?: unknown }).svn === 'number'",
-   "replacement": "true",
-   "line": "if (mm && typeof mm === 'object' && typeof (mm as { svn?: unknown }).svn === 'number') {",
-   "occurrence": 1,
-   "lineno": 246,
-   "reason": "A non-number svn always fails the following Number.isFinite check (no coercion), giving NoMin / hasMin false as before."
-  },
-  {
-   "package": "pca-verified-core",
-   "file": "src/ext-attest.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof (mm as { svn?: unknown }).svn === 'number'",
-   "replacement": "true",
-   "line": "const hasMin = typeof mm === 'string' ? mm.length > 0 : !!mm && typeof mm === 'object' && typeof (mm as { svn?: unknown }).svn === 'number' && Number.isFinite((mm as { svn: number }).svn);",
-   "occurrence": 1,
-   "lineno": 302,
-   "reason": "A non-number svn always fails the following Number.isFinite check (no coercion), giving NoMin / hasMin false as before."
   },
   {
    "package": "pca-verified-core",
@@ -30653,6 +29791,1495 @@
    "occurrence": 1,
    "lineno": 666,
    "reason": "0.4.1 max_spend: with spend undefined, 'undefined <= lim' is false, so the result is false either way."
+  },
+  {
+   "package": "pca-ciba",
+   "file": "src/index.ts",
+   "mutator": "StringLiteral",
+   "original": "`ciba: the step-up ${what} contains an approval-explanation clause`",
+   "replacement": "``",
+   "line": "if (FORGED_CLAUSE_RE.test(value)) throw new RangeError(`ciba: the step-up ${what} contains an approval-explanation clause`);",
+   "occurrence": 1,
+   "lineno": 165,
+   "reason": "FORGED_CLAUSE_RE (/because\\s+you\\s+asked/) needs whitespace, which IDENT_RE already refuses, so a value that reaches this line can never match the clause"
+  },
+  {
+   "package": "pca-ciba",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "FORGED_CLAUSE_RE.test(value)",
+   "replacement": "false",
+   "line": "if (FORGED_CLAUSE_RE.test(value)) throw new RangeError(`ciba: the step-up ${what} contains an approval-explanation clause`);",
+   "occurrence": 1,
+   "lineno": 165,
+   "reason": "FORGED_CLAUSE_RE (/because\\s+you\\s+asked/) needs whitespace, which IDENT_RE already refuses, so a value that reaches this line can never match the clause"
+  },
+  {
+   "package": "pca-ciba",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "params === null",
+   "replacement": "false",
+   "line": "if (params === null || typeof params !== 'object' || Array.isArray(params)) throw new RangeError('ciba: step-up params must be an object');",
+   "occurrence": 1,
+   "lineno": 224,
+   "reason": "stepUp.params ?? {} on the line above cannot yield null, so the params === null disjunct is never the deciding one"
+  },
+  {
+   "package": "pca-ciba",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "a.payee !== undefined",
+   "replacement": "true",
+   "line": "if (a.payee !== undefined && !/^[\\x20-\\x7E]+$/.test(a.payee)) {",
+   "occurrence": 1,
+   "lineno": 299,
+   "reason": "with no payee the regex is tested against the string 'undefined' (all printable ASCII), which passes, so the guard is a no-op either way"
+  },
+  {
+   "package": "pca-aggsig",
+   "file": "src/core.ts",
+   "mutator": "BooleanLiteral",
+   "original": "false",
+   "replacement": "true",
+   "line": "if (a.length !== b.length) return false;",
+   "occurrence": 1,
+   "lineno": 49,
+   "reason": "sameBytes only ever compares a fixed 96-byte re-encoding with a 96-byte input (isCompressed checked the length first): the length guard is redundant, and reading one index past the end XORs two undefineds to 0"
+  },
+  {
+   "package": "pca-aggsig",
+   "file": "src/core.ts",
+   "mutator": "ConditionalExpression",
+   "original": "a.length !== b.length",
+   "replacement": "false",
+   "line": "if (a.length !== b.length) return false;",
+   "occurrence": 1,
+   "lineno": 49,
+   "reason": "sameBytes only ever compares a fixed 96-byte re-encoding with a 96-byte input (isCompressed checked the length first): the length guard is redundant, and reading one index past the end XORs two undefineds to 0"
+  },
+  {
+   "package": "pca-aggsig",
+   "file": "src/core.ts",
+   "mutator": "EqualityOperator",
+   "original": "i < a.length",
+   "replacement": "i <= a.length",
+   "line": "for (let i = 0; i < a.length; i++) d |= a[i]! ^ b[i]!;",
+   "occurrence": 1,
+   "lineno": 51,
+   "reason": "sameBytes only ever compares a fixed 96-byte re-encoding with a 96-byte input (isCompressed checked the length first): the length guard is redundant, and reading one index past the end XORs two undefineds to 0"
+  },
+  {
+   "package": "pca-aggsig",
+   "file": "src/core.ts",
+   "mutator": "ConditionalExpression",
+   "original": "!isCompressed(sig, SIGNATURE_LENGTH)",
+   "replacement": "false",
+   "line": "if (!isCompressed(sig, SIGNATURE_LENGTH)) return false;",
+   "occurrence": 1,
+   "lineno": 61,
+   "reason": "the canonical re-encoding comparison that follows already rejects every input the compression-flag / length pre-check rejects (a non-compressed or wrong-length value never re-encodes to itself), so the pre-check is a fast path only"
+  },
+  {
+   "package": "pca-webbotauth",
+   "file": "src/content-digest.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof body === 'string'",
+   "replacement": "false",
+   "line": "return typeof body === 'string' ? Buffer.from(body, 'utf8') : Buffer.from(body);",
+   "occurrence": 1,
+   "lineno": 23,
+   "reason": "Buffer.from(string) and Buffer.from(string, 'utf8') are the same; Buffer.from(Uint8Array[, 'utf8']) ignores the encoding: every branch yields identical bytes"
+  },
+  {
+   "package": "pca-webbotauth",
+   "file": "src/content-digest.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof body === 'string'",
+   "replacement": "true",
+   "line": "return typeof body === 'string' ? Buffer.from(body, 'utf8') : Buffer.from(body);",
+   "occurrence": 1,
+   "lineno": 23,
+   "reason": "Buffer.from(string) and Buffer.from(string, 'utf8') are the same; Buffer.from(Uint8Array[, 'utf8']) ignores the encoding: every branch yields identical bytes"
+  },
+  {
+   "package": "pca-webbotauth",
+   "file": "src/content-digest.ts",
+   "mutator": "EqualityOperator",
+   "original": "typeof body === 'string'",
+   "replacement": "typeof body !== 'string'",
+   "line": "return typeof body === 'string' ? Buffer.from(body, 'utf8') : Buffer.from(body);",
+   "occurrence": 1,
+   "lineno": 23,
+   "reason": "Buffer.from(string) and Buffer.from(string, 'utf8') are the same; Buffer.from(Uint8Array[, 'utf8']) ignores the encoding: every branch yields identical bytes"
+  },
+  {
+   "package": "pca-webbotauth",
+   "file": "src/content-digest.ts",
+   "mutator": "StringLiteral",
+   "original": "'string'",
+   "replacement": "\"\"",
+   "line": "return typeof body === 'string' ? Buffer.from(body, 'utf8') : Buffer.from(body);",
+   "occurrence": 1,
+   "lineno": 23,
+   "reason": "Buffer.from(string) and Buffer.from(string, 'utf8') are the same; Buffer.from(Uint8Array[, 'utf8']) ignores the encoding: every branch yields identical bytes"
+  },
+  {
+   "package": "pca-webbotauth",
+   "file": "src/content-digest.ts",
+   "mutator": "StringLiteral",
+   "original": "'utf8'",
+   "replacement": "\"\"",
+   "line": "return typeof body === 'string' ? Buffer.from(body, 'utf8') : Buffer.from(body);",
+   "occurrence": 1,
+   "lineno": 23,
+   "reason": "Buffer.from(string) and Buffer.from(string, 'utf8') are the same; Buffer.from(Uint8Array[, 'utf8']) ignores the encoding: every branch yields identical bytes"
+  },
+  {
+   "package": "pca-webbotauth",
+   "file": "src/content-digest.ts",
+   "mutator": "ConditionalExpression",
+   "original": "b64.length % 4 !== 0",
+   "replacement": "false",
+   "line": "if (b64.length % 4 !== 0) throw new Error(`member \"${key}\" is not canonical base64`);",
+   "occurrence": 1,
+   "lineno": 55,
+   "reason": "the length-mod-4 pre-check throws the same message as the re-encoding comparison below it (Buffer base64 re-encoding always pads to a multiple of 4), so it is a fast path only"
+  },
+  {
+   "package": "pca-webbotauth",
+   "file": "src/content-digest.ts",
+   "mutator": "EqualityOperator",
+   "original": "i < a.length",
+   "replacement": "i <= a.length",
+   "line": "for (let i = 0; i < a.length; i++) d |= a[i]! ^ b[i]!;",
+   "occurrence": 1,
+   "lineno": 81,
+   "reason": "reading one index past the end of both arrays XORs two undefineds to 0, leaving the accumulator unchanged"
+  },
+  {
+   "package": "pca-bbs",
+   "file": "src/bbs.ts",
+   "mutator": "StringLiteral",
+   "original": "'bbs: non-canonical G1 encoding'",
+   "replacement": "\"\"",
+   "line": "if (re.length !== bytes.length || re.some((b, i) => b !== bytes[i])) throw new Error('bbs: non-canonical G1 encoding');",
+   "occurrence": 1,
+   "lineno": 96,
+   "reason": "strictG1/strictG2 throw only to be caught by every caller (octetsToSignature / verify / proofVerify map any throw to the malformed-* reason), so the message is not observable; and the length guard is subsumed by the byte comparison (an uncompressed encoding differs at byte 0, the compression flag)"
+  },
+  {
+   "package": "pca-bbs",
+   "file": "src/bbs.ts",
+   "mutator": "StringLiteral",
+   "original": "'bbs: non-canonical G2 encoding'",
+   "replacement": "\"\"",
+   "line": "if (re.length !== bytes.length || re.some((b, i) => b !== bytes[i])) throw new Error('bbs: non-canonical G2 encoding');",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "strictG1/strictG2 throw only to be caught by every caller (octetsToSignature / verify / proofVerify map any throw to the malformed-* reason), so the message is not observable; and the length guard is subsumed by the byte comparison (an uncompressed encoding differs at byte 0, the compression flag)"
+  },
+  {
+   "package": "pca-bbs",
+   "file": "src/bbs.ts",
+   "mutator": "ConditionalExpression",
+   "original": "re.length !== bytes.length",
+   "replacement": "false",
+   "line": "if (re.length !== bytes.length || re.some((b, i) => b !== bytes[i])) throw new Error('bbs: non-canonical G2 encoding');",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "strictG1/strictG2 throw only to be caught by every caller (octetsToSignature / verify / proofVerify map any throw to the malformed-* reason), so the message is not observable; and the length guard is subsumed by the byte comparison (an uncompressed encoding differs at byte 0, the compression flag)"
+  },
+  {
+   "package": "pca-bbs",
+   "file": "src/bbs.ts",
+   "mutator": "ConditionalExpression",
+   "original": "re.length !== bytes.length",
+   "replacement": "false",
+   "line": "if (re.length !== bytes.length || re.some((b, i) => b !== bytes[i])) throw new Error('bbs: non-canonical G1 encoding');",
+   "occurrence": 1,
+   "lineno": 96,
+   "reason": "strictG1/strictG2 throw only to be caught by every caller (octetsToSignature / verify / proofVerify map any throw to the malformed-* reason), so the message is not observable; and the length guard is subsumed by the byte comparison (an uncompressed encoding differs at byte 0, the compression flag)"
+  },
+  {
+   "package": "pca-abe",
+   "file": "src/bls.ts",
+   "mutator": "EqualityOperator",
+   "original": "off < 576",
+   "replacement": "off <= 576",
+   "line": "for (let off = 0; off < 576; off += 48) if (bytesToNumberBE(bytes.subarray(off, off + 48)) >= Fp.ORDER) return null;",
+   "occurrence": 1,
+   "lineno": 187,
+   "reason": "a 577th read is an empty subarray, which is the number 0 and passes the < p test: the extra iteration cannot change the result"
+  },
+  {
+   "package": "pca-abe",
+   "file": "src/bls.ts",
+   "mutator": "EqualityOperator",
+   "original": "bytesToNumberBE(bytes.subarray(off, off + 48)) >= Fp.ORDER",
+   "replacement": "bytesToNumberBE(bytes.subarray(off, off + 48)) > Fp.ORDER",
+   "line": "for (let off = 0; off < 576; off += 48) if (bytesToNumberBE(bytes.subarray(off, off + 48)) >= Fp.ORDER) return null;",
+   "occurrence": 1,
+   "lineno": 187,
+   "reason": "a coordinate equal to p parses as 0 and the round-trip check (toBytes(x) == bytes) below then rejects it, so < p vs <= p cannot change the result"
+  },
+  {
+   "package": "pca-vc",
+   "file": "src/index.ts",
+   "mutator": "EqualityOperator",
+   "original": "close < 0",
+   "replacement": "close <= 0",
+   "line": "if (open !== 0 || close < 0) throw new Error('pca-vc: malformed @signature-params');",
+   "occurrence": 1,
+   "lineno": 410,
+   "reason": "open is already required to be 0 on the same line, so close (the index of ')') can never be 0"
+  },
+  {
+   "package": "pca-vdf",
+   "file": "src/vdf.ts",
+   "mutator": "EqualityOperator",
+   "original": "pi > N - pi",
+   "replacement": "pi >= N - pi",
+   "line": "if (!isUnit(pi, N) || pi > N - pi) return { ok: false, reason: 'non-canonical-pi' };",
+   "occurrence": 1,
+   "lineno": 464,
+   "reason": "N is odd (checked above), so pi == N - pi (2*pi == N) is impossible and > vs >= agree"
+  },
+  {
+   "package": "pca-fhe",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "sealPromise === null",
+   "replacement": "true",
+   "line": "if (sealPromise === null) sealPromise = SEAL();",
+   "occurrence": 1,
+   "lineno": 227,
+   "reason": "memoisation of an idempotent loader: re-running SEAL() on every call yields an equivalent library instance, only slower"
+  },
+  {
+   "package": "pca-gnap",
+   "file": "src/index.ts",
+   "mutator": "StringLiteral",
+   "original": "'unexpected alg (not EdDSA)'",
+   "replacement": "\"\"",
+   "line": "if (header.alg !== 'EdDSA') return fail('unexpected alg (not EdDSA)');",
+   "occurrence": 1,
+   "lineno": 827,
+   "reason": "jose refuses to verify an Ed25519 key under any alg other than EdDSA (it throws, mapped to the signature reason above), so a verified header always has alg EdDSA and this refusal is unreachable"
+  },
+  {
+   "package": "pca-pq-threshold",
+   "file": "src/experimental/lattice-threshold.ts",
+   "mutator": "ArrowFunction",
+   "original": "() => 0n",
+   "replacement": "() => undefined",
+   "line": "const shareCoeffs: bigint[][] = Array.from({ length: n }, () => Array.from({ length: params.dim }, () => 0n));",
+   "occurrence": 1,
+   "lineno": 166,
+   "reason": "every cell of the zero-initialised matrix / accumulator is assigned (or read through ?? 0n) before it is observed, so the initial fill value and the row length are not observable"
+  },
+  {
+   "package": "pca-pq-threshold",
+   "file": "src/experimental/lattice-threshold.ts",
+   "mutator": "ObjectLiteral",
+   "original": "{ length: params.dim }",
+   "replacement": "{}",
+   "line": "const shareCoeffs: bigint[][] = Array.from({ length: n }, () => Array.from({ length: params.dim }, () => 0n));",
+   "occurrence": 1,
+   "lineno": 166,
+   "reason": "every cell of the zero-initialised matrix / accumulator is assigned (or read through ?? 0n) before it is observed, so the initial fill value and the row length are not observable"
+  },
+  {
+   "package": "pca-pq-threshold",
+   "file": "src/experimental/lattice-threshold.ts",
+   "mutator": "ObjectLiteral",
+   "original": "{ length: params.dim }",
+   "replacement": "{}",
+   "line": "const out: bigint[] = Array.from({ length: params.dim }, () => 0n);",
+   "occurrence": 1,
+   "lineno": 194,
+   "reason": "every cell of the zero-initialised matrix / accumulator is assigned (or read through ?? 0n) before it is observed, so the initial fill value and the row length are not observable"
+  },
+  {
+   "package": "pca-pq-threshold",
+   "file": "src/experimental/lattice-threshold.ts",
+   "mutator": "ArrowFunction",
+   "original": "() => 0n",
+   "replacement": "() => undefined",
+   "line": "const out: bigint[] = Array.from({ length: params.dim }, () => 0n);",
+   "occurrence": 1,
+   "lineno": 194,
+   "reason": "every cell of the zero-initialised matrix / accumulator is assigned (or read through ?? 0n) before it is observed, so the initial fill value and the row length are not observable"
+  },
+  {
+   "package": "pca-pq-threshold",
+   "file": "src/experimental/lattice-threshold.ts",
+   "mutator": "ConditionalExpression",
+   "original": "row",
+   "replacement": "true",
+   "line": "if (row) row[c] = r;",
+   "occurrence": 1,
+   "lineno": 173,
+   "reason": "the row exists for every i < n (the matrix was built with n rows), so the defensive row guard is always true"
+  },
+  {
+   "package": "pca-pq-threshold",
+   "file": "src/experimental/lattice-threshold.ts",
+   "mutator": "ConditionalExpression",
+   "original": "lastRow",
+   "replacement": "true",
+   "line": "if (lastRow) lastRow[c] = mod(target - running, params.q);",
+   "occurrence": 1,
+   "lineno": 177,
+   "reason": "the row exists for every i < n (the matrix was built with n rows), so the defensive row guard is always true"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof v === 'number'",
+   "replacement": "true",
+   "line": "const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0);",
+   "occurrence": 1,
+   "lineno": 151,
+   "reason": "Number.isSafeInteger already is false for every non-number, so the typeof test is redundant"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "isInt(d.min) && isInt(d.max)",
+   "replacement": "true",
+   "line": "if (isInt(d.min) && isInt(d.max) && d.min > d.max) return `${path}: min > max`;",
+   "occurrence": 1,
+   "lineno": 175,
+   "reason": "reaching this line every defined min / max already passed the isInt check in the loop above (a non-integer returned earlier), and comparing with an undefined bound is false"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "LogicalOperator",
+   "original": "isInt(d.min) && isInt(d.max)",
+   "replacement": "isInt(d.min) || isInt(d.max)",
+   "line": "if (isInt(d.min) && isInt(d.max) && d.min > d.max) return `${path}: min > max`;",
+   "occurrence": 1,
+   "lineno": 175,
+   "reason": "reaching this line every defined min / max already passed the isInt check in the loop above (a non-integer returned earlier), and comparing with an undefined bound is false"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "LogicalOperator",
+   "original": "isInt(d.min_items) && isInt(d.max_items)",
+   "replacement": "isInt(d.min_items) || isInt(d.max_items)",
+   "line": "if (isInt(d.min_items) && isInt(d.max_items) && d.min_items > d.max_items) return `${path}: min_items > max_items`;",
+   "occurrence": 1,
+   "lineno": 182,
+   "reason": "reaching this line every defined min_items / max_items is a non-negative integer (checked above), and comparing with an undefined bound is false"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "isInt(d.min_items) && isInt(d.max_items)",
+   "replacement": "true",
+   "line": "if (isInt(d.min_items) && isInt(d.max_items) && d.min_items > d.max_items) return `${path}: min_items > max_items`;",
+   "occurrence": 1,
+   "lineno": 182,
+   "reason": "reaching this line every defined min_items / max_items is a non-negative integer (checked above), and comparing with an undefined bound is false"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof u === 'string'",
+   "replacement": "true",
+   "line": "if (!d.accumulates_into.every((u) => typeof u === 'string' && u.length <= 64 && UNIT_ID_RE.test(u))) return `${path}: accumulates_into entries must be unit ids`;",
+   "occurrence": 1,
+   "lineno": 189,
+   "reason": "a non-string entry has no .length, so the length <= 64 test that follows is false (undefined <= 64) and the entry is refused either way"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof r.param !== 'string'",
+   "replacement": "false",
+   "line": "if (typeof r.param !== 'string' || !own(v.params, r.param)) return `${at}: reversibility_by.param must be a declared parameter`;",
+   "occurrence": 1,
+   "lineno": 214,
+   "reason": "own(v.params, <non-string>) is false: parameter keys always start with 'action.params.', which no number or object spelling matches"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "ka === null",
+   "replacement": "false",
+   "line": "if (ka === null || ka.alg !== resolveSigAlg(d.sig.alg)!.alg) return { ok: false, reason: 'sig.alg does not match the pinned key suite' };",
+   "occurrence": 1,
+   "lineno": 319,
+   "reason": "key.alg already passed suiteErr, so resolveSigAlg(key.alg) is never null here"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "key.pq_pk !== undefined",
+   "replacement": "true",
+   "line": "const pin: PqPinPolicy = key.pq_pk !== undefined ? { pqPins: { [key.pk]: key.pq_pk } } : {};",
+   "occurrence": 1,
+   "lineno": 320,
+   "reason": "a key without pq_pk is verified by verifyPinnedSuite with pins {pk: undefined} vs {}: both mean no pin for the PQ half, and ed25519 ignores pins"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "mo < 1",
+   "replacement": "false",
+   "line": "if (y < 1 || mo < 1 || mo > 12 || d < 1) return false;",
+   "occurrence": 1,
+   "lineno": 349,
+   "reason": "month 0 or 13+ indexes past the days-in-month table: dim is undefined and d <= undefined is false, the same refusal"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "mo > 12",
+   "replacement": "false",
+   "line": "if (y < 1 || mo < 1 || mo > 12 || d < 1) return false;",
+   "occurrence": 1,
+   "lineno": 349,
+   "reason": "month 0 or 13+ indexes past the days-in-month table: dim is undefined and d <= undefined is false, the same refusal"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "d.min !== undefined",
+   "replacement": "true",
+   "line": "if (d.min !== undefined && x < d.min) return { code: 'out_of_domain', reason: `below min ${d.min}` };",
+   "occurrence": 1,
+   "lineno": 367,
+   "reason": "comparing x < undefined is false, the same as skipping the bound"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "d.max !== undefined",
+   "replacement": "true",
+   "line": "if (d.max !== undefined && x > d.max) return { code: 'out_of_domain', reason: `above max ${d.max}` };",
+   "occurrence": 1,
+   "lineno": 368,
+   "reason": "comparing x > undefined is false, the same as skipping the bound"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "d.min !== undefined",
+   "replacement": "true",
+   "line": "if (ints && ((d.min !== undefined && (e as number) < d.min) || (d.max !== undefined && (e as number) > d.max))) return { code: 'out_of_domain', reason: 'array item outside min/max' };",
+   "occurrence": 1,
+   "lineno": 387,
+   "reason": "comparing an integer with an undefined bound is false, the same as skipping it"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "d.max !== undefined",
+   "replacement": "true",
+   "line": "if (ints && ((d.min !== undefined && (e as number) < d.min) || (d.max !== undefined && (e as number) > d.max))) return { code: 'out_of_domain', reason: 'array item outside min/max' };",
+   "occurrence": 1,
+   "lineno": 387,
+   "reason": "comparing an integer with an undefined bound is false, the same as skipping it"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "EqualityOperator",
+   "original": "REV_RANK[b] > REV_RANK[a]",
+   "replacement": "REV_RANK[b] >= REV_RANK[a]",
+   "line": "const maxRev = (xs: SchemaReversibility[]): SchemaReversibility => xs.reduce((a, b) => (REV_RANK[b] > REV_RANK[a] ? b : a), 'reversible' as SchemaReversibility);",
+   "occurrence": 1,
+   "lineno": 430,
+   "reason": "equal ranks name the same class, so keeping or replacing the accumulator returns the same value"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ArrayDeclaration",
+   "original": "[]",
+   "replacement": "[\"Stryker was here\"]",
+   "line": ".filter((p) => v.params[p]!.type === 'integer' && (v.params[p]!.accumulates_into ?? []).includes(unit))",
+   "occurrence": 1,
+   "lineno": 496,
+   "reason": "an absent accumulates_into and the one-element placeholder list differ only when the queried unit is literally the placeholder text, which is not a unit id (UNIT_ID_RE) any schema can declare"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ArrayDeclaration",
+   "original": "[]",
+   "replacement": "[\"Stryker was here\"]",
+   "line": "const req = new Set(t.inputSchema?.required ?? []);",
+   "occurrence": 1,
+   "lineno": 589,
+   "reason": "an absent required list and the placeholder list differ only for a parameter literally named 'Stryker was here', which is not a schema name ([A-Za-z0-9_]{1,64}) and is skipped first"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof op !== 'object'",
+   "replacement": "false",
+   "line": "if (!op || typeof op !== 'object' || !op.operationId) continue;",
+   "occurrence": 1,
+   "lineno": 620,
+   "reason": "a primitive op has no operationId, so the following !op.operationId test continues the loop either way"
+  },
+  {
+   "file": "src/action-schema.ts",
+   "mutator": "ArrayDeclaration",
+   "original": "[]",
+   "replacement": "[\"Stryker was here\"]",
+   "line": "const req = new Set(sch?.required ?? []);",
+   "occurrence": 1,
+   "lineno": 624,
+   "reason": "same as the MCP importer: only a parameter literally named 'Stryker was here' could differ, and that is not a schema name"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-attest.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof x === 'number'",
+   "replacement": "true",
+   "line": "const isSvnBound = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0 && !Object.is(x, -0);",
+   "occurrence": 1,
+   "lineno": 249,
+   "reason": "Number.isSafeInteger is false for every non-number, so the typeof test is redundant"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-attest.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof mm !== 'object'",
+   "replacement": "false",
+   "line": "if (mm === null || typeof mm !== 'object' || Array.isArray(mm)) return false;",
+   "occurrence": 1,
+   "lineno": 253,
+   "reason": "a primitive reaches Object.getPrototypeOf, whose result (String/Number/Boolean prototype) is neither Object.prototype nor null, so the next test returns false as well; the only callers pass an absent value as undefined only after a defined-check"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-attest.ts",
+   "mutator": "ConditionalExpression",
+   "original": "keys[0] === 'svn'",
+   "replacement": "true",
+   "line": "return keys.length === 1 && keys[0] === 'svn' && OWN_HAS.call(mm, 'svn') && isSvnBound((mm as { svn: unknown }).svn);",
+   "occurrence": 1,
+   "lineno": 257,
+   "reason": "keys has exactly one element and OWN_HAS.call(mm, 'svn') follows, which is false unless that one key is 'svn'"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ObjectLiteral",
+   "original": "{ ok: false, reason: 'PCActn is not an object' }",
+   "replacement": "{}",
+   "line": "if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };",
+   "occurrence": 1,
+   "lineno": 230,
+   "reason": "unreachable from every caller: verifyA2ATask gets its PCActn from extractPca (a non-null object only) and the payment path refuses a non-object before calling it, so a non-object never reaches this guard"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "BooleanLiteral",
+   "original": "false",
+   "replacement": "true",
+   "line": "if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };",
+   "occurrence": 1,
+   "lineno": 230,
+   "reason": "unreachable from every caller: verifyA2ATask gets its PCActn from extractPca (a non-null object only) and the payment path refuses a non-object before calling it, so a non-object never reaches this guard"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "StringLiteral",
+   "original": "'PCActn is not an object'",
+   "replacement": "\"\"",
+   "line": "if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };",
+   "occurrence": 1,
+   "lineno": 230,
+   "reason": "unreachable from every caller: verifyA2ATask gets its PCActn from extractPca (a non-null object only) and the payment path refuses a non-object before calling it, so a non-object never reaches this guard"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "pcActn === null || typeof pcActn !== 'object'",
+   "replacement": "false",
+   "line": "if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };",
+   "occurrence": 1,
+   "lineno": 230,
+   "reason": "unreachable from every caller: verifyA2ATask gets its PCActn from extractPca (a non-null object only) and the payment path refuses a non-object before calling it, so a non-object never reaches this guard"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "LogicalOperator",
+   "original": "pcActn === null || typeof pcActn !== 'object'",
+   "replacement": "pcActn === null && typeof pcActn !== 'object'",
+   "line": "if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };",
+   "occurrence": 1,
+   "lineno": 230,
+   "reason": "unreachable from every caller: verifyA2ATask gets its PCActn from extractPca (a non-null object only) and the payment path refuses a non-object before calling it, so a non-object never reaches this guard"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "pcActn === null",
+   "replacement": "false",
+   "line": "if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };",
+   "occurrence": 1,
+   "lineno": 230,
+   "reason": "unreachable from every caller: verifyA2ATask gets its PCActn from extractPca (a non-null object only) and the payment path refuses a non-object before calling it, so a non-object never reaches this guard"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof pcActn !== 'object'",
+   "replacement": "false",
+   "line": "if (pcActn === null || typeof pcActn !== 'object') return { ok: false, reason: 'PCActn is not an object' };",
+   "occurrence": 1,
+   "lineno": 230,
+   "reason": "unreachable from every caller: verifyA2ATask gets its PCActn from extractPca (a non-null object only) and the payment path refuses a non-object before calling it, so a non-object never reaches this guard"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "history.length > 0",
+   "replacement": "true",
+   "line": "if (Array.isArray(history) && history.length > 0) {",
+   "occurrence": 1,
+   "lineno": 150,
+   "reason": "an empty history array makes the for loop below run zero iterations, the same as skipping it"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "EqualityOperator",
+   "original": "history.length > 0",
+   "replacement": "history.length >= 0",
+   "line": "if (Array.isArray(history) && history.length > 0) {",
+   "occurrence": 1,
+   "lineno": 150,
+   "reason": "an empty history array makes the for loop below run zero iterations, the same as skipping it"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "opts.grant !== undefined",
+   "replacement": "true",
+   "line": "const hasGrant = !!opts && opts.grant !== undefined && opts.grant !== null && typeof opts.grant === 'object';",
+   "occurrence": 1,
+   "lineno": 203,
+   "reason": "undefined !== null is true but typeof undefined === 'object' is false, so the grant test is false for an undefined grant either way"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "CallExpression",
+   "original": "assertAuthority(opts);",
+   "replacement": ";",
+   "line": "assertAuthority(opts);",
+   "occurrence": 1,
+   "lineno": 229,
+   "reason": "every caller of verifyPcActn has already run assertAuthority on the same options"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "chain.length > 0",
+   "replacement": "true",
+   "line": "const leaf: unknown = Array.isArray(chain) && chain.length > 0 ? chain[chain.length - 1] : undefined;",
+   "occurrence": 1,
+   "lineno": 666,
+   "reason": "an empty chain gives chain[-1] = undefined, which is not a record, so leafHolder is undefined exactly as on the untaken branch"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "EqualityOperator",
+   "original": "chain.length > 0",
+   "replacement": "chain.length >= 0",
+   "line": "const leaf: unknown = Array.isArray(chain) && chain.length > 0 ? chain[chain.length - 1] : undefined;",
+   "occurrence": 1,
+   "lineno": 666,
+   "reason": "an empty chain gives chain[-1] = undefined, which is not a record, so leafHolder is undefined exactly as on the untaken branch"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof amt.value !== 'number'",
+   "replacement": "false",
+   "line": "if (!isRecord(amt) || typeof amt.value !== 'number' || !Number.isFinite(amt.value) || typeof amt.currency !== 'string') return 'payment mandate amount is malformed';",
+   "occurrence": 1,
+   "lineno": 679,
+   "reason": "!Number.isFinite(amt.value) on the same line is true for every non-number, so the typeof test is redundant"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof params.amount !== 'number'",
+   "replacement": "false",
+   "line": "if (!own(params, 'amount') || typeof params.amount !== 'number' || !Number.isFinite(params.amount)) return 'the PCActn params carry no numeric amount to bind the mandate amount to';",
+   "occurrence": 1,
+   "lineno": 680,
+   "reason": "!Number.isFinite(params.amount) on the same line is true for every non-number, so the typeof test is redundant"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "BooleanLiteral",
+   "original": "false",
+   "replacement": "true",
+   "line": "let same = false;",
+   "occurrence": 1,
+   "lineno": 688,
+   "reason": "the try block assigns same on every path that does not throw and the catch sets it false, so its initial value is never read"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "BlockStatement",
+   "original": "<multiline>",
+   "replacement": "{}",
+   "line": "} catch {",
+   "occurrence": 2,
+   "lineno": 691,
+   "reason": "the catch only sets same to false, which is its initial value"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "BooleanLiteral",
+   "original": "!require.includes('params_digest')",
+   "replacement": "require.includes('params_digest')",
+   "line": "if (!require.includes('params_digest')) require.push('params_digest');",
+   "occurrence": 1,
+   "lineno": 742,
+   "reason": "the mandate path always supplies the params plaintext (refused earlier otherwise), so the params_digest check is enforced and a mismatch is a 'fail' that denies regardless of the require list"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "!require.includes('params_digest')",
+   "replacement": "false",
+   "line": "if (!require.includes('params_digest')) require.push('params_digest');",
+   "occurrence": 1,
+   "lineno": 742,
+   "reason": "the mandate path always supplies the params plaintext (refused earlier otherwise), so the params_digest check is enforced and a mismatch is a 'fail' that denies regardless of the require list"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "!require.includes('params_digest')",
+   "replacement": "true",
+   "line": "if (!require.includes('params_digest')) require.push('params_digest');",
+   "occurrence": 1,
+   "lineno": 742,
+   "reason": "the mandate path always supplies the params plaintext (refused earlier otherwise), so the params_digest check is enforced and a mismatch is a 'fail' that denies regardless of the require list"
+  },
+  {
+   "package": "pca-a2a",
+   "file": "src/index.ts",
+   "mutator": "StringLiteral",
+   "original": "'params_digest'",
+   "replacement": "\"\"",
+   "line": "if (!require.includes('params_digest')) require.push('params_digest');",
+   "occurrence": 1,
+   "lineno": 742,
+   "reason": "the mandate path always supplies the params plaintext (refused earlier otherwise), so the params_digest check is enforced and a mismatch is a 'fail' that denies regardless of the require list"
+  },
+  {
+   "package": "pca-ciba",
+   "file": "src/index.ts",
+   "mutator": "StringLiteral",
+   "original": "'other:'",
+   "replacement": "\"\"",
+   "line": "found.add(g ? g[0] : 'other:' + ch);",
+   "occurrence": 1,
+   "lineno": 204,
+   "reason": "a single character's script-group name never equals 'other:' + that character (group names are multi-letter words), so the set size - the only thing read - is the same with or without the prefix"
+  },
+  {
+   "package": "pca-ciba",
+   "file": "src/index.ts",
+   "mutator": "ConditionalExpression",
+   "original": "/^[\\x20-\\x7E]*$/.test(payee)",
+   "replacement": "false",
+   "line": "if (/^[\\x20-\\x7E]*$/.test(payee)) return payee;",
+   "occurrence": 1,
+   "lineno": 211,
+   "reason": "falls through to the per-word loop below, whose own ASCII test returns each ASCII word unchanged and the words are re-joined with the same single spaces, so the result is the same string"
+  },
+  {
+   "package": "pca-ciba",
+   "file": "src/index.ts",
+   "mutator": "Regex",
+   "original": "/^[\\x20-\\x7E]*$/",
+   "replacement": "/^[\\x20-\\x7E]$/",
+   "line": "if (/^[\\x20-\\x7E]*$/.test(payee)) return payee;",
+   "occurrence": 1,
+   "lineno": 211,
+   "reason": "falls through to the per-word loop below, whose own ASCII test returns each ASCII word unchanged and the words are re-joined with the same single spaces, so the result is the same string"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-wire.ts",
+   "mutator": "ArithmeticOperator",
+   "original": "Math.random() * 0x1_0000_0000",
+   "replacement": "Math.random() / 0x1_0000_0000",
+   "line": "return Math.floor(Math.random() * 0x1_0000_0000);",
+   "occurrence": 1,
+   "lineno": 39,
+   "reason": "the salt only spreads the proved parser's duplicate-key buckets (the proof holds for every value): getRandomValues vs Math.random vs a constant divisor change no verdict"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-wire.ts",
+   "mutator": "ConditionalExpression",
+   "original": "c?.getRandomValues",
+   "replacement": "true",
+   "line": "if (c?.getRandomValues) return c.getRandomValues(new Uint32Array(1))[0]!;",
+   "occurrence": 1,
+   "lineno": 38,
+   "reason": "the salt only spreads the proved parser's duplicate-key buckets (the proof holds for every value): getRandomValues vs Math.random vs a constant divisor change no verdict"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-wire.ts",
+   "mutator": "ConditionalExpression",
+   "original": "c?.getRandomValues",
+   "replacement": "false",
+   "line": "if (c?.getRandomValues) return c.getRandomValues(new Uint32Array(1))[0]!;",
+   "occurrence": 1,
+   "lineno": 38,
+   "reason": "the salt only spreads the proved parser's duplicate-key buckets (the proof holds for every value): getRandomValues vs Math.random vs a constant divisor change no verdict"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-wire.ts",
+   "mutator": "OptionalChaining",
+   "original": "c?.getRandomValues",
+   "replacement": "c.getRandomValues",
+   "line": "if (c?.getRandomValues) return c.getRandomValues(new Uint32Array(1))[0]!;",
+   "occurrence": 1,
+   "lineno": 38,
+   "reason": "the salt only spreads the proved parser's duplicate-key buckets (the proof holds for every value): getRandomValues vs Math.random vs a constant divisor change no verdict"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-wire.ts",
+   "mutator": "EqualityOperator",
+   "original": "i < n",
+   "replacement": "i <= n",
+   "line": "for (let i = 0; i < n; i += CH) out += String.fromCharCode.apply(null, b.slice(i, Math.min(n, i + CH)));",
+   "occurrence": 1,
+   "lineno": 135,
+   "reason": "the slice end is clamped by Math.min(n, i + 4096), so one more loop iteration with i == n appends an empty chunk"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-wire.ts",
+   "mutator": "ConditionalExpression",
+   "original": "st.is_Bad",
+   "replacement": "true",
+   "line": "if (st.is_Bad) throw new TypeError('canonicalize: value outside the strict profile');",
+   "occurrence": 1,
+   "lineno": 147,
+   "reason": "reached only after is_Done returned; the remaining outcome is Bad or the unreachable output-limit status"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-wire.ts",
+   "mutator": "StringLiteral",
+   "original": "'canonicalize: output exceeds the verified printer limit'",
+   "replacement": "\"\"",
+   "line": "throw new RangeError('canonicalize: output exceeds the verified printer limit');",
+   "occurrence": 1,
+   "lineno": 148,
+   "reason": "Not reachable by any representable input: the printer emits at most 6 UTF-16 code units per input code unit (the longest escape is \\uXXXX) plus a constant per node, and a JS string is at most 2^30 code units with the whole input bounded by the process heap, so the output of any value that fits in memory stays far below 2^40 code units. The Done/Bad/More statuses of the proved printer are exhaustive, and More only arises past that fuel."
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-policyvm.ts",
+   "mutator": "LogicalOperator",
+   "original": "i < vs.length && j < kept.length",
+   "replacement": "i < vs.length || j < kept.length",
+   "line": "for (let i = 0; i < vs.length && j < kept.length; i++) if (vs[i] === kept[j]) { out.push((caveats as unknown[])[i]); j++; }",
+   "occurrence": 1,
+   "lineno": 240,
+   "reason": "the proved RootCaveats returns a subsequence of its input by construction, so the identity walk always consumes every kept element, and the early-exit / mismatch guard (an internal consistency check) never fires"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-policyvm.ts",
+   "mutator": "ConditionalExpression",
+   "original": "i < vs.length",
+   "replacement": "true",
+   "line": "for (let i = 0; i < vs.length && j < kept.length; i++) if (vs[i] === kept[j]) { out.push((caveats as unknown[])[i]); j++; }",
+   "occurrence": 1,
+   "lineno": 240,
+   "reason": "the proved RootCaveats returns a subsequence of its input by construction, so the identity walk always consumes every kept element, and the early-exit / mismatch guard (an internal consistency check) never fires"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-policyvm.ts",
+   "mutator": "EqualityOperator",
+   "original": "i < vs.length",
+   "replacement": "i <= vs.length",
+   "line": "for (let i = 0; i < vs.length && j < kept.length; i++) if (vs[i] === kept[j]) { out.push((caveats as unknown[])[i]); j++; }",
+   "occurrence": 1,
+   "lineno": 240,
+   "reason": "the proved RootCaveats returns a subsequence of its input by construction, so the identity walk always consumes every kept element, and the early-exit / mismatch guard (an internal consistency check) never fires"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-policyvm.ts",
+   "mutator": "ConditionalExpression",
+   "original": "j < kept.length",
+   "replacement": "true",
+   "line": "for (let i = 0; i < vs.length && j < kept.length; i++) if (vs[i] === kept[j]) { out.push((caveats as unknown[])[i]); j++; }",
+   "occurrence": 1,
+   "lineno": 240,
+   "reason": "the proved RootCaveats returns a subsequence of its input by construction, so the identity walk always consumes every kept element, and the early-exit / mismatch guard (an internal consistency check) never fires"
+  },
+  {
+   "package": "pca-verified-core",
+   "file": "src/ext-policyvm.ts",
+   "mutator": "EqualityOperator",
+   "original": "j < kept.length",
+   "replacement": "j <= kept.length",
+   "line": "for (let i = 0; i < vs.length && j < kept.length; i++) if (vs[i] === kept[j]) { out.push((caveats as unknown[])[i]); j++; }",
+   "occurrence": 1,
+   "lineno": 240,
+   "reason": "the proved RootCaveats returns a subsequence of its input by construction, so the identity walk always consumes every kept element, and the early-exit / mismatch guard (an internal consistency check) never fires"
+  },
+  {
+   "file": "src/agent-native.ts",
+   "mutator": "UnaryOperator",
+   "original": "-1",
+   "replacement": "+1",
+   "line": "const i = typeof cv.class === 'string' ? REV.indexOf(cv.class) : -1;",
+   "occurrence": 1,
+   "lineno": 946,
+   "reason": "wellFormedCaveat (called before the fold switch) already guarantees class is one of the REV strings, so the typeof test is redundant at 835 and the non-string branch (-1 / +1) at 946 is never taken"
+  },
+  {
+   "file": "src/agent-native.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof cv.class === 'string'",
+   "replacement": "true",
+   "line": "return typeof cv.class === 'string' && REV.includes(cv.class);",
+   "occurrence": 1,
+   "lineno": 835,
+   "reason": "wellFormedCaveat (called before the fold switch) already guarantees class is one of the REV strings, so the typeof test is redundant at 835 and the non-string branch (-1 / +1) at 946 is never taken"
+  },
+  {
+   "file": "src/agent-native.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof cv.class === 'string'",
+   "replacement": "true",
+   "line": "const i = typeof cv.class === 'string' ? REV.indexOf(cv.class) : -1;",
+   "occurrence": 1,
+   "lineno": 946,
+   "reason": "wellFormedCaveat (called before the fold switch) already guarantees class is one of the REV strings, so the typeof test is redundant at 835 and the non-string branch (-1 / +1) at 946 is never taken"
+  },
+  {
+   "file": "src/attest-pq-software.ts",
+   "mutator": "ArrayDeclaration",
+   "original": "[]",
+   "replacement": "[\"Stryker was here\"]",
+   "line": "const allowed = opts.allowedSuites === undefined ? null : new Set<SigAlg>(Array.isArray(opts.allowedSuites) ? opts.allowedSuites : []);",
+   "occurrence": 1,
+   "lineno": 257,
+   "reason": "a non-array allowedSuites becomes an empty (refuse-everything) set; the placeholder string in the mutant is not a signature suite name, so the set refuses every real suite either way"
+  },
+  {
+   "file": "src/capability.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof c.pq_pk === 'string'",
+   "replacement": "true",
+   "line": "const isTrustedRoot = policy?.trustedRoot !== undefined && typeof c.pq_pk === 'string' && capHash(policy.trustedRoot) === capHash(c);",
+   "occurrence": 1,
+   "lineno": 671,
+   "reason": "an artifact root without a string pq_pk never resolves a PQ verify key, with or without the trustedRoot shortcut (resolvePqVerifyKey returns null for a missing artifact key even when a pin is supplied): both branches end in the same 'needs a PQ key pinned' refusal (probed: identical reason for a pq_pk-less root with trustedRoot + pin)"
+  },
+  {
+   "file": "src/attest-allowlist-anchor.ts",
+   "mutator": "BooleanLiteral",
+   "original": "false",
+   "replacement": "true",
+   "line": "if (typeof e !== 'object' || e === null) return false;",
+   "occurrence": 1,
+   "lineno": 78,
+   "reason": "validEntry is private and its only caller (anchorAllowlistHead) passes an object it has just built (an object literal or a spread of its argument), so e is never a non-object or null: the guard is always false, so the value it returns can never be observed."
+  },
+  {
+   "file": "src/attest-allowlist-anchor.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof e !== 'object' || e === null",
+   "replacement": "false",
+   "line": "if (typeof e !== 'object' || e === null) return false;",
+   "occurrence": 1,
+   "lineno": 78,
+   "reason": "validEntry is private and its only caller (anchorAllowlistHead) passes an object it has just built (an object literal or a spread of its argument), so e is never a non-object or null: the guard is always false, and removing it changes nothing."
+  },
+  {
+   "file": "src/attest-allowlist-anchor.ts",
+   "mutator": "LogicalOperator",
+   "original": "typeof e !== 'object' || e === null",
+   "replacement": "typeof e !== 'object' && e === null",
+   "line": "if (typeof e !== 'object' || e === null) return false;",
+   "occurrence": 1,
+   "lineno": 78,
+   "reason": "validEntry is private and its only caller (anchorAllowlistHead) passes an object it has just built (an object literal or a spread of its argument), so e is never a non-object or null: the guard is always false, so || and && agree (both operands false)."
+  },
+  {
+   "file": "src/attest-allowlist-anchor.ts",
+   "mutator": "ConditionalExpression",
+   "original": "e === null",
+   "replacement": "false",
+   "line": "if (typeof e !== 'object' || e === null) return false;",
+   "occurrence": 1,
+   "lineno": 78,
+   "reason": "validEntry is private and its only caller (anchorAllowlistHead) passes an object it has just built (an object literal or a spread of its argument), so e is never a non-object or null: the guard is always false (never null)."
+  },
+  {
+   "file": "src/attest-allowlist.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof opts.clockSkewMs === 'number'",
+   "replacement": "true",
+   "line": "if (opts.clockSkewMs !== undefined && !(typeof opts.clockSkewMs === 'number' && Number.isFinite(opts.clockSkewMs))) {",
+   "occurrence": 1,
+   "lineno": 286,
+   "reason": "Number.isFinite is false for every non-number without coercion (unlike the global isFinite), so the typeof conjunct is redundant: a non-number option is refused as malformed either way."
+  },
+  {
+   "file": "src/attest-allowlist.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof opts.maxLifetimeMs === 'number'",
+   "replacement": "true",
+   "line": "if (opts.maxLifetimeMs !== undefined && !(typeof opts.maxLifetimeMs === 'number' && Number.isFinite(opts.maxLifetimeMs))) {",
+   "occurrence": 1,
+   "lineno": 289,
+   "reason": "Number.isFinite is false for every non-number without coercion (unlike the global isFinite), so the typeof conjunct is redundant: a non-number option is refused as malformed either way."
+  },
+  {
+   "file": "src/attest-allowlist.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof opts.minVersion === 'number'",
+   "replacement": "true",
+   "line": "if (opts.minVersion !== undefined && !(typeof opts.minVersion === 'number' && Number.isSafeInteger(opts.minVersion))) {",
+   "occurrence": 1,
+   "lineno": 292,
+   "reason": "Number.isSafeInteger is false for every non-number without coercion (unlike the global isFinite), so the typeof conjunct is redundant: a non-number option is refused as malformed either way."
+  },
+  {
+   "file": "src/attest-allowlist.ts",
+   "mutator": "ConditionalExpression",
+   "original": "typeof opts.lastSeenVersion === 'number'",
+   "replacement": "true",
+   "line": "if (opts.lastSeenVersion !== undefined && !(typeof opts.lastSeenVersion === 'number' && Number.isSafeInteger(opts.lastSeenVersion))) {",
+   "occurrence": 1,
+   "lineno": 295,
+   "reason": "Number.isSafeInteger is false for every non-number without coercion (unlike the global isFinite), so the typeof conjunct is redundant: a non-number option is refused as malformed either way."
+  },
+  {
+   "file": "src/approval-channels.ts",
+   "mutator": "ConditionalExpression",
+   "original": "url === undefined",
+   "replacement": "false",
+   "line": "if (!enabled || url === undefined) {",
+   "occurrence": 1,
+   "lineno": 177,
+   "reason": "`enabled` is computed as typeof url === 'string' && url.length > 0, so url === undefined implies !enabled, which already takes the branch; this operand only narrows the type for the compiler."
+  },
+  {
+   "file": "src/attest-maa-keys.ts",
+   "mutator": "StringLiteral",
+   "original": "'fetch'",
+   "replacement": "\"\"",
+   "line": "opts = snapshotConfig(opts, { keep: ['store', 'fetch'] }); // freeze the policy: later edits must not change what this trust enforces",
+   "occurrence": 1,
+   "lineno": 445,
+   "reason": "snapshotConfig keeps functions by reference anyway (snap() returns a function unchanged), and createMaaKeyTrust requires opts.fetch to be a function (it throws otherwise, snapshot or not), so listing 'fetch' in `keep` cannot change what the trust uses."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "ConditionalExpression",
+   "original": "t.length === 0",
+   "replacement": "false",
+   "line": "if (t.length === 0) return null;",
+   "occurrence": 1,
+   "lineno": 243,
+   "reason": "With the early return removed, an empty text still ends in null: splitTopLevel('') gives no || / && parts, it does not start with '(', and parseAtom('') finds no operator and fails the word-operator regex, returning null."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "EqualityOperator",
+   "original": "idx >= 0",
+   "replacement": "idx > 0",
+   "line": "if (idx >= 0) {",
+   "occurrence": 1,
+   "lineno": 282,
+   "reason": "An operator at index 0 has an empty left-hand side (null from toFieldPath, which only accepts principal / resource / action / context forms). Skipping it instead falls through to later tokens and the word-operator regex, whose left-hand side then begins with the operator text and is likewise rejected by toFieldPath, so parseAtom returns null either way."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "utc",
+   "replacement": "false",
+   "line": "if (utc) y += y < 50 ? 2000 : 1900;",
+   "occurrence": 1,
+   "lineno": 100,
+   "reason": "The year only reaches setUTCFullYear, where it can only decide whether Feb 29 exists (the one year-dependent roll-over). For every UTCTime two-digit year yy the mutated years (yy, yy-2000, yy-1900, yy+2000 for yy>=50, 2050 for yy=50) are leap exactly when the real one (yy<50 ? 2000+yy : 1900+yy) is: yy=0 gives 0/-2000/2000 (all divisible by 400), and every other value lies in a century-free span where leapness is yy mod 4. Proleptic years below 100 are taken literally by setUTCFullYear (unlike Date.UTC)."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "AssignmentOperator",
+   "original": "y += y < 50 ? 2000 : 1900",
+   "replacement": "y -= y < 50 ? 2000 : 1900",
+   "line": "if (utc) y += y < 50 ? 2000 : 1900;",
+   "occurrence": 1,
+   "lineno": 100,
+   "reason": "The year only reaches setUTCFullYear, where it can only decide whether Feb 29 exists (the one year-dependent roll-over). For every UTCTime two-digit year yy the mutated years (yy, yy-2000, yy-1900, yy+2000 for yy>=50, 2050 for yy=50) are leap exactly when the real one (yy<50 ? 2000+yy : 1900+yy) is: yy=0 gives 0/-2000/2000 (all divisible by 400), and every other value lies in a century-free span where leapness is yy mod 4. Proleptic years below 100 are taken literally by setUTCFullYear (unlike Date.UTC)."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "y < 50",
+   "replacement": "true",
+   "line": "if (utc) y += y < 50 ? 2000 : 1900;",
+   "occurrence": 1,
+   "lineno": 100,
+   "reason": "The year only reaches setUTCFullYear, where it can only decide whether Feb 29 exists (the one year-dependent roll-over). For every UTCTime two-digit year yy the mutated years (yy, yy-2000, yy-1900, yy+2000 for yy>=50, 2050 for yy=50) are leap exactly when the real one (yy<50 ? 2000+yy : 1900+yy) is: yy=0 gives 0/-2000/2000 (all divisible by 400), and every other value lies in a century-free span where leapness is yy mod 4. Proleptic years below 100 are taken literally by setUTCFullYear (unlike Date.UTC)."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "EqualityOperator",
+   "original": "y < 50",
+   "replacement": "y <= 50",
+   "line": "if (utc) y += y < 50 ? 2000 : 1900;",
+   "occurrence": 1,
+   "lineno": 100,
+   "reason": "The year only reaches setUTCFullYear, where it can only decide whether Feb 29 exists (the one year-dependent roll-over). For every UTCTime two-digit year yy the mutated years (yy, yy-2000, yy-1900, yy+2000 for yy>=50, 2050 for yy=50) are leap exactly when the real one (yy<50 ? 2000+yy : 1900+yy) is: yy=0 gives 0/-2000/2000 (all divisible by 400), and every other value lies in a century-free span where leapness is yy mod 4. Proleptic years below 100 are taken literally by setUTCFullYear (unlike Date.UTC)."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "mo < 1 || mo > 12 || d < 1",
+   "replacement": "false",
+   "line": "if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return false;",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "Redundant with the roll-over check on the return line: with these month/day guards gone, month 00 rolls to December (getUTCMonth 11 != -1), months 13-99 roll to a month index != mo-1, and day 00 rolls to the previous month's last day (28-31 != 0), so timeTextInRange still returns false for exactly the same texts. The hour/minute/second guards in the same condition are unmutated."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "LogicalOperator",
+   "original": "mo < 1 || mo > 12 || d < 1",
+   "replacement": "(mo < 1 || mo > 12) && d < 1",
+   "line": "if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return false;",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "Redundant with the roll-over check on the return line: with these month/day guards gone, month 00 rolls to December (getUTCMonth 11 != -1), months 13-99 roll to a month index != mo-1, and day 00 rolls to the previous month's last day (28-31 != 0), so timeTextInRange still returns false for exactly the same texts. The hour/minute/second guards in the same condition are unmutated."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "mo < 1 || mo > 12",
+   "replacement": "false",
+   "line": "if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return false;",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "Redundant with the roll-over check on the return line: with these month/day guards gone, month 00 rolls to December (getUTCMonth 11 != -1), months 13-99 roll to a month index != mo-1, and day 00 rolls to the previous month's last day (28-31 != 0), so timeTextInRange still returns false for exactly the same texts. The hour/minute/second guards in the same condition are unmutated."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "LogicalOperator",
+   "original": "mo < 1 || mo > 12",
+   "replacement": "mo < 1 && mo > 12",
+   "line": "if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return false;",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "Redundant with the roll-over check on the return line: with these month/day guards gone, month 00 rolls to December (getUTCMonth 11 != -1), months 13-99 roll to a month index != mo-1, and day 00 rolls to the previous month's last day (28-31 != 0), so timeTextInRange still returns false for exactly the same texts. The hour/minute/second guards in the same condition are unmutated."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "mo < 1",
+   "replacement": "false",
+   "line": "if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return false;",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "Redundant with the roll-over check on the return line: with these month/day guards gone, month 00 rolls to December (getUTCMonth 11 != -1), months 13-99 roll to a month index != mo-1, and day 00 rolls to the previous month's last day (28-31 != 0), so timeTextInRange still returns false for exactly the same texts. The hour/minute/second guards in the same condition are unmutated."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "mo > 12",
+   "replacement": "false",
+   "line": "if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return false;",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "Redundant with the roll-over check on the return line: with these month/day guards gone, month 00 rolls to December (getUTCMonth 11 != -1), months 13-99 roll to a month index != mo-1, and day 00 rolls to the previous month's last day (28-31 != 0), so timeTextInRange still returns false for exactly the same texts. The hour/minute/second guards in the same condition are unmutated."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "d < 1",
+   "replacement": "false",
+   "line": "if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return false;",
+   "occurrence": 1,
+   "lineno": 102,
+   "reason": "Redundant with the roll-over check on the return line: with these month/day guards gone, month 00 rolls to December (getUTCMonth 11 != -1), months 13-99 roll to a month index != mo-1, and day 00 rolls to the previous month's last day (28-31 != 0), so timeTextInRange still returns false for exactly the same texts. The hour/minute/second guards in the same condition are unmutated."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "t.getUTCMonth() === mo - 1",
+   "replacement": "true",
+   "line": "return t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;",
+   "occurrence": 1,
+   "lineno": 105,
+   "reason": "With mo in 1..12 and d in 1..99 (guarded above), a non-existent day overflows the month by 1..71 days: that always changes the month (a later month, or January of the next year for December), and the resulting date is <= 3 when d <= 31 and <= 31 < d otherwise, so it always changes the date too. Each conjunct alone therefore decides exactly like both, and && vs || agree (both true for a real date, both false for an overflow)."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "LogicalOperator",
+   "original": "t.getUTCMonth() === mo - 1 && t.getUTCDate() === d",
+   "replacement": "t.getUTCMonth() === mo - 1 || t.getUTCDate() === d",
+   "line": "return t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;",
+   "occurrence": 1,
+   "lineno": 105,
+   "reason": "With mo in 1..12 and d in 1..99 (guarded above), a non-existent day overflows the month by 1..71 days: that always changes the month (a later month, or January of the next year for December), and the resulting date is <= 3 when d <= 31 and <= 31 < d otherwise, so it always changes the date too. Each conjunct alone therefore decides exactly like both, and && vs || agree (both true for a real date, both false for an overflow)."
+  },
+  {
+   "file": "src/attest-nvidia-ocsp.ts",
+   "mutator": "ConditionalExpression",
+   "original": "t.getUTCDate() === d",
+   "replacement": "true",
+   "line": "return t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;",
+   "occurrence": 1,
+   "lineno": 105,
+   "reason": "With mo in 1..12 and d in 1..99 (guarded above), a non-existent day overflows the month by 1..71 days: that always changes the month (a later month, or January of the next year for December), and the resulting date is <= 3 when d <= 31 and <= 31 < d otherwise, so it always changes the date too. Each conjunct alone therefore decides exactly like both, and && vs || agree (both true for a real date, both false for an overflow)."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "EqualityOperator",
+   "original": "close < 0",
+   "replacement": "close <= 0",
+   "line": "if (close < 0) throw new Error(`unterminated ${kind} block`);",
+   "occurrence": 1,
+   "lineno": 230,
+   "reason": "The closing delimiter is found after the opening one, so its index is never 0; '< 0' and '<= 0' agree."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "Regex",
+   "original": "/^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/",
+   "replacement": "/^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)/",
+   "line": "const wm = /^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/.exec(t);",
+   "occurrence": 1,
+   "lineno": 291,
+   "reason": "The trailing $ is redundant after a greedy group, [\\S\\S] only matters for left-hand sides containing spaces (never valid paths), and the trailing operand is trimmed again on the next line."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "Regex",
+   "original": "/^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/",
+   "replacement": "/^([\\S\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/",
+   "line": "const wm = /^([\\s\\S]*?\\S)\\s+(in|is|like|has)\\s+([\\s\\S]+)$/.exec(t);",
+   "occurrence": 1,
+   "lineno": 291,
+   "reason": "The trailing $ is redundant after a greedy group, [\\S\\S] only matters for left-hand sides containing spaces (never valid paths), and the trailing operand is trimmed again on the next line."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "EqualityOperator",
+   "original": "i < text.length",
+   "replacement": "i <= text.length",
+   "line": "for (let i = 0; i < text.length; i++) {",
+   "occurrence": 1,
+   "lineno": 472,
+   "reason": "In indexOfTopLevel the extra i = text.length iteration sees ch = '' (no quote/bracket), and text.startsWith(token, text.length) is false because every caller (parseAtom) passes a non-empty token, so it returns the same index/-1."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "ConditionalExpression",
+   "original": "ch === '['",
+   "replacement": "false",
+   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
+   "occurrence": 1,
+   "lineno": 482,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "StringLiteral",
+   "original": "'['",
+   "replacement": "\"\"",
+   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
+   "occurrence": 1,
+   "lineno": 482,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "ConditionalExpression",
+   "original": "ch === '{'",
+   "replacement": "false",
+   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
+   "occurrence": 1,
+   "lineno": 482,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "UpdateOperator",
+   "original": "depth++",
+   "replacement": "depth--",
+   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
+   "occurrence": 1,
+   "lineno": 482,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "StringLiteral",
+   "original": "'{'",
+   "replacement": "\"\"",
+   "line": "if (ch === '(' || ch === '[' || ch === '{') depth++;",
+   "occurrence": 1,
+   "lineno": 482,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "ConditionalExpression",
+   "original": "ch === ')' || ch === ']'",
+   "replacement": "false",
+   "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
+   "occurrence": 1,
+   "lineno": 483,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "LogicalOperator",
+   "original": "ch === ')' || ch === ']'",
+   "replacement": "ch === ')' && ch === ']'",
+   "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
+   "occurrence": 1,
+   "lineno": 483,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "ConditionalExpression",
+   "original": "ch === ')'",
+   "replacement": "false",
+   "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
+   "occurrence": 1,
+   "lineno": 483,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "ConditionalExpression",
+   "original": "ch === '}'",
+   "replacement": "false",
+   "line": "else if (ch === ')' || ch === ']' || ch === '}') depth--;",
+   "occurrence": 1,
+   "lineno": 483,
+   "reason": "Once a comparison atom has been tokenised, a token past the end of a quoted string or inside brackets can only occur with a left-hand side containing quotes or brackets, which toFieldPath rejects (and a right-hand side with brackets is never a literal), so the atom is untranslatable either way."
+  },
+  {
+   "package": "pca-mpc",
+   "file": "src/compose.ts",
+   "mutator": "EqualityOperator",
+   "original": "v.rQuant > rQuant",
+   "replacement": "v.rQuant >= rQuant",
+   "line": "if (v.rQuant > rQuant) rQuant = v.rQuant;",
+   "occurrence": 1,
+   "lineno": 49,
+   "reason": "Assigning v.t to t (or v.rQuant to rQuant) when they are equal is a no-op."
+  },
+  {
+   "package": "pca-policy-bridge",
+   "file": "src/cedar.ts",
+   "mutator": "ArithmeticOperator",
+   "original": "close + 1",
+   "replacement": "close - 1",
+   "line": "re.lastIndex = close + 1;",
+   "occurrence": 1,
+   "lineno": 232,
+   "reason": "the scan restarts at close-1 instead of close+1, but a condition block keyword needs four characters starting at the restart point and only the closing brace follows, so the next match is unchanged"
+  },
+  {
+   "package": "pca-mpc",
+   "file": "src/compose.ts",
+   "mutator": "EqualityOperator",
+   "original": "v.t > t",
+   "replacement": "v.t >= t",
+   "line": "if (v.t > t) t = v.t;",
+   "occurrence": 1,
+   "lineno": 48,
+   "reason": "Assigning v.t to t when they are equal is a no-op (t only ever holds the running maximum)."
+  },
+  {
+   "package": "pca-mpc",
+   "file": "src/net/party-main.ts",
+   "mutator": "StringLiteral",
+   "original": "'bigint'",
+   "replacement": "\"\"",
+   "line": "process.stdout.write(JSON.stringify(o, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)) + '\\n');",
+   "occurrence": 1,
+   "lineno": 137,
+   "reason": "No value ever passed to out() contains a bigint (JSON-parsed config fields, numeric PartyResult / OtNetResult / link stats, string events, and NetAbort fields whose only evidence object holds signed hex strings), and typeof is never '' either, so the replacer returns v unchanged in both versions; the bigint branch is a defensive fallback."
+  },
+  {
+   "file": "src/approval-channels.ts",
+   "mutator": "ConditionalExpression",
+   "original": "url === undefined",
+   "replacement": "false",
+   "line": "if (!enabled || url === undefined) {",
+   "occurrence": 2,
+   "lineno": 234,
+   "reason": "`enabled` is computed as typeof url === 'string' && url.length > 0, so url === undefined implies !enabled, which already takes the branch; this operand only narrows the type for the compiler (the && mutant of this line is killed by mutation-kill-r11-approval-channels.test.ts)."
+  },
+  {
+   "file": "src/approval-channels.ts",
+   "mutator": "ConditionalExpression",
+   "original": "send === undefined",
+   "replacement": "false",
+   "line": "if (!enabled || send === undefined) {",
+   "occurrence": 1,
+   "lineno": 279,
+   "reason": "`enabled` is computed as typeof send === 'function', so send === undefined implies !enabled, which already takes the branch; this operand only narrows the type for the compiler (the && mutant of this line is killed by mutation-kill-r11-approval-channels.test.ts)."
   }
  ]
 }

@@ -1,0 +1,170 @@
+-- Query event(Aggregated(i_4,j,m,l_4)) ==> (event(Signed(i_4,m,l_4)) || event(RevealShare(i_4))) && (event(Signed(j,m,l_4)) || event(RevealShare(j))) in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 182 rules (80 with conclusion selected). Queue: 22 rules.
+Starting query event(Aggregated(i_4,j,m,l_4)) ==> (event(Signed(i_4,m,l_4)) || event(RevealShare(i_4))) && (event(Signed(j,m,l_4)) || event(RevealShare(j)))
+goal reachable: l1_7 ≠ cmt(c1,cm(d_3),cm(e_3)) && b-event(Signed(c1,m,(l1_7,cmt(c1,cm(d_3),cm(e_3))))) && attacker(l1_7) && b-event(@p_act(@occ8_1,(m,l1_7,cmt(c1,cm(d_3),cm(e_3))))) && b-event(Signed(c2,m,(cmt(c2,cm(d_4),cm(e_4)),l2_7))) && attacker(m) && attacker(l2_7) && b-event(@p_act(@occ19_1,(m,cmt(c2,cm(d_4),cm(e_4)),l2_7))) && attacker(l_4) && b-event(@p_act(@occ38_1,(zs(sh(g[],c1),d_3,e_3,m,nolist),zs(sh(g[],c2),d_4,e_4,m,nolist),l_4))) -> event(Aggregated(c1,c2,m,l_4))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ8_1 = @occ8[!1 = @sid]
+d_4 = d_1[!1 = @sid_1]
+e_4 = e_1[!1 = @sid_1]
+@occ19_1 = @occ19[!1 = @sid_1]
+@occ38_1 = @occ38[!1 = @sid_2]
+
+Derivation:
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+d_4 = d_1[!1 = @sid_1]
+e_4 = e_1[!1 = @sid_1]
+@occ8_1 = @occ8[!1 = @sid]
+@occ19_1 = @occ19[!1 = @sid_1]
+@occ38_1 = @occ38[!1 = @sid_2]
+
+1. We assume as hypothesis that
+attacker(l_4).
+
+2. We assume as hypothesis that
+attacker(l2_7).
+
+3. The message cmt(c2,cm(d_4),cm(e_4)) may be sent to the attacker at output {18}.
+attacker(cmt(c2,cm(d_4),cm(e_4))).
+
+4. By 3, the attacker may know cmt(c2,cm(d_4),cm(e_4)).
+Using the function 3-proj-cmt the attacker may obtain cm(e_4).
+attacker(cm(e_4)).
+
+5. By 3, the attacker may know cmt(c2,cm(d_4),cm(e_4)).
+Using the function 2-proj-cmt the attacker may obtain cm(d_4).
+attacker(cm(d_4)).
+
+6. Using the function c2 the attacker may obtain c2.
+attacker(c2).
+
+7. By 6, the attacker may know c2.
+By 5, the attacker may know cm(d_4).
+By 4, the attacker may know cm(e_4).
+Using the function cmt the attacker may obtain cmt(c2,cm(d_4),cm(e_4)).
+attacker(cmt(c2,cm(d_4),cm(e_4))).
+
+8. We assume as hypothesis that
+attacker(m).
+
+9. By 8, the attacker may know m.
+By 7, the attacker may know cmt(c2,cm(d_4),cm(e_4)).
+By 2, the attacker may know l2_7.
+Using the function 3-tuple the attacker may obtain (m,cmt(c2,cm(d_4),cm(e_4)),l2_7).
+attacker((m,cmt(c2,cm(d_4),cm(e_4)),l2_7)).
+
+10. The event @p_act(@occ19_1,(m,cmt(c2,cm(d_4),cm(e_4)),l2_7)) records how variables are instantiated at {19}.
+The message (m,cmt(c2,cm(d_4),cm(e_4)),l2_7) that the attacker may have by 9 may be received at input {19}.
+The event Signed(c2,m,(cmt(c2,cm(d_4),cm(e_4)),l2_7)) may be executed at {21}.
+So the message zs(sh(g[],c2),d_4,e_4,m,nolist) may be sent to the attacker at output {23}.
+attacker(zs(sh(g[],c2),d_4,e_4,m,nolist)).
+
+11. The message cmt(c1,cm(d_3),cm(e_3)) may be sent to the attacker at output {7}.
+attacker(cmt(c1,cm(d_3),cm(e_3))).
+
+12. By 11, the attacker may know cmt(c1,cm(d_3),cm(e_3)).
+Using the function 3-proj-cmt the attacker may obtain cm(e_3).
+attacker(cm(e_3)).
+
+13. By 11, the attacker may know cmt(c1,cm(d_3),cm(e_3)).
+Using the function 2-proj-cmt the attacker may obtain cm(d_3).
+attacker(cm(d_3)).
+
+14. Using the function c1 the attacker may obtain c1.
+attacker(c1).
+
+15. By 14, the attacker may know c1.
+By 13, the attacker may know cm(d_3).
+By 12, the attacker may know cm(e_3).
+Using the function cmt the attacker may obtain cmt(c1,cm(d_3),cm(e_3)).
+attacker(cmt(c1,cm(d_3),cm(e_3))).
+
+16. We assume as hypothesis that
+attacker(l1_7).
+
+17. By 8, the attacker may know m.
+By 16, the attacker may know l1_7.
+By 15, the attacker may know cmt(c1,cm(d_3),cm(e_3)).
+Using the function 3-tuple the attacker may obtain (m,l1_7,cmt(c1,cm(d_3),cm(e_3))).
+attacker((m,l1_7,cmt(c1,cm(d_3),cm(e_3)))).
+
+18. The event @p_act(@occ8_1,(m,l1_7,cmt(c1,cm(d_3),cm(e_3)))) records how variables are instantiated at {8}.
+The message (m,l1_7,cmt(c1,cm(d_3),cm(e_3))) that the attacker may have by 17 may be received at input {8}.
+The event Signed(c1,m,(l1_7,cmt(c1,cm(d_3),cm(e_3)))) may be executed at {10}.
+We have l1_7 ≠ cmt(c1,cm(d_3),cm(e_3)).
+So the message zs(sh(g[],c1),d_3,e_3,m,nolist) may be sent to the attacker at output {12}.
+attacker(zs(sh(g[],c1),d_3,e_3,m,nolist)).
+
+19. By 18, the attacker may know zs(sh(g[],c1),d_3,e_3,m,nolist).
+By 10, the attacker may know zs(sh(g[],c2),d_4,e_4,m,nolist).
+By 1, the attacker may know l_4.
+Using the function 3-tuple the attacker may obtain (zs(sh(g[],c1),d_3,e_3,m,nolist),zs(sh(g[],c2),d_4,e_4,m,nolist),l_4).
+attacker((zs(sh(g[],c1),d_3,e_3,m,nolist),zs(sh(g[],c2),d_4,e_4,m,nolist),l_4)).
+
+20. The event @p_act(@occ38_1,(zs(sh(g[],c1),d_3,e_3,m,nolist),zs(sh(g[],c2),d_4,e_4,m,nolist),l_4)) records how variables are instantiated at {38}.
+The message (zs(sh(g[],c1),d_3,e_3,m,nolist),zs(sh(g[],c2),d_4,e_4,m,nolist),l_4) that the attacker may have by 19 may be received at input {38}.
+So event Aggregated(c1,c2,m,l_4) may be executed at {42}.
+event(Aggregated(c1,c2,m,l_4)).
+
+21. By 20, event(Aggregated(c1,c2,m,l_4)).
+The goal is reached, represented in the following fact:
+event(Aggregated(c1,c2,m,l_4)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+out(c, ~M) with ~M = pubk(g) at {1}
+
+new d_1: bitstring creating d_5 at {15} in copy a_4
+
+new e_1: bitstring creating e_5 at {16} in copy a_4
+
+event Created(c2,d_5,e_5) at {17} in copy a_4
+
+out(c, cmt(c2,~M_1,~M_2)) with ~M_1 = cm(d_5), ~M_2 = cm(e_5) at {18} in copy a_4
+
+new d: bitstring creating d_6 at {4} in copy a_5
+
+new e: bitstring creating e_6 at {5} in copy a_5
+
+event Created(c1,d_6,e_6) at {6} in copy a_5
+
+out(c, cmt(c1,~M_3,~M_4)) with ~M_3 = cm(d_6), ~M_4 = cm(e_6) at {7} in copy a_5
+
+in(c, (a_6,a_7,cmt(c1,~M_3,~M_4))) with ~M_3 = cm(d_6), ~M_4 = cm(e_6) at {8} in copy a_5
+
+event Signed(c1,a_6,(a_7,cmt(c1,cm(d_6),cm(e_6)))) at {10} in copy a_5
+
+event Used(c1,d_6,e_6,a_6) at {11} in copy a_5
+
+out(c, ~M_5) with ~M_5 = zs(sh(g,c1),d_6,e_6,a_6,nolist) at {12} in copy a_5
+
+in(c, (a_6,cmt(c2,~M_1,~M_2),a_8)) with ~M_1 = cm(d_5), ~M_2 = cm(e_5) at {19} in copy a_4
+
+event Signed(c2,a_6,(cmt(c2,cm(d_5),cm(e_5)),a_8)) at {21} in copy a_4
+
+event Used(c2,d_5,e_5,a_6) at {22} in copy a_4
+
+out(c, ~M_6) with ~M_6 = zs(sh(g,c2),d_5,e_5,a_6,nolist) at {23} in copy a_4
+
+in(c, (~M_5,~M_6,a_9)) with ~M_5 = zs(sh(g,c1),d_6,e_6,a_6,nolist), ~M_6 = zs(sh(g,c2),d_5,e_5,a_6,nolist) at {38} in copy a_10
+
+event Aggregated(c1,c2,a_6,a_9) at {42} in copy a_10 (goal)
+
+The event Aggregated(c1,c2,a_6,a_9) is executed at {42} in copy a_10.
+A trace has been found.
+RESULT event(Aggregated(i_4,j,m,l_4)) ==> (event(Signed(i_4,m,l_4)) || event(RevealShare(i_4))) && (event(Signed(j,m,l_4)) || event(RevealShare(j))) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query event(Aggregated(i_4,j,m,l_4)) ==> (event(Signed(i_4,m,l_4)) || event(RevealShare(i_4))) && (event(Signed(j,m,l_4)) || event(RevealShare(j))) is false.
+
+--------------------------------------------------------------
+

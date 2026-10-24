@@ -39,6 +39,7 @@
  */
 import { canonicalBytes, hashCanonical, utf8 } from './hash';
 import type { DurableKv } from './durable-state';
+import { verifyAllowlistDurableProved } from './attest-proved';
 import { SIG_SUITES, isKnownSigAlg, type SuitePublicKeys, signWithSuite, verifyWithSuite, type SigAlg, resolvePqVerifyKey, type SuitePublicKeyStrings, type SuiteSecretKeys } from './pq';
 
 function registeredSuiteKeys(alg: SigAlg, k: SuitePublicKeyStrings): SuitePublicKeys {
@@ -159,7 +160,6 @@ const IMAGE_DIGEST = /^sha256:[0-9a-f]{64}$/;
 const DRIVER_VERSION = /^[0-9]{1,6}(\.[0-9]{1,6}){1,3}$/;
 const CORROBORATION_LABEL = /^vantages=[1-9][0-9]{0,2};method=[\x20-\x7e]{1,150}$/;
 const ISSUER_URL = /^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]{1,5})?$/;
-const B64U_DIGEST = /^[A-Za-z0-9_-]{43}$/;
 const DOMAIN = 'pca-attest-allowlist/v1\n';
 const BODY_KEYS = ['version', 'issuedAt', 'notBefore', 'expiresAt', 'entries'];
 const ENTRY_KEYS = ['kind', 'value', 'label', 'notAfter', 'revoked'];
@@ -313,17 +313,6 @@ export function verifyAllowlistManifest(manifest: unknown, opts: VerifyAllowlist
   }
 }
 
-/** Persisted high-water mark per issuer. */
-interface AllowlistHighWater {
-  version: number;
-  digest: string;
-}
-const highWaterKey = (issuer: string): string => `allowlist/${issuer}`;
-function parseHighWater(x: unknown): AllowlistHighWater | undefined {
-  if (!isRecord(x) || typeof x['version'] !== 'number' || !Number.isSafeInteger(x['version']) || typeof x['digest'] !== 'string' || !B64U_DIGEST.test(x['digest'])) return undefined;
-  return { version: x['version'], digest: x['digest'] };
-}
-
 /**
  * {@link verifyAllowlistManifest} with the rollback high-water mark kept in durable state (`openDurableState`).
  * The stored (version, digest) per issuer is fed in as `lastSeen*`; an accepted manifest atomically advances it
@@ -336,30 +325,7 @@ export async function verifyAllowlistDurable(
   opts: Omit<VerifyAllowlistOptions, 'lastSeenVersion' | 'lastSeenDigest'>,
   kv: DurableKv,
 ): Promise<VerifyAllowlistResult> {
-  try {
-    const issuer = isRecord(manifest) && typeof manifest['issuer'] === 'string' && manifest['issuer'].length <= 200 ? manifest['issuer'] : undefined;
-    if (issuer === undefined) return fail('malformed', 'issuer must be a string');
-    const raw = await kv.get(highWaterKey(issuer));
-    const prior = raw === undefined ? undefined : parseHighWater(raw);
-    if (raw !== undefined && prior === undefined) return fail('malformed', 'persisted allowlist high-water mark is corrupt');
-    const v = verifyAllowlistManifest(manifest, { ...opts, ...(prior ? { lastSeenVersion: prior.version, lastSeenDigest: prior.digest } : {}) });
-    if (!v.ok) return v;
-    const after = parseHighWater(
-      await kv.update(highWaterKey(issuer), (cur) => {
-        const c = cur === undefined ? undefined : parseHighWater(cur);
-        if (cur !== undefined && c === undefined) return undefined; // leave a corrupt record for the next read to reject
-        // Versions are append-only: the record only ever moves to a STRICTLY newer version. An equal version is kept
-        // as stored (same digest: nothing to do; different digest: the post-update check below reports `conflict`).
-        if (c !== undefined && c.version >= v.version) return undefined;
-        return { version: v.version, digest: v.digest } satisfies AllowlistHighWater;
-      }),
-    );
-    if (after === undefined || after.version > v.version) return fail('rollback', 'a newer manifest was accepted concurrently');
-    if (after.version === v.version && after.digest !== v.digest) return fail('conflict', 'same version as the stored high-water mark but a different body');
-    return v;
-  } catch (e) {
-    return fail('malformed', e instanceof Error ? e.message : 'durable verification error');
-  }
+  return verifyAllowlistDurableProved(manifest, opts, kv); // PROVED CODE: Attest.dfy UpdateFn / DurableStep (attest-proved.ts)
 }
 
 /** Validate operator input and return a canonical body. THROWS on any violation (an operator-side tool). */

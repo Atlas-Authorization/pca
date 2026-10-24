@@ -9,6 +9,11 @@ linearizability.
 
 Scope: what the models and runs establish, and what they do not (section 7). Nothing here is an independent audit.
 
+> **Test your own store.** The linearizability harness below is packaged for users as `@atlasauth/pca-store-conformance`
+> (implement a small adapter, run `pca-store-conformance --adapter ./my-adapter.mjs`); see
+> [the store conformance kit guide](../guides/store-conformance-kit.md). `pca-doctor` runs a short version of it against
+> a live deployment ([guide](../guides/pca-doctor.md)).
+
 ## 1. The contract
 
 From `packages/pca/src/replay.ts`:

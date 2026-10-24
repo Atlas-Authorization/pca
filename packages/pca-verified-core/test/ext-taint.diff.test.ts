@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Differential test: PROVED taint core (formal/dafny/Taint.dfy via src/ext-taint.ts) vs production packages/pca/src/taint.ts.
+// Differential test: PROVED taint core (formal/dafny/Taint.dfy via src/ext-taint.ts) vs the hand-written taint.ts (frozen in test/support/legacy/taint.ts; production now runs the proved code).
 // FUZZ_N scales the random sections (default 20k on the Mac; millions on a cloud box).
 import { describe, expect, it } from 'vitest';
 import {
@@ -10,7 +10,7 @@ import {
   taintValue as prodTaintValue,
   type TaintLabel as PL,
   type TaintContext as PCtx,
-} from '../../pca/src/taint';
+} from './support/legacy/taint';
 import {
   combineTaintRank,
   computeTaintVerified,

@@ -18,13 +18,20 @@ export type PCActn = PcaT.PCActn; type Capability = PcaT.Capability;
 
 // ---------------------------------------------------------------- reference oracle (mirrors tools/pca-diff-fuzz/gen/oracle.ts)
 const CK = [['version', 'version'], ['audience', 'audience'], ['validity', 'validity'], ['chain', 'cap_chain'], ['grant_ref_bound', 'grant_ref_bound'], ['plan_inclusion', 'plan_inclusion'], ['leaf_signature', 'leaf_signature'], ['counter', 'counter']] as const;
-export async function refVerify(rawStr: string, grantStr: string, now: number, aud: string, allowedSuites?: string[]): Promise<Record<string, unknown>> {
+export async function refVerify(rawStr: string, grantStr: string, now: number, aud: string, allowedSuites?: string[], intentPolicy?: PcaT.IntentPolicy, intentPolicyJson?: string, intentV2?: unknown): Promise<Record<string, unknown>> {
+  // `intent_policy_json` is the policy as raw JSON text (lexical forms such as 950000.0 / 1e6 survive transport); it wins.
+  if (intentPolicyJson !== undefined) intentPolicy = JSON.parse(intentPolicyJson) as PcaT.IntentPolicy;
   try {
     let p: PCActn | undefined;
     try { p = pca.decodePCActn(rawStr); } catch { /* wire failure */ }
     if (p === undefined) return { allow: false, checks: { wire: false } };
-    const g = await pca.verifyPCActnCore(p, { grant: safeParse(grantStr) as Capability, nowEpoch: now, audience: aud, ...(allowedSuites !== undefined ? { allowedSuites: allowedSuites as never } : {}) });
-    return { allow: g.allow, checks: g.checks.wire === 'fail' ? { wire: false } : Object.fromEntries([['wire', true], ...CK.map(([k, t]) => [k, g.checks[t] === 'pass'])]) };
+    const g = await pca.verifyPCActnCore(p, { grant: safeParse(grantStr) as Capability, nowEpoch: now, audience: aud, ...(allowedSuites !== undefined ? { allowedSuites: allowedSuites as never } : {}), ...(intentPolicy !== undefined ? { intent: intentPolicy } : {}), ...(intentV2 !== undefined ? { intentV2: intentV2 as never } : {}) });
+    // Intent Layer M2: `intent` is reported only when evaluated (the PCActn carries `intent` or the policy is active).
+    const intent = g.checks.intent !== undefined ? [['intent', g.checks.intent === 'pass']] : [];
+    // `unsupported_suite`: the reference itself refused with that reason (a suite no verifier implements, e.g. an
+    // unregistered alg in the Intent v2 context); the gate's suite judge reads it (drivers tag theirs the same way).
+    const uns = typeof g.reason === 'string' && g.reason.includes('unsupported_suite') ? { unsupported_suite: g.reason } : {};
+    return { allow: g.allow, checks: g.checks.wire === 'fail' ? { wire: false } : Object.fromEntries([['wire', true], ...CK.map(([k, t]) => [k, g.checks[t] === 'pass']), ...intent]), ...uns };
   } catch (e) { return { error: 'exception:' + (e as Error).message.slice(0, 60) }; }
 }
 /** Standalone chain API (R4-01): `raw` is JSON text `{ chain, expected_root_issuer?, pq_pins?, trusted_root?, allowed_suites? }`. */

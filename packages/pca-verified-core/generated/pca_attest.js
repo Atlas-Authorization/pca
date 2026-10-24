@@ -1457,6 +1457,8 @@ let Attest = (function() {
     static MatchBinding(id, b) {
       if (((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_modelAllow).length))) && (!(Attest.__default.Incl((b).dtor_modelAllow, (id).dtor_model)))) {
         return Attest.Option.create_Some(Attest.BFail.create_BModel());
+      } else if (((b).dtor_minM).is_MinBad) {
+        return Attest.Option.create_Some(Attest.BFail.create_BMinBad());
       } else if ((((b).dtor_minM).is_EqPin) && (!(((b).dtor_minM).dtor_matches))) {
         return Attest.Option.create_Some(Attest.BFail.create_BMinEq());
       } else if ((((b).dtor_minM).is_Svn) && ((((b).dtor_minM).dtor_parse).is_SvnNotInteger)) {
@@ -1478,7 +1480,7 @@ let Attest = (function() {
       }
     };
     static BindingHolds(id, b) {
-      return (((((((!((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_modelAllow).length))) || (_dafny.Seq.contains((b).dtor_modelAllow, (id).dtor_model))) && (!(((b).dtor_minM).is_EqPin) || (((b).dtor_minM).dtor_matches))) && (!(((b).dtor_minM).is_Svn) || ((((b).dtor_minM).dtor_parse).is_SvnOk))) && (!((b).dtor_operatorPinned) || ((id).dtor_operatorMatches))) && (!((b).dtor_requireMeasured) || ((id).dtor_weightsMeasured))) && (!((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_weightsAllow).length))) || (_dafny.Seq.contains((b).dtor_weightsAllow, (id).dtor_weights)))) && (!((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_sysAllow).length))) || (((id).dtor_hasSys) && (_dafny.Seq.contains((b).dtor_sysAllow, (id).dtor_sys))))) && (!((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_toolAllow).length))) || (((id).dtor_hasTool) && (_dafny.Seq.contains((b).dtor_toolAllow, (id).dtor_tool))));
+      return ((((((((!((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_modelAllow).length))) || (_dafny.Seq.contains((b).dtor_modelAllow, (id).dtor_model))) && (!(((b).dtor_minM).is_MinBad))) && (!(((b).dtor_minM).is_EqPin) || (((b).dtor_minM).dtor_matches))) && (!(((b).dtor_minM).is_Svn) || ((((b).dtor_minM).dtor_parse).is_SvnOk))) && (!((b).dtor_operatorPinned) || ((id).dtor_operatorMatches))) && (!((b).dtor_requireMeasured) || ((id).dtor_weightsMeasured))) && (!((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_weightsAllow).length))) || (_dafny.Seq.contains((b).dtor_weightsAllow, (id).dtor_weights)))) && (!((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_sysAllow).length))) || (((id).dtor_hasSys) && (_dafny.Seq.contains((b).dtor_sysAllow, (id).dtor_sys))))) && (!((_dafny.ZERO).isLessThan(new BigNumber(((b).dtor_toolAllow).length))) || (((id).dtor_hasTool) && (_dafny.Seq.contains((b).dtor_toolAllow, (id).dtor_tool))));
     };
     static NoBinding() {
       return Attest.Binding.create_Binding(_dafny.Seq.of(), Attest.MinM.create_NoMin(), false, false, _dafny.Seq.of(), _dafny.Seq.of(), _dafny.Seq.of());
@@ -1685,19 +1687,20 @@ let Attest = (function() {
       }
     };
     static IndexOf(xs, n) {
-      if ((new BigNumber((xs).length)).isEqualTo(_dafny.ZERO)) {
-        return new BigNumber(-1);
-      } else if ((((xs)[_dafny.ZERO])[0]).isEqualTo(n)) {
-        return _dafny.ZERO;
-      } else {
-        let _0_r = Attest.__default.IndexOf((xs).slice(_dafny.ONE), n);
-        if ((_0_r).isLessThan(_dafny.ZERO)) {
-          return new BigNumber(-1);
-        } else {
-          return (_0_r).plus(_dafny.ONE);
-        }
+      let _hresult = _dafny.ZERO;
+      let _0_j;
+      _0_j = _dafny.ZERO;
+      while (((_0_j).isLessThan(new BigNumber((xs).length))) && (!(((xs)[_0_j])[0]).isEqualTo(n))) {
+        _0_j = (_0_j).plus(_dafny.ONE);
       }
-    };
+      if ((_0_j).isLessThan(new BigNumber((xs).length))) {
+        _hresult = _0_j;
+      } else {
+        _hresult = new BigNumber(-1);
+      }
+      return _hresult;
+      return _hresult;
+    }
     static RemoveAt(xs, i) {
       return _dafny.Seq.Concat((xs).slice(0, i), (xs).slice((i).plus(_dafny.ONE)));
     };
@@ -1705,20 +1708,16 @@ let Attest = (function() {
       return ((t).minus((e)[1])).isLessThan(ret);
     };
     static DropAged(xs, t, ret) {
-      TAIL_CALL_START: while (true) {
-        if (((new BigNumber((xs).length)).isEqualTo(_dafny.ZERO)) || (Attest.__default.Live((xs)[_dafny.ZERO], t, ret))) {
-          return xs;
-        } else {
-          let _in0 = (xs).slice(_dafny.ONE);
-          let _in1 = t;
-          let _in2 = ret;
-          xs = _in0;
-          t = _in1;
-          ret = _in2;
-          continue TAIL_CALL_START;
-        }
+      let _hresult = _dafny.Seq.of();
+      let _0_k;
+      _0_k = _dafny.ZERO;
+      while (((_0_k).isLessThan(new BigNumber((xs).length))) && (!(Attest.__default.Live((xs)[_0_k], t, ret)))) {
+        _0_k = (_0_k).plus(_dafny.ONE);
       }
-    };
+      _hresult = (xs).slice(_0_k);
+      return _hresult;
+      return _hresult;
+    }
     static MsConsume(s, n, t) {
       let _0_i = Attest.__default.IndexOf((s).dtor_items, n);
       if (((_dafny.ZERO).isLessThanOrEqualTo(_0_i)) && (Attest.__default.Live(((s).dtor_items)[_0_i], t, (s).dtor_ret))) {
@@ -2496,9 +2495,14 @@ let Attest = (function() {
       $dt.parse = parse;
       return $dt;
     }
+    static create_MinBad() {
+      let $dt = new MinM(3);
+      return $dt;
+    }
     get is_NoMin() { return this.$tag === 0; }
     get is_EqPin() { return this.$tag === 1; }
     get is_Svn() { return this.$tag === 2; }
+    get is_MinBad() { return this.$tag === 3; }
     get dtor_matches() { return this.matches; }
     get dtor_parse() { return this.parse; }
     toString() {
@@ -2508,6 +2512,8 @@ let Attest = (function() {
         return "Attest.MinM.EqPin" + "(" + _dafny.toString(this.matches) + ")";
       } else if (this.$tag === 2) {
         return "Attest.MinM.Svn" + "(" + _dafny.toString(this.parse) + ")";
+      } else if (this.$tag === 3) {
+        return "Attest.MinM.MinBad";
       } else  {
         return "<unexpected>";
       }
@@ -2521,6 +2527,8 @@ let Attest = (function() {
         return other.$tag === 1 && this.matches === other.matches;
       } else if (this.$tag === 2) {
         return other.$tag === 2 && _dafny.areEqual(this.parse, other.parse);
+      } else if (this.$tag === 3) {
+        return other.$tag === 3;
       } else  {
         return false; // unexpected
       }
@@ -2649,52 +2657,58 @@ let Attest = (function() {
       let $dt = new BFail(0);
       return $dt;
     }
-    static create_BMinEq() {
+    static create_BMinBad() {
       let $dt = new BFail(1);
       return $dt;
     }
-    static create_BMinSvnNotInt() {
+    static create_BMinEq() {
       let $dt = new BFail(2);
       return $dt;
     }
-    static create_BMinSvnBelow() {
+    static create_BMinSvnNotInt() {
       let $dt = new BFail(3);
       return $dt;
     }
-    static create_BOperator() {
+    static create_BMinSvnBelow() {
       let $dt = new BFail(4);
       return $dt;
     }
-    static create_BNotMeasured() {
+    static create_BOperator() {
       let $dt = new BFail(5);
       return $dt;
     }
-    static create_BWeights() {
+    static create_BNotMeasured() {
       let $dt = new BFail(6);
       return $dt;
     }
-    static create_BSys() {
+    static create_BWeights() {
       let $dt = new BFail(7);
       return $dt;
     }
-    static create_BTool() {
+    static create_BSys() {
       let $dt = new BFail(8);
       return $dt;
     }
+    static create_BTool() {
+      let $dt = new BFail(9);
+      return $dt;
+    }
     get is_BModel() { return this.$tag === 0; }
-    get is_BMinEq() { return this.$tag === 1; }
-    get is_BMinSvnNotInt() { return this.$tag === 2; }
-    get is_BMinSvnBelow() { return this.$tag === 3; }
-    get is_BOperator() { return this.$tag === 4; }
-    get is_BNotMeasured() { return this.$tag === 5; }
-    get is_BWeights() { return this.$tag === 6; }
-    get is_BSys() { return this.$tag === 7; }
-    get is_BTool() { return this.$tag === 8; }
+    get is_BMinBad() { return this.$tag === 1; }
+    get is_BMinEq() { return this.$tag === 2; }
+    get is_BMinSvnNotInt() { return this.$tag === 3; }
+    get is_BMinSvnBelow() { return this.$tag === 4; }
+    get is_BOperator() { return this.$tag === 5; }
+    get is_BNotMeasured() { return this.$tag === 6; }
+    get is_BWeights() { return this.$tag === 7; }
+    get is_BSys() { return this.$tag === 8; }
+    get is_BTool() { return this.$tag === 9; }
     static get AllSingletonConstructors() {
       return this.AllSingletonConstructors_();
     }
     static *AllSingletonConstructors_() {
       yield BFail.create_BModel();
+      yield BFail.create_BMinBad();
       yield BFail.create_BMinEq();
       yield BFail.create_BMinSvnNotInt();
       yield BFail.create_BMinSvnBelow();
@@ -2708,20 +2722,22 @@ let Attest = (function() {
       if (this.$tag === 0) {
         return "Attest.BFail.BModel";
       } else if (this.$tag === 1) {
-        return "Attest.BFail.BMinEq";
+        return "Attest.BFail.BMinBad";
       } else if (this.$tag === 2) {
-        return "Attest.BFail.BMinSvnNotInt";
+        return "Attest.BFail.BMinEq";
       } else if (this.$tag === 3) {
-        return "Attest.BFail.BMinSvnBelow";
+        return "Attest.BFail.BMinSvnNotInt";
       } else if (this.$tag === 4) {
-        return "Attest.BFail.BOperator";
+        return "Attest.BFail.BMinSvnBelow";
       } else if (this.$tag === 5) {
-        return "Attest.BFail.BNotMeasured";
+        return "Attest.BFail.BOperator";
       } else if (this.$tag === 6) {
-        return "Attest.BFail.BWeights";
+        return "Attest.BFail.BNotMeasured";
       } else if (this.$tag === 7) {
-        return "Attest.BFail.BSys";
+        return "Attest.BFail.BWeights";
       } else if (this.$tag === 8) {
+        return "Attest.BFail.BSys";
+      } else if (this.$tag === 9) {
         return "Attest.BFail.BTool";
       } else  {
         return "<unexpected>";
@@ -2748,6 +2764,8 @@ let Attest = (function() {
         return other.$tag === 7;
       } else if (this.$tag === 8) {
         return other.$tag === 8;
+      } else if (this.$tag === 9) {
+        return other.$tag === 9;
       } else  {
         return false; // unexpected
       }

@@ -11,6 +11,7 @@
 import { readFileSync } from 'node:fs';
 
 import { cmdDecode, cmdDiscovery, cmdExplain, cmdKeygen, cmdSimulate } from './index';
+import { cmdSchemaConform, cmdSchemaInit, cmdSchemaPublish, cmdSchemaSign, cmdSchemaVerify } from './schema';
 
 const USAGE = `pca — Proof-Carrying Authority dev CLI
 
@@ -22,6 +23,15 @@ Usage:
                                       Replay actions against a compiled policy (auto/step_up/deny).
   pca discovery --aud <id> [--suites a,b] [--stepup <url>] [--revocation <url>] [--beacon <url>] [--attest <url>]
                                       Emit a .well-known/pca-configuration document.
+  pca schema init --from openapi|mcp <file|-> --site <url> --aud <id> --version <v> [--prefix <verb.>]
+                                      Draft an action schema (decisions to make go to stderr).
+  pca schema sign <draft.json> --kid <kid> --key <b64u-secret|@file>
+                                      Sign it as the site (stdout: /.well-known/pca-actions.json; stderr: the key entry).
+  pca schema verify <schema.json> <keys.json|discovery.json>
+  pca schema conform <schema.json> <verb> <params.json>
+                                      Closed-world check of one action (DENY = schema_violation).
+  pca schema publish <schema.json> <keys.json> --api <https://instance> --sk <sk_...>
+                                      Anchor it in an Atlas instance's intent transparency log.
 
 Notes:
   <-> reads from STDIN. Nothing here authorizes anything — the resource server's verifier decides.
@@ -126,6 +136,44 @@ async function main(): Promise<void> {
         }) + '\n',
       );
       break;
+    }
+    case 'schema': {
+      const sub = positionals[0];
+      const a = positionals.slice(1);
+      if (sub === 'init') {
+        const src = a[0];
+        if (src === undefined || (flags.from !== 'openapi' && flags.from !== 'mcp') || !flags.site || !flags.aud || !flags.version) {
+          throw new Error('schema init: --from openapi|mcp <file|-> --site --aud --version are required');
+        }
+        const r = cmdSchemaInit(readSource(src), { from: flags.from as 'openapi' | 'mcp', site: flags.site!, aud: flags.aud!, version: flags.version!, ...(flags.prefix ? { verbPrefix: flags.prefix } : {}) });
+        process.stdout.write(r.schema + '\n');
+        for (const t of r.todo) process.stderr.write(`decide: ${t}\n`);
+        return;
+      }
+      if (sub === 'sign') {
+        if (a[0] === undefined || !flags.kid || !flags.key) throw new Error('schema sign: <draft.json> --kid --key are required');
+        const key = flags.key!;
+        const secret = key.startsWith('@') ? readFileSync(key.slice(1), 'utf8') : key;
+        const r = cmdSchemaSign(readSource(a[0]!), { kid: flags.kid!, secret });
+        process.stdout.write(r.schema + '\n');
+        process.stderr.write(`digest ${r.digest}\nintent.schema_keys entry: ${JSON.stringify(r.key)}\n`);
+        return;
+      }
+      if (sub === 'verify' || sub === 'conform') {
+        const r = sub === 'verify' ? (a.length === 2 ? cmdSchemaVerify(readSource(a[0]!), readSource(a[1]!)) : null) : a.length === 3 ? cmdSchemaConform(readSource(a[0]!), a[1]!, readSource(a[2]!)) : null;
+        if (!r) throw new Error(`schema ${sub}: wrong arguments\n\n${USAGE}`);
+        process.stdout.write(r.text + '\n');
+        if (!r.ok) process.exitCode = 1;
+        return;
+      }
+      if (sub === 'publish') {
+        if (a.length !== 2 || !flags.api || !flags.sk) throw new Error('schema publish: <schema.json> <keys.json> --api --sk are required');
+        const r = await cmdSchemaPublish(readSource(a[0]!), readSource(a[1]!), { api: flags.api!, secretKey: flags.sk! });
+        process.stdout.write(r.text + '\n');
+        if (!r.ok) process.exitCode = 1;
+        return;
+      }
+      throw new Error(`schema: unknown sub-command '${String(sub)}'\n\n${USAGE}`);
     }
     default:
       throw new Error(`unknown command '${command}'\n\n${USAGE}`);

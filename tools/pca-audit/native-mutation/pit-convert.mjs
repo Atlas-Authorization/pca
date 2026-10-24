@@ -27,12 +27,30 @@ for (const m of xml.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)) {
   const mut = tag(b, 'mutator').split('.').pop(), desc = unesc(tag(b, 'description')), method = unesc(tag(b, 'mutatedMethod'));
   results.push({ st, file, method, line, mut, desc });
   if (st !== 'SURVIVED' && st !== 'NO_COVERAGE') continue;
-  const pkg = cls.replace(/\$.*$/, '').split('.').slice(0, -1).join('/');
-  const rel = `${srcRoot}/${pkg}/${file}`;
+  const outer = cls.replace(/\$.*$/, '');
+  const pkg = outer.split('.').slice(0, -1).join('/');
+  let rel = `${srcRoot}/${pkg}/${file}`;
+  // Kotlin copies an object literal of an inline stdlib function (sortedBy -> compareBy's Comparator) into a synthetic class
+  // <Outer>$<fn>$$inlined$<inlineFn>$<n> whose SourceFile is the STDLIB file (Comparisons.kt) and whose lines are that file's:
+  // key such a mutant by the call site of <inlineFn> in <fn> of the outer class's own source file.
+  const inl = /\$([^$]+)\$\$inlined\$([^$]+)\$/.exec(cls);
+  let inlinedAt = 0;
+  if (!fs.existsSync(path.join(root, 'sdks', crate, rel))) {
+    const base = outer.split('.').pop().replace(/Kt$/, '');
+    const own = `${srcRoot}/${pkg}/${base}.${crate === 'kotlin-pca' ? 'kt' : 'java'}`;
+    if (!fs.existsSync(path.join(root, 'sdks', crate, own))) throw new Error(`${cls}: source ${file} is not in the tree and neither is ${own}`);
+    rel = own;
+    srcLine(rel, 1);
+    const all = lines.get(rel);
+    const decl = inl ? all.findIndex((l) => new RegExp(`\\bfun ${inl[1]}\\(`).test(l)) : -1;
+    const call = decl >= 0 ? all.findIndex((l, i) => i >= decl && new RegExp(`\\.${inl[2]}\\b`).test(l)) : -1;
+    inlinedAt = call >= 0 ? call + 1 : decl + 1;
+    if (!inlinedAt) throw new Error(`${cls}: cannot locate the inlined ${inl ? inl[2] : '?'} call site in ${own}`);
+  }
   // Kotlin maps inlined stdlib bodies (any / all / map / firstOrNull) to line numbers past the end of the file (SMAP): key such a
   // mutant by the declaration line of its method, the only stable source text for it.
-  let text = srcLine(rel, line);
-  let at = line;
+  let text = inlinedAt ? srcLine(rel, inlinedAt) : srcLine(rel, line);
+  let at = inlinedAt || line;
   if (!text) {
     const name = method.replace(/\$.*$/, '');
     const all = lines.get(rel);

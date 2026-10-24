@@ -257,7 +257,9 @@ describe('Web Bot Auth architecture draft-05, Appendix A', () => {
     const orig = String(v.signature_input);
     expect((await run(orig.replace('("@authority")', '("@authority";sf)'))).reason).toMatch(/unsupported component parameters/);
     expect((await run(orig.replace('("@authority")', '("@method")'))).reason).toBe('@authority is not a covered component');
-    expect((await run(orig.replace('("@authority")', '("@authority" "@request-target")'))).reason).toMatch(/unsupported derived component/);
+    // @request-target is supported since 0.4.2 (RFC 9421 §2.2.5, src/request-target.test.ts); @status (§2.2.9) is a
+    // response-only derived component, never derivable from a request
+    expect((await run(orig.replace('("@authority")', '("@authority" "@status")'))).reason).toMatch(/unsupported derived component/);
   });
 });
 

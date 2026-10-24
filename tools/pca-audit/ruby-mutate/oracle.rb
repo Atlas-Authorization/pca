@@ -8,7 +8,9 @@ require 'atlas_pca/rack_middleware'
 require_relative '../../../sdks/ruby-pca/test/support/corpus'
 
 module Oracle
-  SUPPORTED = %w[ed25519 ml-dsa-65 hybrid-ed25519-ml-dsa-65].freeze
+  # This runtime's capability manifest, read ONCE from the unmutated library (the same rule as conformance.rb's
+  # SUPPORTED_SIG_SUITES; a hard-coded Ed25519/ML-DSA-65 list went stale when 0.4.x added ML-DSA-87, SLH-DSA and LESS).
+  SUPPORTED = AtlasPca.supported_suites.freeze
   ROOT = File.expand_path('../../../sdks/ruby-pca', __dir__)
 
   module_function
@@ -24,14 +26,47 @@ module Oracle
     exit(ok ? 0 : 1)
   RUBY
 
+  # The Rack middleware file is evaluated here on top of an already-loaded AtlasPca and without Rack, so its own
+  # `require_relative '../atlas_pca'` and its `Rack::PCA` alias (defined only when the host loaded Rack) are invisible
+  # in-process. A mutant of that file is also loaded in two FRESH rubies: alone (it must pull in the verifier and must not
+  # define Rack), and after a stub `module Rack` (it must alias Rack::PCA to the middleware).
+  MW_PROBE = <<~'RUBY'
+    module Rack; end if ARGV[0] == 'rack'
+    eval($stdin.read, TOPLEVEL_BINDING, ARGV[1]) # rubocop:disable Security/Eval
+    ok = AtlasPca.respond_to?(:verify_pcactn) && AtlasPca::RackMiddleware.is_a?(Class)
+    ok &&= ARGV[0] == 'rack' ? Rack::PCA.equal?(AtlasPca::RackMiddleware) : !defined?(Rack)
+    exit(ok ? 0 : 1)
+  RUBY
+
   def fresh_load_ok?
+    if @target == File.expand_path(MW) && @text != @orig
+      return %w[plain rack].all? do |mode|
+        IO.popen([RbConfig.ruby, '-e', MW_PROBE, mode, MW], 'w', err: File::NULL, out: File::NULL) { |io| io.write(@text) }
+        $?.success?
+      end
+    end
     return true if @text.lines.first(HEADER) == @orig.lines.first(HEADER)
 
     IO.popen([RbConfig.ruby, '--disable-gems', '-e', PROBE, *@probe_args], 'w', err: File::NULL, out: File::NULL) { |io| io.write(@text) }
     $?.success?
   end
 
+  # The PQ / LESS kill tests and the differential oracles only run their PQ cases on a host that has the suites; on one that
+  # lacks them they silently skip (by design), which turned into ~700 unexplained survivors in run 39866841074 when nobody could
+  # tell from the log which backends the shard had. So print the capability manifest, and with MUT_REQUIRE_PQ=1 (the CI)
+  # refuse to mutate on a host that lacks ML-DSA, SLH-DSA or the LESS FFI library.
+  REQUIRED_SUITES = %w[ml-dsa-65 ml-dsa-87 slh-dsa-sha2-128f slh-dsa-sha2-256s less-cat1].freeze
+
+  def check_backends
+    $stderr.puts "suites: #{SUPPORTED.join(' ')} | openssl #{OpenSSL::OPENSSL_LIBRARY_VERSION} / gem #{OpenSSL::VERSION}"
+    return unless ENV['MUT_REQUIRE_PQ'] == '1'
+
+    missing = REQUIRED_SUITES - SUPPORTED
+    abort "MUT_REQUIRE_PQ=1 but this host lacks #{missing.join(', ')} (OpenSSL >= 3.5 linked into the openssl gem; ATLAS_PCA_LIBLESS)" unless missing.empty?
+  end
+
   def prepare(_file)
+    check_backends
     @orig = File.read(_file)
     k = OpenSSL::PKey.new_raw_private_key('ED25519', "\x05".b * 32)
     @probe_args = [k.raw_public_key.unpack1('H*'), k.sign(nil, 'probe').unpack1('H*'), AtlasPca.hash_canonical({ 'a' => 1 })]
@@ -40,7 +75,8 @@ module Oracle
     Corpus.snapshot
     @tests = []
     Dir[File.join(ROOT, 'test', 'kill', '*.rb')].sort.each { |f| load f }
-    @tests.concat(MutationKill::TESTS) if defined?(MutationKill::TESTS)
+    # a test that `needs` a suite this runtime lacks is skipped, as run_kill.rb does (it would fail on the unmutated source)
+    @tests.concat(MutationKill::TESTS.select { |_, _, needs| needs.nil? || SUPPORTED.include?(needs) }) if defined?(MutationKill::TESTS)
     # MUT_FIRST=<prefix>: run the kill tests whose name starts with <prefix> first (a scoped pass reaches its own tests without
     # sitting through every slow earlier one per mutant). Order only: every test still has to pass, so verdicts are unchanged.
     if (pre = ENV['MUT_FIRST']) && !pre.empty?
@@ -52,21 +88,36 @@ module Oracle
 
   # The mutant REPLACES the library: the loaded module is dropped first, so a deleted def / constant / module_function
   # is really gone (evaluating on top of the loaded module kept the original definition and every deletion "survived").
-  # The Rack middleware (which reopens AtlasPca) is then re-evaluated against the mutated module.
-  # When the mutated FILE is the middleware itself, the library is re-evaluated unmutated and the mutated text is the middleware.
+  # atlas_pca.rb ends with `require_relative` lines for the files that reopen AtlasPca (the Intent Layer v2 files:
+  # safe_regex, predicates, intent_layers, intent_wb, intent_v2). Those are already in $LOADED_FEATURES, so evaluating the
+  # library text again does NOT reload them: without the step below every v2 method would vanish with the dropped module
+  # (and a mutant of one of those files would never be exercised). So after the library each extension is re-evaluated
+  # explicitly, in the library's require order, then the Rack middleware. Whichever of these FILES is being mutated is
+  # evaluated from the mutated text; every other one from disk, unmutated.
   LIB = File.join(ROOT, 'lib', 'atlas_pca.rb')
   MW = File.join(ROOT, 'lib', 'atlas_pca', 'rack_middleware.rb')
+  REQUIRE_RE = /^require_relative '(atlas_pca\/[a-z0-9_]+)'$/
   def apply(text, file)
     @text = text
-    mw_mut = File.expand_path(file) == File.expand_path(MW)
+    target = File.expand_path(file)
+    @target = target
+    src = ->(path) { File.expand_path(path) == target ? text : File.read(path) }
     Object.send(:remove_const, :AtlasPca) if Object.const_defined?(:AtlasPca)
-    eval(mw_mut ? File.read(LIB) : text, TOPLEVEL_BINDING, mw_mut ? LIB : file) # rubocop:disable Security/Eval
-    eval(mw_mut ? text : File.read(MW), TOPLEVEL_BINDING, MW) # rubocop:disable Security/Eval
+    # The extension list is read from the library text BEING EVALUATED: a mutant that deletes (or breaks) one of the
+    # `require_relative` lines must lose that extension, not get it back from this loader (a deleted require survived for
+    # exactly that reason in run 39866841074).
+    lib_text = src.call(LIB)
+    exts = lib_text.scan(REQUIRE_RE).flatten.map { |rel| File.join(ROOT, 'lib', "#{rel}.rb") }
+    [[LIB, lib_text], *exts.map { |path| [path, src.call(path)] }, [MW, src.call(MW)]].each do |path, text|
+      eval(text, TOPLEVEL_BINDING, path) # rubocop:disable Security/Eval
+    end
   end
 
-  def skip?(v)
+  # The suite a vector needs that this runtime lacks (conformance.rb's unsupported_suite), or nil. A terminal
+  # {wire:false} negative is suite-agnostic and is compared as usual.
+  def unsupported(v)
     p = v['pcactn']
-    return false unless p.is_a?(Hash)
+    return nil unless p.is_a?(Hash)
 
     alg = ->(o) { o.is_a?(Hash) && o['alg'].is_a?(String) ? o['alg'] : 'ed25519' }
     sus = case v['requires']
@@ -76,14 +127,35 @@ module Oracle
           when String then (r = v['requires']; r.empty? || SUPPORTED.include?(r) ? nil : r)
           end
     c = v['expect']['checks']
-    sus && !(c.keys == ['wire'] && c['wire'] == false)
+    sus && !(c.keys == ['wire'] && c['wire'] == false) ? sus : nil
+  end
+
+  # Intent Layer v2 `requires_suite` naming a suite this runtime lacks (fn-dsa-*): Corpus.prim_failures checks those
+  # (a deny, unsupported_suite when a v2 check fails first), exactly as conformance.rb does.
+  def v2_unsupported?(v)
+    rs = v['requires_suite']
+    rs.is_a?(String) && !SUPPORTED.include?(rs)
+  end
+
+  def skip?(v)
+    !unsupported(v).nil? || v2_unsupported?(v)
   end
 
   def check_vectors(doc, tag)
     exp = Corpus.snapshot
     doc['vectors'].each do |v|
-      next if skip?(v)
+      next if v2_unsupported?(v)
 
+      if unsupported(v)
+        # conformance.rb: a vector needing a suite this runtime lacks must be DENIED with unsupported_suite (never skipped)
+        next unless v['pcactn'].is_a?(Hash)
+
+        ctx = v['context']
+        got = AtlasPca.verify_pcactn(v['pcactn'], v['grant'], now: ctx['now'], audience: ctx['aud'])
+        return false unless got.allow == false && got.reason.to_s.include?(AtlasPca::UNSUPPORTED_SUITE)
+
+        next
+      end
       key = Corpus.esc("#{tag}:v:#{v['name']}")
       got = Corpus.verify_one(v)
       return false unless got.allow == v['expect']['allow']
@@ -129,15 +201,46 @@ module Oracle
       'adv_vectors' => check_vectors(Corpus.adv, 'adv'), 'adv_snapshot' => check_snapshot_prims(Corpus.adv, 'adv') }
   end
 
+  # Move-to-front hint (mutate.rb): the names of the kill tests that killed the latest mutants, most recent first. Run in that
+  # order first (a killed mutant then costs a few tests, not the whole registry); every test still has to pass for a survivor,
+  # so verdicts are unchanged. `killer` = the name of the test that killed the mutant this process ran (nil: a later stage).
+  class << self
+    attr_accessor :hint
+    attr_reader :killer
+  end
+
   def run
     return false unless fresh_load_ok?
 
-    @tests.each do |name, fn|
-      begin
-        return false unless fn.call
-      rescue StandardError, SystemStackError
+    tests = @tests
+    # MUT_QUICK=<prefix>[|<prefix>...]: run ONLY the kill tests whose name starts with one of the prefixes, skip the corpus
+    # stages (measuring whether new tests kill the mutants that survived the full oracle: a survivor of the full oracle that a
+    # quick run kills is killed by the new tests). Local measurement only: the CI never sets it, so its verdicts are unchanged.
+    if (qk = ENV['MUT_QUICK']) && !qk.empty?
+      pre = qk.split('|')
+      tests.select { |n, _| pre.any? { |x| n.start_with?(x) } }.each do |name, fn|
+        begin
+          next if fn.call
+        rescue StandardError, SystemStackError
+          nil
+        end
+        Oracle.instance_variable_set(:@killer, name)
         return false
       end
+      return true
+    end
+    if (h = Oracle.hint) && !h.empty?
+      front = h.filter_map { |n| tests.find { |t| t[0] == n } }
+      tests = front + (tests - front)
+    end
+    tests.each do |name, fn|
+      begin
+        next if fn.call
+      rescue StandardError, SystemStackError
+        nil
+      end
+      Oracle.instance_variable_set(:@killer, name)
+      return false
     end
     # every other conformance table (merkle, params_digest, threshold_share/set, signer_set_hash, chain_pin, pq_artifact,
     # malformed, depth): conformance.rb checks them, so the oracle must too

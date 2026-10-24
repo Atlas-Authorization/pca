@@ -1,0 +1,26 @@
+{
+  "name": "@atlasauth/pca-intent",
+  "version": "0.4.1",
+  "private": true,
+  "description": "PCA Intent Layer prototype: intent as a measurable object. Outcome space from the grant vocabulary, version-space / Bayesian elicitation with maximal-disagreement boundary-witness questions, residual-risk and fidelity estimates, conservative grant synthesis, content-addressed Intent Maps, signed intent statements and a deterministic grant renderer.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "bench": "tsx bench/run.ts"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-analyzer": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
