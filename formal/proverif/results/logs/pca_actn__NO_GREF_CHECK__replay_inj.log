@@ -1,0 +1,8 @@
+Starting query inj-event(AcceptH(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> inj-event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol))
+RESULT inj-event(AcceptH(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> inj-event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol)) is true.
+Verification summary:
+Query(ies):
+ - Query inj-event(AcceptH(vaud_1,aaud_3,rid,lhol,n,cc,v,iss,e)) ==> inj-event(AgentSigned(lhol,aaud_3,n,cc,v)) || event(Reveal(lhol)) is true.
+Associated restriction(s):
+ - Restriction event(ConsumeN(k_2,a)) && event(ConsumeN(k_2,b)) ==> a = b in process 1.
+ - Restriction event(AdvanceC(s,ct,a)) && event(AdvanceC(s,ct,b)) ==> a = b in process 1.

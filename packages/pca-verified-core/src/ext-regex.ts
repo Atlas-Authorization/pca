@@ -2,9 +2,11 @@
 // ext-regex.ts - typed adapter over the PROVED regex engine and `re:` guard (formal/dafny/Regex.dfy -> generated/pca_regex.js).
 // The glue only converts JS strings to UTF-16 code-unit sequences and back; parsing, compilation to the Thompson NFA, the Pike
 // simulation, the budget refusal and the guard are the Dafny functions.
+import { hardenDafnyRuntime } from './runtime';
 import BigNumber from 'bignumber.js';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const mod = require('../generated/pca_regex.js') as { _dafny: any; Regex: any };
+hardenDafnyRuntime(mod._dafny);
 const R = mod.Regex;
 const dafny = mod._dafny;
 

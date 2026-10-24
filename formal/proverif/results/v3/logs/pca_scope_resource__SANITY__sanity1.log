@@ -1,0 +1,256 @@
+-- Query not event(Accept(rid,lid,hol,v,r)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 200 rules (32 with conclusion selected). Queue: 150 rules.
+400 rules inserted. Base: 248 rules (34 with conclusion selected). Queue: 152 rules.
+600 rules inserted. Base: 440 rules (34 with conclusion selected). Queue: 330 rules.
+800 rules inserted. Base: 501 rules (40 with conclusion selected). Queue: 872 rules.
+1000 rules inserted. Base: 501 rules (40 with conclusion selected). Queue: 872 rules.
+1200 rules inserted. Base: 605 rules (40 with conclusion selected). Queue: 1078 rules.
+1400 rules inserted. Base: 793 rules (40 with conclusion selected). Queue: 1448 rules.
+1600 rules inserted. Base: 793 rules (40 with conclusion selected). Queue: 1448 rules.
+1800 rules inserted. Base: 793 rules (40 with conclusion selected). Queue: 1448 rules.
+2000 rules inserted. Base: 793 rules (40 with conclusion selected). Queue: 1448 rules.
+2200 rules inserted. Base: 793 rules (40 with conclusion selected). Queue: 1448 rules.
+2400 rules inserted. Base: 793 rules (40 with conclusion selected). Queue: 1448 rules.
+2600 rules inserted. Base: 793 rules (40 with conclusion selected). Queue: 1448 rules.
+2800 rules inserted. Base: 793 rules (40 with conclusion selected). Queue: 1448 rules.
+3000 rules inserted. Base: 873 rules (40 with conclusion selected). Queue: 1368 rules.
+3200 rules inserted. Base: 973 rules (40 with conclusion selected). Queue: 1268 rules.
+3400 rules inserted. Base: 1073 rules (40 with conclusion selected). Queue: 1168 rules.
+3600 rules inserted. Base: 1081 rules (40 with conclusion selected). Queue: 1160 rules.
+3800 rules inserted. Base: 1081 rules (40 with conclusion selected). Queue: 1160 rules.
+4000 rules inserted. Base: 1227 rules (41 with conclusion selected). Queue: 1589 rules.
+4200 rules inserted. Base: 1427 rules (41 with conclusion selected). Queue: 1389 rules.
+4400 rules inserted. Base: 1627 rules (41 with conclusion selected). Queue: 1189 rules.
+4600 rules inserted. Base: 1811 rules (42 with conclusion selected). Queue: 1004 rules.
+4800 rules inserted. Base: 1877 rules (42 with conclusion selected). Queue: 938 rules.
+5000 rules inserted. Base: 1944 rules (42 with conclusion selected). Queue: 871 rules.
+5200 rules inserted. Base: 1949 rules (44 with conclusion selected). Queue: 1008 rules.
+5400 rules inserted. Base: 1949 rules (44 with conclusion selected). Queue: 1008 rules.
+5600 rules inserted. Base: 1960 rules (44 with conclusion selected). Queue: 997 rules.
+5800 rules inserted. Base: 2160 rules (44 with conclusion selected). Queue: 797 rules.
+6000 rules inserted. Base: 2237 rules (44 with conclusion selected). Queue: 720 rules.
+6200 rules inserted. Base: 2093 rules (44 with conclusion selected). Queue: 720 rules.
+6400 rules inserted. Base: 2093 rules (44 with conclusion selected). Queue: 720 rules.
+6600 rules inserted. Base: 2087 rules (44 with conclusion selected). Queue: 720 rules.
+6800 rules inserted. Base: 1864 rules (44 with conclusion selected). Queue: 838 rules.
+7000 rules inserted. Base: 2025 rules (44 with conclusion selected). Queue: 932 rules.
+7200 rules inserted. Base: 2159 rules (44 with conclusion selected). Queue: 798 rules.
+7400 rules inserted. Base: 2320 rules (44 with conclusion selected). Queue: 886 rules.
+7600 rules inserted. Base: 2335 rules (44 with conclusion selected). Queue: 1008 rules.
+7800 rules inserted. Base: 2268 rules (44 with conclusion selected). Queue: 1008 rules.
+8000 rules inserted. Base: 2344 rules (44 with conclusion selected). Queue: 901 rules.
+8200 rules inserted. Base: 2381 rules (44 with conclusion selected). Queue: 864 rules.
+8400 rules inserted. Base: 2381 rules (44 with conclusion selected). Queue: 864 rules.
+8600 rules inserted. Base: 2338 rules (88 with conclusion selected). Queue: 820 rules.
+8800 rules inserted. Base: 2270 rules (154 with conclusion selected). Queue: 754 rules.
+9000 rules inserted. Base: 2138 rules (188 with conclusion selected). Queue: 720 rules.
+9200 rules inserted. Base: 1938 rules (188 with conclusion selected). Queue: 720 rules.
+9400 rules inserted. Base: 1872 rules (255 with conclusion selected). Queue: 653 rules.
+9600 rules inserted. Base: 2072 rules (455 with conclusion selected). Queue: 453 rules.
+9800 rules inserted. Base: 1974 rules (536 with conclusion selected). Queue: 372 rules.
+10000 rules inserted. Base: 1839 rules (602 with conclusion selected). Queue: 306 rules.
+10200 rules inserted. Base: 1952 rules (767 with conclusion selected). Queue: 141 rules.
+Starting query not event(Accept(rid,lid,hol,v,r))
+200 rules inserted. Base: 200 rules (199 with conclusion selected). Queue: 665 rules.
+400 rules inserted. Base: 400 rules (399 with conclusion selected). Queue: 465 rules.
+600 rules inserted. Base: 600 rules (599 with conclusion selected). Queue: 265 rules.
+800 rules inserted. Base: 800 rules (799 with conclusion selected). Queue: 65 rules.
+goal reachable: attacker(verb_2) && attacker(r) && attacker(k_1) -> event(Accept(h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),h(((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]))),pk(k_1),verb_2,r))
+
+Derivation:
+
+1. We assume as hypothesis that
+attacker(k_1).
+
+2. We assume as hypothesis that
+attacker(r).
+
+3. We assume as hypothesis that
+attacker(verb_2).
+
+4. Using the function actT the attacker may obtain actT.
+attacker(actT).
+
+5. By 4, the attacker may know actT.
+By 3, the attacker may know verb_2.
+By 2, the attacker may know r.
+Using the function 3-tuple the attacker may obtain (actT,verb_2,r).
+attacker((actT,verb_2,r)).
+
+6. By 5, the attacker may know (actT,verb_2,r).
+By 1, the attacker may know k_1.
+Using the function sign the attacker may obtain sign((actT,verb_2,r),k_1).
+attacker(sign((actT,verb_2,r),k_1)).
+
+7. Using the function endm the attacker may obtain endm.
+attacker(endm).
+
+8. Using the function nil the attacker may obtain nil.
+attacker(nil).
+
+9. Using the function anys the attacker may obtain anys.
+attacker(anys).
+
+10. The message pk(kT[]) may be sent to the attacker at output {4}.
+attacker(pk(kT[])).
+
+11. By 10, the attacker may know pk(kT[]).
+By 10, the attacker may know pk(kT[]).
+By 9, the attacker may know anys.
+By 8, the attacker may know nil.
+Using the function 4-tuple the attacker may obtain (pk(kT[]),pk(kT[]),anys,nil).
+attacker((pk(kT[]),pk(kT[]),anys,nil)).
+
+12. The entry keys(pk(kT[]),kT[]) may be inserted in a table at insert {2}.
+table(keys(pk(kT[]),kT[])).
+
+13. The message (pk(kT[]),pk(kT[]),anys,nil) that the attacker may have by 11 may be received at input {11}.
+The entry keys(pk(kT[]),kT[]) that may be in a table by 12 may be read at get {17}.
+The entry keys(pk(kT[]),kT[]) that may be in a table by 12 may be read at get {16}.
+So the message ((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])) may be sent to the attacker at output {15}.
+attacker(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))).
+
+14. By 13, the attacker may know ((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])).
+Using the function 2-proj-2-tuple the attacker may obtain sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]).
+attacker(sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])).
+
+15. By 9, the attacker may know anys.
+By 8, the attacker may know nil.
+Using the function 2-tuple the attacker may obtain (anys,nil).
+attacker((anys,nil)).
+
+16. Using the function none the attacker may obtain none.
+attacker(none).
+
+17. Using the function capT the attacker may obtain capT.
+attacker(capT).
+
+18. By 17, the attacker may know capT.
+By 16, the attacker may know none.
+By 10, the attacker may know pk(kT[]).
+By 10, the attacker may know pk(kT[]).
+By 15, the attacker may know (anys,nil).
+Using the function 5-tuple the attacker may obtain (capT,none,pk(kT[]),pk(kT[]),(anys,nil)).
+attacker((capT,none,pk(kT[]),pk(kT[]),(anys,nil))).
+
+19. By 18, the attacker may know (capT,none,pk(kT[]),pk(kT[]),(anys,nil)).
+By 14, the attacker may know sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]).
+Using the function 2-tuple the attacker may obtain ((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])).
+attacker(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))).
+
+20. By 19, the attacker may know ((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])).
+By 7, the attacker may know endm.
+Using the function 2-tuple the attacker may obtain (((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm).
+attacker((((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm)).
+
+21. By 1, the attacker may know k_1.
+Using the function pk the attacker may obtain pk(k_1).
+attacker(pk(k_1)).
+
+22. By 19, the attacker may know ((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])).
+By 21, the attacker may know pk(k_1).
+By 9, the attacker may know anys.
+By 8, the attacker may know nil.
+Using the function 4-tuple the attacker may obtain (((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),pk(k_1),anys,nil).
+attacker((((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),pk(k_1),anys,nil)).
+
+23. The message (((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),pk(k_1),anys,nil) that the attacker may have by 22 may be received at input {19}.
+The entry keys(pk(kT[]),kT[]) that may be in a table by 12 may be read at get {26}.
+So the message ((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])) may be sent to the attacker at output {25}.
+attacker(((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]))).
+
+24. By 23, the attacker may know ((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])).
+Using the function 2-proj-2-tuple the attacker may obtain sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]).
+attacker(sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])).
+
+25. By 19, the attacker may know ((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])).
+Using the function h the attacker may obtain h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))).
+attacker(h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])))).
+
+26. By 17, the attacker may know capT.
+By 25, the attacker may know h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))).
+By 10, the attacker may know pk(kT[]).
+By 21, the attacker may know pk(k_1).
+By 15, the attacker may know (anys,nil).
+Using the function 5-tuple the attacker may obtain (capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)).
+attacker((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil))).
+
+27. By 26, the attacker may know (capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)).
+By 24, the attacker may know sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]).
+Using the function 2-tuple the attacker may obtain ((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])).
+attacker(((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]))).
+
+28. By 27, the attacker may know ((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])).
+By 20, the attacker may know (((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm).
+Using the function 2-tuple the attacker may obtain (((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])),(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm)).
+attacker((((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])),(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm))).
+
+29. By 28, the attacker may know (((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])),(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm)).
+By 5, the attacker may know (actT,verb_2,r).
+By 6, the attacker may know sign((actT,verb_2,r),k_1).
+Using the function 3-tuple the attacker may obtain ((((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])),(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm)),(actT,verb_2,r),sign((actT,verb_2,r),k_1)).
+attacker(((((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])),(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm)),(actT,verb_2,r),sign((actT,verb_2,r),k_1))).
+
+30. The message ((((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[])),(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[])),endm)),(actT,verb_2,r),sign((actT,verb_2,r),k_1)) that the attacker may have by 29 may be received at input {34}.
+So event Accept(h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),h(((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]))),pk(k_1),verb_2,r) may be executed at {52}.
+event(Accept(h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),h(((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]))),pk(k_1),verb_2,r)).
+
+31. By 30, event(Accept(h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),h(((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]))),pk(k_1),verb_2,r)).
+The goal is reached, represented in the following fact:
+event(Accept(h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),h(((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),sign((capT,none,pk(kT[]),pk(kT[]),(anys,nil)),kT[]))),pk(kT[]),pk(k_1),(anys,nil)),kT[]))),pk(k_1),verb_2,r)).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new kT: bitstring creating kT_1 at {1}
+
+insert keys(pk(kT_1),kT_1) at {2}
+
+event KeyGen(pk(kT_1)) at {3}
+
+out(c, ~M) with ~M = pk(kT_1) at {4}
+
+in(c, (~M,~M,anys,nil)) with ~M = pk(kT_1), ~M = pk(kT_1) at {11} in copy a
+
+get keys(pk(kT_1),kT_1) at {17} in copy a
+
+get keys(pk(kT_1),kT_1) at {16} in copy a
+
+event Granted(pk(kT_1),pk(kT_1),anys,nil,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1)))) at {14} in copy a
+
+out(c, ((capT,none,~M_1,~M_2,(anys,nil)),~M_3)) with ~M_1 = pk(kT_1), ~M_2 = pk(kT_1), ~M_3 = sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1) at {15} in copy a
+
+in(c, (((capT,none,~M,~M,(anys,nil)),~M_3),pk(a_1),anys,nil)) with ~M = pk(kT_1), ~M = pk(kT_1), ~M_3 = sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1) at {19} in copy a_2
+
+get keys(pk(kT_1),kT_1) at {26} in copy a_2
+
+event HonestDelegated(h(((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),kT_1))),anys,nil,pk(kT_1)) at {24} in copy a_2
+
+out(c, ((capT,~M_4,~M_5,~M_6,(anys,nil)),~M_7)) with ~M_4 = h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))), ~M_5 = pk(kT_1), ~M_6 = pk(a_1), ~M_7 = sign((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),kT_1) at {25} in copy a_2
+
+in(c, ((((capT,h(((capT,none,~M,~M,(anys,nil)),~M_3)),~M,pk(a_1),(anys,nil)),~M_7),(((capT,none,~M,~M,(anys,nil)),~M_3),endm)),(actT,a_3,a_4),sign((actT,a_3,a_4),a_1))) with h(((capT,none,~M,~M,(anys,nil)),~M_3)) = h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))), ~M = pk(kT_1), ~M_7 = sign((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),kT_1), ~M = pk(kT_1), ~M = pk(kT_1), ~M_3 = sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1) at {34} in copy a_5
+
+event ScopeOK(h(((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),kT_1))),anys,a_3) at {48} in copy a_5
+
+event ResOK(h(((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),kT_1))),nil,a_4) at {49} in copy a_5
+
+event ScopeOK(h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),anys,a_3) at {50} in copy a_5
+
+event ResOK(h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),nil,a_4) at {51} in copy a_5
+
+event Accept(h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),h(((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),kT_1))),pk(a_1),a_3,a_4) at {52} in copy a_5 (goal)
+
+The event Accept(h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),h(((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),sign((capT,h(((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),sign((capT,none,pk(kT_1),pk(kT_1),(anys,nil)),kT_1))),pk(kT_1),pk(a_1),(anys,nil)),kT_1))),pk(a_1),a_3,a_4) is executed at {52} in copy a_5.
+A trace has been found.
+RESULT not event(Accept(rid,lid,hol,v,r)) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not event(Accept(rid,lid,hol,v,r)) is false.
+
+--------------------------------------------------------------
+

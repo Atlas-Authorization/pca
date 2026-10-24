@@ -1,15 +1,23 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error - plain ESM script, no types
-import { scan } from '../../../scripts/check-unsafe-trusted-root.mjs';
+
+// Repository tooling under scripts/: absent from trees that ship this package without the repository scripts (the public
+// package repository). The suite skips there instead of failing to load.
+const SCRIPT = join(__dirname, '..', '..', '..', 'scripts', 'check-unsafe-trusted-root.mjs');
+const HAVE = existsSync(SCRIPT);
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- plain ESM script, no types */
+let scan: any;
 
 /**
  * R5-B1 structural guard: no template / example / doc / README / sample / playground may teach a grant or trusted root taken
  * from the request or from the presented artifact's own `cap_chain[0]`.
  */
-describe('scripts/check-unsafe-trusted-root.mjs', () => {
+describe.skipIf(!HAVE)('scripts/check-unsafe-trusted-root.mjs', async () => {
+  // describe.skipIf still RUNS this collector (to register the skipped tests), so the import itself must be guarded
+  if (HAVE) ({ scan } = await import(pathToFileURL(SCRIPT).href));
   it('the repository teaches no artifact-rooted or request-rooted trusted root', () => {
     expect(scan()).toEqual([]);
   });

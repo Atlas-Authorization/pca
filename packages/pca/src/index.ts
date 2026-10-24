@@ -19,6 +19,27 @@ export * from './frost-pq';
 export * from './predicates';
 export * from './risk';
 export * from './envelope';
+export * from './intent-binding';
+// Intent Layer v2 wire batch W-B (conformance rules 16-18): world facts, offer sets, per-parameter provenance, label
+// receipts and flows, classifier verdicts, and their composition for the verifier pipeline.
+export * from './intent-artifacts';
+export * from './oracle-facts';
+export * from './offer-set';
+export * from './label-receipts';
+export * from './param-provenance';
+export * from './intent-classifier';
+export * from './intent-env';
+export * from './intent-layers';
+export * from './intent';
+export * from './action-schema';
+export * from './intent-acc';
+export * from './intent-session-caveat';
+export * from './intent-session';
+export * from './intent-revocation';
+export * from './intent-required';
+export * from './intent-v2';
+export * from './intent-map-commit';
+export * from './intent-history';
 export * from './policy-vm';
 export * from './ledger';
 export * from './revocation';

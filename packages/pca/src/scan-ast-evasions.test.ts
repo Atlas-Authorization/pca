@@ -1,13 +1,8 @@
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error - plain ESM script, no types
-import { scan as pqScan } from '../../../scripts/check-pq-pinning.mjs';
-// @ts-expect-error - plain ESM script, no types
-import { scan as unsafeScan } from '../../../scripts/check-unsafe-trusted-root.mjs';
-// @ts-expect-error - plain ESM data module, no types
-import { CASES, EVASIONS, SRC, TPL, evasionExpect } from '../../../scripts/fixtures/pca-scan/cases.mjs';
 
 /**
  * R6-CORE-05: both scanners were regex-based and evadable (lowercase headers, req.get, destructuring, slice/shift, variable
@@ -19,6 +14,21 @@ type Case = { id: string; path: string; code: string; unsafe?: boolean; pq?: boo
 type Evasion = { code: string; art?: boolean; req?: boolean; unbound?: boolean };
 
 const REPO = join(__dirname, '..', '..', '..');
+// Repository tooling under scripts/ (and the private red-team PoC directories): absent from trees that ship this package
+// without them (the public package repository). The suites skip there instead of failing to load.
+const TOOLING = ['scripts/check-pq-pinning.mjs', 'scripts/check-unsafe-trusted-root.mjs', 'scripts/fixtures/pca-scan/cases.mjs'];
+const HAVE = TOOLING.every((f) => existsSync(join(REPO, f)));
+const HAVE_POC = HAVE && existsSync(join(REPO, 'redteam/round6/core'));
+/* eslint-disable @typescript-eslint/no-explicit-any -- plain ESM scripts / data module, no types */
+let pqScan: any, unsafeScan: any, CASES: any, EVASIONS: any, SRC: any, TPL: any, evasionExpect: any;
+const load = async (): Promise<void> => {
+  if (pqScan) return;
+  const [pq, unsafe, cases] = await Promise.all(TOOLING.map((f) => import(pathToFileURL(join(REPO, f)).href)));
+  ({ scan: pqScan } = pq);
+  ({ scan: unsafeScan } = unsafe);
+  ({ CASES, EVASIONS, SRC, TPL, evasionExpect } = cases);
+};
+/* eslint-enable @typescript-eslint/no-explicit-any */
 const H = "import { verifyPCActnCore, verifyPCActn, verifyChain } from '@atlasauth/pca';\nexport async function h(req: any, p: any, store: any) {\n";
 
 const pqFiles = (root: string): string[] => (pqScan(root, {}) as string[]).map((v) => v.split(':')[0]!);
@@ -34,7 +44,10 @@ function plant(files: Record<string, string>): string {
   return root;
 }
 
-describe('R6-CORE-05: AST scanners catch every evasion', () => {
+describe.skipIf(!HAVE)('R6-CORE-05: AST scanners catch every evasion', async () => {
+  // describe.skipIf still RUNS this collector; without the tooling there is nothing to load or enumerate
+  if (!HAVE) return;
+  await load();
   const files: Record<string, string> = {};
   for (const [id, e] of Object.entries(EVASIONS as Record<string, Evasion>)) {
     files[`${TPL}/${id}.ts`] = `${H}${e.code}\n}\n`;
@@ -65,7 +78,8 @@ describe('R6-CORE-05: AST scanners catch every evasion', () => {
   }
 });
 
-describe('R6-CORE-05: the red-team PoC directories, verbatim', () => {
+describe.skipIf(!HAVE_POC)('R6-CORE-05: the red-team PoC directories, verbatim', async () => {
+  if (HAVE_POC) await load();
   it('round-6 core/scan2: every evasion file is caught by the scanner responsible for it', () => {
     const root = join(REPO, 'redteam/round6/core/scan2');
     const pq = pqFiles(root);
@@ -107,7 +121,7 @@ describe('R6-CORE-05: the red-team PoC directories, verbatim', () => {
   });
 });
 
-describe('R6-CORE-05: self-test modes', () => {
+describe.skipIf(!HAVE)('R6-CORE-05: self-test modes', () => {
   it('both scripts expose a passing --self-test', async () => {
     const { spawnSync } = await import('node:child_process');
     for (const s of ['scripts/check-unsafe-trusted-root.mjs', 'scripts/check-pq-pinning.mjs']) {

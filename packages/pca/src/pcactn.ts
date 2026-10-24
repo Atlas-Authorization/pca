@@ -1,5 +1,5 @@
 import { type Capability, type CapabilityChain, capHash, holderPqKey, verifyChain } from './capability';
-import { CoreState, audienceStatus, capChainStatus, counterStatus, grantRefBoundStatus, hookStatus, leafDecision, suitePolicy, validityDecision, versionStatus } from '@atlasauth/pca-verified-core';
+import { CoreState, taintGateVerified, audienceStatus, capChainStatus, counterStatus, grantRefBoundStatus, hookStatus, leafDecision, suitePolicy, validityDecision, versionStatus } from '@atlasauth/pca-verified-core';
 import { coreResultOf, pqBindingErrorVerified } from './verified-decision';
 import { b64u, canonicalBytesStrict, __canonicalizeLenientServerOnly, hashCanonical, sha256, utf8 } from './hash';
 import { strictParse } from './strict-json';
@@ -35,7 +35,10 @@ import {
 } from './merkle';
 import type { ThresholdSignature } from './threshold';
 import { BEACON_EPOCH_MS } from './beacons';
-import { type TaintContext, computeTaint } from './taint';
+import type { TaintContext } from './taint';
+import { type EnvelopeIntent, type IntentPolicy, decideIntentBinding } from './intent-binding';
+import type { IntentSessionWire } from './intent-session';
+import { type IntentV2Context, decideIntentV2 } from './intent-v2';
 
 /**
  * PCActn wire object (spec §7), WIRE FORMAT v2.
@@ -87,6 +90,13 @@ export interface PCActn {
    * firewall (`tool_schema` caveat) is bound to it: a swapped / shadowed tool denies.
    */
   tool_binding?: string;
+  /**
+   * Optional SIGNED intent binding (Intent Layer M2): the IntentStatement ref + Intent Map digest the root grant's
+   * goal commits to, the goal salt that opens it, and the map's fidelity / residual-risk figures. See intent-binding.ts.
+   */
+  intent?: EnvelopeIntent;
+  /** Optional SIGNED Intent Layer v2 session member (session, root, seq, schema, accumulator claims, ...). See intent-session.ts. */
+  intent_session?: IntentSessionWire;
   /**
    * B4 crypto-agility (OPTIONAL, additive). Signature suite for the leaf signature. ABSENT means
    * `"ed25519"` — the pre-B4 default, byte-identical on the wire. The full registry (all SIGNED /
@@ -342,6 +352,10 @@ export function buildPCActn(input: {
   progressStep?: Record<string, unknown>;
   prohibitionEvidence?: Record<string, unknown> | unknown[];
   toolBinding?: string;
+  /** Signed intent binding (see intent-binding.ts); the root grant's goal must be `intentGoal(ref, map_digest)`. */
+  intent?: EnvelopeIntent;
+  /** Signed Intent Layer v2 session member (see intent-session.ts). */
+  intentSession?: IntentSessionWire;
 }): PCActn {
   if (typeof input.aud !== 'string' || input.aud.length === 0) throw new Error('buildPCActn: aud (audience) is required');
   const node = input.plan.find((n) => n.id === input.nodeId);
@@ -385,6 +399,8 @@ export function buildPCActn(input: {
     ...(input.progressStep !== undefined ? { progress_step: input.progressStep } : {}),
     ...(input.prohibitionEvidence !== undefined ? { prohibition_evidence: input.prohibitionEvidence } : {}),
     ...(input.toolBinding !== undefined ? { tool_binding: input.toolBinding } : {}),
+    ...(input.intent !== undefined ? { intent: input.intent } : {}),
+    ...(input.intentSession !== undefined ? { intent_session: input.intentSession } : {}),
   };
   return signPCActn(body, input.signerSecret);
 }
@@ -549,6 +565,10 @@ export async function verifyPCActnCore(
      * post-quantum protection and a pure-PQ leaf is unauthenticated. Do not set in production.
      */
     allowUnboundPq?: boolean;
+    /** Intent Layer M2 policy (require a bound `intent`, fidelity floor, residual-risk ceiling); see intent-binding.ts. */
+    intent?: IntentPolicy;
+    /** Intent Layer v2 verifier state + policy (schemas, session root and grants, accumulator state); see intent-v2.ts. */
+    intentV2?: IntentV2Context;
   },
 ): Promise<VerifyResult> {
   let st = CoreState.init<string, string>();
@@ -667,19 +687,31 @@ export async function verifyPCActnCore(
     if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter', 'pass');
     else fail('counter', 'missing or not a non-negative safe integer');
 
+    // Intent Layer M2: `intent` check (present iff the PCActn carries `intent` or the policy is active).
+    const intentDecision = decideIntentBinding(p.intent, opts.grant, opts.intent, p.intent_session?.session, p.intent_session?.map_form);
+    if (intentDecision.status === 'pass') mark('intent', 'pass');
+    else if (intentDecision.status === 'fail') fail('intent', intentDecision.reason);
+    // Intent Layer v2: `schema` (rule 14), `intent_session` (rule 13), `accumulators` (rule 15); reported only when the
+    // PCActn carries `intent_session` or a v2 policy is active (see intent-v2.ts).
+    for (const c of decideIntentV2(p, opts.grant, opts.intentV2, now).checks) {
+      if (c.ok) mark(c.name, 'pass');
+      else fail(c.name, c.reason ?? 'rejected');
+    }
+
     // later milestones
 
     // M1 taint gate (enforce.taint). Reuses the L4 taint functional verbatim: the agent's own label is
     // never read; every declared ref is independently re-classified from server facts. Fails closed when
     // the lineage is unverifiable (valid:false => stub/empty/forged provenance) or the taint exceeds policy.
+    // PROVED CODE: the gate decision is the Dafny-proved `Taint.Gate` over `Taint.ComputeSafe` (verified-core
+    // `taintGateVerified`, formal/dafny/Taint.dfy); `scripts/check-verified-core.sh` fails if this call is removed.
     if (opts.enforce?.taint) {
       const g = opts.enforce.taint;
       try {
-        const t = computeTaint(p.provenance, g.ctx);
-        if (!t.valid) fail('taint_gate', t.reason ?? 'provenance lineage is not server-verifiable (fail closed)');
-        else if (!(g.maxTaint >= 0)) fail('taint_gate', 'taint gate misconfigured: maxTaint must be a non-negative number (fail closed)');
-        else if (!(t.taint <= g.maxTaint)) fail('taint_gate', `information-flow taint ${t.taint} exceeds policy max ${g.maxTaint}`);
-        else mark('taint_gate', 'pass');
+        const ctx = g.ctx;
+        const r = taintGateVerified(p.provenance, ctx, g.maxTaint);
+        if (r.ok) mark('taint_gate', 'pass');
+        else fail('taint_gate', r.reason);
       } catch (e) {
         fail('taint_gate', `taint gate error (fail closed): ${(e as Error).message}`);
       }

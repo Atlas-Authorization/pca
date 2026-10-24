@@ -61,6 +61,12 @@ export const EVENT_TYPES = {
   grantRevoked: 'https://atlasauth.net/caep/grant-revoked',
   /** PCA — a mid-run kill-switch for an agent: revoke EVERY grant that agent holds, now. */
   killSwitch: 'https://atlasauth.net/caep/kill-switch',
+  /**
+   * PCA Intent Layer v2 (§3.9) — intent artifacts revoked by the principal: session ids, map digests, delta-grant ids,
+   * profile versions, as the namespaced revocation ids of `@atlasauth/pca` (`pca-intent:session:<σ>`, ...). Push is
+   * best effort: the signed-epoch pull bound (T22) is the guarantee.
+   */
+  intentRevoked: 'https://atlasauth.net/caep/intent-revoked',
 } as const;
 
 /** A CAEP/SSF Subject Identifier (RFC 9493). Opaque to this package; carried verbatim. */
@@ -98,6 +104,18 @@ export interface KillSwitchEvent {
   subject?: SubjectIdentifier;
 }
 
+/** PCA `intent-revoked` payload: `{ ids, session?, reason, event_timestamp }`. */
+export interface IntentRevokedEvent {
+  /** Namespaced intent revocation ids (`pca-intent:session:…`, `pca-intent:map:…`, `pca-intent:delta:…`, `pca-intent:profile:…@v`). */
+  ids: string[];
+  /** The session the revocation is about, when there is one. */
+  session?: string;
+  reason: string;
+  /** CAEP `event_timestamp`: integer seconds since the epoch. */
+  event_timestamp: number;
+  subject?: SubjectIdentifier;
+}
+
 /** CAEP 1.0 §3.4 `session-revoked` payload. */
 export interface CaepSessionRevokedEvent {
   /** RFC 9493 subject whose session was revoked. */
@@ -128,6 +146,7 @@ export interface CaepCredentialChangeEvent {
 export type SetEventPayload =
   | GrantRevokedEvent
   | KillSwitchEvent
+  | IntentRevokedEvent
   | CaepSessionRevokedEvent
   | CaepCredentialChangeEvent;
 
@@ -141,6 +160,7 @@ export interface SetEvents {
   'https://schemas.openid.net/secevent/caep/event-type/credential-change'?: CaepCredentialChangeEvent;
   'https://atlasauth.net/caep/grant-revoked'?: GrantRevokedEvent;
   'https://atlasauth.net/caep/kill-switch'?: KillSwitchEvent;
+  'https://atlasauth.net/caep/intent-revoked'?: IntentRevokedEvent;
   [eventTypeUri: string]: SetEventPayload | undefined;
 }
 
@@ -285,6 +305,8 @@ export interface RevocationState {
   revokedGrants: Map<string, number>;
   /** agent id → event_timestamp of the kill-switch that revoked all of its grants. */
   killedAgents: Map<string, number>;
+  /** intent revocation id → event_timestamp of the `intent-revoked` event that named it (created on first use). */
+  revokedIntentIds?: Map<string, number>;
 }
 
 /** A fresh, empty revocation state. */
@@ -326,9 +348,21 @@ export function applySET(state: RevocationState, parsed: ParsedSet): RevocationS
       if (typeof grantRef === 'string' && grantRef.length > 0) {
         recordMax(state.revokedGrants, grantRef, ts);
       }
+    } else if (type === EVENT_TYPES.intentRevoked) {
+      const { ids } = ev as IntentRevokedEvent;
+      if (Array.isArray(ids)) {
+        for (const id of ids) {
+          if (typeof id === 'string' && id.startsWith('pca-intent:')) recordMax((state.revokedIntentIds ??= new Map()), id, ts);
+        }
+      }
     }
   }
   return state;
+}
+
+/** Has a pushed `intent-revoked` event named this intent revocation id? (Best effort; the epoch pull bound decides.) */
+export function isIntentRevoked(state: RevocationState, id: string): boolean {
+  return state.revokedIntentIds?.has(id) === true;
 }
 
 /**

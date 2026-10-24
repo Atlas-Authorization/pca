@@ -1,0 +1,144 @@
+name: Verified core
+
+# The Dafny-proved decision core (formal/dafny -> packages/pca-verified-core):
+#  - proofs: the pinned Dafny (formal/dafny/TOOLCHAIN.lock, hash-checked before unpacking) verifies the core and every
+#    standalone component, and the committed generated JavaScript must be byte-identical to a fresh compile
+#    (pca-verified-core's `verify` + `check:generated`, and the same for Regex/Wire/Merkle/Taint/Attest/PolicyVm);
+#  - differentials: production (verified-core-backed) vs the frozen pre-wiring TypeScript (pca-verified-core tests) and the
+#    wiring scan (the decision paths in packages/pca/src must still call the verified core);
+#  - diverse compilation: the same proved modules compiled to C#, Go, Java, Python and JavaScript must reproduce the
+#    pinned transcript (formal/dafny/difftargets).
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proofs:
+    name: Dafny proofs + generated-JS reproducibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      DAFNY_DIR: ${{ github.workspace }}/../dafny
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Pinned Dafny (hash-verified)
+        run: |
+          sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq unzip libicu-dev >/dev/null
+          bash formal/dafny/verify-toolchain.sh --install --dir "$DAFNY_DIR"
+          echo "$DAFNY_DIR" >> "$GITHUB_PATH"
+      - name: Core proofs (pca-verified-core `verify`)
+        run: bash formal/dafny/build.sh --verify-only
+      - name: Core generated JS == fresh compile (pca-verified-core `check:generated`)
+        run: bash formal/dafny/build.sh --check
+      - name: Standalone components (proofs + generated JS)
+        run: bash .github/scripts/ts-dafny-ext-check.sh Regex Wire Merkle Taint Attest PolicyVm
+      - name: Glue contract
+        working-directory: formal/dafny
+        run: dafny verify GlueContract.dfy --verify-included-files --allow-warnings --verification-time-limit 120 --resource-limit 0
+
+  differentials:
+    name: differentials (production vs frozen legacy) + wiring scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      # Node 24 bundles OpenSSL 3.5 (ML-DSA / SLH-DSA): the primitives N-version harness uses node:crypto as one of its
+      # post-quantum voters (formal/dafny/TOOLCHAIN.lock records Node 24 as the reference runtime)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-verified-core... --filter=@atlasauth/pca...
+      - name: Build
+        run: pnpm -r --filter=@atlasauth/pca-verified-core... --filter=@atlasauth/pca... run build
+      - name: Differential tests
+        run: pnpm --filter @atlasauth/pca-verified-core test
+      - name: Wiring scan
+        run: |
+          if [ -f scripts/check-verified-core.sh ]; then bash scripts/check-verified-core.sh --scan-only
+          else echo "::notice::scripts/check-verified-core.sh is not part of this tree: wiring scan skipped"; fi
+
+  pca-suite-verified-core-mode:
+    # the full packages/pca suite a second time with PCA_VERIFIED_CORE=1; only on trees that have the switch
+    # (packages/pca/src/verified-core-mode.ts)
+    # sharded like ci.yml's test job: the whole suite on one runner does not fit in the job timeout. 12 shards / 180 min:
+    # with the opt-in proved wire encoder every canonicalisation runs a printer that is quadratic per string, so single files
+    # take 25-40 min (grant-ref-binding, conformance; measured on run 38495915046 and on a 12-core box), and 3 of 6 shards
+    # hit the 120 min limit (docs/pca/security/verified-core.md, wire layer, "Cost").
+    name: packages/pca suite, PCA_VERIFIED_CORE=1 (shard ${{ matrix.shard }}/12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Present in this tree?
+        id: present
+        run: |
+          if [ -f packages/pca/src/verified-core-mode.ts ]; then echo "yes=true" >> "$GITHUB_OUTPUT"
+          else echo "yes=false" >> "$GITHUB_OUTPUT"; echo "::notice::no PCA_VERIFIED_CORE switch in this tree (packages/pca/src/verified-core-mode.ts): nothing to run"; fi
+      - if: steps.present.outputs.yes == 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.present.outputs.yes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        if: steps.present.outputs.yes == 'true'
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Build
+        if: steps.present.outputs.yes == 'true'
+        run: pnpm -r --filter=@atlasauth/pca... run build
+      # the Groth16 tests (zk.test.ts) need the compliance circuit's build outputs, as in ci.yml's core package shard
+      - name: Compliance circuit
+        if: steps.present.outputs.yes == 'true'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/circom" https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
+          chmod +x "$RUNNER_TEMP/circom"
+          CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
+      - name: Test (PCA_VERIFIED_CORE=1)
+        if: steps.present.outputs.yes == 'true'
+        env:
+          PCA_VERIFIED_CORE: '1'
+        run: pnpm --filter @atlasauth/pca exec vitest run --shard=${{ matrix.shard }}/12
+
+  diverse-compilation:
+    name: diverse compilation (C#, Go, Java, Python, JS)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Toolchain pin + all-target transcript equality + miscompile self-test
+        run: bash formal/dafny/difftargets/ci-check.sh

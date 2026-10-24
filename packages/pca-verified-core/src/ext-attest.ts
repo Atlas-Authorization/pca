@@ -10,6 +10,7 @@
 // verifyAttestationVerified, createAttestationVerifierVerified, VerifiedMemoryNonceStore, verifyAllowlistDurableVerified and
 // verifyAllowlistAnchoredVerified are behaviour-identical re-implementations of the production entry points on the inputs the
 // differential tests cover; NONE is imported by production code yet.
+import { hardenDafnyRuntime } from './runtime';
 import BigNumber from 'bignumber.js';
 
 // Minimal structural types (the production types live in @atlasauth/pca, which depends on this package).
@@ -48,6 +49,7 @@ export interface AgentBinding {
 }
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const gen = require('../generated/pca_attest.js') as { _dafny: any; Attest: any };
+hardenDafnyRuntime(gen._dafny);
 const A = gen.Attest;
 const D = gen._dafny;
 const DF = A.__default;
@@ -241,17 +243,36 @@ const REASONS = {
   tool: () => `tool_manifest_digest not in tool_manifest_allowlist (tools changed?)`,
 };
 
-function minMeasurementDecision(mm: AgentBinding['min_measurement'], runtime: string): any {
-  if (typeof mm === 'string') return mm.length > 0 ? A.MinM.create_EqPin(runtime === mm) : A.MinM.create_NoMin();
-  if (mm && typeof mm === 'object' && typeof (mm as { svn?: unknown }).svn === 'number') {
-    const min = (mm as { svn: number }).svn;
-    if (!Number.isFinite(min)) return A.MinM.create_NoMin();
-    const accepted = Number(runtime);
-    const parse =
-      runtime.trim() === '' || !Number.isInteger(accepted) ? A.SvnCheck.create_SvnNotInteger() : accepted < min ? A.SvnCheck.create_SvnBelow() : A.SvnCheck.create_SvnOk();
-    return A.MinM.create_Svn(parse);
-  }
-  return A.MinM.create_NoMin();
+/** A canonical decimal SVN text: "0" or a non-zero digit followed by digits (no sign, spaces, exponent, hex or leading zeros). */
+const SVN_TEXT = /^(?:0|[1-9][0-9]*)$/;
+/** A minimum SVN: a safe non-negative integer JSON number (not -0). */
+const isSvnBound = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0 && !Object.is(x, -0);
+const OWN_HAS = Object.prototype.hasOwnProperty;
+/** True iff `mm` is exactly `{svn: n}` (one own enumerable key, a plain object) with a valid bound. */
+function svnSpec(mm: unknown): mm is { svn: number } {
+  if (mm === null || typeof mm !== 'object' || Array.isArray(mm)) return false;
+  const proto = Object.getPrototypeOf(mm);
+  if (proto !== Object.prototype && proto !== null) return false;
+  const keys = Object.keys(mm);
+  return keys.length === 1 && keys[0] === 'svn' && OWN_HAS.call(mm, 'svn') && isSvnBound((mm as { svn: unknown }).svn);
+}
+/** The measured SVN, or undefined when `runtime` is not the canonical decimal text of a safe integer. */
+function measuredSvn(runtime: unknown): number | undefined {
+  if (typeof runtime !== 'string' || !SVN_TEXT.test(runtime)) return undefined;
+  const n = Number(runtime);
+  return Number.isSafeInteger(n) ? n : undefined;
+}
+/**
+ * min_measurement as the proved MinM (Attest.dfy). Absent or "" constrains nothing; a non-empty string is an equality pin; `{svn: n}`
+ * (n a safe non-negative integer JSON number) is the monotone ladder over a canonical decimal runtime_measurement; ANY other present
+ * value is MinBad and fails closed (it used to be ignored: `{svn: "5"}` enforced nothing). Never throws.
+ */
+function minMeasurementDecision(mm: unknown, runtime: unknown): any {
+  if (mm === undefined || mm === '') return A.MinM.create_NoMin();
+  if (typeof mm === 'string') return A.MinM.create_EqPin(runtime === mm);
+  if (!svnSpec(mm)) return A.MinM.create_MinBad();
+  const got = measuredSvn(runtime);
+  return A.MinM.create_Svn(got === undefined ? A.SvnCheck.create_SvnNotInteger() : got < mm.svn ? A.SvnCheck.create_SvnBelow() : A.SvnCheck.create_SvnOk());
 }
 
 /** matchAgentBinding with the decision made by the proved MatchBinding. Same reasons as production. */
@@ -259,14 +280,7 @@ export function matchAgentBindingVerified(id: MeasuredIdentity, binding: AgentBi
   const b = binding ?? {};
   const it = new Interner();
   const list = (x: unknown): any => seqOf(Array.isArray(x) && x.length > 0 ? x.map((e) => bn(it.id(e))) : []);
-  let minErrThrown: unknown;
-  let minM: any;
-  try {
-    minM = minMeasurementDecision(b.min_measurement, id.runtime_measurement);
-  } catch (e) {
-    minErrThrown = e;
-    minM = A.MinM.create_Svn(A.SvnCheck.create_SvnOk()); // placeholder: production would throw at exactly this stage
-  }
+  const minM = minMeasurementDecision(b.min_measurement, id.runtime_measurement);
   const operatorPinned = typeof b.operator === 'string' && b.operator.length > 0;
   const bid = A.BIdent.create_BIdent(
     bn(it.id(id.model_id)), bn(it.id(id.weights_digest)), id.weights_measured === true,
@@ -279,14 +293,14 @@ export function matchAgentBindingVerified(id: MeasuredIdentity, binding: AgentBi
     list(b.weights_allowlist), list(b.system_prompt_allowlist), list(b.tool_manifest_allowlist),
   );
   const r = DF.MatchBinding(bid, bb);
-  if (minErrThrown !== undefined && (r.is_None || kindName(r.dtor_v) !== 'BModel')) throw minErrThrown;
   if (r.is_None) return null;
   const k = kindName(r.dtor_v);
   switch (k) {
     case 'BModel': return REASONS.model(id);
+    case 'BMinBad': return `min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)`;
     case 'BMinEq': return `runtime_measurement does not match required min_measurement`;
     case 'BMinSvnNotInt': return `runtime_measurement ${id.runtime_measurement} is not an integer SVN (required min svn ${(b.min_measurement as { svn: number }).svn})`;
-    case 'BMinSvnBelow': return `runtime_measurement svn ${Number(id.runtime_measurement)} is below required min svn ${(b.min_measurement as { svn: number }).svn}`;
+    case 'BMinSvnBelow': return `runtime_measurement svn ${measuredSvn(id.runtime_measurement)} is below required min svn ${(b.min_measurement as { svn: number }).svn}`;
     case 'BOperator': return REASONS.op(id);
     case 'BNotMeasured': return REASONS.measured();
     case 'BWeights': return REASONS.weights();
@@ -299,7 +313,8 @@ export function matchAgentBindingVerified(id: MeasuredIdentity, binding: AgentBi
 export function requiresAttestationVerified(binding: AgentBinding | undefined): boolean {
   const b = binding ?? {};
   const mm = b.min_measurement as unknown;
-  const hasMin = typeof mm === 'string' ? mm.length > 0 : !!mm && typeof mm === 'object' && typeof (mm as { svn?: unknown }).svn === 'number' && Number.isFinite((mm as { svn: number }).svn);
+  // any present min_measurement other than "" constrains (a malformed one fails closed in MatchBinding, so it must also require a document)
+  const hasMin = mm !== undefined && mm !== '';
   const ne = (x: unknown): boolean => Array.isArray(x) && x.length > 0;
   return DF.RequiresAttestation(
     A.BindingFlags.create_BindingFlags(ne(b.model_allowlist), hasMin, typeof b.operator === 'string' && b.operator.length > 0, ne(b.weights_allowlist), ne(b.system_prompt_allowlist), ne(b.tool_manifest_allowlist), b.require_hardware === true, b.require_measured_weights === true),

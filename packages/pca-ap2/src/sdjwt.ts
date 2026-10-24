@@ -100,8 +100,30 @@ export function parseJson(text: string, what: string): unknown {
   return v;
 }
 
+/**
+ * UTF-8 text of decoded bytes, FATAL on any invalid sequence. `Buffer#toString('utf8')` silently substitutes U+FFFD, so
+ * distinct byte strings would read as the same claims (a parser differential against strict decoders). The BOM is kept,
+ * so `JSON.parse` refuses it.
+ */
+function utf8Text(bytes: Uint8Array, what: string): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    throw new Ap2Error(`${what}: not valid UTF-8`);
+  }
+}
+
+/**
+ * Set `out[k] = v` as an OWN data property. Plain assignment of the key `__proto__` would instead replace the object's
+ * prototype: the claim would vanish from the own keys (and from any re-serialisation) while its members became readable
+ * as inherited claims.
+ */
+function setClaim(out: JsonObject, k: string, v: Json): void {
+  Object.defineProperty(out, k, { value: v, enumerable: true, writable: true, configurable: true });
+}
+
 function decodeJsonSegment(segment: string, what: string): JsonObject {
-  const v = parseJson(b64uDecode(segment, what).toString('utf8'), what);
+  const v = parseJson(utf8Text(b64uDecode(segment, what), what), what);
   if (!isObject(v)) throw new Ap2Error(`${what}: must be a JSON object`);
   return v;
 }
@@ -293,7 +315,7 @@ type Disclosure =
   | { kind: 'element'; value: Json; raw: string };
 
 function decodeDisclosure(raw: string): Disclosure {
-  const arr = parseJson(b64uDecode(raw, 'disclosure').toString('utf8'), 'disclosure');
+  const arr = parseJson(utf8Text(b64uDecode(raw, 'disclosure'), 'disclosure'), 'disclosure');
   if (!Array.isArray(arr)) throw new Ap2Error('disclosure: must be a JSON array');
   if (typeof arr[0] !== 'string' || arr[0].length === 0) throw new Ap2Error('disclosure: salt must be a non-empty string');
   if (arr.length === 3) {
@@ -349,7 +371,7 @@ export function processDisclosures(payload: JsonObject, disclosures: string[], a
       for (const [k, v] of Object.entries(node)) {
         if (k === '_sd' || k === '_sd_alg') continue;
         if (k === '...') throw new Ap2Error('SD-JWT: "..." is only valid as the sole key of an array element');
-        out[k] = walk(v, depth + 1);
+        setClaim(out, k, walk(v, depth + 1));
       }
       const sd = node._sd;
       if (sd !== undefined) {
@@ -358,7 +380,7 @@ export function processDisclosures(payload: JsonObject, disclosures: string[], a
           const d = take(digest, 'property');
           if (!d || d.kind !== 'property') continue;
           if (Object.prototype.hasOwnProperty.call(out, d.name)) throw new Ap2Error(`SD-JWT: disclosed claim ${d.name} collides with an existing claim`);
-          out[d.name] = walk(d.value, depth + 1);
+          setClaim(out, d.name, walk(d.value, depth + 1));
         }
       }
       return out;

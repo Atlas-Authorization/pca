@@ -177,7 +177,11 @@ generator that stops reaching interesting inputs fails the suite.
    exercised by the differential tests above, not proved.
 3. **Dafny, Boogie and Z3** (a bug in the verifier could accept a false lemma) and **Dafny's JavaScript compiler** (a miscompile
    could change behaviour). The generated JS is committed and reproducible; the differential tests are the end-to-end check on it.
-4. **The JavaScript engine** (V8 / Node) and the Dafny runtime inside `pca_core.js`, including `bignumber.js` for Dafny integers.
+4. **The JavaScript engine** (V8 / Node) and the Dafny runtime inside `pca_core.js` (and each `pca_<component>.js`), including
+   `bignumber.js` for Dafny integers. One runtime function is replaced at load time (`src/runtime.ts`, `hardenDafnyRuntime`):
+   the stock `Seq.Concat` spreads its operands into call arguments (`Seq.of(...a)`), which throws `RangeError: Maximum call stack
+   size exceeded` for a sequence of more than about 10^5 elements (a 1 MiB JSON string crashed the proved strict-JSON parser);
+   the replacement copies with a loop and returns the same sequence.
 5. **Replay-store implementations.** `Replay.dfy` proves the contract and the in-memory reference model. A real (distributed,
    durable) store must itself be atomic and honour the retention rule; that is outside this proof. The nonce theorem also
    assumes a non-decreasing clock across operations (precondition `TimesAtMost`).
@@ -187,14 +191,20 @@ generator that stops reaching interesting inputs fails the suite.
 
 * **Cryptographic security** of any primitive, side channels, post-quantum assumptions, key management, revocation correctness.
 * **Parsing and wire validation** (`validateWireV2`, strict JSON, canonicalization, strict base64url): evaluated in TS.
-* **The Policy VM** (`decide`, risk score, budget, predicates, `evaluateAgentCaveats`), **Merkle plan inclusion**, **taint**,
-  **freshness / beacon / revocation-epoch verification**, **attestation verification**, **ZK verification**, **bond settlement**:
-  evaluated in TS; only how their *results* combine into the verdict is proved.
+* In this core (`Common`/`Chain`/`Caveats`/`Threshold`/`Replay`/`Verdict`): the Policy VM, Merkle inclusion, taint and attestation are
+  inputs. Since 0.4.2 their decisions run the separately proved extension models by default (taint, Merkle inclusion, attestation, the
+  `decide()` kernels; see [Production wiring](#production-wiring-of-the-extension-components)). Still **evaluated in hand-written TS by
+  default**: the predicate / caveat evaluator, the risk score, budget arithmetic (`leak`, `debit`, `cost`), strict JSON and canonical
+  encoding, the regex engine, Merkle consistency and revocation membership (all but the risk / budget arithmetic have an opt-in proved path),
+  and with no proved model at all: **freshness / beacon / revocation-epoch verification**, **ZK verification**, **bond settlement**.
 * Numeric details of the freshness gate (`epochMs`, `maxAgeMs` arithmetic on doubles) and of Policy-VM risk values.
 * Distributed replay-store atomicity, durability, and multi-instance clock skew.
 * Liveness / availability: the proofs say nothing about a verifier that is slow or unavailable.
-* Anything outside the listed modules (hosted API, MCP tools, SDKs in other languages: they have their own verifiers, kept in
-  agreement by the conformance corpus, not by this proof).
+* Anything outside the listed modules (hosted API, MCP tools). In particular **the 9 native verifiers (Go, Python, Rust, Java, .NET,
+  PHP, Ruby, Kotlin, Swift) are conformance-checked, not proved**: they are independent hand-written implementations held to the
+  TypeScript verdicts by the shared conformance corpus (every vector, every language), plus mutation testing. Nothing proved here runs
+  in them. The only machine-checked statements about a native verifier are the bounded Kani harnesses and the Verus transliterations
+  of fragments of the Rust verifier (`implementation-verification.md`), which are not a proof of the shipped crate.
 * The Tamarin properties about attackers with compromised keys; this core proves the decision logic those models abstract.
 
 ## Behaviour notes
@@ -219,15 +229,15 @@ pnpm --filter @atlasauth/pca-verified-core test   # bridge + differential suites
 
 # Extension components: wire, Merkle, taint, attestation combination, Policy VM, regex
 
-Standalone Dafny modules (each verified and compiled by `formal/dafny/build-ext.sh <Component>`, output `packages/pca-verified-core/generated/pca_<component>.js`). None is wired into production TypeScript yet: each ships as a typed adapter in `@atlasauth/pca-verified-core` (`src/ext-*.ts`) with differential tests against the production code. Where a drop-in is not byte-identical the section lists why.
+Standalone Dafny modules (each verified and compiled by `formal/dafny/build-ext.sh <Component>`, output `packages/pca-verified-core/generated/pca_<component>.js`), each with a typed adapter in `@atlasauth/pca-verified-core` (`src/ext-*.ts`). Since 0.4.2 the taint, Merkle inclusion, attestation and Policy-VM kernel decisions **are the production path**; wire, regex, the Policy-VM evaluator, the strict Merkle consistency / membership verifiers and the proved nonce store are opt-in (`PCA_VERIFIED_CORE`). The exact list, the measured cost and the reasons are in [Production wiring of the extension components](#production-wiring-of-the-extension-components). The hand-written code each wired path replaced is frozen in `packages/pca-verified-core/test/support/legacy/` and is now only the differential-test oracle.
 
 ## Wire layer (`Wire.dfy`): strict JSON, canonical encoding, UTF-8 order, base64url, hex
 
-Source: `formal/dafny/Wire.dfy` (modules `Utf`, `B64`, `Json`, `Api`; standalone, no includes). Build: `formal/dafny/build-ext.sh Wire`
+Source: `formal/dafny/Wire.dfy` (modules `Utf`, `B64`, `Json`, `Fast`, `FastP`, `Api`; standalone, no includes). Build: `formal/dafny/build-ext.sh Wire`
 (verify + compile) writes `packages/pca-verified-core/generated/pca_wire.js`; `--check` recompiles and compares byte for byte.
-TypeScript adapter: `packages/pca-verified-core/src/ext-wire.ts` (`wireCanonicalOfText`, `wireCanonicalizeStrict`,
+TypeScript adapter: `packages/pca-verified-core/src/ext-wire.ts` (`wireAcceptsText`, `wireCanonicalOfText`, `wireCanonicalizeStrict`,
 `wireCompareUtf8`, `wireDecodeB64uStrict`, `wireB64uEncode`, `wireHexDecode`, `wireHexEncode`).
-Last full verification: **325 verified, 0 errors** (`ObjLoopPrint` now uses `{:isolate_assertions}`, which splits it into more VCs; before: 229) (Dafny 4.11.0, Z3 4.12.1). `assume` / `{:axiom}` / `{:extern}` / `{:verify false}`: **none**
+Last full verification: **2,108 verified, 0 errors** (with the compiled fast paths `Fast` / `FastP`; before them 325; `ObjLoopPrint`, `ObjM`, `MemberM`, `Merge` and `ObjPM` use `{:isolate_assertions}`; the slowest VC takes about 45 s of the 120 s limit) (Dafny 4.11.0, Z3 4.12.1). `assume` / `{:axiom}` / `{:extern}` / `{:verify false}`: **none**
 (`build-ext.sh` greps for them). **Trusted contracts for this component: none** (no hash or signature primitive is involved; the hash
 is applied to the output of the canonical printer, outside this module).
 
@@ -288,13 +298,30 @@ Two observations that are not bugs: (1) `hash.ts` has no strict hex decoder (hex
 
 * The double behind a decimal (see Model); the JS-value -> `J` import in the adapter (`toJ`: classifies a JS number as integer or decimal
   lexeme via `String(v)`; the profile decisions themselves are the proved `Valid`). Sparse arrays and accessor properties are not modelled.
-* Cost: the compiled reference is a literal functional transcription. It is linear for strings but **quadratic in the number of
-  members of one array / object** (`acc + [x]`, `HasKey`), so it is NOT wired into production and the corpus differential caps texts
-  at 20,000 characters (64 of 9,000 corpus texts are larger). Wiring would need an array-backed accumulator proved equal to this
-  specification.
+* Cost of the specification functions: they are a literal functional transcription, and the Dafny `int` compiles to one
+  BigNumber per code unit and per index, so as compiled code they are slow (a 1 MiB string took 5.6 s to parse), quadratic in the
+  members of one array / object (`acc + [x]`, `HasKey`; the insertion sort `SortKV`) and, for the printer, in the length of each
+  string (`PrintBody` copies its accumulator once per character). `wireCanonicalOfText` and the base64url / hex / `CompareUtf8`
+  entry points still run them.
+* **Compiled fast paths (modules `Fast`, `FastP`).** `wireAcceptsText` and `wireCanonicalizeStrict` run separate compiled code that is
+  PROVED equal to the specification (`Api.ParseAcceptsUSpec`: `ParseAcceptsU(t, seed) == Json.ParseTop(t).Some?`; `Api.CanonicalOfValueU`:
+  `Done` => `CanonText(v) == Some(output)`, `Bad` => `CanonText(v) == None`). They take strings as native 16-bit units and index with
+  native integers (`newtype U16`, `newtype N`, compiled to plain JS numbers), and they are linear: the parser is one left-to-right
+  scan (methods mirroring `ParseValue` / `ArrLoop` / `ObjLoop` / `StrBody` / `ParseNum`, with loop invariants that equate each loop
+  state with the tail-recursive specification), strings are decoded once into an append-only arena, and duplicate keys are found in
+  one hash table per document keyed by (object id, key) whose bucket hash is salted per call (the proof holds for every salt; the
+  salt only keeps an attacker from aiming keys at one bucket). The printer checks the profile and prints in one pass into a growing
+  buffer; object members are ordered by a merge sort on their keys' code points and shown equal to `SortKV` through `SortedUnique`.
+  Recursion is bounded by the profile's depth limit (32), not by the number of members, so no legal input exhausts the stack. The only
+  result without a verdict is `Exh` (output past 2^40 code units, unreachable in practice), which the glue treats as resource exhaustion.
+  Measured on a 12-core Windows box (Node 24), proved path vs hand-written, cold: strictParse of a 1 MiB string about 35 ms (was 1.9 s;
+  hand-written 3-5 ms), a 520,000-element array about 0.1-0.15 s (hand-written 60 ms), a string of 100,000 escapes about 9 ms (was
+  126 s); canonicalizeStrict of a 1 MiB string about 15-30 ms (a 20,000-character string took 25 s before), a 5,000-key object about
+  14 ms (was 809 s), 520,000 integers about 0.15-0.2 s (hand-written 60 ms). The adapter glue (`toJU`, `units16`) is not proved: it
+  copies code units and classifies a JS number as integer / decimal lexeme exactly as `toJ` does.
 * `canonicalizeStrict` accepting a value that cannot be produced by `strictParse` is *proved impossible* only for the lexical model;
   the "canonical text of an accepted document is itself <= 1 MiB" fact is a precondition (`CanonRoundTripTop`), not proved.
-* Not wired into `packages/pca/src` (default as instructed): `strict-json.ts` / `hash.ts` still run the TypeScript.
+* Wiring: **opt-in** (`PCA_VERIFIED_CORE=wire`): `strictParse` accepts a text only when the proved parser accepts it (`wireAcceptsText`; the value is materialised by the hand-written parser, a disagreement fails closed, a `RangeError` from the compiled code defers to the hand-written parser and any other exception counts as a rejection, so callers always get a `StrictJsonError`), and `canonicalizeStrict` returns the proved encoding (a `RangeError` there likewise defers to the hand-written encoder). Off by default (the hand-written code is still several times faster; numbers above).
 
 
 ### Merkle trees: inclusion and consistency proofs (`Merkle.dfy`, RFC 6962 / RFC 9162)
@@ -336,7 +363,7 @@ inclusion proofs do not authenticate `(index, size)` (`IndexSizeNotAuthenticated
 difference is encoding strictness: the proved adapter requires canonical base64url of exactly 32 bytes for roots and elements, production
 accepts any decodable string (the random campaign finds this alone only at m = 0 with a non-canonical root).
 
-**Wiring.** Not wired into `merkle.ts` / `ledger.ts` (the adapter hashes with `node:crypto`, production with noble). Drop-ins: `verifyInclusionVerified`, `verifyMembershipVerified`, `verifyConsistencyVerified`, `merkleRootVerified`, `inclusionProofVerified`, `consistencyProofVerified`.
+**Wiring.** `merkle.ts verifyInclusion` (every plan-inclusion check of `verifyPCActnCore`, the mesh evidence check and `ledger.ts verifyLedgerInclusion`) **runs `verifyInclusionVerified` by default**: the glue computes the canonical leaf bytes and refuses a path longer than 53 steps before decoding (a DoS bound only: no safe-integer size has a longer path, `ExpLen`). `ledger.ts verifyLedgerConsistency` and `revocation.ts verifyMembership` route to the proved verifiers only with `PCA_VERIFIED_CORE=merkle-strict`. For consistency the proved verifier is stricter on encodings (roots and path elements must be canonical base64url of exactly 32 bytes; see the relation above), which is a behaviour change, not a cost problem. For membership it is not: since 0.4.2 the hand-written `leafOk` applies the same sibling rule (`decodeB64uStrict`, exactly 32 bytes), so the opt-in only swaps in the proved fold. The builders (`merkleRoot`, `merkleProof`, `consistencyProof`) stay hand-written: they produce data that the proved verifiers then check.
 
 **Remaining gap.** `Wire`-level canonical encoding of the leaf (`canonicalBytes`) is the caller's (leaf bytes are an input); the sha384 suite is covered by the inclusion verifier only (ledger.ts consistency is SHA-256 only); the `bindRoot` string of revocation.ts is glue; STH signatures / witness signing are not part of this component.
 
@@ -378,7 +405,7 @@ Production bugs found by this proof effort (both FIXED; the model now has the fi
 was false (sparse `trusted_refs`, throwing `registry.lookup`). `computeTaintVerified` is now observably identical to production on every
 tested input, including the hostile ones (throwing registry / getters / proxies, sparse arrays, inherited kinds).
 
-Wiring: **not wired** into production; `computeTaintVerified` is a drop-in.
+Wiring: **production path since 0.4.2**. `taint.ts computeTaint` forwards to `computeTaintVerified`, and the `enforce.taint` gate of `verifyPCActnCore` is `taintGateVerified` (the proved `Gate` over `ComputeSafe`). `joinLabel`, `joinLabels` and `classifyRef` stay exported hand-written helpers; no verifier path calls them.
 
 Gap / not covered: the numeric risk formula (`riskScore`'s `unit()`/clamp on the taint term) and `max(computed, agentClaim)` is
 proved only on the rank scale (`Combine`); no function named `deriveRisk` exists in `packages/pca/src` (the combination is described in
@@ -434,17 +461,21 @@ and a clock reading that is not a safe integer refuses the nonce (fail closed, n
 
 ### Wiring status
 
-Nothing is imported by production yet. `matchAgentBindingVerified`, `createMultiRootVerifierVerified` (pure, in `src/ext-attest.ts`) and
-`verifyAttestationVerified`, `createAttestationVerifierVerified`, `verifyAllowlistDurableVerified`, `verifyAllowlistAnchoredVerified` (in `test/support/attest-dropins.ts`,
-because they need production primitives and `@atlasauth/pca` depends on this package) are byte-identical re-implementations whose decisions are made by the compiled Dafny.
-Remaining gap: the primitive glue (signature verification, `parseBody` shape checks, canonical binding bytes, tree-head signature checks, `nonceEntropyOk`) is not proved;
-non-integer clock operands use the production double arithmetic (integer operands use the proved arithmetic; a fractional skew is floored, which is exact for integer
+**0.4.2 strict SVN.** `min_measurement` maps to the proved `MinM`: absent or `""` is no constraint, a non-empty string an equality pin, exactly `{svn: n}` (n a safe non-negative integer JSON number, not -0) the monotone ladder over a runtime measurement that must be canonical decimal text; ANY other present value is `MinBad`, which `MatchBinding` refuses first after the model allowlist (`MalformedMinFailsClosed`), and which `requiresAttestation` counts as a constraint. The frozen hand-written oracle parsed with `Number()` and ignored malformed bounds; the differential test compares against it everywhere except the min stage, which it checks against a literal transcription of the new rule.
+
+**Production path since 0.4.2.** `attestation.ts` forwards `matchAgentBinding`, `requiresAttestation` and `createMultiRootVerifier` to the
+pure adapters (`src/ext-attest.ts`), and `verifyAttestation`, `createAttestationVerifier`, `attest-allowlist.ts verifyAllowlistDurable` and
+`attest-allowlist-anchor.ts verifyAllowlistAnchored` to `packages/pca/src/attest-proved.ts` (the former test-support drop-ins, moved into the
+package), whose decisions are made by the compiled Dafny. `memoryNonceStore` returns the proved `VerifiedMemoryNonceStore` only with
+`PCA_VERIFIED_CORE=noncestore` (cost, see the wiring section). Remaining gap: the primitive glue (signature verification, `parseBody` shape
+checks, canonical binding bytes, tree-head signature checks, `nonceEntropyOk`, the hardware verifier) is not proved; non-integer clock operands
+use the production double arithmetic (integer operands use the proved arithmetic; a fractional skew is floored, which is exact for integer
 operands); `verifyAllowlistManifest` itself is not re-implemented (its ordering is proved over facts and checked against production, `allowlistGate`).
 
 
 ### Predicate DSL, caveat evaluator and Policy-VM decision (`PolicyVm.dfy`, `generated/pca_policyvm.js`, `src/ext-policyvm.ts`)
 
-Standalone module (no includes); built by `formal/dafny/build-ext.sh PolicyVm`. **271 verified, 0 errors**; no `assume`, `{:axiom}`, `extern` or
+Standalone module (no includes); built by `formal/dafny/build-ext.sh PolicyVm`. **288 verified, 0 errors** at 0.4.1 (271 at 0.4.0; 0.4.1 adds `RootCaveats`, `RootCaveatsEnforced`, `RootMaxSpendEnforced`, `MaxSpendEv`); no `assume`, `{:axiom}`, `extern` or
 `{:verify false}` (the build greps for them). Dafny 4.11.0 / Z3 4.12.1. The compiled JavaScript is committed and `build-ext.sh PolicyVm --check`
 recompiles and requires it to be byte-identical.
 
@@ -490,8 +521,12 @@ accessor properties; Proxy traps and a class whose `toString` is overridden are 
 **Not covered / gap.** `verifyChain` inside `decide()` (covered by `Chain.dfy`); `readEnvelope`; the floating-point risk functional and plan geodesic;
 `tool_schema` internals; the regex engine; the deep-recursion behaviour (the TS catches a stack overflow at the deepest frame and reports `unknown` there;
 the proved evaluator is total but its host recursion is bounded by the JS stack as well, so conditions nested far beyond any real policy are outside the
-equivalence; production inputs are depth-capped by the wire profile at 32). **Not wired** into production: `predicates.ts` / `policy-vm.ts` were not
-edited. A drop-in is NOT byte-identical for free: the production evaluators accept live JS values (getters, class instances) and the converter refuses
+equivalence; production inputs are depth-capped by the wire profile at 32). **Wiring (0.4.2):** `decide()` takes its threshold band, admission and release / admit / debit decision from the proved kernels
+(`requiredThresholdVerified`, `admitVerified`, `decideCoreVerified`) **by default**; the predicate DSL, caveat evaluator and root-caveat selection run
+the proved evaluator only with `PCA_VERIFIED_CORE=policyvm` (cost), with the production regex guard, the matcher charged against the decision's regex
+budget and the `tool_schema` evaluator as oracles; a value the converter refuses (`PolicyVmUnsupported`) falls back to the hand-written evaluator.
+The hand-written evaluators remain the default and keep their own mutation and differential coverage.
+Historical note: A drop-in is NOT byte-identical for free: the production evaluators accept live JS values (getters, class instances) and the converter refuses
 some of them, so wiring would need the converter's refusals to fall back to the TS path. The drop-in `decide()` used by the tests is
 `test/support/policyvm-decide.ts` (verbatim copy of `decide()` with the five decision points replaced by the proved code).
 
@@ -548,8 +583,8 @@ typed adapter `src/ext-regex.ts` (`safeRegexFullMatchVerified`, `compilesVerifie
 - JS number semantics: the TS guard reads `\d+` with `Number()`; Dafny uses unbounded ints. Differences only for > 2^53 literals, where both
   reject (the engine refuses repeat bounds > 4 digits, and the guard's final conjunct is the engine).
 - `ceil(log2(options))` uses `Math.log2`; Dafny uses an integer recursion (equal on 2..65).
-- **Not wired into production** (`safe-regex.ts`/`predicates.ts` unchanged): the compiled Dafny uses BigNumber/Seq and is ~100x slower than the
-  TS matcher (about 100 ms per random pattern in tests), so it is used as an oracle and as `ext-regex` for callers who want the proved path.
+- **Opt-in in production** (`PCA_VERIFIED_CORE=regex`: `safeRegexFullMatch` and `isSafeRegexSource` run the proved engine and guard): the compiled
+  Dafny uses BigNumber/Seq and is about two orders of magnitude slower than the TS matcher (numbers in the wiring section), so the default stays the TS matcher.
 
 ## Differential results
 `test/ext-regex.diff.test.ts` compares the proved engine against (a) production `compileSafeRegex`/`safeRegexFullMatch`, (b) production
@@ -573,6 +608,36 @@ budget (64 evaluations, 8,192 source chars, 5,000,000 steps per document vs one 
 `ReMatches` equals the single-predicate path, which the run confirms. Multi-pattern documents can be refused by the budget, and that is not covered.
 
 
+## Production wiring of the extension components
+
+Since 0.4.2 the production paths below **are** the compiled Dafny code (no switch, no fallback); the hand-written TypeScript they
+replaced is frozen in `packages/pca-verified-core/test/support/legacy/` and is used only as the differential-test oracle.
+`scripts/check-verified-core.sh` fails if any of these calls disappears or a hand-written decision loop comes back.
+
+| Production entry point | Proved function (model) | Default |
+|---|---|---|
+| `taint.ts computeTaint` | `computeTaintVerified` (`Taint.ComputeSafe`) | **proved** |
+| `verifyPCActnCore` `enforce.taint` gate | `taintGateVerified` (`Taint.Gate`) | **proved** |
+| `merkle.ts verifyInclusion` (plan inclusion, mesh evidence, `verifyLedgerInclusion`) | `verifyInclusionVerified` (`Merkle.VerifyInclusion`) | **proved** |
+| `attestation.ts matchAgentBinding`, `requiresAttestation`, `createMultiRootVerifier` | `matchAgentBindingVerified`, `requiresAttestationVerified`, `createMultiRootVerifierVerified` (`Attest.dfy`) | **proved** |
+| `verifyAttestation`, `createAttestationVerifier`, `verifyAllowlistDurable`, `verifyAllowlistAnchored` | `src/attest-proved.ts` (`Attest.dfy` `Order`/`GateStep`, `NeedsConsume`/`HookFinal`, `UpdateFn`/`DurableStep`, `HeadFreshness`/`CacheStage`/`AnchorScan`) | **proved** |
+| `decide()` threshold band, admission, release / admit / debit | `requiredThresholdVerified`, `admitVerified`, `decideCoreVerified` (`PolicyVm.dfy`) | **proved** |
+| `strictParse`, `canonicalizeStrict` | `wireAcceptsText`, `wireCanonicalizeStrict` (`Wire.dfy`) | opt-in `PCA_VERIFIED_CORE=wire` (linear compiled fast path, a few times the hand-written cost) |
+| `safeRegexFullMatch`, `isSafeRegexSource` | `safeRegexFullMatchVerified`, `isSafeRegexSourceVerified` (`Regex.dfy`) | opt-in `regex` (about two orders of magnitude slower) |
+| `decide()` predicate / caveat evaluator, root-caveat selection | `createPolicyVm` (`PolicyVm.dfy`) | opt-in `policyvm` (cost; `PolicyVmUnsupported` falls back) |
+| `verifyLedgerConsistency`, `revocation.ts verifyMembership` | `verifyConsistencyVerified`, `verifyMembershipVerified` (`Merkle.dfy`) | opt-in `merkle-strict` (consistency: stricter encodings, a behaviour change, not a cost issue; membership: same sibling rule as the default since 0.4.2) |
+| `memoryNonceStore` | `VerifiedMemoryNonceStore` (`Attest.dfy` `MsConsume`) | opt-in `noncestore` (functional map: per-consume copy) |
+
+`PCA_VERIFIED_CORE` is read once (`1` / `all` / `true` = every opt-in module; or a comma list of `wire, regex, policyvm,
+merkle-strict, noncestore`); without `process.env` (a browser bundle) nothing is opted in. Per-call cost of every row, proved vs
+hand-written on the same inputs: `packages/pca/bench/verified-core-bench.mjs` (results in `packages/pca/bench/results/verified-core.json`,
+produced by the 0.4.2 release gate; the default / opt-in split above follows the cost notes in each component section and is
+re-checked against those numbers).
+
+What this does **not** change: the glue around each call (primitive evaluation, value conversion, error-string rendering) is trusted
+and differentially tested, not proved; the risk score and budget arithmetic (`riskScore`, `leak`, `debit`, `cost`) remain hand-written;
+and the 9 native verifiers run none of this code (see "Not covered").
+
 ## Status of the extension findings (fixed in production AND in the models)
 
 Every production finding listed for `Attest`, `Merkle`, `Taint` and `PolicyVm` is fixed in `packages/pca/src` (regressions in
@@ -585,7 +650,7 @@ byte-identical to a fresh compile):
 | `Attest.dfy` | 134 verified, 0 errors | `NullIsFailedRoot`, `NullNeverAborts`, `SingleUse` (time-based), `LiveNeverEvicted`, `LiveRejected`, `ApplyKeepsLive`, `FullOfLiveRefuses`, `AgedOutReaccepted`, `ConsumeWf`, `OptionsFailClosed`, `EqualVersionConflict`, `WritesStrictlyIncrease`; removed `EvictionReopensReplay`, `ZeroCapacityNoProtection`, `ConflictBranchDead`, `SameVersionRaceAccepted` |
 | `Merkle.dfy` | 189 verified, 0 errors | `EmptyTreeIff`, `ExpLen`, `CLoopExactLen`, `VerMidExactLen`, `ExpLenShiftK`, `PreShiftOffK`, `NotPow2Shift`, `MidRejectsEmpty`, `NoAliasShiftK` (all shifts k*2^j, n <= 2^j), `SigDecides`, `DyadicTwins`, `PathCapRedundant` |
 | `Taint.dfy` | 63 verified, 0 errors | `UnknownKindIsNotVouching`, `RawRank`, `UnknownKindRanksWorst`, `ComputeSafe`, `EvalErrorFailsClosed`, `ComputeSafeTotal`, `GateFailsClosedOnError` |
-| `PolicyVm.dfy` | 271 verified, 0 errors | `CmpStrZero`, `CmpStrAntisym`, `CmpStrTrans`, `SortProps`, `SortedUnique`, `SortPerm`, `DeepEqObjPerm`, nested `DeepEqDeepPerm` / `NormEqSer` / `NormPermTop` / `NormCongArr` / `NormCongObj`, `ReversibilityNonStringUnsatisfied` |
+| `PolicyVm.dfy` | 271 verified, 0 errors (288 at 0.4.1, with the root-caveat lemmas; 0.4.2 adds the `intent_session` caveat: `SessionCaveatOk`, `SessionCaveatSatisfied`, `SessionCaveatMalformedUnsatisfied`, `SessionCaveatAgentSatisfied`, and the negative-zero flag on `VNum` (set exactly for the JS -0) with `SessionNegZeroRefused` / `SessionNegZeroRefusedAgent` / `SessionPosZeroAccepted`, so the model and TypeScript agree on `seq: -0`; count re-run at the 0.4.2 freeze) | `CmpStrZero`, `CmpStrAntisym`, `CmpStrTrans`, `SortProps`, `SortedUnique`, `SortPerm`, `DeepEqObjPerm`, nested `DeepEqDeepPerm` / `NormEqSer` / `NormPermTop` / `NormCongArr` / `NormCongObj`, `ReversibilityNonStringUnsatisfied` |
 
 `formal/dafny/build-ext.sh` (and `build.sh` via `remote-verify.sh`) now run through the pcaq queue (`formal/dafny/qrun.sh`), and
 `scripts/check-verified-core.sh` checks every standalone model (`Regex`, `Wire`, `Merkle`, `Taint`, `Attest`, `PolicyVm`) plus the core.

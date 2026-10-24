@@ -52,6 +52,16 @@ export function overCaveatCap(chain: unknown): boolean {
   }
   return total > CAVEAT_CAP_PER_CHAIN;
 }
+/**
+ * Intent Layer v2 (rules 13-19: `intent_session`, the v2 / committed-map goal, schema, accumulators, layers, W-B) postdates the
+ * frozen legacy copies: production opens the v2 goal commitment (the legacy reads it as an M2 goal and fails `intent`) and then
+ * runs the v2 checks, which fail closed without the verifier's v2 state (`opts.intentV2`, never passed by these loops: the
+ * first is "schema: this verifier has no action schema configured"). So a PCActn carrying `intent_session` is out of the
+ * legacy oracle's scope and is compared against the expected REJECT instead (like the caveat cap).
+ */
+export function carriesIntentSession(p: unknown): boolean {
+  return p !== null && typeof p === 'object' && !Array.isArray(p) && Object.prototype.hasOwnProperty.call(p, 'intent_session');
+}
 /** The cap_chain of a vector (decoded object or raw JSON text), or undefined. */
 export function vectorChain(p: unknown, raw?: string): unknown {
   if (p && typeof p === 'object') return (p as { cap_chain?: unknown }).cap_chain;

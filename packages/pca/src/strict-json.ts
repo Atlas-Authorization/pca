@@ -16,6 +16,9 @@ import { MAX_DECIMAL_DIGITS, MAX_JSON_DEPTH, hasLoneSurrogate } from './hash';
  *  - input longer than {@link MAX_JSON_BYTES} UTF-16 units.
  * Object keys are materialised as plain own data properties (so `"__proto__"` is just a key).
  */
+import { wireAcceptsText } from '@atlasauth/pca-verified-core';
+import { verifiedCoreOptIn } from './verified-core-mode';
+
 export const MAX_JSON_BYTES = 1 << 20;
 
 export class StrictJsonError extends Error {
@@ -28,6 +31,41 @@ export class StrictJsonError extends Error {
 const NUM = /-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/y;
 
 export function strictParse(text: string): unknown {
+  return verifiedCoreOptIn('wire') ? strictParseProvedGate(text) : strictParseTs(text);
+}
+
+/**
+ * OPT-IN (`PCA_VERIFIED_CORE=wire`): acceptance is decided by the Dafny-proved strict-JSON profile (formal/dafny/Wire.dfy,
+ * verified-core `wireAcceptsText`: the compiled fast path `Fast.AcceptsU`, proved equal to `Json.ParseTop(t).Some?`; linear,
+ * recursion bounded by the depth limit). A text the proved code rejects is rejected (with the hand-written parser's message when it
+ * agrees, else a generic one); an accepted text is materialised by the hand-written parser, and a disagreement fails closed. A
+ * RangeError from the compiled code would be resource exhaustion, not a verdict: such a text is decided by the hand-written parser
+ * alone, exactly as with the opt-in off. Any other exception counts as a rejection, so callers always get a StrictJsonError.
+ * Off by default: still several times the hand-written cost (docs/pca/security/verified-core.md).
+ */
+function provedAccepts(text: string): boolean | 'exhausted' {
+  try {
+    return wireAcceptsText(text);
+  } catch (e) {
+    return e instanceof RangeError ? 'exhausted' : false;
+  }
+}
+
+function strictParseProvedGate(text: string): unknown {
+  // The normative size cap is enforced BEFORE the compiled code sees the text: the adapter copies the input into a Dafny seq of
+  // code units, so an oversized body would cost a full copy (64 MiB of units) before being refused. UTF-8 bytes >= UTF-16 units, so more units than the
+  // cap is always over the byte cap: refuse exactly as the hand-written parser does (same message, same offset).
+  if (typeof text === 'string' && text.length > MAX_JSON_BYTES) throw new StrictJsonError('input too large', 0);
+  const proved = typeof text === 'string' ? provedAccepts(text) : false;
+  if (proved === 'exhausted') return strictParseTs(text);
+  if (!proved) {
+    strictParseTs(text); // throws the usual StrictJsonError when the hand-written parser agrees
+    throw new StrictJsonError('rejected by the verified strict-JSON profile', 0);
+  }
+  return strictParseTs(text);
+}
+
+function strictParseTs(text: string): unknown {
   if (typeof text !== 'string') throw new StrictJsonError('input is not a string', 0);
   // NORMATIVE: the input-size bound is in UTF-8 BYTES (portable; bounds storage), not UTF-16 units.
   if (new TextEncoder().encode(text).length > MAX_JSON_BYTES) throw new StrictJsonError('input too large', 0);

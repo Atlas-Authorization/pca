@@ -64,16 +64,17 @@ than seed from anything weaker, while verification (which needs no randomness) k
 
 | | |
 |---|---|
-| Artifact | `wasm/less_cat1.wasm`, 96,209 bytes |
-| SHA-256 | `2d6c8141f5194d2b808627105b7bf593c97d3e6544084b40248f42dbd1bf096e` |
-| Source | https://github.com/less-sig/LESS, commit `6383430b9123e69d2ef6a6224f930972e3225610`, `Reference_Implementation/`, `-DCATEGORY=252 -DTARGET=45` (public domain; unmodified) |
-| Toolchain | clang 19.1.5 from wasi-sdk 25 (recorded in the wasm's `producers` section), `-O2 -std=c99`, portable scalar C (no AVX/NEON defines), `-mexec-model=reactor` |
-| Added C | the ~40-line seam `less_wasm_glue.c` (embedded in `scripts/lessbuild.sh`): seeds the reference CSPRNG and exposes flat buffers |
-| Reproduce | on x86_64 Linux: `scripts/lessbuild.sh /tmp/work /tmp/out` (downloads wasi-sdk-25, clones LESS), copy `less_cat1.wasm` here, then `node scripts/embed-wasm.mjs` |
+| Artifact | `wasm/less_cat1.wasm`, 96,720 bytes |
+| SHA-256 | `473d20c2713ef30ab3b4cb3ac2b59c51f801501fa49ad046b999cb53afa77957` (recorded in `wasm/BUILD.json`) |
+| Source | the LESS reference with the Atlas verifier fixes, vendored in `sdks/pca-less-c` (https://github.com/Atlas-Authorization/LESS, branch `atlas-verifier-hardening`, commit `0b8b9a07ce029bd9af12d701f5093c5ca0d9418b` = upstream https://github.com/less-sig/LESS `6383430b9123e69d2ef6a6224f930972e3225610` plus the fixes of defects 1-3 below), `Reference_Implementation/`, `-DCATEGORY=252 -DTARGET=45` (CC0) |
+| Toolchain | wasi-sdk 25.0 (clang 19.1.5-wasi-sdk, recorded in the wasm's `producers` section), release tarball pinned by SHA-256, `-O2 -std=c99`, portable scalar C (no AVX/NEON defines), `-mexec-model=reactor`, 8 MiB stack |
+| Added C | the ~40-line seam `scripts/less_wasm_glue.c`: seeds the reference CSPRNG and exposes flat buffers |
+| Reproduce | `scripts/build-wasm.sh` (x86_64 Linux or arm64 macOS: downloads and hash-checks wasi-sdk 25.0, checks the source digest, writes `wasm/less_cat1.wasm` and `wasm/BUILD.json`), then `node scripts/embed-wasm.mjs` |
 
-The build script fetches and checks out exactly the commit above and refuses to build at any other commit. The
-build log of the SHIPPED binary was not retained, so what ties that artifact to the commit is that it reproduces the
-commit's KAT byte-for-byte; a fresh rebuild has not been shown to be bit-identical to the shipped file.
+The build is reproducible: the same script gives the same SHA-256 on x86_64 Linux (farm job `q261012-203714-gvc8`) and on
+arm64 macOS (2026-10-12). The previous artifact (`2d6c8141...`, built from the UNPATCHED upstream by an earlier script whose
+log was not kept) was never shown to be bit-identical to a rebuild; this one is. The new artifact reproduces the official KAT
+100/100 (keygen and signing are unchanged by the fixes).
 
 ## Evidence and findings
 
@@ -83,10 +84,9 @@ of cryptographic security.
 
 **Source pinned**: upstream `https://github.com/less-sig/LESS` commit
 `6383430b9123e69d2ef6a6224f930972e3225610` (current `main` head at time of writing; "Version 2.1"
-tree), `Reference_Implementation/`, `-DCATEGORY=252 -DTARGET=45`. The shipped
-`wasm/less_cat1.wasm` has SHA-256 `2d6c8141f5194d2b808627105b7bf593c97d3e6544084b40248f42dbd1bf096e`.
-The build log does not record the commit it was built at; what ties the artifact to this source is that
-it reproduces that commit's KAT exactly.
+tree), `Reference_Implementation/`, `-DCATEGORY=252 -DTARGET=45`. The table below was measured on the
+artifact of that date (the unpatched upstream, SHA-256 `2d6c8141...`). The current artifact is the patched build
+of "Build provenance"; its official KAT run (100/100) was repeated on 2026-10-12.
 
 | Check | Result |
 |---|---|
@@ -108,7 +108,7 @@ compile the **same** C, so their agreement rules out toolchain/ABI/UB-driven div
 it is not an independent implementation of the LESS specification, and the KATs were produced by that same
 reference code.
 
-### Upstream defects found (reference unmodified; mitigated in the wrapper)
+### Upstream defects found (fixed in the compiled reference; the wrapper keeps its own guards)
 
 All three are in the public-input path (a forged *signature*), so they matter to a verifier.
 
@@ -128,16 +128,25 @@ All three are in the public-input path (a forged *signature*), so they matter to
    bytes beyond the end of the signature (native ASan `heap-buffer-overflow`, 16-byte read, 0 bytes after
    the buffer). Read-only; not shown to leak anything.
 
-Mitigations (in `src/index.ts`, no C changed): reject inputs shorter than their trailing byte claims
-(1), reject any `cf_monom_actions` row with a padding bit set (2), and give the wasm a zero-filled
-`signatureMax`-byte tail after the signed message (3). Honest output never trips these: every KAT and
+Fixes (in the compiled C, `sdks/pca-less-c/README.md`): `crypto_sign_open` rejects an input shorter than its trailing
+byte claims (1); `CheckCanonicalAction` rejects any padding bit (2); `crypto_sign_open` requires the stored seed count to
+equal the number of seeds the challenge makes `RebuildGGM` read (3). Wrapper guards (in `src/core.ts`, kept as a second
+layer): the same length and padding checks, a zero-filled `signatureMax`-byte tail after the signed message, and the
+canonical seed count check described under "Malleability". Honest output never trips these: every KAT and
 several hundred freshly generated signatures pass through them. After the mitigations, the same fuzz classes run clean
 under ASan and UBSan natively (padded driver, `LESS_PAD=1`). These defects have **not** been reported
 upstream from this work.
 
 ### Malleability
 
-No alternative encoding of a valid signature was found to verify: 0 of 10,370 single-bit variants,
+**Found 2026-10-12 and fixed:** the UNPATCHED reference accepted a valid signature whose seed storage was extended by 16
+arbitrary bytes with the trailing seed count raised by one (count <= 11): it reads only the seeds the challenge needs and
+ignores the rest, so one valid signature had up to 2^128 accepted variants per extra seed slot. Single-bit flips (below)
+cannot find this. Fix 3 refuses it in the compiled reference, and `open` refuses any signature that still opens with its
+last seed dropped and its count lowered by one (a non-canonical seed count) even under an unpatched binary. Both forms
+are vectors in packages/pca/conformance/less-vectors.json that every verifier must refuse.
+
+No other alternative encoding of a valid signature was found to verify: 0 of 10,370 single-bit variants,
 plus region complement/reversal/cross-message tests. Signing the same (key, message) twice yields two
 different valid signatures (randomized salt); that is scheme randomization, not malleability. This is
 absence-of-evidence over the tested space, not a proof of strong unforgeability/non-malleability.

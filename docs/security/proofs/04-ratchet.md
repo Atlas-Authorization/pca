@@ -112,7 +112,7 @@ a random function gives independent uniform outputs).
 **Game FS-OTK.** $\mathcal A$ adaptively queries $\mathrm{Sign}(i,m)$ (each leaf at most once; the oracle punctures it), then queries $\mathrm{Corrupt}()$ once, receiving the current covering state and all leaf public keys. It then outputs $(i^\ast,m^\ast,\sigma^\ast)$.
 It wins if `verifyLeafSignature(root, i*, m*, σ*)` holds, leaf $i^\ast$ was punctured **before** the Corrupt call, and $m^\ast\ne$ the message signed at $i^\ast$.
 
-**Theorem GG-2 (forward security of the state) [R].**
+**Theorem GG-2 (forward security of the state) [R; machine-checked for every depth in Lean `formal/computational/leanmath/PcaMath/Ratchet.lean` (`hybrid`, `full`, `expand_factor`, `gg2`), 2026-10-12].**
 $$\Pr[\text{win}]\le\mathrm{Adv}^{\mathrm{cr}}_{\mathrm{SHA\text{-}256}}+2^d\Big[(d+2)\,\mathrm{Adv}^{\mathrm{prf}}_{\mathrm{HMAC}}(t')+\varepsilon_{\mathrm{Ed}}(t'',q_s,q_h)\Big].$$
 *Proof.* (Merkle) A verifying signature at index $i^\ast$ with a leaf key different from the true leaf key $pk_{i^\ast}$ is a Merkle second preimage at a fixed (index,size): `verifyLeafSignature` checks `merklePath.index === leafIndex` and `verifyInclusion` fixes the path shape (Lemma 4.1 of `01-core.md`), a SHA-256 collision.
 (Guess) The reduction guesses $i^\ast\in[2^d]$ (loss $2^d$; adaptive choice of punctured leaves forces this).
@@ -145,7 +145,7 @@ No post-compromise security: a thief of the current state signs every unspent le
 | RP-6 | special HVZK, simulator exact up to $<2^{-243}$ | P |
 | RP-7 | NIZK in the programmable ROM | PM |
 | GG-1 | length-doubling PRG from HMAC-PRF | P |
-| GG-2 | forward-secure unforgeability, loss $2^d(d+2)$ | R (HMAC-PRF, A-Ed) |
+| GG-2 | forward-secure unforgeability, loss $2^d(d+2)$ | PM (Lean `Ratchet.lean`, any depth; HMAC-PRF, A-Ed as premises) |
 | GG-3 | no resistance against the state holder | P (negative) |
 
 **Gaps.** (1) The end-to-end forking loss of RP-3. (2) The commitments are unrelated to server-side risk: the accumulator is not wired into the verifier. (3) Rounding in the adapters. (4) HMAC-PRF is an assumption about SHA-256's compression function; the Ed25519 constant is cited. (5) DL-H for the specific generator.

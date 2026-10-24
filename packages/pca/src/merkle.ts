@@ -1,12 +1,10 @@
+import { verifyInclusionVerified } from '@atlasauth/pca-verified-core';
 import {
   b64u,
   canonicalBytes,
-  decodeB64uStrict,
   DEFAULT_HASH_SUITE,
   hashCanonical,
   hashWithSuite,
-  HASH_LEN,
-  isHashSuite,
   sha256,
   type HashSuite,
 } from './hash';
@@ -26,6 +24,8 @@ import {
  * versa, so a proof built under one suite NEVER verifies under the other.
  */
 const LEAF = 0x00;
+/** Longest inclusion path a safe-integer tree size can have (ceil(log2(2^53))). */
+const MAX_INCLUSION_PATH = 53;
 const NODE = 0x01;
 
 export interface ProofStep {
@@ -108,51 +108,24 @@ export function merkleProof(leaves: unknown[], index: number, suite: HashSuite =
   return proof;
 }
 
-/** Sibling sides (leaf -> root) for leaf `index` in a tree of `size` leaves (RFC 6962 split). */
-function pathShape(index: number, size: number): ('L' | 'R')[] {
-  const out: ('L' | 'R')[] = [];
-  let idx = index;
-  let n = size;
-  while (n > 1) {
-    const k = split(n);
-    if (idx < k) {
-      out.push('R');
-      n = k;
-    } else {
-      out.push('L');
-      idx -= k;
-      n -= k;
-    }
-  }
-  return out.reverse();
-}
-
-/** Never throws; malformed proofs return false. */
+/**
+ * Never throws; malformed proofs return false.
+ *
+ * PROVED CODE. The decision is the Dafny-proved RFC 6962 inclusion verifier `Merkle.VerifyInclusion`
+ * (formal/dafny/Merkle.dfy, `@atlasauth/pca-verified-core` `verifyInclusionVerified`): the path shape bound to
+ * `(index, size)`, the per-suite sibling length, the fold and the root comparison. The glue here only computes the
+ * canonical leaf bytes (a value that cannot be canonicalised is `false`, as before); the adapter resolves the
+ * self-describing `hash_suite` (absent => sha256, unknown => false) and decodes every sibling and the root as
+ * canonical base64url of exactly the suite's length. See docs/pca/security/verified-core.md;
+ * `scripts/check-verified-core.sh` fails if this call is removed.
+ */
 export function verifyInclusion(root: string, proof: InclusionProof, leaf: unknown): boolean {
   try {
-    if (!proof || !Array.isArray(proof.path)) return false;
-    // Resolve the SELF-DESCRIBING hash suite fail-closed: absent => sha256 (back-compat); a present-but-
-    // unknown value is rejected (never silently downgraded). The suite fixes the sibling byte length, so a
-    // sha384 proof's 48-byte siblings can never satisfy a sha256 reading (32) and vice versa — cross-suite
-    // proofs therefore fail here without any special-casing.
-    const rawSuite: unknown = (proof as { hash_suite?: unknown }).hash_suite;
-    if (rawSuite !== undefined && !isHashSuite(rawSuite)) return false;
-    const suite: HashSuite = rawSuite === undefined ? DEFAULT_HASH_SUITE : rawSuite;
-    const sibLen = HASH_LEN[suite];
-    // Bind index+size: the path SHAPE (length and each sibling side) is fully determined by them.
-    if (!Number.isSafeInteger(proof.index) || !Number.isSafeInteger(proof.size)) return false;
-    if (proof.size < 1 || proof.index < 0 || proof.index >= proof.size) return false;
-    const shape = pathShape(proof.index, proof.size);
-    if (shape.length !== proof.path.length) return false;
-    let h = leafHashSuite(leaf, suite);
-    for (let i = 0; i < proof.path.length; i++) {
-      const step = proof.path[i]!;
-      if (step.side !== shape[i]) return false;
-      const sib = decodeB64uStrict(step.hash, sibLen); // canonical base64url, exactly `sibLen` bytes
-      if (!sib) return false;
-      h = step.side === 'L' ? nodeHash(sib, h, suite) : nodeHash(h, sib, suite);
-    }
-    return b64u(h) === root;
+    // DoS bound only (never a decision): a safe-integer `size` gives a path of at most 53 steps and the proved verifier
+    // rejects every other length, so an over-long path is refused before its siblings are decoded.
+    const path = (proof as { path?: unknown } | null | undefined)?.path;
+    if (Array.isArray(path) && path.length > MAX_INCLUSION_PATH) return false;
+    return verifyInclusionVerified(root, proof, canonicalBytes(leaf));
   } catch {
     return false;
   }

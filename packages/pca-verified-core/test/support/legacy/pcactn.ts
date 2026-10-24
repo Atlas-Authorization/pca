@@ -33,10 +33,13 @@ import {
   paramsDigest,
   planLeaf,
   verifyInclusion,
-} from '../../../../pca/src/merkle';
+} from './merkle'; // repointed to the frozen copy when verifyInclusion was wired to the proved code
 import type { ThresholdSignature } from '../../../../pca/src/threshold';
+// Intent Layer M2 (added after the freeze): the `intent` decision is not a verified-core component, so this oracle
+// calls the SAME production decision and the differential keeps comparing the check fold around it.
+import { type EnvelopeIntent, type IntentPolicy, decideIntentBinding } from '../../../../pca/src/intent-binding';
 import { BEACON_EPOCH_MS } from '../../../../pca/src/beacons';
-import { type TaintContext, computeTaint } from '../../../../pca/src/taint';
+import { type TaintContext, computeTaint } from './taint'; // repointed to the frozen copy when computeTaint was wired to the proved code
 
 /**
  * PCActn wire object (spec §7), WIRE FORMAT v2.
@@ -530,6 +533,8 @@ export async function verifyPCActnCore(
      * post-quantum protection and a pure-PQ leaf is unauthenticated. Do not set in production.
      */
     allowUnboundPq?: boolean;
+    /** Intent Layer M2 policy (mirrors production; see intent-binding.ts). */
+    intent?: IntentPolicy;
   },
 ): Promise<VerifyResult> {
   const checks: Record<string, CheckStatus> = {};
@@ -629,6 +634,11 @@ export async function verifyPCActnCore(
     // 4. counter (monotonicity vs. stored state is the RS's job; presence/type here)
     if (typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) checks.counter = 'pass';
     else fail('counter', 'missing or not a non-negative safe integer');
+
+    // Intent Layer M2: `intent` (present iff the PCActn carries `intent` or the policy is active).
+    const intentDecision = decideIntentBinding((p as { intent?: EnvelopeIntent }).intent, opts.grant, opts.intent);
+    if (intentDecision.status === 'pass') checks.intent = 'pass';
+    else if (intentDecision.status === 'fail') fail('intent', intentDecision.reason);
 
     // later milestones
 

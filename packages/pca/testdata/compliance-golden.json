@@ -1,0 +1,260 @@
+{
+ "eu-ai-act/full": {
+  "summary": {
+   "totalActions": 4,
+   "autonomous": 2,
+   "humanOverseen": 3,
+   "denied": 1,
+   "attributableAgents": 3,
+   "autonomousBound": 500,
+   "maxTaintObserved": 2
+  },
+  "period": {
+   "from": 2,
+   "to": 9
+  },
+  "pass": true,
+  "controls": [
+   {
+    "id": "art12-record-keeping",
+    "name": "Automatic logging of events",
+    "status": "pass",
+    "evidence": "4 attributable actions recorded"
+   },
+   {
+    "id": "art14-human-oversight",
+    "name": "Human oversight",
+    "status": "pass",
+    "evidence": "3 human-reviewed actions; autonomous bound 500"
+   },
+   {
+    "id": "art15-robustness",
+    "name": "Bounded autonomy (accuracy/robustness)",
+    "status": "pass",
+    "evidence": "machine-checked safety bound = 500 between human co-signs"
+   },
+   {
+    "id": "art13-transparency",
+    "name": "Transparency / traceability",
+    "status": "pass",
+    "evidence": "every action binds to a signed goal commitment (lineage)"
+   }
+  ],
+  "md": "# PCA compliance evidence — eu-ai-act\n\nGenerated 1970-01-01T00:00:01.000Z · 4 actions · 3 agents · overall: PASS\n\n| Control | Status | Evidence |\n| --- | --- | --- |\n| Automatic logging of events (art12-record-keeping) | PASS | 4 attributable actions recorded |\n| Human oversight (art14-human-oversight) | PASS | 3 human-reviewed actions; autonomous bound 500 |\n| Bounded autonomy (accuracy/robustness) (art15-robustness) | PASS | machine-checked safety bound = 500 between human co-signs |\n| Transparency / traceability (art13-transparency) | PASS | every action binds to a signed goal commitment (lineage) |\n\n_Evidence mapping, not a legal certification._"
+ },
+ "eu-ai-act/bare": {
+  "summary": {
+   "totalActions": 0,
+   "autonomous": 0,
+   "humanOverseen": 0,
+   "denied": 0,
+   "attributableAgents": 0,
+   "autonomousBound": 500,
+   "maxTaintObserved": 0
+  },
+  "period": {
+   "from": 0,
+   "to": 0
+  },
+  "pass": true,
+  "controls": [
+   {
+    "id": "art12-record-keeping",
+    "name": "Automatic logging of events",
+    "status": "warn",
+    "evidence": "0 attributable actions recorded"
+   },
+   {
+    "id": "art14-human-oversight",
+    "name": "Human oversight",
+    "status": "pass",
+    "evidence": "0 human-reviewed actions; autonomous bound 500"
+   },
+   {
+    "id": "art15-robustness",
+    "name": "Bounded autonomy (accuracy/robustness)",
+    "status": "pass",
+    "evidence": "machine-checked safety bound = 500 between human co-signs"
+   },
+   {
+    "id": "art13-transparency",
+    "name": "Transparency / traceability",
+    "status": "warn",
+    "evidence": "no goal commitment supplied"
+   }
+  ],
+  "md": "# PCA compliance evidence — eu-ai-act\n\nGenerated 1970-01-01T00:00:01.000Z · 0 actions · 0 agents · overall: PASS\n\n| Control | Status | Evidence |\n| --- | --- | --- |\n| Automatic logging of events (art12-record-keeping) | WARN | 0 attributable actions recorded |\n| Human oversight (art14-human-oversight) | PASS | 0 human-reviewed actions; autonomous bound 500 |\n| Bounded autonomy (accuracy/robustness) (art15-robustness) | PASS | machine-checked safety bound = 500 between human co-signs |\n| Transparency / traceability (art13-transparency) | WARN | no goal commitment supplied |\n\n_Evidence mapping, not a legal certification._"
+ },
+ "soc2/full": {
+  "summary": {
+   "totalActions": 4,
+   "autonomous": 2,
+   "humanOverseen": 3,
+   "denied": 1,
+   "attributableAgents": 3,
+   "autonomousBound": 500,
+   "maxTaintObserved": 2
+  },
+  "period": {
+   "from": 2,
+   "to": 9
+  },
+  "pass": true,
+  "controls": [
+   {
+    "id": "cc6.1-access",
+    "name": "Logical access — least privilege",
+    "status": "pass",
+    "evidence": "actions constrained by signed predicates + capability attenuation (deny by default)"
+   },
+   {
+    "id": "cc7.2-monitoring",
+    "name": "Monitoring of anomalies",
+    "status": "pass",
+    "evidence": "1 denied + 3 escalated actions captured"
+   },
+   {
+    "id": "cc7.3-audit-trail",
+    "name": "Audit trail",
+    "status": "pass",
+    "evidence": "4 content-addressed actions across 3 agents"
+   },
+   {
+    "id": "cc8.1-change",
+    "name": "Change management (policy integrity)",
+    "status": "pass",
+    "evidence": "policy is signed into the grant; tampering breaks verification"
+   }
+  ],
+  "md": "# PCA compliance evidence — soc2\n\nGenerated 1970-01-01T00:00:01.000Z · 4 actions · 3 agents · overall: PASS\n\n| Control | Status | Evidence |\n| --- | --- | --- |\n| Logical access — least privilege (cc6.1-access) | PASS | actions constrained by signed predicates + capability attenuation (deny by default) |\n| Monitoring of anomalies (cc7.2-monitoring) | PASS | 1 denied + 3 escalated actions captured |\n| Audit trail (cc7.3-audit-trail) | PASS | 4 content-addressed actions across 3 agents |\n| Change management (policy integrity) (cc8.1-change) | PASS | policy is signed into the grant; tampering breaks verification |\n\n_Evidence mapping, not a legal certification._"
+ },
+ "soc2/bare": {
+  "summary": {
+   "totalActions": 0,
+   "autonomous": 0,
+   "humanOverseen": 0,
+   "denied": 0,
+   "attributableAgents": 0,
+   "autonomousBound": 500,
+   "maxTaintObserved": 0
+  },
+  "period": {
+   "from": 0,
+   "to": 0
+  },
+  "pass": true,
+  "controls": [
+   {
+    "id": "cc6.1-access",
+    "name": "Logical access — least privilege",
+    "status": "pass",
+    "evidence": "actions constrained by signed predicates + capability attenuation (deny by default)"
+   },
+   {
+    "id": "cc7.2-monitoring",
+    "name": "Monitoring of anomalies",
+    "status": "pass",
+    "evidence": "0 denied + 0 escalated actions captured"
+   },
+   {
+    "id": "cc7.3-audit-trail",
+    "name": "Audit trail",
+    "status": "warn",
+    "evidence": "0 content-addressed actions across 0 agents"
+   },
+   {
+    "id": "cc8.1-change",
+    "name": "Change management (policy integrity)",
+    "status": "pass",
+    "evidence": "policy is signed into the grant; tampering breaks verification"
+   }
+  ],
+  "md": "# PCA compliance evidence — soc2\n\nGenerated 1970-01-01T00:00:01.000Z · 0 actions · 0 agents · overall: PASS\n\n| Control | Status | Evidence |\n| --- | --- | --- |\n| Logical access — least privilege (cc6.1-access) | PASS | actions constrained by signed predicates + capability attenuation (deny by default) |\n| Monitoring of anomalies (cc7.2-monitoring) | PASS | 0 denied + 0 escalated actions captured |\n| Audit trail (cc7.3-audit-trail) | WARN | 0 content-addressed actions across 0 agents |\n| Change management (policy integrity) (cc8.1-change) | PASS | policy is signed into the grant; tampering breaks verification |\n\n_Evidence mapping, not a legal certification._"
+ },
+ "gdpr/full": {
+  "summary": {
+   "totalActions": 4,
+   "autonomous": 2,
+   "humanOverseen": 3,
+   "denied": 1,
+   "attributableAgents": 3,
+   "autonomousBound": 500,
+   "maxTaintObserved": 2
+  },
+  "period": {
+   "from": 2,
+   "to": 9
+  },
+  "pass": true,
+  "controls": [
+   {
+    "id": "art5-purpose",
+    "name": "Purpose limitation",
+    "status": "pass",
+    "evidence": "actions bound to a committed goal/purpose"
+   },
+   {
+    "id": "art5-minimization",
+    "name": "Data minimisation",
+    "status": "pass",
+    "evidence": "taint-gated data flows; max taint observed = 2"
+   },
+   {
+    "id": "art5-accountability",
+    "name": "Accountability",
+    "status": "pass",
+    "evidence": "3 attributable agent identities"
+   },
+   {
+    "id": "art17-erasure",
+    "name": "Right to erasure",
+    "status": "pass",
+    "evidence": "erasure path wired"
+   }
+  ],
+  "md": "# PCA compliance evidence — gdpr\n\nGenerated 1970-01-01T00:00:01.000Z · 4 actions · 3 agents · overall: PASS\n\n| Control | Status | Evidence |\n| --- | --- | --- |\n| Purpose limitation (art5-purpose) | PASS | actions bound to a committed goal/purpose |\n| Data minimisation (art5-minimization) | PASS | taint-gated data flows; max taint observed = 2 |\n| Accountability (art5-accountability) | PASS | 3 attributable agent identities |\n| Right to erasure (art17-erasure) | PASS | erasure path wired |\n\n_Evidence mapping, not a legal certification._"
+ },
+ "gdpr/bare": {
+  "summary": {
+   "totalActions": 0,
+   "autonomous": 0,
+   "humanOverseen": 0,
+   "denied": 0,
+   "attributableAgents": 0,
+   "autonomousBound": 500,
+   "maxTaintObserved": 0
+  },
+  "period": {
+   "from": 0,
+   "to": 0
+  },
+  "pass": true,
+  "controls": [
+   {
+    "id": "art5-purpose",
+    "name": "Purpose limitation",
+    "status": "warn",
+    "evidence": "no goal commitment supplied"
+   },
+   {
+    "id": "art5-minimization",
+    "name": "Data minimisation",
+    "status": "pass",
+    "evidence": "taint-gated data flows; max taint observed = 0"
+   },
+   {
+    "id": "art5-accountability",
+    "name": "Accountability",
+    "status": "warn",
+    "evidence": "0 attributable agent identities"
+   },
+   {
+    "id": "art17-erasure",
+    "name": "Right to erasure",
+    "status": "warn",
+    "evidence": "erasure path not asserted"
+   }
+  ],
+  "md": "# PCA compliance evidence — gdpr\n\nGenerated 1970-01-01T00:00:01.000Z · 0 actions · 0 agents · overall: PASS\n\n| Control | Status | Evidence |\n| --- | --- | --- |\n| Purpose limitation (art5-purpose) | WARN | no goal commitment supplied |\n| Data minimisation (art5-minimization) | PASS | taint-gated data flows; max taint observed = 0 |\n| Accountability (art5-accountability) | WARN | 0 attributable agent identities |\n| Right to erasure (art17-erasure) | WARN | erasure path not asserted |\n\n_Evidence mapping, not a legal certification._"
+ }
+}

@@ -6,10 +6,11 @@
 // Out of the value model (the converter THROWS PolicyVmUnsupported, so a caller can fall back to production code):
 // cyclic data, sparse-array holes, accessor properties, objects with non-Object.prototype / non-null prototypes are kept (as non-plain),
 // Proxy traps are not observable here. Everything the production code reads from JSON-like data is covered.
+import { hardenDafnyRuntime } from './runtime';
 import BigNumber from 'bignumber.js';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const gen = require('../generated/pca_policyvm.js') as { _dafny: any; PolicyVm: any };
-const D = gen._dafny;
+const D = hardenDafnyRuntime(gen._dafny);
 const P = gen.PolicyVm;
 const F = P.__default;
 
@@ -94,7 +95,8 @@ export function toValue(x: unknown, path: object[] = []): any {
     case 'boolean':
       return x ? VTrue : VFalse;
     case 'number':
-      return Number.isFinite(x) ? P.Value.create_VNum(toRat(x)) : VNonFinite;
+      // negz: exactly the JS -0 (Object.is), so the model sees what isNonNeg-style integer checks see (PolicyVm.dfy NegZeroWf)
+      return Number.isFinite(x) ? P.Value.create_VNum(toRat(x), Object.is(x, -0)) : VNonFinite;
     case 'string':
       return P.Value.create_VStr(toStr(x));
     case 'function':

@@ -242,7 +242,12 @@ describe('aggregated capability chains: every refusal has its own reason', () =>
     const u = clone(chain) as any[];
     u[0].sig = '!!!';
     expect(V(u)).toEqual({ ok: false, reason: 'malformed hop sig' });
-    for (const alias of [chain[0]!.sig + '=', chain[0]!.sig.replace(/-/g, '+').replace(/_/g, '/')]) {
+    // The standard-alphabet spelling is an alias only when the random signature's base64url text contains a
+    // '-' or '_' (about 98% of draws); otherwise it IS the canonical text and must verify, so it is not an alias.
+    const sig0 = chain[0]!.sig;
+    const std = sig0.replace(/-/g, '+').replace(/_/g, '/');
+    const aliases = [sig0 + '=', ...(std !== sig0 ? [std] : [])];
+    for (const alias of aliases) {
       const v = clone(chain) as any[];
       v[0].sig = alias;
       const r = V(v);

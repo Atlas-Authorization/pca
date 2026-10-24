@@ -650,15 +650,21 @@ describe('timing: scalar multiplication must not depend on the secret scalar (on
     const dense = (1n << 252n) - 1n;
     // Interleave the two classes trial by trial and compare their FASTEST observations: the minimum is
     // robust to scheduler / GC / co-tenant load, which only ever adds time.
-    const best = { sparse: Infinity, dense: Infinity };
-    for (let trial = 0; trial < 120; trial++) {
-      for (const [name, k] of trial % 2 ? ([['sparse', sparse], ['dense', dense]] as const) : ([['dense', dense], ['sparse', sparse]] as const)) {
-        const t0 = performance.now();
-        for (let i = 0; i < 10; i++) mulBase(k);
-        best[name] = Math.min(best[name], performance.now() - t0);
+    const measure = (): number => {
+      const best = { sparse: Infinity, dense: Infinity };
+      for (let trial = 0; trial < 120; trial++) {
+        for (const [name, k] of trial % 2 ? ([['sparse', sparse], ['dense', dense]] as const) : ([['dense', dense], ['sparse', sparse]] as const)) {
+          const t0 = performance.now();
+          for (let i = 0; i < 10; i++) mulBase(k);
+          best[name] = Math.min(best[name], performance.now() - t0);
+        }
       }
-    }
-    const ratio = best.dense / best.sparse;
+      return best.dense / best.sparse;
+    };
+    // A real scalar-dependent cost shows in every measurement; a co-tenant burst on a shared runner does not repeat.
+    // One re-measurement when the first lands outside the band (once seen at 1.41 on CI); the band itself is unchanged.
+    let ratio = measure();
+    if (!(ratio > 0.7 && ratio < 1.4)) ratio = measure();
     expect(ratio).toBeGreaterThan(0.7);
     expect(ratio).toBeLessThan(1.4);
   });

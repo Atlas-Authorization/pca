@@ -225,12 +225,15 @@ if (cfg.id === 0) {
     expect(r.proxyLog).toEqual([]);
     const r2 = await launchLocal({ n: 2, vectors: [...V], mainJs: srvJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'bitflip', dir: 'c2s', afterBytes: 0 } } });
     expect(r2.outputs[1]!.json).toMatchObject({ got: 'ok' });
-    expect(r2.proxyLog).toEqual(['fault bitflip c2s after 0B']);
+    // one entry per proxied connection: node 1 retries while node 0 is not listening yet, so a slow runner can log it twice
+    expect(r2.proxyLog.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(r2.proxyLog)).toEqual(new Set(['fault bitflip c2s after 0B']));
     // a delay fault without ms keeps the proxy's one-second default (the launcher only scales an ms that was given)
     const r3 = await launchLocal({ n: 2, vectors: [...V], mainJs: srvJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'delay', dir: 'c2s', afterBytes: 0 } } });
     expect(r3.outputs[1]!.json.got).toBe('ok');
     expect(r3.outputs[1]!.json.ms).toBeGreaterThanOrEqual(950);
-    expect(r3.proxyLog).toEqual(['fault delay c2s after 0B']);
+    expect(r3.proxyLog.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(r3.proxyLog)).toEqual(new Set(['fault delay c2s after 0B']));
   }, 60_000);
   it('output: the last non-empty stdout line is parsed; stderr is kept up to 2000 characters; the exit code is reported', async () => {
     const r = await launchLocal({ n: 1, vectors: [V[0]], mainJs: noisyJs, offline: 'no-dealer' });

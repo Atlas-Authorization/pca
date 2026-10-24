@@ -1,0 +1,10 @@
+{
+  "name": "pca-canon-fuzz",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Adversarial canonical-form (float/string) cross-language convergence proof for the PCA verifiers. Generates hard doubles + hard strings, runs them through the pca-diff-fuzz language drivers, and asserts byte-identical canonical output vs the TypeScript reference.",
+  "scripts": {
+    "audit": "./run.sh",
+    "gate": "./run.sh --count 60000"
+  }
+}

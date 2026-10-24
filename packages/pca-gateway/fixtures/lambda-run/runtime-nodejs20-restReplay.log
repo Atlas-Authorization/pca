@@ -1,0 +1,61 @@
+09 Oct 2026 12:29:41,797 [INFO] (rapid) exec '/var/runtime/bootstrap' (cwd=/var/task, handler=)
+09 Oct 2026 12:29:42,007 [INFO] (rapid) INIT START(type: on-demand, phase: init)
+09 Oct 2026 12:29:42,008 [INFO] (rapid) The extension's directory "/opt/extensions" does not exist, assuming no extensions to be loaded.
+09 Oct 2026 12:29:42,008 [INFO] (rapid) Starting runtime without AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN , Expected?: false
+START RequestId: 62bbccd5-30cc-4735-b2a3-da5aaae9dbb5 Version: $LATEST
+09 Oct 2026 12:29:42,173 [INFO] (rapid) INIT RTDONE(status: success)
+09 Oct 2026 12:29:42,173 [INFO] (rapid) INIT REPORT(durationMs: 165.978000)
+09 Oct 2026 12:29:42,173 [INFO] (rapid) INVOKE START(requestId: 62bbccd5-30cc-4735-b2a3-da5aaae9dbb5)
+09 Oct 2026 12:29:42,273 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 99.485000ms)
+END RequestId: 62bbccd5-30cc-4735-b2a3-da5aaae9dbb5
+REPORT RequestId: 62bbccd5-30cc-4735-b2a3-da5aaae9dbb5	Init Duration: 0.04 ms	Duration: 265.64 ms	Billed Duration: 266 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: e5d2aacd-b095-4579-9a80-72125bf753b1 Version: $LATEST
+09 Oct 2026 12:29:42,290 [INFO] (rapid) INVOKE START(requestId: e5d2aacd-b095-4579-9a80-72125bf753b1)
+09 Oct 2026 12:29:42,317 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 27.093000ms)
+END RequestId: e5d2aacd-b095-4579-9a80-72125bf753b1
+REPORT RequestId: e5d2aacd-b095-4579-9a80-72125bf753b1	Duration: 27.29 ms	Billed Duration: 28 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: fca5c7da-03f2-4279-82c5-2a911a3b35d7 Version: $LATEST
+09 Oct 2026 12:29:42,328 [INFO] (rapid) INVOKE START(requestId: fca5c7da-03f2-4279-82c5-2a911a3b35d7)
+END RequestId: fca5c7da-03f2-4279-82c5-2a911a3b35d7
+REPORT RequestId: fca5c7da-03f2-4279-82c5-2a911a3b35d7	Duration: 19.19 ms	Billed Duration: 20 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+09 Oct 2026 12:29:42,347 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 18.979000ms)
+START RequestId: 3c84f365-ec46-49a4-b219-04f4b8d7cb9b Version: $LATEST
+09 Oct 2026 12:29:42,352 [INFO] (rapid) INVOKE START(requestId: 3c84f365-ec46-49a4-b219-04f4b8d7cb9b)
+09 Oct 2026 12:29:42,381 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 29.039000ms)
+END RequestId: 3c84f365-ec46-49a4-b219-04f4b8d7cb9b
+REPORT RequestId: 3c84f365-ec46-49a4-b219-04f4b8d7cb9b	Duration: 29.29 ms	Billed Duration: 30 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: 843a37d7-4eaa-4b4b-8370-3f580010c4ca Version: $LATEST
+09 Oct 2026 12:29:42,386 [INFO] (rapid) INVOKE START(requestId: 843a37d7-4eaa-4b4b-8370-3f580010c4ca)
+END RequestId: 843a37d7-4eaa-4b4b-8370-3f580010c4ca
+REPORT RequestId: 843a37d7-4eaa-4b4b-8370-3f580010c4ca	Duration: 19.23 ms	Billed Duration: 20 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+09 Oct 2026 12:29:42,405 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 19.027000ms)
+START RequestId: cfbab435-f018-424e-88e1-9f89b535dc84 Version: $LATEST
+09 Oct 2026 12:29:42,409 [INFO] (rapid) INVOKE START(requestId: cfbab435-f018-424e-88e1-9f89b535dc84)
+END RequestId: cfbab435-f018-424e-88e1-9f89b535dc84
+REPORT RequestId: cfbab435-f018-424e-88e1-9f89b535dc84	Duration: 17.72 ms	Billed Duration: 18 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+09 Oct 2026 12:29:42,427 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 17.547000ms)
+START RequestId: 6998fc82-ec85-4227-8254-6ddef46c0fea Version: $LATEST
+09 Oct 2026 12:29:42,430 [INFO] (rapid) INVOKE START(requestId: 6998fc82-ec85-4227-8254-6ddef46c0fea)
+09 Oct 2026 12:29:42,446 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 16.551000ms)
+END RequestId: 6998fc82-ec85-4227-8254-6ddef46c0fea
+REPORT RequestId: 6998fc82-ec85-4227-8254-6ddef46c0fea	Duration: 16.69 ms	Billed Duration: 17 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: 2eb0574c-7dae-4ec1-9033-fac09e77462b Version: $LATEST
+09 Oct 2026 12:29:42,449 [INFO] (rapid) INVOKE START(requestId: 2eb0574c-7dae-4ec1-9033-fac09e77462b)
+09 Oct 2026 12:29:42,465 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 16.360000ms)
+END RequestId: 2eb0574c-7dae-4ec1-9033-fac09e77462b
+REPORT RequestId: 2eb0574c-7dae-4ec1-9033-fac09e77462b	Duration: 16.57 ms	Billed Duration: 17 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: 4aa24ba2-54fe-458a-98af-884288d2c9a3 Version: $LATEST
+09 Oct 2026 12:29:42,469 [INFO] (rapid) INVOKE START(requestId: 4aa24ba2-54fe-458a-98af-884288d2c9a3)
+END RequestId: 4aa24ba2-54fe-458a-98af-884288d2c9a3
+REPORT RequestId: 4aa24ba2-54fe-458a-98af-884288d2c9a3	Duration: 17.56 ms	Billed Duration: 18 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+09 Oct 2026 12:29:42,486 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 17.388000ms)
+START RequestId: 9ace584c-9352-4ddc-9bad-483701dd4961 Version: $LATEST
+09 Oct 2026 12:29:42,490 [INFO] (rapid) INVOKE START(requestId: 9ace584c-9352-4ddc-9bad-483701dd4961)
+09 Oct 2026 12:29:42,507 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 16.853000ms)
+END RequestId: 9ace584c-9352-4ddc-9bad-483701dd4961
+REPORT RequestId: 9ace584c-9352-4ddc-9bad-483701dd4961	Duration: 17.02 ms	Billed Duration: 18 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	
+START RequestId: 02a5d45a-6d75-4394-88d8-bc80af3b4395 Version: $LATEST
+09 Oct 2026 12:29:42,510 [INFO] (rapid) INVOKE START(requestId: 02a5d45a-6d75-4394-88d8-bc80af3b4395)
+09 Oct 2026 12:29:42,528 [INFO] (rapid) INVOKE RTDONE(status: success, produced bytes: 0, duration: 17.381000ms)
+END RequestId: 02a5d45a-6d75-4394-88d8-bc80af3b4395
+REPORT RequestId: 02a5d45a-6d75-4394-88d8-bc80af3b4395	Duration: 17.70 ms	Billed Duration: 18 ms	Memory Size: 3008 MB	Max Memory Used: 3008 MB	

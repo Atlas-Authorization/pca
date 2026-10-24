@@ -1,15 +1,24 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error - plain ESM script, no types
-import { ALLOW, scan } from '../../../scripts/check-pq-pinning.mjs';
+
+// Repository tooling under scripts/: absent from trees that ship this package without the repository scripts (the public
+// package repository). The suite skips there instead of failing to load.
+const SCRIPT = join(__dirname, '..', '..', '..', 'scripts', 'check-pq-pinning.mjs');
+const HAVE = existsSync(SCRIPT);
+/* eslint-disable @typescript-eslint/no-explicit-any -- plain ESM script, no types */
+let ALLOW: any;
+let scan: any;
 
 /**
  * R3-01 structural guard: no production file may verify a post-quantum signature outside the choke point
  * (packages/pca/src/pq.ts) unless it is allowlisted with a reason. A forgotten surface cannot recur silently.
  */
-describe('scripts/check-pq-pinning.mjs', () => {
+describe.skipIf(!HAVE)('scripts/check-pq-pinning.mjs', async () => {
+  // describe.skipIf still RUNS this collector (to register the skipped tests), so the import itself must be guarded
+  if (HAVE) ({ ALLOW, scan } = await import(pathToFileURL(SCRIPT).href));
   it('the repository has no un-allowlisted PQ verification path', () => {
     expect(scan()).toEqual([]);
   });

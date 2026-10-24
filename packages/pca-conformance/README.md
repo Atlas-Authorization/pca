@@ -41,7 +41,7 @@ import { writeFileSync } from 'node:fs';
 writeFileSync('vectors.json', serializeVectorSet(VECTOR_SET));
 ```
 
-Each vector has `id`, `description`, `pcactn`, `aud` (the verifier's own audience, or `null` for any), `verifyOptions` (deterministic `nowEpoch` and optional enforcement gates) and `expect`.
+Each vector has `id`, `description`, `pcactn`, `aud` (the verifier's own audience, or `null` for any), `verifyOptions` (deterministic `nowEpoch`, optional enforcement gates and an optional `intent` policy `{require?, min_fidelity_ppm?, max_residual_risk_ppm?}`) and `expect`. The `intent` check is reported only when the action carries the signed `intent` member or the policy is active (the `intent_*` vectors).
 
 ## API
 

@@ -1,0 +1,24 @@
+# name | module | invariants (spec:/prop: prefixes as in formal/tla/run.sh) | constants (;-separated) | expected
+nf_tau1_eps0_N4   | ElicitationLoop | TypeOK GrantHighConf TruthInVS GrantSound QueryBound prop:VsShrinks prop:Termination | N=4;Eps=0;TauNum=1;TauDen=1;Noisy=FALSE;MaxNoise=0 | pass
+nf_tau1_eps1_N4   | ElicitationLoop | TypeOK GrantHighConf TruthInVS GrantSound QueryBound prop:VsShrinks prop:Termination | N=4;Eps=1;TauNum=1;TauDen=1;Noisy=FALSE;MaxNoise=0 | pass
+nf_tau1_eps0_N5   | ElicitationLoop | TypeOK GrantHighConf TruthInVS GrantSound QueryBound prop:VsShrinks prop:Termination | N=5;Eps=0;TauNum=1;TauDen=1;Noisy=FALSE;MaxNoise=0 | pass
+nf_tau1_eps2_N5   | ElicitationLoop | TypeOK GrantHighConf TruthInVS GrantSound QueryBound prop:VsShrinks prop:Termination | N=5;Eps=2;TauNum=1;TauDen=1;Noisy=FALSE;MaxNoise=0 | pass
+# a credence threshold below 1 is NOT exactly sound (only sound in posterior expectation; see credence_bound)
+nf_tauhalf_N4     | ElicitationLoop | TypeOK GrantHighConf TruthInVS GrantSound | N=4;Eps=1;TauNum=1;TauDen=2;Noisy=FALSE;MaxNoise=0 | fail
+# one wrong answer breaks soundness: the noise-free assumption is load-bearing
+noisy1_tau1_N4    | ElicitationLoop | TypeOK GrantHighConf GrantSound | N=4;Eps=0;TauNum=1;TauDen=1;Noisy=TRUE;MaxNoise=1 | fail
+# ... but even with noise the loop still terminates and the grant is still inside the high-confidence region
+noisy1_live_N4    | ElicitationLoop | TypeOK GrantHighConf QueryBound prop:VsShrinks prop:Termination | N=4;Eps=0;TauNum=1;TauDen=1;Noisy=TRUE;MaxNoise=1 | pass
+# v2: frame vetoes join the ratchet (T21)
+v2_veto_N4        | ElicitationLoop | TypeOK GrantHighConf GrantSound VetoDisjoint prop:VetoPermanent prop:Termination | N=4;Eps=0;TauNum=1;TauDen=1;Noisy=FALSE;MaxNoise=0 | pass
+# v2 Reservation (T11): no overspend with LIN; the double-spend trace without it; equivocation detectable with inclusion proofs
+res_lin           | Reservation | TypeOK NoOverspend EquivocationDetected prop:ReleaseEventually | Sites={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;LIN=TRUE;BYZ=TRUE;INCL=TRUE | pass
+res_nolin         | Reservation | TypeOK NoOverspend | Sites={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;LIN=FALSE;BYZ=FALSE;INCL=TRUE | fail
+res_noincl        | Reservation | TypeOK EquivocationDetected | Sites={"s1","s2"};Cap=3;Amts={1,2};MaxIds=2;LIN=TRUE;BYZ=TRUE;INCL=FALSE | fail
+# v2 LazyElicitation (T13, T14): adversarial visit order
+lazy_nf_N4        | LazyElicitation | EffectiveSound QuestionsBound NoAgentWidening prop:UncertainShrinks | N=4;Noisy=FALSE;MaxNoise=0;AgentSigned=FALSE | pass
+lazy_noisy_N4     | LazyElicitation | EffectiveSound | N=4;Noisy=TRUE;MaxNoise=1;AgentSigned=FALSE | fail
+lazy_agent_N4     | LazyElicitation | EffectiveSound NoAgentWidening | N=4;Noisy=FALSE;MaxNoise=0;AgentSigned=TRUE | fail
+# v2 Revocation (T22)
+rev_ok            | Revocation | ExposureBound | MaxT=8;DRev=2;S=1;CheckAge=TRUE | pass
+rev_noage         | Revocation | ExposureBound | MaxT=8;DRev=2;S=1;CheckAge=FALSE | fail

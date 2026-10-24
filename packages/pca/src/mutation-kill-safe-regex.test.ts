@@ -2,10 +2,11 @@
  * Mutation-kill tests for safe-regex.ts: differential against V8 for every accepted construct (class escapes, complement
  * boundaries, range merging, escapes), the exact accept/refuse boundary of every numeric limit, and the work-budget edge.
  */
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { compileSafeRegex, MAX_MATCH_STEPS, MAX_NFA_INSTRUCTIONS, runSafeRegex, safeRegexFullMatch } from './safe-regex';
 import { RegexBudget } from './regex-budget';
 import { REGEX_CACHE_MAX_PER_SOURCE, regexCacheHas } from './regex-cache';
+import { __setVerifiedCoreModeForTests, VERIFIED_CORE_OPT_IN_MODULES, verifiedCoreOptIn } from './verified-core-mode';
 
 const ref = (src: string, s: string): boolean => new RegExp('^(?:' + src + ')$').test(s);
 
@@ -464,6 +465,10 @@ describe('class range normalisation (internal representation)', () => {
 });
 
 describe('survivor kills (round 4): early abort and compile cache are observable through allocation counts', () => {
+  // These observe the hand-written compiler and its compile cache; under PCA_VERIFIED_CORE=regex safeRegexFullMatch runs the proved
+  // engine, which has no cache. Pin the regex opt-in off here (every other opt-in stays as configured).
+  beforeAll(() => __setVerifiedCoreModeForTests(VERIFIED_CORE_OPT_IN_MODULES.filter((m) => m !== 'regex' && verifiedCoreOptIn(m)).join(',') || 'none'));
+  afterAll(() => __setVerifiedCoreModeForTests(undefined));
   /** Number of Array.prototype.push calls made while fn runs (the compiler builds its AST and program with push; the matcher does not). */
   const pushes = (fn: () => void): number => {
     let n = 0;

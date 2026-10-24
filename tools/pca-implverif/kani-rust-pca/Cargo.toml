@@ -14,6 +14,12 @@ sha2 = "0.10"
 serde_json = { version = "1", features = ["float_roundtrip"] }
 base64 = "0.22"
 fips204 = "0.4"
+# the remaining signature-suite verifiers of sdks/rust-pca (same versions and features)
+fips205 = { version = "0.4", default-features = false, features = ["slh_dsa_sha2_128f", "slh_dsa_sha2_256s"] }
+fn-dsa-vrfy = "0.4"
 
 [lints.rust]
 unexpected_cfgs = { level = "allow" }
+
+[features]
+b64wrap = []

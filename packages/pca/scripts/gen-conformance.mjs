@@ -3,7 +3,7 @@
 // Usage: pnpm --filter @atlasauth/pca build && node packages/pca/scripts/gen-conformance.mjs
 import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { writeCore } from './conformance-io.mjs';
+import { cloneJson, writeCore } from './conformance-io.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as pca from '../dist/index.js';
@@ -26,7 +26,7 @@ for (const k of [principal, agent, sub, rogue]) {
   keys[k.label] = { seed: pca.b64u(k.secretKey), public: pca.b64u(k.publicKey) };
 }
 
-const clone = (x) => JSON.parse(JSON.stringify(x));
+const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const caveatA = { type: 'max_spend', usd: 100 };
 // Exercises UTF-16 key ordering (U+FF5E sorts AFTER U+1F600's surrogate pair) and non-ASCII strings.
 const caveatB = { type: 'note', '～': 1, '\u{1F600}': 2, z: 3, text: 'café <&> "q" \\ \n ' };
