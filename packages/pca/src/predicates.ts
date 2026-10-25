@@ -1,7 +1,10 @@
+import { isSafeRegexSourceVerified } from '@atlasauth/pca-verified-core';
+import { verifiedCoreOptIn } from './verified-core-mode';
 import { canonicalize, compareUtf8, hasLoneSurrogate } from './hash';
 import { compileSafeRegex, safeRegexFullMatch } from './safe-regex';
 import { chargeRegex, withRegexBudget } from './regex-budget';
 import type { Caveat, CaveatEvaluator } from './capability';
+import { INTENT_SESSION_CAVEAT, intentSessionCaveatError } from './intent-session-caveat';
 
 /**
  * Deterministic, non-code predicate DSL (spec §5.1 "semantic action-predicates") + the built-in
@@ -475,6 +478,8 @@ const UNBOUNDED_QUANTIFIER_BITS = 8;
  * Well-formed ordinary patterns (`/acct/[^/]+/items/\d+`, `(?:GET|POST) /x`) are unaffected.
  */
 export function isSafeRegexSource(src: string): boolean {
+  // OPT-IN (`PCA_VERIFIED_CORE=regex`): the Dafny-proved guard (formal/dafny/Regex.dfy `SafeSource`, verified-core).
+  if (verifiedCoreOptIn('regex')) return isSafeRegexSourceVerified(src);
   type Frame = { hasQuant: boolean; hasAlt: boolean };
   const stack: Frame[] = [{ hasQuant: false, hasAlt: false }];
   let prev: 'none' | 'atom' | Frame = 'none'; // what a following quantifier would bind to
@@ -689,6 +694,9 @@ export const envelopeCaveatEvaluator: CaveatEvaluator = (caveat: Caveat, ctx: un
         const lim = caveat.limit;
         return fin(lim) && lim >= 0;
       }
+      case INTENT_SESSION_CAVEAT:
+        // Intent Layer v2 session binding (rule 13): no per-action constraint here; satisfied iff well-formed.
+        return intentSessionCaveatError(caveat) === null;
       default:
         return false;
     }

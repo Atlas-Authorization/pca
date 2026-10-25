@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // bridge.ts - the ONLY file that touches the Dafny-generated runtime types. Everything exported from the package
 // is plain JSON-like data / closures; Dafny datatypes (BigNumber ints, Seq, Option, Res, tuples) never leak.
+import { hardenDafnyRuntime } from './runtime';
 import BigNumber from 'bignumber.js';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const core = require('../generated/pca_core.js') as {
@@ -12,6 +13,7 @@ const core = require('../generated/pca_core.js') as {
   Replay: any;
   Verdict: any;
 };
+hardenDafnyRuntime(core._dafny);
 
 export const D = core;
 export const Common = core.Common;

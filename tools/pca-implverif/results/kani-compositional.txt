@@ -1,7 +1,50 @@
-Kani compositional harnesses (tools/pca-implverif/kani-rust-pca/src/proofs.rs, modules compositional and b64_compositional), 2026-10-11.
-NONE OF THESE HAS A VERDICT.
-- First submission (q261011-171345-pl2v and siblings): compile error, "recursion limit reached while expanding #[kanitool::stub]"
-  (13 stub attributes on decision_logic_abstract exceed rustc's default 128). Fixed by src/kroot.rs (crate root that sets
-  recursion_limit and loads the unmodified lib.rs as a module). The fix has NOT been compiled yet.
-- Resubmissions q261011-171646-jcz0 and q261011-183314-uqnr / 183315-4gm1 / 183316-3ep0 / 183316-7gpw waited in the queue
-  (no box with free memory) and were cancelled unrun when the budget ran out.
+Kani compositional harnesses (tools/pca-implverif/kani-rust-pca/src/proofs.rs, modules compositional and b64_compositional).
+Kani 0.68.0, CBMC 6.11.0, CaDiCaL unless stated. Queue owner iv-close. Status at 2026-10-12 (rust-pca code about to change for
+0.4.2: the full set is to be re-run ONCE with tools/pca-implverif/run-iv-close.sh after the code freeze).
+
+==== 0.4.2 FREEZE RUN (sources at 45351bbf, clean worktree; run-iv-close.sh harness set, 57 harnesses; 2026-10-13) ====
+Queue owner freeze042-kani. One harness per job, CaDiCaL, unwinding assertions on; d_* with the 240 s loop probe and
+--unwindset <B-tree loops>:2 as in run-iv-close.sh. Memory: 12 GB unless stated (the 12 GB cap is too small from about
+length 32 for b_rt and 44 for b_len; those were re-run at the memory shown, nothing else changed).
+PROVED (46)
+  json_value_get_dispatch                    1 m          json_field1_ver / aud / iat / exp            5 m each (15 GB)
+  json_field1_counter / grant_ref / cap_chain 5-6 m (15 GB)  b64u_decode_metadata_mirror               3 m
+  b_alphabet_scan_le64                       2 m          b_crate_decode_over_contract_any_len         < 1 m
+  b64u_spec_vs_crate_le4 / le5 / le6         2-3 m each
+  b_len_n00_03 .. b_len_n40_43 (11)          0-8 m each   b_len_n44_47 .. b_len_n60_64 (5)             3-5 m each (28 GB; 12 GB OOM)
+  b_rt_n00_03 .. b_rt_n28_31 (8)             0-3 m each   b_rt_n32_35 .. b_rt_n52_55 (6)               3-9 m each (28 GB; 12 GB OOM)
+  b_rt_n56_59, b_rt_n60_64                   7 m, 9 m (90 GB; OOM at 28 GB)
+NOT CONCLUDED (11)
+  d_wire_terminal d_version d_audience d_validity d_counter d_grant_ref_bound d_chain_cap d_chain_gate_order
+  d_plan_inclusion d_leaf_signature: each ran about 3 h 30 m on its own spot box (sp0..sp9) without a verdict and was
+  killed when the Azure cost-cap watchdog deallocated the whole farm (coordinator included) at 04:51 UTC.
+  d_allow_iff_all_pass: started last (big, then cloud-box-1), killed the same way after under 1 h. No harness FAILED.
+
+VERIFIED (on the pre-0.4.2 source)
+  b64u_spec_vs_crate_le4 / le5 / le6        168 s / 149 s / 150 s   spec decoder == URL_SAFE_NO_PAD.decode().ok(), every byte string <= 4/5/6
+  b64u_decode_metadata_mirror               249 s                   DmMirror layout == base64 DecodeMetadata (real internal_decode)
+  b_crate_decode_over_contract_any_len       21 s                   real Engine::decode over the internal_decode contract, any length < 2^40
+  b_alphabet_scan_le64                      191 s                   real alphabet scan, every ASCII string <= 64
+  b_len_n00_03                               49 s                   length/padding rules, lengths 0..3, any len
+  b_rt_n00_03                                86 s                   round trip / result characterisation, lengths 0..3, any len
+  json_value_get_dispatch                    48 s                   Value::get(&str) == Map::get on objects (1-entry map), None otherwise
+
+DID NOT FINISH (diagnosed)
+  decision_logic_abstract (monolithic)      8 h 23 m (CaDiCaL, sp3), 4 h 57 m (kissat, big)       cancelled
+  json_abs_pcactn_shape (7 inserts)         8 h 17 m (sp6), 3 h 05 m (big)                         cancelled
+  b64u_wrapper_contract_le64                about 4 h 50 m (cloud-box-7), 4 h 57 m (big)                   cancelled
+  d_audience (decomposed), probe            > 60 min, symbolic execution never ended
+  json_field_* bounded-2 (2 inserts)        OOM at 12 GB
+  b_len / b_rt lengths 4..7                 OOM at 12 GB (input built by a Vec push loop; now one nondet allocation)
+  d_* with unwindset                        cancelled by the coordinator while running (code change for 0.4.2)
+Diagnosis (CBMC symex traces, "Unwinding loop/recursion" counts):
+  - serde_json Value clone / PartialEq / drop are recursive; with a symbolic variant CBMC unrolls the recursion at every
+    level (Value -> Map -> Vec<Value> -> ...). Fixed in the harnesses: no clone, a non-recursive comparison, values leaked.
+  - std BTreeMap<String, _> with heap String keys: each key comparison is a memcmp over heap bytes that symbolic
+    execution does not fold, so insert positions become symbolic and the node-restructuring loops
+    (correct_childrens_parent_links) are unrolled thousands of times. This affects the real Verdict.checks map
+    (9 inserts) in every decision harness and any real serde_json Map with more than one entry.
+  - Kani 0.68 cannot stub a trait's PROVIDED method for one Self type (Iterator::all, Engine::decode) and resolves
+    <T as Trait>::m only for methods defined in that impl; `core::cmp::PartialEq` in a stub path resolves to the derive
+    macro. So the alphabet scan and string equality could not be replaced by loop-free contracts (any-length wrapper
+    harness dropped); the decoding loop (<GeneralPurpose as Engine>::internal_decode, defined in the impl) is the contract.

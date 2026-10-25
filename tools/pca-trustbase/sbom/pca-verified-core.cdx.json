@@ -7,8 +7,8 @@
       "type": "library",
       "bom-ref": "root",
       "name": "@atlasauth/pca-verified-core",
-      "version": "0.4.0",
-      "purl": "pkg:npm/%40atlasauth/pca-verified-core@0.4.0",
+      "version": "0.4.1",
+      "purl": "pkg:npm/%40atlasauth/pca-verified-core@0.4.1",
       "licenses": [
         {
           "license": {
@@ -39,7 +39,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "dbde5f2571178a6efa19dcf6bf21405644c30536c8d838e68820483743913c19"
+          "content": "bff990d929482fee77ff62b99c1bd08dab4b920d999e962ef591a5980150b017"
         }
       ]
     },
@@ -290,7 +290,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "32f990e1322a3380703fc67b303ead129b71cd3328218f28b3dcbd7b9d144e20"
+          "content": "b9950552361c6b327c8c5fb802b89167cb32b669f07b54b03d64a6d222a019fc"
         }
       ]
     },

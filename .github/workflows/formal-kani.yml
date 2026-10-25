@@ -1,0 +1,195 @@
+name: Formal - Kani
+
+# Kani bounded model checking of the SHIPPING Rust verifier sources (tools/pca-implverif/kani-*/ copy the crate sources
+# byte-for-byte from the pca-rust repo, checked out at the same ref as this run) - one harness per job. Harnesses that
+# do not fit a hosted runner (4 vCPU, 16 GB, 6 h) are excluded in .github/scripts/formal-kani-tiers.txt with the reason;
+# "probe" harnesses run only on a manual run with kani_probe=true and do not gate. "long" harnesses (the decomposed
+# decision harnesses, which ran 3.5 h on the farm without a verdict) get one NON-GATING job each at the 6 h cap; each
+# records PROVED / FAILED / NOT-CONCLUDED and the long-summary job lists them in the run summary. Every other harness
+# must report VERIFICATION SUCCESSFUL. Runs on ci/** pushes and on demand; never on main pushes.
+on:
+  push:
+    branches: ['ci/**']
+  workflow_dispatch:
+    inputs:
+      native_ref:
+        description: 'Ref of the pca-rust repo (default: the ref of this run)'
+        required: false
+        default: ''
+      kani_probe:
+        description: 'Also run the probe-tier harnesses (non-gating)'
+        type: boolean
+        default: false
+      kani_long:
+        description: 'Run the long-tier harnesses (non-gating, up to 355 min each; manual dispatch only, never on push, so they do not hold free runner slots during an RC run)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NATIVE_REF: ${{ inputs.native_ref || github.ref_name }}
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      long_matrix: ${{ steps.plan.outputs.long_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kani cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.kani
+            ~/.cargo/bin/kani
+            ~/.cargo/bin/cargo-kani
+          key: kani-${{ hashFiles('TOOLCHAIN.lock') }}-${{ runner.os }}
+      - name: Kani (version from TOOLCHAIN.lock)
+        run: bash .github/scripts/formal-kani-setup.sh
+      - name: Verified sources (pca-rust @ ${{ env.NATIVE_REF }})
+        run: bash .github/scripts/formal-natives.sh "$NATIVE_REF"
+      - name: List harnesses
+        id: plan
+        run: |
+          rc=0; lf="$RUNNER_TEMP/kani-long.json"; echo '{"include":[]}' > "$lf"
+          m="$(bash .github/scripts/formal-kani-plan.sh "${{ inputs.kani_probe || false }}" "$lf")" || rc=$?
+          echo "matrix=$m" >> "$GITHUB_OUTPUT"
+          echo "$m" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["include"]), "harness job(s)")'
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.kani_long }}" != true ]; then echo '{"include":[]}' > "$lf"; fi
+          echo "long_matrix=$(cat "$lf")" >> "$GITHUB_OUTPUT"
+          python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["include"]), "long-tier job(s) (non-gating)")' "$lf"
+          exit $rc
+
+  harness:
+    name: ${{ matrix.crate }} ${{ matrix.harness }}
+    needs: plan
+    if: ${{ always() && needs.plan.outputs.matrix != '' && needs.plan.outputs.matrix != '{"include":[]}' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    continue-on-error: ${{ matrix.probe }}
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kani cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.kani
+            ~/.cargo/bin/kani
+            ~/.cargo/bin/cargo-kani
+          key: kani-${{ hashFiles('TOOLCHAIN.lock') }}-${{ runner.os }}
+      - name: Kani (version from TOOLCHAIN.lock)
+        run: bash .github/scripts/formal-kani-setup.sh
+      - run: bash .github/scripts/formal-natives.sh "$NATIVE_REF"
+      - name: cargo kani --harness ${{ matrix.harness }}
+        working-directory: tools/pca-implverif/${{ matrix.crate }}
+        env:
+          H: ${{ matrix.harness }}
+          F: ${{ matrix.features }}
+        run: |
+          bash ./build.sh
+          mkdir -p "$RUNNER_TEMP/kani"; log="$RUNNER_TEMP/kani/$(echo "$H" | tr ':/' '__').log"
+          s=$(date +%s)
+          ulimit -v 15000000   # fail cleanly (out of memory) instead of the runner being killed
+          rc=0; cargo kani -Z stubbing -Z function-contracts -Z loop-contracts ${F:+--features "$F"} --harness "$H" --exact \
+            --output-format terse > "$log" 2>&1 || rc=$?
+          echo "rc=$rc wall=$(( $(date +%s) - s ))s"; grep -a -E 'VERIFICATION:|Complete - |Runtime (Symex|Solver)|error' "$log" | tail -8 || true
+          grep -aq 'VERIFICATION:- SUCCESSFUL' "$log" && [ "$rc" = 0 ]
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kani-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/kani
+
+  # long tier: one non-gating job per harness at the hosted-runner 6 h cap. A job that is killed (timeout, runner OOM)
+  # before it records an outcome is reported NOT-CONCLUDED by long-summary; nothing here can turn into a pass.
+  long:
+    name: long ${{ matrix.crate }} ${{ matrix.harness }}
+    needs: plan
+    if: ${{ always() && needs.plan.outputs.long_matrix != '' && needs.plan.outputs.long_matrix != '{"include":[]}' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.plan.outputs.long_matrix) }}
+    steps:
+      - name: Job clock
+        run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - name: Kani cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.kani
+            ~/.cargo/bin/kani
+            ~/.cargo/bin/cargo-kani
+          key: kani-${{ hashFiles('TOOLCHAIN.lock') }}-${{ runner.os }}
+      - name: Kani (version from TOOLCHAIN.lock)
+        run: bash .github/scripts/formal-kani-setup.sh
+      - run: bash .github/scripts/formal-natives.sh "$NATIVE_REF"
+      - name: cargo kani --harness ${{ matrix.harness }} (long tier, non-gating)
+        working-directory: tools/pca-implverif/${{ matrix.crate }}
+        env:
+          C: ${{ matrix.crate }}
+          H: ${{ matrix.harness }}
+          F: ${{ matrix.features }}
+          OUT: ${{ runner.temp }}/kani-long
+          JOB_MIN: '355'
+          KANI_MEM_KB: '15000000'   # ulimit -v, below the runner's 16 GB (same cap as the harness jobs)
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/formal-kani-long.sh"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kani-long-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/kani-long
+          if-no-files-found: ignore
+
+  long-summary:
+    name: long-tier summary
+    needs: [plan, long]
+    if: ${{ always() && needs.plan.outputs.long_matrix != '' && needs.plan.outputs.long_matrix != '{"include":[]}' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true   # no artifact at all: every harness is reported NOT-CONCLUDED below
+        with:
+          pattern: kani-long-*
+          path: long
+      - name: PROVED / FAILED / NOT-CONCLUDED
+        env:
+          LONG: ${{ needs.plan.outputs.long_matrix }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import glob, json, os
+          got = {}
+          for p in glob.glob('long/*/outcome.tsv'):
+              for line in open(p):
+                  c, h, o, w, d = (line.rstrip('\n').split('\t') + [''] * 5)[:5]
+                  got[(c, h)] = (o, int(w or 0), d)
+          rows = []
+          for j in json.loads(os.environ['LONG'])['include']:
+              o, w, d = got.get((j['crate'], j['harness']), ('NOT-CONCLUDED', 0, 'no outcome recorded (job cancelled, timed out or runner lost before kani returned)'))
+              rows.append((j['crate'], j['harness'], o, w, d))
+          n = {k: sum(r[2] == k for r in rows) for k in ('PROVED', 'FAILED', 'NOT-CONCLUDED')}
+          print('## Kani long tier (non-gating)\n')
+          print(f"{n['PROVED']} PROVED, {n['FAILED']} FAILED, {n['NOT-CONCLUDED']} NOT-CONCLUDED of {len(rows)}\n")
+          print('| crate | harness | outcome | wall | detail |\n|---|---|---|---|---|')
+          for c, h, o, w, d in rows:
+              print(f'| {c} | `{h}` | **{o}** | {w // 60} min | {d.replace("|", "/")} |')
+          PY
+          cat "$GITHUB_STEP_SUMMARY"

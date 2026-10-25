@@ -1,3 +1,5 @@
+import { verifyMembershipVerified } from '@atlasauth/pca-verified-core';
+import { verifiedCoreOptIn } from './verified-core-mode';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L5 revocation "accumulator" — v0 as a SORTED MERKLE SET (deterministic, pure, no RSA modulus).
@@ -18,7 +20,7 @@ import { snapshotConfig } from './config-snapshot';
  * a trusted, fresh source (guardian-signed / witnessed epoch root); a stale root can't show later
  * revocations.
  */
-import { b64u, canonicalBytes, compareUtf8, sha256, unb64u, utf8 } from './hash';
+import { b64u, canonicalBytes, compareUtf8, decodeB64uStrict, sha256, utf8 } from './hash';
 import { publicKeyOf } from './keys';
 import {
   type SignerSuiteOpts,
@@ -92,14 +94,17 @@ export interface NonMembershipProof {
 /** Check a leaf proof against the bound root, including that index/size are what the path says. */
 function leafOk(root: string, size: number, id: string, proof: InclusionProof): boolean {
   try {
-    if (!proof || proof.size !== size || !Number.isInteger(proof.index) || proof.index < 0 || proof.index >= size) return false;
+    // STRICT (normative, like the PCActn plan proof): safe-integer index / size, every sibling canonical base64url of exactly
+    // 32 bytes. A sibling of another length cannot fold to the signed root, but it used to be decoded and hashed anyway.
+    if (!proof || proof.size !== size || !Number.isSafeInteger(proof.index) || proof.index < 0 || proof.index >= size) return false;
     const sides = expectedSides(proof.index, size);
     if (!Array.isArray(proof.path) || proof.path.length !== sides.length) return false;
     let h = leafHash(id);
     for (let i = 0; i < sides.length; i++) {
       const step = proof.path[i]!;
       if (step.side !== sides[i]) return false;
-      const sib = unb64u(step.hash);
+      const sib = decodeB64uStrict(step.hash, 32);
+      if (sib === null) return false;
       h = step.side === 'L' ? nodeHash(sib, h) : nodeHash(h, sib);
     }
     return bindRoot(size, b64u(h)) === root;
@@ -186,13 +191,22 @@ export class RevocationSet {
 
 /** Verify id IS in the set (inclusion against the size-bound root). */
 export function verifyMembership(root: string, proof: InclusionProof, id: string): boolean {
+  // OPT-IN (`PCA_VERIFIED_CORE=merkle-strict`): the Dafny-proved inclusion fold (formal/dafny/Merkle.dfy, verified-core
+  // `verifyMembershipVerified`). Same sibling-encoding rule as leafOk (canonical base64url of exactly 32 bytes, 0.4.2).
+  if (verifiedCoreOptIn('merkle-strict')) {
+    try {
+      return verifyMembershipVerified(root, proof, canonicalBytes(id));
+    } catch {
+      return false;
+    }
+  }
   return !!proof && leafOk(root, proof.size, id, proof);
 }
 
 /** Verify id is NOT in the set the root commits to. */
 export function verifyNonMembership(root: string, proof: NonMembershipProof, id: string): boolean {
   try {
-    if (!proof || !Number.isInteger(proof.size) || proof.size < 0) return false;
+    if (!proof || !Number.isSafeInteger(proof.size) || proof.size < 0) return false;
     const { size, lo, hi } = proof;
     if (size === 0) return !lo && !hi && root === bindRoot(0, EMPTY_TREE);
     if (!lo && !hi) return false;
@@ -315,7 +329,11 @@ export interface EpochCheckOptions extends PqPinPolicy {
 export function checkRevocationEpoch(ep: RevocationEpoch, o: EpochCheckOptions): { ok: boolean; reason?: string } {
   try {
     if (!ep || ep.guardian !== o.guardianPublic || resolveSigAlg(ep.alg) === null) return { ok: false, reason: 'revocation epoch not signed by the pinned guardian' };
-    if (!Number.isSafeInteger(ep.epoch) || ep.epoch < 0 || !Number.isSafeInteger(ep.set_size) || ep.set_size < 0) {
+    if (
+      !Number.isSafeInteger(ep.epoch) || ep.epoch < 0 || !Number.isSafeInteger(ep.set_size) || ep.set_size < 0 ||
+      // epoch-ms instants: safe integers (a string, null or fractional value used to reach the window comparisons)
+      !Number.isSafeInteger(ep.issued_at) || !Number.isSafeInteger(ep.not_after)
+    ) {
       return { ok: false, reason: 'malformed revocation epoch' };
     }
     if (!verifyPinnedSuite(ep.alg, o.guardianPublic, ep.pq_pk, epochMessage(ep), { sig: ep.sig, pq_sig: ep.pq_sig }, o)) {

@@ -1,0 +1,69 @@
+TLC2 Version 2026.10.06.014338 (rev: 94d0c50)
+Running breadth-first search Model-Checking with fp 36 and seed 5203705757214800604 with 2 workers on 2 cores with 1820MB heap and 64MB offheap memory [pid: 4051] (Linux 7.0.0-1017-azure amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /work/jobs/q261012-194047-f133/ws/formal/intent/tla/ElicitationLoop.tla
+Parsing file /tmp/tlc-7865432122968764627/Naturals.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-7865432122968764627/FiniteSets.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-7865432122968764627/_TLCTrace.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-7865432122968764627/Sequences.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-7865432122968764627/TLC.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-7865432122968764627/TLCExt.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Parsing file /tmp/tlc-7865432122968764627/Integers.tla (jar:file:/work/jobs/q261012-194047-f133/ws/formal/intent/tla/.tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Integers
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module ElicitationLoop
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module ElicitationLoop
+Starting... (2026-10-12 19:42:45)
+Computing initial states...
+Computed 2 initial states...
+Computed 4 initial states...
+Computed 8 initial states...
+Finished computing initial states: 11 distinct states generated at 2026-10-12 19:42:45.
+Error: Invariant GrantSound is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ done = FALSE
+/\ noise = 0
+/\ asked = 0
+/\ vs = {{}, 1..1, 2..2, 3..3, 4..4, 1..2, 2..3, 3..4, 1..3, 2..4, 1..4}
+/\ truth = {}
+/\ grant = {}
+/\ vetoed = {}
+
+State 2: <Ask(1) line 72, col 11 to line 80, col 53 of module ElicitationLoop>
+/\ done = FALSE
+/\ noise = 1
+/\ asked = 1
+/\ vs = {1..1, 1..2, 1..3, 1..4}
+/\ truth = {}
+/\ grant = {}
+/\ vetoed = {}
+
+State 3: <Ask(2) line 72, col 11 to line 80, col 53 of module ElicitationLoop>
+/\ done = FALSE
+/\ noise = 1
+/\ asked = 2
+/\ vs = {1..1}
+/\ truth = {}
+/\ grant = {}
+/\ vetoed = {}
+
+State 4: <Stop line 82, col 9 to line 86, col 56 of module ElicitationLoop>
+/\ done = TRUE
+/\ noise = 1
+/\ asked = 2
+/\ vs = {1..1}
+/\ truth = {}
+/\ grant = {1}
+/\ vetoed = {}
+
+734 states generated, 321 distinct states found, 198 states left on queue.
+The depth of the complete state graph search is 4.
+Finished in 01s at (2026-10-12 19:42:46)
+Trace exploration spec path: ./ElicitationLoop_TTrace_1791834164.tla

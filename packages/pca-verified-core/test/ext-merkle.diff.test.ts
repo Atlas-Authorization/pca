@@ -4,7 +4,7 @@
 // PCA_MERKLE_EXH (exhaustive n bound), PCA_MERKLE_MUT (mutations per proof). Defaults keep the Mac run short; the bulk run is on a cloud box.
 import { describe, expect, it } from 'vitest';
 import { b64u, canonicalBytes, decodeB64uStrict, sha256 } from '../../pca/src/hash';
-import { leafHash, merkleProof, merkleRoot, planLeaf, verifyInclusion } from '../../pca/src/merkle';
+import { leafHash, merkleProof, merkleRoot, planLeaf, verifyInclusion } from './support/legacy/merkle';
 import { TransparencyLedger, verifyLedgerConsistency } from '../../pca/src/ledger';
 import {
   b64uDecodeStrict,

@@ -724,6 +724,9 @@ export async function runParty(cfg: PartyConfig): Promise<PartyResult> {
       a: prep.alpha.map((a) => hx(a.x)),
       at: prep.alpha.map((a) => hx(a.tag[peer]!)),
     });
+    // Abort claims arriving during this round are read in link order (see Mesh.setDeferAborts): the cheater's own abort
+    // must not pre-empt an honest party that has not yet received every peer's blame data.
+    mesh.setDeferAborts(true);
     const blames = await exchange(
       'blame',
       blameMsg,
@@ -733,7 +736,7 @@ export async function runParty(cfg: PartyConfig): Promise<PartyResult> {
       },
       null,
       false,
-    );
+    ).finally(() => mesh.setDeferAborts(false));
     for (const p of others) {
       const b = blames.get(p)!;
       for (let l = 0; l < K; l++) {

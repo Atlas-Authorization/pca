@@ -316,8 +316,11 @@ function addPinnedShare(name, role, signerSet, t, share, valid, description) {
   const v = pca.verifyThreshold({ shares: [share] }, thMsg, signerSet, t);
   const got = v.ok && v.roles.includes(role);
   if (got !== valid) throw new Error(`threshold_share ${name}: verifyThreshold=${got} (${v.reason}) != intended ${valid}`);
+  // Suite capability: a share under a non-ed25519 suite names it (`requires`); a runner whose runtime lacks it asserts the
+  // share is refused (fail closed) instead of comparing `valid`.
+  const requires = typeof share.alg === 'string' && share.alg !== 'ed25519' ? share.alg : undefined;
   thresholdShareAdds.push({
-    name, role, t, valid, description,
+    name, ...(requires !== undefined ? { requires } : {}), role, t, valid, description,
     signer_set: signerSet,
     threshold_message: pca.b64u(thMsg),
     signer_set_hash: pca.b64u(pca.signerSetHash(signerSet)),

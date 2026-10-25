@@ -102,7 +102,8 @@ interface Link {
   id: number;
   socket: TLSSocket | null;
   splitter: FrameSplitter;
-  inbox: { f: Frame; size: number }[];
+  /** Queued frames; `abort` marks a peer's abort claim deferred behind its earlier frames (see `deferAborts`). */
+  inbox: { f: Frame; size: number; abort?: NetAbort }[];
   inboxBytes: number;
   paused: boolean;
   sendSeq: number;
@@ -134,6 +135,7 @@ export class Mesh {
   private server: tls.Server | null = null;
   private failure: NetAbort | null = null;
   private finished = false;
+  private deferAborts = false;
   private readonly clock: MeshClock;
   private readonly recvTimeoutMs: number;
   private readonly connectTimeoutMs: number;
@@ -334,7 +336,7 @@ export class Mesh {
         const claimedBlame =
           typeof d?.blamed === 'number' && Number.isInteger(d.blamed) && d.blamed >= 0 && d.blamed <= maxId ? d.blamed : null;
         const detail = typeof d?.detail === 'string' ? sanitize(d.detail, 120) : '';
-        return this.fail(
+        const claim =
           new NetAbort(
             'peer-abort',
             relayed ? null : l.id,
@@ -343,9 +345,14 @@ export class Mesh {
             claimedKind,
             claimedBlame,
             relayed ? { reason: 'relayed abort: a second-hand claim passed on by an honest peer; it names no one and is never evidence' } : {},
-          ),
-          l.id,
-        );
+          );
+        if (this.deferAborts) {
+          // Order-preserving: the claim takes effect when it is READ, i.e. only after every frame this peer sent before
+          // it (an honest peer always sends its round data before it aborts, on this same in-order link).
+          l.inbox.push({ f, size: b.length, abort: claim });
+          continue;
+        }
+        return this.fail(claim, l.id);
       }
       if (f.seq !== l.recvSeq) {
         const kind: AbortKind = f.seq < l.recvSeq ? 'duplicate' : 'out-of-order';
@@ -435,6 +442,10 @@ export class Mesh {
     for (;;) {
       if (this.failure) throw this.failure;
       const it = l.inbox.shift();
+      if (it?.abort) {
+        this.fail(it.abort, from);
+        throw it.abort;
+      }
       if (it) {
         const f = it.f;
         l.inboxBytes -= it.size;
@@ -470,6 +481,17 @@ export class Mesh {
         this.ev.on('wake', done);
       });
     }
+  }
+
+  /**
+   * While on, a peer's abort frame does not poison the mesh on arrival: it is queued behind that peer's earlier frames and
+   * only takes effect when a receive from that peer reaches it. Used for the blame round, where every party (the honest ones
+   * always, before any abort) sends its blame data first: a fast party's abort, in particular a cheater's own claim, then
+   * cannot pre-empt an honest party that is still collecting the blame data it needs to name the culprit itself. Turning it
+   * off affects only frames that arrive later: an abort already queued still takes effect at the next receive from that peer.
+   */
+  setDeferAborts(on: boolean): void {
+    this.deferAborts = on;
   }
 
   /** Receive `round` from every peer in `from` concurrently. A failure on any link rejects the whole call. */

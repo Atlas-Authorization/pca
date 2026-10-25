@@ -1,0 +1,1031 @@
+{
+ "summary": [
+  "stripe.payout on acct:1 (tier 3, risk 0.75)",
+  "stripe.payout on acct:1 (tier 2, risk 1.00)"
+ ],
+ "lineage": [
+  [
+   "because you asked to process October payouts",
+   "Goal: process October payouts — committed",
+   "Authority: stripe.payout"
+  ],
+  [
+   "b"
+  ]
+ ],
+ "slack": [
+  {
+   "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+   "blocks": [
+    {
+     "type": "header",
+     "text": {
+      "type": "plain_text",
+      "text": "Approval needed · tier 3",
+      "emoji": true
+     }
+    },
+    {
+     "type": "section",
+     "text": {
+      "type": "mrkdwn",
+      "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+     }
+    },
+    {
+     "type": "section",
+     "text": {
+      "type": "mrkdwn",
+      "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+     }
+    },
+    {
+     "type": "context",
+     "elements": [
+      {
+       "type": "mrkdwn",
+       "text": "Approve or deny step-up `su_1` in your Atlas inbox."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+   "blocks": [
+    {
+     "type": "header",
+     "text": {
+      "type": "plain_text",
+      "text": "Approval needed · tier 3",
+      "emoji": true
+     }
+    },
+    {
+     "type": "section",
+     "text": {
+      "type": "mrkdwn",
+      "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+     }
+    },
+    {
+     "type": "section",
+     "text": {
+      "type": "mrkdwn",
+      "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+     }
+    },
+    {
+     "type": "actions",
+     "elements": [
+      {
+       "type": "button",
+       "text": {
+        "type": "plain_text",
+        "text": "Approve",
+        "emoji": true
+       },
+       "url": "https://app.example/inbox?stepup=su_1&decision=approve",
+       "style": "primary",
+       "action_id": "pca_approve"
+      },
+      {
+       "type": "button",
+       "text": {
+        "type": "plain_text",
+        "text": "Deny",
+        "emoji": true
+       },
+       "url": "https://app.example/inbox?stepup=su_1&decision=deny",
+       "style": "danger",
+       "action_id": "pca_deny"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "text": "Approval needed: stripe.payout on acct:1 (tier 2, risk 1.00)",
+   "blocks": [
+    {
+     "type": "header",
+     "text": {
+      "type": "plain_text",
+      "text": "Approval needed · tier 2",
+      "emoji": true
+     }
+    },
+    {
+     "type": "section",
+     "text": {
+      "type": "mrkdwn",
+      "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+     }
+    },
+    {
+     "type": "section",
+     "text": {
+      "type": "mrkdwn",
+      "text": "*Why this is requested*\n• b"
+     }
+    },
+    {
+     "type": "actions",
+     "elements": [
+      {
+       "type": "button",
+       "text": {
+        "type": "plain_text",
+        "text": "Approve",
+        "emoji": true
+       },
+       "url": "https://app.example/inbox?x=1&stepup=su_1&decision=approve",
+       "style": "primary",
+       "action_id": "pca_approve"
+      },
+      {
+       "type": "button",
+       "text": {
+        "type": "plain_text",
+        "text": "Deny",
+        "emoji": true
+       },
+       "url": "https://app.example/inbox?x=1&stepup=su_1&decision=deny",
+       "style": "danger",
+       "action_id": "pca_deny"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+   "blocks": [
+    {
+     "type": "header",
+     "text": {
+      "type": "plain_text",
+      "text": "Approval needed · tier 3",
+      "emoji": true
+     }
+    },
+    {
+     "type": "section",
+     "text": {
+      "type": "mrkdwn",
+      "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+     }
+    },
+    {
+     "type": "section",
+     "text": {
+      "type": "mrkdwn",
+      "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+     }
+    },
+    {
+     "type": "context",
+     "elements": [
+      {
+       "type": "mrkdwn",
+       "text": "Approve or deny step-up `su_1` in your Atlas inbox."
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "webhook": [
+  {
+   "type": "pca.step_up.created",
+   "stepup": {
+    "id": "su_1",
+    "verb": "stripe.payout",
+    "resource": "acct:1",
+    "params": {
+     "amount": 80
+    },
+    "tier": 3,
+    "reason": "risk 0.75 above theta2",
+    "goalCommit": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+    "goal": "process October payouts",
+    "lineage": {
+     "because": "because you asked to process October payouts",
+     "chain": [
+      {
+       "label": "Goal: process October payouts",
+       "detail": "committed"
+      },
+      {
+       "label": "Authority: stripe.payout"
+      }
+     ]
+    },
+    "r": 0.754,
+    "requestedAt": 1
+   },
+   "summary": "stripe.payout on acct:1 (tier 3, risk 0.75)",
+   "lineage": [
+    "because you asked to process October payouts",
+    "Goal: process October payouts — committed",
+    "Authority: stripe.payout"
+   ]
+  },
+  {
+   "type": "pca.step_up.created",
+   "stepup": {
+    "id": "su_1",
+    "verb": "stripe.payout",
+    "resource": "acct:1",
+    "params": {
+     "amount": 80
+    },
+    "tier": 3,
+    "reason": "risk 0.75 above theta2",
+    "goalCommit": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+    "goal": "process October payouts",
+    "lineage": {
+     "because": "because you asked to process October payouts",
+     "chain": [
+      {
+       "label": "Goal: process October payouts",
+       "detail": "committed"
+      },
+      {
+       "label": "Authority: stripe.payout"
+      }
+     ]
+    },
+    "r": 0.754,
+    "requestedAt": 1
+   },
+   "summary": "stripe.payout on acct:1 (tier 3, risk 0.75)",
+   "lineage": [
+    "because you asked to process October payouts",
+    "Goal: process October payouts — committed",
+    "Authority: stripe.payout"
+   ],
+   "inbox_url": "https://app.example/inbox"
+  },
+  {
+   "type": "pca.step_up.created",
+   "stepup": {
+    "id": "su_1",
+    "verb": "stripe.payout",
+    "resource": "acct:1",
+    "params": {
+     "amount": 80
+    },
+    "tier": 3,
+    "reason": "risk 0.75 above theta2",
+    "goalCommit": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+    "goal": "process October payouts",
+    "lineage": {
+     "because": "because you asked to process October payouts",
+     "chain": [
+      {
+       "label": "Goal: process October payouts",
+       "detail": "committed"
+      },
+      {
+       "label": "Authority: stripe.payout"
+      }
+     ]
+    },
+    "r": 0.754,
+    "requestedAt": 1
+   },
+   "summary": "stripe.payout on acct:1 (tier 3, risk 0.75)",
+   "lineage": [
+    "because you asked to process October payouts",
+    "Goal: process October payouts — committed",
+    "Authority: stripe.payout"
+   ]
+  }
+ ],
+ "text": [
+  {
+   "subject": "Approval needed: stripe.payout on acct:1",
+   "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+  },
+  {
+   "subject": "Approval needed: stripe.payout on acct:1",
+   "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout\n\nApprove or deny: https://app.example/inbox?stepup=su_1"
+  },
+  {
+   "subject": "Approval needed: stripe.payout on acct:1",
+   "text": "stripe.payout on acct:1 (tier 2, risk 1.00)\n\nb\n\nApprove or deny: https://app.example/inbox?x=1&stepup=su_1"
+  },
+  {
+   "subject": "Approval needed: stripe.payout on acct:1",
+   "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+  }
+ ],
+ "slackNotify": [
+  {
+   "kind": "slack",
+   "requestId": "su_1",
+   "delivered": true,
+   "payload": {
+    "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "blocks": [
+     {
+      "type": "header",
+      "text": {
+       "type": "plain_text",
+       "text": "Approval needed · tier 3",
+       "emoji": true
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+      }
+     },
+     {
+      "type": "actions",
+      "elements": [
+       {
+        "type": "button",
+        "text": {
+         "type": "plain_text",
+         "text": "Approve",
+         "emoji": true
+        },
+        "url": "https://app.example/inbox?stepup=su_1&decision=approve",
+        "style": "primary",
+        "action_id": "pca_approve"
+       },
+       {
+        "type": "button",
+        "text": {
+         "type": "plain_text",
+         "text": "Deny",
+         "emoji": true
+        },
+        "url": "https://app.example/inbox?stepup=su_1&decision=deny",
+        "style": "danger",
+        "action_id": "pca_deny"
+       }
+      ]
+     }
+    ]
+   },
+   "status": 200
+  },
+  {
+   "kind": "slack",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "blocks": [
+     {
+      "type": "header",
+      "text": {
+       "type": "plain_text",
+       "text": "Approval needed · tier 3",
+       "emoji": true
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+      }
+     },
+     {
+      "type": "context",
+      "elements": [
+       {
+        "type": "mrkdwn",
+        "text": "Approve or deny step-up `su_1` in your Atlas inbox."
+       }
+      ]
+     }
+    ]
+   },
+   "status": 502,
+   "reason": "slack webhook returned 502"
+  },
+  {
+   "kind": "slack",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "blocks": [
+     {
+      "type": "header",
+      "text": {
+       "type": "plain_text",
+       "text": "Approval needed · tier 3",
+       "emoji": true
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+      }
+     },
+     {
+      "type": "context",
+      "elements": [
+       {
+        "type": "mrkdwn",
+        "text": "Approve or deny step-up `su_1` in your Atlas inbox."
+       }
+      ]
+     }
+    ]
+   },
+   "reason": "boom"
+  },
+  {
+   "kind": "slack",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "blocks": [
+     {
+      "type": "header",
+      "text": {
+       "type": "plain_text",
+       "text": "Approval needed · tier 3",
+       "emoji": true
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+      }
+     },
+     {
+      "type": "context",
+      "elements": [
+       {
+        "type": "mrkdwn",
+        "text": "Approve or deny step-up `su_1` in your Atlas inbox."
+       }
+      ]
+     }
+    ]
+   },
+   "reason": "slack transport error"
+  },
+  {
+   "kind": "slack",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "blocks": [
+     {
+      "type": "header",
+      "text": {
+       "type": "plain_text",
+       "text": "Approval needed · tier 3",
+       "emoji": true
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+      }
+     },
+     {
+      "type": "context",
+      "elements": [
+       {
+        "type": "mrkdwn",
+        "text": "Approve or deny step-up `su_1` in your Atlas inbox."
+       }
+      ]
+     }
+    ]
+   },
+   "reason": "slack channel not configured"
+  },
+  {
+   "kind": "slack",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "text": "Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "blocks": [
+     {
+      "type": "header",
+      "text": {
+       "type": "plain_text",
+       "text": "Approval needed · tier 3",
+       "emoji": true
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*stripe.payout* on `acct:1`\n_risk 0.75 above theta2_"
+      }
+     },
+     {
+      "type": "section",
+      "text": {
+       "type": "mrkdwn",
+       "text": "*Why this is requested*\n• because you asked to process October payouts\n• Goal: process October payouts — committed\n• Authority: stripe.payout"
+      }
+     },
+     {
+      "type": "context",
+      "elements": [
+       {
+        "type": "mrkdwn",
+        "text": "Approve or deny step-up `su_1` in your Atlas inbox."
+       }
+      ]
+     }
+    ]
+   },
+   "reason": "slack channel not configured"
+  }
+ ],
+ "slackEnabled": [
+  false,
+  false,
+  true
+ ],
+ "webhookNotify": [
+  {
+   "kind": "webhook",
+   "requestId": "su_1",
+   "delivered": true,
+   "payload": {
+    "type": "pca.step_up.created",
+    "stepup": {
+     "id": "su_1",
+     "verb": "stripe.payout",
+     "resource": "acct:1",
+     "params": {
+      "amount": 80
+     },
+     "tier": 3,
+     "reason": "risk 0.75 above theta2",
+     "goalCommit": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "goal": "process October payouts",
+     "lineage": {
+      "because": "because you asked to process October payouts",
+      "chain": [
+       {
+        "label": "Goal: process October payouts",
+        "detail": "committed"
+       },
+       {
+        "label": "Authority: stripe.payout"
+       }
+      ]
+     },
+     "r": 0.754,
+     "requestedAt": 1
+    },
+    "summary": "stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "lineage": [
+     "because you asked to process October payouts",
+     "Goal: process October payouts — committed",
+     "Authority: stripe.payout"
+    ],
+    "inbox_url": "https://app.example/inbox"
+   },
+   "status": 200
+  },
+  {
+   "kind": "webhook",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "type": "pca.step_up.created",
+    "stepup": {
+     "id": "su_1",
+     "verb": "stripe.payout",
+     "resource": "acct:1",
+     "params": {
+      "amount": 80
+     },
+     "tier": 3,
+     "reason": "risk 0.75 above theta2",
+     "goalCommit": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "goal": "process October payouts",
+     "lineage": {
+      "because": "because you asked to process October payouts",
+      "chain": [
+       {
+        "label": "Goal: process October payouts",
+        "detail": "committed"
+       },
+       {
+        "label": "Authority: stripe.payout"
+       }
+      ]
+     },
+     "r": 0.754,
+     "requestedAt": 1
+    },
+    "summary": "stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "lineage": [
+     "because you asked to process October payouts",
+     "Goal: process October payouts — committed",
+     "Authority: stripe.payout"
+    ]
+   },
+   "status": 500,
+   "reason": "webhook returned 500"
+  },
+  {
+   "kind": "webhook",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "type": "pca.step_up.created",
+    "stepup": {
+     "id": "su_1",
+     "verb": "stripe.payout",
+     "resource": "acct:1",
+     "params": {
+      "amount": 80
+     },
+     "tier": 3,
+     "reason": "risk 0.75 above theta2",
+     "goalCommit": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "goal": "process October payouts",
+     "lineage": {
+      "because": "because you asked to process October payouts",
+      "chain": [
+       {
+        "label": "Goal: process October payouts",
+        "detail": "committed"
+       },
+       {
+        "label": "Authority: stripe.payout"
+       }
+      ]
+     },
+     "r": 0.754,
+     "requestedAt": 1
+    },
+    "summary": "stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "lineage": [
+     "because you asked to process October payouts",
+     "Goal: process October payouts — committed",
+     "Authority: stripe.payout"
+    ]
+   },
+   "reason": "down"
+  },
+  {
+   "kind": "webhook",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "type": "pca.step_up.created",
+    "stepup": {
+     "id": "su_1",
+     "verb": "stripe.payout",
+     "resource": "acct:1",
+     "params": {
+      "amount": 80
+     },
+     "tier": 3,
+     "reason": "risk 0.75 above theta2",
+     "goalCommit": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "goal": "process October payouts",
+     "lineage": {
+      "because": "because you asked to process October payouts",
+      "chain": [
+       {
+        "label": "Goal: process October payouts",
+        "detail": "committed"
+       },
+       {
+        "label": "Authority: stripe.payout"
+       }
+      ]
+     },
+     "r": 0.754,
+     "requestedAt": 1
+    },
+    "summary": "stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "lineage": [
+     "because you asked to process October payouts",
+     "Goal: process October payouts — committed",
+     "Authority: stripe.payout"
+    ]
+   },
+   "reason": "webhook transport error"
+  },
+  {
+   "kind": "webhook",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "type": "pca.step_up.created",
+    "stepup": {
+     "id": "su_1",
+     "verb": "stripe.payout",
+     "resource": "acct:1",
+     "params": {
+      "amount": 80
+     },
+     "tier": 3,
+     "reason": "risk 0.75 above theta2",
+     "goalCommit": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+     "goal": "process October payouts",
+     "lineage": {
+      "because": "because you asked to process October payouts",
+      "chain": [
+       {
+        "label": "Goal: process October payouts",
+        "detail": "committed"
+       },
+       {
+        "label": "Authority: stripe.payout"
+       }
+      ]
+     },
+     "r": 0.754,
+     "requestedAt": 1
+    },
+    "summary": "stripe.payout on acct:1 (tier 3, risk 0.75)",
+    "lineage": [
+     "because you asked to process October payouts",
+     "Goal: process October payouts — committed",
+     "Authority: stripe.payout"
+    ]
+   },
+   "reason": "webhook channel not configured"
+  }
+ ],
+ "webhookEnabled": [
+  false,
+  false,
+  true
+ ],
+ "emailNotify": [
+  {
+   "kind": "email",
+   "requestId": "su_1",
+   "delivered": true,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout\n\nApprove or deny: https://app.example/inbox?stepup=su_1"
+   }
+  },
+  {
+   "kind": "email",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "smtp"
+  },
+  {
+   "kind": "email",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "email send error"
+  },
+  {
+   "kind": "email",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "email channel not configured"
+  }
+ ],
+ "emailEnabled": [
+  false,
+  true
+ ],
+ "smsNotify": [
+  {
+   "kind": "sms",
+   "requestId": "su_1",
+   "delivered": true,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout\n\nApprove or deny: https://app.example/inbox?stepup=su_1"
+   }
+  },
+  {
+   "kind": "sms",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "smtp"
+  },
+  {
+   "kind": "sms",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "sms send error"
+  },
+  {
+   "kind": "sms",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "sms channel not configured"
+  }
+ ],
+ "smsEnabled": [
+  false,
+  true
+ ],
+ "pushNotify": [
+  {
+   "kind": "push",
+   "requestId": "su_1",
+   "delivered": true,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout\n\nApprove or deny: https://app.example/inbox?stepup=su_1"
+   }
+  },
+  {
+   "kind": "push",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "smtp"
+  },
+  {
+   "kind": "push",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "push send error"
+  },
+  {
+   "kind": "push",
+   "requestId": "su_1",
+   "delivered": false,
+   "payload": {
+    "subject": "Approval needed: stripe.payout on acct:1",
+    "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout"
+   },
+   "reason": "push channel not configured"
+  }
+ ],
+ "pushEnabled": [
+  false,
+  true
+ ],
+ "sent": [
+  {
+   "url": "https://hooks.example/s",
+   "init": {
+    "method": "POST",
+    "headers": {
+     "content-type": "application/json"
+    },
+    "body": "{\"text\":\"Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)\",\"blocks\":[{\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\"Approval needed · tier 3\",\"emoji\":true}},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*stripe.payout* on `acct:1`\\n_risk 0.75 above theta2_\"}},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Why this is requested*\\n• because you asked to process October payouts\\n• Goal: process October payouts — committed\\n• Authority: stripe.payout\"}},{\"type\":\"actions\",\"elements\":[{\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"Approve\",\"emoji\":true},\"url\":\"https://app.example/inbox?stepup=su_1&decision=approve\",\"style\":\"primary\",\"action_id\":\"pca_approve\"},{\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"Deny\",\"emoji\":true},\"url\":\"https://app.example/inbox?stepup=su_1&decision=deny\",\"style\":\"danger\",\"action_id\":\"pca_deny\"}]}]}"
+   }
+  },
+  {
+   "url": "https://hooks.example/s",
+   "init": {
+    "method": "POST",
+    "headers": {
+     "content-type": "application/json"
+    },
+    "body": "{\"text\":\"Approval needed: stripe.payout on acct:1 (tier 3, risk 0.75)\",\"blocks\":[{\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\"Approval needed · tier 3\",\"emoji\":true}},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*stripe.payout* on `acct:1`\\n_risk 0.75 above theta2_\"}},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Why this is requested*\\n• because you asked to process October payouts\\n• Goal: process October payouts — committed\\n• Authority: stripe.payout\"}},{\"type\":\"context\",\"elements\":[{\"type\":\"mrkdwn\",\"text\":\"Approve or deny step-up `su_1` in your Atlas inbox.\"}]}]}"
+   }
+  },
+  {
+   "url": "https://w.example",
+   "init": {
+    "method": "POST",
+    "headers": {
+     "content-type": "application/json",
+     "x-sig": "s"
+    },
+    "body": "{\"type\":\"pca.step_up.created\",\"stepup\":{\"id\":\"su_1\",\"verb\":\"stripe.payout\",\"resource\":\"acct:1\",\"params\":{\"amount\":80},\"tier\":3,\"reason\":\"risk 0.75 above theta2\",\"goalCommit\":\"GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG\",\"goal\":\"process October payouts\",\"lineage\":{\"because\":\"because you asked to process October payouts\",\"chain\":[{\"label\":\"Goal: process October payouts\",\"detail\":\"committed\"},{\"label\":\"Authority: stripe.payout\"}]},\"r\":0.754,\"requestedAt\":1},\"summary\":\"stripe.payout on acct:1 (tier 3, risk 0.75)\",\"lineage\":[\"because you asked to process October payouts\",\"Goal: process October payouts — committed\",\"Authority: stripe.payout\"],\"inbox_url\":\"https://app.example/inbox\"}"
+   }
+  },
+  {
+   "url": "https://w.example",
+   "init": {
+    "method": "POST",
+    "headers": {
+     "content-type": "application/json"
+    },
+    "body": "{\"type\":\"pca.step_up.created\",\"stepup\":{\"id\":\"su_1\",\"verb\":\"stripe.payout\",\"resource\":\"acct:1\",\"params\":{\"amount\":80},\"tier\":3,\"reason\":\"risk 0.75 above theta2\",\"goalCommit\":\"GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG\",\"goal\":\"process October payouts\",\"lineage\":{\"because\":\"because you asked to process October payouts\",\"chain\":[{\"label\":\"Goal: process October payouts\",\"detail\":\"committed\"},{\"label\":\"Authority: stripe.payout\"}]},\"r\":0.754,\"requestedAt\":1},\"summary\":\"stripe.payout on acct:1 (tier 3, risk 0.75)\",\"lineage\":[\"because you asked to process October payouts\",\"Goal: process October payouts — committed\",\"Authority: stripe.payout\"]}"
+   }
+  },
+  {
+   "url": "https://w.example",
+   "init": {
+    "method": "POST",
+    "headers": {
+     "content-type": "application/json"
+    },
+    "body": "{\"type\":\"pca.step_up.created\",\"stepup\":{\"id\":\"su_1\",\"verb\":\"stripe.payout\",\"resource\":\"acct:1\",\"params\":{\"amount\":80},\"tier\":3,\"reason\":\"risk 0.75 above theta2\",\"goalCommit\":\"GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG\",\"goal\":\"process October payouts\",\"lineage\":{\"because\":\"because you asked to process October payouts\",\"chain\":[{\"label\":\"Goal: process October payouts\",\"detail\":\"committed\"},{\"label\":\"Authority: stripe.payout\"}]},\"r\":0.754,\"requestedAt\":1},\"summary\":\"stripe.payout on acct:1 (tier 3, risk 0.75)\",\"lineage\":[\"because you asked to process October payouts\",\"Goal: process October payouts — committed\",\"Authority: stripe.payout\"],\"inbox_url\":\"https://app.example/inbox\"}"
+   }
+  }
+ ],
+ "texts": [
+  {
+   "subject": "Approval needed: stripe.payout on acct:1",
+   "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout\n\nApprove or deny: https://app.example/inbox?stepup=su_1"
+  },
+  {
+   "subject": "Approval needed: stripe.payout on acct:1",
+   "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout\n\nApprove or deny: https://app.example/inbox?stepup=su_1"
+  },
+  {
+   "subject": "Approval needed: stripe.payout on acct:1",
+   "text": "stripe.payout on acct:1 (tier 3, risk 0.75)\n\nbecause you asked to process October payouts\nGoal: process October payouts — committed\nAuthority: stripe.payout\n\nApprove or deny: https://app.example/inbox?stepup=su_1"
+  }
+ ],
+ "dispatch": [
+  [
+   "webhook",
+   true
+  ],
+  [
+   "email",
+   true
+  ]
+ ],
+ "dispatchCount": [
+  3
+ ]
+}

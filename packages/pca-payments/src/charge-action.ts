@@ -26,7 +26,9 @@ const clamp01 = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x);
 export function chargeParams(mandate: PaymentMandate, charge: Charge): Record<string, unknown> {
   return {
     amount: charge.amount,
-    currency: charge.currency ?? mandate.terms.currency,
+    // Only an ABSENT currency defaults to the mandate's: `null` (or any other value) is carried as is and fails the
+    // currency predicate (`??` used to read `null` as absent and substitute the mandate currency).
+    currency: charge.currency === undefined ? mandate.terms.currency : charge.currency,
     ...(charge.category !== undefined ? { category: charge.category } : {}),
   };
 }

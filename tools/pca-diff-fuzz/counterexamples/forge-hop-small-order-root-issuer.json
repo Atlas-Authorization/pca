@@ -1,0 +1,92 @@
+{
+ "mutator": "forge-hop-small-order-root-issuer",
+ "case": "c006173",
+ "bytes": 1199,
+ "allImplementationsAgree": false,
+ "context": {
+  "now": 1800000000000,
+  "aud": "rs-fuzz"
+ },
+ "results": {
+  "oracle": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": false,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "dotnet": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": false,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "go": {
+   "allow": false,
+   "checks": {
+    "audience": true,
+    "chain": false,
+    "counter": true,
+    "leaf_signature": true,
+    "plan_inclusion": true,
+    "validity": true,
+    "version": true,
+    "wire": true
+   }
+  },
+  "php": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": false,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "python": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": false,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  },
+  "ruby": {
+   "allow": false,
+   "checks": {
+    "wire": true,
+    "version": true,
+    "audience": true,
+    "validity": true,
+    "chain": false,
+    "plan_inclusion": true,
+    "leaf_signature": true,
+    "counter": true
+   }
+  }
+ },
+ "pcactn_json": "{\"ver\":2,\"action\":{\"verb\":\"😀x\",\"resource\":\"mail/back\\\\slash\",\"params_digest\":\"GmBBmLqsPKUxhNefQRbzOWy4zhkd9MA00nPGNW_ewI4\",\"reversibility_class\":\"reversible\"},\"grant_ref\":\"SyCPsuMCrmHgL9kbHqw7TwlNBWK7qpJC5XFgFEutQqs\",\"cap_chain\":[{\"id\":\"SyCPsuMCrmHgL9kbHqw7TwlNBWK7qpJC5XFgFEutQqs\",\"issuer\":\"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"holder\":\"4USw7UMKKV9klH_CRVQAGiCr_MWRXerq-npOKVdTRsI\",\"caveats\":[],\"body_digest\":\"SyCPsuMCrmHgL9kbHqw7TwlNBWK7qpJC5XFgFEutQqs\",\"sig\":\"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}],\"plan\":{\"root\":\"CvIYmiSJtHsEbRWx9lDuAFIlqvz-O1P89wWXLLF3-40\",\"inclusion_proof\":{\"index\":0,\"size\":1,\"path\":[]},\"node_id\":\"n0\",\"conditions_digest\":\"YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY\"},\"attestation\":{\"quote_digest\":\"\",\"epoch\":0,\"model_id\":\"unattested\",\"measurement\":\"/\",\"operator\":\"unattested\"},\"provenance\":{\"causal_hash\":\"\",\"taint_level\":0,\"trusted_refs\":[]},\"freshness\":{\"beacon_ref\":\"\",\"epoch\":0,\"accumulator_witness\":\"\"},\"counter\":68701604,\"risk_claim\":{\"r\":0,\"inputs\":{}},\"aud\":\"rs-fuzz\",\"iat\":1799999987196,\"exp\":1800001187196,\"sig\":\"7DhzWhICn3TvmoWeSG-Bxfx6AN1NnTgE9wDJr6fjwG0FHztC2Rlqc0EFhH4io-Uma7_agfRxlyQgHjdgjfxxAQ\"}",
+ "grant": "{\"body_digest\":\"SyCPsuMCrmHgL9kbHqw7TwlNBWK7qpJC5XFgFEutQqs\",\"caveats\":[],\"holder\":\"4USw7UMKKV9klH_CRVQAGiCr_MWRXerq-npOKVdTRsI\",\"id\":\"SyCPsuMCrmHgL9kbHqw7TwlNBWK7qpJC5XFgFEutQqs\",\"issuer\":\"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"sig\":\"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}"
+}

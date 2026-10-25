@@ -11,7 +11,9 @@ import { decodePcaHeader, pcaHeaders } from './adapters';
 import { decodeSafetyCertificate } from './safety-certificate';
 import { MAX_LIMIT_LENGTH, parseLimit } from './facade';
 
-const BUDGET_MS = 2000;
+// A Stryker run executes the suite on instrumented code (thousands of mutants, several workers per core): the wall-clock
+// budget is widened 10x there only so the dry run can pass; a quadratic mutant would still miss even the widened budget.
+const BUDGET_MS = process.env.PCA_MUTATION_RUN ? 20_000 : 2000;
 const timed = <T>(f: () => T): { out: T; ms: number } => {
   const t0 = performance.now();
   const out = f();

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { useSingleThreadSnarkCurvesInWorkerThreads } from './test-support/snarkjs-single-thread';
 import {
   type ComplianceStatement,
   type Groth16ComplianceProof,
@@ -35,6 +36,9 @@ import { encodeKey, generateKeyPair } from './keys';
 import { DEFAULT_RISK_POLICY, type TrustBudget } from './risk';
 import type { Capability } from './capability';
 import type { PlanNode } from './merkle';
+
+// snarkjs single-threaded when this file runs in a worker thread (Stryker's vitest runner): see test-support/snarkjs-single-thread.ts
+beforeAll(useSingleThreadSnarkCurvesInWorkerThreads);
 
 const P = generateKeyPair();
 const A = generateKeyPair();

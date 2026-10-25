@@ -43,7 +43,20 @@ def sigWire (p : J) : Bool :=
 def closedKeys (o : J) (allowed : List String) : Bool := o.keys.all (fun k => allowed.contains k)
 
 def REQUIRED : List String := ["ver","action","grant_ref","cap_chain","plan","attestation","provenance","freshness","counter","risk_claim","aud","iat","exp","sig"]
-def OPTIONAL : List String := ["nonce","caution","rationale_commitment","progress_step","prohibition_evidence","tool_binding","threshold","zk_compliance","bond_ref","alg","pq_pk","pq_sig"]
+def OPTIONAL : List String := ["nonce","caution","rationale_commitment","progress_step","prohibition_evidence","tool_binding","threshold","zk_compliance","bond_ref","alg","pq_pk","pq_sig","intent"]
+
+/-! ### Intent binding (Intent Layer M2; conformance README rule 12) -/
+def INTENT_KEYS : List String := ["ref","map_digest","goal_salt","fidelity_ppm","residual_risk_ppm"]
+def MAX_GOAL_SALT : Nat := 128
+def PPM_ONE : Int := 1000000
+
+/-- the shape of the optional signed `intent` member (closed, all five members, bytes / length / ranges). -/
+def intentWire (v : J) : Bool :=
+  v.isObj && closedKeys v INTENT_KEYS && INTENT_KEYS.all (fun k => (v.get? k).isSome) &&
+  b64n (v.get? "ref") 32 && b64n (v.get? "map_digest") 32 &&
+  (match strOf (v.get? "goal_salt") with | some s => !s.isEmpty && s.utf8ByteSize ≤ MAX_GOAL_SALT | none => false) &&
+  (match (v.get? "fidelity_ppm").bind safeInt with | some f => decide (0 ≤ f) && decide (f ≤ PPM_ONE) | none => false) &&
+  (match (v.get? "residual_risk_ppm").bind safeInt with | some r => decide (0 ≤ r) | none => false)
 
 def withoutKeys (p : J) (ks : List String) : J :=
   match p with | .obj kv => .obj (kv.filter (fun e => !ks.contains e.1)) | x => x
@@ -141,6 +154,10 @@ def validateWire (p : J) : Bool := Id.run do
   match p.get? "progress_step" with
   | some v =>
     if !v.isObj then return false
+  | none => pure ()
+  match p.get? "intent" with
+  | some v =>
+    if !intentWire v then return false
   | none => pure ()
   match p.get? "prohibition_evidence" with
   | some v =>
@@ -279,6 +296,113 @@ def verifyChain (chain : Array J) (expRoot : Option String) (allowed : Option (L
       if hashCanon cc[j]! != hashCanon pc[j]! then return .ok false
   return (if pqSeen then .pq else .ok true)
 
+/-- verifier intent policy; a threshold is kept as the raw JSON value so a set-but-invalid one is distinguishable. -/
+structure IntentPolicy where
+  require : Bool := false
+  minFid : Option J := none
+  maxRes : Option J := none
+
+def IntentPolicy.active (q : IntentPolicy) : Bool := q.require || q.minFid.isSome || q.maxRes.isSome
+
+/-- from `context.intent_policy` (absent / non-object => no policy; `require` counts only when it is `true`). -/
+def IntentPolicy.ofJ (o : Option J) : IntentPolicy :=
+  match o with
+  | some (.obj kv) =>
+    let q := J.obj kv
+    { require := (match q.get? "require" with | some (.bool true) => true | _ => false),
+      minFid := q.get? "min_fidelity_ppm", maxRes := q.get? "max_residual_risk_ppm" }
+  | _ => {}
+
+/-- the exact value N/D (D a power of ten) of a NON-NEGATIVE JSON number lexeme in any lexical form (950000,
+    950000.0, 1e6, 4.31e6, 9007199254740991.4); none for a malformed lexeme or an exponent beyond any double. -/
+def lexValue (lex : String) : Option (Nat × Nat) := Id.run do
+  let (mant, ex) := match lex.splitOn "e" with
+    | [m, e] => (m, e)
+    | _ => match lex.splitOn "E" with | [m, e] => (m, e) | _ => (lex, "0")
+  let ex' := if ex.startsWith "+" then ex.drop 1 else ex
+  let some e := ex'.toInt? | return none
+  let parts := mant.splitOn "."
+  if parts.length > 2 then return none
+  let ip := parts[0]!
+  let fp := if parts.length > 1 then parts[1]! else ""
+  if ip.isEmpty || !(ip.all Char.isDigit) || !(fp.all Char.isDigit) then return none
+  let digits := ip ++ fp
+  let some d := digits.toNat? | return none
+  if d == 0 then return some (0, 1)
+  let shift : Int := e - fp.length
+  -- beyond these the value is certainly above 2^53 (refused) or below half the least subnormal (rounds to 0)
+  if shift > 400 then return none
+  if shift + digits.length < -400 then return some (0, 1)
+  if shift ≥ 0 then return some (d * 10 ^ shift.toNat, 1)
+  return some (d, 10 ^ (-shift).toNat)
+
+/-- round the non-negative rational N/D to the nearest IEEE-754 binary64 (round-half-to-even), exactly as JSON.parse
+    and every shipped verifier's float parser do, and return it when that double is an integer <= 2^53-1; none otherwise. -/
+def roundedSafeInt (N D : Nat) : Option Nat := Id.run do
+  if N == 0 then return some 0
+  if N ≥ 9007199254740992 * D then return none -- the nearest double is >= 2^53
+  if N < D then
+    -- v < 1: the nearest double is an integer only when it is 0 (v <= 2^-1075, the tie goes to even 0) or 1
+    -- (v >= 1 - 2^-54, the tie goes to 1.0 whose significand is even)
+    if N * 2 ^ 1075 ≤ D then return some 0
+    if N * 2 ^ 54 ≥ D * (2 ^ 54 - 1) then return some 1
+    return none
+  -- 1 <= v < 2^53: binade 2^e <= v < 2^(e+1), e in 0..52, spacing 2^(e-52)
+  let mut e : Nat := 0
+  for i in [1:53] do
+    if 2 ^ i * D ≤ N then e := i
+  let k := 52 - e
+  let num := N * 2 ^ k
+  let fl := num / D
+  let rem := num % D
+  let m := if 2 * rem > D then fl + 1 else if 2 * rem < D then fl else fl + fl % 2
+  if m % 2 ^ k != 0 then return none
+  let r := m / 2 ^ k
+  if r > MAX_SAFE then return none
+  return some r
+
+/-- a set threshold's value: a JSON number whose binary64 VALUE is an integer in [0, 2^53-1] (lexical form irrelevant;
+    any leading "-" is refused: negative values and negative zero, including "-1e-400" which JSON.parse makes -0). -/
+def thresholdVal (t : Option J) : Option Int :=
+  match t with
+  | some (.num lex) => if lex.startsWith "-" then none else
+      match lexValue lex with
+      | some (n, d) => (roundedSafeInt n d).map Int.ofNat
+      | none => none
+  | _ => none
+
+def thresholdOk (t : Option J) : Bool := t.isNone || (thresholdVal t).isSome
+
+/-- the FIRST caveat of the grant that is an object with type "envelope": its string goal_commit. -/
+def rootGoalCommit (grant : J) : Option String :=
+  match (grant.get? "caveats").bind J.asArr? with
+  | none => none
+  | some cs => match cs.find? (fun c => c.isObj && strOf (c.get? "type") == some "envelope") with
+    | some e => strOf (e.get? "goal_commit")
+    | none => none
+
+/-- the `intent` check: none = not reported (no member, inactive policy); some b = its verdict. `p` is wire-valid. -/
+def intentCheck (p grant : J) (q : IntentPolicy) : Option Bool := Id.run do
+  let slot := p.get? "intent"
+  if slot.isNone && !q.active then return none
+  if !(thresholdOk q.minFid && thresholdOk q.maxRes) then return some false
+  let some it := slot | return some false
+  let some commit := rootGoalCommit grant | return some false
+  let ref := (strOf (it.get? "ref")).getD ""
+  let md := (strOf (it.get? "map_digest")).getD ""
+  let salt := (strOf (it.get? "goal_salt")).getD ""
+  let want := hashCanon (.obj #[("d", .str "atlas-pca/goal/v1\x00"), ("goal", .str ("pca-intent:v1:" ++ ref ++ ":" ++ md)), ("salt", .str salt)])
+  if want != commit then return some false
+  let fid := ((it.get? "fidelity_ppm").bind safeInt).getD 0
+  let res := ((it.get? "residual_risk_ppm").bind safeInt).getD 0
+  match thresholdVal q.minFid with
+  | some m => if fid < m then return some false
+  | none => pure ()
+  match thresholdVal q.maxRes with
+  | some m => if res > m then return some false
+  | none => pure ()
+  return some true
+
 structure Verdict where
   allow : Bool
   checks : List (String × Bool)
@@ -286,7 +410,7 @@ structure Verdict where
 
 def CHECKS : List String := ["wire","version","audience","validity","chain","grant_ref_bound","plan_inclusion","leaf_signature","counter"]
 
-def verifyCore (p : J) (grant : J) (now : Int) (aud : String) (allowed : Option (List String)) : Verdict := Id.run do
+def verifyCore (p : J) (grant : J) (now : Int) (aud : String) (allowed : Option (List String)) (intent : IntentPolicy := {}) : Verdict := Id.run do
   if !validateWire p then return ⟨false, [("wire", false)], false⟩
   -- version
   let ver := (p.get? "ver").bind safeInt
@@ -327,6 +451,7 @@ def verifyCore (p : J) (grant : J) (now : Int) (aud : String) (allowed : Option 
   let counterOk := match (p.get? "counter").bind safeInt with | some i => i ≥ 0 | none => false
   let checks := [("wire", true), ("version", versionOk), ("audience", audOk), ("validity", validity), ("chain", chainOk),
                  ("grant_ref_bound", grOk), ("plan_inclusion", inclOk), ("leaf_signature", sigOk), ("counter", counterOk)]
+    ++ (match intentCheck p grant intent with | some b => [("intent", b)] | none => [])
   return ⟨checks.all (·.2), checks, pq⟩
 
 end PcaRef

@@ -87,7 +87,8 @@ export interface ChainPolicy {
   /**
    * R3-01: verifier-side PQ pins by Ed25519 identity (`{ [ed25519 b64u]: pq_pk }`, from {@link pqPinFor} or the
    * verifier's own registry). A pure-PQ or hybrid ROOT hop has no parent holding a `holder_pq` commitment, so its
-   * `pq_pk` is accepted only when it equals the pin of `root.issuer` (or the root is `trustedRoot`). With neither,
+   * `pq_pk` is accepted only when it equals the pin of `root.issuer` (or the root is `trustedRoot`; a pin that is also
+   * supplied must still agree: trustedRoot never overrides a disagreeing pin). With neither,
    * a non-ed25519 root is REFUSED (an artifact-supplied PQ key proves nothing about who issued the root).
    */
   pqPins?: Readonly<Record<string, string>>;
@@ -665,8 +666,16 @@ function verifyChainUnchecked(chain: CapabilityChain, expectedRootIssuer?: strin
     const rootPq = (): { pq: PinnedPqKey | null; err?: string } => {
       if (rootPqMemo) return rootPqMemo;
       if (suite === null || !suite.needsPqPk) return (rootPqMemo = { pq: null });
+      // FAIL CLOSED: a supplied pin for the root issuer must agree, even when the root is the stored grant (trustedRoot
+      // never overrides a disagreeing pqPins; with both, both must agree).
+      const isTrustedRoot = policy?.trustedRoot !== undefined && typeof c.pq_pk === 'string' && capHash(policy.trustedRoot) === capHash(c);
+      const pins = policy?.pqPins;
+      const pin = pins !== undefined && Object.prototype.hasOwnProperty.call(pins, c.issuer) ? pins[c.issuer] : undefined;
+      if (isTrustedRoot && pin !== undefined && pin !== c.pq_pk) {
+        return (rootPqMemo = { pq: null, err: `hop 0: root suite '${suite.alg}': the server-side PQ pin for the root issuer (policy.pqPins) does not match the stored grant's pq_pk (fail closed)` });
+      }
       const pq =
-        policy?.trustedRoot !== undefined && typeof c.pq_pk === 'string' && capHash(policy.trustedRoot) === capHash(c)
+        isTrustedRoot
           ? resolvePqVerifyKey(c.issuer, c.pq_pk, { trustedPk: c.pq_pk })
           : resolvePqVerifyKey(c.issuer, c.pq_pk, { pqPins: policy?.pqPins, allowUnboundPq: policy?.allowUnboundPq });
       return (rootPqMemo =

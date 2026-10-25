@@ -140,3 +140,25 @@ describe('envelope caveats and plain conditions decide true as well as false', (
     expect(vm.evaluateCondition(leaf('lt', 'x', 'action.params.missing'), ctx)).toBe(false);
   });
 });
+
+describe('rootCaveats', () => {
+  it('a non-array is returned untouched (same value, no conversion attempted)', () => {
+    const vm = plainVm();
+    const o = { not: 'an array' };
+    expect(vm.rootCaveats(o as never)).toBe(o);
+    for (const x of [undefined, null, 5, 'x']) expect(vm.rootCaveats(x as never)).toBe(x);
+  });
+  it('an array yields a subsequence of the ORIGINAL caveat objects (identity preserved, order kept); the empty array stays empty', () => {
+    const vm = plainVm();
+    const cav = [{ type: 'expires', at: 1 }, { type: 'budget', limit: 5 }, { type: 'expires', at: 2 }, { type: 'x' }];
+    const out = vm.rootCaveats(cav as never) as unknown[];
+    expect(Array.isArray(out)).toBe(true);
+    let at = -1;
+    for (const c of out) {
+      const idx = cav.indexOf(c as never);
+      expect(idx).toBeGreaterThan(at);
+      at = idx;
+    }
+    expect(vm.rootCaveats([] as never)).toEqual([]);
+  });
+});

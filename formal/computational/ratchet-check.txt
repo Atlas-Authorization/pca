@@ -1,0 +1,8 @@
+# 2026-10-12T21:02:28Z host cloud-box; Lean Lean (version 4.34.1, x86_64-unknown-linux-gnu, commit 5045d0056413266e57c625dcd7c365b10e377c52, Release)
+✔ [8924/8924] Built PcaMath.Ratchet (7.1s)
+Build completed successfully (8924 jobs).
+build rc=0
+'PcaMath.Ratchet.hybrid' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Ratchet.full' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Ratchet.expand_factor' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaMath.Ratchet.gg2' depends on axioms: [propext, Classical.choice, Quot.sound]

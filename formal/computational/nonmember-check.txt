@@ -1,0 +1,16 @@
+# job q261012-210122-pjzm (box sp4, Lean v4.34.1 core, 2026-10-12): PcaComp incl. NonMember, MapCommit, RevChain
+✔ [3/9] Built PcaProof.Attenuation (1.4s)
+⚠ [4/9] Built PcaComp.NonMember (1.7s)
+warning: PcaComp/NonMember.lean:101:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+✔ [5/9] Built PcaComp.RevChain (1.0s)
+✔ [6/9] Built PcaComp.Chain (1.1s)
+⚠ [7/9] Built PcaComp.MapCommit (614ms)
+warning: PcaComp/MapCommit.lean:39:68: `if_neg` has been deprecated: Use `ite_eq_right` instead
+✔ [8/9] Built PcaComp (257ms)
+Build completed successfully (9 jobs).
+'PcaComp.NonMember.nonmember_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaComp.MapCommit.open_binding' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaComp.MapCommit.z0_binding' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PcaComp.RevChain.chain_sub' depends on axioms: [propext]
+'PcaComp.RevChain.chain_root' depends on axioms: [propext]
+'PcaComp.RevChain.never_readmit' depends on axioms: [propext]

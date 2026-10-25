@@ -1,5 +1,11 @@
 # Changelog: @atlasauth/pca-mpc
 
+## Unreleased
+
+### Fixed
+
+- **Identifiable abort no longer depends on message timing in the blame round.** A party whose MAC share was wrong runs the blame round too, finds every other party's data consistent and aborts accusing the dealer. Its abort frame used to poison an honest party's mesh on arrival, so an honest party still waiting for another honest party's blame data ended with a second-hand `peer-abort` (an unverified claim naming the dealer) instead of naming the cheater itself; with every honest party slower than the cheater, nobody named it first-hand. During the blame round an abort claim is now read in link order, behind the frames the peer sent before it (`Mesh.setDeferAborts`): honest parties always send their blame data before aborting, so each honest party completes its own check and names the cheater (`mac-check`, blamed = cheater) whatever the arrival order. An abort that arrives before a peer's blame data still ends the round at once. Tests: `src/net/identify.test.ts` (6b, forced order through a delaying proxy), `src/net/mutation-kill-r13-g6-mesh-defer.test.ts`. Test infrastructure: the delaying `FaultProxy` now delivers delayed bytes before passing on a close (it used to drop them). The in-memory test mesh (`MemMesh`) implements the same deferral.
+
 ## 0.4.0 - 2026-10-11
 
 BREAKING: wire version 2 (both peers must upgrade).

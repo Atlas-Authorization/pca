@@ -1,0 +1,8 @@
+Starting query event(AcceptS(vaud_1,rid,lhol,n,c1_3,s1)) && event(AcceptS(vaud_1,rid,lhol,n,c2_2,s2)) ==> s1 = s2
+RESULT event(AcceptS(vaud_1,rid,lhol,n,c1_3,s1)) && event(AcceptS(vaud_1,rid,lhol,n,c2_2,s2)) ==> s1 = s2 is true.
+Verification summary:
+Query(ies):
+ - Query event(AcceptS(vaud_1,rid,lhol,n,c1_3,s1)) && event(AcceptS(vaud_1,rid,lhol,n,c2_2,s2)) ==> s1 = s2 is true.
+Associated restriction(s):
+ - Restriction event(ConsumeN(k_2,a)) && event(ConsumeN(k_2,b)) ==> a = b in process 1.
+ - Restriction event(AdvanceC(s,ct,a)) && event(AdvanceC(s,ct,b)) ==> a = b in process 1.

@@ -201,8 +201,14 @@ function assertAborted(outs: NodeOutput[], culprit: number | null, kinds: string
     expect(direct || viaPeer, `party ${p.id}: unexpected abort kind ${e.kind}/${e.claimedKind}`).toBe(true);
     if (culprit !== null) {
       if (viaPeer) {
-        // a relayed abort is only a claim: the accusation is kept apart and never becomes attribution
-        if (e.claimedBlame !== undefined && e.claimedBlame !== null) expect(e.claimedBlame).toBe(culprit);
+        // A peer-abort is only a claim, kept apart from attribution. When the frame came from the culprit itself
+        // (e.blamed === culprit) or was relayed second-hand by an honest peer (e.blamed === null: it carries whatever
+        // the culprit claimed), its accusation is unconstrained: a malicious party's own abort frame bypasses its
+        // tamper fault and may name anyone (e.g. its own mul0.t timeout names an honest peer). Only a first-hand
+        // abort from an honest peer (e.blamed is that peer) must accuse the culprit.
+        if (e.blamed !== null && e.blamed !== culprit && e.claimedBlame !== undefined && e.claimedBlame !== null) {
+          expect(e.claimedBlame).toBe(culprit);
+        }
       } else {
         expect(e.blamed, `party ${p.id} must blame the culprit (${e.message})`).toBe(culprit);
       }
@@ -234,6 +240,18 @@ describe('malicious sender at the framing layer (party 1 attacks round mul0)', (
       assertAborted(r.outputs, 1, c.kinds);
     }, T(240_000));
   }
+
+  it('silent-from: the culprit aborting first with its own (false) accusation of an honest peer is still only a claim', async () => {
+    // Party 1 is silent from mul0, so it never gets the honest parties' mul0.t and times out on them; with a shorter
+    // deadline than the honest parties' its abort frame (not subject to the tamper fault) reaches them first and
+    // accuses an honest party. Deterministic stand-in for the CPU-starved CI ordering that flaked the old assertion.
+    const r = await run({
+      Q: 64,
+      recvTimeoutMs: 30_000,
+      overrides: { 1: { recvTimeoutMs: T(6_000), frameFault: { kind: 'silent-from', round: 'mul0', to: undefined } } },
+    });
+    assertAborted(r.outputs, 1, ['timeout']);
+  }, T(240_000));
 
   it('bitflip inside a payload never yields a silently wrong answer', async () => {
     const r = await run({ Q: 64, recvTimeoutMs: 30_000, overrides: { 1: { frameFault: { kind: 'bitflip', round: 'mul0' } } } });

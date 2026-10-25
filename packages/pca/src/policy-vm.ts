@@ -1,24 +1,26 @@
+import { PolicyVmUnsupported, admitVerified, createPolicyVm, decideCoreVerified, requiredThresholdVerified, type PolicyVm } from '@atlasauth/pca-verified-core';
+import { verifiedCoreOptIn } from './verified-core-mode';
+import { safeRegexFullMatch } from './safe-regex';
 import { type Capability, type CapabilityChain, verifyChain } from './capability';
 import type { PCActn } from './pcactn';
 import type { PlanNode } from './merkle';
 import { ENVELOPE_CAVEAT, readEnvelope } from './envelope';
-import { withRegexBudget } from './regex-budget';
-import { agentNativeCaveatEvaluator, type AgentCaveatContext } from './agent-native';
+import { chargeRegex, withRegexBudget } from './regex-budget';
+import { agentNativeCaveatEvaluator, toolSchemaEvaluator, type AgentCaveatContext } from './agent-native';
 import {
   evaluateCaveats,
   evaluatePredicates,
+  isSafeRegexSource,
   type ActionContext,
+  type Predicate,
   type CaveatContext,
 } from './predicates';
 import {
-  admit as admitBudget,
   ageSinceTouch,
   cost,
   debit,
   leak,
   planGeodesic,
-  escalateThreshold,
-  requiredThreshold,
   riskScore,
   type RequiredThreshold,
   type RiskInputs,
@@ -40,6 +42,13 @@ export interface DecideInput {
    * artifact). A pure-PQ / hybrid ROOT is refused unless its issuer has a pin equal to its `pq_pk`.
    */
   pqPins?: Readonly<Record<string, string>>;
+  /**
+   * The verifier's OWN stored copy of the grant (never the presented artifact's root). A pure-PQ / hybrid ROOT whose
+   * capability is byte-identical to it is authorised on its own `pq_pk` (R3-01 `ChainPolicy.trustedRoot`), exactly as
+   * `verifyPCActnCore` authorises it; a pin in `pqPins` that disagrees still refuses. Without it (and without a pin) a
+   * pure-PQ / hybrid root is refused (fail closed). `verifyPCActn` and `deriveDecideInput` pass their stored grant here.
+   */
+  trustedRoot?: Capability;
   /**
    * Optional delegation chain (root = grant ... leaf). When given: delegationDepth is derived as
    * chain.length-1 (overriding caveatContext.delegationDepth) and caveats added beyond the
@@ -200,6 +209,40 @@ export function decide(input: DecideInput): PolicyDecision {
   return withRegexBudget(() => decideInner(input));
 }
 
+// ---- OPT-IN proved predicate / caveat evaluator (`PCA_VERIFIED_CORE=policyvm`) ---------------------------------------------------------
+// The Dafny-proved predicate DSL and caveat evaluator (formal/dafny/PolicyVm.dfy, verified-core `createPolicyVm`). Off by default:
+// the compiled code converts every value to exact rationals and sequences and is much slower (docs/pca/security/verified-core.md).
+// Its oracles are the production primitives: the regex guard, the linear-time matcher CHARGED against the decision's regex budget
+// exactly where the hand-written evaluator charges it, and the tool_schema evaluator. A value the converter cannot represent
+// (`PolicyVmUnsupported`: a live JS object such as a getter or class instance) falls back to the hand-written evaluator.
+let provedVm: PolicyVm | undefined;
+function vmOf(): PolicyVm {
+  return (provedVm ??= createPolicyVm({
+    safeRegex: isSafeRegexSource,
+    regexFullMatch: (src, subject) => (chargeRegex(src, subject.length) ? safeRegexFullMatch(src, subject) : null),
+    toolSchema: (caveat, ctx) => toolSchemaEvaluator(caveat as Parameters<typeof toolSchemaEvaluator>[0], ctx),
+  }));
+}
+function provedOr<T>(proved: () => T, ts: () => T): T {
+  if (verifiedCoreOptIn('policyvm')) {
+    try {
+      return proved();
+    } catch (e) {
+      if (!(e instanceof PolicyVmUnsupported)) throw e;
+    }
+  }
+  return ts();
+}
+function predicatesStep(predicates: Predicate[], action: ActionContext): { allowed: boolean; reason?: string } {
+  return provedOr(() => vmOf().evaluatePredicates(predicates, action), () => evaluatePredicates(predicates, action));
+}
+function caveatsStep(caveats: Capability['caveats'], cctx: CaveatContext, action: ActionContext): { ok: boolean; failed: string[] } {
+  return provedOr(() => vmOf().evaluateCaveats(caveats, agentCaveatContext(cctx, action), 'agent'), () => evaluateAgentCaveats(caveats, cctx, action));
+}
+function rootCaveatsStep(grant: Capability): Capability['caveats'] {
+  return provedOr(() => vmOf().rootCaveats(grant.caveats) as Capability['caveats'], () => rootCaveats(grant));
+}
+
 function decideInner(input: DecideInput): PolicyDecision {
   const fallbackBudget: TrustBudget = input?.budget ?? { B: 0, tau: 0 };
   try {
@@ -217,7 +260,8 @@ function decideInner(input: DecideInput): PolicyDecision {
     if (input.chainVerified !== true) {
       const toVerify: CapabilityChain =
         Array.isArray(input.chain) && input.chain.length > 0 ? input.chain : [grant];
-      const cr = verifyChain(toVerify, grant?.issuer, { pqPins: input.pqPins });
+      // pca-unsafe-root: allow decide()'s own trustedRoot parameter (documented: the verifier's stored grant); verifyPCActn and deriveDecideInput pass their grant parameter, exactly as the core verifier does, and a disagreeing pqPins entry still refuses
+      const cr = verifyChain(toVerify, grant?.issuer, { pqPins: input.pqPins, ...(input.trustedRoot !== undefined ? { trustedRoot: input.trustedRoot } : {}) });
       if (!cr.ok) return denied(`capability chain unverified: ${cr.reason ?? 'invalid'}`, budget);
     }
 
@@ -225,7 +269,7 @@ function decideInner(input: DecideInput): PolicyDecision {
     const reasons: string[] = [];
 
     // 1. semantic predicates (default deny)
-    const pr = evaluatePredicates(env.predicates, action);
+    const pr = predicatesStep(env.predicates, action);
     if (!pr.allowed) reasons.push(pr.reason ?? 'action not permitted by envelope predicates');
 
     // The plan node is the one the caller names (on the server path: the SIGNED pcactn.plan.node_id). There is no
@@ -251,16 +295,16 @@ function decideInner(input: DecideInput): PolicyDecision {
         extra = chain[chain.length - 1]!.caveats.slice(grant.caveats.length);
       }
     }
-    const ecv = evaluateAgentCaveats(env.caveats, cctx, action);
+    const ecv = caveatsStep(env.caveats, cctx, action);
     if (!ecv.ok) reasons.push(`caveat(s) not satisfied: ${ecv.failed.join(', ')}`);
     // 0.4.1 (security): caveats placed directly on the ROOT grant, outside the envelope, are signed authority too and are
     // enforced exactly like the caveats delegation hops append (attenuation applies from the root). Only the envelope
     // caveat that `readEnvelope` reads is excluded (its predicates and inner caveats are evaluated above); a second
     // `envelope` caveat, or any type this evaluator does not implement, is unsatisfied (fail closed).
-    const rcv = evaluateAgentCaveats(rootCaveats(grant), cctx, action);
+    const rcv = caveatsStep(rootCaveatsStep(grant), cctx, action);
     if (!rcv.ok) reasons.push(`root caveat(s) not satisfied: ${rcv.failed.join(', ')}`);
     const cv = { ok: ecv.ok && rcv.ok };
-    const dcv = evaluateAgentCaveats(extra, cctx, action);
+    const dcv = caveatsStep(extra, cctx, action);
     if (!dcv.ok) reasons.push(`delegated caveat(s) not satisfied: ${dcv.failed.join(', ')}`);
 
     // 3. risk
@@ -286,10 +330,16 @@ function decideInner(input: DecideInput): PolicyDecision {
     // irreversible (NOT optimistic-eligible) — never fail-open.
     const rc = cctx.reversibilityClass;
     const irreversible = !(typeof rc === 'string' && FAST_PATH_ELIGIBLE_CLASSES.has(rc));
-    const rt = requiredThreshold(r, pol, { irreversible });
+    // PROVED CODE (steps 3-5): the threshold band, the budget admission, the escalation and the release / admit / debit
+    // decision are the Dafny-proved kernels `PolicyVm.ReqThr`, `AdmitOf`, `DecideCore` (formal/dafny/PolicyVm.dfy,
+    // verified-core `requiredThresholdVerified`, `admitVerified`, `decideCoreVerified`). The glue computes the
+    // floating-point facts they take: the risk `r` (riskScore, unproved) and `leaked.B >= cost(r)` (a double comparison).
+    // readEnvelope has already refused a policy with a non-finite theta. `scripts/check-verified-core.sh` fails if these
+    // calls are removed.
+    const rt = requiredThresholdVerified(r, pol.theta1, pol.theta2, irreversible);
 
     // 4. budget admission
-    const adm = admitBudget(r, leaked, pol);
+    const adm = admitVerified(requiredThresholdVerified(r, pol.theta1, pol.theta2, false).t, leaked.B >= cost(r, pol.kappa));
     if (adm.needStepUp) {
       reasons.push(
         rt.t < 3 && adm.t === 3
@@ -299,16 +349,14 @@ function decideInner(input: DecideInput): PolicyDecision {
     }
 
     // 5. guardian release: policy AND caveats; the human/step-up path stays available otherwise
-    const policyOk = pr.allowed && cv.ok && dcv.ok && chainOk;
-    const release = policyOk;
-    const autoAdmit = release && adm.admit;
-    const outBudget = release && adm.metered ? debit(leaked, cost(r, pol.kappa)) : leaked;
+    const dec = decideCoreVerified(pr.allowed, cv.ok, dcv.ok, chainOk, rt, adm);
+    const outBudget = dec.debit ? debit(leaked, cost(r, pol.kappa)) : leaked;
     return {
-      releaseGuardianShare: release,
-      requiredThreshold: escalateThreshold(rt, adm.t),
+      releaseGuardianShare: dec.release,
+      requiredThreshold: dec.threshold,
       r,
-      admit: autoAdmit,
-      needStepUp: release ? adm.needStepUp : true,
+      admit: dec.admit,
+      needStepUp: dec.needStepUp,
       reasons,
       budget: outBudget,
     };
@@ -349,8 +397,10 @@ export function deriveDecideInput(
     budget: TrustBudget;
     chain?: CapabilityChain;
     now: number;
-    /** REQUIRED: the grant from the verifier's own store (by the PCActn's grant_ref). */
+    /** REQUIRED: the grant from the verifier's own store (by the PCActn's grant_ref). Also the chain's `trustedRoot`. */
     grant: Capability;
+    /** Verifier-side PQ pins by issuer (never from the request); forwarded to `decide()`'s chain check. */
+    pqPins?: Readonly<Record<string, string>>;
     goalNodeId?: string;
     subject?: Record<string, unknown>;
     env?: Record<string, unknown>;
@@ -364,6 +414,9 @@ export function deriveDecideInput(
   const chain = ctx.chain ?? p.cap_chain;
   return {
     grant: ctx.grant,
+    // the stored grant authorises a pure-PQ / hybrid root on its own pq_pk, exactly as in verifyPCActnCore (R3-01)
+    trustedRoot: ctx.grant,
+    ...(ctx.pqPins !== undefined ? { pqPins: ctx.pqPins } : {}),
     chain,
     action: {
       action: {

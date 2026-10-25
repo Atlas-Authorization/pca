@@ -9,6 +9,8 @@ import { merkleRoot, planNodeLeaf, type PlanNode } from '../merkle';
 import { decodePCActn, verifyPCActnCore, type CheckStatus, type PCActn, type VerifyHooks } from '../pcactn';
 import { decide, evaluateAgentCaveats, resolveReversibilityClass } from '../policy-vm';
 import type { SigAlg } from '../pq';
+import type { IntentPolicy } from '../intent-binding';
+import { type IntentV2Context, decideIntentV2 } from '../intent-v2';
 import { checkRevocationEpoch, type RevocationEpoch } from '../revocation';
 import { type RequiredThreshold, type RiskInputs, type TrustBudget } from '../risk';
 
@@ -92,6 +94,15 @@ export interface VerifyPCActnOptions {
   allowedSuites?: readonly SigAlg[];
   /** LEGACY: accept PQ keys read from the artifact (no `holder_pq` binding). Voids the hybrid's PQ protection (F-2). Default false. */
   allowUnboundPq?: boolean;
+  /** Intent Layer M2 policy, passed to the core `intent` check (see intent-binding.ts). */
+  intent?: IntentPolicy;
+  /**
+   * Intent Layer v2 state + policy (rules 13–18, see intent-v2.ts). `params` defaults to `context.params`. For a PCActn
+   * with `intent_session`, the verifier-computed `env.acc` / `env.mon` (accumulators passed), `env.canon` (schema
+   * passed) and `env.world` / `env.prov` / `env.class` (W-B passed) REPLACE those members of `context.env` for the grant
+   * predicates: only the verifier computes them.
+   */
+  intentV2?: IntentV2Context;
   /**
    * Server-side PQ pins `issuer -> pq_pk` (b64u). When set, a grant whose root suite is not Ed25519 must carry a `pq_pk`
    * byte-equal to `pqPins[grant.issuer]`; a missing or different pin FAILS the `pq_pin` check (fail closed). An Ed25519
@@ -112,7 +123,14 @@ export interface PcaPrincipalInfo {
   verified: boolean;
 }
 
-const CLASS_RANK: Record<string, number> = { reversible: 0, costly: 1, irreversible: 2 };
+/**
+ * Severity of a reversibility class, over BOTH vocabularies the verifier sees: the RS strictness enum (`costly`) and the
+ * caveat enum (`rate_limited`, see predicates.REVERSIBILITY_ORDER), which sit on the same middle tier. `rate_limited` used to
+ * be missing here, so it ranked as an unknown (most restrictive) class: a declared `rate_limited` then counted as STRICTER
+ * than an authoritative `costly` and replaced it as the effective class (which `reversibility_max` caveats read), and passed
+ * against an authoritative `irreversible`.
+ */
+const CLASS_RANK: Record<string, number> = { reversible: 0, rate_limited: 1, costly: 1, irreversible: 2 };
 /** Unknown class strings are the most restrictive (fail closed). */
 const classRank = (c: unknown): number => (typeof c === 'string' && Object.prototype.hasOwnProperty.call(CLASS_RANK, c) ? CLASS_RANK[c]! : 2);
 
@@ -178,8 +196,9 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
           },
         }
       : opts.hooks;
+    const intentV2 = opts.intentV2 ? { ...opts.intentV2, params: opts.intentV2.params ?? ctx.params } : undefined;
     // pca-unsafe-root: allow the full verifier's own grant parameter; callers pass their stored grant (pca-a2a's pinned-issuer root is admitted only with pqPins)
-    const core = await verifyPCActnCore(p, { grant: opts.grant, nowEpoch: now, audience: opts.audience, hooks, allowedSuites: opts.allowedSuites, allowUnboundPq: opts.allowUnboundPq });
+    const core = await verifyPCActnCore(p, { grant: opts.grant, nowEpoch: now, audience: opts.audience, hooks, allowedSuites: opts.allowedSuites, allowUnboundPq: opts.allowUnboundPq, intent: opts.intent, intentV2 });
     // A wire-form failure is terminal (normative): nothing else is evaluated on a malformed object.
     if (core.checks.wire === 'fail') return failClosed(core.reason ?? 'wire: malformed PCActn', { wire: 'fail' });
     let vs = VerdictState.init<string, string>(Object.entries(core.checks) as [string, CheckStatus][], !core.allow && core.reason ? [core.reason] : []);
@@ -300,13 +319,17 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
     const actionCtx = {
       action: { verb: p.action?.verb, resource: p.action?.resource, params: ctx.params, reversibility_class: reversibility },
       subject: ctx.subject,
-      env: ctx.env,
+      env: v2Env(p, opts.grant, intentV2, now, ctx.env),
       // Signed `tool_binding` (D): binds the semantic firewall (`tool_schema` caveats) to the tool the agent signed.
       ...(typeof p.tool_binding === 'string' ? { toolBinding: p.tool_binding } : {}),
     };
     const d = decide({
       // pca-unsafe-root: allow decide() runs under the same grant parameter as the core verifier above
       grant: opts.grant,
+      // the SAME authority the core verifier used for a pure-PQ / hybrid root: the stored grant and the server-side pins.
+      // pca-unsafe-root: allow mirrors the core's own trustedRoot: opts.grant (pcactn.ts), so decide() accepts no root the core refused; a non-Ed25519 pinned-issuer root from pca-a2a still needs a matching pqPins entry (pq_pin check above, fail closed)
+      trustedRoot: opts.grant,
+      ...(opts.pqPins !== undefined ? { pqPins: opts.pqPins } : {}),
       action: actionCtx,
       plan: ctx.plan,
       nodeId: p.plan?.node_id,
@@ -366,6 +389,17 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
   } catch (e) {
     return failClosed(`verifier error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
   }
+}
+
+/** The predicate `env`: the host's, with the verifier-computed v2 members (see intent-v2.ts IntentV2Env). */
+function v2Env(p: PCActn, grant: Capability, ctx: IntentV2Context | undefined, now: number, env: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (p.intent_session === undefined) return env;
+  // only the verifier computes these members: whatever the host passed under these names is dropped
+  const rest: Record<string, unknown> = { ...(env ?? {}) };
+  for (const k of ['acc', 'mon', 'canon', 'world', 'prov', 'class']) delete rest[k];
+  const d = decideIntentV2(p, grant, ctx, now).env ?? {};
+  for (const [k, v] of Object.entries(d)) if (v !== undefined) rest[k] = v;
+  return rest;
 }
 
 /**

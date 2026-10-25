@@ -1,0 +1,17 @@
+nf_tau1_eps0_N4      expect=pass  got=pass         OK          3s  674 gen 294 distinct 
+nf_tau1_eps1_N4      expect=pass  got=pass         OK          2s  559 gen 294 distinct 
+nf_tau1_eps0_N5      expect=pass  got=pass         OK          2s  2227 gen 842 distinct 
+nf_tau1_eps2_N5      expect=pass  got=pass         OK          2s  326 gen 211 distinct 
+nf_tauhalf_N4        expect=fail  got=fail         OK          1s  13 gen 13 distinct Error: Invariant GrantSound is violated.
+noisy1_tau1_N4       expect=fail  got=fail         OK          2s  734 gen 321 distinct Error: Invariant GrantSound is violated.
+noisy1_live_N4       expect=pass  got=pass         OK          2s  3068 gen 1094 distinct 
+v2_veto_N4           expect=pass  got=pass         OK          1s  674 gen 294 distinct 
+res_lin              expect=pass  got=pass         OK          6s  144957 gen 28132 distinct 
+res_nolin            expect=fail  got=fail         OK          1s  59 gen 54 distinct Error: Invariant NoOverspend is violated.
+res_noincl           expect=fail  got=fail         OK          0s  13 gen 13 distinct Error: Invariant EquivocationDetected is violated.
+lazy_nf_N4           expect=pass  got=pass         OK          2s  847 gen 209 distinct 
+lazy_noisy_N4        expect=fail  got=fail         OK          1s  20 gen 17 distinct Error: Invariant EffectiveSound is violated.
+lazy_agent_N4        expect=fail  got=fail         OK          1s  15 gen 15 distinct Error: Invariant NoAgentWidening is violated.
+rev_ok               expect=pass  got=pass         OK          0s  905 gen 375 distinct 
+rev_noage            expect=fail  got=fail         OK          0s  301 gen 112 distinct Error: Invariant ExposureBound is violated.
+mismatches: 0

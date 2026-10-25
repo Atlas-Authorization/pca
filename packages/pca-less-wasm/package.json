@@ -32,7 +32,7 @@
     "!dist/**/*.test.*"
   ],
   "scripts": {
-    "build:wasm": "echo 'wasm is cross-compiled off-box by scripts/lessbuild.sh on a Linux VM (wasi-sdk-25); drop the result into wasm/less_cat1.wasm, then run: node scripts/embed-wasm.mjs' && exit 1",
+    "build:wasm": "bash scripts/build-wasm.sh && node scripts/embed-wasm.mjs",
     "build": "node scripts/embed-wasm.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.esm.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"

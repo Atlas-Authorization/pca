@@ -22,6 +22,7 @@ import {
   verifyMembership,
   verifyNonMembership,
 } from './revocation';
+import { __setVerifiedCoreModeForTests } from './verified-core-mode';
 
 const cat = (a: Uint8Array, b: Uint8Array) => {
   const m = new Uint8Array(a.length + b.length);
@@ -224,10 +225,22 @@ describe('verifyNonMembership', () => {
       lo: { id: 'a', proof: { index: 0, size: 1.5, path: [{ side: 'R' as const, hash: b64u(sib0) }] } },
       hi: { id: 'c', proof: { index: 1, size: 1.5, path: [{ side: 'R' as const, hash: b64u(s1) }, { side: 'L' as const, hash: b64u(lLo) }] } },
     };
-    // control: both leaves DO fold to the root (leaf-level checks have no integrality rule), so only the size rule refuses
-    expect(verifyMembership(root, proof.lo.proof, 'a')).toBe(true);
-    expect(verifyMembership(root, proof.hi.proof, 'c')).toBe(true);
-    expect(verifyNonMembership(root, proof, 'b')).toBe(false);
+    // control: both leaves DO fold to the root under the hand-written leaf check (no integrality rule), so only the size rule
+    // refuses. Pinned to the hand-written path so the control means the same under PCA_VERIFIED_CORE: the opt-in proved
+    // membership verifier (merkle-strict) is stricter and refuses the non-integer size itself (checked below).
+    try {
+      __setVerifiedCoreModeForTests('none');
+      expect(verifyMembership(root, proof.lo.proof, 'a')).toBe(true);
+      expect(verifyMembership(root, proof.hi.proof, 'c')).toBe(true);
+      expect(verifyNonMembership(root, proof, 'b')).toBe(false);
+      __setVerifiedCoreModeForTests('merkle-strict');
+      expect(verifyMembership(root, proof.lo.proof, 'a')).toBe(false);
+      expect(verifyMembership(root, proof.hi.proof, 'c')).toBe(false);
+      expect(verifyNonMembership(root, proof, 'b')).toBe(false);
+    } finally {
+      __setVerifiedCoreModeForTests(undefined);
+    }
+    expect(verifyNonMembership(root, proof, 'b')).toBe(false); // whatever PCA_VERIFIED_CORE says
   });
   it('hostile input is false, not an exception (and never true)', () => {
     expect(verifyNonMembership(s.root, { size: 3, lo: { id: Symbol('x'), proof: nm('c').lo!.proof } } as never, 'c')).toBe(false);

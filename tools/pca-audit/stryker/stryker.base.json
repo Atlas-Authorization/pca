@@ -17,10 +17,9 @@
   "disableTypeChecks": "src/**/*.ts",
   "ignoreStatic": true,
   "ignorePatterns": [
-    "src/zk*.test.ts",
     "**/*.realsilicon.test.ts",
     "src/attest-maa-pins.test.ts",
     "src/mutation-equivalents-diff-*.test.ts"
   ],
-  "dryRunTimeoutMinutes": 15
+  "dryRunTimeoutMinutes": 60
 }

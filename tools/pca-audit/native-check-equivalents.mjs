@@ -42,7 +42,7 @@ if (args.includes('--merge')) {
       const p = path.join(root, 'sdks', crate, sub, 'mutation-equivalents.part.json');
       if (!fs.existsSync(p)) continue;
       for (const e of JSON.parse(fs.readFileSync(p, 'utf8'))) {
-        const n = { crate: e.crate ?? crate, file: e.file, mutant: e.mutant ?? e.description, line: (e.line ?? '').trim(), ...(e.occurrence ? { occurrence: e.occurrence } : {}), ...(e.fn ? { fn: e.fn } : {}), ...(e.lineno ? { lineno: e.lineno } : {}), reason: e.reason };
+        const n = { crate: e.crate ?? crate, file: e.file, mutant: e.mutant ?? e.description, line: (e.line ?? '').trim(), ...(e.occurrence ? { occurrence: e.occurrence } : {}), ...(e.fn ? { fn: e.fn } : {}), ...(e.lineno ? { lineno: e.lineno } : {}), ...(e.multiplicity ? { multiplicity: e.multiplicity } : {}), reason: e.reason };
         const k = siteKey(n.crate, n.file, n.mutant, n.line, n.occurrence ?? 1);
         if (!have.has(k)) { ledger.equivalents.push(n); have.add(k); }
       }
@@ -107,5 +107,7 @@ if (reports.length) {
   }
   errors.push(...checkSites(entries, survivors, units));
 }
-if (errors.length) { console.error(errors.join('\n')); console.error(`FAIL: ${errors.length} problem(s); ${ledger.equivalents.length} entries`); process.exit(1); }
-console.log(`native equivalents ok: ${ledger.equivalents.length} entries (one site each${drift ? `; ${drift} line hint(s) drifted, informational` : ''})${reports.length ? `; ${nSurv} survivors all matched` : ' (static check)'}`);
+// exitCode, not process.exit(): exit() right after a large console.error to a PIPE drops the unflushed tail (the mutation
+// merge reads this stderr; it saw 289 of 4,101 unlisted Java survivors)
+if (errors.length) { console.error(errors.join('\n')); console.error(`FAIL: ${errors.length} problem(s); ${ledger.equivalents.length} entries`); process.exitCode = 1; }
+else console.log(`native equivalents ok: ${ledger.equivalents.length} entries (one site each${drift ? `; ${drift} line hint(s) drifted, informational` : ''})${reports.length ? `; ${nSurv} survivors all matched` : ' (static check)'}`);
