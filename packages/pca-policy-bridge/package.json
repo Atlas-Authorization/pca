@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-policy-bridge",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Import external authz policy into PCA: compile Cedar and OPA/Rego policies and OpenFGA/Zanzibar ReBAC models+tuples into PCA predicates/caveats, so existing enterprise policy engines drive proof-carrying authority.",
   "keywords": [
     "cedar",

@@ -1,0 +1,27 @@
+{
+  "name": "@atlasauth/pca-wallet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PCA Intent Layer v2 wallet side: the trusted question channel (verifier-selected cells, wallet-rendered cards from fixed templates, no agent text), friction tiers scaled by harm, per-session and per-hour question caps, attention canaries and the approval-fatigue model, agent-initiated structured clarifications, and opt-in differentially private population priors.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-intent": "workspace:*",
+    "@atlasauth/pca-webauthn": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

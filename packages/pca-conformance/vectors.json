@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "generator": "@atlasauth/pca-conformance generateVectorSet() — deterministic keys, fixed clock, real @atlasauth/pca builders",
   "sig_domain": "atlas-pca/actn/v2",
   "check_order": [
@@ -13,6 +13,7 @@
     "plan_root_authorized",
     "leaf_signature",
     "counter",
+    "intent",
     "taint_gate",
     "freshness",
     "attestation",
@@ -1082,6 +1083,725 @@
           "attestation": "not-enforced",
           "threshold": "not-enforced",
           "revocation": "not-enforced"
+        }
+      }
+    },
+    {
+      "id": "intent_bound",
+      "description": "Intent Layer M2: the signed intent slot opens the root grant goal commitment (pca-intent:v1:<ref>:<map_digest>) and meets the policy floor/ceiling: the intent check passes.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+        "cap_chain": [
+          {
+            "id": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [
+              {
+                "agent_binding": {},
+                "caveats": [],
+                "goal_commit": "1QKNGzWCHbMqlS7ppA3K8ADBsk8v-BcyepDE3EyZcwc",
+                "predicates": [],
+                "risk_policy": {
+                  "bMax": 1,
+                  "kappa": 1,
+                  "lambda": 0.0005,
+                  "rho": 0.5,
+                  "theta1": 0.25,
+                  "theta2": 0.6,
+                  "weights": {
+                    "alpha": 0.25,
+                    "beta": 0.2,
+                    "delta": 0.2,
+                    "epsilon": 0.1,
+                    "gamma": 0.2,
+                    "zeta": 0.05
+                  }
+                },
+                "type": "envelope"
+              }
+            ],
+            "body_digest": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "sig": "BSZSH7JssoEVOsLWY4HuAtgTca9TSIsHbrgYTX-hxXsR8Tl0yxptgbV9N-seyG-5aFvz0jZVc0F3SN8ZIgPmAg"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "intent": {
+          "ref": "YMC4HzIUWTIQjclID5MqytSZYoEBHrw2Lo3mkJDO2u8",
+          "map_digest": "x3rPl5MvEEjPFFWwXtOoHUNeTp6fmPiCETtWef4obqo",
+          "goal_salt": "Y29uZm9ybWFuY2UtaW50ZW50",
+          "fidelity_ppm": 950000,
+          "residual_risk_ppm": 12000
+        },
+        "sig": "gGL_pEuPldveQnTDQxQM1xHyqBix5fjudRTA7BWWGO4fjgUxZMA_rNSuK3Hma0BE9W68oIu4KHvX-VeHSiclCA"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000,
+        "intent": {
+          "require": true,
+          "min_fidelity_ppm": 950000,
+          "max_residual_risk_ppm": 12000
+        }
+      },
+      "expect": {
+        "ok": true,
+        "firstFailedCheck": null,
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced",
+          "intent": "pass"
+        }
+      }
+    },
+    {
+      "id": "intent_required_absent",
+      "description": "Intent policy {require:true} but the action carries no intent slot: the intent check fails closed.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+        "cap_chain": [
+          {
+            "id": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [
+              {
+                "agent_binding": {},
+                "caveats": [],
+                "goal_commit": "1QKNGzWCHbMqlS7ppA3K8ADBsk8v-BcyepDE3EyZcwc",
+                "predicates": [],
+                "risk_policy": {
+                  "bMax": 1,
+                  "kappa": 1,
+                  "lambda": 0.0005,
+                  "rho": 0.5,
+                  "theta1": 0.25,
+                  "theta2": 0.6,
+                  "weights": {
+                    "alpha": 0.25,
+                    "beta": 0.2,
+                    "delta": 0.2,
+                    "epsilon": 0.1,
+                    "gamma": 0.2,
+                    "zeta": 0.05
+                  }
+                },
+                "type": "envelope"
+              }
+            ],
+            "body_digest": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "sig": "BSZSH7JssoEVOsLWY4HuAtgTca9TSIsHbrgYTX-hxXsR8Tl0yxptgbV9N-seyG-5aFvz0jZVc0F3SN8ZIgPmAg"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "sig": "JX1UIV1OGf3xOFWwCiaqtzgnyPeoOYwLdCMK3kCv8a7j5ORY4-vAwdVD4670eGSpYLuhfxj4o8-c_3cXBCdWCA"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000,
+        "intent": {
+          "require": true
+        }
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "intent",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced",
+          "intent": "fail"
+        }
+      }
+    },
+    {
+      "id": "intent_binding_mismatch",
+      "description": "The intent slot's map_digest is not the one the root grant goal commits to: the intent check fails.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+        "cap_chain": [
+          {
+            "id": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [
+              {
+                "agent_binding": {},
+                "caveats": [],
+                "goal_commit": "1QKNGzWCHbMqlS7ppA3K8ADBsk8v-BcyepDE3EyZcwc",
+                "predicates": [],
+                "risk_policy": {
+                  "bMax": 1,
+                  "kappa": 1,
+                  "lambda": 0.0005,
+                  "rho": 0.5,
+                  "theta1": 0.25,
+                  "theta2": 0.6,
+                  "weights": {
+                    "alpha": 0.25,
+                    "beta": 0.2,
+                    "delta": 0.2,
+                    "epsilon": 0.1,
+                    "gamma": 0.2,
+                    "zeta": 0.05
+                  }
+                },
+                "type": "envelope"
+              }
+            ],
+            "body_digest": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "sig": "BSZSH7JssoEVOsLWY4HuAtgTca9TSIsHbrgYTX-hxXsR8Tl0yxptgbV9N-seyG-5aFvz0jZVc0F3SN8ZIgPmAg"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "intent": {
+          "ref": "YMC4HzIUWTIQjclID5MqytSZYoEBHrw2Lo3mkJDO2u8",
+          "map_digest": "YMC4HzIUWTIQjclID5MqytSZYoEBHrw2Lo3mkJDO2u8",
+          "goal_salt": "Y29uZm9ybWFuY2UtaW50ZW50",
+          "fidelity_ppm": 950000,
+          "residual_risk_ppm": 12000
+        },
+        "sig": "NUJXPEI--mkgXN4MUQmudsE322DNpQF2a9q75rtMEZzP8A0Wn5nPCbVmNQH5Yc4sKoDD5lZ8eyZqVKn-aOUEDQ"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "intent",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced",
+          "intent": "fail"
+        }
+      }
+    },
+    {
+      "id": "intent_fidelity_below_min",
+      "description": "Bound intent whose fidelity_ppm (950000) is below the policy min_fidelity_ppm (950001): the intent check fails.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+        "cap_chain": [
+          {
+            "id": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [
+              {
+                "agent_binding": {},
+                "caveats": [],
+                "goal_commit": "1QKNGzWCHbMqlS7ppA3K8ADBsk8v-BcyepDE3EyZcwc",
+                "predicates": [],
+                "risk_policy": {
+                  "bMax": 1,
+                  "kappa": 1,
+                  "lambda": 0.0005,
+                  "rho": 0.5,
+                  "theta1": 0.25,
+                  "theta2": 0.6,
+                  "weights": {
+                    "alpha": 0.25,
+                    "beta": 0.2,
+                    "delta": 0.2,
+                    "epsilon": 0.1,
+                    "gamma": 0.2,
+                    "zeta": 0.05
+                  }
+                },
+                "type": "envelope"
+              }
+            ],
+            "body_digest": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "sig": "BSZSH7JssoEVOsLWY4HuAtgTca9TSIsHbrgYTX-hxXsR8Tl0yxptgbV9N-seyG-5aFvz0jZVc0F3SN8ZIgPmAg"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "intent": {
+          "ref": "YMC4HzIUWTIQjclID5MqytSZYoEBHrw2Lo3mkJDO2u8",
+          "map_digest": "x3rPl5MvEEjPFFWwXtOoHUNeTp6fmPiCETtWef4obqo",
+          "goal_salt": "Y29uZm9ybWFuY2UtaW50ZW50",
+          "fidelity_ppm": 950000,
+          "residual_risk_ppm": 12000
+        },
+        "sig": "gGL_pEuPldveQnTDQxQM1xHyqBix5fjudRTA7BWWGO4fjgUxZMA_rNSuK3Hma0BE9W68oIu4KHvX-VeHSiclCA"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000,
+        "intent": {
+          "min_fidelity_ppm": 950001
+        }
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "intent",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced",
+          "intent": "fail"
+        }
+      }
+    },
+    {
+      "id": "intent_residual_above_max",
+      "description": "Bound intent whose residual_risk_ppm (12000) exceeds the policy max_residual_risk_ppm (11999): the intent check fails.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+        "cap_chain": [
+          {
+            "id": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [
+              {
+                "agent_binding": {},
+                "caveats": [],
+                "goal_commit": "1QKNGzWCHbMqlS7ppA3K8ADBsk8v-BcyepDE3EyZcwc",
+                "predicates": [],
+                "risk_policy": {
+                  "bMax": 1,
+                  "kappa": 1,
+                  "lambda": 0.0005,
+                  "rho": 0.5,
+                  "theta1": 0.25,
+                  "theta2": 0.6,
+                  "weights": {
+                    "alpha": 0.25,
+                    "beta": 0.2,
+                    "delta": 0.2,
+                    "epsilon": 0.1,
+                    "gamma": 0.2,
+                    "zeta": 0.05
+                  }
+                },
+                "type": "envelope"
+              }
+            ],
+            "body_digest": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "sig": "BSZSH7JssoEVOsLWY4HuAtgTca9TSIsHbrgYTX-hxXsR8Tl0yxptgbV9N-seyG-5aFvz0jZVc0F3SN8ZIgPmAg"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "intent": {
+          "ref": "YMC4HzIUWTIQjclID5MqytSZYoEBHrw2Lo3mkJDO2u8",
+          "map_digest": "x3rPl5MvEEjPFFWwXtOoHUNeTp6fmPiCETtWef4obqo",
+          "goal_salt": "Y29uZm9ybWFuY2UtaW50ZW50",
+          "fidelity_ppm": 950000,
+          "residual_risk_ppm": 12000
+        },
+        "sig": "gGL_pEuPldveQnTDQxQM1xHyqBix5fjudRTA7BWWGO4fjgUxZMA_rNSuK3Hma0BE9W68oIu4KHvX-VeHSiclCA"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000,
+        "intent": {
+          "max_residual_risk_ppm": 11999
+        }
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "intent",
+        "perCheck": {
+          "wire": "pass",
+          "version": "pass",
+          "audience": "pass",
+          "validity": "pass",
+          "cap_chain": "pass",
+          "grant_ref_bound": "pass",
+          "plan_inclusion": "pass",
+          "plan_root_authorized": "not-enforced",
+          "leaf_signature": "pass",
+          "counter": "pass",
+          "taint_gate": "not-enforced",
+          "attestation": "not-enforced",
+          "threshold": "not-enforced",
+          "revocation": "not-enforced",
+          "intent": "fail"
+        }
+      }
+    },
+    {
+      "id": "intent_bad_wire",
+      "description": "The intent slot has fidelity_ppm 1000001 (out of [0, 1e6], re-signed): the wire check fails and is terminal.",
+      "pcactn": {
+        "ver": 2,
+        "action": {
+          "verb": "stripe.refund",
+          "resource": "charge:ch_conformance",
+          "params_digest": "fdFsXJBXgVZlLJPJ3D_UU0aHOsJ-cmJoR-s5LYV-KZE",
+          "reversibility_class": "reversible"
+        },
+        "grant_ref": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+        "cap_chain": [
+          {
+            "id": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "issuer": "BhwVo6lR2qAHtPQPc4sReU4W2mDcb_u5fryjQAqr9Xo",
+            "holder": "67ZuBM-5QTX7jamJ0mcmVdfQCg7zAasqUpgjnpmiL1Y",
+            "caveats": [
+              {
+                "agent_binding": {},
+                "caveats": [],
+                "goal_commit": "1QKNGzWCHbMqlS7ppA3K8ADBsk8v-BcyepDE3EyZcwc",
+                "predicates": [],
+                "risk_policy": {
+                  "bMax": 1,
+                  "kappa": 1,
+                  "lambda": 0.0005,
+                  "rho": 0.5,
+                  "theta1": 0.25,
+                  "theta2": 0.6,
+                  "weights": {
+                    "alpha": 0.25,
+                    "beta": 0.2,
+                    "delta": 0.2,
+                    "epsilon": 0.1,
+                    "gamma": 0.2,
+                    "zeta": 0.05
+                  }
+                },
+                "type": "envelope"
+              }
+            ],
+            "body_digest": "LqnsG8Dg4l78Zda9qOevcNjbtNPx8pth7FdoDZz2yXI",
+            "sig": "BSZSH7JssoEVOsLWY4HuAtgTca9TSIsHbrgYTX-hxXsR8Tl0yxptgbV9N-seyG-5aFvz0jZVc0F3SN8ZIgPmAg"
+          }
+        ],
+        "plan": {
+          "root": "DLn8Sj4_ehM12DqrBCe-Iu16zb1AyMuirMo7qUOpD2U",
+          "inclusion_proof": {
+            "index": 1,
+            "size": 2,
+            "path": [
+              {
+                "side": "L",
+                "hash": "_asAplGL2PazmmoeDidbzgSefU4pJyHlpCEePvk2tLQ"
+              }
+            ]
+          },
+          "node_id": "refund",
+          "conditions_digest": "YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY"
+        },
+        "attestation": {
+          "quote_digest": "",
+          "epoch": 0,
+          "model_id": "unattested",
+          "measurement": "",
+          "operator": "unattested"
+        },
+        "provenance": {
+          "causal_hash": "",
+          "taint_level": 0,
+          "trusted_refs": []
+        },
+        "freshness": {
+          "beacon_ref": "",
+          "epoch": 0,
+          "accumulator_witness": ""
+        },
+        "counter": 1,
+        "risk_claim": {
+          "r": 0,
+          "inputs": {}
+        },
+        "aud": "atlas:rs:conformance",
+        "iat": 1700000000000,
+        "exp": 1700001200000,
+        "intent": {
+          "ref": "YMC4HzIUWTIQjclID5MqytSZYoEBHrw2Lo3mkJDO2u8",
+          "map_digest": "x3rPl5MvEEjPFFWwXtOoHUNeTp6fmPiCETtWef4obqo",
+          "goal_salt": "Y29uZm9ybWFuY2UtaW50ZW50",
+          "fidelity_ppm": 1000001,
+          "residual_risk_ppm": 12000
+        },
+        "sig": "I37DPXmj3Am9vKnKrPtasbyghf3VXtdMt-1RDapjp3xVXbElTCTitcMKhebw_qorh-AXEIBVd2qWaTQ_3L3FDw"
+      },
+      "aud": "atlas:rs:conformance",
+      "verifyOptions": {
+        "nowEpoch": 1700000000000
+      },
+      "expect": {
+        "ok": false,
+        "firstFailedCheck": "wire",
+        "perCheck": {
+          "wire": "fail"
         }
       }
     },

@@ -32,7 +32,6 @@ const entries = new Map<string, Entry>(); // least-recently-used first
 const bySource = new Map<string, Map<string, true>>(); // source -> its keys, least-recently-used first
 let totalWeight = 0;
 let sourceProvider: (() => string | null) | null = null;
-const enc = new TextEncoder();
 
 /** Install the provider of the CURRENT source (the server's per-request client key); `null` uninstalls. */
 export function setRegexCacheSourceProvider(fn: (() => string | null) | null): void {
@@ -47,8 +46,16 @@ function currentSource(): string {
   }
 }
 
+// The key must be INJECTIVE over JavaScript strings: TextEncoder maps every lone surrogate to U+FFFD, so 'x\ud800',
+// 'x\udc00' and 'x\ufffd' would share one compiled program. Hash the UTF-16 code units (2 bytes each, big-endian).
 function keyOf(src: string): string {
-  return bytesToHex(sha256(enc.encode(src)));
+  const b = new Uint8Array(src.length * 2);
+  for (let i = 0; i < src.length; i++) {
+    const c = src.charCodeAt(i);
+    b[2 * i] = c >> 8;
+    b[2 * i + 1] = c & 0xff;
+  }
+  return bytesToHex(sha256(b));
 }
 
 function remove(key: string): void {

@@ -1,3 +1,4 @@
+import { computeTaintVerified } from '@atlasauth/pca-verified-core';
 import type { ResourceGraph } from './objective-risk';
 
 /**
@@ -213,32 +214,14 @@ export interface TaintResult {
  * lineage → 0; any unverifiable/web/agent ref → high (up to 1); an empty lineage → 1 (no trusted evidence).
  * Fail-closed: a missing context, absent/malformed provenance, a non-array `trusted_refs`, or any non-string
  * ref all return `{ taint: 1, valid: false }`. Never throws.
+ *
+ * PROVED CODE. The decision (fail-closed pre-checks, per-ref classification, the join, the rank and the
+ * fail-closed handling of a throwing registry) is the Dafny-proved `Taint.ComputeSafe` (formal/dafny/Taint.dfy,
+ * `@atlasauth/pca-verified-core` `computeTaintVerified`); this function only forwards to it. The glue there
+ * evaluates the primitives (typeof checks, `registry.lookup`, `resourceGraph.node`) in the order of
+ * {@link classifyRef}. See docs/pca/security/verified-core.md; `scripts/check-verified-core.sh` fails if this
+ * call is removed.
  */
 export function computeTaint(provenance: unknown, ctx: TaintContext): TaintResult {
-  const fail = (reason: string): TaintResult => ({ taint: 1, label: { ...TOP }, refs: [], valid: false, reason });
-  try {
-    if (!ctx || !ctx.registry || typeof ctx.registry.lookup !== 'function') return fail('taint: no trusted-input registry');
-    if (provenance === null || typeof provenance !== 'object' || Array.isArray(provenance)) {
-      return fail('taint: provenance is absent or malformed');
-    }
-    const refsRaw = (provenance as TaintProvenance).trusted_refs;
-    if (refsRaw !== undefined && !Array.isArray(refsRaw)) return fail('taint: trusted_refs must be an array');
-    const list: unknown[] = Array.isArray(refsRaw) ? refsRaw : [];
-    // Indexed loop (not `.some`/`.map`): holes of a sparse array are visited as `undefined` and rejected.
-    for (let i = 0; i < list.length; i++) {
-      const r = list[i];
-      if (typeof r !== 'string' || r.length === 0) return fail('taint: trusted_refs must be non-empty strings');
-    }
-    const refs: TaintRefClassification[] = [];
-    for (let i = 0; i < list.length; i++) {
-      const ref = list[i] as string;
-      refs.push({ ref, label: classifyRef(ref, ctx) });
-    }
-    const label = joinLabels(refs.map((r) => r.label));
-    const taint = taintValue(label);
-    if (!Number.isFinite(taint)) return fail('taint: non-finite taint value (fail closed)');
-    return { taint, label, refs, valid: true };
-  } catch (e) {
-    return fail(`taint: evaluation error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
-  }
+  return computeTaintVerified(provenance, ctx) as TaintResult;
 }

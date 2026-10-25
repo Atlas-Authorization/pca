@@ -19,6 +19,10 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+# ...but tracked transcripts are content, not logs: test fixtures (sha256-pinned in each PROVENANCE.json) and the
+# prover result logs the assembly keeps under formal/ (larger ones are listed in OMITTED-LARGE-LOGS.txt instead)
+!packages/*/fixtures/**/*.log
+!formal/**/*.log
 .cache/
 .turbo/
 

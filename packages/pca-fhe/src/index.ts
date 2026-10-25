@@ -287,8 +287,17 @@ export interface FheContext {
   dispose(): void;
 }
 
+/**
+ * Yield one macrotask. Every SEAL call is synchronous WASM (seconds for keygen / Galois rotations), and once the
+ * module is loaded `await loadSeal()` resolves as a microtask, so back-to-back gate operations would otherwise
+ * hold the event loop for their whole combined run: timers, I/O and IPC (a server's other requests, a test
+ * runner's RPC) starve. Each operation builds its context here, so each one yields before its synchronous block.
+ */
+const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
 /** Build the deterministic BFV context. Awaits SEAL once; the module is reused on later calls. */
 export async function createFheContext(): Promise<FheContext> {
+  await yieldToEventLoop();
   const seal = await loadSeal();
   const parms = seal.EncryptionParameters(seal.SchemeType.bfv);
   parms.setPolyModulusDegree(POLY_MODULUS_DEGREE);

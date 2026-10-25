@@ -1794,7 +1794,8 @@ let Regex = (function() {
         let _2_inner = (_source0).inner;
         let _3_mn = (_source0).mn;
         let _4_mx = (_source0).mx;
-        return ((_3_mn).multipliedBy(Regex.__default.Size(_2_inner))).plus((((_4_mx).isEqualTo(new BigNumber(-1))) ? ((Regex.__default.Size(_2_inner)).plus(new BigNumber(2))) : (((_4_mx).minus(_3_mn)).multipliedBy((Regex.__default.Size(_2_inner)).plus(_dafny.ONE)))));
+        let _5_S = Regex.__default.Size(_2_inner);
+        return ((_3_mn).multipliedBy(_5_S)).plus((((_4_mx).isEqualTo(new BigNumber(-1))) ? ((_5_S).plus(new BigNumber(2))) : (((_4_mx).minus(_3_mn)).multipliedBy((_5_S).plus(_dafny.ONE)))));
       }
     };
     static SizeL(l) {

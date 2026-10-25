@@ -142,8 +142,8 @@ export class FaultProxy {
     const up = net.connect(this.target.port, this.target.host);
     c.on('error', () => up.destroy());
     up.on('error', () => c.destroy());
-    c.on('close', () => up.destroy());
-    up.on('close', () => c.destroy());
+    // A closed side tears down the other one, but only after that direction's delayed bytes are delivered (pipe): a real
+    // network delays data, it does not drop what the sender wrote before it closed.
     this.pipe(c, up, 'c2s');
     this.pipe(up, c, 's2c');
   }
@@ -157,6 +157,7 @@ export class FaultProxy {
     let held: Buffer | null = null;
     let pending = 0; // delayed writes in flight: a half-close must not overtake them
     let ended = false;
+    let closed = false;
     from.on('data', (chunk: Buffer) => {
       const before = seen;
       seen += chunk.length;
@@ -177,7 +178,8 @@ export class FaultProxy {
           setTimeout(() => {
             if (!to.destroyed) to.write(chunk);
             pending--;
-            if (pending === 0 && ended) to.end();
+            if (pending === 0 && closed) to.end(() => to.destroy());
+            else if (pending === 0 && ended) to.end();
           }, f.ms ?? 1000);
           return;
         case 'truncate':
@@ -216,6 +218,10 @@ export class FaultProxy {
       if (held) to.write(held);
       ended = true;
       if (pending === 0) to.end();
+    });
+    from.on('close', () => {
+      closed = true;
+      if (pending === 0) to.destroy();
     });
   }
 }

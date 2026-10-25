@@ -12,6 +12,7 @@ import {
   mintGrant,
   DEFAULT_RISK_POLICY,
   pcactnDigest,
+  paramsDigest,
 } from '@atlasauth/pca';
 import { FlattenedSign, exportJWK, generateKeyPair as joseKeys } from 'jose';
 import {
@@ -43,7 +44,11 @@ const grant: Capability = mintGrant({
   goal: 'buy the cart',
   envelope: { predicates: [{ verb: 'purchase', resource: '*' }], caveats: [{ type: 'expires', at: NOW + 3_600_000 }], agent_binding: {}, risk_policy: DEFAULT_RISK_POLICY },
 }).grant;
-const plan: PlanNode[] = [{ id: 'buy-1', verb: 'purchase', resource: 'merchant/acme/cart/42', reversibility_class: 'reversible' }];
+const PAY = { amount: 5, currency: 'USD' };
+const plan: PlanNode[] = [
+  { id: 'buy-1', verb: 'purchase', resource: 'merchant/acme/cart/42', reversibility_class: 'reversible' },
+  { id: 'pay-1', verb: 'purchase', resource: 'merchant/acme/cart/42', params_digest: paramsDigest(PAY), reversibility_class: 'reversible' },
+];
 
 /** The resource server's authority + view for the full verifier: the stored grant, revocation, its plan, a budget, low risk. */
 const FULL = {
@@ -287,15 +292,17 @@ describe('payment mandate', () => {
     expect(m.credentialSubject.human_present).toBe(false);
   });
   it('verify: exact mismatch result and pass-through of the core verdict', async () => {
-    const p = mk();
+    const payMk = (counter = 1): PCActn => buildPCActn({ grant, chain: [grant], plan, nodeId: 'pay-1', params: PAY, counter, signerSecret: A.secretKey, aud: AUD, now: NOW });
+    const PAYFULL = { ...FULL, context: { ...FULL.context, params: PAY } };
+    const p = payMk();
     const m = a2aPaymentMandateFromPca(p, { amount, paymentMethod: { type: 'c' } });
-    const other = mk(2);
-    expect(await verifyA2APaymentMandate(m, other, { ...FULL, aud: AUD, now: NOW })).toStrictEqual({
+    const other = payMk(2);
+    expect(await verifyA2APaymentMandate(m, other, { ...PAYFULL, aud: AUD, now: NOW })).toStrictEqual({
       ok: false,
       reason: 'payment mandate is not bound to this PCActn (pcactn_digest mismatch)',
       pcActn: other,
     });
-    const ok = await verifyA2APaymentMandate(m, p, { ...FULL, aud: AUD, now: NOW });
+    const ok = await verifyA2APaymentMandate(m, p, { ...PAYFULL, aud: AUD, now: NOW });
     expect(ok.ok).toBe(true);
     expect(ok.pcActn).toBe(p);
   });

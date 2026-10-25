@@ -38,6 +38,9 @@
  *             "taint"?:       { "maxTaint": number, "registry": "empty" }
  *             "attestation"?: { "required"?: boolean, "mode": "not-enforced" }
  *           }
+ *           "intent"?:   {               // Intent Layer M2 policy; active iff require or a threshold is set
+ *             "require"?: boolean, "min_fidelity_ppm"?: number, "max_residual_risk_ppm"?: number
+ *           }
  *         }
  *         "expect": {
  *           "ok":              boolean                       // == VerifyResult.allow
@@ -61,14 +64,20 @@ import {
   type CapabilityChain,
   type CheckStatus,
   type EnforcementGates,
+  type EnvelopeIntent,
+  type IntentPolicy,
   type KeyPair,
   type PCActn,
   type PCActnBody,
   type PlanNode,
   type VerifyResult,
+  DEFAULT_RISK_POLICY,
   b64u,
   buildPCActn,
   delegate,
+  intentGoal,
+  intentMapDigest,
+  mintGrant,
   mintRoot,
   notEnforced,
   paramsDigest,
@@ -82,7 +91,7 @@ import {
 } from '@atlasauth/pca';
 
 /** Semver of the vector set. Bump on ANY change to the bytes of `vectors.json`. */
-export const CONFORMANCE_VERSION = '1.1.0';
+export const CONFORMANCE_VERSION = '1.2.0';
 
 /** NORMATIVE order the core verifier evaluates checks in; `firstFailedCheck` is the earliest 'fail' here. */
 export const CHECK_ORDER = [
@@ -96,6 +105,8 @@ export const CHECK_ORDER = [
   'plan_root_authorized',
   'leaf_signature',
   'counter',
+  // Intent Layer M2: reported only when the PCActn carries `intent` or the verifier's intent policy is active.
+  'intent',
   'taint_gate',
   'freshness',
   'attestation',
@@ -118,6 +129,8 @@ export interface VerifyOptionsSpec {
   nowEpoch: number;
   /** Opt-in enforcement gates; absent => every gate reports 'not-enforced'. */
   enforce?: EnforceSpec;
+  /** Intent Layer M2 policy (`{require?, min_fidelity_ppm?, max_residual_risk_ppm?}`); JSON-only, passed through as is. */
+  intent?: IntentPolicy;
 }
 
 /** The authored expectation for a vector — the full per-check contract, not just allow/deny. */
@@ -162,6 +175,8 @@ export interface ConformanceVerifyInput {
   audience: string | null;
   nowEpoch: number;
   enforce?: EnforceSpec;
+  /** Intent Layer M2 policy. */
+  intent?: IntentPolicy;
 }
 
 /** Any verifier under test: a plain function of (action, input) -> verdict. SDK-mirrorable. */
@@ -263,6 +278,38 @@ const VALID: PCActn = buildPCActn({
   iat: NOW,
   riskClaim: { r: 0, inputs: {} },
 });
+
+// ---- Intent Layer M2: a root grant minted for an intent goal, and an action carrying the bound `intent` slot ----
+
+const INTENT_REF = b64u(sha256(utf8(SEED_DOMAIN + 'intent-statement')));
+const INTENT_MAP_DIGEST = intentMapDigest({ v: 1, kind: 'pca-intent-map', intent_ref: INTENT_REF, metrics: { fidelity_est_ppm: 950_000, residual_risk_ppm: 12_000 } });
+const INTENT_SALT = 'Y29uZm9ybWFuY2UtaW50ZW50';
+const INTENT: EnvelopeIntent = { ref: INTENT_REF, map_digest: INTENT_MAP_DIGEST, goal_salt: INTENT_SALT, fidelity_ppm: 950_000, residual_risk_ppm: 12_000 };
+
+/** Root Intent Grant whose envelope goal commits to `pca-intent:v1:<ref>:<map_digest>` (principal -> sub-agent, one hop). */
+const INTENT_GRANT: Capability = mintGrant({
+  principalSecret: PRINCIPAL.secretKey,
+  principalPublic: b64u(PRINCIPAL.publicKey),
+  holder: b64u(SUBAGENT.publicKey),
+  envelope: { predicates: [], caveats: [], agent_binding: {}, risk_policy: DEFAULT_RISK_POLICY },
+  goal: intentGoal(INTENT_REF, INTENT_MAP_DIGEST),
+  salt: INTENT_SALT,
+}).grant;
+
+const intentAction = (intent?: EnvelopeIntent): PCActn =>
+  buildPCActn({
+    grant: INTENT_GRANT,
+    chain: [INTENT_GRANT],
+    plan: PLAN,
+    nodeId: 'refund',
+    params: PARAMS,
+    counter: 1,
+    signerSecret: SUBAGENT.secretKey,
+    aud: AUD,
+    iat: NOW,
+    riskClaim: { r: 0, inputs: {} },
+    ...(intent !== undefined ? { intent } : {}),
+  });
 
 /** Re-sign a (mutated) action's body with the acting leaf's key, isolating the failure under test. */
 function resign(p: PCActn): PCActn {
@@ -406,6 +453,54 @@ export function generateVectorSet(): ConformanceVectorSet {
       expect: failingBase('counter'),
     },
     {
+      id: 'intent_bound',
+      description: 'Intent Layer M2: the signed intent slot opens the root grant goal commitment (pca-intent:v1:<ref>:<map_digest>) and meets the policy floor/ceiling: the intent check passes.',
+      pcactn: intentAction(INTENT),
+      aud: AUD,
+      verifyOptions: base({ intent: { require: true, min_fidelity_ppm: 950_000, max_residual_risk_ppm: 12_000 } }),
+      expect: { ok: true, firstFailedCheck: null, perCheck: { ...BASE_CHECKS, intent: 'pass' } },
+    },
+    {
+      id: 'intent_required_absent',
+      description: 'Intent policy {require:true} but the action carries no intent slot: the intent check fails closed.',
+      pcactn: intentAction(),
+      aud: AUD,
+      verifyOptions: base({ intent: { require: true } }),
+      expect: failingBase('intent'),
+    },
+    {
+      id: 'intent_binding_mismatch',
+      description: "The intent slot's map_digest is not the one the root grant goal commits to: the intent check fails.",
+      pcactn: intentAction({ ...INTENT, map_digest: INTENT_REF }),
+      aud: AUD,
+      verifyOptions: base(),
+      expect: failingBase('intent'),
+    },
+    {
+      id: 'intent_fidelity_below_min',
+      description: 'Bound intent whose fidelity_ppm (950000) is below the policy min_fidelity_ppm (950001): the intent check fails.',
+      pcactn: intentAction(INTENT),
+      aud: AUD,
+      verifyOptions: base({ intent: { min_fidelity_ppm: 950_001 } }),
+      expect: failingBase('intent'),
+    },
+    {
+      id: 'intent_residual_above_max',
+      description: 'Bound intent whose residual_risk_ppm (12000) exceeds the policy max_residual_risk_ppm (11999): the intent check fails.',
+      pcactn: intentAction(INTENT),
+      aud: AUD,
+      verifyOptions: base({ intent: { max_residual_risk_ppm: 11_999 } }),
+      expect: failingBase('intent'),
+    },
+    {
+      id: 'intent_bad_wire',
+      description: 'The intent slot has fidelity_ppm 1000001 (out of [0, 1e6], re-signed): the wire check fails and is terminal.',
+      pcactn: resign({ ...intentAction(INTENT), intent: { ...INTENT, fidelity_ppm: 1_000_001 } }),
+      aud: AUD,
+      verifyOptions: base(),
+      expect: { ok: false, firstFailedCheck: 'wire', perCheck: { wire: 'fail' } },
+    },
+    {
       id: 'stale_freshness',
       description: 'GATED (enforce.freshness): the signed freshness anchor is a stub (empty beacon_ref / epoch 0), so the freshness gate fails closed.',
       pcactn: VALID,
@@ -486,6 +581,7 @@ export const coreVerify: HarnessVerify = (pcactn, input) => {
     nowEpoch: input.nowEpoch,
     audience: input.audience,
     ...(input.enforce ? { enforce: materializeEnforce(input.enforce) } : {}),
+    ...(input.intent ? { intent: input.intent } : {}),
   });
   return result;
 };
@@ -527,6 +623,7 @@ export async function runConformance(
       audience: v.aud,
       nowEpoch: v.verifyOptions.nowEpoch,
       ...(v.verifyOptions.enforce ? { enforce: v.verifyOptions.enforce } : {}),
+      ...(v.verifyOptions.intent ? { intent: v.verifyOptions.intent } : {}),
     };
     const verdict = await verify(v.pcactn, input);
     const actualFirst = firstFailedCheck(verdict.checks);

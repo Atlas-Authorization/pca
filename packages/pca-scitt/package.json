@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-scitt",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "SCITT transparency receipts for PCA (RFC 9943/9942): register each verified PCActn as a COSE Signed Statement and return/verify the COSE inclusion receipt, turning PCA's decision record into standards-shaped, externally-verifiable append-only audit evidence.",
   "keywords": [
     "scitt",

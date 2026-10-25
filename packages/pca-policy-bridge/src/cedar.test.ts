@@ -200,15 +200,32 @@ describe('cedarToPca', () => {
 
 describe('cedarToPca: hostile policy text cannot stall the translator (ReDoS regressions)', () => {
   const head = 'permit (principal, action == Action::"read", resource) when { c';
+  // Linear vs super-linear by GROWTH, not by a wall-clock budget: a budget fails (or passes) with the machine's load, so a
+  // mutant that only costs a constant factor flipped between killed and surviving with runner load. Quadrupling the input
+  // must not grow the best-of-3 time by more than 10x (linear ~4x, the old quadratic ~16x); a 10 s cap still catches a hang.
+  const growth = (mk: (n: number) => string, n: number): { ratio: number; big: number } => {
+    const best = (text: string) => {
+      let b = Infinity;
+      for (let i = 0; i < 3; i++) {
+        const t = performance.now();
+        cedarToPca(text);
+        b = Math.min(b, performance.now() - t);
+      }
+      return b;
+    };
+    const small = best(mk(n));
+    const big = best(mk(4 * n));
+    return { ratio: big / Math.max(small, 2), big };
+  };
   it('a long whitespace run inside nested brackets is linear (was quadratic: 80k spaces took ~5 s)', () => {
-    const t = Date.now();
-    cedarToPca(head + '['.repeat(200) + ' '.repeat(80_000) + '['.repeat(200) + 'ontext.amount < 100 };');
-    expect(Date.now() - t).toBeLessThan(1500);
+    const g = growth((n) => head + '['.repeat(200) + ' '.repeat(n) + '['.repeat(200) + 'ontext.amount < 100 };', 20_000);
+    expect(g.big).toBeLessThan(10_000);
+    expect(g.ratio).toBeLessThan(10);
   });
   it('whitespace after a scope keyword is linear', () => {
-    const t = Date.now();
-    cedarToPca('permit (principal' + ' '.repeat(100_000) + ', action, resource);');
-    expect(Date.now() - t).toBeLessThan(1500);
+    const g = growth((n) => 'permit (principal' + ' '.repeat(n) + ', action, resource);', 25_000);
+    expect(g.big).toBeLessThan(10_000);
+    expect(g.ratio).toBeLessThan(10);
   });
   it('operators with and without surrounding whitespace still translate', () => {
     for (const text of ['permit (principal == User::"a", action, resource);', 'permit (principal==User::"a", action, resource);', 'permit (principal   ==   User::"a", action, resource);', 'permit (principal, action in [Action::"r"], resource);']) {

@@ -1,0 +1,6 @@
+out/
+node_modules/
+*.log
+drivers/dotnet/obj/
+drivers/dotnet/bin/
+drivers/**/target/

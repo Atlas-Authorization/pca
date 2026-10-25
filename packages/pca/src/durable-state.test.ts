@@ -273,6 +273,12 @@ describe('durable-state: REAL multi-process concurrency', () => {
     const results = await Promise.all(Array.from({ length: N }, (_, i) => runWorker(d, 'race', i + 1, M)));
     stop = true;
     await observer;
+    // one more reading after every writer is done: on a loaded machine the writers can finish before the 15 ms poll lands,
+    // and the final values must still be >= everything observed before them
+    const lastH = await parent.get('hwm');
+    const lastC = await parent.get('counter');
+    if (typeof lastH === 'number') seenHwm.push(lastH);
+    if (typeof lastC === 'number') seenCounter.push(lastC);
     for (const r of results) {
       expect(r.err).toBe('');
       expect(r.code).toBe(0);

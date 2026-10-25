@@ -647,22 +647,27 @@ module Attest {
   // ==============================================================================================
   // B. AGENT-BINDING MATCH (matchAgentBinding) and requiresAttestation
   // ==============================================================================================
-  // min_measurement as the glue evaluated it: none / equality pin / monotone svn ladder.
+  // min_measurement as the glue evaluated it: none / equality pin / monotone svn ladder / MALFORMED constraint.
+  // The glue maps an absent min_measurement or "" to NoMin; a non-empty string to EqPin; `{svn: n}` with n a safe non-negative integer
+  // JSON number to Svn (the measured runtime_measurement must be a canonical decimal integer string, else SvnNotInteger); ANY other
+  // present value (a string / fractional / negative / non-finite / -0 svn, an object without svn, a number, an array, null) to MinBad,
+  // which fails closed (0.4.2: it used to be NoMin, i.e. it enforced nothing).
   datatype SvnCheck = SvnNotInteger | SvnBelow | SvnOk
-  datatype MinM = NoMin | EqPin(matches: bool) | Svn(parse: SvnCheck)
+  datatype MinM = NoMin | EqPin(matches: bool) | Svn(parse: SvnCheck) | MinBad
 
   datatype BIdent = BIdent(model: Id, weights: Id, weightsMeasured: bool, hasSys: bool, sys: Id, hasTool: bool, tool: Id, operatorMatches: bool)
   datatype Binding = Binding(
     modelAllow: seq<Id>, minM: MinM, operatorPinned: bool, requireMeasured: bool,
     weightsAllow: seq<Id>, sysAllow: seq<Id>, toolAllow: seq<Id>)
 
-  datatype BFail = BModel | BMinEq | BMinSvnNotInt | BMinSvnBelow | BOperator | BNotMeasured | BWeights | BSys | BTool
+  datatype BFail = BModel | BMinBad | BMinEq | BMinSvnNotInt | BMinSvnBelow | BOperator | BNotMeasured | BWeights | BSys | BTool
 
   predicate Incl(s: seq<Id>, x: Id) { x in s }
 
   function MatchBinding(id: BIdent, b: Binding): Option<BFail>
   {
     if |b.modelAllow| > 0 && !Incl(b.modelAllow, id.model) then Some(BModel)
+    else if b.minM.MinBad? then Some(BMinBad)
     else if b.minM.EqPin? && !b.minM.matches then Some(BMinEq)
     else if b.minM.Svn? && b.minM.parse.SvnNotInteger? then Some(BMinSvnNotInt)
     else if b.minM.Svn? && b.minM.parse.SvnBelow? then Some(BMinSvnBelow)
@@ -677,6 +682,7 @@ module Attest {
   predicate BindingHolds(id: BIdent, b: Binding)
   {
     (|b.modelAllow| > 0 ==> id.model in b.modelAllow) &&
+    !b.minM.MinBad? &&
     (b.minM.EqPin? ==> b.minM.matches) &&
     (b.minM.Svn? ==> b.minM.parse.SvnOk?) &&
     (b.operatorPinned ==> id.operatorMatches) &&
@@ -690,6 +696,12 @@ module Attest {
   // carry fails closed.
   lemma MatchIff(id: BIdent, b: Binding)
     ensures MatchBinding(id, b).None? <==> BindingHolds(id, b)
+  {}
+
+  // THEOREM (0.4.2): a malformed min_measurement constraint is never satisfied, whatever the identity: fail closed.
+  lemma MalformedMinFailsClosed(id: BIdent, b: Binding)
+    requires b.minM.MinBad?
+    ensures MatchBinding(id, b).Some? && !BindingHolds(id, b)
   {}
 
   function NoBinding(): Binding { Binding([], NoMin, false, false, [], [], []) }
@@ -971,6 +983,26 @@ module Attest {
     if |xs| == 0 then -1
     else if xs[0].0 == n then 0
     else var r := IndexOf(xs[1..], n); if r < 0 then -1 else r + 1
+  } by method {
+    // compiled form: one index loop (the recursive form above copies the tail and recurses once per entry: quadratic, and it
+    // exhausts the stack once the store holds a few thousand nonces)
+    var j := 0;
+    while j < |xs| && xs[j].0 != n
+      invariant 0 <= j <= |xs| && forall q :: 0 <= q < j ==> xs[q].0 != n
+      decreases |xs| - j
+    { j := j + 1; }
+    IndexOfFirst(xs, n);
+    return if j < |xs| then j else -1;
+  }
+  // IndexOf is the FIRST matching index
+  lemma IndexOfFirst(xs: seq<(int, int)>, n: int)
+    ensures forall q :: 0 <= q < IndexOf(xs, n) ==> xs[q].0 != n
+    decreases |xs|
+  {
+    if |xs| > 0 && xs[0].0 != n {
+      IndexOfFirst(xs[1..], n);
+      forall q | 0 < q < IndexOf(xs, n) ensures xs[q].0 != n { assert xs[1..][q - 1] == xs[q]; }
+    }
   }
   function RemoveAt(xs: seq<(int, int)>, i: int): seq<(int, int)>
     requires 0 <= i < |xs|
@@ -983,6 +1015,14 @@ module Attest {
     decreases |xs|
   {
     if |xs| == 0 || Live(xs[0], t, ret) then xs else DropAged(xs[1..], t, ret)
+  } by method {
+    // compiled form: find the first live entry, then ONE slice (the tail-recursive form above copies the tail per dropped entry)
+    var k := 0;
+    while k < |xs| && !Live(xs[k], t, ret)
+      invariant 0 <= k <= |xs| && DropAged(xs, t, ret) == DropAged(xs[k..], t, ret)
+      decreases |xs| - k
+    { assert xs[k..][1..] == xs[k + 1..]; k := k + 1; }
+    return xs[k..];
   }
 
   function MsConsume(s: MS, n: int, t: int): (MS, bool)

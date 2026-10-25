@@ -50,7 +50,8 @@ const g2 = (h: string) => {
   if (p === null) throw new Error('fixture G2 point rejected');
   return p;
 };
-const gtMul = bls12_381.fields.Fp12.mul;
+const Fp12 = bls12_381.fields.Fp12;
+const gtMul = (a: Parameters<typeof Fp12.mul>[0], b: Parameters<typeof Fp12.mul>[1]) => Fp12.mul(a, b);
 const eGG = pairing(G1_BASE, G2_BASE);
 
 describe('BLS12-381 BSW07 key and ciphertext components agree with py_ecc', () => {

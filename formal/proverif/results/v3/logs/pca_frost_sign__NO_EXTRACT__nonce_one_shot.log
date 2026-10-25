@@ -1,0 +1,44 @@
+-- Query event(Used(i_4,d_3,e_3,m1_3)) && event(Used(i_4,d_3,e_3,m2_3)) ==> m1_3 = m2_3 in process 1.
+Translating the process into Horn clauses...
+Completing...
+200 rules inserted. Base: 107 rules (52 with conclusion selected). Queue: 18 rules.
+Starting query event(Used(i_4,d_3,e_3,m1_3)) && event(Used(i_4,d_3,e_3,m2_3)) ==> m1_3 = m2_3
+goal reachable: l1_6 ≠ cmt(c1,cm(d_3),cm(e_3)) && attacker(m2_3) && attacker(l1_6) && b-event(@p_act(@occ8_1,(m2_3,l1_6,cmt(c1,cm(d_3),cm(e_3))))) -> event(Used(c1,d_3,e_3,m2_3)) && event(Used(c1,d_3,e_3,m2_3))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ8_1 = @occ8[!1 = @sid]
+goal reachable: attacker(m2_3) && attacker(l2_6) && b-event(@p_act(@occ8_1,(m2_3,cmt(c1,cm(d_3),cm(e_3)),l2_6))) -> event(Used(c1,d_3,e_3,m2_3)) && event(Used(c1,d_3,e_3,m2_3))
+Abbreviations:
+d_3 = d[!1 = @sid]
+e_3 = e[!1 = @sid]
+@occ8_1 = @occ8[!1 = @sid]
+goal reachable: l1_6 ≠ cmt(c2,cm(d_3),cm(e_3)) && attacker(m2_3) && attacker(l1_6) && b-event(@p_act(@occ19_1,(m2_3,l1_6,cmt(c2,cm(d_3),cm(e_3))))) -> event(Used(c2,d_3,e_3,m2_3)) && event(Used(c2,d_3,e_3,m2_3))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+@occ19_1 = @occ19[!1 = @sid]
+goal reachable: attacker(m2_3) && attacker(l2_6) && b-event(@p_act(@occ19_1,(m2_3,cmt(c2,cm(d_3),cm(e_3)),l2_6))) -> event(Used(c2,d_3,e_3,m2_3)) && event(Used(c2,d_3,e_3,m2_3))
+Abbreviations:
+d_3 = d_1[!1 = @sid]
+e_3 = e_1[!1 = @sid]
+@occ19_1 = @occ19[!1 = @sid]
+goal reachable: l1_6 ≠ cmt(c3,cm(d_3),cm(e_3)) && attacker(m2_3) && attacker(l1_6) && b-event(@p_act(@occ30_1,(m2_3,l1_6,cmt(c3,cm(d_3),cm(e_3))))) -> event(Used(c3,d_3,e_3,m2_3)) && event(Used(c3,d_3,e_3,m2_3))
+Abbreviations:
+d_3 = d_2[!1 = @sid]
+e_3 = e_2[!1 = @sid]
+@occ30_1 = @occ30[!1 = @sid]
+goal reachable: attacker(m2_3) && attacker(l2_6) && b-event(@p_act(@occ30_1,(m2_3,cmt(c3,cm(d_3),cm(e_3)),l2_6))) -> event(Used(c3,d_3,e_3,m2_3)) && event(Used(c3,d_3,e_3,m2_3))
+Abbreviations:
+d_3 = d_2[!1 = @sid]
+e_3 = e_2[!1 = @sid]
+@occ30_1 = @occ30[!1 = @sid]
+RESULT event(Used(i_4,d_3,e_3,m1_3)) && event(Used(i_4,d_3,e_3,m2_3)) ==> m1_3 = m2_3 is true.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query event(Used(i_4,d_3,e_3,m1_3)) && event(Used(i_4,d_3,e_3,m2_3)) ==> m1_3 = m2_3 is true.
+
+--------------------------------------------------------------
+

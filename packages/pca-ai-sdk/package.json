@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-ai-sdk",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Vercel AI SDK adapter for Proof-Carrying Authority: wrap an AI SDK tool so every call emits a PCActn (and attaches the proof) before execute runs.",
   "keywords": [
     "vercel ai sdk",

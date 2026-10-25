@@ -1,0 +1,165 @@
+-- Query event(Accept(m_7,ss_7,two,a,g,p_1)) ==> event(Issued(agentR,a,m_7,ss_7,two)) || event(AgentLeafSigned(a,m_7)) || event(Issued(guardianR,g,m_7,ss_7,two)) || event(Issued(principalR,p_1,m_7,ss_7,two)) || (event(Reveal(a)) && event(Reveal(g)) && a ≠ g) || (event(Reveal(a)) && event(Reveal(p_1)) && a ≠ p_1) || (event(Reveal(g)) && event(Reveal(p_1)) && g ≠ p_1) in process 0.
+Translating the process into Horn clauses...
+Completing...
+Starting query event(Accept(m_7,ss_7,two,a,g,p_1)) ==> event(Issued(agentR,a,m_7,ss_7,two)) || event(AgentLeafSigned(a,m_7)) || event(Issued(guardianR,g,m_7,ss_7,two)) || event(Issued(principalR,p_1,m_7,ss_7,two)) || (event(Reveal(a)) && event(Reveal(g)) && a ≠ g) || (event(Reveal(a)) && event(Reveal(p_1)) && a ≠ p_1) || (event(Reveal(g)) && event(Reveal(p_1)) && g ≠ p_1)
+goal reachable: @sid ≠ @sid_1 && @sid_2 ≠ @sid_1 && @sid_2 ≠ @sid && attacker(m_7) && b-event(Reveal(pk(k_2))) -> event(Accept(m_7,h((ssT,pk(k_2),pk(k_3),pk(k_4))),two,pk(k_2),pk(k_3),pk(k_4)))
+Abbreviations:
+k_2 = k[!1 = @sid_2]
+k_3 = k[!1 = @sid]
+k_4 = k[!1 = @sid_1]
+
+Derivation:
+Abbreviations:
+k_2 = k[!1 = @sid]
+k_3 = k[!1 = @sid_1]
+k_4 = k[!1 = @sid_2]
+
+1. The message pk(k_2) may be sent to the attacker at output {5}.
+attacker(pk(k_2)).
+
+2. The entry keys(pk(k_2),k_2) may be inserted in a table at insert {3}.
+table(keys(pk(k_2),k_2)).
+
+3. The message pk(k_2) that the attacker may have by 1 may be received at input {64}.
+The entry keys(pk(k_2),k_2) that may be in a table by 2 may be read at get {67}.
+The event Reveal(pk(k_2)) may be executed at {65}.
+So the message k_2 may be sent to the attacker at output {66}.
+attacker(k_2).
+
+4. We assume as hypothesis that
+attacker(m_7).
+
+5. Using the function leafT the attacker may obtain leafT.
+attacker(leafT).
+
+6. By 5, the attacker may know leafT.
+By 4, the attacker may know m_7.
+Using the function 2-tuple the attacker may obtain (leafT,m_7).
+attacker((leafT,m_7)).
+
+7. By 6, the attacker may know (leafT,m_7).
+By 3, the attacker may know k_2.
+Using the function sign the attacker may obtain sign((leafT,m_7),k_2).
+attacker(sign((leafT,m_7),k_2)).
+
+8. The message pk(k_4) may be sent to the attacker at output {5}.
+attacker(pk(k_4)).
+
+9. The message pk(k_3) may be sent to the attacker at output {5}.
+attacker(pk(k_3)).
+
+10. Using the function ssT the attacker may obtain ssT.
+attacker(ssT).
+
+11. By 10, the attacker may know ssT.
+By 1, the attacker may know pk(k_2).
+By 9, the attacker may know pk(k_3).
+By 8, the attacker may know pk(k_4).
+Using the function 4-tuple the attacker may obtain (ssT,pk(k_2),pk(k_3),pk(k_4)).
+attacker((ssT,pk(k_2),pk(k_3),pk(k_4))).
+
+12. By 11, the attacker may know (ssT,pk(k_2),pk(k_3),pk(k_4)).
+Using the function h the attacker may obtain h((ssT,pk(k_2),pk(k_3),pk(k_4))).
+attacker(h((ssT,pk(k_2),pk(k_3),pk(k_4)))).
+
+13. By 4, the attacker may know m_7.
+By 12, the attacker may know h((ssT,pk(k_2),pk(k_3),pk(k_4))).
+By 7, the attacker may know sign((leafT,m_7),k_2).
+By 7, the attacker may know sign((leafT,m_7),k_2).
+Using the function 4-tuple the attacker may obtain (m_7,h((ssT,pk(k_2),pk(k_3),pk(k_4))),sign((leafT,m_7),k_2),sign((leafT,m_7),k_2)).
+attacker((m_7,h((ssT,pk(k_2),pk(k_3),pk(k_4))),sign((leafT,m_7),k_2),sign((leafT,m_7),k_2))).
+
+14. By 1, the attacker may know pk(k_2).
+By 9, the attacker may know pk(k_3).
+By 8, the attacker may know pk(k_4).
+Using the function 3-tuple the attacker may obtain (pk(k_2),pk(k_3),pk(k_4)).
+attacker((pk(k_2),pk(k_3),pk(k_4))).
+
+15. The entry keys(pk(k_3),k_3) may be inserted in a table at insert {3}.
+table(keys(pk(k_3),k_3)).
+
+16. The entry keys(pk(k_4),k_4) may be inserted in a table at insert {3}.
+table(keys(pk(k_4),k_4)).
+
+17. The message (pk(k_2),pk(k_3),pk(k_4)) that the attacker may have by 14 may be received at input {7}.
+The entry keys(pk(k_2),k_2) that may be in a table by 2 may be read at get {14}.
+The entry keys(pk(k_3),k_3) that may be in a table by 15 may be read at get {13}.
+The entry keys(pk(k_4),k_4) that may be in a table by 16 may be read at get {12}.
+We have pk(k_3) ≠ pk(k_4) && pk(k_2) ≠ pk(k_4) && pk(k_2) ≠ pk(k_3).
+So the entry sets(h((ssT,pk(k_2),pk(k_3),pk(k_4))),pk(k_2),pk(k_3),pk(k_4)) may be inserted in a table at insert {11}.
+table(sets(h((ssT,pk(k_2),pk(k_3),pk(k_4))),pk(k_2),pk(k_3),pk(k_4))).
+
+18. The message (m_7,h((ssT,pk(k_2),pk(k_3),pk(k_4))),sign((leafT,m_7),k_2),sign((leafT,m_7),k_2)) that the attacker may have by 13 may be received at input {44}.
+The entry sets(h((ssT,pk(k_2),pk(k_3),pk(k_4))),pk(k_2),pk(k_3),pk(k_4)) that may be in a table by 17 may be read at get {55}.
+So event Accept(m_7,h((ssT,pk(k_2),pk(k_3),pk(k_4))),two,pk(k_2),pk(k_3),pk(k_4)) may be executed at {52}.
+event(Accept(m_7,h((ssT,pk(k_2),pk(k_3),pk(k_4))),two,pk(k_2),pk(k_3),pk(k_4))).
+
+19. By 18, event(Accept(m_7,h((ssT,pk(k_2),pk(k_3),pk(k_4))),two,pk(k_2),pk(k_3),pk(k_4))).
+The goal is reached, represented in the following fact:
+event(Accept(m_7,h((ssT,pk(k_2),pk(k_3),pk(k_4))),two,pk(k_2),pk(k_3),pk(k_4))).
+
+
+A more detailed output of the traces is available with
+  set traceDisplay = long.
+
+new k: bitstring creating k_5 at {2} in copy a
+
+insert keys(pk(k_5),k_5) at {3} in copy a
+
+event KeyGen(pk(k_5)) at {4} in copy a
+
+out(c, ~M) with ~M = pk(k_5) at {5} in copy a
+
+new k: bitstring creating k_6 at {2} in copy a_1
+
+insert keys(pk(k_6),k_6) at {3} in copy a_1
+
+event KeyGen(pk(k_6)) at {4} in copy a_1
+
+out(c, ~M_1) with ~M_1 = pk(k_6) at {5} in copy a_1
+
+new k: bitstring creating k_7 at {2} in copy a_2
+
+insert keys(pk(k_7),k_7) at {3} in copy a_2
+
+event KeyGen(pk(k_7)) at {4} in copy a_2
+
+out(c, ~M_2) with ~M_2 = pk(k_7) at {5} in copy a_2
+
+in(c, (~M,~M_2,~M_1)) with ~M = pk(k_5), ~M_2 = pk(k_7), ~M_1 = pk(k_6) at {7} in copy a_3
+
+get keys(pk(k_5),k_5) at {14} in copy a_3
+
+get keys(pk(k_7),k_7) at {13} in copy a_3
+
+get keys(pk(k_6),k_6) at {12} in copy a_3
+
+event SetReg(h((ssT,pk(k_5),pk(k_7),pk(k_6)))) at {10} in copy a_3
+
+insert sets(h((ssT,pk(k_5),pk(k_7),pk(k_6))),pk(k_5),pk(k_7),pk(k_6)) at {11} in copy a_3
+
+in(c, ~M) with ~M = pk(k_5) at {64} in copy a_4
+
+get keys(pk(k_5),k_5) at {67} in copy a_4
+
+event Reveal(pk(k_5)) at {65} in copy a_4
+
+out(c, ~M_3) with ~M_3 = k_5 at {66} in copy a_4
+
+in(c, (a_5,h((ssT,~M,~M_2,~M_1)),sign((leafT,a_5),~M_3),sign((leafT,a_5),~M_3))) with h((ssT,~M,~M_2,~M_1)) = h((ssT,pk(k_5),pk(k_7),pk(k_6))), sign((leafT,a_5),~M_3) = sign((leafT,a_5),k_5), sign((leafT,a_5),~M_3) = sign((leafT,a_5),k_5) at {44} in copy a_6
+
+get sets(h((ssT,pk(k_5),pk(k_7),pk(k_6))),pk(k_5),pk(k_7),pk(k_6)) at {55} in copy a_6
+
+event Accept(a_5,h((ssT,pk(k_5),pk(k_7),pk(k_6))),two,pk(k_5),pk(k_7),pk(k_6)) at {52} in copy a_6 (goal)
+
+The event Accept(a_5,h((ssT,pk(k_5),pk(k_7),pk(k_6))),two,pk(k_5),pk(k_7),pk(k_6)) is executed at {52} in copy a_6.
+A trace has been found.
+RESULT event(Accept(m_7,ss_7,two,a,g,p_1)) ==> event(Issued(agentR,a,m_7,ss_7,two)) || event(AgentLeafSigned(a,m_7)) || event(Issued(guardianR,g,m_7,ss_7,two)) || event(Issued(principalR,p_1,m_7,ss_7,two)) || (event(Reveal(a)) && event(Reveal(g)) && a ≠ g) || (event(Reveal(a)) && event(Reveal(p_1)) && a ≠ p_1) || (event(Reveal(g)) && event(Reveal(p_1)) && g ≠ p_1) is false.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query event(Accept(m_7,ss_7,two,a,g,p_1)) ==> event(Issued(agentR,a,m_7,ss_7,two)) || event(AgentLeafSigned(a,m_7)) || event(Issued(guardianR,g,m_7,ss_7,two)) || event(Issued(principalR,p_1,m_7,ss_7,two)) || (event(Reveal(a)) && event(Reveal(g)) && a ≠ g) || (event(Reveal(a)) && event(Reveal(p_1)) && a ≠ p_1) || (event(Reveal(g)) && event(Reveal(p_1)) && g ≠ p_1) is false.
+
+--------------------------------------------------------------
+

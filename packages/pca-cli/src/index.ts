@@ -329,3 +329,6 @@ export function cmdSimulate(policyJson: string, actionsJson: string): string {
     ...lintLines,
   ].join('\n');
 }
+
+// Intent Layer v2: `pca schema` (draft from OpenAPI / MCP, sign, verify, conform, publish).
+export * from './schema';

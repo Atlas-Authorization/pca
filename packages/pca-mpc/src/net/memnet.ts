@@ -32,7 +32,8 @@ export class MemNet {
 }
 
 interface Q {
-  items: Array<{ rd: string; d: unknown; size: number }>;
+  /** `abort` marks a peer's abort claim queued behind that peer's earlier messages (see `setDeferAborts`). */
+  items: Array<{ rd: string; d: unknown; size: number; abort?: NetAbort }>;
   closed: boolean;
 }
 
@@ -46,6 +47,7 @@ export class MemMesh {
   private bytesOut = new Map<number, number>();
   private bytesIn = new Map<number, number>();
   private waiters: Array<() => void> = [];
+  private deferAborts = false;
   constructor(
     private readonly net: MemNet,
     readonly selfId: number,
@@ -91,6 +93,10 @@ export class MemMesh {
     for (;;) {
       if (this.failure) throw this.failure;
       const it = q.items.shift();
+      if (it?.abort) {
+        this.fail(it.abort, from);
+        throw it.abort;
+      }
       if (it) {
         if (it.rd !== rd) {
           const e = new NetAbort('wrong-round', from, this.selfId, `expected round '${rd}', got '${it.rd}'`);
@@ -136,6 +142,10 @@ export class MemMesh {
       return false;
     }
   }
+  /** As `Mesh.setDeferAborts`: while on, a peer's abort claim is queued behind its earlier messages instead of poisoning this node. */
+  setDeferAborts(on: boolean): void {
+    this.deferAborts = on;
+  }
   /** Poison this node and tell every peer (they stop with a `peer-abort` naming this node as the authenticated sender). */
   fail(err: NetAbort, skipPeer?: number): void {
     if (this.failure) return;
@@ -146,7 +156,10 @@ export class MemMesh {
       if (peer.failure) continue;
       const kind: AbortKind = err.kind === 'peer-abort' ? (err.claimedKind ?? 'peer-abort') : err.kind;
       const blamed = err.kind === 'peer-abort' ? (err.claimedBlame ?? null) : err.blamed;
-      peer.failure = new NetAbort('peer-abort', this.selfId, p, `peer ${this.selfId} reported an abort (${kind}, accuses ${blamed === null ? 'no one' : blamed}, unverified) ${err.message.slice(0, 120)}`, kind, blamed);
+      const claim = new NetAbort('peer-abort', this.selfId, p, `peer ${this.selfId} reported an abort (${kind}, accuses ${blamed === null ? 'no one' : blamed}, unverified) ${err.message.slice(0, 120)}`, kind, blamed);
+      // As `Mesh`: a deferring peer reads the claim in order, behind the messages this node sent it before.
+      if (peer.deferAborts) peer.inbox.get(this.selfId)!.items.push({ rd: 'abort', d: null, size: 0, abort: claim });
+      else peer.failure = claim;
     }
     for (const p of this.peers) this.net.nodes.get(p)!.wake();
     this.wake();

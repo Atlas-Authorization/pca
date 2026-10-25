@@ -117,6 +117,22 @@ describe('(6) each party in turn is the cheater and is named', () => {
   }, T(120_000));
 });
 
+describe('(6b) the blame round does not depend on message order', () => {
+  // The cheater runs the blame round too, finds every OTHER party consistent and aborts accusing the dealer. Its abort
+  // must not pre-empt an honest party whose blame round is still waiting for another honest party's data: here every
+  // byte from party 2 to party 1 is delayed, so party 0's abort reaches party 1 before party 2's blame message.
+  it('party 0 forges its MAC share; party 1 receives the cheater\'s abort before party 2\'s blame data, and still names party 0', async () => {
+    const r = await run({
+      overrides: { 0: { behavior: { kind: 'mac-lie', round: 'mul1' } } },
+      wireFault: { dialer: 2, target: 1, fault: { kind: 'delay', dir: 'c2s', afterBytes: 0, ms: 400 } },
+    });
+    expectIdentified(r.outputs, 0);
+    for (const p of parties(r.outputs).filter((x) => x.id !== 0)) {
+      expect([p.json.error.kind, p.json.error.blamed], `party ${p.id}: ${p.json.error.message}`).toEqual(['mac-check', 0]);
+    }
+  }, T(120_000));
+});
+
 describe('(5a) a lying trusted dealer is detected over the network', () => {
   it('a dealer that deals c = a*b + 1: every party aborts and names the DEALER', async () => {
     const r = await run({ overrides: { 3: { dealerFault: { keepCDelta: '1' } } } });

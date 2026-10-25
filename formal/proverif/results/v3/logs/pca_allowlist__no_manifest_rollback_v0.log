@@ -1,0 +1,13 @@
+-- Query not event(Acc(v0)) in process 1.
+Translating the process into Horn clauses...
+Completing...
+Starting query not event(Acc(v0))
+RESULT not event(Acc(v0)) is true.
+
+--------------------------------------------------------------
+Verification summary:
+
+Query not event(Acc(v0)) is true.
+
+--------------------------------------------------------------
+

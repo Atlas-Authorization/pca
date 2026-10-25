@@ -1,0 +1,4 @@
+Starting query event(Accept(m_7,ss_7,three,a,g,p_1)) ==> event(Issued(principalR,p_1,m_7,ss_7,three)) || event(Reveal(p_1))
+RESULT event(Accept(m_7,ss_7,three,a,g,p_1)) ==> event(Issued(principalR,p_1,m_7,ss_7,three)) || event(Reveal(p_1)) is true.
+Verification summary:
+Query event(Accept(m_7,ss_7,three,a,g,p_1)) ==> event(Issued(principalR,p_1,m_7,ss_7,three)) || event(Reveal(p_1)) is true.

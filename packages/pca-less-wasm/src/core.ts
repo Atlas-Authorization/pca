@@ -3,9 +3,11 @@
  *
  * LESS is a NIST additional-digital-signature (Round 2) CANDIDATE -- not a standard -- whose security
  * rests on the code-equivalence problem, a hardness family distinct from lattices (ML-DSA / FN-DSA) and
- * hashes (SLH-DSA). The crypto core is the official LESS reference C (https://github.com/less-sig/LESS,
- * public domain) compiled verbatim to `wasm32-wasi`; the only added C is a ~40-line seam that seeds the
- * reference CSPRNG and exposes flat byte-buffer entry points (BUILD_NOTES.md).
+ * hashes (SLH-DSA). The crypto core is the LESS reference C (https://github.com/less-sig/LESS, public
+ * domain) with the Atlas verifier fixes (Atlas-Authorization/LESS, branch atlas-verifier-hardening, vendored
+ * in sdks/pca-less-c) compiled to `wasm32-wasi` by scripts/build-wasm.sh (pinned toolchain, recorded hashes
+ * in wasm/BUILD.json); the only added C is a ~40-line seam that seeds the reference CSPRNG and exposes flat
+ * byte-buffer entry points (scripts/less_wasm_glue.c).
  *
  * ## Portable loader
  * This module imports nothing from `node:*`. The wasm needs a single host import, WASI
@@ -21,8 +23,9 @@
  * ## Status (honest)
  * Verified by the official KATs, a native-vs-wasm differential, sanitizer runs and robustness tests, but
  * UNAUDITED; no independent implementation exists; keygen/sign are not constant-time. The upstream
- * verifier has three memory-safety defects on forged signatures that this wrapper mitigates (see
- * `wellFormedSignedMessage` and the README). Prefer the classical hybrid.
+ * verifier has three memory-safety defects on forged signatures; the compiled reference carries their fixes
+ * and this wrapper keeps its own guards as a second layer (see `wellFormedSignedMessage`, `open` and the
+ * README). Prefer the classical hybrid.
  */
 
 /** The single compiled LESS parameter set (NIST Category 1, short-signature corner). */
@@ -370,9 +373,9 @@ function layoutMatches(s: LessSizes): boolean {
 }
 
 /**
- * Pre-validation of an attached signed message, rejecting what the reference would mishandle. The
- * reference is NOT modified; these two checks exist because of two upstream defects found by this
- * package's cross-check work (README "Findings"):
+ * Pre-validation of an attached signed message, rejecting what the UNPATCHED upstream reference would
+ * mishandle. The compiled reference carries the fixes (sdks/pca-less-c); these checks stay as a second layer,
+ * for the two upstream defects found by this package's cross-check work (README "Findings"):
  *
  *  1. `crypto_sign_open` has no `smlen >= sig_len` check: a short input (including a valid signature
  *     whose final leaf-count byte has had one bit flipped upward) underflows `*mlen` and the following
@@ -384,7 +387,7 @@ function layoutMatches(s: LessSizes): boolean {
  *     generator matrix (confirmed with AddressSanitizer on a native build; undetectable in wasm, where it
  *     silently corrupts adjacent stack memory). We reject any row with a padding bit set.
  *  3. (handled in `open`, not here) `RebuildGGM` over-reads past the signature on forged input; see the
- *     zero-filled slack allocation in `open`.
+ *     zero-filled slack allocation in `open`, and the canonical seed count check there.
  *
  * Neither check can reject a signature that `sign` produces: every KAT and random signature in the test
  * suites passes through them.
@@ -409,11 +412,30 @@ function wellFormedSignedMessage(sm: Uint8Array, s: LessSizes): boolean {
  * (empty on failure). Deterministic; needs no seeding.
  */
 export function open(publicKey: Uint8Array, signedMessage: Uint8Array): { ok: boolean; message: Uint8Array } {
-  const c = instantiate();
   const s = sizes();
   if (publicKey.length !== s.publicKey) {
     throw new LessError(`open: publicKey must be ${s.publicKey} bytes, got ${publicKey.length}`);
   }
+  const r = openRaw(publicKey, signedMessage, s);
+  if (!r.ok) return r;
+  // Canonical seed count (second layer for the fix in the compiled reference): the trailing byte must be exactly the number
+  // of seeds the challenge makes RebuildGGM read. The unpatched reference reads only that many and ignores any extra
+  // seed bytes, so a valid signature padded with 16 arbitrary bytes and a seed count raised by one still opened there (a
+  // malleated signature). If the same signature with its last seed dropped (count - 1) also opens, the count was not
+  // canonical: refuse. On a canonical signature that shorter form needs a seed it no longer has and fails.
+  const leaves = signedMessage[signedMessage.length - 1]!;
+  if (leaves > 0) {
+    const shorter = new Uint8Array(signedMessage.length - s.seed);
+    shorter.set(signedMessage.subarray(0, signedMessage.length - 1 - s.seed), 0);
+    shorter[shorter.length - 1] = leaves - 1;
+    if (openRaw(publicKey, shorter, s).ok) return { ok: false, message: new Uint8Array(0) };
+  }
+  return r;
+}
+
+/** One `less_open` call behind the input guards; `open` adds the canonical seed count check. */
+function openRaw(publicKey: Uint8Array, signedMessage: Uint8Array, s: LessSizes): { ok: boolean; message: Uint8Array } {
+  const c = instantiate();
   // Wrapper-level guard for two UPSTREAM DEFECTS (see wellFormedSignedMessage and README "Findings").
   if (!wellFormedSignedMessage(signedMessage, s)) return { ok: false, message: new Uint8Array(0) };
   const pPk = c.malloc(s.publicKey);

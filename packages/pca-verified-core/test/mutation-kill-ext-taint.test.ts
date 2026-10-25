@@ -2,7 +2,7 @@
 // Mutation-kill tests for src/ext-taint.ts: the typed adapter over the proved taint decisions. Differential against the production
 // implementation over an adversarial corpus, plus pinned reasons / call orders / numeric boundaries.
 import { describe, expect, it } from 'vitest';
-import { computeTaint, joinLabel, joinLabels, labelRank as prodRank, taintValue as prodValue } from '../../pca/src/taint';
+import { computeTaint, joinLabel, joinLabels, labelRank as prodRank, taintValue as prodValue } from './support/legacy/taint';
 import {
   BOTTOM,
   TAINT_LEVELS,

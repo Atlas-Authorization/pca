@@ -1,0 +1,61 @@
+name: Formal - model-to-code conformance (full)
+
+# The executable models in tools/pca-formal/conformance against the real TypeScript implementation (packages/pca), FULL
+# size (~10^6 random cases + exhaustive small scopes), split into shards; every stage must report "disagree": 0, and the
+# harness self-test (deliberately broken model mutants) must kill every mutant not recorded as surviving. Differential testing, not a proof.
+# Runs on ci/** pushes and on demand; the smoke size runs in CI on every push.
+on:
+  push:
+    branches: ['ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shard:
+    name: shard ${{ matrix.shard }}/8
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          # packages/pca resolves ML-DSA / SLH-DSA from node:crypto
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Build packages/pca and its workspace dependencies (the harness loads their dist/)
+        run: pnpm -r --filter=@atlasauth/pca... run build
+      - name: Full run, shard ${{ matrix.shard }} of 8
+        run: |
+          set +e
+          bash verify/run-conformance.sh full ${{ matrix.shard }} 8 2>&1 | tee "$RUNNER_TEMP/conformance-${{ matrix.shard }}.txt"
+          rc=${PIPESTATUS[0]}
+          # a surviving model mutant must be one recorded (and discussed) in tools/pca-formal/results/mutants.txt
+          new=$(grep SURVIVED .verify-work/conformance/mutants-${{ matrix.shard }}.txt | awk '{print $1}' | sort -u)
+          old=$(grep SURVIVED tools/pca-formal/results/mutants.txt 2>/dev/null | awk '{print $1}' | sort -u)
+          # no vacuous pass: every stage must have produced a non-empty result with cases, and the self-test must have run
+          python3 .github/scripts/formal-conformance-check.py .verify-work/conformance ${{ matrix.shard }} full || rc=1
+          extra=$(comm -23 <(printf '%s\n' $new) <(printf '%s\n' $old) | sed '/^$/d')
+          [ -z "$extra" ] || { echo "::error::model mutant(s) survived that are not recorded: $extra"; rc=1; }
+          exit $rc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conformance-full-${{ matrix.shard }}
+          path: |
+            .verify-work/conformance
+            ${{ runner.temp }}/conformance-${{ matrix.shard }}.txt

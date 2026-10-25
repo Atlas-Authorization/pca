@@ -1,0 +1,32 @@
+{
+  "name": "@atlasauth/pca-evidence",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PCA Intent Layer v2 dispute evidence bundle (pca-intent-evidence v1): build, anchor and SCITT-register a bundle of statement, session root, maps, schema, signed answers, delta grants, PCActns, verdicts, receipts, effects and revocation epochs, plus a standalone deterministic replay verifier (library + CLI) that recomputes a findings report.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pca-evidence": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-intent": "workspace:*",
+    "@atlasauth/pca-scitt": "workspace:*",
+    "@atlasauth/pca-wallet": "workspace:*",
+    "@atlasauth/pca-webauthn": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -10,6 +10,8 @@
  * Pure and deterministic given explicit salts; the default salt is 16 random bytes.
  */
 import { randomBytes } from '@noble/hashes/utils';
+import { verifyConsistencyVerified } from '@atlasauth/pca-verified-core';
+import { verifiedCoreOptIn } from './verified-core-mode';
 import { b64u, canonicalBytes, hashCanonical, sha256, unb64u, utf8 } from './hash';
 import { publicKeyOf } from './keys';
 import {
@@ -127,6 +129,10 @@ const MAX_CONSISTENCY_PATH = 2 * 53 + 2;
  * Without the `oldRoot` pin an attacker-chosen "previous head" would make any rewrite look consistent.
  */
 export function verifyLedgerConsistency(oldRoot: string, newRoot: string, proof: ConsistencyProof): boolean {
+  // OPT-IN (`PCA_VERIFIED_CORE=merkle-strict`): the Dafny-proved RFC 9162 consistency verifier (formal/dafny/Merkle.dfy,
+  // verified-core `verifyConsistencyVerified`). Not the default because it is STRICTER than this function (roots and path
+  // elements must be canonical base64url of exactly 32 bytes), not because of cost; see docs/pca/security/verified-core.md.
+  if (verifiedCoreOptIn('merkle-strict')) return verifyConsistencyVerified(oldRoot, newRoot, proof);
   try {
     if (typeof oldRoot !== 'string' || typeof newRoot !== 'string') return false;
     const first = proof.oldSize;

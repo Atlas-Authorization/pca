@@ -41,7 +41,7 @@ PCA realm="atlas", error="<missing_pcactn|invalid_pcactn|unknown_grant>", hint="
 
 ## Post-quantum key pins
 
-A pure-post-quantum or hybrid artifact names its signer by an Ed25519 key and carries its own PQ public key. The server never verifies under that embedded key: a PQ liveness beacon (`POST /v1/pca/beacons`, principal path) or witness cosignature (`POST /v1/pca/ledger/witness`, which now also accepts `alg`, `pq_pk`, `pq_sig`) is accepted only under the PQ key pinned for the signer. Ed25519 behaviour is unchanged and needs no pin.
+A pure-post-quantum or hybrid artifact names its signer by an Ed25519 key and carries its own PQ public key. The server never verifies under that embedded key: a PQ liveness beacon (`POST /v1/pca/beacons`, principal path) or witness cosignature (`POST /v1/pca/ledger/witness`, which now also accepts `alg`, `pq_pk`, `pq_sig`) is accepted only under the PQ key pinned for the signer. The same holds for intent session roots (`POST /v1/pca/intent/sessions`) and session grants (`POST /v1/pca/intent/sessions/:sid/grants`): a pure-PQ or hybrid root or grant is accepted only when its signer's PQ key is pinned here; the key listed in the root's own `principals[].pq_pk` is never trusted. Ed25519 behaviour is unchanged and needs no pin.
 
 | Method and path | Purpose |
 |---|---|

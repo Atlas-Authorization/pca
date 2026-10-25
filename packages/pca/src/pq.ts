@@ -200,8 +200,9 @@ export const FN_DSA_SEED_BYTES = 32;
  * this parameter set), secret key a 32-byte seed. The signature is VARIABLE LENGTH (seed-tree): 1,153..1,329
  * bytes in 16-byte steps, the trailing byte being the opened-leaf count.
  *
- * LESS suites are TS-reference-only: the other SDK verifiers do not implement them and reject them
- * fail-closed (unknown `alg`). They are NOT in the shared cross-language conformance corpora.
+ * The wasm is the patched reference of sdks/pca-less-c (the same C the Go, Rust and Python verifiers link); a verifier
+ * without a LESS backend refuses these suites with `unsupported_suite` (conformance/SUITES.md). Known answers, including
+ * the seed-padding malleation every verifier must refuse: conformance/less-vectors.json.
  */
 export const LESS_CAT1_PUBLIC_KEY_BYTES = 97484;
 export const LESS_CAT1_SECRET_KEY_BYTES = 32;

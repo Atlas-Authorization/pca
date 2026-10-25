@@ -1,0 +1,54 @@
+{
+  "name": "@atlasauth/pca-doctor",
+  "version": "0.4.2",
+  "description": "pca-doctor: check a live PCA deployment's assumptions (clock skew, replay-store atomicity and durability, trusted-proxy config, suite / PQ-pin policy, root-caveat enforcement) and print pass / warn / fail with a remediation per check.",
+  "keywords": [
+    "doctor",
+    "deployment check",
+    "proof-carrying authority",
+    "pca"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-doctor"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pca-doctor": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-store-conformance": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}

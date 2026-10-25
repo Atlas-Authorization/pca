@@ -174,12 +174,12 @@ describe('nonceEntropyOk', () => {
 
 describe('requiresAttestation', () => {
   it('is false for no / empty / inert bindings', () => {
-    for (const b of [undefined, {}, { model_allowlist: [] }, { weights_allowlist: [] }, { system_prompt_allowlist: [] }, { tool_manifest_allowlist: [] }, { operator: '' }, { min_measurement: '' }, { min_measurement: { svn: NaN } }, { min_measurement: {} }, { min_measurement: { svn: '3' } }, { require_hardware: false }, { require_measured_weights: false }, { model_allowlist: 'x' }, { operator: 5 }] as never[]) {
+    for (const b of [undefined, {}, { model_allowlist: [] }, { weights_allowlist: [] }, { system_prompt_allowlist: [] }, { tool_manifest_allowlist: [] }, { operator: '' }, { min_measurement: '' }, { require_hardware: false }, { require_measured_weights: false }, { model_allowlist: 'x' }, { operator: 5 }] as never[]) {
       expect(requiresAttestation(b)).toBe(false);
     }
   });
   it('each single constraint makes it true', () => {
-    for (const b of [{ model_allowlist: ['m'] }, { weights_allowlist: ['w'] }, { system_prompt_allowlist: ['s'] }, { tool_manifest_allowlist: ['t'] }, { operator: 'o' }, { min_measurement: 'x' }, { min_measurement: { svn: 0 } }, { min_measurement: { svn: 7 } }, { require_hardware: true }, { require_measured_weights: true }] as never[]) {
+    for (const b of [{ model_allowlist: ['m'] }, { weights_allowlist: ['w'] }, { system_prompt_allowlist: ['s'] }, { tool_manifest_allowlist: ['t'] }, { operator: 'o' }, { min_measurement: 'x' }, { min_measurement: { svn: 0 } }, { min_measurement: { svn: 7 } }, { min_measurement: { svn: NaN } }, { min_measurement: {} }, { min_measurement: { svn: '3' } }, { min_measurement: null }, { require_hardware: true }, { require_measured_weights: true }] as never[]) {
       expect(requiresAttestation(b)).toBe(true);
     }
   });
@@ -214,10 +214,15 @@ describe('matchAgentBinding', () => {
     expect(at('4.5', 5)).toBe('runtime_measurement 4.5 is not an integer SVN (required min svn 5)');
     expect(at('', 0)).toBe('runtime_measurement  is not an integer SVN (required min svn 0)');
     expect(at('  ', 0)).toBe('runtime_measurement    is not an integer SVN (required min svn 0)');
-    expect(at('5', Number.NaN)).toBeNull(); // malformed lower bound: nothing to enforce
-    expect(at('abc', Number.POSITIVE_INFINITY)).toBeNull();
-    expect(matchAgentBinding(id, { min_measurement: { svn: '5' } as never })).toBeNull(); // non-numeric svn: ignored
-    expect(matchAgentBinding(id, { min_measurement: null as never })).toBeNull();
+    // 0.4.2: a malformed lower bound FAILS CLOSED (it used to enforce nothing), and the runtime SVN must be canonical decimal text
+    expect(at('5', Number.NaN)).toBe('min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)');
+    expect(at('abc', Number.POSITIVE_INFINITY)).toBe('min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)');
+    expect(at('5', -1)).toBe('min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)');
+    expect(at('5', 1.5)).toBe('min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)');
+    expect(at('5', -0)).toBe('min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)');
+    expect(matchAgentBinding(id, { min_measurement: { svn: '5' } as never })).toBe('min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)');
+    expect(matchAgentBinding(id, { min_measurement: null as never })).toBe('min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)');
+    for (const rm of ['0x10', '1e1', ' 8 ', '08', '+8']) expect(at(rm, 1)).toBe(`runtime_measurement ${rm} is not an integer SVN (required min svn 1)`);
   });
   it('weights_allowlist and require_measured_weights', () => {
     expect(matchAgentBinding(id, { weights_allowlist: ['w'] })).toBeNull();

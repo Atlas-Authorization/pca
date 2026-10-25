@@ -102,7 +102,7 @@ function build(s: Spec = {}): Built {
 
 // ---------------------------------------------------------------- collection
 type Intent = 'accept' | 'reject' | 'either';
-interface Pending { category: string; name: string; intent: Intent; kind: 'verify' | 'canon' | 'chain'; raw: string; grant: string; now: number; aud: string; allowed_suites?: string[] }
+interface Pending { category: string; name: string; intent: Intent; kind: 'verify' | 'canon' | 'chain'; raw: string; grant: string; now: number; aud: string; allowed_suites?: string[]; intent_policy?: Record<string, unknown>; intent_policy_json?: string; intent_v2?: Record<string, unknown> }
 const PEND: Pending[] = [];
 const grantStr = (g: any) => { try { return pca.canonicalizeStrict(P(g)); } catch { return rawText(g); } };
 function V(category: string, name: string, intent: Intent, b: Built | { pc: any; grant: any }, o: { raw?: string; now?: number; aud?: string; pc?: any } = {}) {
@@ -594,10 +594,14 @@ const toLE = (v: bigint) => { const o = new Uint8Array(32); for (let i = 0; i < 
 {
   const gold = loadGolden();
   gold.primitives.json_parse.forEach((j: any, i: number) => C('golden-json', `json_parse[${i}]`, j.accept ? 'accept' : 'reject', j.input));
+  // A `requires` vector stays out, EXCEPT one that names a cross-impl suite (ml-dsa-65 / its hybrid): that tag only tells a
+  // per-language runner whose runtime lacks the backend to assert unsupported_suite; the gate handles that through each
+  // driver's suite manifest, so those vectors stay in the cross-language comparison.
+  const CROSS_SUITES = new Set(['ed25519', 'ml-dsa-65', 'hybrid-ed25519-ml-dsa-65']);
   for (const v of gold.vectors) {
-    if (v.requires) continue;
+    if (v.requires && !CROSS_SUITES.has(v.requires)) continue;
     const raw = v.pcactn_json ?? JSON.stringify(v.pcactn);
-    PEND.push({ category: 'golden', name: v.name, intent: v.expect.allow ? 'accept' : 'reject', kind: 'verify', raw, grant: JSON.stringify(v.grant), now: v.context.now, aud: v.context.aud });
+    PEND.push({ category: 'golden', name: v.name, intent: v.expect.allow ? 'accept' : 'reject', kind: 'verify', raw, grant: JSON.stringify(v.grant), now: v.context.now, aud: v.context.aud, ...(v.context.intent_policy !== undefined ? { intent_policy: v.context.intent_policy } : {}), ...(v.context.intent_policy_json !== undefined ? { intent_policy_json: v.context.intent_policy_json } : {}), ...(v.context.intent_v2 !== undefined ? { intent_v2: v.context.intent_v2 } : {}) });
   }
   // R3-03: PQ key binding (holder_pq) + allowed_suites policy. Every verifier MUST agree, including the positives (they need ML-DSA-65).
   for (const v of gold.vectors) {
@@ -619,7 +623,8 @@ async function main() {
   let deviates = 0;
   for (const [i, p] of PEND.entries()) {
     const id = `adv${String(i).padStart(4, '0')}`;
-    const ref = p.kind === 'verify' ? await refVerify(p.raw, p.grant, p.now, p.aud, p.allowed_suites) : p.kind === 'chain' ? refChain(p.raw) : refCanon(p.raw);
+    // the recorded expectation is the verdict (allow + check map); the reference's unsupported_suite tag is live-only
+    const { unsupported_suite: _uns, ...ref } = p.kind === 'verify' ? await refVerify(p.raw, p.grant, p.now, p.aud, p.allowed_suites, p.intent_policy as never, p.intent_policy_json, p.intent_v2) : p.kind === 'chain' ? refChain(p.raw) : refCanon(p.raw);
     const accepted = p.kind === 'verify' || p.kind === 'chain' ? ref.allow === true : ref.canon !== undefined;
     const refDeviates = p.intent !== 'either' && (p.intent === 'accept') !== accepted;
     if (refDeviates) deviates++;
@@ -627,8 +632,8 @@ async function main() {
     if (seen.has(key)) throw new Error('duplicate vector name ' + key);
     seen.add(key);
     const dev = refDeviates ? { refDeviates: true } : {};
-    full.push(JSON.stringify({ id, category: p.category, name: p.name, intent: p.intent, kind: p.kind, raw: p.raw, grant: p.grant, now: p.now, aud: p.aud, ...(p.allowed_suites !== undefined ? { allowed_suites: p.allowed_suites } : {}), ref, ...dev }));
-    const sha = createHash('sha256').update(JSON.stringify(p.allowed_suites !== undefined ? [p.raw, p.grant, p.now, p.aud, p.kind, p.allowed_suites] : [p.raw, p.grant, p.now, p.aud, p.kind])).digest('hex');
+    full.push(JSON.stringify({ id, category: p.category, name: p.name, intent: p.intent, kind: p.kind, raw: p.raw, grant: p.grant, now: p.now, aud: p.aud, ...(p.allowed_suites !== undefined ? { allowed_suites: p.allowed_suites } : {}), ...(p.intent_policy !== undefined ? { intent_policy: p.intent_policy } : {}), ...(p.intent_policy_json !== undefined ? { intent_policy_json: p.intent_policy_json } : {}), ...(p.intent_v2 !== undefined ? { intent_v2: p.intent_v2 } : {}), ref, ...dev }));
+    const sha = createHash('sha256').update(JSON.stringify([p.raw, p.grant, p.now, p.aud, p.kind, ...(p.allowed_suites !== undefined ? [p.allowed_suites] : []), ...(p.intent_policy !== undefined ? [{ intent_policy: p.intent_policy }] : []), ...(p.intent_policy_json !== undefined ? [{ intent_policy_json: p.intent_policy_json }] : []), ...(p.intent_v2 !== undefined ? [{ intent_v2: p.intent_v2 }] : [])])).digest('hex');
     lines.push(JSON.stringify({ id, category: p.category, name: p.name, intent: p.intent, kind: p.kind, rawLen: p.raw.length, sha256: sha, ref, ...dev }));
   }
   if (CORPUS) writeFileSync(CORPUS, full.join('\n') + '\n');

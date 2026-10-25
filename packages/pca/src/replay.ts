@@ -55,10 +55,15 @@ export interface CounterStore {
   advance(streamKey: string, counter: number): Promise<boolean>;
 }
 
-/** Length-prefixed, injective encoding of the parts, hashed to a fixed-size key. */
+/**
+ * Length-prefixed, injective encoding of the parts, hashed to a fixed-size key. THROWS on a part that is not a string or
+ * holds a lone surrogate: such a string has no UTF-8 encoding (the encoder writes U+FFFD for it, so "\ud800", "\udbff" and
+ * "\ufffd" would share one key). The guard below refuses those components before any key is built.
+ */
 export function replayKey(namespace: string, ...parts: readonly string[]): string {
   const chunks: Uint8Array[] = [];
   for (const part of [namespace, ...parts]) {
+    if (typeof part !== 'string' || hasLoneSurrogate(part)) throw new TypeError('replayKey: every part must be a well-formed string (no lone surrogates)');
     const bytes = utf8(part);
     const len = new Uint8Array(4);
     new DataView(len.buffer).setUint32(0, bytes.length, false);
@@ -123,7 +128,7 @@ export async function guardPCActnReplay(store: ReplayStore, p: PCActn, opts: Gua
   const nonceOk = hasNonce && typeof p.nonce === 'string' && p.nonce.length !== 0 && u8len(p.nonce) <= MAX_NONCE_LEN && !hasLoneSurrogate(p.nonce);
   const facts: ReplayFacts = {
     nowOk: Number.isSafeInteger(opts.now),
-    verifierAudOk: typeof opts.aud === 'string' && opts.aud.length !== 0 && u8len(opts.aud) <= MAX_AUD_LEN,
+    verifierAudOk: typeof opts.aud === 'string' && opts.aud.length !== 0 && u8len(opts.aud) <= MAX_AUD_LEN && !hasLoneSurrogate(opts.aud),
     isObject: objectOk,
     audMatches: objectOk && typeof p.aud === 'string' && p.aud === opts.aud,
     iatOk: objectOk && isSafeNonNegInt(p.iat),

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-ap2",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "AP2 (Agent Payments Protocol) Intent/Cart/Payment mandates as real SD-JWT credentials (integer minor units, key binding), bound to a PCA grant and action proof; x402 / Stripe Shared-Payment-Token settlement shapes.",
   "keywords": [
     "ap2",

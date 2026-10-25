@@ -1,5 +1,7 @@
 import { canonicalizeStrict, decodeB64uStrict } from './hash';
 import { validateShareSignatureWire, validateSignatureWire } from './pq';
+import { validateIntentWire } from './intent-binding';
+import { validateIntentSessionWire } from './intent-session';
 
 /**
  * PCActn wire format v2: the NORMATIVE structural + lexical rules a signed PCActn must satisfy BEFORE any
@@ -28,6 +30,10 @@ export const PCACTN_OPTIONAL_FIELDS = [
   'threshold', 'zk_compliance', 'bond_ref',
   // B4 crypto-agility (additive): absent `alg` == "ed25519" and validates exactly as today.
   'alg', 'pq_pk', 'pq_sig',
+  // Intent Layer M2 (additive, SIGNED): the `envelope.intent` binding (see intent-binding.ts).
+  'intent',
+  // Intent Layer v2 (additive, SIGNED): the session member (see intent-session.ts, conformance rule 13).
+  'intent_session',
 ] as const;
 
 const KNOWN = new Set<string>([...PCACTN_REQUIRED_FIELDS, ...PCACTN_OPTIONAL_FIELDS]);
@@ -156,6 +162,14 @@ export function validateWireV2(p: unknown): string | null {
     }
     if (p.tool_binding !== undefined && decodeB64uStrict(p.tool_binding, B32) === null) return "'tool_binding' is not canonical base64url (32 bytes)";
     if (p.progress_step !== undefined && !isObj(p.progress_step)) return "'progress_step' must be an object";
+    if (p.intent !== undefined) {
+      const intentErr = validateIntentWire(p.intent);
+      if (intentErr !== null) return intentErr;
+    }
+    if (p.intent_session !== undefined) {
+      const sessionErr = validateIntentSessionWire(p.intent_session);
+      if (sessionErr !== null) return sessionErr;
+    }
     if (p.prohibition_evidence !== undefined && !isObj(p.prohibition_evidence) && !Array.isArray(p.prohibition_evidence)) {
       return "'prohibition_evidence' must be an object or array";
     }

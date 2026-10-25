@@ -1,12 +1,12 @@
 // FROZEN SNAPSHOT of packages/pca/src/server/verify.ts BEFORE the verified-core wiring (the legacy reference for the differential tests).
-import { requiresAttestation } from '../../../../pca/src/attestation';
+import { requiresAttestation } from './attestation'; // repointed to the frozen copy (attestation wired to the proved code)
 import { beaconRef, verifyLivenessBeacon, type LivenessBeacon } from '../../../../pca/src/beacons';
 import { type Capability } from '../../../../pca/src/capability';
 import { readEnvelope } from '../../../../pca/src/envelope';
 import { hashCanonical } from '../../../../pca/src/hash';
 import { merkleRoot, planNodeLeaf, type PlanNode } from '../../../../pca/src/merkle';
 import { decodePCActn, verifyPCActnCore, type CheckStatus, type PCActn, type VerifyHooks } from './pcactn';
-import { decide, evaluateAgentCaveats } from '../../../../pca/src/policy-vm';
+import { decide, evaluateAgentCaveats } from './policy-vm'; // repointed to the frozen copy (decide kernels wired to the proved code)
 import type { SigAlg } from '../../../../pca/src/pq';
 import { checkRevocationEpoch, type RevocationEpoch } from '../../../../pca/src/revocation';
 import { type RequiredThreshold, type RiskInputs, type TrustBudget } from '../../../../pca/src/risk';
@@ -91,6 +91,8 @@ export interface VerifyPCActnOptions {
   allowedSuites?: readonly SigAlg[];
   /** LEGACY: accept PQ keys read from the artifact (no `holder_pq` binding). Voids the hybrid's PQ protection (F-2). Default false. */
   allowUnboundPq?: boolean;
+  /** Intent Layer M2 policy, passed to the core `intent` check (mirrors production). */
+  intent?: import('../../../../pca/src/intent-binding').IntentPolicy;
 }
 
 /** The minimum enforcement profile a resource server should demand (see `requirePCA`). */
@@ -176,7 +178,7 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
           },
         }
       : opts.hooks;
-    const core = await verifyPCActnCore(p, { grant: opts.grant, nowEpoch: now, audience: opts.audience, hooks, allowedSuites: opts.allowedSuites, allowUnboundPq: opts.allowUnboundPq });
+    const core = await verifyPCActnCore(p, { grant: opts.grant, nowEpoch: now, audience: opts.audience, hooks, allowedSuites: opts.allowedSuites, allowUnboundPq: opts.allowUnboundPq, intent: opts.intent });
     // A wire-form failure is terminal (normative): nothing else is evaluated on a malformed object.
     if (core.checks.wire === 'fail') return failClosed(core.reason ?? 'wire: malformed PCActn', { wire: 'fail' });
     const checks: Record<string, CheckStatus> = { ...core.checks };
@@ -272,6 +274,9 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
     };
     const d = decide({
       grant: opts.grant,
+      // 0.4.2 bug fix mirrored into this oracle (not a verified-core change): decide() gets the stored grant + pins
+      trustedRoot: opts.grant,
+      ...((opts as { pqPins?: Readonly<Record<string, string>> }).pqPins !== undefined ? { pqPins: (opts as { pqPins?: Readonly<Record<string, string>> }).pqPins } : {}),
       action: actionCtx,
       plan: ctx.plan,
       nodeId: p.plan?.node_id,

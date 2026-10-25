@@ -1,0 +1,50 @@
+{
+ "mutator": "proof-sibling-noncanonical-tail",
+ "case": "c005452",
+ "bytes": 1340,
+ "allImplementationsAgree": true,
+ "context": {
+  "now": 1800000000000,
+  "aud": "rs-fuzz"
+ },
+ "results": {
+  "oracle": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "dotnet": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "go": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "php": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "python": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  },
+  "ruby": {
+   "allow": false,
+   "checks": {
+    "wire": false
+   }
+  }
+ },
+ "pcactn_json": "{\"ver\":2,\"action\":{\"verb\":\"x\",\"resource\":\"z\",\"params_digest\":\"RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o\",\"reversibility_class\":\"irreversible\"},\"grant_ref\":\"_voCl9o_xUH11kMdZZnaLEho98dOvnFOl0ZZNDs6owk\",\"cap_chain\":[{\"id\":\"_voCl9o_xUH11kMdZZnaLEho98dOvnFOl0ZZNDs6owk\",\"issuer\":\"EFIkTaQvVC4IxOsLM2XH3AtrlnbPLOUtoPTeXYA30ME\",\"holder\":\"664DtjPOxss8Bk1TB6M6CdoaDUS7sS_xC163Hqq6huM\",\"caveats\":[],\"body_digest\":\"_voCl9o_xUH11kMdZZnaLEho98dOvnFOl0ZZNDs6owk\",\"sig\":\"TC2QNaTIPorelhFcdZ-FSuU-DWYuUawDI6vyBjFo3t6F4wdV7h-BVcpM45BK_iD_bB5lalrV8khuo7r9wt9xAQ\"}],\"plan\":{\"root\":\"dSi2owZ1KF5Me3sEdVzhNQznMi2Z9idUYuq1jpkDWTo\",\"inclusion_proof\":{\"index\":0,\"size\":3,\"path\":[{\"side\":\"R\",\"hash\":\"xvlYJZuWDJmjIIiILlXflTLZcdVgdSmgUTP3Bd0i2rI\"},{\"side\":\"R\",\"hash\":\"hRgs98bJlvKg0Xs_2Qsfi5hVDCOq9wzzklhZzb6HzDt\"}]},\"node_id\":\"n0\",\"conditions_digest\":\"YM87EgmmvAr4WYQDm1wkrB7pFoHs4esi8tOmv9_DUxY\"},\"attestation\":{\"quote_digest\":\"\",\"epoch\":933,\"model_id\":\"unattested\",\"measurement\":\"\",\"operator\":\"unattested\"},\"provenance\":{\"causal_hash\":\"\",\"taint_level\":0,\"trusted_refs\":[]},\"freshness\":{\"beacon_ref\":\"\",\"epoch\":0,\"accumulator_witness\":\"\"},\"counter\":7,\"risk_claim\":{\"r\":0,\"inputs\":{}},\"aud\":\"rs-fuzz\",\"iat\":1799999635810,\"exp\":1800000835810,\"caution\":0.5,\"bond_ref\":\"ünï\",\"sig\":\"EPpdzcw9HklPBDwXYgLM_wZloh9dwTqFkdOoniX1E4BLerNN3dZcXVnUt-459AV0f8eavtQc5pm2VOTsvdutBg\"}",
+ "grant": "{\"body_digest\":\"_voCl9o_xUH11kMdZZnaLEho98dOvnFOl0ZZNDs6owk\",\"caveats\":[],\"holder\":\"664DtjPOxss8Bk1TB6M6CdoaDUS7sS_xC163Hqq6huM\",\"id\":\"_voCl9o_xUH11kMdZZnaLEho98dOvnFOl0ZZNDs6owk\",\"issuer\":\"EFIkTaQvVC4IxOsLM2XH3AtrlnbPLOUtoPTeXYA30ME\",\"sig\":\"TC2QNaTIPorelhFcdZ-FSuU-DWYuUawDI6vyBjFo3t6F4wdV7h-BVcpM45BK_iD_bB5lalrV8khuo7r9wt9xAQ\"}"
+}

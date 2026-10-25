@@ -20,7 +20,7 @@ model-to-code conformance harness (section "Model-to-code conformance").
 | Tamarin prover | 1.12.0 (Homebrew tap on the Mac for the original runs; GitHub release `linux64-ubuntu` on the cloud boxes) | boxes |
 | Maude | 3.5.1 (release zip; apt's 3.2 is rejected by Tamarin) | boxes |
 | ProVerif | 2.05 (opam switch `pv`, OCaml 4.14.2) | cloud-box-1 |
-| CryptoVerif | 2.13 (opam) | cloud-box-1 |
+| CryptoVerif | 2.13 (opam; `formal/cryptoverif/install-cv.sh` installs switch `cv`) | cloud-box-1, sp4 |
 | Lean 4 | v4.34.1 (core only, no mathlib) | Mac + box |
 | Node / tsx / vitest stack | repo-pinned (tsx 4.23.1) | boxes |
 
@@ -58,9 +58,11 @@ One row per mechanised result that backs the 0.4.0 release: what is proved, by w
 | Area | Tool | Scope | Result | Evidence |
 |---|---|---|---|---|
 | Decision core (chain walk and attenuation, threshold count, replay guard, check and verdict combinator, PQ key-authority and suite rules) | Dafny 4.11.0 | unbounded; no `assume` / axiom / extern | 171 verified, 0 errors; committed generated JS byte-identical to a fresh compile (re-run 2026-10-11) | `verified-core.md`, `formal/dafny/` |
-| Regex, Wire, Merkle, Taint, Attest, PolicyVm models | Dafny 4.11.0 | unbounded, standalone models | 245, 325, 189, 63, 134, 271 verified, 0 errors; generated JS byte-identical (re-run 2026-10-11) | `formal/dafny/*.dfy` |
+| Regex, Wire, Merkle, Taint, Attest, PolicyVm models | Dafny 4.11.0 | unbounded, standalone models | 245, 325, 189, 63, 134, 271 verified, 0 errors (PolicyVm 288 at 0.4.1, re-run 2026-10-12, after the root-caveat lemmas); generated JS byte-identical (re-run 2026-10-11) | `formal/dafny/*.dfy` |
 | Proved regex engine vs production TypeScript and V8 | differential testing (not a proof) | 6,000,040 (pattern, subject) pairs | 0 disagreements | `verified-core.md` ledger row |
 | Production TS vs the Dafny-backed core | differential testing | conformance corpus plus random mutations | 290 of 290 tests agree | `packages/pca-verified-core/test/` |
+| Which production paths ARE proved code (0.4.2) | Dafny models compiled to JS, called directly by `packages/pca` | default: core (chain, threshold, replay guard, verdict) plus taint, Merkle inclusion, attestation decisions and the `decide()` kernels; opt-in (`PCA_VERIFIED_CORE`): wire, regex, Policy-VM evaluator, strict Merkle consistency / membership, nonce store | CI wiring scan (`scripts/check-verified-core.sh`); differential tests now compare production (proved) against frozen hand-written oracles | `verified-core.md` "Production wiring of the extension components" |
+| The 9 native verifiers (Go, Python, Rust, Java, .NET, PHP, Ruby, Kotlin, Swift) | conformance corpus + mutation testing (not a proof) | every vector, every language | conformance-checked, **not proved**; only bounded Kani harnesses and Verus transliterations of Rust fragments exist | `implementation-verification.md` |
 | Budget `node_bound` (one allocation: at most its limit of distinct debiting spends) | Tamarin | unbounded traces; concrete limits 'c1' (v4 shipped model) and 'c2' (v5 focus encoding) | verified (54 steps on v4; 55 with induction; v5 16 and 612 steps) | "Budget and scope closure" below |
 | Budget `root_bound` | Tamarin | unbounded traces; limit 'c2' | verified (67,480 steps) | same |
 | Budget bug witnesses `DEBIT_LEAF_ONLY`, `NONATOMIC_DEBIT`, `NO_PARENT_CHECK`; scope `NO_ANCESTOR_RES`, `NO_ANCESTOR_SCOPE` | TLC (TLA+ mirrors of the Tamarin models) | bounded (B1, C1); shipped model also passes at B2 over 8,552,602 states | 13 cases, 0 mismatches: every bug flag yields a counterexample, the shipped model passes at the same bound; Tamarin also finds the `DEBIT_LEAF_ONLY` trace (18 steps) | same |
@@ -76,6 +78,69 @@ One row per mechanised result that backs the 0.4.0 release: what is proved, by w
 | Kani compositional decision and base64 harnesses; sharded `folding-pca` Miri (12 of 17 shards pass at the time of writing) | Kani, Miri | - | running; results go in a follow-up docs commit (not a release blocker) | `f342b878` |
 | Tamarin and TLC closure runs | Tamarin, TLC | - | done (row above) | `b63a3360`, `b04cf555` |
 | Threshold share whose `pq_pk` differs from the registered key | Dafny (`Threshold.dfy` lemma `PqPkMismatchNeverCounts`) + conformance vectors | unbounded (Dafny); 4 shared DENY vectors | core 171 verified, glue contract 174 verified; cross-language gate 12,152 vectors, 0 disagreements (TypeScript plus 7 native verifiers, Go, Python, Ruby, PHP, .NET, Rust and Java, in the per-vector matrix; Kotlin and Swift run natively over the same corpus) | `d00dba73` |
+| Cryptographic reductions behind T15, sequencer receipts and key sets (incl. the retirement / freshness fix), revocation epochs (dedicated authority), AT-3/AT-4 attestation (T27 sink check), T28 and Z0 hiding against rule 19, zkVM receipts, PQ trusted-side pins, FR-5, ABE-3, evidence-bundle attribution | CryptoVerif 2.13 | computational, concrete bounds; 11 models, against the code of 5e718f47 / 5501b545 / 16953c21 | **all queries proved**; 18 negative controls (incl. the pre-fix behaviours) each unprovable as required, 0 mismatches (job `q261012-210157-bx9q`, 2026-10-12) | "Computational reductions (CryptoVerif, 2026-10-12)" below, `formal/cryptoverif/` |
+| Sorted-set non-membership (revocation); committed-map binding for any size (`open_binding`, `z0_binding`); append-only revocation / key-set chains (`chain_sub`, `never_readmit`, `chain_root`) | Lean 4 (core) | unbounded sizes and chain lengths, explicit collision extractors (tightness 1) | all checked, axioms at most `propext`, `Classical.choice`, `Quot.sound`, no `sorry` | `formal/computational/lean/PcaComp/{NonMember,MapCommit,RevChain}.lean`, `formal/computational/nonmember-check.txt` |
+| GG-2 forward security of the GGM ratchet, depth-generic hybrid (`hybrid`: depth * eps_prg for any depth; `gg2`: eps_CR + 2^d (eps0 + d eps + epsL + eps_Ed)) | Lean 4 + Mathlib | any depth (no unrolling); efficiency as distinguisher classes closed under the reduction steps | checked, axioms `propext`, `Classical.choice`, `Quot.sound` | `formal/computational/leanmath/PcaMath/Ratchet.lean`, `formal/computational/ratchet-check.txt` |
+
+## Computational reductions (CryptoVerif, 2026-10-12)
+
+Claims that had been argued only in prose because they are cryptographic reductions or rest on trusted hardware
+are now proved in CryptoVerif 2.13, with concrete bounds in the primitives' advantages. Models, recorded output and
+the reproduce command are in `formal/cryptoverif/` (README there). Run: job `q261012-210157-bx9q`, farm box sp4.
+Result: 11 models, every query proved; 18 negative controls (one removed check or assumption each, including the
+behaviour before the fixes of 5e718f47 / 5501b545 and the one-salt map commitment), every one unprovable as required. `Psign` = UF-CMA advantage of one key, `Phash` = collision advantage, `Psigncoll` = key
+collision, `N*` = numbers of keys / verifier runs; each bound is CryptoVerif's verbatim output, summarised.
+
+| Claim | Model | Proved correspondence | Bound |
+|---|---|---|---|
+| T15 delta authenticity (+ the EUF premise of T14) | `intent_delta.cv` | an accepted admitting root D_k was minted by the trust-anchor principal with exactly (session, digest(S), seq, prev, holder, body); every honest-signed earlier link was minted by its signer; per-link, so for chains of any length | `Psign_P + 2 Psigncoll + 3 Phash` |
+| Session-root binding | same | the accepted S is one P signed, although the verifier only checks S's self-signature under a key S lists | same |
+| Evidence-bundle attribution (`pca-evidence` `verifyEvidenceBundle`) | same | with the reader's principal keys pinned (`trust.principals`), a re-verified bundle attributes the grant, the signed answer and the agent's action to their honest signers; with the default (keys from the bundle's own self-signed S) nothing is attributable (negative control) | `+ Psign_A` |
+| Sequencer receipts + root-signed key sets (rotation, corruption) | `acc_receipt.cv` | accepted receipt => issued by the sequencer with exactly these fields, unless that signing key leaked; injective (no double counting); the pcactn digest binds one action | `Psign_root + NK (Psign_key + Psigncoll) + 2 Phash` |
+| Revocation epochs (dedicated authority, 5e718f47) | `revocation_epoch.cv` + Lean `RevChain` | an accepted epoch was published by the session's revocation authority (scope, root, times), with a dishonest co-principal present; the tracked chain is append-only (no rollback, drop or equivocation) | `Psign_authority` |
+| Receipts after the retirement / freshness fix (5e718f47, 5501b545) | `acc_receipt_retire.cv` | a key that leaks only after its retirement takes effect forges nothing: accepted receipt => issued, no corruption escape; injective | `Psign_root + NK Psign_key + (3NK^2+NK) Psigncoll + 2 Phash` |
+| AT-3 / AT-4 / measurement substitution / T27 sink check | `attest_hw.cv` | accepted attestation => a genuine allowlisted guest quoted exactly (holder, grant, epoch, nonce, measurement), unless the signing chip was physically broken; injective (replay fails); accepted action => signed by that attested guest (relay fails) | `Psign_root + NC (Psign_chip + Psigncoll) + 3 Phash + NV^2/2|nonce|` (+ `NL PsignH` for the action) |
+| zkVM receipt soundness (abstract commitment) | `zk_intent.cv` | accepted => the principal committed to map m (salt r) and the pinned-image guest ran on (m, r, action) and admitted it with risk <= eps | `Pzk + Psign_P + 4 Phash` |
+| T28 against rule 19 (16953c21) | `map_commit_t28.cv` + Lean `MapCommit.z0_binding` | accepted => the guest checked the principal's committed header, cell and metrics leaves (exact values and salts) | `Pzk + Psign_P + 5 Phash` |
+| Z0 hiding against rule 19 | `map_commit_hiding.cv` | undisclosed leaves stay secret given their leaf hashes and the disclosed salts, any number of leaves | `(2 NL^2 + 4 qH NL)/2^256` |
+| PQ suites only under trusted-side pins | `pq_pinned_delta.cv` | T15, root binding and epoch authenticity with Ed25519 fully broken | `Ppq(ML-DSA-65) + 3 Phash` (no Ed25519 term) |
+| FR-5 FROST descriptor binding | `frost_descriptor.cv` | accepted descriptor => certified by the pinned authority with exactly (X_g, t, n, signer set) | `Psign_auth + 3 Phash` |
+| ABE-3 KEM-DEM | `abe_kemdem.cv` | secrecy of the challenge bit | `4 NE Penc + (NE^2 + 2 qH NE)/|G_T|` after the Lean ABE-1 hop |
+
+Negative controls (each must fail, and does): delta signed by any key S lists; delta without digest(S); no key-set
+check; no seq store; no domain separation between epochs and other artifacts; report_data without the nonce; without
+the holder key; no allowlist check; hardware assumption broken (rogue image with an allowlisted measurement); zk
+verifier without image-id pin; without the principal's commitment; ML-DSA key from the artifact; unpinned FROST
+authority; ABE key known; and the pre-fix behaviours: receipts without retirement / freshness, epochs from any principal,
+the one-salt map commitment, the guest skipping the metrics opening, a bundle reader taking principals from the bundle.
+
+**Assumptions left (exactly):** UF-CMA of Ed25519, ML-DSA-65 (SLH-DSA, hybrid via EasyCrypt H-1), and the vendor
+attestation keys; collision resistance of SHA-256 and SHA-512; NA-ZKVM (knowledge soundness of the pinned-image
+RISC Zero receipt, modelled as unforgeability of journals whose only producer is the public guest) and, for T28's
+hiding only, NA-ZK plus EasyCrypt HID; NA-CANON (injective, domain-separated encodings; Dafny `Wire.dfy`); ABE-3 also
+HKDF as a random oracle. **Hardware (HW-ATT), stated minimally:** the vendor root key is unforgeable, and a chip's
+attestation key is used only by its secure processor, only to sign report(m, rd) with m the launch measurement of the
+requesting guest and rd the value that guest supplied. Per chip: a physically broken chip is the `ChipBroken`
+escape and affects only its own reports. Separately, the allowlisted mediator code requests reports only for holder
+keys it generated and never exports (H3). That is a property of the measured code, not of the hardware.
+
+**Compositions** (each part machine-checked, combined by a union bound): T11 no-overspend = receipt injectivity +
+TLA+ `Reservation.tla` `NoOverspend`; T22 = epoch authenticity + Lean `PcaComp.NonMember.nonmember_sound` + TLA+
+`Revocation.tla` `ExposureBound`, so Pr[revoked id admitted after t_r + Delta_rev + s] <= Psign + Psigncoll +
+Adv_CR(SHA-256); T27 = `attest_hw.cv` + Dafny `Taint.dfy` + interpreter correctness (not proved; `pca-dataflow` is not
+wired to attestation yet); AT-3/AT-4 = `attest_hw.cv` + Dafny `Attest.dfy` (`VerifySound`, `NonceAgeSound`,
+`HookSound`: the decision procedure is exactly the modelled conjunction).
+
+**Findings:** (1) a leaked *retired* sequencer key forged receipts indefinitely: FIXED in 5e718f47 / 5501b545,
+proved above, the old verifier is a negative control (residual window for a key leaked before its retirement takes
+effect: 60 s + `max_keyset_age_s`, or 60 s with tracked key-set versions); (2) any co-principal could sign a
+revocation-suppressing epoch: FIXED (dedicated authority, append-only full-set epochs), proved, old behaviour is a negative
+control; (3) Z0 needed per-leaf salts: IMPLEMENTED in 16953c21, proved hiding; (4) NEW: `verifyEvidenceBundle` without
+`trust.principals` attributes nothing (the bundle's own session root is self-signed), so a fabricated bundle re-verifies;
+a reader must pin the principal keys or compare the reported `principal_keys` out of band.
+
+GG-2 is now machine-checked for every depth in Lean (`PcaMath/Ratchet.lean`, ledger row above). Not mechanised here:
+FROST/PedPoP themselves (NA-FROST), attestation deployment assumptions H6-H9, and multi-root independence.
 
 ## Results
 
@@ -163,7 +228,9 @@ Proven by `auto` (UF-CMA signature + hash collision resistance, honest keys, no 
   `grant_ref` binding, each up to a sum of `Psign`, `Psigncoll`, `Phash` terms (exact text in `cv/results/`).
 - Negative controls (hash check, leaf check or root-signature check removed) leave the corresponding query
   "Could not prove".
-NOT proved computationally: replay (stateful store), unbounded chains, key compromise, expiry, threshold, attestation.
+NOT proved computationally in that revision: replay (stateful store), unbounded chains, key compromise, expiry, threshold, attestation.
+Since then: replay (`pca_replay.cv`), unbounded chains and key compromise (EasyCrypt C-1), threshold (EasyCrypt TH-1) and
+attestation, receipts, epochs, intent deltas, zk receipts, PQ pins, the committed map (`formal/cryptoverif/`, section above). Expiry is not cryptographic.
 
 ### Tamarin v2 (`formal/tamarin/*_v2` models, results in `formal/tamarin/results/v2/`)
 
@@ -339,9 +406,12 @@ the code before any check; Lean's `grantRefBound_empty_*_fails` gives the same v
 
 ## Gaps and assumptions (read these)
 
-- **Computational soundness.** CryptoVerif proved only leaf/root authorization, depth-2 delegation and `grant_ref`
-  binding. Everything else (replay, unbounded chains, key compromise, threshold, attestation, FROST) rests on perfect
-  cryptography. Nothing says anything about Ed25519 / ML-DSA / SLH-DSA / SEV-SNP strength or post-quantum security.
+- **Computational soundness.** The symbolic models (Tamarin, ProVerif) assume perfect cryptography. The computational
+  results are: CryptoVerif (`formal/proverif/cv/`: leaf/root authorization, depth-2 delegation, `grant_ref`, replay;
+  `formal/cryptoverif/`: intent deltas, receipts, epochs, attestation, zk receipts, PQ pins, FR-5, ABE-3) and EasyCrypt
+  (C-1 for chains of any length with key corruption, TH-1, hybrids). They reduce to UF-CMA / collision resistance /
+  NA-ZKVM / HW-ATT; nothing proves Ed25519, ML-DSA, SLH-DSA or SEV-SNP themselves. FROST rests on NA-FROST. GG-2 is
+  checked in Lean (any depth).
 - **Conformance is testing, not proof.** Millions of agreeing scenarios over a bounded configuration space
   (3 verbs, <=3 hops, 3 holders, few nonces/counters); the injected-bug experiments show the harness can detect the
   classes of bug in the mutation menu, nothing more. Memory safety, side channels, parsing of arbitrary bytes and the

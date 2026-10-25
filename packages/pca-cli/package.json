@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-cli",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "The pca dev CLI: decode and explain a PCActn (why it passed or failed each check), mint a dev grant/key, and simulate a policy over actions.",
   "keywords": [
     "cli",

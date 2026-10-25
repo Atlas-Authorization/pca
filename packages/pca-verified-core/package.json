@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-verified-core",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "The decision logic of the PCA verifier (capability-chain walk and attenuation, threshold distinct-role count, replay guard, check/verdict combinator, suite and PQ-pin binding rules), written and machine-proved in Dafny and compiled to JavaScript.",
   "keywords": [
     "formal verification",

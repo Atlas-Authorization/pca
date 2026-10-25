@@ -225,10 +225,13 @@ export interface BlastRadius {
 export function blastRadius(action: Pick<CanonicalAction, 'resource'>, graph: ResourceGraph, scope?: Scope): BlastRadius {
   const reachable = graph.reachable(action.resource, scope);
   if (reachable.length === 0 || graph.size === 0) return { count: 0, reachable, normalized: 1, harm: {} };
-  const harm: Record<string, number> = {};
+  // Tally in a Map: on a plain object a dimension named `__proto__` was silently dropped (assigning a non-object prototype is
+  // a no-op, so its harm was never counted) and one named like another Object.prototype member (`constructor`, `toString`)
+  // started from the inherited function instead of 0. `Object.fromEntries` defines own data properties for every name.
+  const harm = new Map<string, number>();
   for (const id of reachable)
-    for (const [d, v] of Object.entries(graph.node(id)?.harm ?? {})) if (Number.isFinite(v) && v > 0) harm[d] = (harm[d] ?? 0) + v;
-  return { count: reachable.length, reachable, normalized: reachable.length / graph.size, harm };
+    for (const [d, v] of Object.entries(graph.node(id)?.harm ?? {})) if (Number.isFinite(v) && v > 0) harm.set(d, (harm.get(d) ?? 0) + v);
+  return { count: reachable.length, reachable, normalized: reachable.length / graph.size, harm: Object.fromEntries(harm) };
 }
 
 // ---- 3. committed embeddings -------------------------------------------------------------
@@ -578,7 +581,9 @@ export function harmReport(units: HarmUnits, denoms: readonly Denomination[]): H
   let num = 0, den = 0;
   for (const d of denoms) {
     if (!(d.weight > 0) || !(d.ceiling > 0)) continue;
-    num += d.weight * Math.min(1, Math.max(0, units[d.id] ?? 0) / d.ceiling);
+    // own properties only: a denomination named like an Object.prototype member reads 0, never the inherited function (NaN)
+    const u = Object.prototype.hasOwnProperty.call(units, d.id) ? units[d.id]! : 0;
+    num += d.weight * Math.min(1, Math.max(0, u) / d.ceiling);
     den += d.weight;
   }
   return { units, normalized: den === 0 ? 1 : clamp01(num / den) };

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-webbotauth",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Web Bot Auth for PCA (RFC 9421 HTTP Message Signatures): sign outbound agent HTTP requests with an Ed25519 key published at /.well-known/http-message-signatures-directory, optionally carrying the PCA per-action proof, so PCA agents pass Cloudflare/AWS-WAF bot verification AND carry proof-of-authority.",
   "keywords": [
     "web bot auth",
