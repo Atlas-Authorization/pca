@@ -4,8 +4,10 @@ import { mintGrant } from './envelope';
 import { encodeKey, generateKeyPair } from './keys';
 import { buildPCActn, thresholdMessage } from './pcactn';
 import { DEFAULT_RISK_POLICY } from './risk';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
 import { assembleThreshold, createThresholdVerifier, signShare } from './threshold';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /**
  * F-1 regression (docs/pca/security/proofs/02-threshold-hybrid.md A.3): the required threshold t is decided by

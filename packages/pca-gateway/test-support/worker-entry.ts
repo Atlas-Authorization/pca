@@ -17,6 +17,9 @@ export default {
     const handler = cloudflareWorker<Request, Response>({
       audience: env.AUDIENCE,
       bindRequest: false, // conformance harness: unbound proofs
+      policy: { mode: 'signature-only' }, // explicit since 0.5: this harness checks the adapter, not the grant's limits
+      replayGuard: { claim: async () => true },
+      requireChecks: [],
       routes: JSON.parse(env.ROUTES) as RouteRule[],
       resolveGrant: async (ref: string): Promise<Capability | null> =>
         ref === env.GRANT_REF ? (JSON.parse(env.GRANT_JSON) as Capability) : null,

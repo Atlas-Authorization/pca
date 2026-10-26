@@ -1,5 +1,7 @@
 # @atlasauth/pca-fndsa-wasm
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The **FN-DSA (Falcon, FIPS 206) signature backend** for `@atlasauth/pca`'s post-quantum suite
 registry. It provides key generation, signing and — the operation the PCA verifier actually performs
 — **signature verification**, for the two standardized parameter sets:

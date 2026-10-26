@@ -1,5 +1,7 @@
 # @atlasauth/pca-vdf
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A Verifiable Delay Function (VDF) timelock for Proof-Carrying Authority. It gives irreversible actions a
 mandatory cooling-off period that is verifiable offline with no trusted clock: an action is released only
 when a Wesolowski VDF proof shows that `steps` sequential modular squarings were performed on an input

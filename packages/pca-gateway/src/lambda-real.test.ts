@@ -7,6 +7,8 @@
  * same adapter with the recorded grants and a clock pinned to the mint time, and must reproduce the
  * response byte for byte. This pins the adapter's behaviour inside the Lambda runtime to what is
  * checked in; it does not run Lambda, and it does not exercise API Gateway itself.
+ * In 0.5 the verdict's `counter` check was renamed `counter_format`; the recorded verdict strings in invocations.jsonl carry
+ * that one key rename and nothing else.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,6 +16,9 @@ import { describe, expect, it } from 'vitest';
 import type { Capability } from '@atlasauth/pca';
 import { LAMBDA_TEST_ROUTES } from '../scripts/lambda/config';
 import { lambdaAuthorizer, lambdaSimpleAuthorizer, memoryReplayGuard, type GatewayOptions, type LambdaRequestAuthorizerEvent } from './index';
+
+/** Signature-only on purpose (0.5: an explicit mode): these tests are about routing, adapters and binding; full mode is in full-policy.test.ts. */
+const SIG_ONLY = { policy: { mode: 'signature-only' as const }, replayGuard: { claim: async () => true }, requireChecks: [] as string[] };
 
 const DIR = join(__dirname, '..', 'fixtures', 'lambda-run');
 const read = (n: string): string => readFileSync(join(DIR, n), 'utf8');
@@ -42,6 +47,7 @@ function opts(tag: string, mintedAtMs: number, extra?: Partial<GatewayOptions>):
     // The recorded proofs predate R2-11 (request binding default-on, 86f30a78): they do not commit the request binding,
     // so the replay reproduces the recorded run with binding off. The default-on denial is asserted separately below.
     bindRequest: false,
+    ...SIG_ONLY,
     ...extra,
   };
 }
@@ -130,7 +136,7 @@ describe('SAM local API Gateway emulation: events as the emulated gateway sent t
     expect(results.filter((r) => !r.pass)).toEqual([]);
   });
   it('the adapter finds method and route in every emulated event (a known proof header with an unknown grant is denied as unknown-grant, never unmapped-route / no-proof)', async () => {
-    const handler = lambdaAuthorizer({ audience: 'ins_acme', routes: LAMBDA_TEST_ROUTES, resolveGrant: async () => null });
+    const handler = lambdaAuthorizer({ audience: 'ins_acme', routes: LAMBDA_TEST_ROUTES, resolveGrant: async () => null, ...SIG_ONLY });
     let checked = 0;
     for (const e of events) {
       if (e.headers === undefined) continue; // TOKEN-shape event: no headers, fails closed
@@ -142,7 +148,7 @@ describe('SAM local API Gateway emulation: events as the emulated gateway sent t
     expect(checked).toBeGreaterThanOrEqual(5);
   });
   it('TOKEN-shape events (authorizationToken only) fail closed with no-proof', async () => {
-    const handler = lambdaAuthorizer({ audience: 'ins_acme', routes: LAMBDA_TEST_ROUTES, resolveGrant: async () => null });
+    const handler = lambdaAuthorizer({ audience: 'ins_acme', routes: LAMBDA_TEST_ROUTES, resolveGrant: async () => null, ...SIG_ONLY });
     const tok = events.filter((e) => typeof e.authorizationToken === 'string' && e.headers === undefined);
     expect(tok.length).toBeGreaterThan(0);
     for (const e of tok) {

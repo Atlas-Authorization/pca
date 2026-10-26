@@ -608,6 +608,64 @@ function predicateMatchesInner(p: Predicate, ctx: ActionContext): boolean {
   }
 }
 
+const OP_TEXT: Record<string, string> = {
+  eq: '==', ne: '!=', lt: '<', lte: '<=', gt: '>', gte: '>=', in: 'in', nin: 'not in', prefix: 'starts with',
+  like: 'like', matches: 'matches', is_a: 'is a', member_of: 'member of',
+};
+const MAX_SHOWN_STRING = 64;
+const MAX_SHOWN_ITEMS = 8;
+
+/** A scalar operand in a denial reason. Deterministic across SDKs: only safe integers, booleans, null and plain short strings are spelled out. */
+function showValue(v: unknown, depth = 0): string {
+  if (v === null) return 'null';
+  if (typeof v === 'boolean') return String(v);
+  if (typeof v === 'number') return Number.isSafeInteger(v) ? String(v) : '<number>';
+  if (typeof v === 'string') return v.length <= MAX_SHOWN_STRING && !/[\u0000-\u001f"\\\ud800-\udfff]/.test(v) ? `"${v}"` : '"..."';
+  if (Array.isArray(v) && depth === 0) return v.length <= MAX_SHOWN_ITEMS ? `[${v.map((x) => showValue(x, 1)).join(', ')}]` : '[...]';
+  return '<value>';
+}
+
+/** The condition as the limit a reader recognises: `amount <= 500`, `currency in ["usd", "eur"]`. */
+function describeCondition(c: Condition, depth = 0): string {
+  if (c === null || typeof c !== 'object') return '<condition>';
+  if (isGroupCondition(c)) {
+    if (depth >= 2) return '(...)';
+    if ('all_of' in c && Array.isArray(c.all_of)) return `all of (${c.all_of.slice(0, MAX_SHOWN_ITEMS).map((x) => describeCondition(x, depth + 1)).join('; ')})`;
+    if ('any_of' in c && Array.isArray(c.any_of)) return `any of (${c.any_of.slice(0, MAX_SHOWN_ITEMS).map((x) => describeCondition(x, depth + 1)).join('; ')})`;
+    if ('not' in c) return `not (${describeCondition(c.not, depth + 1)})`;
+    return '<condition>';
+  }
+  const f = typeof c.field === 'string' ? c.field : '<field>';
+  const name = f.startsWith('action.params.') ? f.slice('action.params.'.length) : f;
+  if (c.op === 'exists') return c.value === false ? `${name} absent` : `${name} present`;
+  const op = typeof c.op === 'string' && Object.prototype.hasOwnProperty.call(OP_TEXT, c.op) ? OP_TEXT[c.op] : undefined;
+  if (op === undefined) return `${name} <condition>`;
+  return `${name} ${op} ${c.ref !== undefined ? (typeof c.ref === 'string' ? c.ref : '<ref>') : showValue(c.value)}`;
+}
+
+/** Inside an unmet top-level condition, the narrowest part that failed (an `all_of` points at its first unmet child). */
+function narrowestUnmet(c: Condition, ctx: ActionContext, depth = 0): Condition {
+  if (depth < 4 && isGroupCondition(c) && 'all_of' in c && Array.isArray(c.all_of)) {
+    for (const x of c.all_of) if (!evaluateCondition(x, ctx)) return narrowestUnmet(x, ctx, depth + 1);
+  }
+  return c;
+}
+
+/**
+ * B6 (0.5): when the verb and resource are in scope but a `where` limit is not met, name that limit. null when no predicate
+ * is in scope (the plain "no predicate permits" wording stays for that case).
+ */
+function firstUnmetLimit(predicates: Predicate[], ctx: ActionContext): string | null {
+  const a = ctx?.action;
+  if (!a || typeof a.verb !== 'string' || typeof a.resource !== 'string') return null;
+  for (const p of predicates) {
+    if (p === null || typeof p !== 'object' || !verbMatches(p.verb, a.verb) || !resourceMatches(p.resource, a.resource)) continue;
+    if (!Array.isArray(p.where)) continue;
+    for (const c of p.where) if (!evaluateCondition(c, ctx)) return describeCondition(narrowestUnmet(c, ctx));
+  }
+  return null;
+}
+
 /**
  * An action is allowed iff it matches AT LEAST ONE predicate (verb AND resource AND all `where`).
  * Default-deny: an empty predicate list allows nothing.
@@ -624,6 +682,8 @@ function evaluatePredicatesInner(predicates: Predicate[], ctx: ActionContext): P
       if (predicateMatches(p, ctx)) return { allowed: true, matched: p };
     }
     const a = ctx?.action;
+    const limit = firstUnmetLimit(predicates, ctx);
+    if (limit !== null) return { allowed: false, reason: `${limit} not satisfied for ${String(a?.verb)} on ${String(a?.resource)}` };
     return { allowed: false, reason: `no predicate permits ${String(a?.verb)} on ${String(a?.resource)}` };
   } catch {
     return { allowed: false, reason: 'predicate evaluation error (fail closed)' };

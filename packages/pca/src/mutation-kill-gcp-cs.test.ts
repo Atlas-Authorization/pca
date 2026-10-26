@@ -199,7 +199,7 @@ describe('parseGcpCsJwt', () => {
     for (const h of ['[1]', '"x"', 'null', '5']) expect(err(fake(h, {})), h).toBe('parseGcpCsJwt: header is not a JSON object');
     for (const p of ['[1]', '"x"', 'null', '5']) expect(err(fake({ alg: 'RS256' }, p)), p).toBe('parseGcpCsJwt: payload is not a JSON object');
     for (const h of [{}, { alg: '' }, { alg: 5 }, { alg: null }]) expect(err(fake(h, {})), JSON.stringify(h)).toBe('parseGcpCsJwt: header has no alg');
-    expect(err(fake({ alg: 'RS256' }, {}, '!'))).toBe('parseGcpCsJwt: empty signature');
+    expect(err(fake({ alg: 'RS256' }, {}, '!'))).toBe('parseGcpCsJwt: malformed signature segment: non-canonical compact JWS: bad-character');
   });
   it('header fields are kept only with the right types; signing input and signature are exact', () => {
     const t = fake({ alg: 'RS256', kid: 'k', jku: 'u', x5c: ['a', 'b'], typ: 'JWT', extra: 1 }, { a: 1 }, b64u(Buffer.from([1, 2, 3])));

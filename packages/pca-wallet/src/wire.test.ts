@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { b64u, generateKeyPair, hashCanonical, intentActionDigest, paramsDigest } from '@atlasauth/pca';
+import { b64u, generateKeyPair, hashCanonical, paramsDigest } from '@atlasauth/pca';
+import { intentActionDigest } from '@atlasauth/pca/ext/intent';
 import { rng } from '@atlasauth/pca-intent';
 import {
   actionValuesOf,

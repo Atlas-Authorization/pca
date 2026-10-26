@@ -1,20 +1,22 @@
 import {
+  pcactnDigest,
+  type Capability,
+  type PCActn,
+  type SignerSuiteOpts,
+} from '@atlasauth/pca';
+import {
   intentActionDigest,
   mintSessionGrant,
-  pcactnDigest,
   signIntentRequired,
   verifyIntentRequired,
   type ActionSchemaKey,
-  type Capability,
   type CellCoords,
   type ConformResult,
   type Friction,
   type IntentRequiredBody,
   type MintSessionGrantArgs,
-  type PCActn,
   type SignedIntentRequired,
-  type SignerSuiteOpts,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 import { boxesToPredicates, type IntentLearner } from './learner';
 import { cellOf, encodeCell, verbCellCount, type Omega, type Outcome, type VerbSpace } from './omega';
 

@@ -19,7 +19,17 @@
  * with the fail-closed `verifyPCActnCore`, checks the proof carries the capability the route maps to,
  * and maps that allow/deny onto the gateway's own contract (an HTTP 200/403 for Envoy, a `Response`
  * for a Worker, an IAM policy for Lambda). A bypassed gateway changes nothing — the resource server's
- * own `requirePCA` is still the backstop. The concrete gateway SDKs (Envoy protobufs, `aws-lambda`,
+ * own `requirePCA` is still the backstop.
+ *
+ * FULL-POLICY MODE (the default since 0.5): `policy: { mode: 'full', params: 'body', state, isRevoked }`.
+ * A gateway built without a `policy` is a configuration error (it throws, and every request is denied). The explicit
+ * alternative, `policy: { mode: 'signature-only' }`, verifies that a proof is genuine and bound to the request, but the
+ * signed params carry only the request binding, so the grant's limits (`amount <= 100`, `max_spend`) are not evaluated;
+ * it requires a `replayGuard` and, unless `requireChecks` says otherwise, a `hooks.revocation` check. In full mode the agent signs the REAL params (the JSON body, or what `params(req)` returns)
+ * with the request binding as a `binding` member inside them (see {@link bindParams}); the gateway checks that
+ * digest and then runs the full verifier (`authorizeExecution` from `@atlasauth/pca`): the grant's predicates,
+ * limits and caveats, revocation (required), the replay counter (required store) and the trust budget. A missing
+ * store, revocation check or params source denies every request. The concrete gateway SDKs (Envoy protobufs, `aws-lambda`,
  * the Workers runtime) are NEVER imported: the event / request / response shapes are minimal
  * STRUCTURAL shims, so this package has no gateway dependency and stays version/runtime-agnostic.
  *
@@ -54,10 +64,15 @@
 
 import {
   PCA_HEADER,
+  authorizeExecution,
   decodePcaHeader,
   decodePCActn,
+  missingExecutionComponents,
   verifyPCActnCore,
   paramsDigest,
+  strictParse,
+  type AuthorizeExecutionOptions,
+  type PcaVerdict,
   type VerifyHooks,
   type EnforcementGates,
   type PCActn,
@@ -150,8 +165,9 @@ export interface GatewayOptions {
   /** Opt-in enforcement gates (taint / freshness / attestation) forwarded to the core verifier. */
   enforce?: EnforcementGates;
   /**
-   * Core checks that MUST report `pass` (e.g. `['revocation']`). A check that is `not-enforced` (no
-   * hook supplied) then DENIES, instead of the default where an absent hook silently allows.
+   * Core checks that MUST report `pass`. A check that is `not-enforced` (no hook supplied) then DENIES. Default (0.5), in
+   * signature-only mode: `['revocation']` (so `hooks.revocation` is required); pass `[]` to waive it. Full mode takes
+   * revocation from `policy.isRevoked`.
    */
   requireChecks?: string[];
   /**
@@ -172,6 +188,46 @@ export interface GatewayOptions {
   now?: () => number;
   /** `WWW-Authenticate` realm on a deny challenge. Default: the audience. */
   realm?: string;
+  /**
+   * REQUIRED (0.5). `{ mode: 'full', ... }` (the default mode: state and `isRevoked` required, the grant's limits are
+   * evaluated against the real params) or the explicit `{ mode: 'signature-only' }` (the proof and its request binding
+   * only; needs `replayGuard` and, by default, `hooks.revocation`). Absent: the gateway is misconfigured and denies.
+   */
+  policy: GatewayPolicy;
+}
+
+/**
+ * Full-policy mode: the gateway evaluates the grant's limits against the real params, with revocation and replay
+ * required. The options of `authorizeExecution` from `@atlasauth/pca`; the audience, grant lookup, hooks and clock
+ * are the gateway's own.
+ */
+export type GatewayPolicy = GatewayFullPolicy | GatewaySignatureOnlyPolicy;
+
+/** Signature-only mode: the proof is genuine and bound to the request; the grant's limits are NOT evaluated. */
+export interface GatewaySignatureOnlyPolicy {
+  mode: 'signature-only';
+}
+
+export interface GatewayFullPolicy extends Omit<AuthorizeExecutionOptions, 'audience' | 'grant' | 'resolveGrant' | 'hooks' | 'now'> {
+  mode: 'full';
+  /**
+   * Where the operation's params come from. `'body'`: the request body, a JSON object (strict JSON; the adapter must
+   * supply `GatewayRequest.body`, so it fails closed where the gateway never sees the body, e.g. a Lambda REQUEST
+   * authorizer). A function: build them from the request (e.g. from the query); `undefined` denies.
+   * The agent signs `bindParams(params, binding)`: these params plus the request binding as a `binding` member.
+   */
+  params: 'body' | ((req: GatewayRequest) => Record<string, unknown> | undefined);
+}
+
+/**
+ * The params an agent signs for a full-policy gateway: the operation's params plus the request binding as a
+ * `binding` member (omit `binding` when the gateway runs with `bindRequest: false`). A params object that already has
+ * a `binding` member is refused (throws), as the gateway refuses it.
+ */
+export function bindParams(params: Record<string, unknown>, binding?: RequestBinding): Record<string, unknown> {
+  if (binding === undefined) return params;
+  if (Object.prototype.hasOwnProperty.call(params, 'binding')) throw new Error("params already have a 'binding' member");
+  return { ...params, binding };
 }
 
 /** Which request attributes are bound into the proof (method and path always are). */
@@ -312,6 +368,8 @@ export interface Decision {
   pcactn?: PCActn;
   /** The capability the matched route required, when a rule matched. */
   matched?: RequiredCapability;
+  /** Full-policy mode: the full verifier's verdict (policy, limits, revocation, replay, budget), when it ran. */
+  policyVerdict?: PcaVerdict;
 }
 
 // ---------------------------------------------------------------------------
@@ -401,7 +459,7 @@ function deny(
   status: number,
   reason: string,
   realm: string,
-  extra?: { verdict?: VerifyResult; pcactn?: PCActn; matched?: RequiredCapability },
+  extra?: { verdict?: VerifyResult; pcactn?: PCActn; matched?: RequiredCapability; policyVerdict?: PcaVerdict },
 ): Decision {
   return {
     allow: false,
@@ -422,7 +480,7 @@ export const PCA_INJECTED_HEADERS: readonly string[] = ['x-pca-verdict', 'x-pca-
 
 function allowDecision(
   reason: string,
-  extra?: { verdict?: VerifyResult; pcactn?: PCActn; matched?: RequiredCapability },
+  extra?: { verdict?: VerifyResult; pcactn?: PCActn; matched?: RequiredCapability; policyVerdict?: PcaVerdict },
 ): Decision {
   const headers: Record<string, string> = {};
   if (extra?.verdict) headers['x-pca-verdict'] = JSON.stringify(extra.verdict);
@@ -448,7 +506,61 @@ export interface GatewayRequest {
   authority?: string;
   /** Lower-case hex SHA-256 of the request body, when the adapter/caller can supply it (for `bindRequest.body`). */
   bodySha256?: string;
+  /** The raw request body text, when the adapter can supply it (read only by full-policy mode with `params: 'body'`). */
+  body?: string;
   headers: HeaderMap;
+}
+
+/** "full policy mode is missing x" for a full-mode (or unknown-mode) configuration, "the gateway is missing x" when there is no policy or it is signature-only. */
+const missingText = (opts: GatewayOptions, missing: string[]): string => {
+  const mode = (opts.policy as GatewayPolicy | undefined)?.mode;
+  return `${mode === undefined || mode === 'signature-only' ? 'the gateway' : 'full policy mode'} is missing ${missing.join(', ')}`;
+};
+
+const DEFAULT_REQUIRE_CHECKS: readonly string[] = ['revocation'];
+
+/** What is missing from the configuration (empty when complete): the policy mode's components. */
+function missingPolicy(opts: GatewayOptions): string[] {
+  const p = opts.policy as GatewayPolicy | undefined;
+  if (p === undefined) return ["policy ({ mode: 'full', params, state, isRevoked } or an explicit { mode: 'signature-only' })"];
+  if (p.mode === 'signature-only') {
+    const m: string[] = [];
+    if (opts.replayGuard === undefined) m.push('replayGuard (signature-only mode needs a single-use guard)');
+    if ((opts.requireChecks ?? DEFAULT_REQUIRE_CHECKS).includes('revocation') && typeof opts.hooks?.revocation !== 'function') {
+      m.push("hooks.revocation (required by the default requireChecks ['revocation']; pass requireChecks: [] to waive)");
+    }
+    return m;
+  }
+  if (p.mode !== 'full') return [`a known policy mode (got '${String((p as { mode?: unknown }).mode)}')`];
+  const missing = missingExecutionComponents({ ...p, audience: opts.audience, resolveGrant: opts.resolveGrant });
+  if (p.params !== 'body' && typeof p.params !== 'function') missing.push("params ('body' or a function)");
+  return missing;
+}
+
+/** Full-policy mode: the params the agent must have signed for this request, or why they cannot be built. */
+function signedParams(req: GatewayRequest, policy: GatewayFullPolicy, bind: BindRequestOptions | false): { params: Record<string, unknown> } | { error: string } {
+  let params: unknown;
+  if (policy.params === 'body') {
+    if (typeof req.body !== 'string') return { error: 'full policy mode reads the params from the body, and the request carries none' };
+    try {
+      params = strictParse(req.body);
+    } catch (e) {
+      return { error: `the body is not strict JSON: ${(e as Error).message}` };
+    }
+  } else {
+    params = policy.params(req);
+  }
+  if (params === null || typeof params !== 'object' || Array.isArray(params)) return { error: 'the request params are not a JSON object' };
+  const obj = params as Record<string, unknown>;
+  if (bind === false) return { params: obj };
+  if (Object.prototype.hasOwnProperty.call(obj, 'binding')) return { error: "the request params carry a 'binding' member (reserved for the request binding)" };
+  if ((bind.authority && !req.authority) || (bind.body === true && !req.bodySha256)) return { error: 'request lacks an attribute the proof must bind (authority / body hash)' };
+  try {
+    // the params carry the body, so its hash is bound only when asked for explicitly (bindRequest.body === true)
+    return { params: { ...obj, binding: requestBinding(req, { ...(bind.authority ? { authority: true } : {}), body: bind.body === true }) } };
+  } catch (e) {
+    return { error: `the request cannot be bound: ${(e as Error).message}` };
+  }
 }
 
 /** Why `path` is ambiguous for route matching, or `undefined` when it is canonical. */
@@ -554,8 +666,21 @@ export async function authorize(req: GatewayRequest, opts: GatewayOptions): Prom
     }
   }
 
-  // 5b. Request binding (RT-09): the signed params digest must be the digest of THIS request.
-  if (opts.bindRequest !== false) {
+  // Full-policy mode: a configuration with a missing component denies every request (fail closed).
+  const missingCfg = missingPolicy(opts);
+  if (missingCfg.length > 0) return deny('proof-rejected', 403, `${missingText(opts, missingCfg)} (fail closed)`, realm, { verdict, pcactn });
+  const policy = opts.policy.mode === 'full' ? opts.policy : undefined;
+  let fullParams: Record<string, unknown> | undefined;
+  if (policy !== undefined) {
+    // 5b (full). The agent signed the real params plus the request binding: rebuild them from THIS request.
+    const sp = signedParams(req, policy, opts.bindRequest ?? {});
+    if ('error' in sp) return deny('request-mismatch', 403, sp.error, realm, { verdict, pcactn });
+    if (pcactn.action.params_digest !== paramsDigest(sp.params)) {
+      return deny('request-mismatch', 403, 'the proof is not bound to this request (params/method/path/query/authority)', realm, { verdict, pcactn });
+    }
+    fullParams = sp.params;
+  } else if (opts.bindRequest !== false) {
+    // 5b. Request binding (RT-09): the signed params digest must be the digest of THIS request.
     const b = opts.bindRequest ?? {};
     const missing =
       (b.authority && !req.authority) || (b.body === true && !req.bodySha256)
@@ -574,7 +699,8 @@ export async function authorize(req: GatewayRequest, opts: GatewayOptions): Prom
   }
 
   // 5c. Required checks must have PASSED (not merely "not-enforced").
-  for (const c of opts.requireChecks ?? []) {
+  // signature-only: revocation must have passed unless waived; full mode gets it from `isRevoked` below
+  for (const c of opts.requireChecks ?? (policy === undefined ? DEFAULT_REQUIRE_CHECKS : [])) {
     if (verdict.checks[c] !== 'pass') {
       return deny('proof-rejected', 403, `required check '${c}' is ${verdict.checks[c] ?? 'absent'}`, realm, { verdict, pcactn });
     }
@@ -594,6 +720,24 @@ export async function authorize(req: GatewayRequest, opts: GatewayOptions): Prom
     }
   }
 
+  // 5e. Full-policy mode: the grant's limits and caveats, revocation, the replay counter and the trust budget.
+  let policyVerdict: PcaVerdict | undefined;
+  if (policy !== undefined && fullParams !== undefined) {
+    const { mode: _m, params: _p, ...execOpts } = policy;
+    const { revocation: _r, ...hooks } = opts.hooks ?? {};
+    const d = await authorizeExecution(
+      pcactn,
+      { verb: required?.verb ?? pcactn.action.verb, ...(required?.resource !== undefined ? { resource: required.resource } : {}), params: fullParams },
+      { ...execOpts, audience: opts.audience, grant, now: () => now, ...(opts.hooks ? { hooks } : {}) },
+    );
+    if (!d.allow) {
+      const code: Exclude<DecisionCode, 'allow'> =
+        d.kind === 'replay' ? 'replayed-proof' : d.kind === 'binding' ? 'insufficient-capability' : d.kind === 'authn' ? 'verify-failed' : 'proof-rejected';
+      return deny(code, d.status, d.reason, realm, { verdict, pcactn, ...(d.verdict ? { policyVerdict: d.verdict } : {}) });
+    }
+    policyVerdict = d.verdict;
+  }
+
   // 6. Single use (only for a proof that would otherwise be allowed, so denied attempts never burn it).
   if (opts.replayGuard) {
     let first: boolean;
@@ -606,15 +750,21 @@ export async function authorize(req: GatewayRequest, opts: GatewayOptions): Prom
   }
 
   return allowDecision(
-    'proof-carrying action verified',
-    required ? { verdict, pcactn, matched: required } : { verdict, pcactn },
+    policyVerdict ? 'proof-carrying action authorized (full policy)' : 'proof-carrying action verified',
+    { verdict, pcactn, ...(required ? { matched: required } : {}), ...(policyVerdict ? { policyVerdict } : {}) },
   );
 }
 
 /** Build a reusable authorizer bound to one config (verify many requests). */
 export function createGateway(opts: GatewayOptions): (req: GatewayRequest) => Promise<Decision> {
   // Freeze the configuration (routes, audience, ...): later edits by the caller must not change what this gateway enforces.
-  const frozen = snapshotConfig(opts, { keep: ['replayGuard', 'hooks'] });
+  const missing = missingPolicy(opts);
+  if (missing.length > 0) throw new TypeError(`pca-gateway: ${missingText(opts, missing)}`);
+  const frozen: GatewayOptions = Object.freeze({
+    ...snapshotConfig(opts, { keep: ['replayGuard', 'hooks', 'policy'] }),
+    // the policy's state store is the caller's (state, not configuration data)
+    policy: snapshotConfig(opts.policy, { keep: ['state'] }),
+  });
   return (req: GatewayRequest) => authorize(req, frozen);
 }
 
@@ -632,6 +782,8 @@ export interface EnvoyHttpCheckRequest {
   path?: string;
   authority?: string;
   headers?: Record<string, string | undefined>;
+  /** The request body, when Envoy forwards it (`with_request_body`); read by full-policy mode with `params: 'body'`. */
+  body?: string;
 }
 
 /**
@@ -666,7 +818,7 @@ function envoyRequest(check: EnvoyHttpCheckRequest): GatewayRequest {
   const path = rawPath === '' ? '/' : rawPath;
   const authority = check.authority ?? headers[':authority'];
   const query = queryOfTarget(target);
-  return { method, path, query, headers, ...(authority === undefined ? {} : { authority }) };
+  return { method, path, query, headers, ...(authority === undefined ? {} : { authority }), ...(check.body === undefined ? {} : { body: check.body }) };
 }
 
 /**
@@ -715,6 +867,8 @@ export interface EnvoyGrpcCheckRequest {
         scheme?: string;
         /** Lower-cased header names (Envoy joins repeated headers with `,`). */
         headers?: Record<string, string | undefined>;
+        /** The request body as text (`with_request_body`); read by full-policy mode with `params: 'body'`. */
+        body?: string;
       };
     };
   };
@@ -773,6 +927,7 @@ export function envoyGrpcExtAuthz(opts: GatewayOptions): (check: EnvoyGrpcCheckR
     if (path !== undefined) req.path = path;
     const authority = http.host ?? headers[':authority'];
     if (authority !== undefined) req.authority = authority;
+    if (http.body !== undefined) req.body = http.body;
     const decision = await gateway(envoyRequest(req));
     if (decision.allow) {
       return {
@@ -815,6 +970,8 @@ export interface WorkerLikeRequest {
     /** Present on a Fetch `Headers`; lets the adapter find and scrub every inbound `x-pca-*`. */
     forEach?(callback: (value: string, name: string) => void): void;
   };
+  /** Present on a Fetch `Request`: full-policy mode with `params: 'body'` reads the body from a clone. */
+  clone?(): { text(): Promise<string> };
 }
 
 /**
@@ -893,7 +1050,9 @@ export function cloudflareWorker<Req extends WorkerLikeRequest, Res>(
     const { path, authority, query } = pathFromUrl(request.url);
     const pcaHeader = request.headers.get(PCA_HEADER);
     const headers: HeaderMap = pcaHeader === null ? {} : { [PCA_HEADER.toLowerCase()]: pcaHeader };
-    const decision = await gateway({ method: request.method, path, query, authority, headers });
+    // full-policy mode with body params reads the body from a clone (the original still goes upstream intact)
+    const body = opts.policy?.mode === 'full' && opts.policy.params === 'body' && typeof request.clone === 'function' ? await request.clone().text() : undefined;
+    const decision = await gateway({ method: request.method, path, query, authority, headers, ...(body === undefined ? {} : { body }) });
     if (decision.allow) {
       const forged = inboundPcaHeaders(request);
       if (forged.length === 0) return opts.next(request);
@@ -1062,4 +1221,5 @@ export function lambdaSimpleAuthorizer(
 // ---------------------------------------------------------------------------
 
 export { PCA_HEADER, pcaHeaders, decodePcaHeader, decodePCActn, verifyPCActnCore } from '@atlasauth/pca';
-export type { PCActn, Capability, VerifyResult } from '@atlasauth/pca';
+export { authorizeExecution, memoryPcaStore } from '@atlasauth/pca';
+export type { PCActn, Capability, VerifyResult, PcaVerdict, PcaStateStore } from '@atlasauth/pca';

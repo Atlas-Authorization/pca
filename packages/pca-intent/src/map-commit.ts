@@ -1,4 +1,5 @@
-import { commitMap, hashCanonical, type CommittedMap, type MapDim, type MapMetricsLeaf } from '@atlasauth/pca';
+import { hashCanonical } from '@atlasauth/pca';
+import { commitMap, type CommittedMap, type MapDim, type MapMetricsLeaf } from '@atlasauth/pca/ext/intent';
 import type { IntentMap } from './map';
 
 /**

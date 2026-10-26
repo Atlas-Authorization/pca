@@ -1,4 +1,6 @@
 import { snapshotConfig } from './config-snapshot';
+import { ceremonyOf, type CeremonyTranscript } from './zk-ceremony';
+import { type AssuranceLabel, type ZkSystem, assuranceLabelOf, setAssuranceLabel } from './assurance';
 /**
  * §9B — Zero-knowledge proof-of-compliance (intent privacy from the Resource Server).
  *
@@ -44,6 +46,7 @@ import { publicKeyOf, sign, verifyB64u } from './keys';
 import type { Capability } from './capability';
 import { type PCActn, type HookResult, type VerifyContext, type ZkVerifier } from './pcactn';
 import { type DecideInput, decide } from './policy-vm';
+import type { AttestationDocument, ExpectedAttestationBinding, HardwareAttestationVerifier } from './attestation';
 
 const DOMAIN = 'atlas-pca/zk-compliance/v1\0';
 
@@ -153,6 +156,10 @@ export function createAttestedComplianceProver(attestorSecret: Uint8Array): Atte
  * Plug it in via `createZkVerifier({ snarkBackend })`; it receives ONLY commitments as public inputs,
  * preserving the privacy property.
  */
+/**
+ * Assurance (0.5): a backend declares its proof system with `setAssuranceLabel(backend, { level: <ZkSystem> })`; the
+ * library's own backends do. `createZkVerifier` reports that system on a pass (an unlabelled backend is `unknown`).
+ */
 export interface SnarkBackend {
   verify(input: {
     /** The opaque proof carried in `pcactn.zk_compliance`. */
@@ -160,6 +167,32 @@ export interface SnarkBackend {
     publicInputs: { action_commit: string; policy_commit: string; plan_commit: string };
     ctx: VerifyContext;
   }): boolean | Promise<boolean>;
+}
+
+/** `grantRef` of the binding a prover VM's hardware quote carries (see {@link proverKeyBinding}). */
+export const ZK_PROVER_BINDING_REF = 'atlas-pca/zk-prover/v1';
+
+/**
+ * The value the prover VM must put in its hardware quote's report_data so that the quote vouches for ITS key:
+ * `attestationBinding(proverKeyBinding(proverPublicKey, epoch, nonce))`. A quote taken for another key, epoch or nonce
+ * does not bind.
+ */
+export function proverKeyBinding(proverPublicKey: string, epoch: number, nonce: string): ExpectedAttestationBinding {
+  return { holderPub: proverPublicKey, grantRef: ZK_PROVER_BINDING_REF, epoch, nonce };
+}
+
+/** Binds the attested-VM prover key to hardware evidence of the VM measurement. */
+export interface ProverAttestationOpts {
+  /**
+   * A vendor verifier (SEV-SNP, TDX, Azure MAA, ...) or a multi-root verifier. It MUST carry a `hardware` or
+   * `multi_root` assurance label: a software or unlabelled verifier is refused at construction. Its evidence resolver
+   * receives a stub document whose `attestor` is the prover's public key, so it can look up that prover's quote.
+   */
+  hardwareVerifier: HardwareAttestationVerifier;
+  /** The binding the quote must carry for this prover key (server-known epoch and nonce). Throwing denies. */
+  expectedBinding(proverPublicKey: string): ExpectedAttestationBinding | Promise<ExpectedAttestationBinding>;
+  /** REQUIRED, non-empty: accepted measured runtime measurements (the VM image). Accept-all is not permitted. */
+  measurements: string[];
 }
 
 export interface ZkVerifierOpts {
@@ -173,6 +206,18 @@ export interface ZkVerifierOpts {
   policyCommitments?: string[];
   /** Supplied => delegate proof verification to a real ZK backend (the statement is the proof). */
   snarkBackend?: SnarkBackend;
+  /**
+   * Prover keys that are no longer trusted (a retired or compromised prover VM). A statement signed by one is denied
+   * even when the key is still listed in `trustedProverKeys`. Rotation = add the new key to `trustedProverKeys`, put
+   * the old one here, then drop it from `trustedProverKeys` once its statements have expired.
+   */
+  revokedProverKeys?: string[];
+  /**
+   * ATTESTED-VM, HARDWARE-BOUND (0.5): require hardware evidence that the prover key lives in an attested VM with an
+   * allowlisted measurement, instead of trusting the key alone. See {@link ProverAttestationOpts}. Attested-VM mode only
+   * (ignored with `snarkBackend`). Absent => the prover key is trusted as configured, and the assurance label says so.
+   */
+  proverAttestation?: ProverAttestationOpts;
   /** Clock for freshness, epoch ms (default `Date.now`). */
   now?: () => number;
   /** Allowed clock skew (ms) for issued_at/expires_at (default 0). A statement with
@@ -191,9 +236,31 @@ export interface ZkVerifierOpts {
  * In BOTH modes the verifier uses only commitments — never the plaintext policy or plan.
  */
 export function createZkVerifier(opts: ZkVerifierOpts): ZkVerifier {
-  opts = snapshotConfig(opts, { keep: ['snarkBackend'] }); // freeze the configuration: later edits by the caller must not change what this verifier enforces
+  opts = snapshotConfig(opts, { keep: ['snarkBackend', 'proverAttestation'] }); // freeze the configuration: later edits by the caller must not change what this verifier enforces
+  // Assurance label (0.5) from the configuration: attested-VM mode is a signed statement, not a proof; SNARK mode is the
+  // backend's declared system (`unknown` when it declares none).
+  const pa = opts.snarkBackend ? undefined : opts.proverAttestation;
+  if (pa !== undefined) {
+    const hw = assuranceLabelOf(pa.hardwareVerifier);
+    if (hw?.level !== 'hardware' && hw?.level !== 'multi_root') throw new TypeError('createZkVerifier: proverAttestation.hardwareVerifier must carry a hardware or multi_root assurance label');
+    if (!Array.isArray(pa.measurements) || pa.measurements.length === 0 || pa.measurements.some((m) => typeof m !== 'string' || m === '')) throw new TypeError('createZkVerifier: proverAttestation.measurements must be a non-empty allowlist');
+    if (typeof pa.expectedBinding !== 'function') throw new TypeError('createZkVerifier: proverAttestation.expectedBinding must be a function');
+  }
+  const hwLabel = pa ? assuranceLabelOf(pa.hardwareVerifier) : undefined;
+  const label: AssuranceLabel = opts.snarkBackend
+    ? (assuranceLabelOf(opts.snarkBackend) ?? { level: 'unknown' satisfies ZkSystem })
+    : hwLabel
+      ? { level: 'attested_vm_hw' satisfies ZkSystem, vendor: `hardware-bound:${hwLabel.vendor ?? hwLabel.level}` }
+      : { level: 'attested_vm' satisfies ZkSystem };
+  return setAssuranceLabel(zkHook(opts), label);
+}
+
+function zkHook(opts: ZkVerifierOpts): ZkVerifier {
 
   const trusted = new Set(Array.isArray(opts.trustedProverKeys) ? opts.trustedProverKeys : []);
+  const revoked = new Set(Array.isArray(opts.revokedProverKeys) ? opts.revokedProverKeys : []);
+  const pa = opts.snarkBackend ? undefined : opts.proverAttestation;
+  const paMeasurements = pa ? new Set(pa.measurements) : undefined;
   const expectedPolicy = Array.isArray(opts.policyCommitments) ? new Set(opts.policyCommitments) : undefined;
   const clock = opts.now ?? (() => Date.now());
   const skew = Number.isFinite(opts.clockSkewMs) ? Math.max(0, opts.clockSkewMs as number) : 0;
@@ -225,6 +292,7 @@ export function createZkVerifier(opts: ZkVerifierOpts): ZkVerifier {
       if (st.v !== 1 || st.mode !== 'attested-vm') return fail('unrecognized compliance statement');
       if (st.released !== true) return fail('statement does not assert release');
       if (typeof st.prover !== 'string' || !trusted.has(st.prover)) return fail('prover key is not trusted');
+      if (revoked.has(st.prover)) return fail('prover key is revoked');
 
       const { sig, ...body } = st as ComplianceStatement;
       if (typeof sig !== 'string' || !verifyB64u(st.prover, statementMessage(body as ComplianceStatementBody), sig)) {
@@ -244,6 +312,17 @@ export function createZkVerifier(opts: ZkVerifierOpts): ZkVerifier {
       if (st.plan_commit !== planCommit) return fail('statement does not bind to this plan commitment');
       if (typeof st.policy_commit !== 'string' || !wantPolicy.has(st.policy_commit)) {
         return fail('statement policy commitment is not an expected policy');
+      }
+
+      // hardware binding of the prover key (last: it is the expensive check). Every outcome other than a bound,
+      // measured, allowlisted identity denies.
+      if (pa && paMeasurements) {
+        const expected = await pa.expectedBinding(st.prover);
+        const hw = await pa.hardwareVerifier.verify({ document: { attestor: st.prover, mode: 'hardware' } as unknown as AttestationDocument, ctx, nowMs, expected });
+        if (!hw || hw.ok !== true) return fail(`prover hardware evidence invalid: ${hw ? (hw.reason ?? 'no reason given') : 'no result'}`);
+        if (hw.bound !== true) return fail('prover hardware evidence does not bind the prover key');
+        if (!hw.measured || typeof hw.measured.runtime_measurement !== 'string') return fail('prover hardware evidence carries no measured identity');
+        if (!paMeasurements.has(hw.measured.runtime_measurement)) return fail('prover VM measurement is not allowlisted');
       }
 
       return { enforced: true, ok: true };
@@ -413,7 +492,21 @@ export const DEFAULT_WASM_PATH = (): string => pjoin(circuitsBuild(), 'complianc
 /** Default path to the Groth16 proving key (`compliance_final.zkey`). */
 export const DEFAULT_ZKEY_PATH = (): string => pjoin(circuitsBuild(), 'compliance_final.zkey');
 
+/** Evidence that a verifying key came from a multi-party ceremony: the published transcript and its pinned SHA-256. */
+export interface CeremonyEvidence {
+  transcript: CeremonyTranscript;
+  /** SHA-256 (hex) of the canonical transcript, published out of band by the coordinator. */
+  sha256: string;
+}
+
+/** `multi-party` only for an explicit verifying key backed by pinned ceremony evidence; the bundled fixtures are single-party. */
+function ceremonyLabel(opts: { verificationKey?: object; ceremony?: CeremonyEvidence }, circuit: string): 'single-party' | 'multi-party' {
+  return ceremonyOf(opts.verificationKey, opts.ceremony && { ...opts.ceremony, circuit });
+}
+
 export interface Groth16BackendOpts {
+  /** Ceremony evidence for `verificationKey`; without it the backend reports `ceremony: single-party`. */
+  ceremony?: CeremonyEvidence;
   /** The verifying-key JSON object (snarkjs vkey). When omitted, loads `verificationKeyPath`. */
   verificationKey?: object;
   /** Path to a `verification_key.json`; defaults to the bundled circuit fixture. */
@@ -432,7 +525,7 @@ export interface Groth16BackendOpts {
  */
 export function createGroth16SnarkBackend(opts: Groth16BackendOpts = {}): SnarkBackend {
   const getVkey = lazyVkey(opts, DEFAULT_VKEY_PATH);
-  return {
+  return setAssuranceLabel<SnarkBackend>({
     async verify({ proof, publicInputs }): Promise<boolean> {
       const env = proof as Partial<Groth16ComplianceProof> | null | undefined;
       if (!env || typeof env !== 'object') return false;
@@ -451,7 +544,7 @@ export function createGroth16SnarkBackend(opts: Groth16BackendOpts = {}): SnarkB
       const groth16 = await loadGroth16();
       return await groth16.verify(await getVkey(), ps, g16);
     },
-  };
+  }, { level: 'groth16' satisfies ZkSystem, ceremony: ceremonyLabel(opts, 'pca-compliance-v1') });
 }
 
 /** The private compliance witness (never revealed by the proof) + the public commitments to bind to. */
@@ -994,6 +1087,8 @@ export async function verifyPolicyVmProof(env: unknown, opts: PolicyVmVerifyOpts
 }
 
 export interface PolicyVmBackendOpts extends PolicyVmVerifyOpts {
+  /** Ceremony evidence for `verificationKey`; without it the backend reports `ceremony: single-party`. */
+  ceremony?: CeremonyEvidence;
   /**
    * Optional in-circuit struct-hash binding. When set, the proof's public hash halves must equal these
    * — the RS recomputes them with `policyVmStructHash` over the fixed-layout fields it expects. This is
@@ -1008,6 +1103,15 @@ export interface PolicyVmBackendOpts extends PolicyVmVerifyOpts {
 /** Two 128-bit halves at `hiIdx`/`loIdx` match the expected digest (or no expectation was set). */
 function policyVmHalvesMatch(ps: string[], hiIdx: number, loIdx: number, want?: DigestHalves): boolean {
   return !want || (ps[hiIdx] === want.hi && ps[loIdx] === want.lo);
+}
+
+/**
+ * Assurance label of a Policy-VM backend: `policyvm_snark` only when the proof is bound to this action, policy and plan
+ * (all three `expect*Hash`); without them a valid proof may be for another compliant action, so the label is `unknown`.
+ */
+function policyVmLabel(opts: PolicyVmBackendOpts): AssuranceLabel {
+  const ceremony = ceremonyLabel(opts, 'pca-policyvm-v1');
+  return opts.expectActionHash && opts.expectPolicyHash && opts.expectPlanHash ? { level: 'policyvm_snark' satisfies ZkSystem, ceremony } : { level: 'unknown' satisfies ZkSystem, vendor: 'policyvm-unbound', ceremony };
 }
 
 /** Shared struct-hash binding over the proof's public signals (used by both curve backends). */
@@ -1029,13 +1133,13 @@ function policyVmStructHashesMatch(ps: string[] | undefined, opts: PolicyVmBacke
  */
 export function createPolicyVmSnarkBackend(opts: PolicyVmBackendOpts = {}): SnarkBackend {
   const getVkey = lazyVkey(opts, POLICYVM_VKEY_PATH);
-  return {
+  return setAssuranceLabel<SnarkBackend>({
     async verify({ proof }): Promise<boolean> {
       const env = proof as Partial<PolicyVmComplianceProof> | null | undefined;
       if (!policyVmStructHashesMatch(env?.publicSignals, opts)) return false;
       return verifyPolicyVmProof(env, { verificationKey: await getVkey(), expect: opts.expect });
     },
-  };
+  }, policyVmLabel(opts));
 }
 
 /**
@@ -1045,13 +1149,13 @@ export function createPolicyVmSnarkBackend(opts: PolicyVmBackendOpts = {}): Snar
  */
 export function createPolicyVmSnarkBackendBls12381(opts: PolicyVmBackendOpts = {}): SnarkBackend {
   const getVkey = lazyVkey(opts, POLICYVM_BLS12381_VKEY_PATH);
-  return {
+  return setAssuranceLabel<SnarkBackend>({
     async verify({ proof }): Promise<boolean> {
       const env = proof as Partial<PolicyVmComplianceProofBls12381> | null | undefined;
       if (!policyVmStructHashesMatch(env?.publicSignals, opts)) return false;
       return verifyPolicyVmProof(env, { verificationKey: await getVkey(), expect: opts.expect });
     },
-  };
+  }, policyVmLabel(opts));
 }
 
 export interface PolicyVmProverOpts {

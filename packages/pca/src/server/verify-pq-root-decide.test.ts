@@ -12,7 +12,9 @@ import { buildPCActn } from '../pcactn';
 import { decide, deriveDecideInput } from '../policy-vm';
 import { encodeMlDsaPublicKey, mlDsa65Keygen, type SigAlg } from '../pq';
 import { DEFAULT_RISK_POLICY } from '../risk';
-import { verifyPCActn } from './verify';
+import { verifyPCActn as verifyPCActn05 } from './verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 const AUD = 'rs-pqroot';
 const NOW = Date.UTC(2026, 9, 12, 12, 0, 0);

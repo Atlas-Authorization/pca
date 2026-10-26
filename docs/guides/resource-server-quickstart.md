@@ -35,7 +35,45 @@ const verdict = await verifyPCActn(pcactn, {
 // PcaVerdict: { allow, r, requiredThreshold: { t, proof, optimisticAllowed }, checks, reasons, budget? }
 ```
 
-`checks` maps each clause (`version`, `cap_chain`, `plan_inclusion`, `leaf_signature`, `counter`, `grant_ref`, `params_digest`, `delegated_caveats`, `policy`, `threshold`, `budget`, ...) to `'pass' | 'fail' | 'not-enforced'`. `allow` is true only if nothing failed and the policy VM released the guardian share. If you passed `context.budget`, persist the returned `verdict.budget` on allow.
+Since 0.5, `verifyPCActn` requires the default checks (`require` defaults to `DEFAULT_REQUIRED_CHECKS`: `counter_format`, `revocation`, `plan_root_authorized`, `audience`, `validity`, `grant_ref_bound`). A call without a revocation hook, an authorized plan or an audience denies; the example above also needs `hooks: { revocation }`, `context.planAuthorized: true` and `audience`. Pass `require: []` to get the report alone. A feature the proof carries but the verifier does not implement (a `bond_ref`) reports `unsupported` and denies unless you list it in `allowUnsupported`.
+
+`checks` maps each clause (`version`, `cap_chain`, `plan_inclusion`, `leaf_signature`, `counter_format`, `replay`, `grant_ref`, `params_digest`, `delegated_caveats`, `policy`, `threshold`, `budget`, ...) to `'pass' | 'fail' | 'not-enforced' | 'unsupported'`. `allow` is true only if nothing failed and the policy VM released the guardian share. If you passed `context.budget`, persist the returned `verdict.budget` on allow.
+
+### `authorize(input, opts)`: the whole pipeline, bound to the operation
+
+`authorize` runs the same pipeline as `requirePCA` below, but every component is required and the decision is bound to the operation your handler is about to execute. Build it once with `createAuthorizer`:
+
+```ts
+import { createAuthorizer, isAuthorizedFor, memoryPcaStore } from '@atlasauth/pca';
+
+const authorizeRefund = createAuthorizer({
+  audience: 'refunds-api',                                   // this server's id: the PCActn's aud must match
+  resolveGrant: async (grantRef) => grantsById.get(grantRef) ?? null,
+  budgetStore: memoryPcaStore(),                             // a shared PcaStateStore in production
+  hooks: { revocation: async ({ grant }) => ({ enforced: true, ok: !revoked.has(grant.id) }) },
+  plan: 'single-step',                                       // or a context() that returns the authorized plan
+  risk: (op) => ({ blastRadius: Math.min(1, Number(op?.params?.amount) / 500) }), // priced by the server
+});
+
+// In the handler: the operation THIS handler will execute, from its route and the parsed body.
+const operation = { verb: 'stripe.refund', resource: `charge:${chargeId}`, params: body };
+const result = await authorizeRefund({ request: { headers, body }, operation });
+if (!result.allow) return { status: result.status, error: result.reason };
+if (isAuthorizedFor(result, operation)) await refund(operation.params);
+```
+
+- The PCActn must be for exactly `operation`: same verb, same resource, and its signed params digest must open to `operation.params`. Those params are what the grant's predicates and caveats evaluate, so a validly signed $400 refund under a $100 grant is refused, and so is a $50 proof presented with a $400 body.
+- A missing `audience`, `resolveGrant`, `budgetStore` or `hooks.revocation` refuses every call and names the missing component in `result.missing`. `insecureAllowUnenforced` is not accepted, and `require` can add checks but not remove the defaults.
+- `result.operation` (`verb`, `resource`, `params_digest`, and `id`, the PCActn's digest) records what was authorized; `isAuthorizedFor(result, operation)` checks it against the values the side effect is about to use.
+- The trust budget starts at the grant's signed `bMax` the first time a holder is seen (override with `seedBudget`).
+- The framework adapters (`@atlasauth/pca-express`, `-fastify`, `-hono`, `-next`, `-fetch`) run `authorize` when you give them `operation: (req) => ({ verb, resource, params })`; `req.method`, `req.url` and the parsed `req.body` are available to the mapping, and the bound operation is attached next to the verdict.
+
+Risk inputs and gates (also accepted by `requirePCA` and `verifyPCActn`):
+
+- `risk: (operation, grant, pcactn) => Partial<RiskInputs>` supplies server-derived inputs; `catalogRisk(verb, params, grant)` returns them from the connector catalog (reversibility, blast radius, and `amount / kappa` for money-moving verbs). Inputs from `risk` and from `context().risk` are combined input by input, keeping the riskier value.
+- `requireRiskInputs: ['blastRadius', ...]` refuses an action whose named inputs the server did not supply (check `risk_inputs`), instead of pricing them at the worst case.
+- `enforce: { taint, freshness, attestation }` turns on the verifier's taint, freshness and attestation gates. Each one fails closed.
+- `intentV2` passes the Intent Layer context (session root, action schema, provenance policy, label receipts), so per-parameter provenance is checked in the same call.
 
 ### `requirePCA(opts)`
 
@@ -45,9 +83,12 @@ A framework-agnostic guard, the PCA analogue of `requireAuth()`:
 import { requirePCA, memoryPcaStore } from '@atlasauth/pca';
 
 const guard = requirePCA({
+  audience: 'ins_acme',
   resolveGrant: async (grantRef) => grantsById.get(grantRef) ?? null,   // null = unknown grant
   hooks,
-  budgetStore: memoryPcaStore(),         // implement PcaStateStore over Redis/DB in production
+  budgetStore: memoryPcaStore(),         // production: a shared PcaStateStore that implements claim or withKeyLock
+  // REQUIRED (0.5): the operation this route executes, from your routing and the parsed body, never from the proof
+  operation: (req) => ({ verb: 'stripe.refund', resource: `charge:${req.body.charge}`, params: req.body.params }),
   context: (req, pcactn) => ({ params: req.body?.params }),
 });
 
@@ -62,7 +103,8 @@ if (!res.ok) {
 ```
 
 - Extraction (`defaultExtract`): header `PCA-Action: <base64url PCActn JSON>`, else JSON body `{ pcactn }`. Override with `extract`.
-- Replay: with `budgetStore`, the counter must strictly increase per `grant.id:leafHolder`, and the budget is loaded and saved there. Without a store, counters are reported `not-enforced`. Use a shared store in any multi-node deployment.
+- Operation binding: a guard built without `operation` throws. The proof must be for exactly the verb, resource and params you name, so a valid proof for one tool cannot authorize another. `insecureAllowUnboundOperation: true` keeps the 0.4 unbound guard for a migration.
+- Replay: with `budgetStore`, the counter must strictly increase per (audience, `grant.id`, leaf holder) (`pcaStateKey(grantId, holder, undefined, audience)` is the key), and the budget is loaded and saved there. Without a store, counters are reported `not-enforced`. Use a shared store in any multi-node deployment. A shared store alone is not enough: `requirePCA` reads the counter and budget, verifies, then writes them back, so the store must also implement `claim` (one atomic compare-and-set per action) or `withKeyLock`, an exclusive per-key lock across every process that does not expire under its holder (a Postgres row or advisory lock qualifies; a Redis lease does only if `put` is a compare-and-set). Since 0.5 a store with neither, that does not declare `scope: 'process'`, is refused when the guard is built (`multiInstance: false` runs it in one process on purpose).
 - 401 (`WWW-Authenticate: PCA realm="pca", error=...`) covers missing/undecodable PCActn, unknown grant, and failed `version`, `cap_chain`, `leaf_signature`, `malformed` or `grant_ref` checks. Policy and threshold denials are 403.
 
 ### Injectable hooks (`VerifyHooks`)
@@ -92,7 +134,7 @@ const hooks = {
 };
 ```
 
-`signerSet` must register the agent role's key as the leaf holder. Check the `Signer` shape in `packages/pca/src/threshold.ts` if you build it by hand. `t` / `requiredT` is mandatory (there is no default: the agent's own `risk_claim.r` must never decide `t`), and `verifyPCActn` denies a hook that enforced less than the `t` it derived from your server-held risk inputs. For golden test vectors to validate your own verifier, see [Verify in your language](./verify-in-your-language.md).
+`signerSet` must register the agent role's key as the leaf holder. Check the exported `Signer` type of `@atlasauth/pca` if you build it by hand. `t` / `requiredT` is mandatory (there is no default: the agent's own `risk_claim.r` must never decide `t`), and `verifyPCActn` denies a hook that enforced less than the `t` it derived from your server-held risk inputs. For golden test vectors to validate your own verifier, see [Verify in your language](./verify-in-your-language.md).
 
 ## Option 2: Atlas-hosted `/v1/pca/*`
 

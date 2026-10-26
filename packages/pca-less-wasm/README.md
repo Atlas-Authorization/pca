@@ -1,5 +1,7 @@
 # @atlasauth/pca-less-wasm
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 **LESS** code-based signatures for [`@atlasauth/pca`](https://www.npmjs.com/package/@atlasauth/pca): the
 official LESS reference C compiled to WebAssembly, with a tiny portable loader that has **no dependency
 and no `node:` import** -- it runs in Node >= 20, browsers, Web Workers, Deno, Bun and edge runtimes.

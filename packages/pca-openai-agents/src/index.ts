@@ -21,25 +21,39 @@
  * guardrail shapes are modelled as minimal duck-typed interfaces — so this compiles and tests WITHOUT
  * the `@openai/agents` package installed, and slots into any compatible minor version.
  *
- * HONESTY: verification here is REAL (signature + capability chain + plan inclusion + audience + validity
- * window + counter, via `verifyPCActnCore`). It is still only as strong as the grant you verify against
- * and the gates you enable; it does not replace the resource server when a tool makes a remote call — it
- * makes the LOCAL agent-execution boundary refuse to act without a valid PCActn.
+ * Two modes for {@link withPcaTool} / {@link pcaTools}. With `mode: 'signature-only'` and `verify` the proof is
+ * checked by `verifyPCActnCore`: signature + capability chain + plan inclusion + audience + validity window +
+ * counter format. That proves the proof is genuine, NOT that the grant permits this call: the grant's limits are
+ * not read, the tool input is not bound to the signed params, and nothing stops a replay. With `authorize`
+ * (full-policy mode, RECOMMENDED) every call runs `authorizeExecution` from `@atlasauth/pca`: the input must hash
+ * to the signed params digest, the grant's predicates, limits and caveats are evaluated, revocation is required,
+ * and a replay store makes each PCActn single-use; a missing store, revocation check or grant source is a
+ * configuration error (fail closed). The guardrails are signature-only pre-filters (a run-level guardrail sees no
+ * single tool call to bind); put the authority check on the tool with `authorize`. Either way this does not
+ * replace the resource server when a tool makes a remote call — it makes the LOCAL agent-execution boundary refuse
+ * to act without a valid PCActn.
  */
 
 import {
   type Agent,
+  type AuthorizeExecutionOptions,
   type Capability,
   type CheckStatus,
+  type ExecutionDecision,
+  type ExecutionOperation,
   type ClassApproval,
   type EnforcementGates,
   type PCActn,
+  type PcaStateStore,
   type Review,
   type StepUpRequest,
   type VerifyHooks,
   type VerifyResult,
   decodePCActn,
+  authorizeExecution,
   decodePcaHeader,
+  memoryPcaStore,
+  missingExecutionComponents,
   reviewAction,
   verifyPCActnCore,
 } from '@atlasauth/pca';
@@ -119,7 +133,11 @@ export type ProofSource<Args> = (input: Args, runContext: AgentRunContext) => Pr
 export type GuardrailProofSource = (args: GuardrailArgs) => ProofInput | null | undefined;
 
 /** Why a guarded execute / guardrail refused. */
-export type PcaToolDenialKind = 'missing' | 'malformed' | 'verify' | 'binding';
+/**
+ * `policy` / `replay` / `revoked` / `config` come only from full-policy mode (`authorize`): the grant's limits or
+ * caveats refused the call, the PCActn was already used, the grant is revoked, or a required component is missing.
+ */
+export type PcaToolDenialKind = 'missing' | 'malformed' | 'verify' | 'binding' | 'policy' | 'replay' | 'revoked' | 'config';
 
 /** Typed error thrown when a guarded tool refuses to run; the Agents SDK surfaces it as a tool error. */
 export class PcaToolDenied extends Error {
@@ -153,6 +171,19 @@ export type VerifyFn = (pcactn: PCActn) => VerifyResult | Promise<VerifyResult>;
 
 export type Verify = VerifyGrant | VerifyFn;
 
+/**
+ * Full-policy mode (recommended): the options of `authorizeExecution` from `@atlasauth/pca`, minus the audience
+ * (the guard's own `audience`, which must then be a string). `grant` or `resolveGrant`, `state` and `isRevoked` are
+ * required; a guard built without one of them throws, and every call is refused.
+ */
+export interface AuthorizeOptions<Args> extends Omit<AuthorizeExecutionOptions, 'audience'> {
+  /**
+   * The operation this call executes: its verb, resource and the params the agent signed. Default:
+   * `{ verb: <the guard's verb>, params: input }`, which needs the guard's `verb`.
+   */
+  operation?: (input: Args, runContext: AgentRunContext) => ExecutionOperation;
+}
+
 export interface WithPcaToolOptions<Args> {
   /**
    * How to find the proof for a call. Default: {@link proofFromRunContext} — reads a string PCActn from
@@ -160,8 +191,19 @@ export interface WithPcaToolOptions<Args> {
    * bag, or anywhere else.
    */
   require?: ProofSource<Args>;
-  /** How to verify the proof: the grant it must satisfy, or a custom `VerifyFn`. */
-  verify: Verify;
+  /**
+   * `'full'` (the default, since 0.5): every call runs `authorize` (grant limits, args binding, revocation, replay).
+   * `'signature-only'`: only the proof's signature, chain, audience and window are checked (`verify`); the grant's
+   * limits are NOT evaluated and nothing stops a replay. A guard needs one of the two, never both.
+   */
+  mode?: 'full' | 'signature-only';
+  /**
+   * Signature-only mode (`mode: 'signature-only'`): the grant the proof must chain to, or a custom `VerifyFn`. The grant's
+   * limits are NOT evaluated and replay is not prevented; prefer `authorize`. Give exactly one of the two.
+   */
+  verify?: Verify;
+  /** Full-policy mode (the default): grant limits, input binding, revocation and replay. See {@link AuthorizeOptions}. */
+  authorize?: AuthorizeOptions<Args>;
   /**
    * This verifier's audience (resource-server / instance id), matched against the PCActn's signed `aud`:
    * a string must equal it; `null` opts out ("accept any audience"); OMITTING it fails closed when the
@@ -246,7 +288,7 @@ async function runVerify(verify: Verify, pcactn: PCActn, audience: string | null
  */
 async function assertProof(
   raw: ProofInput | null | undefined,
-  opts: { verify: Verify; audience?: string | null; verb?: string; label: string },
+  opts: { verify: Verify; audience?: string | null; verb?: string; label: string; full?: (pcactn: PCActn) => Promise<ExecutionDecision> },
 ): Promise<{ pcactn: PCActn; result: VerifyResult }> {
   if (raw === null || raw === undefined) {
     throw new PcaToolDenied('no proof-carrying action present on the call', opts.label, 'missing');
@@ -264,11 +306,40 @@ async function assertProof(
       'binding',
     );
   }
+  if (opts.full) {
+    const d = await opts.full(pcactn);
+    if (!d.allow) throw new PcaToolDenied(d.reason, String(pcactn.action?.verb ?? opts.label), d.kind === 'authn' ? 'verify' : d.kind, d.checks);
+    return { pcactn, result: { allow: true, checks: d.verdict.checks } };
+  }
   const result = await runVerify(opts.verify, pcactn, opts.audience);
   if (!result.allow) {
     throw new PcaToolDenied(result.reason ?? 'verification failed', pcactn.action.verb, 'verify', result.checks);
   }
   return { pcactn, result };
+}
+
+/** Full-policy mode: check the configuration once (throws on a missing component) and return the per-call check. */
+function fullPolicy<Args>(
+  options: WithPcaToolOptions<Args>,
+): ((pcactn: PCActn, input: Args, runContext: AgentRunContext) => Promise<ExecutionDecision>) | undefined {
+  const auth = options.authorize;
+  const mode = options.mode ?? 'full';
+  if (mode !== 'full' && mode !== 'signature-only') throw new TypeError(`withPcaTool: unknown mode '${String(mode)}'`);
+  if (mode === 'signature-only') {
+    if (auth !== undefined) throw new TypeError("withPcaTool: `authorize` is the full mode; drop it, or drop mode: 'signature-only'");
+    if (options.verify === undefined) throw new TypeError("withPcaTool: mode 'signature-only' needs `verify`");
+    return undefined;
+  }
+  if (auth === undefined) throw new TypeError("withPcaTool: pass `authorize` (full policy, the default mode), or set mode: 'signature-only' with `verify` to check the signature only");
+  if (options.verify !== undefined) throw new TypeError("withPcaTool: `verify` checks the signature only: set mode: 'signature-only' to use it, and drop `authorize`");
+  const audience = typeof options.audience === 'string' ? options.audience : undefined;
+  const missing = missingExecutionComponents({ ...auth, ...(audience !== undefined ? { audience } : {}) });
+  if (auth.operation === undefined && options.verb === undefined) missing.push("operation (or the guard's verb)");
+  if (missing.length > 0 || audience === undefined) throw new TypeError(`withPcaTool: full policy mode is missing ${missing.join(', ')}`);
+  const { operation, ...rest } = auth;
+  const verb = options.verb ?? '';
+  const opOf = operation ?? ((input: Args): ExecutionOperation => ({ verb, params: isRecord(input) ? input : {} }));
+  return async (pcactn, input, runContext) => authorizeExecution(pcactn, opOf(input, runContext), { ...rest, audience });
 }
 
 // ---- the execution guard ------------------------------------------------------------------------------
@@ -287,6 +358,9 @@ export function withPcaTool<Args extends Record<string, unknown>, Result>(
   // (contravariant), so it satisfies ProofSource<Args> by assignment — no cast needed.
   const source: ProofSource<Args> = options.require ?? proofFromRunContext;
   const label = options.verb ?? tool.name ?? '(tool)';
+  const full = fullPolicy(options);
+  // signature-only mode (`fullPolicy` returned undefined, so `verify` is set)
+  const verify: Verify = options.verify ?? ((): VerifyResult => ({ allow: false, checks: {}, reason: 'no verifier configured' }));
 
   // Method syntax (not an arrow property): the target `AgentTool.execute` is a METHOD, so its parameters
   // are checked bivariantly — a method shim with concrete arg types assigns cleanly, no `any`, no cast.
@@ -296,10 +370,12 @@ export function withPcaTool<Args extends Record<string, unknown>, Result>(
       const raw = source(input, runContext ?? {});
       let verified: { pcactn: PCActn; result: VerifyResult };
       try {
+        const ctx = runContext ?? {};
         verified = await assertProof(raw, {
-          verify: options.verify,
+          verify,
           ...(options.audience !== undefined ? { audience: options.audience } : {}),
           ...(options.verb !== undefined ? { verb: options.verb } : {}),
+          ...(full ? { full: (pcactn: PCActn) => full(pcactn, input, ctx) } : {}),
           label,
         });
       } catch (err) {
@@ -328,8 +404,15 @@ function mergeToolOptions(
   over: PcaToolOverride<Record<string, unknown>> | undefined,
 ): WithPcaToolOptions<Record<string, unknown>> {
   if (!over) return base;
+  // a per-tool `verify` or `authorize` replaces the shared mode (the two are exclusive); `mode` follows the override, else the shared one
+  const modeName = over.mode ?? (over.authorize !== undefined ? undefined : base.mode);
+  const mode = over.authorize !== undefined ? { authorize: over.authorize } : over.verify !== undefined ? { verify: over.verify } : {
+    ...(base.verify !== undefined ? { verify: base.verify } : {}),
+    ...(base.authorize !== undefined ? { authorize: base.authorize } : {}),
+  };
   return {
-    verify: over.verify ?? base.verify,
+    ...mode,
+    ...(modeName !== undefined ? { mode: modeName } : {}),
     ...((over.require ?? base.require) !== undefined ? { require: over.require ?? base.require } : {}),
     ...('audience' in over ? { audience: over.audience } : base.audience !== undefined ? { audience: base.audience } : {}),
     ...((over.verb ?? base.verb) !== undefined ? { verb: over.verb ?? base.verb } : {}),
@@ -555,6 +638,13 @@ export {
   verifyPCActnCore,
   decodePCActn,
   reviewAction,
+  // full-policy mode (`authorize`)
+  authorizeExecution,
+  memoryPcaStore,
+  type AuthorizeExecutionOptions,
+  type ExecutionOperation,
+  type ExecutionDecision,
+  type PcaStateStore,
   type Agent,
   type AiSdkTool,
   type PcaCall,

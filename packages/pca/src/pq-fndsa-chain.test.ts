@@ -14,7 +14,9 @@ import {
 } from './pq';
 import { buildQuorumSet, quorumActionDigest, assembleQuorumProof, signQuorumShare, verifyQuorum } from './pq-threshold';
 import { DEFAULT_RISK_POLICY } from './risk';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /** FN-DSA (Falcon, FIPS 206) on capability hops, the PCActn leaf and quorum shares, with the same F-2/F-4 rules as ML-DSA. */
 const NOW = Date.now();

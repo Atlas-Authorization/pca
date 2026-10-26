@@ -209,7 +209,7 @@ describe('auditPCActn (verifier per-check table + decision explanation)', () => 
       cap_chain: 'pass',
       plan_inclusion: 'pass',
       leaf_signature: 'pass',
-      counter: 'pass',
+      counter_format: 'pass',
     });
     expect(audit.explanation.decision).toEqual(decide(di));
     expect(audit.explanation.autoAllow).toBe(true);

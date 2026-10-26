@@ -43,6 +43,16 @@ import {
   type RiskPolicy,
   type TrustBudget,
   type Review,
+  type KeyPair,
+  reviewAction,
+  admit,
+  cost,
+  leak,
+  safetyBound,
+  agent,
+  generateKeyPair,
+} from '@atlasauth/pca';
+import {
   type DlpPolicy,
   type ImmuneState,
   type ImmuneConfig,
@@ -50,12 +60,6 @@ import {
   type ThreatLevel,
   type Catalog,
   type ActionSpec,
-  type KeyPair,
-  reviewAction,
-  admit,
-  cost,
-  leak,
-  safetyBound,
   evaluateDlp,
   observe,
   assess,
@@ -64,9 +68,7 @@ import {
   DEFAULT_IMMUNE_CONFIG,
   DEFAULT_ADAPT_CONFIG,
   DEFAULT_CATALOG,
-  agent,
-  generateKeyPair,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/research';
 
 // ============================================================================================
 // Seeded determinism

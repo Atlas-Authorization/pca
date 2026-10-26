@@ -2,7 +2,7 @@
 // ts-stryker-plan.mjs <k> <n>   (repo root) Print shard k of n of the TypeScript mutation-testing plan, one line per package:
 //   <package-dir> <src-file> <src-file> ...      (src files relative to packages/<package-dir>)
 // Scope: every non-test source file (src/**/*.ts) of every package that has entries in the equivalent-mutant ledger
-// (tools/pca-audit/mutation-equivalents.json) - the audited set. Units are kept in package order and cut into n contiguous
+// (tools/pca-audit/mutation-equivalents.json) plus its `also_audited_packages` (new packages with no entries yet) - the audited set. Units are kept in package order and cut into n contiguous
 // slices of about equal line count, so a shard touches as few packages (= Stryker dry runs) as possible.
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,7 +10,7 @@ import { join } from 'node:path';
 const [k, n] = process.argv.slice(2, 4).map(Number);
 if (!(n >= 1 && k >= 1 && k <= n)) { console.error('usage: ts-stryker-plan.mjs <k> <n>'); process.exit(2); }
 const ledger = JSON.parse(readFileSync('tools/pca-audit/mutation-equivalents.json', 'utf8'));
-const pkgs = [...new Set(ledger.equivalents.map((e) => e.package ?? 'pca'))].filter((p) => existsSync(join('packages', p, 'src'))).sort();
+const pkgs = [...new Set([...ledger.equivalents.map((e) => e.package ?? 'pca'), ...(ledger.also_audited_packages ?? [])])].filter((p) => existsSync(join('packages', p, 'src'))).sort();
 const walk = (d) => readdirSync(d).flatMap((e) => { const p = join(d, e); return statSync(p).isDirectory() ? walk(p) : [p]; });
 const excludeCache = new Map();
 /** The non-test "exclude" globs of a package's tsconfig.build.json as RegExps over paths relative to the package. */

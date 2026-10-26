@@ -1,5 +1,7 @@
 # @atlasauth/pca-pq-threshold
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Post-quantum hybrid threshold step-up for Proof-Carrying Authority (PCA). A step-up is authorized only when **both** of these hold over the same action:
 
 - a classical FROST (Ed25519) t-of-n threshold signature, and
@@ -20,7 +22,8 @@ Depends on `@atlasauth/pca`.
 ## Usage
 
 ```ts
-import { frostTrustedDealerKeygen, mlDsa65Keygen } from '@atlasauth/pca';
+import { mlDsa65Keygen } from '@atlasauth/pca';
+import { frostTrustedDealerKeygen } from '@atlasauth/pca/ext/frost';
 import { generateKeyPair } from '@atlasauth/pca';
 import { hybridThresholdSign, issueGroupDescriptor, verifyHybridThreshold } from '@atlasauth/pca-pq-threshold';
 

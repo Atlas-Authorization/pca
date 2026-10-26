@@ -1,17 +1,19 @@
 import { type Capability, type CapabilityChain, type PCActn, verifyPCActnCore } from '@atlasauth/pca';
+import { type ReplayStore, guardPCActnReplay } from '@atlasauth/pca';
 import { grantedOAuthScopes } from './authority';
 import {
   ExpiredNoRefreshError,
   NotAuthorizedError,
   ScopeExceededError,
+  StoreError,
   UnknownConnectionError,
+  VaultError,
 } from './errors';
 import { type ProviderConfig, type VaultFetch, refreshConnection } from './refresh';
 import {
   type ConnectionAuthority,
   type ConnectionStore,
   type StoredConnection,
-  InMemoryConnectionStore,
 } from './store';
 
 /** What a successful {@link TokenVault.getConnectionToken} hands back: a fresh, provably-authorized token. */
@@ -84,6 +86,20 @@ export interface TokenVaultOptions {
   useVerb?: string | null;
   /** Expiry assumed when a refreshed token exposes neither `expires_in` nor a JWT `exp`. Default 300_000. */
   defaultTokenLifetimeMs?: number;
+  /**
+   * One-time-use store for presented actions. When set, a PCActn that already released a token is refused
+   * the second time (a captured action cannot be replayed to the vault). Use a durable, shared store.
+   */
+  replay?: ReplayStore;
+  /** Revocation source. Return true to refuse the action. A throw or rejection refuses it too (fail closed). */
+  isRevoked?: (pcActn: PCActn) => boolean | Promise<boolean>;
+  /**
+   * Production profile, ON unless set to `false`. The constructor throws unless the store encrypts at rest
+   * (`EncryptedConnectionStore`), `replay` and `isRevoked` are set and `audience` is a string. `strict: false`
+   * is for tests and local development and still requires an explicit `store` (the plaintext in-memory store
+   * lives in `@atlasauth/pca-connect/testing`).
+   */
+  strict?: boolean;
 }
 
 const DEFAULTS: {
@@ -120,9 +136,25 @@ export class TokenVault {
   private readonly resourceFor: (provider: string, connectionId: string) => string;
   private readonly useVerb: string | null;
   private readonly defaultTokenLifetimeMs: number;
+  private readonly replay: ReplayStore | undefined;
+  private readonly isRevoked: ((pcActn: PCActn) => boolean | Promise<boolean>) | undefined;
+  /** In-flight refreshes by connection, so two callers never spend one single-use refresh token twice. */
+  private readonly inflight = new Map<string, Promise<Awaited<ReturnType<typeof refreshConnection>>>>();
 
   constructor(options: TokenVaultOptions = {}) {
-    this.store = options.store ?? new InMemoryConnectionStore();
+    if (options.strict !== false) {
+      const missing: string[] = [];
+      if ((options.store as { encrypted?: unknown } | undefined)?.encrypted !== true) missing.push('an encrypting store');
+      if (options.replay === undefined) missing.push('replay');
+      if (options.isRevoked === undefined) missing.push('isRevoked');
+      if (typeof options.audience !== 'string' || options.audience.length === 0) missing.push('audience');
+      if (missing.length > 0) throw new Error(`TokenVault strict mode requires ${missing.join(', ')}`);
+    } else if (options.store === undefined) {
+      throw new Error('TokenVault requires a store');
+    }
+    this.replay = options.replay;
+    this.isRevoked = options.isRevoked;
+    this.store = options.store as ConnectionStore;
     this.providers = options.providers ?? {};
     this.fetchImpl = options.fetch;
     this.now = options.now ?? (() => Date.now());
@@ -139,6 +171,14 @@ export class TokenVault {
   /** Store (or replace) an agent's connection. The authority descriptor binds which capability may use it. */
   async putConnection(args: PutConnectionArgs): Promise<StoredConnection> {
     const connectionId = args.connectionId ?? this.defaultConnectionId;
+    for (const [k, val] of [['agentId', args.agentId], ['provider', args.provider], ['connectionId', connectionId], ['accessToken', args.accessToken], ['principal', args.authority?.principal]] as const) {
+      if (typeof val !== 'string' || val.length === 0) throw new TypeError(`putConnection: ${k} must be a non-empty string`);
+    }
+    if (typeof args.expiresAt !== 'number' || !Number.isFinite(args.expiresAt)) throw new TypeError('putConnection: expiresAt must be a finite number');
+    if (args.refreshToken !== undefined && (typeof args.refreshToken !== 'string' || args.refreshToken.length === 0)) {
+      throw new TypeError('putConnection: refreshToken must be a non-empty string when given');
+    }
+    if (!Array.isArray(args.scopes) || args.scopes.some((s) => typeof s !== 'string')) throw new TypeError('putConnection: scopes must be a list of strings');
     const authority: ConnectionAuthority = {
       provider: args.provider,
       principal: args.authority.principal,
@@ -157,7 +197,7 @@ export class TokenVault {
       useCount: 0,
       ...(args.refreshToken !== undefined ? { refreshToken: args.refreshToken } : {}),
     };
-    await this.store.set(connection);
+    await this.storeSet(connection);
     return connection;
   }
 
@@ -182,7 +222,7 @@ export class TokenVault {
 
     // 1. Resolve the connection. The connection carries the trust anchor (bound principal), so it must be
     //    looked up before verification can be anchored.
-    const connection = await this.store.get({ agentId, provider, connectionId });
+    const connection = await this.storeGet({ agentId, provider, connectionId });
     if (connection === undefined) throw new UnknownConnectionError(agentId, provider, connectionId);
 
     // 2. Anchor + verify. The chain must be rooted at the connection's bound principal, else a self-minted
@@ -195,6 +235,17 @@ export class TokenVault {
     const result = await verifyPCActnCore(pcActn, { grant: root, grantFromArtifact: true, ...(this.pqPins ? { pqPins: this.pqPins } : {}), audience, nowEpoch: now });
     if (!result.allow) {
       throw new NotAuthorizedError(`PCActn verification failed: ${result.reason ?? 'rejected'}`, result.checks);
+    }
+
+    // 2b. Revocation. No source configured means no check (opt in; `strict` makes it mandatory).
+    if (this.isRevoked !== undefined) {
+      let revoked: boolean;
+      try {
+        revoked = (await this.isRevoked(pcActn)) !== false;
+      } catch {
+        throw new NotAuthorizedError('revocation source unavailable');
+      }
+      if (revoked) throw new NotAuthorizedError('the capability chain is revoked');
     }
 
     // 3. Bind the action to this provider/connection (so an unrelated authorized action cannot unlock the token).
@@ -225,27 +276,41 @@ export class TokenVault {
       throw new ScopeExceededError(provider, requested, [...granted], missing);
     }
 
-    // 6. Freshness: refresh a stale token, else release it as-is.
+    // 5b. One-time use, last of the authorization checks so a refused request does not burn the action.
+    if (this.replay !== undefined) {
+      const verdict = await guardPCActnReplay(this.replay, pcActn, { aud: pcActn.aud, now });
+      if (!verdict.ok) throw new NotAuthorizedError(`replay guard refused the action: ${verdict.reason}`);
+    }
+
+    // 6. Freshness: refresh a stale token, else release it as-is. A token whose expiry or clock is not a
+    //    finite number can never be shown to be fresh, so it counts as stale.
     let token = connection;
     let refreshed = false;
-    if (connection.expiresAt - now <= this.expiryLeewayMs) {
+    if (!Number.isFinite(connection.expiresAt) || !Number.isFinite(now) || connection.expiresAt - now <= this.expiryLeewayMs) {
       if (connection.refreshToken === undefined) throw new ExpiredNoRefreshError(provider, connectionId);
-      const updated = await refreshConnection({
-        connection,
-        config: this.providers[provider],
-        refreshToken: connection.refreshToken,
-        requested,
-        fetch: this.fetchImpl,
-        now,
-        defaultTokenLifetimeMs: this.defaultTokenLifetimeMs,
-      });
+      const refreshToken = connection.refreshToken;
+      const flightKey = `${agentId}\u0000${provider}\u0000${connectionId}`;
+      let flight = this.inflight.get(flightKey);
+      if (flight === undefined) {
+        flight = refreshConnection({
+          connection,
+          config: this.providers[provider],
+          refreshToken,
+          requested,
+          fetch: this.fetchImpl,
+          now,
+          defaultTokenLifetimeMs: this.defaultTokenLifetimeMs,
+        }).finally(() => this.inflight.delete(flightKey));
+        this.inflight.set(flightKey, flight);
+      }
+      const updated = await flight;
       token = { ...connection, ...updated };
       refreshed = true;
     }
 
     // 7. Record usage and persist.
     token = { ...token, lastUsedAt: now, useCount: token.useCount + 1 };
-    await this.store.set(token);
+    await this.storeSet(token);
 
     return {
       provider,
@@ -259,6 +324,27 @@ export class TokenVault {
 
   /** Remove a stored connection. */
   async deleteConnection(agentId: string, provider: string, connectionId?: string): Promise<void> {
-    await this.store.delete({ agentId, provider, connectionId: connectionId ?? this.defaultConnectionId });
+    try {
+      await this.store.delete({ agentId, provider, connectionId: connectionId ?? this.defaultConnectionId });
+    } catch (e) {
+      throw e instanceof VaultError ? e : new StoreError();
+    }
+  }
+
+  // The store's own error text is never passed on: it can quote a connection string or a record.
+  private async storeGet(key: Parameters<ConnectionStore['get']>[0]): Promise<StoredConnection | undefined> {
+    try {
+      return await this.store.get(key);
+    } catch (e) {
+      throw e instanceof VaultError ? e : new StoreError();
+    }
+  }
+
+  private async storeSet(c: StoredConnection): Promise<void> {
+    try {
+      await this.store.set(c);
+    } catch (e) {
+      throw e instanceof VaultError ? e : new StoreError();
+    }
   }
 }

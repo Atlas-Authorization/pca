@@ -62,6 +62,12 @@ export interface AnalyzerOptions {
   maxCombinations?: number;
 }
 
+/** The grid bound. A bound that is not a non-negative finite number (NaN compares false with everything) would disable the cap, so it falls back to the default. */
+function boundOf(opts: AnalyzerOptions | undefined): number {
+  const m = opts?.maxCombinations;
+  return typeof m === 'number' && Number.isFinite(m) && m >= 0 ? m : DEFAULT_MAX_COMBINATIONS; // 0 is allowed: every grid overflows and fails safe
+}
+
 function reversibilityIndex(cls: string): number {
   return (REVERSIBILITY_ORDER as readonly string[]).indexOf(cls);
 }
@@ -77,7 +83,7 @@ function reversibilityIndex(cls: string): number {
  */
 export function reachable(policy: PolicyInput, action: AnalyzerAction, opts: AnalyzerOptions = {}): ReachableResult {
   const model = toModel(policy);
-  const max = opts.maxCombinations ?? DEFAULT_MAX_COMBINATIONS;
+  const max = boundOf(opts);
   if (!model.caveatSat) {
     return { reachable: false, reason: `caveats unsatisfiable: ${model.caveatReason ?? 'unknown'}` };
   }
@@ -150,7 +156,7 @@ function mergeWitness(witness: AnalyzerAction, provided: AnalyzerAction): Analyz
  */
 export function alwaysDenies(policy: PolicyInput, verb?: string, opts: AnalyzerOptions = {}): AlwaysDeniesResult {
   const model = toModel(policy);
-  const max = opts.maxCombinations ?? DEFAULT_MAX_COMBINATIONS;
+  const max = boundOf(opts);
   if (!model.caveatSat) {
     return { alwaysDenies: true, reason: `caveats unsatisfiable: ${model.caveatReason ?? 'unknown'}` };
   }
@@ -175,7 +181,7 @@ export function alwaysDenies(policy: PolicyInput, verb?: string, opts: AnalyzerO
  */
 export function alwaysAllows(policy: PolicyInput, verb: string, opts: AnalyzerOptions = {}): AlwaysAllowsResult {
   const model = toModel(policy);
-  const max = opts.maxCombinations ?? DEFAULT_MAX_COMBINATIONS;
+  const max = boundOf(opts);
   if (!model.caveatSat) {
     return { alwaysAllows: false, reason: `caveats unsatisfiable: ${model.caveatReason ?? 'unknown'}` };
   }
@@ -211,7 +217,7 @@ function probesFor(models: PolicyModel[], verb?: string): ReturnType<typeof coll
 export function subsumes(a: PolicyInput, b: PolicyInput, opts: AnalyzerOptions = {}): SubsumesResult {
   const ma = toModel(a);
   const mb = toModel(b);
-  const max = opts.maxCombinations ?? DEFAULT_MAX_COMBINATIONS;
+  const max = boundOf(opts);
   const pr = probesFor([ma, mb]);
   const outcome = search(pr, (rep) => admits(mb, rep) && !admits(ma, rep), max);
   if (outcome.hit !== undefined) {
@@ -229,7 +235,7 @@ export function subsumes(a: PolicyInput, b: PolicyInput, opts: AnalyzerOptions =
 export function disjoint(a: PolicyInput, b: PolicyInput, opts: AnalyzerOptions = {}): DisjointResult {
   const ma = toModel(a);
   const mb = toModel(b);
-  const max = opts.maxCombinations ?? DEFAULT_MAX_COMBINATIONS;
+  const max = boundOf(opts);
   const pr = probesFor([ma, mb]);
   const outcome = search(pr, (rep) => admits(ma, rep) && admits(mb, rep), max);
   if (outcome.hit !== undefined) {
@@ -247,7 +253,7 @@ export function disjoint(a: PolicyInput, b: PolicyInput, opts: AnalyzerOptions =
 export function equivalent(a: PolicyInput, b: PolicyInput, opts: AnalyzerOptions = {}): EquivalentResult {
   const ma = toModel(a);
   const mb = toModel(b);
-  const max = opts.maxCombinations ?? DEFAULT_MAX_COMBINATIONS;
+  const max = boundOf(opts);
   const pr = probesFor([ma, mb]);
   const outcome = search(pr, (rep) => admits(ma, rep) !== admits(mb, rep), max);
   if (outcome.hit !== undefined) {
@@ -279,7 +285,7 @@ function approxNote(models: PolicyModel[], overflow: boolean): string | undefine
  */
 export function intentConformance(policy: PolicyInput, intent: Intent, opts: AnalyzerOptions = {}): IntentConformanceResult {
   const model = toModel(policy);
-  const max = opts.maxCombinations ?? DEFAULT_MAX_COMBINATIONS;
+  const max = boundOf(opts);
   const amountField = intent.amountField ?? 'amount';
   const minAmount = intent.minAmount ?? 0;
 

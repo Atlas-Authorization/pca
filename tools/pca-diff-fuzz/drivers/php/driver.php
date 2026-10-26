@@ -57,6 +57,13 @@ foreach (file($inp, FILE_IGNORE_NEW_LINES) as $line) {
             if (is_string($why) && str_contains($why, Pca::UNSUPPORTED_SUITE)) {
                 $r['unsupported_suite'] = $why;
             }
+        } elseif ($c['kind'] === 'policy') {
+            // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+            // evaluateCaveats(policyCaveats(grant, chain), context) as {allow, failed}
+            $pv = Json::parseLax($c['raw']);
+            $res = Pca::evaluateCaveats(Pca::policyCaveats($pv->get('grant'), $pv->get('chain')), $pv->get('context'));
+            $r['allow'] = $res['ok'] === true;
+            $r['failed'] = array_values($res['failed']);
         } elseif (str_starts_with((string)$c['kind'], 'intent_')) {
             // Intent Layer v2 primitives: raw = JSON text of the primitive's `input`; result = its conformance `expect` shape
             // (IntentV2::primitive, the entry the native runners use), written as canonical JSON.

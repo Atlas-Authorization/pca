@@ -80,15 +80,17 @@ export function simulate(
 ): SimReport {
   const catalog = opts.catalog ?? DEFAULT_CATALOG;
   const start = opts.start ?? 0;
-  const ordered = actions
-    .map((a, i) => ({ a, at: a.at ?? start + i }))
-    .sort((x, y) => x.at - y.at);
+  // An action with no usable time cannot be replayed in order: it is reported as denied, not skipped or guessed.
+  const timed = actions.map((a, i) => ({ a, at: a.at ?? start + i }));
+  const untimed = timed.filter((x) => !Number.isFinite(x.at));
+  const ordered = timed.filter((x) => Number.isFinite(x.at)).sort((x, y) => x.at - y.at);
 
   let budget: TrustBudget = { B: policy.riskPolicy.bMax, tau: start, asOf: start };
   const recent: number[] = [];
   const results: SimResult[] = [];
   let peakRisk = 0;
   let autonomousRisk = 0;
+  for (const { a } of untimed) results.push({ action: a, outcome: 'deny', r: 1, reason: 'action has no finite time', budgetAfter: budget.B });
 
   for (const { a, at } of ordered) {
     const spec = catalog.get(a.verb);

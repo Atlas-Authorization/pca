@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-conformance",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Canonical PCActn conformance vectors + a differential harness so every PCA verifier implementation (the 9 language SDKs, the zkVM, the TS core) provably agrees on accept/reject for the same inputs.",
   "keywords": [
     "conformance",
@@ -54,5 +54,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "stable"
   }
 }

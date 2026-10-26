@@ -10,9 +10,9 @@ import {
   verifyInclusion,
   verifyPCActnCore,
   type Capability,
-  type IntentPolicy,
   type PCActn,
 } from './index';
+import { type IntentPolicy } from './ext/intent';
 import { verifyWithSuite } from './pq-test-support';
 import { type Signer, type ThresholdShare, verifyThreshold } from './threshold';
 

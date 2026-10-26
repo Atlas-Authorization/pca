@@ -13,6 +13,8 @@
  */
 import {
   createRemoteJWKSet,
+  base64url,
+  decodeProtectedHeader,
   errors as joseErrors,
   jwtVerify,
   type JWK,
@@ -21,6 +23,7 @@ import {
   type JWTVerifyOptions,
   type KeyLike,
 } from 'jose';
+import { createHash } from 'node:crypto';
 import { assertCanonicalCompactJws } from '@atlasauth/pca';
 import { discoverOidc } from './discovery';
 
@@ -39,6 +42,9 @@ export type OidcVerificationErrorCode =
   | 'not_before'
   | 'nonce'
   | 'azp'
+  | 'at_hash'
+  | 'c_hash'
+  | 'keys'
   | 'claims';
 
 /** The error thrown for any ID-token verification failure. `code` classifies the cause. */
@@ -72,6 +78,8 @@ export interface OidcIdTokenClaims extends JWTPayload {
   exp: number;
   nonce?: string;
   azp?: string;
+  at_hash?: string;
+  c_hash?: string;
   auth_time?: number;
   email?: string;
   email_verified?: boolean;
@@ -95,6 +103,13 @@ export interface VerifyIdTokenOptions {
    * Defaults to `audience` when that is a single string.
    */
   authorizedParty?: string;
+  /**
+   * When set, the ID token's `at_hash` MUST be present and equal the left half of the hash of this
+   * access token (OIDC Core 3.1.3.6 / 3.2.2.9). Use it whenever you also use the access token.
+   */
+  accessToken?: string;
+  /** When set, the ID token's `c_hash` MUST be present and equal the hash of this authorization code (OIDC Core 3.3.2.11). */
+  code?: string;
   /** Clock skew tolerance in seconds (default 0). */
   clockToleranceSec?: number;
   /** When set, reject a token whose `iat` is older than this many seconds. */
@@ -167,7 +182,21 @@ export async function verifyIdToken(idToken: string, opts: VerifyIdTokenOptions)
     throw mapJoseError(cause);
   }
 
-  return projectClaims(payload, opts);
+  const claims = projectClaims(payload, opts);
+  const alg = decodeProtectedHeader(idToken).alg;
+  if (opts.accessToken !== undefined) checkHalfHash('at_hash', claims.at_hash, opts.accessToken, alg);
+  if (opts.code !== undefined) checkHalfHash('c_hash', claims.c_hash, opts.code, alg);
+  return claims;
+}
+
+/** OIDC Core 3.1.3.6: base64url(left half of H(value)), H chosen by the ID token's alg (EdDSA = SHA-512). */
+function checkHalfHash(name: 'at_hash' | 'c_hash', actual: string | undefined, value: string, alg: string | undefined): void {
+  if (actual === undefined) throw new OidcVerificationError(name, `id token is missing the expected ${name}`);
+  const bits = alg === 'EdDSA' ? 512 : /(256|384|512)$/.exec(alg ?? '')?.[1];
+  if (bits === undefined) throw new OidcVerificationError(name, `cannot compute ${name} for alg ${String(alg)}`);
+  const digest = createHash(`sha${bits}`).update(value, 'ascii').digest();
+  const expected = base64url.encode(digest.subarray(0, digest.length / 2));
+  if (actual !== expected) throw new OidcVerificationError(name, `id token ${name} does not match the supplied value`);
 }
 
 async function resolveKey(opts: VerifyIdTokenOptions): Promise<OidcVerifyKey> {
@@ -196,6 +225,8 @@ function projectClaims(payload: JWTPayload, opts: VerifyIdTokenOptions): OidcIdT
 
   const nonce = asString(payload.nonce);
   const azp = asString(payload.azp);
+  const atHash = asString(payload.at_hash);
+  const cHash = asString(payload.c_hash);
 
   // nonce binding (OIDC Core §3.1.3.7): when the RP supplied a nonce it MUST round-trip exactly.
   if (opts.nonce !== undefined && nonce !== opts.nonce) {
@@ -234,6 +265,8 @@ function projectClaims(payload: JWTPayload, opts: VerifyIdTokenOptions): OidcIdT
     exp,
     ...(nonce !== undefined ? { nonce } : {}),
     ...(azp !== undefined ? { azp } : {}),
+    ...(atHash !== undefined ? { at_hash: atHash } : {}),
+    ...(cHash !== undefined ? { c_hash: cHash } : {}),
     ...(authTime !== undefined ? { auth_time: authTime } : {}),
     ...(email !== undefined ? { email } : {}),
     ...(emailVerified !== undefined ? { email_verified: emailVerified } : {}),

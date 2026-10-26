@@ -1,5 +1,7 @@
 # @atlasauth/pca-fndsa
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 FN-DSA (Falcon, FIPS 206 draft) signature suites for Proof-Carrying Authority. It defines the suite ids, the fixed wire sizes, strict length enforcement and the PCA leaf-signature framing (pure and hybrid with Ed25519). The Falcon arithmetic itself is delegated to a pluggable backend, because a constant-time Falcon is not something to hand-roll in TypeScript. Use [`@atlasauth/pca-fndsa-wasm`](https://www.npmjs.com/package/@atlasauth/pca-fndsa-wasm) as the backend.
 
 FN-DSA keys and signatures are much smaller than ML-DSA's, which helps on bandwidth-bound surfaces.

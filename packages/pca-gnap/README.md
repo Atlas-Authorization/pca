@@ -1,5 +1,7 @@
 # @atlasauth/pca-gnap
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A [GNAP (RFC 9635)](https://www.rfc-editor.org/rfc/rfc9635) bridge for Proof-Carrying Authority (PCA), defining an "agent-GNAP" profile. A GNAP grant request is turned into an attenuated, key-bound PCA capability; a GNAP `access` rights array becomes the capability's policy predicates; multi-hop delegation can only narrow authority; GNAP continuation maps to a PCA step-up; and key-bound requests use detached-JWS (`jwsd`) proofs.
 
 ## Install
@@ -62,7 +64,33 @@ Delegated hops are clamped to the issuer's own authority at issue time (`clampTo
 
 ## Status
 
-Experimental. The profile is defined by this package, not by an IETF document, and it implements only the GNAP subset it needs: a single access token per request, `jwsd` as the verified proof method, and no `httpsig` or `mtls` verification. The cryptography is unaudited.
+Experimental. The profile is defined by this package on top of RFC 9635; it is not an IETF profile. The cryptography is unaudited.
+
+## Supported subset (the contract)
+
+| GNAP feature | Support |
+|---|---|
+| Single access token request (`access_token.access`) | supported |
+| Multiple access tokens (array), `subject`, `user`, `access_token.flags` semantics | not supported: a request without `access_token.access` is refused |
+| Client key proof `jwsd` (detached JWS, EdDSA, `typ` `gnap-binding-jwsd`) | supported, verified |
+| Client key proof `httpsig`, `mtls`, `jwsd-vc`, any other or missing method | not supported: refused at grant time |
+| Client key as a reference string | not supported: refused |
+| Client key type | OKP / Ed25519 JWK only |
+| Interaction and continuation | maps to a PCA step-up (see API) |
+
+Nothing outside this table is silently ignored where it would widen authority: only the rights in `access_token.access` can be granted, and delegated hops can only narrow them.
+
+## Failure modes
+
+| Missing or invalid | Result |
+|---|---|
+| `client.key.proof` not `jwsd` (string or `{ method }`), even with a holder override | `GnapError`: unsupported client key proof method |
+| no OKP/Ed25519 `jwk` and no holder override, or non-canonical key encoding | `GnapError`: cannot resolve holder |
+| `access_token.access` missing, not an array, or a malformed item | `GnapError` |
+| `jwsd` bad signature, tampered body, wrong holder, wrong `typ` or `alg`, stale `created`, wrong `htm`/`uri`, wrong `ath` | `verifyGnapRequest` returns `{ ok: false, reason }` |
+| non-canonical detached-JWS spelling | `{ ok: false, reason }` before the signature check |
+| access token malformed, broken chain, wrong root issuer | `verifyGnapToken` returns `{ ok: false }` |
+| action outside the root envelope or any hop's rights | `authorizeGnapAction` returns `{ allowed: false, reason }` |
 
 ## License
 

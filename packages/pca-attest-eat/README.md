@@ -1,5 +1,7 @@
 # @atlasauth/pca-attest-eat
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Per-session attestation freshness and channel binding for Proof-Carrying Authority (PCA). TEE evidence (for example an AMD SEV-SNP attestation report) captured once is a static blob that can be replayed or relayed onto another session. This package emits that evidence as an Entity Attestation Token (EAT, RFC 9711, compact JWS with `typ: eat+jwt`), binds it to a live channel (RA-TLS style `cnf`) and a fresh per-session nonce, and appraises it with a RATS-style split of evidence, endorsements and reference values (RFC 9334).
 
 It also verifies the AMD SEV-SNP report signature (ECDSA P-384) and the VCEK, ASK, ARK certificate chain using only `node:crypto`, and can co-sign the resulting verdict with a post-quantum signature.

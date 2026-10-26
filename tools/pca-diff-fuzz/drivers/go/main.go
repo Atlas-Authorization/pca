@@ -88,6 +88,24 @@ func one(c in) (res map[string]any) {
 		}
 		return
 	}
+	if c.Kind == "policy" {
+		// Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+		// EvaluateCaveats(PolicyCaveats(grant, chain), context) as {allow, failed}
+		pv, err := pca.ParseJSONLenient([]byte(c.Raw))
+		o, _ := pv.(map[string]any)
+		ctx, _ := o["context"].(map[string]any)
+		if err != nil || o == nil || ctx == nil {
+			res["error"] = "exception:policy"
+			return
+		}
+		ok, failed := pca.EvaluateCaveats(pca.PolicyCaveats(o["grant"], o["chain"]), ctx)
+		if failed == nil {
+			failed = []string{}
+		}
+		res["allow"] = ok
+		res["failed"] = failed
+		return
+	}
 	if f, ok := v2Primitives[c.Kind]; ok {
 		in, err := pca.ParseJSONLenient([]byte(c.Raw))
 		if err != nil {

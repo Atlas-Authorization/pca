@@ -60,6 +60,13 @@ File.open(outp, 'w') do |o|
         r['allow'] = g.allow ? true : false
         r['checks'] = g.checks.to_h { |k, v| [k.to_s, v ? true : false] }
         r['unsupported_suite'] = g.reason if g.reason.to_s.include?(AtlasPca::UNSUPPORTED_SUITE)
+      elsif c['kind'] == 'policy'
+        # Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+        # evaluate_caveats(policy_caveats(grant, chain), context) as {allow, failed}
+        pv = AtlasPca.parse_json(c['raw'], loose: true)
+        ok, failed = AtlasPca.evaluate_caveats(AtlasPca.policy_caveats(pv['grant'], pv['chain']), pv['context'])
+        r['allow'] = ok ? true : false
+        r['failed'] = failed
       elsif V2_PRIMITIVES.key?(c['kind'])
         r['result'] = V2_PRIMITIVES[c['kind']].call(AtlasPca.parse_json_text(c['raw']))
       elsif c['kind'] == 'chain'

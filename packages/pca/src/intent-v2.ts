@@ -462,7 +462,11 @@ function accStep(p: PcactnView, ctx: IntentV2Context | undefined, now: number): 
   return { ok: true, env };
 }
 
-/** Run the v2 checks (never throws: an internal error fails the check being evaluated). */
+/**
+ * Run the v2 checks (never throws: an internal error fails the check being evaluated). `p.intent_session` must have passed
+ * `validateIntentSessionWire` (the core verifier wire-checks the PCActn first): a committed member of the wrong type is read as
+ * absent here, so a host that calls this function directly validates the member itself.
+ */
 export function decideIntentV2(p: PcactnView, grant: Capability, ctx: IntentV2Context | undefined, now: number): IntentV2Decision {
   const out: IntentV2Decision = { checks: [] };
   const present = p?.intent_session !== undefined;
@@ -470,7 +474,7 @@ export function decideIntentV2(p: PcactnView, grant: Capability, ctx: IntentV2Co
   const ctxErr = intentV2ContextError(ctx);
   if (ctxErr !== null) {
     // a malformed verifier context fails closed: every v2 check that could be reported fails with the reason
-    const committed = present && p.intent_session!.map_form === 'commit';
+    const committed = present && (p.intent_session as { map_form?: unknown } | null)?.map_form === 'commit';
     for (const name of ['schema', 'intent_session', ...(present ? (['accumulators'] as const) : []), ...(committed ? (['map'] as const) : [])] as const) out.checks.push({ name, ok: false, reason: `malformed v2 context: ${ctxErr}` });
     return out;
   }

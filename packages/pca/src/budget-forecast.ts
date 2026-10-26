@@ -52,6 +52,8 @@ export interface Recommendation {
  */
 export function recommendPolicy(targetActions: number, perActionRisk: number, opts: { kappa?: number } = {}): Recommendation {
   const kappa = opts.kappa ?? 1;
+  if (!Number.isFinite(kappa) || kappa <= 0) throw new RangeError('recommendPolicy: kappa must be a positive finite number');
+  if (!Number.isFinite(targetActions) || !Number.isFinite(perActionRisk)) throw new RangeError('recommendPolicy: targetActions and perActionRisk must be finite numbers');
   const r = Math.max(1e-6, Math.min(1, perActionRisk));
   const n = Math.max(0, targetActions);
   const bMax = n * r * kappa;

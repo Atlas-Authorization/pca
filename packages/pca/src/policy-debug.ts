@@ -25,8 +25,8 @@ import {
   type PCActn,
   type VerifyHooks,
   type VerifyResult,
-  verifyPCActnCore,
 } from './pcactn';
+import { verifyPCActnCore } from './pcactn-full';
 import {
   ageSinceTouch,
   cost,

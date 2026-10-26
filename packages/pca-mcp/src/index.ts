@@ -25,6 +25,12 @@ export interface McpToolResult {
   [k: string]: unknown;
 }
 
+/** The tool error `withPCA` returns when the local dry-run denies a call (a text content item and `isError: true`). */
+export interface PcaDeniedToolResult extends McpToolResult {
+  content: Array<{ type: 'text'; text: string }>;
+  isError: true;
+}
+
 /** An MCP tool handler: `(args, extra?) => result`, as registered via `server.tool` / `registerTool`. */
 export type McpToolHandler<ARGS = Record<string, unknown>> = (
   args: ARGS,
@@ -50,13 +56,13 @@ export interface GuardToolSpec<ARGS> {
  * On a local fast-fail (`PcaDenied`), returns an MCP error result (`{ isError: true }`) rather than
  * throwing — MCP handlers signal tool errors in-band via `isError` so the model can see them.
  */
-export function withPCA<ARGS extends Record<string, unknown>>(
+export function withPCA<ARGS extends Record<string, unknown>, R extends McpToolResult = McpToolResult>(
   agent: Agent,
   spec: GuardToolSpec<ARGS>,
-  handler: McpToolHandler<ARGS>,
-): McpToolHandler<ARGS> {
-  return async (args: ARGS, extra?: unknown): Promise<McpToolResult> => {
-    const run = guard<ARGS, McpToolResult>(
+  handler: (args: ARGS, extra?: unknown) => Promise<R> | R,
+): (args: ARGS, extra?: unknown) => Promise<R | PcaDeniedToolResult> {
+  return async (args: ARGS, extra?: unknown): Promise<R | PcaDeniedToolResult> => {
+    const run = guard<ARGS, R>(
       agent,
       {
         verb: spec.verb,
@@ -94,3 +100,6 @@ export { bridgeToolCall, pcaHeaders, type PcaCall };
 
 // Intent Layer v2: MCP tools -> the site's signed action schema, and the closed-world check of a tool call.
 export * from './schema';
+
+// The agent's per-call proof fetch for MCP client transports.
+export * from './fetch';

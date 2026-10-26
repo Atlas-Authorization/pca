@@ -1,6 +1,6 @@
 import * as agentNative from '../agent-native';
 import { describe, expect, it } from 'vitest';
-import { enforceRequired, verifyPCActn } from './verify';
+import { enforceRequired, verifyPCActn as verifyPCActn05 } from './verify';
 import { AUD, NOW, setup } from './fixture.test-util';
 import { encodePCActn } from '../pcactn';
 
@@ -17,6 +17,15 @@ describe('verifyPCActn', () => {
     expect(v.checks.plan_root_authorized).toBe('not-enforced'); // no planAuthorized asserted
     expect(v.checks.revocation).toBe('not-enforced');
     expect(v.checks.threshold).toBe('not-enforced');
+  });
+
+  it('0.5 (B6): the stateless verdict reports counter_format only; a `require: [counter]` entry is the alias of it (no replay check without state)', async () => {
+    const s = setup();
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { grant: s.grant, now: NOW, audience: AUD, context: { plan: s.plan, risk: s.lowRisk, params: {} }, require: ['counter'] });
+    expect(v.allow).toBe(true);
+    expect([v.checks.counter_format, 'counter' in v.checks, 'replay' in v.checks]).toEqual(['pass', false, false]);
+    const w = await verifyPCActn(s.mk(s.plan[0]!), { grant: s.grant, now: NOW, audience: AUD, context: { plan: s.plan, risk: s.lowRisk, params: {} }, require: ['replay'] });
+    expect([w.allow, w.checks.replay]).toEqual([false, 'fail']);
   });
 
   it('accepts a string-encoded PCActn', async () => {
@@ -304,6 +313,8 @@ describe('verifyPCActn: omitted budget fails CLOSED (DENY-METERED)', () => {
 });
 
 import { hashCanonical as hashOf } from '../hash';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 describe('verifyPCActn: reasons from sub-checks are passed through verbatim', () => {
   it('a wire-form failure reports the core verifier\'s own reason (not a generic fallback) and stops there', async () => {

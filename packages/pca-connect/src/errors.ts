@@ -11,13 +11,16 @@ import type { CheckStatus } from '@atlasauth/pca';
  *  - `expired_no_refresh` the stored access token is expired/near-expiry and there is no refresh token to mint a new one.
  *  - `refresh_failed`     a refresh was attempted but the provider token endpoint call failed (no config, network, non-2xx, or unparseable body).
  *  - `unknown_connection` no stored connection exists for this agent + provider + connectionId.
+ *  - `store_error`        the connection store (or its encryption) failed; the vault refuses rather than guess.
+ *  - `store_error`        the connection store (or its encryption) failed; the vault refuses rather than guess.
  */
 export type VaultErrorCode =
   | 'not_authorized'
   | 'scope_exceeded'
   | 'expired_no_refresh'
   | 'refresh_failed'
-  | 'unknown_connection';
+  | 'unknown_connection'
+  | 'store_error';
 
 /** Base class for every typed refusal the vault raises. Branch on {@link VaultError.code}. */
 export class VaultError extends Error {
@@ -95,5 +98,13 @@ export class UnknownConnectionError extends VaultError {
     this.agentId = agentId;
     this.provider = provider;
     this.connectionId = connectionId;
+  }
+}
+
+/** The connection store or its encryption failed. The message never carries the underlying error text. */
+export class StoreError extends VaultError {
+  constructor(message = 'the connection store failed') {
+    super('store_error', message);
+    this.name = 'StoreError';
   }
 }

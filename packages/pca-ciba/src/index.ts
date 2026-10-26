@@ -578,3 +578,4 @@ export function cibaDecisionToCosign(
 }
 
 export * from './client';
+export * from './approval';

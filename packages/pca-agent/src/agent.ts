@@ -8,8 +8,8 @@ import {
   buildPCActn,
   commitPlan as commitPlanLocal,
   delegate as delegateCap,
-  verifyLedgerInclusion,
 } from '@atlasauth/pca';
+import { verifyLedgerInclusion } from '@atlasauth/pca/ext/ledger';
 
 export type FetchLike = (
   url: string,

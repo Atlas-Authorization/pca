@@ -56,7 +56,7 @@ import { x509ValidityMs } from './x509-validity';
 import { sha384 } from '@noble/hashes/sha512';
 import { p384 } from '@noble/curves/p384';
 import { attestationBinding } from './attestation';
-import { checkChainRoles, ecPointFromKey, parseCertExtensions, parseTbsExtensions, tbsOfCertificate } from './x509-strict';
+import { RECOGNISED_CRITICAL_EXTENSIONS, checkChainRoles, ecPointFromKey, parseCertExtensions, parseTbsExtensions, tbsOfCertificate } from './x509-strict';
 import type { CertExtension } from './x509-strict';
 import type { MeasuredIdentity } from './attestation';
 
@@ -484,7 +484,7 @@ export async function verifyAmdCertChain(opts: {
 }
 
 /** Critical extensions this verifier understands (RFC 5280 §4.2: an unrecognised critical extension is fatal). */
-const KNOWN_CRITICAL_OK: ReadonlySet<string> = new Set(['2.5.29.19', '2.5.29.15']);
+const KNOWN_CRITICAL_OK: ReadonlySet<string> = RECOGNISED_CRITICAL_EXTENSIONS;
 
 /** The outcome of a full genuine-report verification. */
 export interface GenuineReportResult {
@@ -522,6 +522,12 @@ export async function verifyGenuineSevSnpReport(opts: {
       report = parseSevSnpReport(opts.report);
     } catch (e) {
       return { ok: false, reason: `report parse failed: ${e instanceof Error ? e.message : 'unknown'}` };
+    }
+    // The report is exactly 1184 bytes and the signature block beyond r and s is reserved-zero: anything else is a second
+    // encoding of the same signed report (malleability), so it is refused rather than ignored.
+    if (opts.report.length !== OFF.REPORT_LEN) return { ok: false, reason: `report length ${opts.report.length} is not the canonical ${OFF.REPORT_LEN}` };
+    if (opts.report.subarray(OFF.SIG_S + 72).some((b) => b !== 0) || opts.report.subarray(OFF.SIG_R + 48, OFF.SIG_R + 72).some((b) => b !== 0) || opts.report.subarray(OFF.SIG_S + 48, OFF.SIG_S + 72).some((b) => b !== 0)) {
+      return { ok: false, reason: 'report signature block has non-zero reserved bytes' };
     }
 
     const chain = await verifyAmdCertChain({

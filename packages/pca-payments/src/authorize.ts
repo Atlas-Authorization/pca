@@ -59,6 +59,11 @@ export interface ChargeDecision {
   decision: PolicyDecision;
 }
 
+/** Reason on a charge whose amount is not a non-negative safe integer (minor units). */
+export const AMOUNT_NOT_MINOR_UNITS = 'amount_not_integer_minor_units';
+/** True for a non-negative safe integer (amounts are integer minor units: cents, not dollars). */
+export const isMinorUnits = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0;
+
 const num = (x: unknown, fallback: number): number => (typeof x === 'number' && Number.isFinite(x) ? x : fallback);
 
 /** Build the `ActionContext` a charge denotes (the verb/resource/params the predicates + risk read). */
@@ -159,7 +164,11 @@ export function authorizeCharge(mandate0: PaymentMandate, charge: Charge, verifi
   const mandate = bindToVerifiedGrant(mandate0, verifiedGrant);
   const now = num(charge.now, Date.now());
   const input = chargeDecideInput(mandate, charge, now, verifiedGrant);
-  const decision = decide(input);
+  const raw = decide(input);
+  // Integer minor units only: a fractional, NaN, negative or unsafe amount is refused whatever the policy says.
+  const decision: PolicyDecision = isMinorUnits(charge.amount)
+    ? raw
+    : { ...raw, admit: false, releaseGuardianShare: false, reasons: [AMOUNT_NOT_MINOR_UNITS, ...raw.reasons], budget: mandate.budget };
 
   let outcome: ChargeOutcome;
   if (!decision.releaseGuardianShare) outcome = 'deny';
@@ -200,4 +209,50 @@ export function applyHumanCosign(mandate: PaymentMandate, now: number, opts: { f
     ? rechargeFull(mandate.budget, mandate.policy.bMax, now)
     : recharge(mandate.budget, mandate.policy.rho, mandate.policy.bMax, now);
   return { ...mandate, budget };
+}
+
+/**
+ * Durable cumulative-budget state with an atomic compare-and-set. `version` is opaque to the caller: `compareAndSet`
+ * succeeds only when the stored version still equals `expected` (`undefined` = no record yet) and returns false
+ * otherwise. Back it with a single conditional write (SQL `UPDATE .. WHERE version = $n`, Redis CAS, DynamoDB condition).
+ */
+export interface ChargeBudgetStore {
+  get(key: string): Promise<{ budget: TrustBudget; version: number } | undefined>;
+  compareAndSet(key: string, expected: number | undefined, budget: TrustBudget): Promise<boolean>;
+}
+
+export class ChargeStoreError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ChargeStoreError';
+  }
+}
+
+const MAX_CAS_ATTEMPTS = 8;
+
+/**
+ * {@link authorizeCharge} against the DURABLE cumulative budget in `store` (the mandate's own `budget` is only the
+ * initial value). The debit of an `auto` charge is committed with an atomic compare-and-set before it is returned, so
+ * two concurrent charges cannot both spend the same budget; losing the race re-reads and re-decides. A store that is
+ * missing or malformed throws {@link ChargeStoreError}; persistent contention returns a `deny`.
+ */
+export async function authorizeChargeAtomic(
+  mandate: PaymentMandate,
+  charge: Charge,
+  verifiedGrant: Capability,
+  store: ChargeBudgetStore,
+  key: string = hashCanonical(verifiedGrant),
+): Promise<ChargeDecision> {
+  if (!store || typeof store.get !== 'function' || typeof store.compareAndSet !== 'function') {
+    throw new ChargeStoreError('a ChargeBudgetStore with get and compareAndSet is required');
+  }
+  for (let i = 0; i < MAX_CAS_ATTEMPTS; i++) {
+    const rec = await store.get(key);
+    const m = rec ? { ...mandate, budget: rec.budget } : mandate;
+    const d = authorizeCharge(m, charge, verifiedGrant);
+    if (d.outcome !== 'auto') return d;
+    if (await store.compareAndSet(key, rec?.version, d.budgetAfter)) return d;
+  }
+  const d = authorizeCharge(mandate, charge, verifiedGrant);
+  return { ...d, outcome: 'deny', t: 3, cost: 0, budgetAfter: d.budgetBefore, reasons: ['budget_store_conflict', ...d.reasons] };
 }

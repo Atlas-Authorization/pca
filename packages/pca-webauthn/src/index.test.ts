@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { p256 } from '@noble/curves/p256';
 import { ed25519 } from '@noble/curves/ed25519';
 import { sha256 } from '@noble/hashes/sha256';
-import { type PCActnBody, b64u, frostActionDigest, thresholdMessage } from '@atlasauth/pca';
+import { type PCActnBody, b64u, thresholdMessage } from '@atlasauth/pca';
+import { frostActionDigest } from '@atlasauth/pca/ext/frost';
 import {
   type Assertion,
   type VerifyExpectations,

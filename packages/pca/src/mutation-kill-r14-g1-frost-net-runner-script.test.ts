@@ -42,7 +42,7 @@ type ModuleInternals = typeof Module & {
 
 /** Run frost-net-runner.ts as the entry script with `argv` / `env`; optionally deliver `signal` once it is ready. */
 async function runAsScript(argv: string[], env: Record<string, string | undefined>, signal?: 'SIGTERM' | 'SIGINT'): Promise<ScriptRun> {
-  const req = createRequire(import.meta.url);
+  const req = createRequire(__filename);
   const { register } = req('tsx/cjs/api') as { register(): () => void };
   const unregister = register();
   const out: ScriptRun = { exits: [], stdout: '', stderr: '', subscribed: [] };

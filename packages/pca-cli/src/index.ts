@@ -20,11 +20,10 @@ import {
   compilePolicy,
   decodePCActn,
   generateKeyPair,
-  lintPolicy,
-  simulate,
   unb64u,
   verifyPCActnCore,
 } from '@atlasauth/pca';
+import { lintPolicy, simulate } from '@atlasauth/pca/ext/research';
 
 // ---- small helpers --------------------------------------------------------------------------------
 

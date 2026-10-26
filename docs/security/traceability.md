@@ -1,6 +1,6 @@
 ---
 title: Traceability
-order: 32
+order: 33
 ---
 
 # Traceability matrix (for auditors)
@@ -166,6 +166,9 @@ order: 32
 | T-028 | packages/pca/src/attest-multiroot.test.ts | DENIES below threshold |
 | T-028 | packages/pca/src/attest-amd-snp.test.ts | breaking either root drops below threshold |
 | T-028 | packages/pca/src/attest-multiroot.test.ts | a required root that fails denies the whole attestation through the hook |
+| T-028 | packages/pca/src/attest-forged-root.test.ts | 2-of-2: the forged quote claims the allowlisted image |
+| T-028 | packages/pca/src/attest-forged-root.test.ts | both roots verify but disagree on the measured identity |
+| T-028 | packages/pca/src/attest-forged-root.test.ts | RESIDUAL RISK, pinned |
 | T-029 | packages/pca/src/hardware-sevsnp.test.ts | REJECTS a 1-bit-tampered genuine report |
 | T-029 | packages/pca/src/hardware-sevsnp.test.ts | CHIP_ID: a VCEK for a different chip cannot vouch for this report |
 | T-029 | packages/pca/src/hardware-sevsnp.test.ts | HOST_DATA is host-asserted: not mapped to weights by default |
@@ -223,6 +226,10 @@ order: 32
 | T-039 | packages/pca/src/adversarial.test.ts | any mutated field breaks verifySettlement |
 | T-039 | packages/pca/src/adversarial.test.ts | a FABRICATED fraud proof (asserted decision not reproducible) is rejected on recomputation |
 | T-039 | packages/pca/src/optimistic.test.ts | UPHOLDS an honest claim against a frivolous dispute AND marks the counter-bond for slashing |
+| T-039 | packages/pca/src/bond-store.test.ts | the same call returns the original record and takes the collateral once |
+| T-039 | packages/pca/src/bond-store.test.ts | opens at the ledger clock, never at the claim issued_at |
+| T-039 | packages/pca/src/bond-store.test.ts | refuses a fraud slash after the window closed |
+| T-039 | packages/pca/src/bond-store.test.ts | refuses a claim other than the one registered |
 | T-040 | packages/pca/src/adversarial.test.ts | two validly-witnessed heads at the same size with different roots prove EQUIVOCATION |
 | T-040 | packages/pca/src/adversarial.test.ts | the witness-threshold is FAIL-CLOSED |
 | T-040 | packages/pca/src/adversarial.test.ts | a FORGED prev_root on adjacent heads breaks verifyHeadConsistency |
@@ -230,6 +237,11 @@ order: 32
 | T-040 | packages/pca/src/ledger.test.ts | split view: two conflicting roots at the same size cannot both gather an honest-witness threshold |
 | T-040 | packages/pca/src/mesh.test.ts | refuses equivocation (same size, different log) and rollback |
 | T-040 | packages/pca/src/mesh.test.ts | rejects a head cosigned only by unpinned (attacker) witnesses |
+| T-040 | packages/pca/src/ledger-store.test.ts | rollback: entries missing after a checkpoint |
+| T-040 | packages/pca/src/ledger-store.test.ts | tamper: an entry edited, inserted or reordered no longer reproduces a checkpoint root |
+| T-040 | packages/pca/src/ledger-checkpoints.test.ts | rewritten history between checkpoints, a shrinking log and a broken prev_root link are all inconsistent |
+| T-040 | packages/pca/src/ledger-checkpoints.test.ts | two genuine heads, one log, one size, two roots |
+| T-040 | tools/pca-witness/test/witness.test.ts | refuses a rollback and a split view |
 | T-041 | packages/pca/src/threat-model-gaps.test.ts | an action WITH an inclusion proof against a guardian-signed |
 | T-041 | packages/pca/src/threat-model-gaps.test.ts | an action the operator never appended (omission) is refused |
 | T-041 | packages/pca/src/threat-model-gaps.test.ts | a proof against an UNWITNESSED or under-witnessed head is refused |
@@ -305,6 +317,12 @@ order: 32
 | T-051 | packages/pca/src/grant-ref-binding.test.ts | grant_ref_bound closes the replay-namespace bypass |
 | T-051 | packages/pca/src/grant-ref-binding.test.ts | grant_ref_bound: the check |
 | T-051 | packages/pca-conformance/adversarial/gen-adversarial.ts | grant-ref-bound |
+| T-052 | packages/pca/src/passport-signed.test.ts | every signed field is covered: tampering any of them fails |
+| T-052 | packages/pca/src/passport-signed.test.ts | rejects a forged flag (signed false->true by hand) and a flag with no evidence |
+| T-052 | packages/pca/src/passport-signed.test.ts | accepts the evidence only through an attestation verifier; no verifier = reject, not downgrade |
+| T-052 | packages/pca/src/passport-signed.test.ts | hardware evidence age is re-checked at verify time (exact boundaries, default 24 h, skew for the future) |
+| T-052 | packages/pca/src/passport-signed.test.ts | passport conformance vectors |
+| T-052 | packages/pca/src/server/authorize-passport.test.ts | a refused passport never consumes the PCActn: the same PCActn is then allowed with a valid passport |
 
 ## Guarantee coverage (G-IDs)
 
@@ -351,7 +369,7 @@ order: 32
 | G-9 | packages/pca/src/pq.test.ts | unknown alg => wire fail (terminal) |
 | G-9 | packages/pca/src/pq.test.ts | valid Ed25519 but INVALID ML-DSA => fail (both required) |
 | G-9 | packages/pca/src/pq-surfaces.test.ts | (d) unknown suite + downgrade are fail-closed |
-| G-9 | packages/pca/src/pq-pinning.test.ts | R2-01: a pure-PQ artifact signed by an attacker key but naming the pinned identity is rejected on every surface; genuine pinned artifacts verify |
+| G-9 | packages/pca/src/pq-pinning.test.ts | ed25519 needs no pin; pure/hybrid refused without a pin; pinned key required to match |
 | G-10 | packages/pca/src/attestation.test.ts | relay: a genuine signed quote bound to a different holder |
 | G-10 | packages/pca/src/attest-amd-snp.test.ts | the family pin matters: this Genoa chain is rejected under the Milan or Turin roots |
 | G-10 | packages/pca/src/hardware-sevsnp.test.ts | END-TO-END: ACCEPTS the genuine report |
@@ -369,11 +387,16 @@ order: 32
 | G-12 | packages/pca/src/ledger.test.ts | a rewritten history is not consistent with the old head |
 | G-12 | packages/pca/src/adversarial.test.ts | two validly-witnessed heads at the same size with different roots prove EQUIVOCATION |
 | G-12 | packages/pca/src/ledger.test.ts | k-of-n: threshold met |
+| G-12 | packages/pca/src/ledger-store.test.ts | forged checkpoint: a bad signature, another log, or the wrong guardian pin |
+| G-12 | tools/pca-witness/test/witness.test.ts | cosigns an extension only with a proof that connects it to the last cosigned head |
+| G-12 | packages/pca/src/conformance-ext.test.ts | every vector reproduces, with accepts and rejects |
 | G-13 | packages/pca/src/adversarial.test.ts | under-reporting caution gains the agent NOTHING |
 | G-13 | packages/pca/src/taint.test.ts | is MONOTONE: adding a ref can only raise taint, never lower it |
 | G-13 | packages/pca/src/taint.test.ts | a missing registry in the context fails closed |
 | G-13 | packages/pca/src/agent-native.test.ts | under-report gains nothing; over-report escalates |
 | G-14 | packages/pca/src/optimistic.test.ts | an out-of-policy optimistic claim yields a verifying fraud proof -> slash |
+| G-14 | packages/pca/src/bond-store.test.ts | dispute slash and counter-bond slash use the same recomputed verdicts as the in-memory ledger |
+| G-14 | packages/pca/src/conformance-ext.test.ts | every vector reproduces |
 | G-14 | packages/pca/src/optimistic.test.ts | a fraud proof with a fabricated decision is rejected on recomputation |
 | G-14 | packages/pca/src/optimistic.test.ts | does NOT slash an honest claim when current taint/budget/time have drifted |
 | G-14 | packages/pca/src/optimistic.test.ts | refuses irreversible actions on the optimistic path |
@@ -391,6 +414,135 @@ order: 32
 | G-18 | packages/pca/src/prohibitions.test.ts | prohibitions are independent of the plan |
 | G-18 | packages/pca/src/prohibitions.test.ts | forged all-clear evidence for a violating action is rejected |
 | G-18 | packages/pca/src/prohibitions.test.ts | sign / verify / tamper |
+| G-19 | packages/pca/src/passport-signed.test.ts | signed passport: reason codes |
+| G-19 | packages/pca/src/passport-signed.test.ts | every signed field is covered: tampering any of them fails |
+| G-19 | packages/pca/src/passport-signed.test.ts | passport conformance vectors |
+| G-19 | packages/pca/src/server/authorize-passport.test.ts | a refused passport never consumes the PCActn: the same PCActn is then allowed with a valid passport |
+
+## Security contract coverage (C-IDs)
+
+The invariants of the [Security contract](./security-contract.md). The rows name tests of the surfaces where the invariant is enforced; the contract states, per surface, where it is not.
+
+| ID | Test file | Test name (substring) |
+|---|---|---|
+| C-1 | packages/pca/src/server/verify.test.ts | denies an out-of-plan action |
+| C-1 | packages/pca/src/server/verify.test.ts | denies a tampered body |
+| C-1 | packages/pca/src/server/require-pca.test.ts | 401 on tampered signature |
+| C-1 | packages/pca/src/adversarial.test.ts | an EXPIRED PCActn |
+| C-1 | packages/pca/src/adversarial.test.ts | an audience MISMATCH is rejected |
+| C-1 | packages/pca/src/adversarial.test.ts | a signature from the wrong key is rejected |
+| C-2 | packages/pca/src/grant-ref-binding.test.ts | is part of the default-deny profile |
+| C-2 | packages/pca/src/adversarial.test.ts | a child that DROPS a parent caveat is rejected |
+| C-2 | packages/pca/src/adversarial.test.ts | a hop issued by a key that is NOT the parent holder |
+| C-2 | packages/pca/src/threat-model-gaps.test.ts | only resolves grants IT enrolled |
+| C-3 | packages/pca/src/r041-root-caveats.test.ts | verifyPCActn DENIES an action that exceeds a root max_spend |
+| C-3 | packages/pca/src/r041-root-caveats.test.ts | a root caveat type the policy layer does not implement fails closed |
+| C-3 | packages/pca/src/r041-root-caveats.test.ts | root and hop caveats both apply |
+| C-3 | packages/pca/src/server/verify.test.ts | unknown delegated caveat types still fail closed |
+| C-3 | packages/pca-mcp-rs/src/tool-call.test.ts | an over-limit amount |
+| C-4 | packages/pca/src/server/verify.test.ts | denies params that do not open the digest |
+| C-4 | packages/pca-mcp-rs/src/tool-call.test.ts | another tool, another resource or other arguments |
+| C-4 | packages/pca-gateway/src/bind.test.ts | bindRequest denies a proof used on a different path |
+| C-5 | packages/pca/src/server/verify.test.ts | the agent cannot lower risk through taint |
+| C-5 | packages/pca/src/server/verify.test.ts | caution is MONOTONE |
+| C-5 | packages/pca/src/server/verify.test.ts | the RS-authoritative reversibility class wins |
+| C-5 | packages/pca/src/mutation-kill-agent-native.test.ts | never lowers |
+| C-5 | packages/pca/src/pcactn.test.ts | an agent CANNOT forge low taint |
+| C-6 | packages/pca/src/server/require-pca.test.ts | replay is denied with a store; budget drains |
+| C-6 | packages/pca/src/server/require-pca.mutation-kill.test.ts | without a store the counter is reported not-enforced |
+| C-6 | packages/pca/src/threat-model-gaps.test.ts | two independent guard instances over ONE store also admit exactly one |
+| C-6 | packages/pca/src/threat-model-gaps.test.ts | its failure fails CLOSED |
+| C-6 | packages/pca/src/replay.test.ts | exactly one accepted |
+| C-6 | packages/pca-mcp-rs/src/tool-call.test.ts | a replayed proof |
+| C-6 | packages/pca-gateway/src/index.test.ts | replayed-proof |
+| C-7 | packages/pca/src/revocation.test.ts | rejects stale/expired/rollback epochs |
+| C-7 | packages/pca/src/revocation.test.ts | fails closed on missing root, missing proof, or a forged proof |
+| C-7 | packages/pca/src/server/verify.test.ts | denies when a RevocationChecker hook reports revoked |
+| C-7 | packages/pca/src/server/require-pca.test.ts | allows only when counter, revocation and plan_root_authorized are all ENFORCED |
+| C-8 | packages/pca/src/threshold-server-t.test.ts | refuses to be built without an explicit server-side t |
+| C-8 | packages/pca/src/threshold-server-t.test.ts | a hook configured BELOW the server-derived t is rejected |
+| C-8 | packages/pca/src/server/verify.test.ts | without an enforced threshold verifier is denied |
+| C-8 | packages/pca/src/mutation-kill-threshold.test.ts | there is NO risk_claim-derived default |
+| C-9 | packages/pca/src/server/require-pca.test.ts | allows only when counter, revocation and plan_root_authorized are all ENFORCED |
+| C-9 | packages/pca/src/server/verify.test.ts | required-but-not-enforced check DENY |
+| C-9 | packages/pca/src/server/verify.test.ts | omitted budget does NOT auto-admit |
+| C-9 | packages/pca/src/pcactn.test.ts | present zk_compliance + NO hook |
+| C-9 | packages/pca/src/server/require-pca.test.ts | require-when-bound |
+| C-10 | NO AUTOMATED TEST | |
+| C-11 | packages/pca/src/attest-fail-closed-table.test.ts | software attestation: missing or invalid X => exact denial |
+| C-11 | packages/pca/src/attest-fail-closed-table.test.ts | hardware seam: missing or invalid X => exact denial, labels honest |
+| C-11 | packages/pca/src/attest-allowlist-fail-closed-table.test.ts | verifyAllowlistManifest: missing or invalid X => exact result |
+| C-11 | packages/pca/src/attest-allowlist-fail-closed-table.test.ts | verifyAllowlistDurable: missing or corrupt state => exact result |
+| C-11 | packages/pca/src/attest-pq-software-fail-closed-table.test.ts | attest-pq-software: missing or invalid X => exact result |
+| C-11 | packages/pca/src/attest-allowlist-anchor-vectors.test.ts | allowlist-anchor conformance vectors |
+| C-11 | packages/pca/src/zk-attested-vm-hw.test.ts | attested-VM mode bound to hardware evidence |
+| C-11 | packages/pca/src/zk-attested-vm-hw.test.ts | prover key revocation, rotation and statement freshness |
+| C-11 | packages/pca/src/zk-attested-vm-hw.test.ts | assurance requirement { zk: attested_vm_hardware } |
+| C-11 | packages/pca/src/x509-differential.test.ts | malformed and non-minimal encodings: exact rejection |
+| C-11 | packages/pca/src/x509-differential.test.ts | mutation corpus: where we parse and another parser parses, the role facts are identical |
+| C-11 | packages/pca/src/attest-parser-fuzz.test.ts | targeted strictness rules (each fails without its check) |
+| C-11 | packages/pca/src/attest-canary.test.ts | the judge tells a fail-open verifier from a good one |
+| C-11 | packages/pca/src/attest-canary.test.ts | recorded real-evidence canary |
+| C-12 | packages/pca/src/passport-signed.test.ts | signed passport: reason codes |
+| C-12 | packages/pca/src/passport-signed.test.ts | every signed field is covered: tampering any of them fails |
+| C-12 | packages/pca/src/passport-signed.test.ts | rejects a forged flag (signed false->true by hand) and a flag with no evidence |
+| C-12 | packages/pca/src/passport-signed.test.ts | hardware evidence age is re-checked at verify time (exact boundaries, default 24 h, skew for the future) |
+| C-12 | packages/pca/src/passport-signed.test.ts | passport conformance vectors |
+| C-12 | packages/pca/src/server/authorize-passport.test.ts | a refused passport never consumes the PCActn: the same PCActn is then allowed with a valid passport |
+| C-13 | packages/pca/src/bond-store.test.ts | fail closed when a required component is missing |
+| C-13 | packages/pca/src/bond-store.test.ts | the same call returns the original record and takes the collateral once |
+| C-13 | packages/pca/src/bond-store.test.ts | two racing identical releases: one commits, one is a replay, funds move once |
+| C-13 | packages/pca/src/bond-store.test.ts | a release racing a slash: exactly one wins and the books conserve |
+| C-13 | packages/pca/src/bond-store.test.ts | a clock that steps backwards cannot reopen a closed window or release early |
+| C-13 | packages/pca/src/bond-store.test.ts | a process that dies after the claim opened comes back with the bond open and escrow intact |
+| C-13 | packages/pca/src/bond-store.test.ts | never half, and retrying finishes the job exactly once |
+| C-13 | packages/pca/src/conformance-ext.test.ts | extension layer: optimistic vectors |
+| C-13 | packages/pca/src/conformance-ext.test.ts | a fraud proof filed by the reference passes the wire check |
+| C-13 | packages/pca-store-conformance/src/bond-conformance.test.ts | a store whose moves land before the phase check is caught |
+| C-14 | packages/pca/src/ledger-store.test.ts | no store, a non-store or no guardian key refuses to open |
+| C-14 | packages/pca/src/ledger-store.test.ts | inconsistent: a chain whose boundary proof does not connect the two checkpoints |
+| C-14 | packages/pca/src/ledger-store.test.ts | checkpoint() refuses to sign over entries another writer rewrote since this handle loaded them |
+| C-14 | packages/pca/src/ledger-store.test.ts | two writers on one store never assign an index twice and lose no entry |
+| C-14 | packages/pca/src/ledger-store.test.ts | the log still verifies, and retrying finishes it |
+| C-14 | packages/pca/src/ledger-checkpoints.test.ts | a forged or foreign head fails at its own index with reason head |
+| C-14 | packages/pca/src/conformance-ext.test.ts | extension layer: ledger vectors |
+| C-14 | packages/pca/src/conformance-ext.test.ts | the domains the natives must reproduce are the library constants |
+| C-14 | packages/pca-store-conformance/src/ledger-conformance.test.ts | a store without compare-and-swap is caught |
+| C-14 | tools/pca-witness/test/witness.test.ts | a log of heads cosigned in sequence forms a chain a client verifies end to end |
+| T-053 | packages/pca/src/intent.test.ts | binding mismatches fail the intent check only |
+| T-053 | packages/pca/src/intent.test.ts | policies fail closed |
+| T-053 | packages/pca/src/intent-v2.test.ts | closed world: an undeclared parameter is a terminal schema deny |
+| T-053 | packages/pca/src/intent-dod1-audit.test.ts | no intent under an active policy: denied |
+| T-054 | packages/pca/src/intent-world.test.ts | refuses an unpinned oracle, a key that is not the pinned one, another subject, a duplicate oracle and an undeclared world |
+| T-054 | packages/pca/src/intent-dod1-audit.test.ts | an expired fact (older than freshness_ms): not counted, so the quorum is missed: denied; a future fact likewise |
+| T-054 | packages/pca/src/intent-dod1-audit.test.ts | a verdict from a judge not on the allowlist, for an undeclared classifier, with a label outside the set: denied |
+| T-054 | packages/pca/src/intent-dod1-audit.test.ts | a receipt signed by a key that is not pinned, or bound to another session: denied |
+| T-055 | packages/pca/src/intent-v2.test.ts | T11 (property): any split of any amounts, admitted concurrently, never pushes the counted sum over the cap |
+| T-055 | packages/pca/src/intent-history-window.test.ts | a counted event (or a candidate) with a non-integer time throws instead of being dropped from the cap |
+| T-055 | packages/pca/src/intent-v2.test.ts | receipt freshness: a leaked retired key, an old receipt, an old or superseded key set, an over-long lifetime are refused |
+| T-055 | packages/pca/src/intent-dod1-audit.test.ts | requireDurable refuses a volatile store |
+| T-056 | packages/pca/src/intent-v2.test.ts | append-only: an epoch that drops an id revoked in the tracked last epoch, or rolls back, or equivocates, is refused |
+| T-056 | packages/pca/src/intent-v2.test.ts | refuses: no epoch, a stale epoch, a revoked session / map / delta, a co-principal or stranger signer, a list that is not the signed set |
+| T-057 | packages/pca/src/intent-v2.test.ts | signs and verifies under the discovery keys; any edit fails; expiry is enforced |
+| T-057 | packages/pca/src/intent-dod1-audit.test.ts | a clock that is present but not a safe integer: denied |
+| G-20 | packages/pca/src/intent.test.ts | policies fail closed |
+| G-20 | packages/pca/src/intent-v2.test.ts | accumulators: the claim must equal the verifier post; unknown, unselected and wallet-held claims are refused |
+| G-20 | packages/pca/src/intent-state-conformance.test.ts | pins the history rules a verifier would otherwise get wrong |
+| G-21 | packages/pca/src/intent-world.test.ts | fails closed when fewer than min_oracles facts are fresh |
+| G-21 | packages/pca/src/intent-dod1-audit.test.ts | no classifier verdicts while the policy declares a classifier: denied (no quorum) |
+| C-15 | packages/pca/src/intent.test.ts | bound intent passes; absent intent without policy reports no check (back-compat) |
+| C-15 | packages/pca/src/intent-v2.test.ts | an active policy fails closed on a PCActn without the member |
+| C-15 | packages/pca/src/intent-dod1-audit.test.ts | no verifier context at all for a PCActn that carries intent_session: schema, session and accumulators all fail |
+| C-16 | packages/pca/src/intent-v2.test.ts | sequenced accumulators: the claim carries a sequencer receipt bound to this action, audience and session |
+| C-16 | packages/pca/src/intent-dod1-audit2.test.ts | only reserved and committed events count: released and reverted events leave the pre-state unchanged |
+| C-16 | packages/pca/src/intent-state-conformance.test.ts | is the reference output |
+| C-17 | packages/pca/src/intent-world.test.ts | fails closed when fewer than min_oracles facts are fresh (stale and future facts are not counted) |
+| C-17 | packages/pca/src/intent-dod1-audit.test.ts | a policy with no params map: refused as misconfigured |
+| C-18 | packages/pca/src/intent-dod1-audit.test.ts | no epoch evidence: denied |
+| C-18 | packages/pca/src/intent-v2.test.ts | a policy age bound without a revocation authority in S fails closed |
+| C-19 | packages/pca/src/intent-dod1-audit.test.ts | a malformed verifier context (null member, unknown policy member): every reported check fails with the reason |
+| C-19 | packages/pca/src/intent-dod1-audit2.test.ts | no verdicts at all, or a non-array: denied with the count |
+| C-19 | packages/pca/src/intent-v2.test.ts | absent means empty / default; present with null is malformed and fails closed |
 
 ## Gaps
 
@@ -398,7 +550,9 @@ Entries marked `NO AUTOMATED TEST` above, with the reason. Other entries listed 
 
 ### No automated test
 
-None. The four IDs that previously had no test now have one each (T-008 concurrent counter and budget races, T-015, T-019, T-041). T-015 and T-019 are documented non-goals: their tests pin the stated residual (the wire form is readable, a compromised principal key is total within the grant, detection is after the fact) and the mitigations that do exist, rather than claiming prevention.
+- **C-10** (every success bound to its execution): there is nothing to test yet. The verdict carries no operation id or digest, and no API ties the authorization to the side effect it admits; see the [Security contract](./security-contract.md). Operation records are planned for 0.5.
+
+Otherwise none. The four IDs that previously had no test now have one each (T-008 concurrent counter and budget races, T-015, T-019, T-041). T-015 and T-019 are documented non-goals: their tests pin the stated residual (the wire form is readable, a compromised principal key is total within the grant, detection is after the fact) and the mitigations that do exist, rather than claiming prevention.
 
 ### Partial coverage
 
@@ -407,7 +561,7 @@ These IDs have tests for the mitigation but not for the whole claim:
 - **T-001 / G-5**: counter monotonicity is tested against the in-memory single-node store in the resource-server middleware. The core verifier only checks that the counter is well-formed. Concurrent verifiers sharing one store are tested (T-008); a real multi-node store (Redis, Postgres) supplying `withKeyLock` is the integrator's, and is modelled but not run here.
 - **T-009**: freshness and pre-revocation rejection are tested; there is no test that re-checks authority at effect time, which is the resource server's job.
 - **T-016**: sub-threshold failure is tested for FROST, the multi-signature, and PQ quorums. Separate-trust-domain custody cannot be tested in a single process.
-- **T-028 / T-029**: failure of one root among several is tested with synthetic and real-fixture roots. No test simulates a compromised vendor signing key.
+- **T-028 / T-029**: failure of one root among several is tested with synthetic and real-fixture roots, and a compromised vendor root (a forged quote that validates under it) is tested against a genuine second root. A policy that needs only the compromised root accepts the forgery; that residual risk is pinned by a test, not removed.
 - **T-035**: audience reuse and proof replay are tested; a malicious server misreporting effects is out of what the library can test.
 - **T-040**: equivocation proofs are tested with in-process witnesses. No independent third-party witness is operated or tested.
 - **T-044**: the TypeScript implementation is tested against the frozen conformance vectors. Differential results for the other language SDKs are produced by the separate cross-language conformance run and are not asserted here.
@@ -427,7 +581,7 @@ Highest value first:
 4. **Effect-time re-check (T-009).** A test of a verify-then-revoke-then-execute sequence with the documented re-check hook.
 5. **Cross-SDK differential fuzzing (T-044).** An automated differential fuzzer across the language SDKs on the strict parser.
 6. **Side-channel evidence (T-049).** A timing-distribution harness now exists; a documented constant-time review of signer arithmetic by an independent reviewer does not.
-7. **Compromised vendor key simulation (T-028).** A test where one of several roots signs a forged token with a valid-looking chain and the N-of-M policy denies.
+7. ~~Compromised vendor key simulation (T-028).~~ Done.
 
 ### Not applicable to automated testing
 

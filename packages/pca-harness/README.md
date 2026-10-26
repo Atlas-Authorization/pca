@@ -1,5 +1,7 @@
 # @atlasauth/pca-harness
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A reference orchestration harness for Proof-Carrying Authority. It wraps an untrusted model or tool (the "oracle") and enforces the PCA invariants around it, so the model never holds a signing key. The oracle only proposes an action; the harness checks it against the principal-authorized plan, folds input taint into the risk score, meters the trust budget, and only then signs a PCActn. A compromised or prompt-injected oracle therefore cannot produce an out-of-plan action.
 
 The trusted piece is this small, auditable harness rather than the opaque model, and `harnessMeasurement()` gives a digest of the harness's policy surface that a resource server can allowlist.

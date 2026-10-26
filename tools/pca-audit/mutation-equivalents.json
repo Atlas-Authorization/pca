@@ -1,5 +1,20 @@
 {
  "about": "Surviving Stryker mutants individually justified as equivalent (no input changes any observable result) or unreachable, ONE ENTRY PER MUTATION SITE. Checked by tools/pca-audit/stryker/check-equivalents.mjs. Keyed by package, file, mutator, original text, replacement, trimmed source line and occurrence (which copy of that line text in the file); lineno is a hint only and multiplicity covers the same mutant reported more than once on one line.",
+ "also_audited_packages": [
+  "pca-connect",
+  "pca-connectors",
+  "pca-dataflow",
+  "pca-doctor",
+  "pca-events",
+  "pca-explain",
+  "pca-otel",
+  "pca-policy-ci",
+  "pca-rag",
+  "pca-revoke",
+  "pca-rotate",
+  "pca-store-conformance"
+ ],
+ "also_audited_note": "Packages in the Stryker plan (.github/scripts/ts-stryker-plan.mjs) that have no equivalent-mutant entries yet: their survivors must be killed by tests or listed here with a reason; the merge job fails on an unlisted survivor. A package with entries is in the plan by that alone.",
  "equivalents": [
   {
    "file": "src/replay.ts",
@@ -578,16 +593,6 @@
   },
   {
    "file": "src/server/verify.ts",
-   "mutator": "StringLiteral",
-   "original": "'revocation epoch rejected'",
-   "replacement": "\"\"",
-   "line": "else fail('freshness', r.reason ?? 'revocation epoch rejected');",
-   "occurrence": 1,
-   "lineno": 237,
-   "reason": "Fallback message used only if the sub-verifier returns a failure without a reason; every in-tree verifier supplies one."
-  },
-  {
-   "file": "src/server/verify.ts",
    "mutator": "ArrayDeclaration",
    "original": "[]",
    "replacement": "[\"Stryker was here\"]",
@@ -1004,26 +1009,6 @@
    "occurrence": 1,
    "lineno": 245,
    "reason": "Redundant guards: decodePCActn never returns null/non-object, raw===null is handled above, and a non-object p has no string grant_ref so the third operand denies identically."
-  },
-  {
-   "file": "src/server/require-pca.ts",
-   "mutator": "StringLiteral",
-   "original": "''",
-   "replacement": "\"Stryker was here!\"",
-   "line": "const key = `${grant.id}:${leafHolder ?? ''}`;",
-   "occurrence": 1,
-   "lineno": 257,
-   "reason": "Key suffix only used when leafHolder is defined (state read and write are gated on leafHolder); the withKeyLock key is grant.id."
-  },
-  {
-   "file": "src/server/require-pca.ts",
-   "mutator": "ConditionalExpression",
-   "original": "verdict.checks.counter === 'pass'",
-   "replacement": "true",
-   "line": "} else if (verdict.checks.counter === 'pass') {",
-   "occurrence": 1,
-   "lineno": 300,
-   "reason": "Without a store the core counter check is 'pass' for every wire-valid PCActn (non-integer / negative counters are wire failures), so the guard is always true there."
   },
   {
    "file": "src/server/require-pca.ts",
@@ -2859,16 +2844,6 @@
    "occurrence": 1,
    "lineno": 141,
    "reason": "Strict noble fromHex already rejects any non-canonical encoding and toRawBytes(fromHex(b)) round-trips, so this belt-and-braces check can never fire (loop bound/message/condition unobservable)."
-  },
-  {
-   "file": "src/frost.ts",
-   "mutator": "EqualityOperator",
-   "original": "i < 32",
-   "replacement": "i <= 32",
-   "line": "for (let i = 0; i < 32; i++) {",
-   "occurrence": 1,
-   "lineno": 76,
-   "reason": "Writing out[32] on a 32-byte Uint8Array is ignored; same bytes."
   },
   {
    "file": "src/frost.ts",
@@ -6313,16 +6288,6 @@
    "mutator": "StringLiteral",
    "original": "'not-enforced'",
    "replacement": "\"\"",
-   "line": "} else mark('freshness', 'not-enforced');",
-   "occurrence": 1,
-   "lineno": 238,
-   "reason": "The 'not-enforced' status strings: the verified-core VerdictState.set keeps the status core.checks already initialised for these names ('not-enforced' for an absent context element), asserted in verify.mutation-kill-3.test.ts; overwriting with an empty literal is not observable in the verdict."
-  },
-  {
-   "file": "src/server/verify.ts",
-   "mutator": "StringLiteral",
-   "original": "'not-enforced'",
-   "replacement": "\"\"",
    "line": "mark('beacon', 'not-enforced');",
    "occurrence": 1,
    "lineno": 259,
@@ -6407,16 +6372,6 @@
    "occurrence": 1,
    "lineno": 213,
    "reason": "planDecision ignores the match flag when no plan is supplied."
-  },
-  {
-   "file": "src/server/verify.ts",
-   "mutator": "LogicalOperator",
-   "original": "!core.allow && core.reason",
-   "replacement": "!core.allow || core.reason",
-   "line": "let vs = VerdictState.init<string, string>(Object.entries(core.checks) as [string, CheckStatus][], !core.allow && core.reason ? [core.reason] : []);",
-   "occurrence": 1,
-   "lineno": 185,
-   "reason": "core.reason is only set when core.allow is false."
   },
   {
    "file": "src/server/verify.ts",
@@ -6686,36 +6641,6 @@
    "line": "typeof p.sig === 'string',",
    "occurrence": 1,
    "lineno": 659,
-   "reason": "validateWireV2 runs first and is terminal (wire failure returns before this point), and it guarantees aud is a non-empty string, grant_ref canonical b64u string, sig a string, counter a safe integer and freshness.beacon_ref a string (wire.ts lines 82-94, 148-149), so these type/emptiness re-checks are always true on the glue path; audience kinds map 'string' to the same verdict as any non-null/absent value."
-  },
-  {
-   "file": "src/pcactn.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof p.counter === 'number' && Number.isSafeInteger(p.counter)",
-   "replacement": "true",
-   "line": "if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter', 'pass');",
-   "occurrence": 1,
-   "lineno": 667,
-   "reason": "validateWireV2 runs first and is terminal (wire failure returns before this point), and it guarantees aud is a non-empty string, grant_ref canonical b64u string, sig a string, counter a safe integer and freshness.beacon_ref a string (wire.ts lines 82-94, 148-149), so these type/emptiness re-checks are always true on the glue path; audience kinds map 'string' to the same verdict as any non-null/absent value."
-  },
-  {
-   "file": "src/pcactn.ts",
-   "mutator": "LogicalOperator",
-   "original": "typeof p.counter === 'number' && Number.isSafeInteger(p.counter)",
-   "replacement": "typeof p.counter === 'number' || Number.isSafeInteger(p.counter)",
-   "line": "if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter', 'pass');",
-   "occurrence": 1,
-   "lineno": 667,
-   "reason": "validateWireV2 runs first and is terminal (wire failure returns before this point), and it guarantees aud is a non-empty string, grant_ref canonical b64u string, sig a string, counter a safe integer and freshness.beacon_ref a string (wire.ts lines 82-94, 148-149), so these type/emptiness re-checks are always true on the glue path; audience kinds map 'string' to the same verdict as any non-null/absent value."
-  },
-  {
-   "file": "src/pcactn.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof p.counter === 'number'",
-   "replacement": "true",
-   "line": "if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter', 'pass');",
-   "occurrence": 1,
-   "lineno": 667,
    "reason": "validateWireV2 runs first and is terminal (wire failure returns before this point), and it guarantees aud is a non-empty string, grant_ref canonical b64u string, sig a string, counter a safe integer and freshness.beacon_ref a string (wire.ts lines 82-94, 148-149), so these type/emptiness re-checks are always true on the glue path; audience kinds map 'string' to the same verdict as any non-null/absent value."
   },
   {
@@ -14192,16 +14117,6 @@
    "occurrence": 1,
    "lineno": 1341,
    "reason": "Guards a comparison whose right operand is the guarded value: when the value is undefined, 'x > undefined' is always false, so forcing the guard true (or || instead of &&, or forcing a conjunct true) leaves the result unchanged; when the guard is true the value is a number and both versions agree."
-  },
-  {
-   "file": "src/mesh.ts",
-   "mutator": "EqualityOperator",
-   "original": "a.head.domain < b.head.domain",
-   "replacement": "a.head.domain <= b.head.domain",
-   "line": "return { seen: [...this.seen.values()].map((s) => ({ head: { ...s.head }, rev_ids: [...s.rev] })).sort((a, b) => (a.head.domain < b.head.domain ? -1 : 1)) };",
-   "occurrence": 1,
-   "lineno": 471,
-   "reason": "Comparator tie-break: seen is a Map keyed by head.domain, so two entries never share a domain; the equal case (< vs <=) cannot occur."
   },
   {
    "file": "src/mesh.ts",
@@ -30284,36 +30199,6 @@
    "reason": "an absent accumulates_into and the one-element placeholder list differ only when the queried unit is literally the placeholder text, which is not a unit id (UNIT_ID_RE) any schema can declare"
   },
   {
-   "file": "src/action-schema.ts",
-   "mutator": "ArrayDeclaration",
-   "original": "[]",
-   "replacement": "[\"Stryker was here\"]",
-   "line": "const req = new Set(t.inputSchema?.required ?? []);",
-   "occurrence": 1,
-   "lineno": 589,
-   "reason": "an absent required list and the placeholder list differ only for a parameter literally named 'Stryker was here', which is not a schema name ([A-Za-z0-9_]{1,64}) and is skipped first"
-  },
-  {
-   "file": "src/action-schema.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof op !== 'object'",
-   "replacement": "false",
-   "line": "if (!op || typeof op !== 'object' || !op.operationId) continue;",
-   "occurrence": 1,
-   "lineno": 620,
-   "reason": "a primitive op has no operationId, so the following !op.operationId test continues the loop either way"
-  },
-  {
-   "file": "src/action-schema.ts",
-   "mutator": "ArrayDeclaration",
-   "original": "[]",
-   "replacement": "[\"Stryker was here\"]",
-   "line": "const req = new Set(sch?.required ?? []);",
-   "occurrence": 1,
-   "lineno": 624,
-   "reason": "same as the MCP importer: only a parameter literally named 'Stryker was here' could differ, and that is not a schema name"
-  },
-  {
    "package": "pca-verified-core",
    "file": "src/ext-attest.ts",
    "mutator": "ConditionalExpression",
@@ -30488,28 +30373,6 @@
    "occurrence": 1,
    "lineno": 666,
    "reason": "an empty chain gives chain[-1] = undefined, which is not a record, so leafHolder is undefined exactly as on the untaken branch"
-  },
-  {
-   "package": "pca-a2a",
-   "file": "src/index.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof amt.value !== 'number'",
-   "replacement": "false",
-   "line": "if (!isRecord(amt) || typeof amt.value !== 'number' || !Number.isFinite(amt.value) || typeof amt.currency !== 'string') return 'payment mandate amount is malformed';",
-   "occurrence": 1,
-   "lineno": 679,
-   "reason": "!Number.isFinite(amt.value) on the same line is true for every non-number, so the typeof test is redundant"
-  },
-  {
-   "package": "pca-a2a",
-   "file": "src/index.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof params.amount !== 'number'",
-   "replacement": "false",
-   "line": "if (!own(params, 'amount') || typeof params.amount !== 'number' || !Number.isFinite(params.amount)) return 'the PCActn params carry no numeric amount to bind the mandate amount to';",
-   "occurrence": 1,
-   "lineno": 680,
-   "reason": "!Number.isFinite(params.amount) on the same line is true for every non-number, so the typeof test is redundant"
   },
   {
    "package": "pca-a2a",
@@ -34220,16 +34083,6 @@
    "occurrence": 1,
    "lineno": 100,
    "reason": "At this point mm is not a string (handled above); for any other non-null primitive Object.keys(mm) is [] (length 0), so bound is undefined either way."
-  },
-  {
-   "file": "src/passport.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof bound !== 'number'",
-   "replacement": "false",
-   "line": "if (typeof bound !== 'number' || !Number.isSafeInteger(bound) || bound < 0 || Object.is(bound, -0)) {",
-   "occurrence": 1,
-   "lineno": 101,
-   "reason": "Number.isSafeInteger(bound) in the next operand is already false for every non-number, so the typeof test is redundant."
   },
   {
    "file": "src/server/verify.ts",

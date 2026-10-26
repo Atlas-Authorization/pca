@@ -12,7 +12,7 @@ L0 answers: **is the process acting actually the workload the grant names?** The
 | Mode | What it proves | Status |
 |---|---|---|
 | **Software** | "A key the resource server trusts vouched for these measurements." Measurements are self-asserted by the signer, not rooted in hardware. | Implemented. Suitable for dev, CI and the sanctioned attested-VM equivalent. |
-| **Hardware** | A TEE report, rooted in the vendor's certificate chain, measured the loaded workload. | **Implemented** as `HardwareAttestationVerifier`s: AMD SEV-SNP (`createAmdSnpVerifier`), Intel TDX DCAP quotes (`createIntelDcapVerifier`), Azure Attestation tokens (`createAzureMaaVerifier`), Google Confidential Space tokens (`createGcpConfidentialSpaceVerifier`), NVIDIA confidential-computing GPU evidence (`createNvidiaSpdmVerifier`), and N-of-M corroboration across independent roots (`createMultiRootVerifier`). Tested on evidence captured from real confidential VMs and GPUs (`packages/pca/fixtures/real-*`, `testdata/sevsnp-real`). |
+| **Hardware** | A TEE report, rooted in the vendor's certificate chain, measured the loaded workload. | **Implemented** as `HardwareAttestationVerifier`s: AMD SEV-SNP (`createAmdSnpVerifier`), Intel TDX DCAP quotes (`createIntelDcapVerifier`), Azure Attestation tokens (`createAzureMaaVerifier`), Google Confidential Space tokens (`createGcpConfidentialSpaceVerifier`), NVIDIA confidential-computing GPU evidence (`createNvidiaSpdmVerifier`), and N-of-M corroboration across independent roots (`createMultiRootVerifier`). Tested on evidence captured from real confidential VMs and GPUs. |
 
 ## The attestation document
 
@@ -81,6 +81,6 @@ There is also a standardization gap: no cross-vendor standard attests a model's 
 
 ## Hosted behavior
 
-The attestation check is enforced for an action only when the instance has at least one trusted attestor key **and** the action presents an attestation (a document in the request body, or a declared `quote_digest`). Otherwise it stays `not-enforced`. Manage trusted keys with `GET`/`PUT /v1/pca/attestors` ([API reference](../reference/api.md)).
+The attestation check is enforced for an action when the instance has at least one trusted attestor key **and** the action presents an attestation (a document in the request body, or a declared `quote_digest`), and **always** when the grant's `agent_binding` is non-empty: then a missing, unbound or untrusted attestation denies, whether or not the instance trusts any attestor key. Otherwise it stays `not-enforced`. The expected binding (holder, grant, epoch, nonce) is derived on the server from a nonce it issued, and each nonce is consumed once, in the same transaction that admits the action. The hosted surface verifies software attestors (and, when configured, an allowlisted orchestration harness); it does not run the hardware verifiers above, so a grant that sets `require_hardware` is refused there. Manage trusted keys with `GET`/`PUT /v1/pca/attestors` ([API reference](../reference/api.md)).
 
 Next: [Ledger and revocation](./ledger-and-revocation.md).

@@ -3,7 +3,7 @@ import { CoreState, taintGateVerified, audienceStatus, capChainStatus, counterSt
 import { coreResultOf, pqBindingErrorVerified } from './verified-decision';
 import { b64u, canonicalBytesStrict, __canonicalizeLenientServerOnly, hashCanonical, sha256, utf8 } from './hash';
 import { strictParse } from './strict-json';
-import { PCACTN_WIRE_VERSION, validateWireV2 } from './wire';
+import { PCACTN_WIRE_VERSION, type WireExtensions, validateWireV2 } from './wire';
 import { sign } from './keys';
 import {
   type FnDsaSuiteKey,
@@ -34,11 +34,11 @@ import {
   verifyInclusion,
 } from './merkle';
 import type { ThresholdSignature } from './threshold';
-import { BEACON_EPOCH_MS } from './beacons';
 import type { TaintContext } from './taint';
-import { type EnvelopeIntent, type IntentPolicy, decideIntentBinding } from './intent-binding';
+import type { EnvelopeIntent, IntentPolicy, decideIntentBinding } from './intent-binding';
 import type { IntentSessionWire } from './intent-session';
-import { type IntentV2Context, decideIntentV2 } from './intent-v2';
+import type { IntentV2Context, decideIntentV2 } from './intent-v2';
+import { type AssuranceReport, type AssuranceRequirement, assuranceReport, unmetAssurance } from './assurance';
 
 /**
  * PCActn wire object (spec §7), WIRE FORMAT v2.
@@ -459,7 +459,7 @@ export interface VerifyHooks {
 export interface FreshnessEnforcement {
   /** Reject when the freshness anchor is older than this many ms. */
   maxAgeMs: number;
-  /** ms per freshness epoch, used to map `freshness.epoch` to a wall-clock anchor (default BEACON_EPOCH_MS). */
+  /** ms per freshness epoch, used to map `freshness.epoch` to a wall-clock anchor (default DEFAULT_FRESHNESS_EPOCH_MS). */
   epochMs?: number;
   /** Clock (epoch ms) for the age computation; defaults to the verifier's `nowEpoch`. */
   now?: number;
@@ -507,11 +507,44 @@ export interface EnforcementGates {
   attestation?: AttestationEnforcement;
 }
 
-export type CheckStatus = 'pass' | 'fail' | 'not-enforced';
+/**
+ * `pass`: enforced and satisfied. `fail`: enforced and violated. `not-enforced`: this verifier was not asked to
+ * check it. `unsupported`: the PCActn carries a feature this verifier does not implement (e.g. a `bond_ref`); it is
+ * never a pass, and `verifyPCActn` denies it unless the caller lists the check in `allowUnsupported`.
+ */
+export type CheckStatus = 'pass' | 'fail' | 'not-enforced' | 'unsupported';
+
+/**
+ * Optional layers PCA Core does not load (they are extensions, `@atlasauth/pca/ext/*`). The root `@atlasauth/pca`
+ * entry passes all of them; without one, a PCActn or policy that needs it is refused (fail closed), never skipped.
+ */
+export interface CoreExtensions {
+  wire?: WireExtensions;
+  intentBinding?: typeof decideIntentBinding;
+  intentV2?: typeof decideIntentV2;
+}
+
+/** Default freshness epoch length (ms); equals the liveness-beacon epoch (`BEACON_EPOCH_MS` in the ledger extension). */
+export const DEFAULT_FRESHNESS_EPOCH_MS = 60_000;
+
 export interface VerifyResult {
   allow: boolean;
   checks: Record<string, CheckStatus>;
   reason?: string;
+  /**
+   * What each check rests on (0.5, additive; see `assurance.ts`). Present only when the caller asked for it
+   * (`assurance: true` or `requireAssurance`).
+   */
+  assurance?: AssuranceReport;
+}
+
+/**
+ * A PCActn that carries a `bond_ref` asserts an optimistic-execution bond this verifier does not implement: report it as
+ * `unsupported` (never a pass). Applied after the proved decision fold, so `allow` is untouched here; `verifyPCActn` denies it.
+ */
+function withUnsupported(p: PCActn, r: VerifyResult): VerifyResult {
+  if (p?.bond_ref !== undefined && r.checks.bond === 'not-enforced') r.checks.bond = 'unsupported';
+  return r;
 }
 
 /**
@@ -569,13 +602,22 @@ export async function verifyPCActnCore(
     intent?: IntentPolicy;
     /** Intent Layer v2 verifier state + policy (schemas, session root and grants, accumulator state); see intent-v2.ts. */
     intentV2?: IntentV2Context;
+    /** The extension layers to run (intent binding, wire validators); absent: PCA Core only, see {@link CoreExtensions}. */
+    extensions?: CoreExtensions;
+    /** Attach the per-check assurance report (`result.assurance`). Absent: no report (output unchanged). */
+    assurance?: boolean;
+    /**
+     * High-assurance policy (see `AssuranceRequirement`). When set, an `assurance` check is added: it fails, and the
+     * result denies, when the evidence is weaker, missing, failed, unlabelled, preview or unsupported.
+     */
+    requireAssurance?: AssuranceRequirement;
   },
 ): Promise<VerifyResult> {
   let st = CoreState.init<string, string>();
   const fail = (name: string, why: string) => {
     st = st.fail(name, () => `${name}: ${why}`);
   };
-  const mark = (name: string, s: CheckStatus) => {
+  const mark = (name: string, s: Exclude<CheckStatus, 'unsupported'>) => {
     st = st.set(name, s);
   };
   const now = opts.nowEpoch ?? Date.now();
@@ -585,7 +627,7 @@ export async function verifyPCActnCore(
   try {
     // NORMATIVE CHECK ORDER: wire, version, audience, validity, cap_chain, grant_ref_bound, plan_inclusion,
     // leaf_signature, counter, then hooks. A wire failure is terminal: nothing else is evaluated.
-    const wire = validateWireV2(p);
+    const wire = validateWireV2(p, opts.extensions?.wire);
     if (wire !== null) return coreResultOf(CoreState.wireFail<string, string>('wire', `wire: ${wire}`));
     mark('wire', 'pass');
 
@@ -683,20 +725,25 @@ export async function verifyPCActnCore(
     else if (ld.kind === 'suite-error') fail('leaf_signature', ld.m);
     else fail('leaf_signature', 'signature does not verify under the leaf holder key / suite');
 
-    // 4. counter (monotonicity vs. stored state is the RS's job; presence/type here)
-    if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter', 'pass');
-    else fail('counter', 'missing or not a non-negative safe integer');
+    // 4. counter_format (B6: presence and type only; monotonicity against stored state is the `replay` check of the stateful layer)
+    if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter_format', 'pass');
+    else fail('counter_format', 'missing or not a non-negative safe integer');
 
     // Intent Layer M2: `intent` check (present iff the PCActn carries `intent` or the policy is active).
-    const intentDecision = decideIntentBinding(p.intent, opts.grant, opts.intent, p.intent_session?.session, p.intent_session?.map_form);
-    if (intentDecision.status === 'pass') mark('intent', 'pass');
-    else if (intentDecision.status === 'fail') fail('intent', intentDecision.reason);
+    const ext = opts.extensions;
+    if (ext?.intentBinding) {
+      const intentDecision = ext.intentBinding(p.intent, opts.grant, opts.intent, p.intent_session?.session, p.intent_session?.map_form);
+      if (intentDecision.status === 'pass') mark('intent', 'pass');
+      else if (intentDecision.status === 'fail') fail('intent', intentDecision.reason);
+    } else if (opts.intent !== undefined) fail('intent', 'an intent policy is configured but this verifier does not load the intent layer (fail closed)');
     // Intent Layer v2: `schema` (rule 14), `intent_session` (rule 13), `accumulators` (rule 15); reported only when the
     // PCActn carries `intent_session` or a v2 policy is active (see intent-v2.ts).
-    for (const c of decideIntentV2(p, opts.grant, opts.intentV2, now).checks) {
-      if (c.ok) mark(c.name, 'pass');
-      else fail(c.name, c.reason ?? 'rejected');
-    }
+    if (ext?.intentV2) {
+      for (const c of ext.intentV2(p, opts.grant, opts.intentV2, now).checks) {
+        if (c.ok) mark(c.name, 'pass');
+        else fail(c.name, c.reason ?? 'rejected');
+      }
+    } else if (opts.intentV2 !== undefined) fail('intent_session', 'an intent v2 context is configured but this verifier does not load the intent layer (fail closed)');
 
     // later milestones
 
@@ -722,7 +769,7 @@ export async function verifyPCActnCore(
     // M3 freshness gate (enforce.freshness). Rejects a missing / stub / stale signed freshness anchor.
     if (opts.enforce?.freshness) {
       const g = opts.enforce.freshness;
-      const epochMs = g.epochMs ?? BEACON_EPOCH_MS;
+      const epochMs = g.epochMs ?? DEFAULT_FRESHNESS_EPOCH_MS;
       const fnow = g.now ?? now;
       const skew = Number.isFinite(g.clockSkewMs) ? Math.max(0, g.clockSkewMs as number) : 0;
       const fr = p.freshness;
@@ -768,5 +815,14 @@ export async function verifyPCActnCore(
     st = st.malformed('malformed', `malformed PCActn: ${(e as Error).message}`);
   }
 
-  return coreResultOf(st);
+  if (!opts.assurance && !opts.requireAssurance) return withUnsupported(p, coreResultOf(st));
+  const src = { pcactn: p, hooks: opts.hooks, attestationHook: opts.enforce?.attestation?.verifier ?? opts.hooks?.attestation, allowUnboundPq: opts.allowUnboundPq };
+  if (opts.requireAssurance) {
+    const unmet = unmetAssurance(assuranceReport({ ...src, checks: withUnsupported(p, coreResultOf(st)).checks }), opts.requireAssurance);
+    if (unmet === undefined) st = st.set('assurance', 'pass');
+    else st = st.fail('assurance', () => unmet);
+  }
+  const out = withUnsupported(p, coreResultOf(st));
+  out.assurance = assuranceReport({ ...src, checks: out.checks });
+  return out;
 }

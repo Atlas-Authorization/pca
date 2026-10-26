@@ -1,5 +1,7 @@
 # @atlasauth/pca-langchain
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 LangChain adapter for Proof-Carrying Authority (PCA). `withPCA` wraps a LangChain structured tool so every invocation first builds a signed PCActn for the call (failing fast if the agent's own grant does not permit it), hands you the proof to forward to the resource server, and then runs the original tool.
 
 ## Install

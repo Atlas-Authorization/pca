@@ -19,6 +19,7 @@ import { EmbeddedJWK, SignJWT, calculateJwkThumbprint, decodeProtectedHeader, jw
 import type { JWK, JWTPayload, KeyLike } from 'jose';
 import { assertCanonicalCompactJws } from '@atlasauth/pca';
 import { type PCActn, b64u, sha256 } from '@atlasauth/pca';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 // ---- constants ---------------------------------------------------------------------------------
 
@@ -71,6 +72,86 @@ export interface JtiSeenSet {
   add(jti: string): unknown;
 }
 
+/**
+ * A durable, atomic `jti` replay store for DPoP proofs. `addIfAbsent` MUST be atomic: of N concurrent calls with the
+ * same key exactly one returns `true`. The key passed in is `<jkt>.<jti>`, so one key holder cannot burn another's `jti`.
+ * An entry may be dropped once `nowSec >= expiresAtSec`. Back it with a shared store (SQL unique key, Redis `SET NX EX`);
+ * check it with {@link runDpopReplayStoreConformance}.
+ */
+export interface DpopReplayStore {
+  addIfAbsent(key: string, expiresAtSec: number, nowSec: number): boolean | Promise<boolean>;
+}
+
+/** Single-process test double / small deployments only: state is lost on restart and not shared across processes. */
+export function createInMemoryDpopReplayStore(): DpopReplayStore {
+  const seen = new Map<string, number>();
+  return {
+    addIfAbsent(key, expiresAtSec, nowSec) {
+      for (const [k, exp] of seen) if (nowSec >= exp) seen.delete(k);
+      if (seen.has(key)) return false;
+      seen.set(key, expiresAtSec);
+      return true;
+    },
+  };
+}
+
+/** Conformance suite for a {@link DpopReplayStore}: returns the failed checks (empty = conformant). `make` returns a FRESH empty store. */
+export async function runDpopReplayStoreConformance(make: () => DpopReplayStore): Promise<string[]> {
+  const failures: string[] = [];
+  const check = (ok: boolean, name: string): void => {
+    if (!ok) failures.push(name);
+  };
+  const s = make();
+  check((await s.addIfAbsent('a', 200, 100)) === true, 'first sight of a key returns true');
+  check((await s.addIfAbsent('a', 200, 101)) === false, 'second sight of the same key returns false');
+  check((await s.addIfAbsent('b', 200, 101)) === true, 'a different key is independent');
+  check((await s.addIfAbsent('a', 200, 199)) === false, 'still seen one second before expiry');
+  const t = make();
+  await t.addIfAbsent('c', 200, 100);
+  check((await t.addIfAbsent('c', 400, 200)) === true, 'an expired entry may be added again (nowSec >= expiresAtSec)');
+  const u = make();
+  const wins = (await Promise.all(Array.from({ length: 16 }, () => u.addIfAbsent('race', 200, 100)))).filter(Boolean).length;
+  check(wins === 1, `16 concurrent adds of one key: exactly one wins (got ${wins})`);
+  return failures;
+}
+
+/** Issues and checks stateless server DPoP nonces (RFC 9449 §8/§9): a timestamp MACed with a server secret. */
+export interface DpopNonceIssuer {
+  /** A fresh nonce to send in a `DPoP-Nonce` header. */
+  issue(nowSec?: number): string;
+  /** True only for a nonce this issuer minted that is at most `ttlSec` old (and not from the future). */
+  check(nonce: unknown, nowSec?: number): boolean;
+}
+
+/** Create a {@link DpopNonceIssuer}. `secret` must be at least 32 bytes; `ttlSec` is the nonce lifetime (default 300). */
+export function createDpopNonceIssuer(opts: { secret: Uint8Array; ttlSec?: number }): DpopNonceIssuer {
+  if (!(opts?.secret instanceof Uint8Array) || opts.secret.length < 32) {
+    throw new DpopVerificationError('misconfigured', 'nonce secret must be at least 32 bytes');
+  }
+  const ttl = opts.ttlSec ?? 300;
+  if (!Number.isFinite(ttl) || ttl <= 0) throw new DpopVerificationError('misconfigured', 'nonce ttlSec must be positive');
+  const mac = (ts: Buffer): Buffer => createHmac('sha256', opts.secret).update('dpop-nonce\0').update(ts).digest().subarray(0, 16);
+  return {
+    issue(nowSec = Math.floor(Date.now() / 1000)) {
+      const ts = Buffer.alloc(8);
+      ts.writeBigUInt64BE(BigInt(nowSec));
+      return Buffer.concat([ts, mac(ts)]).toString('base64url');
+    },
+    check(nonce, nowSec = Math.floor(Date.now() / 1000)) {
+      if (typeof nonce !== 'string') return false;
+      const raw = Buffer.from(nonce, 'base64url');
+      if (raw.length !== 24 || raw.toString('base64url') !== nonce) return false;
+      const ts = raw.subarray(0, 8);
+      if (!timingSafeEqual(raw.subarray(8), mac(ts))) return false;
+      const issued = Number(ts.readBigUInt64BE());
+      return issued <= nowSec + DPOP_CLOCK_SKEW_SEC && nowSec - issued <= ttl;
+    },
+  };
+}
+
+/** Largest accepted proof string (bytes). A real proof is well under 2 KiB; RSA keys are the largest. */
+export const DPOP_MAX_PROOF_BYTES = 8192;
+
 export interface CreateDpopProofInput {
   /** HTTP method (case-insensitive in; stored uppercased as `htm`). */
   method: string;
@@ -99,6 +180,15 @@ export interface VerifyDpopProofOptions {
   expectedJkt?: string;
   /** If given, a repeated `jti` is rejected and a fresh one is recorded. */
   seenJti?: JtiSeenSet;
+  /** Durable atomic replay store (see {@link DpopReplayStore}); keyed by `<jkt>.<jti>`. Preferred over `seenJti`. */
+  replayStore?: DpopReplayStore;
+  /**
+   * When true, a verification with neither `replayStore` nor `seenJti` is refused (`replay_store_required`). Set it on
+   * every resource server: the verifier cannot detect replay without your store. (Becomes the default in a future major.)
+   */
+  requireReplayStore?: boolean;
+  /** Server nonce issuer: when given, the proof MUST carry a nonce this issuer minted and has not expired. */
+  nonceIssuer?: DpopNonceIssuer;
   /** Override "now" (epoch seconds) — for tests / fixed clocks. */
   nowSec?: number;
   /** If given, the proof MUST carry exactly this server-issued `nonce` (RFC 9449 §8/§9). */
@@ -201,6 +291,12 @@ export async function createDpopProof(input: CreateDpopProofInput): Promise<stri
  * {@link DpopVerificationError} on any failure; returns the verified claims + key thumbprint on success.
  */
 export async function verifyDpopProof(proof: string, opts: VerifyDpopProofOptions): Promise<DpopVerifyResult> {
+  if (opts.requireReplayStore === true && opts.replayStore === undefined && opts.seenJti === undefined) {
+    throw new DpopVerificationError('replay_store_required', 'no replay store configured; replay cannot be detected');
+  }
+  if (typeof proof !== 'string' || proof.length > DPOP_MAX_PROOF_BYTES) {
+    throw new DpopVerificationError('oversize', `proof is not a string or exceeds ${DPOP_MAX_PROOF_BYTES} bytes`);
+  }
   // Reject a missing / non-public / absent-`jwk` header before trusting the signature.
   let header: ReturnType<typeof decodeProtectedHeader>;
   try {
@@ -214,6 +310,11 @@ export async function verifyDpopProof(proof: string, opts: VerifyDpopProofOption
     throw new DpopVerificationError('typ', `header typ must be '${DPOP_JWT_TYP}', got '${String(header.typ)}'`);
   }
   if (header.jwk === undefined) throw new DpopVerificationError('no_jwk', 'proof header has no embedded jwk');
+  // RFC 9449 §4.2: the header jwk MUST NOT contain a private key.
+  const hj: unknown = header.jwk;
+  if (typeof hj === 'object' && hj !== null && ['d', 'p', 'q', 'dp', 'dq', 'qi', 'k'].some((m) => m in hj)) {
+    throw new DpopVerificationError('private_jwk', 'proof header jwk contains private key material');
+  }
 
   // Signature: EmbeddedJWK verifies under the header `jwk`; `algorithms` pins the asymmetric suite.
   let payload: JWTPayload;
@@ -256,6 +357,10 @@ export async function verifyDpopProof(proof: string, opts: VerifyDpopProofOption
     throw new DpopVerificationError('nonce', 'proof nonce is missing or does not match the expected nonce');
   }
 
+  if (opts.nonceIssuer !== undefined && !opts.nonceIssuer.check(payload.nonce, now)) {
+    throw new DpopVerificationError('nonce', 'proof nonce is missing, forged or expired');
+  }
+
   // Access-token binding (RFC 9449 §4.2 / §7.1): when presented with an access token, `ath` must match.
   if (opts.accessToken !== undefined && payload.ath !== athFor(opts.accessToken)) {
     throw new DpopVerificationError('ath', 'proof ath is missing or does not match the access token');
@@ -265,6 +370,16 @@ export async function verifyDpopProof(proof: string, opts: VerifyDpopProofOption
   if (opts.seenJti !== undefined) {
     if (opts.seenJti.has(jti)) throw new DpopVerificationError('jti_replay', `jti '${jti}' has already been seen`);
     opts.seenJti.add(jti);
+  }
+
+  if (opts.replayStore !== undefined) {
+    let fresh: boolean;
+    try {
+      fresh = await opts.replayStore.addIfAbsent(`${jkt}.${jti}`, iat + opts.maxAgeSec + DPOP_CLOCK_SKEW_SEC, now);
+    } catch (e) {
+      throw new DpopVerificationError('replay_store_error', `replay store failed: ${errMsg(e)}`);
+    }
+    if (fresh !== true) throw new DpopVerificationError('jti_replay', `jti '${jti}' has already been seen`);
   }
 
   const nonce = typeof payload.nonce === 'string' ? payload.nonce : undefined;
@@ -330,6 +445,9 @@ export async function assertPcaDpop(
     url: string;
     maxAgeSec?: number;
     seenJti?: JtiSeenSet;
+    replayStore?: DpopReplayStore;
+    requireReplayStore?: boolean;
+    nonceIssuer?: DpopNonceIssuer;
     nowSec?: number;
     expectedNonce?: string;
     accessToken?: string;
@@ -342,6 +460,9 @@ export async function assertPcaDpop(
     maxAgeSec: opts.maxAgeSec ?? DPOP_DEFAULT_MAX_AGE_SEC,
     expectedJkt: jkt,
     ...(opts.seenJti !== undefined ? { seenJti: opts.seenJti } : {}),
+    ...(opts.replayStore !== undefined ? { replayStore: opts.replayStore } : {}),
+    ...(opts.requireReplayStore !== undefined ? { requireReplayStore: opts.requireReplayStore } : {}),
+    ...(opts.nonceIssuer !== undefined ? { nonceIssuer: opts.nonceIssuer } : {}),
     ...(opts.nowSec !== undefined ? { nowSec: opts.nowSec } : {}),
     ...(opts.expectedNonce !== undefined ? { expectedNonce: opts.expectedNonce } : {}),
     ...(opts.accessToken !== undefined ? { accessToken: opts.accessToken } : {}),

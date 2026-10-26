@@ -70,7 +70,8 @@ The hosted surface exposes only the pure, secret-free checks for payments and th
 > **Breaking change.** The routes `POST /v1/pca/payment-mandates`, `POST /v1/pca/payment-mandates/pcactn`, `POST /v1/pca/mesh/proofs` and `POST /v1/pca/mesh/witness` have been removed. They accepted a signing secret key (`principal_secret`, `signer_secret`, `leaf_secret`, `witness_secret`) in the request body, which any TLS-terminating proxy, APM body capture or crash dump could observe; and a witness that hands its key to a third party is not an independent witness. They now return `404`. Sending a `*_secret` field to a remaining route returns `400` (unknown field). Do the signing on the client with `@atlasauth/pca-payments` and `@atlasauth/pca`, and use the hosted routes only to decide, verify or check consistency.
 
 ```ts
-import { generateKeyPair, encodeKey, mesh } from '@atlasauth/pca';
+import { generateKeyPair, encodeKey } from '@atlasauth/pca';
+import { mesh } from '@atlasauth/pca/ext/research';
 import { buildPaymentMandate, authorizeCharge, chargeToPCActn } from '@atlasauth/pca-payments';
 
 const principal = generateKeyPair();
@@ -116,7 +117,8 @@ The hosted verifier accepts only the signature suites on the instance's **effect
 | Method and path | Auth | Purpose |
 |---|---|---|
 | `POST /v1/pca/grants` | public | Register a signed Root Intent Grant |
-| `POST /v1/pca/plans` | public | Commit a plan DAG under a grant |
+| `POST /v1/pca/plans` | public (committer-signed) | Commit a plan DAG under a grant |
+| `POST /v1/pca/plans/:root/authorize` | public (principal-signed) | Authorize a committed plan root |
 | `POST /v1/pca/actions` | public | Verify a PCActn, anchor it, return a receipt |
 | `GET /v1/pca/suites` | public | Effective signature-suite list (`pca.allowedSuites` or the secure default) |
 | `GET /v1/pca/stepups/:id` | public | Poll a step-up |
@@ -165,12 +167,27 @@ Response: `201` on create, `200` if already registered.
 Commit a plan under an active grant. Request:
 
 ```json
-{ "grant_ref": "<grant.id>", "nodes": [ { "id": "n1", "verb": "read", "resource": "doc:1" } ] }
+{
+  "grant_ref": "<grant.id>",
+  "nodes": [ { "id": "n1", "verb": "read", "resource": "doc:1" } ],
+  "committer": "<holder or principal public key>",
+  "sig": "<Ed25519 signature over the plan-commit message>"
+}
 ```
 
-`nodes` must have 1 to `maxPlanNodes` entries, each with string `id`, `verb` and `resource` (optional `params_digest`, `reversibility_class`, `pre`, `post`); node ids must be unique. `404` for an unknown grant, `403` if the grant is not active, `400` for an invalid plan.
+`nodes` must have 1 to `maxPlanNodes` entries, each with string `id`, `verb` and `resource` (optional `params_digest`, `reversibility_class`, `pre`, `post`); node ids must be unique. `committer` must be the grant's holder key or its principal key, and `sig` is that key's signature over the UTF-8 bytes of `atlas-pca/plan-commit/v1`, a zero byte, then the canonical JSON `{"grant_ref":"<grant.id>","plan_root":"<merkle root>"}`. `404` for an unknown grant, `403` if the grant is not active or the committer is neither key, `400` for an invalid plan or a signature that does not verify. Unknown body fields are refused.
 
-Response `201`: `{ "object": "pca_plan", "plan_root": "<merkle root>", "grant_ref": "<grant.id>" }`. In this release a committed plan is auto-authorized.
+Response `201`: `{ "object": "pca_plan", "plan_root": "<merkle root>", "grant_ref": "<grant.id>", "authorized": false }`.
+
+Committing does not authorize. A committed plan is usable by `POST /v1/pca/actions` only after the principal authorizes its root (below). The one exception is a grant whose signed envelope sets `plan_policy: "agent_commit"`: its plans are authorized on commit (`"authorized": true, "authorization_mode": "agent_commit"`), and the server then takes each action's reversibility class from its own verb catalog, not from the plan node.
+
+### `POST /v1/pca/plans/:root/authorize`
+
+Authorize a committed plan root. Request: `{ "grant_ref": "<grant.id>", "sig": "<signature>" }`, where `sig` is the grant principal key's signature over `atlas-pca/plan-authorize/v1`, a zero byte, then the canonical JSON `{"grant_ref":"<grant.id>","plan_root":"<root>"}`. Idempotent. `404` for an unknown plan, `403` if the grant is not active, `400` if the signature is not the principal's.
+
+Response `200`: `{ "object": "pca_plan", "plan_root", "grant_ref", "authorized": true, "authorization_mode": "principal_sig", "authorized_by" }`.
+
+An action against a plan root that is not committed and authorized under its grant is denied on `plan_root_authorized`.
 
 ## Actions
 
@@ -188,7 +205,7 @@ Request (body, or the `PCA-Action` header for the PCActn alone):
 | `attestation` | object | An `AttestationDocument` ([attestation](../concepts/attestation.md)) |
 | `optimistic` | object | A `BondedClaim` ([optimistic](../concepts/optimistic-and-zk.md)); ignored for irreversible actions |
 
-Adjudication order: grant active, not frozen, committed plan for `plan.root`, replay counter strictly increasing per leaf holder, revocation non-membership for every capability in the chain, optional attestation; then a probe verification derives the required `t`; the server adds its guardian share for `t >= 2`; the final verification enforces the threshold. On allow, the counter and trust budget are advanced atomically (a concurrent submission of the same counter loses and is refused as a replay) and the action is appended to the ledger.
+Adjudication order: grant active, not frozen, a committed and authorized plan for `plan.root`, replay counter strictly increasing per leaf holder, revocation non-membership for every capability in the chain, optional attestation; then a probe verification derives the required `t`; the server adds its guardian share for `t >= 2`; the final verification enforces the threshold. On allow, the counter and trust budget are advanced atomically (a concurrent submission of the same counter loses and is refused as a replay) and the action is appended to the ledger.
 
 Responses:
 
@@ -201,7 +218,7 @@ Responses:
 | `403` | `{ "allow": false, "verdict" }` | Denied: out of plan, policy, revoked, replayed counter, frozen, grant revoked |
 | `400` | Atlas error | Malformed `attestation` or `optimistic`, or a rejected claim |
 
-`verdict` is the `PcaVerdict`: `{ allow, r, requiredThreshold: { t, proof, optimisticAllowed }, checks, reasons, budget? }`. `checks` maps clause names (for example `version`, `cap_chain`, `plan_inclusion`, `leaf_signature`, `counter`, `grant_ref`, `params_digest`, `delegated_caveats`, `policy`, `threshold`, `budget`, `revocation`, `attestation`) to `pass`, `fail` or `not-enforced`.
+`verdict` is the `PcaVerdict`: `{ allow, r, requiredThreshold: { t, proof, optimisticAllowed }, checks, reasons, budget? }`. `checks` maps clause names (for example `version`, `cap_chain`, `plan_inclusion`, `leaf_signature`, `counter_format`, `replay`, `grant_ref`, `params_digest`, `delegated_caveats`, `policy`, `threshold`, `budget`, `revocation`, `attestation`) to `pass`, `fail` or `not-enforced`.
 
 `receipt`:
 
@@ -264,7 +281,7 @@ Auth: `sk_` `pca:write`. Body `{ "reason"?: string }` (truncated to 500 characte
 
 ### `POST /v1/pca/claims/:id/challenge`
 
-Public. Body `{ "reason"?: string }` (audit metadata only). The challenger supplies **no** policy inputs. The server re-runs the Policy VM from the context the agent recorded when opening the claim, against the current grant, revocation set and time, and slashes only if that re-evaluation contradicts the claim or a capability in the chain has since been revoked. Success returns the claim view with `fraudulent: true` and `reason`; `409` if the claim is not open or no fraud is established. Audited as `pca.claim.slashed`.
+Public. Body `{ "reason"?: string, "reward_account"?: string }`. `reason` is audit metadata only; `reward_account` names the bond account that receives the challenger's share if the claim is slashed (without it, that share goes to the treasury). Neither is a policy input. The challenger supplies **no** policy inputs. The server re-runs the Policy VM from the context the agent recorded when opening the claim, against the current grant, revocation set and time, and slashes only if that re-evaluation contradicts the claim or a capability in the chain has since been revoked. Success returns the claim view with `fraudulent: true` and `reason`; `409` if the claim is not open or no fraud is established. Audited as `pca.claim.slashed`.
 
 ## Ledger
 

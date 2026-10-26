@@ -408,12 +408,44 @@ export interface MeshWitnessState {
   seen: { head: MeshHead; rev_ids: string[] }[];
 }
 
+/**
+ * Where a witness keeps what it has cosigned. `save` MUST be durable and atomic: when it returns, a restarted
+ * witness loads exactly this state. A witness that forgets across a restart can be walked back to cosign a fork.
+ * Synchronous on purpose: `cosign` must not return a signature before the state behind it is on disk.
+ */
+export interface MeshWitnessStore {
+  /** The last saved state, or undefined for a store that has never been written. Throws on corrupt data (never returns a partial state). */
+  load(): MeshWitnessState | undefined;
+  save(state: MeshWitnessState): void;
+}
+
+/** In-process store: a test double, and the default when no store is given. It does not survive a restart. */
+export class MemoryMeshWitnessStore implements MeshWitnessStore {
+  private state: string | undefined;
+  load(): MeshWitnessState | undefined {
+    return this.state === undefined ? undefined : (JSON.parse(this.state) as MeshWitnessState);
+  }
+  save(state: MeshWitnessState): void {
+    this.state = JSON.stringify(state);
+  }
+}
+
 /** Optional witness configuration. */
 export interface MeshWitnessOptions {
+  /**
+   * Durable memory. On construction the witness loads from it (a corrupt state throws: the witness never starts
+   * empty over damaged memory); every cosignature is issued only after the new state was saved, and a failed save
+   * refuses the cosignature and changes nothing.
+   */
+  store?: MeshWitnessStore;
   /** Witness's own clock; when set, heads timestamped beyond `now + maxClockSkewMs` are refused. */
   clock?: () => number;
   /** Default {@link DEFAULT_MAX_CLOCK_SKEW_MS}. */
   maxClockSkewMs?: number;
+}
+
+function stateOf(seen: Map<string, { head: MeshHead; rev: string[] }>): MeshWitnessState {
+  return { seen: [...seen.values()].map((s) => ({ head: { ...s.head }, rev_ids: [...s.rev] })).sort((a, b) => (a.head.domain < b.head.domain ? -1 : 1)) };
 }
 
 /**
@@ -432,6 +464,8 @@ export class MeshWitness {
     private readonly opts: MeshWitnessOptions = {},
   ) {
     this.id = encodeKey(publicKeyOf(secret));
+    const loaded = opts.store?.load();
+    if (loaded !== undefined) this.importState(loaded);
   }
 
   /** The newest head this witness cosigned for `domain` (what a domain must prove consistency from). */
@@ -462,13 +496,23 @@ export class MeshWitness {
       const now = new Set(set.list());
       if (!prev.rev.every((id) => now.has(id))) throw new Error('witness: revocation set drops a previously cosigned revocation');
     }
+    if (this.opts.store) {
+      // Persist first, commit to memory second: if the disk write fails nothing was cosigned and nothing changed.
+      const next = new Map(this.seen);
+      next.set(h.domain, { head: { ...h }, rev: set.list() });
+      try {
+        this.opts.store.save(stateOf(next));
+      } catch {
+        throw new Error('witness: could not persist state; refusing to cosign');
+      }
+    }
     this.seen.set(h.domain, { head: { ...h }, rev: set.list() });
     return { witness: this.id, sig: b64u(sign(this.secret, msg(COSIG_DOMAIN, h))) };
   }
 
   /** Export memory for persistence. Deterministic order. */
   exportState(): MeshWitnessState {
-    return { seen: [...this.seen.values()].map((s) => ({ head: { ...s.head }, rev_ids: [...s.rev] })).sort((a, b) => (a.head.domain < b.head.domain ? -1 : 1)) };
+    return stateOf(this.seen);
   }
 
   /** Restore memory; each record must be internally consistent (revocation list reproduces its root). */

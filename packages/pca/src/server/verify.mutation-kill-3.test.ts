@@ -1,9 +1,11 @@
 /** Round 3 for server/verify.ts: the exact check statuses an RS sees when a context element is absent, and the denied fallback. */
 import { describe, expect, it } from 'vitest';
 import { AUD, NOW, setup } from './fixture.test-util';
-import { verifyPCActn } from './verify';
+import { verifyPCActn as verifyPCActn05 } from './verify';
 import { issueLivenessBeacon } from '../beacons';
 import { generateKeyPair } from '../keys';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 describe('verifyPCActn: absent context is reported as not-enforced, not pass', () => {
   it('no params / plan / revocation epoch / beacon / budget', async () => {

@@ -1,3 +1,4 @@
+import { setAssuranceLabel } from './assurance';
 import { x509ValidAt } from './x509-validity';
 import { snapshotConfig } from './config-snapshot';
 /**
@@ -297,7 +298,12 @@ function gpuMeasurementsDigest(report: ParsedNvidiaSpdmReport): string {
 }
 
 /** Build a `HardwareAttestationVerifier` for genuine NVIDIA Hopper/Blackwell GPU-CC evidence. Fails closed. */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createNvidiaSpdmVerifier(opts: NvidiaSpdmVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createNvidiaSpdmVerifierUnlabelled(opts), { level: 'hardware', vendor: 'nvidia-spdm' });
+}
+
+function createNvidiaSpdmVerifierUnlabelled(opts: NvidiaSpdmVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts || !Array.isArray(opts.rootSpkiSha256) || opts.rootSpkiSha256.length === 0) {

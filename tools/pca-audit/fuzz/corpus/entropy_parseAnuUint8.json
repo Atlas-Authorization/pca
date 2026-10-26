@@ -1,0 +1,15 @@
+{
+ "target": "entropy parseAnuUint8",
+ "seeds": [
+  {
+   "v": {
+    "data": [
+     1,
+     2,
+     3
+    ],
+    "success": true
+   }
+  }
+ ]
+}

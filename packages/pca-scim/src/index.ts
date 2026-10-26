@@ -26,14 +26,14 @@
  * so this runs on Node, an edge runtime or inside any web framework.
  */
 
+import { hashCanonical } from '@atlasauth/pca';
 import {
   type AgentPassport,
   type PassportIdentity,
   type PassportRegistry,
   buildRegistry,
-  hashCanonical,
   issuePassport,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/attestation';
 
 // ---------------------------------------------------------------------------
 // SCIM schema URNs
@@ -361,6 +361,7 @@ interface EqFilter {
 
 /** Parse the SCIM `attr eq "value"` / `attr eq true|false` subset. Throws {@link ScimValueError}. */
 export function parseFilter(filter: string): EqFilter {
+  if (typeof filter !== 'string') throw new ScimValueError('invalidFilter', 'filter must be a string');
   const m = /^\s*(\w+)\s+eq\s+(?:"((?:[^"\\]|\\.)*)"|(true|false))\s*$/i.exec(filter);
   if (!m) throw new ScimValueError('invalidFilter', `unsupported filter (only \`attr eq "value"\` is supported): ${filter}`);
   const attr = m[1] as string;
@@ -509,6 +510,14 @@ export interface ScimHandlerOptions {
   baseUrl?: string;
   /** Clock for `meta` timestamps. Default `Date.now`. */
   now?: () => number;
+  /**
+   * REQUIRED (unless `allowUnauthenticated` is set): authenticate and authorize the request (bearer token, mTLS
+   * identity, ...). Must return exactly `true` to admit it; `false`, a throw, a Promise or any other value yields 401.
+   * Synchronous: resolve async checks in your framework layer first and close over the result.
+   */
+  authenticate?: (req: ScimRequest) => boolean;
+  /** Explicit opt-out for tests and fully network-isolated deployments. Never the documented recommendation. */
+  allowUnauthenticated?: boolean;
 }
 
 const SCIM_CONTENT_TYPE = 'application/scim+json';
@@ -539,6 +548,10 @@ function parseIntParam(v: string | undefined, fallback: number): number {
  * by translating that framework's req/res to/from {@link ScimRequest}/{@link ScimResponse}.
  */
 export function scimHandler(store: AgentStore, options: ScimHandlerOptions = {}): (req: ScimRequest) => ScimResponse {
+  const authenticate = options.authenticate;
+  if (typeof authenticate !== 'function' && options.allowUnauthenticated !== true) {
+    throw new TypeError('scimHandler: `authenticate` is required (or pass allowUnauthenticated: true explicitly)');
+  }
   const metaInput = (): MetaInput => {
     const input: MetaInput = {};
     if (options.baseUrl !== undefined) input.baseUrl = options.baseUrl;
@@ -549,7 +562,7 @@ export function scimHandler(store: AgentStore, options: ScimHandlerOptions = {})
   const handleList = (query: Record<string, string | undefined> | undefined): ScimResponse => {
     let items = store.all().map((s) => s.resource);
     const filter = query?.filter;
-    if (filter !== undefined && filter !== '') {
+    if (filter !== undefined && (filter as unknown) !== '') {
       let parsed: EqFilter;
       try {
         parsed = parseFilter(filter);
@@ -638,6 +651,15 @@ export function scimHandler(store: AgentStore, options: ScimHandlerOptions = {})
   };
 
   return (req: ScimRequest): ScimResponse => {
+    if (typeof authenticate === 'function') {
+      let ok = false;
+      try {
+        ok = authenticate(req) === true;
+      } catch {
+        ok = false;
+      }
+      if (!ok) return { ...errorResponse(401, 'authentication required'), headers: { 'content-type': SCIM_CONTENT_TYPE, 'www-authenticate': 'Bearer' } };
+    }
     switch (req.method) {
       case 'GET':
         return req.id === undefined ? handleList(req.query) : handleGetOne(req.id);
@@ -796,5 +818,5 @@ export function pushToOkta(agent: ScimAgent, target: PushTarget): Promise<PushRe
 // Re-exports from the PCA core (so a provisioner only needs this package)
 // ---------------------------------------------------------------------------
 
-export { issuePassport, passportFingerprint, buildRegistry } from '@atlasauth/pca';
-export type { AgentPassport, PassportIdentity, PassportRegistry } from '@atlasauth/pca';
+export { issuePassport, passportFingerprint, buildRegistry } from '@atlasauth/pca/ext/attestation';
+export type { AgentPassport, PassportIdentity, PassportRegistry } from '@atlasauth/pca/ext/attestation';

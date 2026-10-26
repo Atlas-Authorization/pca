@@ -1,5 +1,7 @@
 # @atlasauth/pca-abe
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Proof-carrying encryption for Proof-Carrying Authority (PCA). Tool payloads or results are sealed under an access policy over capability attributes (`holder:`, `verb:`, `resource:`, `scope:`, and bound `act:` verb-on-resource pairs), so they decrypt only for an agent whose PCA capability satisfies the policy. The construction is Bethencourt-Sahai-Waters ciphertext-policy ABE (IEEE S&P 2007, ePrint 2006/309) with a per-key randomiser, adapted to the asymmetric (type-3) pairing on BLS12-381, over a monotone AND/OR/threshold tree shared by Shamir secret sharing, with the payload sealed by AES-256-GCM. Keys issued to different holders cannot be pooled to satisfy a policy neither satisfies.
 
 ## Install

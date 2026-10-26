@@ -1,0 +1,51 @@
+name: Parser fuzz (bounded)
+# Structure-aware mutation fuzzing of every binary / ASN.1 / JWT / key-and-ciphertext decoder in the attestation and crypto
+# modules (tools/pca-audit/fuzz, targets-attest / targets-crypto / targets-ecosystem), seeded with the real captured evidence
+# and fresh valid keys. Two stages: the deterministic regression gate (replays every stored crasher plus a fixed-seed run) and a
+# time-bounded exploration (BUDGET seconds shared by all targets). Any crash, untyped error, hang over 1 s, 512 MiB allocation
+# or accepted mutant fails the job; new crashers are uploaded as an artifact. Commit a reproducer under
+# tools/pca-audit/fuzz/crashers/ together with the source fix.
+on:
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: 'seconds of exploration (default 600)'
+        default: '600'
+  schedule:
+    - cron: '17 3 * * 1'
+  pull_request:
+    paths:
+      - 'packages/pca/src/**'
+      - 'packages/pca-*/src/**'
+      - 'tools/pca-audit/fuzz/**'
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - name: Build the packages the targets import
+        run: pnpm -r --filter "@atlasauth/pca*" run build
+      - name: Regression gate (stored crashers + fixed-seed run)
+        run: packages/pca/node_modules/.bin/tsx tools/pca-audit/fuzz/fuzz.ts --regress
+      - name: Bounded exploration
+        env:
+          PCA_FUZZ_OUT: ${{ runner.temp }}/fuzz-crashers
+          BUDGET: ${{ inputs.budget || '600' }}
+        run: packages/pca/node_modules/.bin/tsx tools/pca-audit/fuzz/fuzz.ts --target all --budget-seconds "$BUDGET" --seed "${{ github.run_number }}"
+      - name: Crashers
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashers
+          path: ${{ runner.temp }}/fuzz-crashers
+          if-no-files-found: ignore

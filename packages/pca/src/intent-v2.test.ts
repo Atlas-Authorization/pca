@@ -1,8 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import {
-  MemoryIntentSessionStore,
   RevocationSet,
+  b64u,
+  buildDiscoveryDocument,
+  buildPCActn,
+  envelopeCaveatEvaluator,
+  parseDiscoveryDocument,
+  paramsDigest,
+  publicKeyOf,
+  sha256,
+  mlDsa65Keygen,
+  encodeMlDsaPublicKey,
+  signPCActn,
+  signRevocationEpoch,
+  utf8,
+  validateWireV2,
+  verifyPCActn as verifyPCActn05,
+  verifyPCActnCore,
+  type PCActn,
+} from './index';
+import {
+  MemoryIntentSessionStore,
   accContextFor,
   accPost,
   accPreState,
@@ -10,9 +29,6 @@ import {
   actionSchemaDigest,
   actionSchemaKeyOf,
   admitIntentAction,
-  b64u,
-  buildDiscoveryDocument,
-  buildPCActn,
   checkSessionRevocation,
   conformAction,
   decideIntentV2,
@@ -20,44 +36,31 @@ import {
   deltaRevocationId,
   draftSchemaFromMcpTools,
   draftSchemaFromOpenApi,
-  envelopeCaveatEvaluator,
   intentActionDigest,
   intentProblem,
   intentSessionCaveatError,
   mapRevocationId,
   mintSessionGrant,
   monitorState,
-  parseDiscoveryDocument,
-  paramsDigest,
   pcactnReservationDigest,
-  publicKeyOf,
   reversibilityOf,
   revocationExposureEnd,
   sessionRevocationId,
   sessionRevocationScope,
   sessionRootDigest,
   settleIntentEvent,
-  sha256,
   signAccReceipt,
   signSequencerKeySet,
-  mlDsa65Keygen,
-  encodeMlDsaPublicKey,
   accReceiptShapeError,
   actionSchemaShapeError,
   sequencerKeySetShapeError,
   signActionSchema,
   signIntentRequired,
-  signPCActn,
-  signRevocationEpoch,
   signSessionRoot,
-  utf8,
   validateIntentSessionWire,
-  validateWireV2,
   verbReversibility,
   verifyActionSchema,
   verifyIntentRequired,
-  verifyPCActn,
-  verifyPCActnCore,
   verifyReceiptAgainstHolder,
   sequencerKeySetDigest,
   trackedKeySetError,
@@ -69,11 +72,12 @@ import {
   type IntentSessionWire,
   type IntentV2Context,
   type MonitorDecl,
-  type PCActn,
   type SessionRoot,
   type SessionRootBody,
   type UnsignedActionSchema,
-} from './index';
+} from './ext/intent';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 // ---- fixture: the §4 walkthrough, scaled down ----------------------------------------------------------------
 const seed = (l: string) => sha256(utf8(`intent-v2-test/${l}`));
@@ -613,7 +617,7 @@ describe('accumulators and the session store (T11, LIN)', () => {
     const post = (acc.state.trip_spend as { sum: number }).sum + (params.total as number);
     const p = build(G0, { salt: 'salt0', map: MAP0, is: is0({ acc: [{ id: 'trip_spend', post }] }), params });
     const v = await verifyPCActn(p, { grant: G0, audience: AUD, now: NOW, context: { params }, intentV2: ctx({ params, acc: acc as IntentV2Context['acc'] }) });
-    const predicateDenied = v.reasons.some((r) => r.includes('no predicate permits'));
+    const predicateDenied = v.reasons.some((r) => r.includes('no predicate permits') || r.includes(' not satisfied for '));
     return { allow: v.checks.accumulators === 'pass' && !predicateDenied, v };
   };
 

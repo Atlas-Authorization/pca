@@ -14,11 +14,12 @@
  * `settlementEvidenceDigest(claim, verdict)` over that verdict's output — so the signed slash commits to
  * the fraud finding the server recomputed, never to anything the challenger supplied.
  *
- * SCOPE / SEAM. Balances live in a simple in-memory `Map` here so the logic is testable and
- * self-contained. In production the real store (a database, an on-chain escrow, a custody ledger) is a
- * SEAM: persist the `SettlementRecord`s and the per-account balances exactly as this class computes
- * them, and re-verify records with `verifySettlement`. The signing key is the guardian / settlement key;
- * only the public half is needed to verify.
+ * SCOPE. INTERNAL ACCOUNTING ONLY; no money moves. This file holds the pure decision logic (`BondSettlementPlanner`: it
+ * validates a transition, re-derives every slash verdict itself, divides the bond and signs the record) and the in-memory
+ * `BondLedger`, which applies a plan to `Map`s and loses everything with the process: it is a TEST DOUBLE and the reference for
+ * the decisions. A deployment uses `StoreBondLedger` (`bond-store.ts`), which commits the SAME plans to a `BondStore` atomically
+ * and idempotently and owns the challenge-window clock. Re-verify any record with `verifySettlement`; the signing key is the
+ * guardian / settlement key and only the public half is needed to verify.
  */
 // Bond settlement records + fraud-verdict evidence are server-only (guardian-signed,
 // carry amount/claimed_r floats), never recomputed by the language verifiers — lenient
@@ -389,6 +390,56 @@ export function verifySettlement(record: SettlementRecord, guardianPublicKey: st
   }
 }
 
+/** The first check a settlement record fails at the wire level; `ok` when none. */
+export type SettlementWireCheck = 'ok' | 'malformed' | 'suite' | 'shape' | 'split' | 'signature';
+
+const nonEmpty = (x: unknown): x is string => typeof x === 'string' && x.length > 0;
+const nonNegNum = (x: unknown): x is number => Number.isFinite(x) && (x as number) >= 0;
+
+/**
+ * WIRE-LEVEL check of a settlement record, in this order: it is an object (`malformed`); its signature suite is known
+ * (`suite`); its fields have the shape its `action` requires (`shape`: names present, `amount` a positive finite number,
+ * `evidenceDigest` empty and `split` absent unless the action is `slash`, and then both present, a guardian epoch a
+ * non-negative integer when present); its split conserves the amount (`split`: `amount` equal to the record's, payouts
+ * non-negative, `(challengerReward + victimCompensation) + treasuryRemainder === amount`, the treasury account is the
+ * record's destination, and an anonymous split pays the treasury everything); and the guardian signature verifies
+ * (`signature`). Pure data: every language runs it from the shared vectors. Never throws.
+ */
+export function settlementWireCheck(record: SettlementRecord, guardianPublicKey: string, pin?: PqPinPolicy): SettlementWireCheck {
+  try {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) return 'malformed';
+    if (resolveSigAlg(record.alg) === null) return 'suite';
+    const r = record as unknown as Record<string, unknown>;
+    const slash = r.action === 'slash';
+    if (
+      !nonEmpty(r.claimId) ||
+      !(r.action === 'open' || r.action === 'release' || r.action === 'slash') ||
+      !Number.isFinite(r.amount) || (r.amount as number) <= 0 ||
+      !nonEmpty(r.from) || !nonEmpty(r.to) ||
+      !Number.isFinite(r.at) ||
+      typeof r.evidenceDigest !== 'string' || (slash ? r.evidenceDigest === '' : r.evidenceDigest !== '') ||
+      (slash ? typeof r.split !== 'object' || r.split === null : r.split !== undefined) ||
+      typeof r.sig !== 'string' ||
+      (r.guardian_epoch !== undefined && !(Number.isSafeInteger(r.guardian_epoch) && (r.guardian_epoch as number) >= 0))
+    ) {
+      return 'shape';
+    }
+    if (slash) {
+      const sp = r.split as Record<string, unknown>;
+      const conserved =
+        sp.amount === r.amount &&
+        nonNegNum(sp.challengerReward) && nonNegNum(sp.victimCompensation) && nonNegNum(sp.treasuryRemainder) &&
+        sp.challengerReward + sp.victimCompensation + sp.treasuryRemainder === r.amount &&
+        nonEmpty(sp.victimAccount) && sp.treasuryAccount === r.to &&
+        (sp.challengerAccount === null ? sp.challengerReward === 0 && sp.victimCompensation === 0 : nonEmpty(sp.challengerAccount));
+      if (!conserved) return 'split';
+    }
+    return verifySettlement(record, guardianPublicKey, pin) ? 'ok' : 'signature';
+  } catch {
+    return 'malformed';
+  }
+}
+
 // ---- A3d: settlement records are anchored into the transparency ledger (externally auditable) ----------
 //
 // WHY. Settlements are the money moves of the fast-path, but until now they lived only in the settlement
@@ -561,11 +612,340 @@ function exactAdd(a: number, b: number, sign: 1 | -1): number {
 /** The lifecycle status of a bond in the ledger. */
 export type BondPhase = 'none' | 'open' | 'released' | 'slashed';
 
-interface BondState {
+/**
+ * One bond as a store holds it. `records` is the signed settlement history in order: the `open` record, then (once
+ * settled) exactly one `release` or `slash` record. `window` is the challenge window as the SETTLEMENT LAYER measured
+ * it (see {@link BondRegistration}); it is absent for a bond opened without a claim registration.
+ */
+export interface BondRow extends BondHead {
+  window?: BondRegistration;
+  records: SettlementRecord[];
+}
+
+/** What deciding a transition needs to know about a bond: who staked how much, and where it stands. */
+export interface BondHead {
   claimId: string;
   amount: number;
   depositor: string;
   status: Exclude<BondPhase, 'none'>;
+}
+
+/**
+ * The challenge window of a registered claim, measured on the settlement layer's own clock. `registeredAt` is
+ * stamped by the ledger's clock when the bond opens; it is NEVER read from the claim, so a claimant who backdates or
+ * forward-dates `issued_at` (within the skew the claim check tolerates) cannot move the window.
+ */
+export interface BondRegistration {
+  registeredAt: number;
+  windowMs: number;
+  /** Digest of the exact claim that was registered; a later slash must present that same claim. */
+  claimDigest: string;
+}
+
+/** What a planner needs to read to decide a transition. Stores expose a read view; planning never mutates. */
+export interface BondView {
+  bond(claimId: string): BondHead | undefined;
+  balanceOf(account: string): number;
+  /** Count and summed amount of the depositor's currently open bonds. */
+  openTotals(depositor: string): { count: number; sum: number };
+}
+
+/** One balance movement of a transition. Applied in order; a debit that would overdraw aborts the whole transition. */
+export interface BondMove {
+  account: string;
+  op: 'debit' | 'credit';
+  amount: number;
+}
+
+/**
+ * A fully decided transition, ready to be committed atomically: the compare-and-swap precondition (`expect`), the new
+ * phase, every balance movement, and the guardian-signed record. A store applies ALL of it or NONE of it.
+ */
+export interface BondPlan {
+  claimId: string;
+  /** The phase the bond MUST be in for the plan to apply (`none` for an open). */
+  expect: BondPhase;
+  next: Exclude<BondPhase, 'none'>;
+  /** Present on an open: the new bond's terms and the caps the store re-checks under its own atomicity. */
+  open?: { amount: number; depositor: string; maxOpenClaims: number; maxOpenAmount: number; window?: BondRegistration };
+  moves: BondMove[];
+  record: SettlementRecord;
+}
+
+export interface BondPlannerOpts {
+  /** The guardian/settlement secret key that signs every record. */
+  guardianSecret: Uint8Array;
+  guardianEpoch?: number;
+  suite?: SignerSuiteOpts;
+  escrowAccount?: string;
+  bondPolicy?: BondPolicy;
+  slashSplitPolicy?: SlashSplitPolicy;
+}
+
+type SlashShared = {
+  claimId: string;
+  claim: BondedClaim;
+  treasury: string;
+  /** The successful challenger's payout account; omit/`null` for an anonymous challenge (→ 100% treasury). */
+  challengerAccount?: string | null;
+  /** The victim-compensation pool account (default `COMPENSATION_POOL_ACCOUNT`). */
+  compensationAccount?: string;
+  /** Override the ledger's slash split policy for this slash. TUNABLE. */
+  splitPolicy?: SlashSplitPolicy;
+};
+export type SlashBondParams = SlashShared & {
+  fraudProof: FraudProof;
+  grant: Capability;
+  /** FROZEN open-time `DecideInput` (server-held, captured at claim open). */
+  openSnapshot: DecideInput;
+};
+export type SlashOnRevocationParams = SlashShared & { revokedCapId: string };
+export type SlashOnDisputeParams = SlashShared & {
+  dispute: DisputeClaim;
+  grant: Capability;
+  openSnapshot: DecideInput;
+  /** The objective oracle resolving the truthful value of the disputed input. */
+  oracle: ObjectiveOracle;
+  rMargin?: number;
+};
+export interface SlashCounterBondParams {
+  /** The challenger's counter-bond id (its own open bond). */
+  counterBondId: string;
+  /** The agent's DISPUTED claim (what the frivolous dispute targeted). */
+  claim: BondedClaim;
+  dispute: DisputeClaim;
+  grant: Capability;
+  openSnapshot: DecideInput;
+  oracle: ObjectiveOracle;
+  treasury: string;
+  /** Optional compensation to the wrongly-accused agent; default `COMPENSATION_POOL_ACCOUNT` (receives 0 when anonymous). */
+  compensationAccount?: string;
+  splitPolicy?: SlashSplitPolicy;
+  rMargin?: number;
+}
+
+/**
+ * The pure half of bond settlement: validates a transition against a read view, re-derives every slash verdict
+ * itself, computes the balance movements and signs the record. It holds no state and touches no store. The
+ * in-memory {@link BondLedger} applies a plan to its maps; a durable ledger (see `bond-store.ts`) commits the same
+ * plan to a {@link BondStore} atomically, so both paths decide identically.
+ */
+export class BondSettlementPlanner {
+  /** The guardian/settlement public key (b64u) — hand this to verifiers of the signed records. */
+  readonly guardianPublicKey: string;
+  readonly escrow: string;
+  readonly bondPolicy: BondPolicy;
+  readonly slashSplitPolicy: SlashSplitPolicy;
+  private readonly guardianSecret: Uint8Array;
+  private readonly guardianEpoch?: number;
+  private readonly suite?: SignerSuiteOpts;
+  private readonly pqPk?: string;
+
+  constructor(opts: BondPlannerOpts) {
+    if (!(opts.guardianSecret instanceof Uint8Array)) {
+      throw new Error('BondLedger: guardianSecret must be a Uint8Array');
+    }
+    this.guardianSecret = opts.guardianSecret;
+    this.guardianPublicKey = b64u(publicKeyOf(opts.guardianSecret));
+    if (opts.guardianEpoch !== undefined && !(Number.isSafeInteger(opts.guardianEpoch) && opts.guardianEpoch >= 0)) {
+      throw new Error('BondLedger: guardianEpoch must be a non-negative safe integer');
+    }
+    this.guardianEpoch = opts.guardianEpoch;
+    if (resolveSigAlg(opts.suite?.alg) === null) throw new Error(`BondLedger: unknown signature alg '${String(opts.suite?.alg)}'`);
+    this.suite = opts.suite;
+    this.pqPk = suitePqPublicKey(opts.suite?.alg, opts.suite);
+    this.escrow = opts.escrowAccount ?? ESCROW_ACCOUNT;
+    this.bondPolicy = opts.bondPolicy ?? DEFAULT_BOND_POLICY;
+    this.slashSplitPolicy = opts.slashSplitPolicy ?? DEFAULT_SLASH_SPLIT_POLICY;
+  }
+
+  private signRecord(base: Omit<SettlementRecord, 'sig' | 'alg' | 'pq_pk' | 'pq_sig'>): SettlementRecord {
+    // Stamp + bind the guardian epoch (when configured) so it is covered by the signature; omitted => absent.
+    const withEpoch = this.guardianEpoch === undefined ? base : { ...base, guardian_epoch: this.guardianEpoch };
+    // Bind the suite (alg + guardian ML-DSA key) into the signed body; ed25519 is byte-identical.
+    const signedBody = bindSuiteFields(withEpoch, this.suite?.alg, this.pqPk);
+    const fields = signSuiteArtifact(this.suite?.alg, suiteKeysOf(this.guardianSecret, this.suite), settlementMessage(signedBody));
+    return { ...signedBody, ...fields };
+  }
+
+  /** The balance movements of a slash: the full bond leaves escrow and is divided per {@link computeSlashSplit}. */
+  private slashMoves(params: {
+    amount: number;
+    treasury: string;
+    challengerAccount?: string | null;
+    compensationAccount?: string;
+    splitPolicy?: SlashSplitPolicy;
+  }): { split: SlashSplit; moves: BondMove[] } {
+    const split = computeSlashSplit(params.amount, params.splitPolicy ?? this.slashSplitPolicy, {
+      challengerAccount: params.challengerAccount ?? null,
+      victimAccount: params.compensationAccount ?? COMPENSATION_POOL_ACCOUNT,
+      treasuryAccount: params.treasury,
+    });
+    const moves: BondMove[] = [{ account: this.escrow, op: 'debit', amount: params.amount }]; // the full bond leaves escrow
+    if (split.challengerAccount && split.challengerReward > 0) moves.push({ account: split.challengerAccount, op: 'credit', amount: split.challengerReward });
+    if (split.victimCompensation > 0) moves.push({ account: split.victimAccount, op: 'credit', amount: split.victimCompensation });
+    if (split.treasuryRemainder > 0) moves.push({ account: split.treasuryAccount, op: 'credit', amount: split.treasuryRemainder });
+    return { split, moves };
+  }
+
+  private openBondOrThrow(view: BondView, who: string, claimId: string): BondHead {
+    const bond = view.bond(claimId);
+    if (!bond) throw new Error(`${who}: no bond for ${claimId}`);
+    if (bond.status !== 'open') throw new Error(`${who}: bond ${claimId} is already ${bond.status} (double-settle refused)`);
+    return bond;
+  }
+
+  private slashPlan(
+    bond: BondHead,
+    claimId: string,
+    now: number,
+    evidenceDigest: string,
+    p: { treasury: string; challengerAccount?: string | null; compensationAccount?: string; splitPolicy?: SlashSplitPolicy },
+  ): BondPlan {
+    const { split, moves } = this.slashMoves({
+      amount: bond.amount,
+      treasury: p.treasury,
+      challengerAccount: p.challengerAccount,
+      compensationAccount: p.compensationAccount,
+      splitPolicy: p.splitPolicy,
+    });
+    const record = this.signRecord({ claimId, action: 'slash', amount: bond.amount, from: this.escrow, to: p.treasury, at: now, evidenceDigest, split });
+    return { claimId, expect: 'open', next: 'slashed', moves, record };
+  }
+
+  /**
+   * Open (lock) a bond: refuses an unaffordable bond, one below `bondAmount(policy, exposure)`, and
+   * one that would breach the per-depositor open-claim caps; debits real collateral. Refuses a non-positive/non-finite amount and a double-open of the same claim.
+   * The bond moves from the depositor into escrow; it credits no account until it settles.
+   */
+  planOpen(view: BondView, params: { claimId: string; amount: number; depositor: string; exposure?: number; now: number; window?: BondRegistration }): BondPlan {
+    const { claimId, amount, depositor } = params;
+    if (typeof claimId !== 'string' || claimId.length === 0) throw new Error('openBond: claimId is required');
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('openBond: amount must be a positive finite number');
+    if (typeof depositor !== 'string' || depositor.length === 0) throw new Error('openBond: depositor is required');
+    if (view.bond(claimId)) throw new Error(`openBond: bond ${claimId} already exists (double-open refused)`);
+
+    const required = bondAmount(this.bondPolicy, params.exposure ?? 0);
+    if (amount < required) throw new Error(`openBond: amount ${amount} is below the required bond ${required}`);
+    const { count: openCount, sum: openSum } = view.openTotals(depositor);
+    if (openCount + 1 > this.bondPolicy.maxOpenClaims) throw new Error('openBond: depositor open-claim cap reached');
+    if (openSum + amount > this.bondPolicy.maxOpenAmount) throw new Error('openBond: depositor aggregate open-bond cap exceeded');
+    if (view.balanceOf(depositor) < amount) throw new Error('openBond: insufficient balance for the bond');
+
+    const record = this.signRecord({ claimId, action: 'open', amount, from: depositor, to: this.escrow, at: params.now, evidenceDigest: '' });
+    return {
+      claimId,
+      expect: 'none',
+      next: 'open',
+      open: { amount, depositor, maxOpenClaims: this.bondPolicy.maxOpenClaims, maxOpenAmount: this.bondPolicy.maxOpenAmount, ...(params.window ? { window: params.window } : {}) },
+      moves: [
+        { account: depositor, op: 'debit', amount }, // collateral is really taken
+        { account: this.escrow, op: 'credit', amount },
+      ],
+      record,
+    };
+  }
+
+  /**
+   * Release a bond back to its depositor after an unchallenged challenge window. Refuses a bond that
+   * does not exist or is not currently `open` (double-settle refused). Credits the depositor.
+   */
+  planRelease(view: BondView, params: { claimId: string; now: number }): BondPlan {
+    const { claimId } = params;
+    const bond = view.bond(claimId);
+    if (!bond) throw new Error(`releaseBond: no bond for ${claimId}`);
+    if (bond.status !== 'open') throw new Error(`releaseBond: bond ${claimId} is already ${bond.status} (double-settle refused)`);
+    const record = this.signRecord({ claimId, action: 'release', amount: bond.amount, from: this.escrow, to: bond.depositor, at: params.now, evidenceDigest: '' });
+    return {
+      claimId,
+      expect: 'open',
+      next: 'released',
+      moves: [
+        { account: this.escrow, op: 'debit', amount: bond.amount },
+        { account: bond.depositor, op: 'credit', amount: bond.amount },
+      ],
+      record,
+    };
+  }
+
+  /** Slash against a VERIFIED fraud verdict; re-runs `verifyFraudProof` itself (see {@link BondLedger.slashBond}). */
+  planSlash(view: BondView, params: SlashBondParams & { now: number }): BondPlan {
+    const { claimId, claim, fraudProof, grant, treasury, openSnapshot } = params;
+    const bond = this.openBondOrThrow(view, 'slashBond', claimId);
+    if (typeof treasury !== 'string' || treasury.length === 0) throw new Error('slashBond: treasury is required');
+    if (claim.bond_ref !== claimId) throw new Error('slashBond: claim.bond_ref does not match claimId');
+
+    // Independently re-derive the fraud verdict — NOT challenger input.
+    const verdict = verifyFraudProof(claim, fraudProof, grant, openSnapshot);
+    if (!verdict.fraudulent || verdict.slashBondRef !== claimId) {
+      throw new Error(`slashBond: refused — no verified fraud verdict slashing ${claimId} (${verdict.reason})`);
+    }
+    return this.slashPlan(bond, claimId, params.now, settlementEvidenceDigest(claim, verdict), params);
+  }
+
+  /** Slash because a capability in the claim's chain was revoked after the bond opened (server-derived evidence). */
+  planSlashOnRevocation(view: BondView, params: SlashOnRevocationParams & { now: number }): BondPlan {
+    const { claimId, claim, revokedCapId, treasury } = params;
+    const bond = this.openBondOrThrow(view, 'slashBondOnRevocation', claimId);
+    if (typeof treasury !== 'string' || treasury.length === 0) throw new Error('slashBondOnRevocation: treasury is required');
+    if (claim.bond_ref !== claimId) throw new Error('slashBondOnRevocation: claim.bond_ref does not match claimId');
+    if (typeof revokedCapId !== 'string' || revokedCapId.length === 0) throw new Error('slashBondOnRevocation: revokedCapId is required');
+    return this.slashPlan(bond, claimId, params.now, revocationEvidenceDigest(claim, revokedCapId), params);
+  }
+
+  /** Slash the AGENT's bond because a dispute proved it UNDERSTATED a risk input; re-runs `adjudicateDispute` itself. */
+  planSlashOnDispute(view: BondView, params: SlashOnDisputeParams & { now: number }): BondPlan {
+    const { claimId, claim, dispute, grant, openSnapshot, oracle, treasury } = params;
+    const bond = this.openBondOrThrow(view, 'slashBondOnDispute', claimId);
+    if (typeof treasury !== 'string' || treasury.length === 0) throw new Error('slashBondOnDispute: treasury is required');
+    if (claim.bond_ref !== claimId) throw new Error('slashBondOnDispute: claim.bond_ref does not match claimId');
+
+    // Independently re-derive the dispute verdict — NOT challenger input.
+    const verdict = adjudicateDispute({ claim, dispute, grant, openSnapshot, oracle, rMargin: params.rMargin });
+    if (verdict.outcome !== 'agent-fraud' || !verdict.fraudulent || verdict.slashBondRef !== claimId) {
+      throw new Error(`slashBondOnDispute: refused — no verified agent-fraud verdict slashing ${claimId} (${verdict.outcome}: ${verdict.reason})`);
+    }
+    return this.slashPlan(bond, claimId, params.now, disputeEvidenceDigest(claim, verdict), params);
+  }
+
+  /** Slash the CHALLENGER's counter-bond because the dispute was FRIVOLOUS (anti-griefing); re-runs `adjudicateDispute`. */
+  planSlashCounterBond(view: BondView, params: SlashCounterBondParams & { now: number }): BondPlan {
+    const { counterBondId, claim, dispute, grant, openSnapshot, oracle, treasury } = params;
+    const bond = view.bond(counterBondId);
+    if (!bond) throw new Error(`slashCounterBond: no counter-bond for ${counterBondId}`);
+    if (bond.status !== 'open') throw new Error(`slashCounterBond: counter-bond ${counterBondId} is already ${bond.status} (double-settle refused)`);
+    if (typeof treasury !== 'string' || treasury.length === 0) throw new Error('slashCounterBond: treasury is required');
+
+    const verdict = adjudicateDispute({ claim, dispute, grant, openSnapshot, oracle, rMargin: params.rMargin });
+    if (verdict.outcome !== 'claim-upheld' || !verdict.slashCounterBond) {
+      throw new Error(`slashCounterBond: refused — the dispute is not frivolous (${verdict.outcome}: ${verdict.reason})`);
+    }
+    // Anonymous slash of the griefer's own stake: 100% treasury (no rewardable challenger). The victim pool
+    // accrues 0 here because `challengerAccount` is null (see `computeSlashSplit`); a deployment that wants to
+    // compensate the wrongly-accused agent on a griefing slash would branch — flagged tunable.
+    return this.slashPlan(bond, counterBondId, params.now, disputeEvidenceDigest(claim, verdict), {
+      treasury,
+      challengerAccount: null,
+      compensationAccount: params.compensationAccount,
+      splitPolicy: params.splitPolicy,
+    });
+  }
+}
+
+/**
+ * Apply `moves` to a balance lookup in order, exactly as {@link InMemoryBondAccount} would, and return the resulting
+ * balances. THROWS (applying nothing) on an invalid amount or an overdraft. Shared by every store so no store can
+ * diverge on the arithmetic (micro-unit exact where the amounts are on the micro grid).
+ */
+export function applyBondMoves(balanceOf: (account: string) => number, moves: readonly BondMove[]): Map<string, number> {
+  const out = new Map<string, number>();
+  const bal = (a: string): number => out.get(a) ?? balanceOf(a);
+  for (const m of moves) {
+    if (!Number.isFinite(m.amount) || m.amount < 0) throw new Error(`${m.op}: invalid amount`);
+    if (m.op === 'debit' && bal(m.account) < m.amount) throw new Error(`debit: insufficient balance for ${m.account}`);
+    out.set(m.account, exactAdd(bal(m.account), m.amount, m.op === 'debit' ? -1 : 1));
+  }
+  return out;
 }
 
 export interface BondLedgerOpts {
@@ -593,67 +973,49 @@ export interface BondLedgerOpts {
 }
 
 /**
- * A simple in-memory, `Map`-backed bond ledger (the real store is a seam — see module header). It
+ * A simple in-memory, `Map`-backed bond ledger (internal accounting only; no money moves). It
  * locks a bond on `openBond`, returns it to the depositor on `releaseBond` (after an unchallenged
  * window), or moves it to the treasury on `slashBond` (only against a VERIFIED fraud verdict). Each
  * transition produces a guardian-signed `SettlementRecord`. `balanceOf` reports settled credits (a
  * release credits the depositor; a slash credits the treasury); an open bond is locked in escrow and
- * credits no one until it settles.
+ * credits no one until it settles. State is lost with the process: for a durable ledger use
+ * `StoreBondLedger` (`bond-store.ts`), which commits the same decisions to a {@link BondStore}.
  */
 export class BondLedger {
-  /** The guardian/settlement public key (b64u) — hand this to verifiers of the signed records. */
-  readonly guardianPublicKey: string;
-  private readonly guardianSecret: Uint8Array;
-  private readonly guardianEpoch?: number;
-  private readonly suite?: SignerSuiteOpts;
-  private readonly pqPk?: string;
-  private readonly escrow: string;
-  private readonly bonds = new Map<string, BondState>();
+  private readonly planner: BondSettlementPlanner;
+  private readonly bonds = new Map<string, BondHead>();
   private readonly accounts: BondAccount;
-  readonly bondPolicy: BondPolicy;
-  readonly slashSplitPolicy: SlashSplitPolicy;
+  private readonly view: BondView;
 
   constructor(opts: BondLedgerOpts) {
-    if (!(opts.guardianSecret instanceof Uint8Array)) {
-      throw new Error('BondLedger: guardianSecret must be a Uint8Array');
-    }
-    this.guardianSecret = opts.guardianSecret;
-    this.guardianPublicKey = b64u(publicKeyOf(opts.guardianSecret));
-    if (opts.guardianEpoch !== undefined && !(Number.isSafeInteger(opts.guardianEpoch) && opts.guardianEpoch >= 0)) {
-      throw new Error('BondLedger: guardianEpoch must be a non-negative safe integer');
-    }
-    this.guardianEpoch = opts.guardianEpoch;
-    if (resolveSigAlg(opts.suite?.alg) === null) throw new Error(`BondLedger: unknown signature alg '${String(opts.suite?.alg)}'`);
-    this.suite = opts.suite;
-    this.pqPk = suitePqPublicKey(opts.suite?.alg, opts.suite);
-    this.escrow = opts.escrowAccount ?? ESCROW_ACCOUNT;
+    this.planner = new BondSettlementPlanner(opts);
     this.accounts = opts.accounts ?? new InMemoryBondAccount();
-    this.bondPolicy = opts.bondPolicy ?? DEFAULT_BOND_POLICY;
-    this.slashSplitPolicy = opts.slashSplitPolicy ?? DEFAULT_SLASH_SPLIT_POLICY;
+    this.view = {
+      bond: (id) => this.bonds.get(id),
+      balanceOf: (a) => this.accounts.balanceOf(a),
+      openTotals: (depositor) => {
+        let count = 0;
+        let sum = 0;
+        for (const b of this.bonds.values()) {
+          if (b.status === 'open' && b.depositor === depositor) {
+            count += 1;
+            sum += b.amount;
+          }
+        }
+        return { count, sum };
+      },
+    };
   }
 
-  /**
-   * Debit the full bonded amount out of escrow and credit it across the challenger / victim-pool / treasury
-   * per {@link computeSlashSplit}. Returns the exact split to embed in the signed record. Shared by both
-   * slash paths (fraud proof + revocation) so they divide identically.
-   */
-  private settleSlashSplit(params: {
-    amount: number;
-    treasury: string;
-    challengerAccount?: string | null;
-    compensationAccount?: string;
-    splitPolicy?: SlashSplitPolicy;
-  }): SlashSplit {
-    const split = computeSlashSplit(params.amount, params.splitPolicy ?? this.slashSplitPolicy, {
-      challengerAccount: params.challengerAccount ?? null,
-      victimAccount: params.compensationAccount ?? COMPENSATION_POOL_ACCOUNT,
-      treasuryAccount: params.treasury,
-    });
-    this.accounts.debit(this.escrow, params.amount); // the full bond leaves escrow
-    if (split.challengerAccount && split.challengerReward > 0) this.credit(split.challengerAccount, split.challengerReward);
-    if (split.victimCompensation > 0) this.credit(split.victimAccount, split.victimCompensation);
-    if (split.treasuryRemainder > 0) this.credit(split.treasuryAccount, split.treasuryRemainder);
-    return split;
+  /** The guardian/settlement public key (b64u) — hand this to verifiers of the signed records. */
+  get guardianPublicKey(): string {
+    return this.planner.guardianPublicKey;
+  }
+  get bondPolicy(): BondPolicy {
+    return this.planner.bondPolicy;
+  }
+  get slashSplitPolicy(): SlashSplitPolicy {
+    return this.planner.slashSplitPolicy;
   }
 
   /** The settled credit balance of `account` (0 if unknown). */
@@ -666,21 +1028,20 @@ export class BondLedger {
     return this.bonds.get(claimId)?.status ?? 'none';
   }
 
-  private credit(account: string, amount: number): void {
-    this.accounts.credit(account, amount);
-  }
-
-  private signRecord(base: Omit<SettlementRecord, 'sig' | 'alg' | 'pq_pk' | 'pq_sig'>): SettlementRecord {
-    // Stamp + bind the guardian epoch (when configured) so it is covered by the signature; omitted => absent.
-    const withEpoch = this.guardianEpoch === undefined ? base : { ...base, guardian_epoch: this.guardianEpoch };
-    // Bind the suite (alg + guardian ML-DSA key) into the signed body; ed25519 is byte-identical.
-    const signedBody = bindSuiteFields(withEpoch, this.suite?.alg, this.pqPk);
-    const fields = signSuiteArtifact(this.suite?.alg, suiteKeysOf(this.guardianSecret, this.suite), settlementMessage(signedBody));
-    return { ...signedBody, ...fields };
-  }
-
   private now(at?: number): number {
     return Number.isFinite(at) ? (at as number) : Date.now();
+  }
+
+  /** Apply a plan all-or-nothing: the moves are checked against an overlay first, so a refused debit leaves no trace. */
+  private commit(plan: BondPlan): SettlementRecord {
+    applyBondMoves((a) => this.accounts.balanceOf(a), plan.moves); // throws before anything is mutated
+    for (const m of plan.moves) {
+      if (m.op === 'debit') this.accounts.debit(m.account, m.amount);
+      else this.accounts.credit(m.account, m.amount);
+    }
+    if (plan.open) this.bonds.set(plan.claimId, { claimId: plan.claimId, amount: plan.open.amount, depositor: plan.open.depositor, status: 'open' });
+    else this.bonds.get(plan.claimId)!.status = plan.next; // a settle plan was made from this bond, so it exists
+    return plan.record;
   }
 
   /**
@@ -689,62 +1050,12 @@ export class BondLedger {
    * The bond moves from the depositor into escrow; it credits no account until it settles.
    */
   openBond(params: { claimId: string; amount: number; depositor: string; exposure?: number; at?: number }): SettlementRecord {
-    const { claimId, amount, depositor } = params;
-    if (typeof claimId !== 'string' || claimId.length === 0) throw new Error('openBond: claimId is required');
-    if (!Number.isFinite(amount) || amount <= 0) throw new Error('openBond: amount must be a positive finite number');
-    if (typeof depositor !== 'string' || depositor.length === 0) throw new Error('openBond: depositor is required');
-    if (this.bonds.has(claimId)) throw new Error(`openBond: bond ${claimId} already exists (double-open refused)`);
-
-    const required = bondAmount(this.bondPolicy, params.exposure ?? 0);
-    if (amount < required) throw new Error(`openBond: amount ${amount} is below the required bond ${required}`);
-    let openCount = 0;
-    let openSum = 0;
-    for (const b of this.bonds.values()) {
-      if (b.status === 'open' && b.depositor === depositor) {
-        openCount += 1;
-        openSum += b.amount;
-      }
-    }
-    if (openCount + 1 > this.bondPolicy.maxOpenClaims) throw new Error('openBond: depositor open-claim cap reached');
-    if (openSum + amount > this.bondPolicy.maxOpenAmount) throw new Error('openBond: depositor aggregate open-bond cap exceeded');
-    if (this.accounts.balanceOf(depositor) < amount) throw new Error('openBond: insufficient balance for the bond');
-
-    this.accounts.debit(depositor, amount); // collateral is really taken
-    this.accounts.credit(this.escrow, amount);
-    this.bonds.set(claimId, { claimId, amount, depositor, status: 'open' });
-    return this.signRecord({
-      claimId,
-      action: 'open',
-      amount,
-      from: depositor,
-      to: this.escrow,
-      at: this.now(params.at),
-      evidenceDigest: '',
-    });
+    return this.commit(this.planner.planOpen(this.view, { ...params, now: this.now(params.at) }));
   }
 
-  /**
-   * Release a bond back to its depositor after an unchallenged challenge window. Refuses a bond that
-   * does not exist or is not currently `open` (double-settle refused). Credits the depositor.
-   */
+  /** Release a bond back to its depositor after an unchallenged challenge window (double-settle refused). */
   releaseBond(params: { claimId: string; at?: number }): SettlementRecord {
-    const { claimId } = params;
-    const bond = this.bonds.get(claimId);
-    if (!bond) throw new Error(`releaseBond: no bond for ${claimId}`);
-    if (bond.status !== 'open') throw new Error(`releaseBond: bond ${claimId} is already ${bond.status} (double-settle refused)`);
-
-    bond.status = 'released';
-    this.accounts.debit(this.escrow, bond.amount);
-    this.credit(bond.depositor, bond.amount);
-    return this.signRecord({
-      claimId,
-      action: 'release',
-      amount: bond.amount,
-      from: this.escrow,
-      to: bond.depositor,
-      at: this.now(params.at),
-      evidenceDigest: '',
-    });
+    return this.commit(this.planner.planRelease(this.view, { claimId: params.claimId, now: this.now(params.at) }));
   }
 
   /**
@@ -755,224 +1066,38 @@ export class BondLedger {
    * recomputed verdict, and its `split` records the challenger / victim-pool / treasury division.
    *
    * SLASH SPLIT: pass `challengerAccount` (the successful challenger's payout account) to divert the
-   * challenger + victim shares; omit it (anonymous) to send the whole bond to the treasury — today's
-   * behavior. `compensationAccount` is the victim pool (default `COMPENSATION_POOL_ACCOUNT`). All credits
-   * happen here, in the same synchronous settlement as the status change.
+   * challenger + victim shares; omit it (anonymous) to send the whole bond to the treasury. `compensationAccount`
+   * is the victim pool (default `COMPENSATION_POOL_ACCOUNT`). All credits happen here, in the same synchronous
+   * settlement as the status change.
    */
-  slashBond(params: {
-    claimId: string;
-    claim: BondedClaim;
-    fraudProof: FraudProof;
-    grant: Capability;
-    /** FROZEN open-time `DecideInput` (server-held, captured at claim open). */
-    openSnapshot: DecideInput;
-    treasury: string;
-    /** The successful challenger's payout account; omit/`null` for an anonymous challenge (→ 100% treasury). */
-    challengerAccount?: string | null;
-    /** The victim-compensation pool account (default `COMPENSATION_POOL_ACCOUNT`). */
-    compensationAccount?: string;
-    /** Override the ledger's slash split policy for this slash. TUNABLE. */
-    splitPolicy?: SlashSplitPolicy;
-    at?: number;
-  }): SettlementRecord {
-    const { claimId, claim, fraudProof, grant, treasury, openSnapshot } = params;
-    const bond = this.bonds.get(claimId);
-    if (!bond) throw new Error(`slashBond: no bond for ${claimId}`);
-    if (bond.status !== 'open') throw new Error(`slashBond: bond ${claimId} is already ${bond.status} (double-settle refused)`);
-    if (typeof treasury !== 'string' || treasury.length === 0) throw new Error('slashBond: treasury is required');
-    if (claim.bond_ref !== claimId) throw new Error('slashBond: claim.bond_ref does not match claimId');
-
-    // Independently re-derive the fraud verdict — NOT challenger input.
-    const verdict = verifyFraudProof(claim, fraudProof, grant, openSnapshot);
-    if (!verdict.fraudulent || verdict.slashBondRef !== claimId) {
-      throw new Error(`slashBond: refused — no verified fraud verdict slashing ${claimId} (${verdict.reason})`);
-    }
-
-    bond.status = 'slashed';
-    const split = this.settleSlashSplit({
-      amount: bond.amount,
-      treasury,
-      challengerAccount: params.challengerAccount,
-      compensationAccount: params.compensationAccount,
-      splitPolicy: params.splitPolicy,
-    });
-    return this.signRecord({
-      claimId,
-      action: 'slash',
-      amount: bond.amount,
-      from: this.escrow,
-      to: treasury,
-      at: this.now(params.at),
-      evidenceDigest: settlementEvidenceDigest(claim, verdict),
-      split,
-    });
+  slashBond(params: SlashBondParams & { at?: number }): SettlementRecord {
+    return this.commit(this.planner.planSlash(this.view, { ...params, now: this.now(params.at) }));
   }
 
   /**
    * Slash a bond because a capability in the claim's chain was REVOKED after the bond opened. The
    * authorizing evidence is server-derived (the caller MUST have confirmed `revokedCapId` is both in
    * the claim's chain and currently in the instance's revocation set) — never a challenger assertion.
-   * Credits the treasury; binds the record to the revocation evidence. Refuses a missing/already-settled
-   * bond (double-settle).
    */
-  slashBondOnRevocation(params: {
-    claimId: string;
-    claim: BondedClaim;
-    revokedCapId: string;
-    treasury: string;
-    /** The successful challenger's payout account; omit/`null` for an anonymous challenge (→ 100% treasury). */
-    challengerAccount?: string | null;
-    /** The victim-compensation pool account (default `COMPENSATION_POOL_ACCOUNT`). */
-    compensationAccount?: string;
-    /** Override the ledger's slash split policy for this slash. TUNABLE. */
-    splitPolicy?: SlashSplitPolicy;
-    at?: number;
-  }): SettlementRecord {
-    const { claimId, claim, revokedCapId, treasury } = params;
-    const bond = this.bonds.get(claimId);
-    if (!bond) throw new Error(`slashBondOnRevocation: no bond for ${claimId}`);
-    if (bond.status !== 'open') throw new Error(`slashBondOnRevocation: bond ${claimId} is already ${bond.status} (double-settle refused)`);
-    if (typeof treasury !== 'string' || treasury.length === 0) throw new Error('slashBondOnRevocation: treasury is required');
-    if (claim.bond_ref !== claimId) throw new Error('slashBondOnRevocation: claim.bond_ref does not match claimId');
-    if (typeof revokedCapId !== 'string' || revokedCapId.length === 0) throw new Error('slashBondOnRevocation: revokedCapId is required');
-
-    bond.status = 'slashed';
-    const split = this.settleSlashSplit({
-      amount: bond.amount,
-      treasury,
-      challengerAccount: params.challengerAccount,
-      compensationAccount: params.compensationAccount,
-      splitPolicy: params.splitPolicy,
-    });
-    return this.signRecord({
-      claimId,
-      action: 'slash',
-      amount: bond.amount,
-      from: this.escrow,
-      to: treasury,
-      at: this.now(params.at),
-      evidenceDigest: revocationEvidenceDigest(claim, revokedCapId),
-      split,
-    });
+  slashBondOnRevocation(params: SlashOnRevocationParams & { at?: number }): SettlementRecord {
+    return this.commit(this.planner.planSlashOnRevocation(this.view, { ...params, now: this.now(params.at) }));
   }
 
   /**
    * Slash the AGENT's bond because a dispute proved it UNDERSTATED a risk input. This method itself re-runs
-   * `adjudicateDispute` (with the objective oracle, against the grant + frozen snapshot the settlement layer
-   * trusts) and refuses unless the SERVER-DERIVED verdict is `agent-fraud` and names THIS bond — the
-   * challenger's assertion alone never authorizes a slash. Refuses a missing / already-settled bond
-   * (double-settle). The signed record's `evidenceDigest` binds to the recomputed dispute verdict, and its
-   * `split` records the challenger / victim-pool / treasury division (identical to the fraud-proof path).
+   * `adjudicateDispute` and refuses unless the SERVER-DERIVED verdict is `agent-fraud` and names THIS bond.
    */
-  slashBondOnDispute(params: {
-    claimId: string;
-    claim: BondedClaim;
-    dispute: DisputeClaim;
-    grant: Capability;
-    /** FROZEN open-time `DecideInput` (server-held, captured at claim open). */
-    openSnapshot: DecideInput;
-    /** The objective oracle resolving the truthful value of the disputed input. */
-    oracle: ObjectiveOracle;
-    treasury: string;
-    /** The successful challenger's payout account; omit/`null` for an anonymous challenge (→ 100% treasury). */
-    challengerAccount?: string | null;
-    /** The victim-compensation pool account (default `COMPENSATION_POOL_ACCOUNT`). */
-    compensationAccount?: string;
-    /** Override the ledger's slash split policy for this slash. TUNABLE. */
-    splitPolicy?: SlashSplitPolicy;
-    rMargin?: number;
-    at?: number;
-  }): SettlementRecord {
-    const { claimId, claim, dispute, grant, openSnapshot, oracle, treasury } = params;
-    const bond = this.bonds.get(claimId);
-    if (!bond) throw new Error(`slashBondOnDispute: no bond for ${claimId}`);
-    if (bond.status !== 'open') throw new Error(`slashBondOnDispute: bond ${claimId} is already ${bond.status} (double-settle refused)`);
-    if (typeof treasury !== 'string' || treasury.length === 0) throw new Error('slashBondOnDispute: treasury is required');
-    if (claim.bond_ref !== claimId) throw new Error('slashBondOnDispute: claim.bond_ref does not match claimId');
-
-    // Independently re-derive the dispute verdict — NOT challenger input.
-    const verdict = adjudicateDispute({ claim, dispute, grant, openSnapshot, oracle, rMargin: params.rMargin });
-    if (verdict.outcome !== 'agent-fraud' || !verdict.fraudulent || verdict.slashBondRef !== claimId) {
-      throw new Error(`slashBondOnDispute: refused — no verified agent-fraud verdict slashing ${claimId} (${verdict.outcome}: ${verdict.reason})`);
-    }
-
-    bond.status = 'slashed';
-    const split = this.settleSlashSplit({
-      amount: bond.amount,
-      treasury,
-      challengerAccount: params.challengerAccount,
-      compensationAccount: params.compensationAccount,
-      splitPolicy: params.splitPolicy,
-    });
-    return this.signRecord({
-      claimId,
-      action: 'slash',
-      amount: bond.amount,
-      from: this.escrow,
-      to: treasury,
-      at: this.now(params.at),
-      evidenceDigest: disputeEvidenceDigest(claim, verdict),
-      split,
-    });
+  slashBondOnDispute(params: SlashOnDisputeParams & { at?: number }): SettlementRecord {
+    return this.commit(this.planner.planSlashOnDispute(this.view, { ...params, now: this.now(params.at) }));
   }
 
   /**
    * Slash the CHALLENGER's COUNTER-BOND because the dispute was FRIVOLOUS — the objective oracle UPHELD the
-   * agent's disputed input, so fast-path admission survives at the truthful value (anti-griefing). Like every
-   * slash here it is server-derived: this method re-runs `adjudicateDispute` and refuses unless the verdict is
-   * `claim-upheld`. `counterBondId` is the challenger's OWN bond (opened via {@link openBond}); the agent's
-   * claim bond is untouched (the honest agent keeps its bond and its provisional effect). The counter-bond
-   * folds to the treasury (anonymous — the griefer is not a rewardable challenger); the signed record's
-   * `evidenceDigest` binds to the recomputed dispute verdict. Refuses a missing / already-settled counter-bond.
+   * agent's disputed input (anti-griefing). Server-derived: this method re-runs `adjudicateDispute` and refuses
+   * unless the verdict is `claim-upheld`. The counter-bond folds to the treasury.
    */
-  slashCounterBond(params: {
-    /** The challenger's counter-bond id (its own open bond). */
-    counterBondId: string;
-    /** The agent's DISPUTED claim (what the frivolous dispute targeted). */
-    claim: BondedClaim;
-    dispute: DisputeClaim;
-    grant: Capability;
-    openSnapshot: DecideInput;
-    oracle: ObjectiveOracle;
-    treasury: string;
-    /** Optional compensation to the wrongly-accused agent; default `COMPENSATION_POOL_ACCOUNT` (receives 0 when anonymous). */
-    compensationAccount?: string;
-    splitPolicy?: SlashSplitPolicy;
-    rMargin?: number;
-    at?: number;
-  }): SettlementRecord {
-    const { counterBondId, claim, dispute, grant, openSnapshot, oracle, treasury } = params;
-    const bond = this.bonds.get(counterBondId);
-    if (!bond) throw new Error(`slashCounterBond: no counter-bond for ${counterBondId}`);
-    if (bond.status !== 'open') throw new Error(`slashCounterBond: counter-bond ${counterBondId} is already ${bond.status} (double-settle refused)`);
-    if (typeof treasury !== 'string' || treasury.length === 0) throw new Error('slashCounterBond: treasury is required');
-
-    const verdict = adjudicateDispute({ claim, dispute, grant, openSnapshot, oracle, rMargin: params.rMargin });
-    if (verdict.outcome !== 'claim-upheld' || !verdict.slashCounterBond) {
-      throw new Error(`slashCounterBond: refused — the dispute is not frivolous (${verdict.outcome}: ${verdict.reason})`);
-    }
-
-    bond.status = 'slashed';
-    // Anonymous slash of the griefer's own stake: 100% treasury (no rewardable challenger). The victim pool
-    // accrues 0 here because `challengerAccount` is null (see `computeSlashSplit`); a deployment that wants to
-    // compensate the wrongly-accused agent on a griefing slash would branch — flagged tunable.
-    const split = this.settleSlashSplit({
-      amount: bond.amount,
-      treasury,
-      challengerAccount: null,
-      compensationAccount: params.compensationAccount,
-      splitPolicy: params.splitPolicy,
-    });
-    return this.signRecord({
-      claimId: counterBondId,
-      action: 'slash',
-      amount: bond.amount,
-      from: this.escrow,
-      to: treasury,
-      at: this.now(params.at),
-      evidenceDigest: disputeEvidenceDigest(claim, verdict),
-      split,
-    });
+  slashCounterBond(params: SlashCounterBondParams & { at?: number }): SettlementRecord {
+    return this.commit(this.planner.planSlashCounterBond(this.view, { ...params, now: this.now(params.at) }));
   }
 }
 

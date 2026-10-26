@@ -1,7 +1,7 @@
 {
   "name": "@atlasauth/pca-scitt",
-  "version": "0.4.2",
-  "description": "SCITT transparency receipts for PCA (RFC 9943/9942): register each verified PCActn as a COSE Signed Statement and return/verify the COSE inclusion receipt, turning PCA's decision record into standards-shaped, externally-verifiable append-only audit evidence.",
+  "version": "0.5.0",
+  "description": "SCITT transparency receipts for PCA (RFC 9943/9942): sign PCA decision records as COSE Signed Statements and verify COSE inclusion and consistency receipts from any RFC 9162 transparency log. An in-memory reference log for tests is under /testing.",
   "keywords": [
     "scitt",
     "cose",
@@ -30,7 +30,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -54,5 +58,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

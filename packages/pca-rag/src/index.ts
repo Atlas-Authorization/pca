@@ -43,8 +43,9 @@ export interface Principal {
 /** A principal, or just its id (shorthand for `{ id }`). */
 export type PrincipalInput = Principal | string;
 
-function toPrincipal(p: PrincipalInput): Principal {
-  return typeof p === 'string' ? { id: p } : p;
+function toPrincipal(p: PrincipalInput): Principal | undefined {
+  if (typeof p === 'string') return { id: p };
+  return p !== null && typeof p === 'object' ? p : undefined;
 }
 
 /**
@@ -147,6 +148,8 @@ export interface CompiledPolicy {
   readonly predicates: Predicate[];
   readonly denies: Predicate[];
   readonly incomplete: boolean;
+  /** Why the policy is incomplete when it is not a translation error (an unusable policy value). */
+  readonly incompleteReason?: string;
   readonly report?: TranslationReport;
 }
 
@@ -162,10 +165,17 @@ function isCompiledPolicy(p: PolicyInput | CompiledPolicy): p is CompiledPolicy 
 
 /** Compile any {@link PolicyInput} (or pass through an already-{@link CompiledPolicy}). */
 export function compilePolicy(policy: PolicyInput | CompiledPolicy): CompiledPolicy {
+  // Total: a value that is not a policy is an incomplete policy (nothing is admitted), never a thrown TypeError mid-retrieval.
+  if (policy === null || typeof policy !== 'object') return { predicates: [], denies: [], incomplete: true, incompleteReason: 'no usable policy was supplied (fail closed)' };
   if (isCompiledPolicy(policy)) return policy;
+  if (!Array.isArray(policy) && !('openfga' in policy) && !Array.isArray((policy as { predicates?: unknown }).predicates)) {
+    return { predicates: [], denies: [], incomplete: true, incompleteReason: 'the policy has no predicates and is not an OpenFGA policy (fail closed)' };
+  }
   if (Array.isArray(policy)) return { predicates: policy, denies: [], incomplete: false };
   if ('openfga' in policy) {
-    const br = openfgaToPca(policy.openfga.model, policy.openfga.tuples);
+    const fga = policy.openfga;
+    if (fga === null || typeof fga !== 'object') return { predicates: [], denies: [], incomplete: true, incompleteReason: 'the OpenFGA policy has no model (fail closed)' };
+    const br = openfgaToPca(fga.model, fga.tuples);
     return {
       predicates: br.predicates,
       denies: br.denies,
@@ -203,6 +213,8 @@ export interface FilterDecision {
   considered: number;
   /** IDs admitted (the model may see these), in candidate order. */
   allowedIds: string[];
+  /** Candidate positions of the admitted documents. Bound into `digest`, so the decision names exactly which candidates passed. */
+  allowedIndexes: number[];
   /** IDs dropped (not authorized / unknown — fail closed), in candidate order. */
   droppedIds: string[];
   /** One record per candidate. */
@@ -247,7 +259,10 @@ function decideDocument(
   compiled: CompiledPolicy,
 ): DocDecision {
   if (compiled.incomplete) {
-    return { id, allowed: false, reason: 'policy translation incomplete (fail closed)' };
+    return { id, allowed: false, reason: compiled.incompleteReason ?? 'policy translation incomplete (fail closed)' };
+  }
+  if (typeof principal.id !== 'string' || principal.id.length === 0) {
+    return { id, allowed: false, reason: 'no principal identity (fail closed)' };
   }
   if (acls.length === 0) {
     return { id, allowed: false, reason: 'no decidable ACL metadata (fail closed)' };
@@ -282,7 +297,7 @@ function runFilter<D>(
   policyInput: PolicyInput | CompiledPolicy,
   ex: Extractors<D>,
 ): FilterResult<D> {
-  const principal = toPrincipal(principalInput);
+  const principal = toPrincipal(principalInput) ?? ({ id: '' } as Principal);
   const compiled = compilePolicy(policyInput);
   const list = Array.isArray(candidates) ? candidates : [];
 
@@ -290,6 +305,8 @@ function runFilter<D>(
   const decisions: DocDecision[] = [];
   const allowedIds: string[] = [];
   const droppedIds: string[] = [];
+  const allowedIndexes: number[] = [];
+  const seenIds = new Set<string>();
 
   for (let i = 0; i < list.length; i++) {
     const doc = list[i]!;
@@ -297,7 +314,8 @@ function runFilter<D>(
     let acls: DocAcl[];
     try {
       id = ex.id(doc, i);
-      acls = ex.acls(doc);
+      const raw: unknown = ex.acls(doc);
+      acls = aclArray(raw); // entries that are not {relation, object} strings are not ACLs
     } catch {
       // A document whose metadata cannot even be read is unknown → fail closed.
       const fid = `doc#${i}`;
@@ -306,21 +324,26 @@ function runFilter<D>(
       continue;
     }
     if (typeof id !== 'string' || id.length === 0) id = `doc#${i}`;
+    // Two candidates with one id would make "allowed" and "dropped" ambiguous in the decision. The later one is told apart by position.
+    if (seenIds.has(id)) id = `${id}#dup${i}`;
+    seenIds.add(id);
 
     const decision = decideDocument(id, acls, principal, compiled);
     decisions.push(decision);
     if (decision.allowed) {
       documents.push(doc);
       allowedIds.push(id);
+      allowedIndexes.push(i);
     } else {
       droppedIds.push(id);
     }
   }
 
   const base = {
-    principal: principal.id,
+    principal: typeof principal.id === 'string' ? principal.id : '',
     considered: list.length,
     allowedIds,
+    allowedIndexes,
     droppedIds,
     policyIncomplete: compiled.incomplete,
   };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compactJwsAliases } from '@atlasauth/pca';
-import { type AgentPassport, issuePassport } from '@atlasauth/pca';
+import { type AgentPassport, issuePassport } from '@atlasauth/pca/ext/attestation';
 import { exportJWK, generateKeyPair as joseGenerateKeyPair } from 'jose';
 import {
   type AgentCard,
@@ -341,5 +341,31 @@ describe('canonical-spelling gate (re-encoded card-signature segments are reject
       const res = await verifyAgentCard({ ...signed, signatures: [{ ...sig, protected: h ?? '', signature: s ?? '' }] }, { key: publicKey });
       expect(res.ok, a.name).toBe(false);
     }
+  });
+});
+
+describe('a2a-1.0 profile and total verification', () => {
+  const base = { name: 'a' } as AgentCard;
+  it('signs the A2A 1.0 section 8.4 signing input (header typ JOSE + kid) that jose compactVerify accepts', async () => {
+    const { publicKey, privateKey } = await joseGenerateKeyPair('EdDSA');
+    const signed = await issueSignedAgentCard(base, privateKey, { kid: 'k1', profile: 'a2a-1.0' });
+    const s = signed.signatures![0]!;
+    expect(JSON.parse(Buffer.from(s.protected, 'base64url').toString())).toEqual({ alg: 'EdDSA', typ: 'JOSE', kid: 'k1' });
+    const { compactVerify } = await import('jose');
+    const payload = Buffer.from(JSON.stringify({ name: 'a' })).toString('base64url');
+    await compactVerify(`${s.protected}.${payload}.${s.signature}`, publicKey);
+    expect(await verifyAgentCard(signed, { key: publicKey })).toEqual({ ok: true });
+  });
+  it('refuses to issue the a2a-1.0 profile without a kid', async () => {
+    const { privateKey } = await joseGenerateKeyPair('EdDSA');
+    await expect(issueSignedAgentCard(base, privateKey, { profile: 'a2a-1.0' })).rejects.toThrow('requires a kid');
+  });
+  it('a card with no strict canonical form, or a non-object card, is a refusal and not an exception', async () => {
+    const { publicKey, privateKey } = await joseGenerateKeyPair('EdDSA');
+    const signed = await issueSignedAgentCard(base, privateKey);
+    const r = await verifyAgentCard({ ...signed, big: 1e21 } as AgentCard, { key: publicKey });
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/^agent card has no canonical form/);
+    expect(await verifyAgentCard(null as never, { key: publicKey })).toEqual({ ok: false, reason: 'agent card is not an object' });
   });
 });
