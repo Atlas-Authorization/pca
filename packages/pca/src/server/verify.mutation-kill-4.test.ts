@@ -4,7 +4,9 @@ import { encodeKey, generateKeyPair } from '../keys';
 import { mintRoot } from '../capability';
 import { buildPCActn } from '../pcactn';
 import { encodeMlDsaPublicKey, mlDsa65Keygen } from '../pq';
-import { verifyPCActn } from './verify';
+import { verifyPCActn as verifyPCActn05 } from './verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 const AUD = 'rs-mk4';
 const NOW = Date.UTC(2026, 9, 11, 12, 0, 0);

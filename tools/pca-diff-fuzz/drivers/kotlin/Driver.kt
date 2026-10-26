@@ -8,6 +8,7 @@
 // intent_*: an Intent Layer v2 primitive (raw = its `input` as JSON text); `result` in the `expect` shape, `reason` when
 //          refused.
 import net.atlasauth.pca.verifier.ActionSchema
+import net.atlasauth.pca.verifier.Caveats
 import net.atlasauth.pca.verifier.IntentClassifier
 import net.atlasauth.pca.verifier.IntentJs
 import net.atlasauth.pca.verifier.IntentMap
@@ -131,6 +132,13 @@ private fun one(c: Map<String, Any?>): String {
                 )
                 val ok = why.isEmpty()
                 "{\"id\":$id,\"allow\":$ok,\"checks\":{\"chain\":$ok}${suiteTag(why)}}"
+            }
+            kind == "policy" -> {
+                // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+                // evaluateCaveats(policyCaveats(grant, chain), context) as {allow, failed}
+                val pv = Json.parseLenient(raw) as Map<String, Any?>
+                val pr = Caveats.evaluateCaveats(Caveats.policyCaveats(pv["grant"], pv["chain"]), pv["context"])
+                "{\"id\":$id,\"allow\":${pr.ok},\"failed\":" + pr.failed.joinToString(",", "[", "]") { esc(it) } + "}"
             }
             kind.startsWith("intent_") -> {
                 val r = intentPrimitive(kind, Json.parseLenient(raw)) ?: return "{\"id\":$id,\"error\":${esc("exception:$kind")}}"

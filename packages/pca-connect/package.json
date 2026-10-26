@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-connect",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Outbound connection token vault for PCA agents: hold and refresh an agent's third-party OAuth tokens (Google/Slack/etc.) under a PCA capability, so a tool call presents a provably-authorized, least-privilege outbound token.",
   "keywords": [
     "oauth",
@@ -28,7 +28,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -53,5 +57,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

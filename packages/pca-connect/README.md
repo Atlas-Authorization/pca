@@ -1,5 +1,7 @@
 # @atlasauth/pca-connect
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 An outbound connection and token vault for Proof-Carrying Authority (PCA) agents. It holds an agent's third-party OAuth tokens (Google, Slack, and others) and refreshes them, and releases an access token only when a verified PCActn proves the agent has authority over the requested provider and scopes. Every outbound token presented by a tool call is then tied to a capability chain.
 
 For each request the vault:
@@ -23,13 +25,18 @@ npm i @atlasauth/pca-connect @atlasauth/pca
 ```ts
 import { buildPCActn, encodeKey, generateKeyPair, mintRoot } from '@atlasauth/pca';
 import { TokenVault, oauthScopeCaveat } from '@atlasauth/pca-connect';
+import { InMemoryConnectionStore } from '@atlasauth/pca-connect/testing';
 
 const principalKeys = generateKeyPair();
 const agentKeys = generateKeyPair();
 const principal = encodeKey(principalKeys.publicKey);
 const agentId = encodeKey(agentKeys.publicKey);
 
-const vault = new TokenVault(); // in-memory store by default; pass { store, providers, fetch } for production
+// 0.5: strict by default. Production: an encrypting store, a replay store, a revocation source and a pinned audience.
+const vault = new TokenVault({
+  strict: false, // tests and local development only; omit it in production
+  store: new InMemoryConnectionStore(), // from '@atlasauth/pca-connect/testing'; plaintext, in memory
+});
 
 await vault.putConnection({
   agentId,
@@ -70,13 +77,15 @@ To refresh expired tokens, pass `providers: { google: { tokenEndpoint, clientId,
 ## API
 
 - `TokenVault`: `putConnection`, `getConnectionToken`, `deleteConnection`
-- `ConnectionStore` interface and `InMemoryConnectionStore`; bring your own store for persistence
+- `ConnectionStore` interface; bring your own store for persistence. The plaintext in-memory store is `InMemoryConnectionStore` in `@atlasauth/pca-connect/testing`
 - `oauthScopeCaveat`, `isOAuthScopeCaveat`, `grantedOAuthScopes`, `OAUTH_SCOPE_CAVEAT`
-- Error classes listed above; types `ProviderConfig`, `VaultFetch`, `ConnectionToken`
+- `EncryptedConnectionStore`, `KeyWrapper`, `LocalKeyWrapper`: envelope encryption of the access and refresh tokens in any `ConnectionStore`. Each secret has its own data key, wrapped by your KMS (implement `KeyWrapper`) or by a local key ring that supports rotation (`addKey`, `setActive`, `reencrypt`, `removeKey`). The wrapped key is bound to the connection and field, so a copied ciphertext does not open. A plaintext record, a tampered record or an unknown key makes `get` throw `StoreError`.
+- `TokenVault` options `replay` (a one-time-use store: a captured action releases a token once), `isRevoked` (a revocation source; a throw refuses), and `strict` (default true: the constructor throws unless the store encrypts, `replay`, `isRevoked` and `audience` are set; `strict: false` is for tests and needs an explicit `store`).
+- Error classes listed above, plus `StoreError` (code `store_error`); types `ProviderConfig`, `VaultFetch`, `ConnectionToken`
 
 ## Status
 
-The returned token carries the scopes it was stored or refreshed with. The least-privilege check is made against the requested scopes, but narrowing the minted token itself only happens on refresh, and only when the provider is configured with `supportsScopeNarrowing`. The default store is in-memory and does not encrypt tokens at rest; supply an encrypting `ConnectionStore` for production. Cryptography in PCA is unaudited.
+The returned token carries the scopes it was stored or refreshed with. The least-privilege check is made against the requested scopes, but narrowing the minted token itself only happens on refresh, and only when the provider is configured with `supportsScopeNarrowing`. There is no default store. For production wrap a durable store in `EncryptedConnectionStore` and keep the default `strict` profile. Concurrent refreshes of one connection share a single request, so a rotating refresh token is spent once. Error messages never contain a token or client secret (a provider error body that echoes one is redacted), and a store failure surfaces as `StoreError` without the store's own text. JavaScript strings cannot be wiped, so a decrypted token lives until it is garbage collected; the data keys and the local key ring are overwritten. Cryptography in PCA is unaudited.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

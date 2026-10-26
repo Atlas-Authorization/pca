@@ -55,6 +55,15 @@ foreach (var line in lines)
             r["checks"] = new Dictionary<string, bool> { ["chain"] = cqOk };
             if (cqWhy != null && cqWhy.Contains(Pq.UnsupportedSuite)) r["unsupported_suite"] = cqWhy;
         }
+        else if (kind == "policy")
+        {
+            // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+            // EvaluateCaveats(PolicyCaveats(grant, chain), context) as {allow, failed}
+            var pv = (Dictionary<string, object?>)Pca.ParseJson(raw)!;
+            var pr = Caveats.EvaluateCaveats(Caveats.PolicyCaveats(pv.GetValueOrDefault("grant"), pv.GetValueOrDefault("chain")), pv.GetValueOrDefault("context"));
+            r["allow"] = pr.Ok;
+            r["failed"] = pr.Failed.ToList();
+        }
         else if (kind.StartsWith("intent_", StringComparison.Ordinal))
         {
             // Intent Layer v2 primitives: raw = JSON text of the primitive's `input`; result = its `expect` shape.

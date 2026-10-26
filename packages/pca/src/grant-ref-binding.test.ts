@@ -3,8 +3,10 @@ import { mintRoot, delegate } from './capability';
 import { encodeKey, generateKeyPair } from './keys';
 import { buildPCActn, signPCActn, verifyPCActnCore, type PCActn } from './pcactn';
 import { InMemoryReplayStore, guardPCActnReplay, type CounterStore, type ReplayStore } from './replay';
-import { DEFAULT_REQUIRED_CHECKS, verifyPCActn } from './server/verify';
+import { DEFAULT_REQUIRED_CHECKS, verifyPCActn as verifyPCActn05 } from './server/verify';
 import { b64u } from './hash';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /**
  * `grant_ref` binding (normative check `grant_ref_bound`): the signed `grant_ref` MUST be a non-empty string equal to

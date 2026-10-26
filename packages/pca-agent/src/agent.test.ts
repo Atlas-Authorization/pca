@@ -7,9 +7,8 @@ import {
   mintRoot,
   verifyPCActnCore,
   verifyChain,
-  verifyLedgerInclusion,
-  TransparencyLedger,
 } from '@atlasauth/pca';
+import { verifyLedgerInclusion, TransparencyLedger } from '@atlasauth/pca/ext/ledger';
 import { createAgent, type FetchLike } from './agent';
 
 const principal = generateKeyPair();

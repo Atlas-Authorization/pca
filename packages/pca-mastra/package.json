@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-mastra",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Mastra tool guard for PCA: wrap a Mastra createTool so each execute is proof-carrying + policy-gated, with step-up on a workflow step.",
   "keywords": [
     "mastra",
@@ -53,5 +53,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

@@ -1,5 +1,7 @@
 # @atlasauth/pca-ratchet
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The PCA Capability Ratchet: two cryptographic primitives that replace bookkeeping in Proof-Carrying Authority with math.
 
 1. **Puncturable forward-secure capability keys.** A GGM puncturable-PRF tree of one-time Ed25519 leaf keys under a Merkle-root commitment. Signing at a leaf punctures it, so once the state has been erased a spent action cannot be re-signed by an adversary who obtains only the new state. A copy of the state taken BEFORE the signing can sign the same leaf again (nothing in a stateless verifier marks the second signature invalid): use `verifyLeafSignatureOnce` with a spent-leaf store for one-time use at the verifier. Adapters round risk up, so a nonzero risk never costs zero units.

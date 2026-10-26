@@ -190,8 +190,8 @@ export function extractPaymentAuthority(caveats: readonly Caveat[]): PaymentAuth
     switch (c.type) {
       case SPEND_CAP_CAVEAT: {
         const max = (c as { max?: unknown }).max;
-        if (typeof max !== 'number' || !Number.isFinite(max) || max < 0) {
-          throw new AcpAuthorityError('malformed max_amount caveat: max must be a finite number >= 0 (fail closed)');
+        if (typeof max !== 'number' || !Number.isSafeInteger(max) || max < 0) {
+          throw new AcpAuthorityError('malformed max_amount caveat: max must be an integer >= 0 in minor units (fail closed)');
         }
         maxAmount = maxAmount === undefined ? max : Math.min(maxAmount, max);
         const cur = (c as { currency?: unknown }).currency;
@@ -239,6 +239,9 @@ export function extractPaymentAuthority(caveats: readonly Caveat[]): PaymentAuth
 }
 
 /** The leaf (acting) capability of a proof's chain. */
+/** Amounts are integer minor units (cents / atomic units): floats, NaN, negatives and unsafe integers are refused. */
+const isAmount = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x) && x > 0;
+
 function leafCapability(pcActn: PCActn): Capability {
   const chain: CapabilityChain = pcActn.cap_chain;
   if (!Array.isArray(chain) || chain.length === 0) {
@@ -272,8 +275,8 @@ export interface AuthorityCheck {
  * missing human-present signal the proof demands all return `{ ok: false }`.
  */
 export function checkPaymentAuthority(authority: PaymentAuthority, request: PaymentRequest): AuthorityCheck {
-  if (typeof request.amount !== 'number' || !Number.isFinite(request.amount) || request.amount <= 0) {
-    return { ok: false, reason: 'amount must be a finite number > 0' };
+  if (!isAmount(request.amount)) {
+    return { ok: false, reason: 'amount must be a positive integer in minor units' };
   }
   if (typeof request.currency !== 'string' || request.currency.length === 0) {
     return { ok: false, reason: 'currency must be a non-empty string' };
@@ -500,6 +503,25 @@ export interface VerifyTokenOptions {
   grant?: Capability;
   /** This verifier's audience for the full `verifyPCActnCore` pass (see the core's fail-closed rule). */
   audience?: string | null;
+  /**
+   * Durable one-time redemption store. After every other check passes the token's `jti` is claimed atomically; a second
+   * redemption, or a store that throws, fails closed.
+   */
+  singleUse?: SingleUseStore;
+  /**
+   * Server-owned settlement: requires `singleUse` and `expectedCurrency`, so a token is never redeemable without a
+   * single-use store or against a currency the server did not name. Default false (see B11).
+   */
+  strict?: boolean;
+}
+
+/**
+ * Atomic first-use claim. `claim` returns true exactly once per `jti` (a conditional insert such as
+ * `INSERT .. ON CONFLICT DO NOTHING RETURNING`, or Redis `SET NX PX`); `expiresAtMs` lets the store drop the record
+ * once the token can no longer verify.
+ */
+export interface SingleUseStore {
+  claim(jti: string, expiresAtMs: number): Promise<boolean>;
 }
 
 /** The outcome of verifying a delegated payment token. */
@@ -530,7 +552,7 @@ function parseClaims(bytes: Uint8Array): DelegatedPaymentClaims | null {
     typeof c.jti !== 'string' ||
     typeof c.session !== 'string' ||
     typeof c.merchant !== 'string' ||
-    typeof c.amount !== 'number' ||
+    !isAmount(c.amount) ||
     typeof c.currency !== 'string' ||
     typeof c.iat !== 'number' ||
     typeof c.exp !== 'number' ||
@@ -564,10 +586,24 @@ function parseClaims(bytes: Uint8Array): DelegatedPaymentClaims | null {
  * `pcActn` is supplied its digest must equal the token's `pca.digest`; with a `grant` it is re-verified
  * end-to-end. Fails CLOSED on every mismatch.
  */
-export async function verifyDelegatedPaymentToken(
-  token: string,
-  opts: VerifyTokenOptions,
-): Promise<TokenVerification> {
+export async function verifyDelegatedPaymentToken(token: string, opts: VerifyTokenOptions): Promise<TokenVerification> {
+  if (opts.strict === true) {
+    if (!opts.singleUse || typeof opts.singleUse.claim !== 'function') return { ok: false, reason: 'strict settlement requires a singleUse store (fail closed)' };
+    if (typeof opts.expectedCurrency !== 'string' || opts.expectedCurrency.length === 0) return { ok: false, reason: 'strict settlement requires expectedCurrency (fail closed)' };
+  }
+  const res = await verifyBinding(token, opts);
+  if (!res.ok || opts.singleUse === undefined) return res;
+  const claims = res.claims as DelegatedPaymentClaims;
+  let first = false;
+  try {
+    first = (await opts.singleUse.claim(claims.jti, claims.exp)) === true;
+  } catch {
+    return { ok: false, reason: 'single-use store unavailable (fail closed)', claims };
+  }
+  return first ? res : { ok: false, reason: 'the delegated payment token was already redeemed', claims };
+}
+
+async function verifyBinding(token: string, opts: VerifyTokenOptions): Promise<TokenVerification> {
   const alg = opts.alg ?? 'EdDSA';
   const now = Number.isFinite(opts.now) ? (opts.now as number) : Date.now();
 
@@ -587,8 +623,8 @@ export async function verifyDelegatedPaymentToken(
   if (claims.merchant !== opts.expectedMerchant) {
     return { ok: false, reason: `token merchant "${claims.merchant}" does not match expected "${opts.expectedMerchant}"`, claims };
   }
-  if (typeof opts.amount !== 'number' || !Number.isFinite(opts.amount) || opts.amount <= 0) {
-    return { ok: false, reason: 'settlement amount must be a finite number > 0', claims };
+  if (!isAmount(opts.amount)) {
+    return { ok: false, reason: 'settlement amount must be a positive integer in minor units', claims };
   }
   if (opts.amount > claims.amount) {
     return { ok: false, reason: `settlement amount ${opts.amount} exceeds the token's authorized amount ${claims.amount}`, claims };
@@ -673,6 +709,8 @@ export interface X402ChallengeOptions {
  * public x402 shape and should be validated against the x402 spec before production.)
  */
 export function x402Challenge(resource: string, opts: X402ChallengeOptions): X402Challenge {
+  // maxAmountRequired is an atomic-unit integer string in x402: a fractional or non-finite amount would emit invalid wire.
+  if (!isAmount(opts.amount)) throw new TypeError('x402Challenge: amount must be a positive integer in atomic/minor units');
   const requirement: X402Requirement = {
     scheme: opts.scheme ?? 'exact',
     network: opts.network ?? 'base-sepolia',
@@ -780,6 +818,13 @@ export interface AcpX402VerifierOptions {
   pcActn?: PCActn;
   grant?: Capability;
   audience?: string | null;
+  /** One-time redemption store (see {@link VerifyTokenOptions.singleUse}). */
+  singleUse?: SingleUseStore;
+  /**
+   * Server-owned settlement: `expectedMerchant`, `amount`, `expectedCurrency` and `singleUse` are all required and the
+   * payload's own `merchant` / `amount` are never read. Default false (see B11).
+   */
+  strict?: boolean;
 }
 
 /**
@@ -790,12 +835,15 @@ export interface AcpX402VerifierOptions {
  */
 export function acpX402Verifier(opts: AcpX402VerifierOptions): X402Verify {
   return async (payload: X402PaymentPayload): Promise<X402VerifyResult> => {
+    if (opts.strict === true && (opts.expectedMerchant === undefined || opts.amount === undefined)) {
+      return { ok: false, reason: 'strict settlement requires the server to supply expectedMerchant and amount (fail closed)' };
+    }
     const merchant = opts.expectedMerchant ?? payload.merchant;
     if (typeof merchant !== 'string' || merchant.length === 0) {
       return { ok: false, reason: 'x402 payload has no merchant to check the token against' };
     }
     const amount = opts.amount ?? payload.amount;
-    if (typeof amount !== 'number') {
+    if (typeof amount !== 'number' || !isAmount(amount)) {
       return { ok: false, reason: 'x402 payload has no amount to check the token against' };
     }
     const res = await verifyDelegatedPaymentToken(payload.token, {
@@ -809,6 +857,8 @@ export function acpX402Verifier(opts: AcpX402VerifierOptions): X402Verify {
       ...(opts.pcActn !== undefined ? { pcActn: opts.pcActn } : {}),
       ...(opts.grant !== undefined ? { grant: opts.grant } : {}),
       ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+      ...(opts.singleUse !== undefined ? { singleUse: opts.singleUse } : {}),
+      ...(opts.strict !== undefined ? { strict: opts.strict } : {}),
     });
     return { ok: res.ok, ...(res.reason !== undefined ? { reason: res.reason } : {}), ...(res.claims ? { claims: res.claims } : {}) };
   };

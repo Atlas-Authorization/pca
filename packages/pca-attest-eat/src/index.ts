@@ -63,9 +63,9 @@ import {
   verify as nodeVerify,
   type KeyObject,
 } from 'node:crypto';
+import { assertCanonicalCompactJws } from '@atlasauth/pca';
 import {
   AMD_MILAN_ARK_SPKI_SHA384,
-  assertCanonicalCompactJws,
   attestAmdSnp,
   type MeasuredIdentity,
   type ParsedSevSnpReport,
@@ -74,7 +74,7 @@ import {
   splitPemCertificates,
   toHex,
   verifyGenuineSevSnpReport,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/attestation';
 
 // Re-export the reused PCA types so consumers of this package do not reach into @atlasauth/pca for them.
 export type { MeasuredIdentity, ParsedSevSnpReport };

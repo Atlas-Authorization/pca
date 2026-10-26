@@ -40,6 +40,8 @@ export interface PolicyModel {
 }
 
 export function normalizePolicy(p: PolicyInput): { predicates: Predicate[]; caveats: Caveat[] } {
+  // A value that is not a policy is an empty policy: the verifier admits nothing under it, and the analysis must not throw.
+  if (p === null || typeof p !== 'object') return { predicates: [], caveats: [] };
   const predicates = Array.isArray(p.predicates) ? p.predicates : [];
   const caveats = 'caveats' in p && Array.isArray(p.caveats) ? p.caveats : [];
   return { predicates, caveats };
@@ -67,6 +69,10 @@ function conditionUndecidable(c: Condition, reasons: Set<string>): void {
   }
   if (c.field === 'action.params') {
     reasons.add('condition on the whole `action.params` object is not enumerated precisely');
+  }
+  if ((c.op === 'lt' || c.op === 'lte' || c.op === 'gt' || c.op === 'gte') && !(typeof c.value === 'number' && Number.isFinite(c.value))) {
+    // The evaluator orders strings too (and refuses other types). Only finite numeric thresholds partition the line into cells.
+    reasons.add(`\`${c.op}\` against a non-numeric operand — string ordering is not enumerated exactly`);
   }
   if (c.op === 'like' || c.op === 'matches' || c.op === 'is_a' || c.op === 'member_of') {
     reasons.add(`\`${c.op}\` condition — matched by over-approximation, not enumerated exactly`);

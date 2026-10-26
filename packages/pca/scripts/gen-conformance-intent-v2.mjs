@@ -22,7 +22,8 @@
 import { createHash } from 'node:crypto';
 import { cloneJson, readCore, writeCore } from './conformance-io.mjs';
 
-const pca = process.env.PCA_SRC ? await import('../src/index.ts') : await import('../dist/index.js');
+import { loadPca } from './pca-all.mjs';
+const pca = await loadPca();
 
 const seed = (l) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const mk = (l) => { const sk = seed(l); return { sk, pub: pca.b64u(pca.publicKeyOf(sk)) }; };
@@ -30,7 +31,7 @@ const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const principal = mk('v2/principal'), agent = mk('v2/agent'), site = mk('v2/site'), sequencer = mk('v2/sequencer'), sequencer2 = mk('v2/sequencer-2'), seqRoot = mk('v2/sequencer-root'), stranger = mk('v2/stranger'), revAuth = mk('v2/revocation-authority');
 const NOW = 1_800_000_000_000;
 const AUD = 'skyair.example';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 const V2 = ['schema', 'intent_session', 'layers', 'accumulators', 'map'];
 const KEYMAP = { chain: 'cap_chain' };
 const REF = pca.b64u(seed('v2/ref'));

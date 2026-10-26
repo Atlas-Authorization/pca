@@ -1,0 +1,220 @@
+{
+  "about": "Maturity tier of every module of @atlasauth/pca, by feature. The package's own manifest carries the feature tiers (pca.features); this file maps the source modules to them so that a CI check (maturity-check.mjs) can verify that every module is classified and that the PCA Core entry point (src/core.ts) gains no new runtime import of an experimental module. core_experimental_baseline lists the experimental modules Core reaches today: the list is empty since 0.5 (B8): the experimental modules are extension subpaths (@atlasauth/pca/ext/*) and Core loads none of them.",
+  "features": {
+    "core": {
+      "tier": "stable",
+      "title": "Proof format and core verification (@atlasauth/pca/core)",
+      "modules": [
+        "core",
+        "index",
+        "wire",
+        "pcactn",
+        "pcactn-cheap-claims",
+        "capability",
+        "merkle",
+        "hash",
+        "keys",
+        "strict-json",
+        "strict-jws",
+        "verified-decision",
+        "verified-core-mode",
+        "adapters"
+      ]
+    },
+    "pq-signatures": {
+      "tier": "stable",
+      "title": "Post-quantum and hybrid signature suites: ML-DSA and SLH-DSA (FIPS 204, FIPS 205) and their Ed25519 hybrids (the FN-DSA and LESS backends are separate, experimental packages)",
+      "modules": [
+        "pq"
+      ]
+    },
+    "server": {
+      "tier": "production",
+      "title": "Full verifier and requirePCA: Policy VM, predicates, caveats, risk, budgets, replay, revocation, approvals, discovery",
+      "modules": [
+        "server/require-pca",
+        "server/verify",
+        "assurance",
+        "server/authorize",
+        "server/authorize-execution",
+        "server/operations",
+        "server/plan-lifecycle",
+        "catalog-risk",
+        "policy-vm",
+        "predicates",
+        "agent-native",
+        "envelope",
+        "risk",
+        "reversibility",
+        "revocation",
+        "replay",
+        "approvals",
+        "approval-channels",
+        "taint",
+        "regex-budget",
+        "regex-cache",
+        "safe-regex",
+        "config-snapshot",
+        "discovery",
+        "receipt",
+        "policy-templates",
+        "prohibitions",
+        "facade",
+        "pcactn-full",
+        "intent-session-caveat"
+      ]
+    },
+    "durable-state": {
+      "tier": "production",
+      "title": "Durable replay and budget state (@atlasauth/pca/durable-state)",
+      "modules": [
+        "durable-state"
+      ]
+    },
+    "threshold-multisig": {
+      "tier": "production",
+      "title": "Default threshold step-up: independent Ed25519 / ML-DSA / hybrid shares bound to the signer set",
+      "modules": [
+        "threshold"
+      ]
+    },
+    "frost": {
+      "tier": "hardened",
+      "title": "FROST threshold signing (RFC 9591), the PedPoP DKG, networked FROST and FROST with a post-quantum co-signature",
+      "modules": [
+        "frost",
+        "ct-scalar",
+        "frost-dkg",
+        "frost-net",
+        "frost-nonce-store",
+        "frost-net-runner",
+        "frost-pq",
+        "pq-threshold",
+        "ext/frost"
+      ]
+    },
+    "attestation": {
+      "tier": "experimental",
+      "title": "Hardware and software attestation: AMD SEV-SNP, Intel TDX (DCAP), Azure Attestation, Google Confidential Space, NVIDIA SPDM / RIM / OCSP, PUF, software attestation, allowlists",
+      "modules": [
+        "attestation",
+        "attest-allowlist",
+        "attest-allowlist-anchor",
+        "attest-amd-snp",
+        "attest-azure-maa",
+        "attest-gcp-confidential-space",
+        "attest-intel-collateral",
+        "attest-intel-dcap",
+        "attest-intel-tdx",
+        "attest-maa-keys",
+        "attest-maa-pins",
+        "attest-maa-pins.data",
+        "attest-nvidia-ocsp",
+        "attest-nvidia-rim",
+        "attest-nvidia-spdm",
+        "attest-pq-software",
+        "attest-proved",
+        "attest-puf",
+        "hardware-sevsnp",
+        "x509-strict",
+        "x509-validity",
+        "passport",
+        "ext/attestation"
+      ]
+    },
+    "zk-compliance": {
+      "tier": "experimental",
+      "title": "Zero-knowledge compliance proofs (Groth16 on BN254 / BLS12-381, Policy-VM SNARK) and the attested-VM compliance mode",
+      "modules": [
+        "zk",
+        "zk-ceremony",
+        "ext/zk"
+      ]
+    },
+    "optimistic": {
+      "tier": "hardened",
+      "title": "Optimistic execution: claims, challenge window, fraud proofs, bond settlement and its durable store (internal accounting only)",
+      "modules": [
+        "optimistic",
+        "bond-settlement",
+        "bond-store",
+        "ext/optimistic"
+      ]
+    },
+    "intent": {
+      "tier": "hardened",
+      "title": "Intent layer, binding and enforcement: signed intent statements and the envelope intent binding, action schemas, session roots and delta grants, accumulators and monitors, world facts and offer sets, parameter provenance and label receipts, classifier dimensions, committed maps, revocation epochs and intent questions",
+      "modules": [
+        "intent",
+        "intent-acc",
+        "intent-artifacts",
+        "intent-binding",
+        "intent-classifier",
+        "intent-env",
+        "intent-history",
+        "intent-layers",
+        "intent-map-commit",
+        "intent-required",
+        "intent-revocation",
+        "intent-session",
+        "intent-strict",
+        "intent-v2",
+        "action-schema",
+        "oracle-facts",
+        "offer-set",
+        "param-provenance",
+        "label-receipts",
+        "ext/intent"
+      ]
+    },
+    "intent-frontier": {
+      "tier": "experimental",
+      "title": "Intent layer frontier: semantic judge threshold, objective risk functional and its grant binding, proof of progress",
+      "modules": [
+        "semantic-threshold",
+        "objective-binding",
+        "objective-risk",
+        "progress"
+      ]
+    },
+    "ledger": {
+      "tier": "hardened",
+      "title": "Transparency ledger with durable store and checkpoint verification, liveness beacons and the global kill switch",
+      "modules": [
+        "ledger",
+        "beacons",
+        "ledger-store",
+        "ext/ledger"
+      ]
+    },
+    "research": {
+      "tier": "experimental",
+      "title": "Research and product-layer modules: agent mesh, multi-agent sessions, behavioural immune system, reputation, safety certificates, natural-language policy, DLP, QRNG entropy, hybrid KEM, guardian HA, console, budget forecast, policy simulation and debugging, contracts, connector catalog",
+      "modules": [
+        "mesh",
+        "durable-mesh-witness",
+        "session",
+        "immune",
+        "reputation",
+        "safety-certificate",
+        "nl",
+        "dlp",
+        "entropy",
+        "kem",
+        "ha",
+        "console",
+        "budget-forecast",
+        "policy-sim",
+        "policy-debug",
+        "contracts",
+        "catalog",
+        "ext/research"
+      ]
+    }
+  },
+  "test_only": [
+    "pq-test-support",
+    "test-support/*"
+  ],
+  "core_experimental_baseline": []
+}

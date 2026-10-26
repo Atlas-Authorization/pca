@@ -190,10 +190,22 @@ export interface SessionTx {
  */
 export interface IntentSessionStore {
   withSession<T>(session: string, fn: (tx: SessionTx) => Promise<T>): Promise<T>;
+  /**
+   * `true` when the history survives a restart of the process (a database row lock and rows). A store that does not say so
+   * is treated as volatile: after a restart its accumulators read zero, so a cap would admit again. `admitIntentAction`
+   * with `requireDurable: true` refuses such a store.
+   */
+  readonly durable?: boolean;
 }
 
-/** In-process store with a per-session promise-chain mutex (tests, single-process sites). */
+/**
+ * In-process store with a per-session promise-chain mutex (tests, single-process sites). It is VOLATILE (`durable` is false):
+ * a restart forgets every session's history, so every cap and monitor starts again from zero. A deployment whose caps must
+ * outlive the process implements {@link IntentSessionStore} over its database and passes `requireDurable: true` to
+ * {@link admitIntentAction}.
+ */
 export class MemoryIntentSessionStore implements IntentSessionStore {
+  readonly durable = false;
   private readonly logs = new Map<string, IntentEvent[]>();
   private readonly locks = new Map<string, Promise<unknown>>();
 
@@ -245,8 +257,11 @@ export async function admitIntentAction<V extends { allow: boolean }>(
     schema?: Pick<ActionSchema, 'verbs'>;
     event: Omit<IntentEvent, 'status'>;
     verify: (acc: { state: Record<string, AccPreState>; monitors: Record<string, string> }) => Promise<V>;
+    /** `true` refuses a store that is not durable (see {@link IntentSessionStore.durable}); the default admits any store. */
+    requireDurable?: boolean;
   },
 ): Promise<V> {
+  if (args.requireDurable === true && store?.durable !== true) throw new Error('admitIntentAction: the session store is not durable (a restart would reset every cap); use a durable IntentSessionStore');
   return store.withSession(args.session, async (tx) => {
     const history = await tx.events();
     const acc = accContextFor(args.root, history, args.event, args.schema);

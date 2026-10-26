@@ -110,7 +110,7 @@ jobs:
         run: |
           curl -fsSL -o "$RUNNER_TEMP/circom" https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
           chmod +x "$RUNNER_TEMP/circom"
-          CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
+          PCA_DEV_SETUP=1 CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
       - name: Test (PCA_VERIFIED_CORE=1)
         if: steps.present.outputs.yes == 'true'
         env:

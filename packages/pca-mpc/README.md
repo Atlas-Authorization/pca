@@ -1,5 +1,7 @@
 # @atlasauth/pca-mpc
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Experimental reference prototype: a multi-stakeholder policy VM composed under secure multi-party computation, for Proof-Carrying Authority (PCA). Several stakeholders (for example user, organization, regulator) each evaluate their own private PCA policy to a tiny decision vector `{ allow, t, rQuant }`, then compose them under MPC so only the joint result is revealed: allow if every party allows, the maximum required proof threshold, and the maximum quantized risk. No party reveals its own policy or its own vector.
 
 ## Install

@@ -23,7 +23,7 @@
  * identity → PCA-principal mapping. This module adds only the ID-JAG-specific rules (single audience, the
  * required `act` agent claim, scope parsing) and the capability projection.
  */
-import { decodeJwt } from 'jose';
+import { decodeJwt, decodeProtectedHeader } from 'jose';
 import {
   OidcVerificationError,
   oidcPrincipal,
@@ -115,6 +115,19 @@ export interface VerifyIdJagOptions {
   discover?: boolean;
   /** Injectable `fetch` used for discovery (defaults to the global `fetch`). */
   fetch?: typeof fetch;
+  /**
+   * Enforce the draft's token shape (draft-ietf-oauth-identity-assertion-authz-grant-04, section 3.1): header
+   * `typ` is `oauth-id-jag+jwt`, `client_id` and `jti` are present, and `consumeJti` is supplied (required in this mode).
+   * Off by default (existing behaviour).
+   */
+  strictDraft?: boolean;
+  /** With `strictDraft`: `client_id` must equal this value (the resource app's client id at the issuer). */
+  clientId?: string;
+  /**
+   * With `strictDraft` (required there): single-use check. Called once per verified grant with its `jti`; return
+   * `false` if the `jti` was already seen (the grant is then refused). Back it with a shared durable store.
+   */
+  consumeJti?: (jti: string, expSec: number) => boolean | Promise<boolean>;
 }
 
 /**
@@ -135,6 +148,10 @@ export async function verifyIdJag(jwt: string, opts: VerifyIdJagOptions): Promis
   }
   if (typeof opts.audience !== 'string' || opts.audience.length === 0) {
     throw new IdJagVerificationError('config', 'verifyIdJag: opts.audience is required (ID-JAG is single-audience)');
+  }
+
+  if (opts.strictDraft === true && typeof opts.consumeJti !== 'function') {
+    throw new IdJagVerificationError('config', 'verifyIdJag: strictDraft requires opts.consumeJti (single-use store)');
   }
 
   // Reuse the OIDC verifier for every crypto + registered-claim check. It maps each jose failure onto a
@@ -198,6 +215,19 @@ export async function verifyIdJag(jwt: string, opts: VerifyIdJagOptions): Promis
   }
 
   const jti = typeof raw.jti === 'string' && raw.jti.length > 0 ? raw.jti : undefined;
+
+  if (opts.strictDraft === true) {
+    const fail = (m: string): never => { throw new IdJagVerificationError('grant', m); };
+    let typ: unknown;
+    try { typ = decodeProtectedHeader(jwt).typ; } catch { typ = undefined; }
+    if (typ !== 'oauth-id-jag+jwt') fail('ID-JAG header typ must be "oauth-id-jag+jwt"');
+    if (typeof raw.client_id !== 'string' || raw.client_id.length === 0) fail('ID-JAG is missing "client_id"');
+    if (opts.clientId !== undefined && raw.client_id !== opts.clientId) fail('ID-JAG client_id does not match the expected client');
+    if (jti === undefined) fail('ID-JAG is missing "jti"');
+    let fresh: boolean;
+    try { fresh = (await opts.consumeJti!(jti!, base.exp)) === true; } catch { fresh = false; }
+    if (!fresh) fail('ID-JAG jti was already used or the single-use store failed');
+  }
 
   return {
     iss: base.iss,

@@ -86,7 +86,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     const { context, pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
       // default require → reads the encoded proof from runtimeContext.get('pca')
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
       verb: 'stripe.refund',
       onVerified: (_r, p) => (verifiedVerb = p.action.verb),
@@ -103,7 +103,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     const { context, pcactn } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
       require: () => pcactn, // object form, not a string, and not from the run context
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
     });
     await expect(tool.execute!({ context })).resolves.toEqual({ ok: true });
@@ -126,7 +126,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     };
     const guarded = withPcaTool(tool, {
       require: proofFromContextHeaders<ArgsWithHeaders>(),
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
     });
     await expect(guarded.execute!({ context: { ...context, headers: { 'PCA-Action': headerValue } } })).resolves.toEqual({ ok: true });
@@ -136,7 +136,7 @@ describe('withPcaTool — Mastra execution guard', () => {
   it('blocks a call with NO proof (typed PcaToolDenied/missing), original not called', async () => {
     const a = refundAgent();
     const sink: { ran?: unknown } = {};
-    const tool = withPcaTool(refundTool(sink), { verify: { grant: a.grant }, audience: AUD, verb: 'stripe.refund' });
+    const tool = withPcaTool(refundTool(sink), { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD, verb: 'stripe.refund' });
     const err = await Promise.resolve(
       tool.execute!({ context: { amount: 20, currency: 'usd', charge: 'ch_1' }, runtimeContext: runContext() }),
     ).catch((e: unknown) => e);
@@ -147,7 +147,7 @@ describe('withPcaTool — Mastra execution guard', () => {
   it('blocks a malformed proof (typed PcaToolDenied/malformed), original not called', async () => {
     const a = refundAgent();
     const sink: { ran?: unknown } = {};
-    const tool = withPcaTool(refundTool(sink), { verify: { grant: a.grant }, audience: AUD });
+    const tool = withPcaTool(refundTool(sink), { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD });
     const ctx: MastraToolExecuteContext<RefundArgs> = {
       context: { amount: 20, currency: 'usd', charge: 'ch_1' },
       runtimeContext: runContext({ pca: 'not-a-valid-pcactn' }),
@@ -162,7 +162,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     const sink: { ran?: unknown } = {};
     const { pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: 'ins_other', // the proof is bound to AUD, not this
     });
     const err = await Promise.resolve(tool.execute!(ctx)).catch((e: unknown) => e);
@@ -177,7 +177,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     const sink: { ran?: unknown } = {};
     const { pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
       verb: 'stripe.payout', // the proof is for stripe.refund
     });
@@ -188,7 +188,7 @@ describe('withPcaTool — Mastra execution guard', () => {
 
   it('preserves non-execute fields on the wrapped tool', () => {
     const a = refundAgent();
-    const tool = withPcaTool(refundTool({}), { verify: { grant: a.grant }, audience: AUD });
+    const tool = withPcaTool(refundTool({}), { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD });
     expect(tool.id).toBe('refund');
     expect(tool.description).toBe('Refund a charge');
     expect(tool.inputSchema).toEqual({ type: 'object' });
@@ -202,7 +202,7 @@ describe('pcaTools — record wrapper', () => {
     const sinks = { a: {} as { ran?: unknown }, b: {} as { ran?: unknown } };
     const wrapped = pcaTools(
       { refund: refundTool(sinks.a), refundTwo: refundTool(sinks.b) },
-      { verify: { grant: a.grant }, audience: AUD },
+      { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD },
     );
     for (const name of ['refund', 'refundTwo'] as const) {
       const err = await Promise.resolve(
@@ -220,7 +220,7 @@ describe('pcaTools — record wrapper', () => {
     const { context, pcactn, ctx } = proveRefund(a, 20);
     const wrapped = pcaTools(
       { refund: refundTool(sink) },
-      { verify: { grant: a.grant, nowEpoch: pcactn.iat }, audience: AUD, per: { refund: { verb: 'stripe.refund' } } },
+      { mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat }, audience: AUD, per: { refund: { verb: 'stripe.refund' } } },
     );
     await expect(wrapped.refund.execute!(ctx)).resolves.toEqual({ ok: true });
     expect(sink.ran).toEqual(context);
@@ -231,7 +231,7 @@ describe('pcaTools — record wrapper', () => {
     const passthrough: MastraTool = { id: 'lookup', description: 'read', execute: async () => 'ok' };
     const wrapped = pcaTools(
       { refund: refundTool({}), lookup: passthrough },
-      { verify: { grant: a.grant }, audience: AUD, only: ['refund'] },
+      { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD, only: ['refund'] },
     );
     expect(wrapped.lookup).toBe(passthrough); // identical reference = not wrapped
     expect(wrapped.refund).not.toBe(passthrough);

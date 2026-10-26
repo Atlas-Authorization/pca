@@ -77,7 +77,7 @@ describe('withPcaTool — agent tool-execution guard', () => {
     let verifiedVerb: string | undefined;
     const { input, pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
       verb: 'stripe.refund',
       onVerified: (_r, p) => (verifiedVerb = p.action.verb),
@@ -94,7 +94,7 @@ describe('withPcaTool — agent tool-execution guard', () => {
     const { input, pcactn } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
       require: () => pcactn, // object form, not a string
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
     });
     await expect(tool.execute!(input)).resolves.toEqual({ ok: true });
@@ -106,7 +106,7 @@ describe('withPcaTool — agent tool-execution guard', () => {
     const sink: { ran?: unknown } = {};
     let denied: PcaToolDenied | undefined;
     const tool = withPcaTool(refundTool(sink), {
-      verify: { grant: a.grant },
+      mode: 'signature-only', verify: { grant: a.grant },
       audience: AUD,
       verb: 'stripe.refund',
       onDeny: (e) => (denied = e),
@@ -122,7 +122,7 @@ describe('withPcaTool — agent tool-execution guard', () => {
     const sink: { ran?: unknown } = {};
     const tool = withPcaTool(refundTool(sink), {
       require: () => 'not-a-real-proof',
-      verify: { grant: a.grant },
+      mode: 'signature-only', verify: { grant: a.grant },
       audience: AUD,
     });
     const err = await Promise.resolve(tool.execute!({ amount: 20, currency: 'usd', charge: 'ch_1' })).catch((e: unknown) => e);
@@ -135,7 +135,7 @@ describe('withPcaTool — agent tool-execution guard', () => {
     const sink: { ran?: unknown } = {};
     const { input, pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: 'ins_other', // the proof is bound to AUD, not this
     });
     const err = await Promise.resolve(tool.execute!(input, ctx)).catch((e: unknown) => e);
@@ -150,7 +150,7 @@ describe('withPcaTool — agent tool-execution guard', () => {
     const sink: { ran?: unknown } = {};
     const { input, pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
       verb: 'stripe.payout', // the proof is for stripe.refund
     });
@@ -161,7 +161,7 @@ describe('withPcaTool — agent tool-execution guard', () => {
 
   it('preserves non-execute fields on the wrapped tool', () => {
     const a = refundAgent();
-    const tool = withPcaTool(refundTool({}), { verify: { grant: a.grant }, audience: AUD });
+    const tool = withPcaTool(refundTool({}), { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD });
     expect(tool.name).toBe('refund');
     expect(tool.description).toBe('Refund a charge');
     expect(tool.parameters).toEqual({ type: 'object' });
@@ -174,7 +174,7 @@ describe('pcaTools — record wrapper', () => {
     const sinks = { a: {} as { ran?: unknown }, b: {} as { ran?: unknown } };
     const wrapped = pcaTools(
       { refund: refundTool(sinks.a), refundTwo: refundTool(sinks.b) },
-      { verify: { grant: a.grant }, audience: AUD },
+      { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD },
     );
     for (const name of ['refund', 'refundTwo'] as const) {
       const err = await Promise.resolve(wrapped[name].execute!({ amount: 20, currency: 'usd', charge: 'ch_1' }, {})).catch((e: unknown) => e);
@@ -190,7 +190,7 @@ describe('pcaTools — record wrapper', () => {
     const { input, pcactn, ctx } = proveRefund(a, 20);
     const wrapped = pcaTools(
       { refund: refundTool(sink) },
-      { verify: { grant: a.grant, nowEpoch: pcactn.iat }, audience: AUD, per: { refund: { verb: 'stripe.refund' } } },
+      { mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat }, audience: AUD, per: { refund: { verb: 'stripe.refund' } } },
     );
     await expect(wrapped.refund.execute!(input, ctx)).resolves.toEqual({ ok: true });
     expect(sink.ran).toEqual(input);
@@ -201,7 +201,7 @@ describe('pcaTools — record wrapper', () => {
     const passthrough: AgentTool = { name: 'lookup', description: 'read', execute: async () => 'ok' };
     const wrapped = pcaTools(
       { refund: refundTool({}), lookup: passthrough },
-      { verify: { grant: a.grant }, audience: AUD, only: ['refund'] },
+      { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD, only: ['refund'] },
     );
     expect(wrapped.lookup).toBe(passthrough); // identical reference = not wrapped
     expect(wrapped.refund).not.toBe(passthrough);

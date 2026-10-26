@@ -1,5 +1,7 @@
 # @atlasauth/pca-acp
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Agentic Commerce Protocol (ACP) and x402 adapter for Proof-Carrying Authority (PCA). It mints an ACP-style delegated one-time payment token (a JWS bound to session, merchant, amount, currency and expiry) from a PCActn, and provides an x402 (HTTP 402) facilitator hook that only settles when the token and its backing proof verify.
 
 The PCActn's capability caveats gate issuance: minting is refused (`AcpAuthorityError`) if the requested amount, currency, merchant, category or human-present modality exceeds what the proof authorizes, or if the token would outlive the proof. The token carries the proof by reference (its digest), never its contents. For the AP2 Intent/Cart/Payment chain see `@atlasauth/pca-ap2`.
@@ -56,7 +58,9 @@ Pass `expectedMerchant` and `amount` to `acpX402Verifier` from your own order da
 
 ## Status
 
-Experimental. ACP and x402 are young protocols: the token and `accepts` field names are structural and should be validated against the current Stripe/OpenAI ACP and Coinbase x402 specs before production use. The x402 helpers perform no network I/O; verification and settlement are injected. Single use of a token (`jti`) is not tracked here, so the resource server must record used ids. The cryptography is unaudited.
+Experimental. Amounts are integer minor units everywhere (mint, settlement, spend-cap caveats and the x402 challenge refuse fractional, negative, NaN and unsafe values). Pass `singleUse` (an atomic `claim(jti, expiresAtMs)` store) to redeem a token exactly once, and `strict: true` to require the store, an expected currency and, for the x402 verifier, a server-supplied merchant and amount (the client payload's own merchant and amount are then never read). The claim is made only after every other check passes and a failing store denies; a token whose settlement call then fails stays spent. Without `strict`, single use is opt-in and the payload fields are the fallback.
+
+Spec pins: ACP delegated-token claims are this package's own structural envelope (not Stripe's Shared Payment Token wire format), and the x402 challenge follows the v1 `accepts` field names (`scheme`, `network`, `maxAmountRequired`, `resource`, `payTo`, `asset`, `mimeType`); x402 v2 and the current ACP schemas have not been checked against this code, so validate them before wire use. The x402 helpers perform no network I/O; verification and settlement are injected. The cryptography is unaudited.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

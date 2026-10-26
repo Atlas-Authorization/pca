@@ -16,19 +16,31 @@
  * Nothing here authorizes on its own — the resource server's verifier decides.
  */
 
-import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
-import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/pca';
+import { requirePCA, requireAuthorized, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
+import type { AuthorizeOptions, AuthorizedOperation, PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore, RequireAuthorizedOptions } from '@atlasauth/pca';
 import type { PCActn } from '@atlasauth/pca';
 
 /** The verdict + PCActn handed to a guarded handler on success. */
 export interface PcaContextValue {
   verdict: Extract<PcaGuardResult, { ok: true }>['verdict'];
   pcactn: PCActn;
+  /** The operation the decision is bound to (only with the `operation` option). */
+  operation?: AuthorizedOperation;
 }
 
 export interface PcaFetchOptions extends RequirePcaOptions {
   /** Shape the 401/403 body (default: `{ error, verdict }`). */
   denyBody?: (result: Extract<PcaGuardResult, { ok: false }>) => unknown;
+  /**
+   * The operation each request will execute, from your routing (verb / resource for the route, the parsed body as
+   * params), never from the PCActn. When set, requests are authorized by `authorize` (the strict pipeline: `budgetStore`
+   * and `hooks.revocation` are required, and a proof for another operation, other params, or params outside the grant
+   * is refused before your handler runs) and the bound `operation` is attached with the verdict. Absent: `requirePCA`,
+   * unchanged.
+   */
+  operation?: RequirePcaOptions['operation'];
+  /** With `operation`: `'single-step'` accepts a one-node plan equal to the bound operation (see `authorize`). */
+  plan?: AuthorizeOptions['plan'];
 }
 
 /** Adapt a web `Request` to the framework-agnostic `PcaRequestLike` (headers getter + parsed JSON body). */
@@ -40,7 +52,7 @@ async function toPcaRequest(req: Request): Promise<PcaRequestLike> {
   } catch {
     body = undefined;
   }
-  return { headers: { get: (name: string) => req.headers.get(name) }, body };
+  return { headers: { get: (name: string) => req.headers.get(name) }, body, method: req.method, url: req.url };
 }
 
 function denyResponse(result: Extract<PcaGuardResult, { ok: false }>, denyBody?: PcaFetchOptions['denyBody']): Response {
@@ -55,7 +67,7 @@ function denyResponse(result: Extract<PcaGuardResult, { ok: false }>, denyBody?:
  * (e.g. inside an existing router). Use `withPCA` for the common wrap-a-handler case.
  */
 export function createPcaFetchGuard(options: PcaFetchOptions): (req: Request) => Promise<PcaGuardResult> {
-  const guard = requirePCA(options);
+  const guard = options.operation ? requireAuthorized(options as RequireAuthorizedOptions) : requirePCA(options);
   return async (req: Request) => guard(await toPcaRequest(req));
 }
 
@@ -66,10 +78,10 @@ export function withPCA(options: PcaFetchOptions, handler: PcaFetchHandler): (re
   const guard = createPcaFetchGuard(options);
   return async (req: Request): Promise<Response> => {
     const result = await guard(req);
-    if (result.ok) return handler(req, { pca: { verdict: result.verdict, pcactn: result.pcactn } });
+    if (result.ok) return handler(req, { pca: { verdict: result.verdict, pcactn: result.pcactn, ...(result.operation ? { operation: result.operation } : {}) } });
     return denyResponse(result, options.denyBody);
   };
 }
 
-export { requirePCA, defaultExtract, memoryPcaStore };
+export { requirePCA, requireAuthorized, defaultExtract, memoryPcaStore };
 export type { PcaGuardResult, RequirePcaOptions, PcaStateStore };

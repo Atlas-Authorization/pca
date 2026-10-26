@@ -1,3 +1,4 @@
+import { setAssuranceLabel } from './assurance';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 backend — PUF (Physical Unclonable Function) UNCLONABLE attestation root.
@@ -654,7 +655,12 @@ export interface PufVerifierOptions {
  *   5. applies the acceptance policy and returns the measured identity (`weights_measured: false`).
  * Fails CLOSED with a specific reason on any mismatch or error.
  */
+/** Assurance label (0.5): `software` (a PUF provider can be simulated in software, so this root never claims hardware). See `assurance.ts`. */
 export function createPufVerifier(opts: PufVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createPufVerifierUnlabelled(opts), { level: 'software', vendor: 'puf' });
+}
+
+function createPufVerifierUnlabelled(opts: PufVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts?.policy || !Array.isArray(opts.policy.measurements) || opts.policy.measurements.length === 0) {

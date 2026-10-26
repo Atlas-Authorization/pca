@@ -1,5 +1,7 @@
 # @atlasauth/pca-control-evals
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 An empirical adversarial safety bound for Proof-Carrying Authority (PCA), complementing PCA's analytic one.
 
 PCA proves an analytic bound: between two human co-signs, the total risk of machine-only actions is at most `bMax/kappa`, whatever the agent does (see `safetyBound()` in `@atlasauth/pca`). That is a statement about the budget. It does not tell you whether the controls actually catch a given adversarial strategy, or how much legitimate work they allow. This package adds the empirical side as a red-team and blue-team control evaluation, following the AI Control methodology of Greenblatt, Shlegeris, Sachan and Roger ([arXiv:2312.06942](https://arxiv.org/abs/2312.06942)) and Korbak et al. ([arXiv:2501.17315](https://arxiv.org/abs/2501.17315)).

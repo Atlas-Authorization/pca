@@ -1,10 +1,12 @@
 /** Mutation-kill tests for server/verify.ts: threshold hook (F-1) boundaries, policy-reason pass-through, delegated-caveat reason format. */
 import { describe, expect, it } from 'vitest';
 import { AUD, NOW, setup } from './fixture.test-util';
-import { verifyPCActn } from './verify';
+import { verifyPCActn as verifyPCActn05 } from './verify';
 import { beaconRef, issueLivenessBeacon } from '../beacons';
 import { generateKeyPair, encodeKey } from '../keys';
 import { encodeMlDsaPublicKey, mlDsa65Keygen } from '../pq';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 const stepUpCtx = (s: ReturnType<typeof setup>) => ({ plan: s.plan, risk: { reversibility: 0, blastRadius: 0.5, confidence: 0.5, semanticDistance: 1 }, params: s.params });
 

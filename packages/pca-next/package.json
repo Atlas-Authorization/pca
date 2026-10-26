@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-next",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Next.js helper for Proof-Carrying Authority: wrap a Route Handler so the inbound PCActn is verified before your handler runs, with a 401/403 response otherwise.",
   "keywords": [
     "next.js",
@@ -47,6 +47,7 @@
     }
   },
   "devDependencies": {
+    "@atlasauth/pca-testing": "workspace:*",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
@@ -60,5 +61,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production"
   }
 }

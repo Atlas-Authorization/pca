@@ -1,5 +1,7 @@
 # @atlasauth/pca-idjag
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 ID-JAG / OAuth Cross-App Access bridge for Proof-Carrying Authority (PCA). An ID-JAG (Identity Assertion Authorization Grant, `draft-ietf-oauth-identity-assertion-authz-grant`) is a JWT an enterprise identity provider mints so an agent app can act on a named user's behalf against one other app: `sub` is the human, `act` is the agent, `aud` is the single target app, and `scope` is the delegated authority. This package verifies such a grant, projects it onto a PCA principal and a signed root capability, and builds the two OAuth requests used in the flow (RFC 8693 token exchange to obtain a grant, RFC 7523 jwt-bearer to redeem one).
 
 ## Install
@@ -60,7 +62,35 @@ const redeem = jwtBearerAssertion({
 
 ## Status
 
-The ID-JAG specification is an IETF draft and may change. JWT checks are delegated to `@atlasauth/pca-oidc`; only asymmetric algorithms are accepted by default. This package does not send any network request except the optional JWKS / discovery fetch. PCA cryptography has not been independently audited.
+Pinned to `draft-ietf-oauth-identity-assertion-authz-grant-04` (21 May 2026). The draft is a moving IETF document; this package follows revision 04 and will be re-pinned when a new revision changes the grant. JWT checks are delegated to `@atlasauth/pca-oidc`; only asymmetric algorithms are accepted by default. This package does not send any network request except the optional JWKS / discovery fetch. PCA cryptography has not been independently audited.
+
+This package is a profile of the draft's grant: it additionally REQUIRES the `act` (agent) and `scope` claims, which the draft marks optional, and accepts exactly one `aud`. Default verification does not check the header `typ`, `client_id` or `jti`; turn on `strictDraft` for the draft's section 3.1 shape.
+
+### Strict mode
+
+```ts
+const grant = await verifyIdJag(jwt, {
+  issuer, audience, key,
+  strictDraft: true,                 // typ "oauth-id-jag+jwt", client_id and jti present
+  clientId: 'resource-app-client',   // optional: client_id must equal this
+  consumeJti: async (jti, exp) => store.insertIfAbsent(jti, exp), // REQUIRED in strict mode; false = already used
+});
+```
+
+## Failure modes
+
+`verifyIdJag` throws `IdJagVerificationError` with a `code` in every row; it never returns a partial grant.
+
+| Missing or invalid | Result (`code`) |
+|---|---|
+| empty token, missing options, missing issuer or audience | `invalid_token` / `config` |
+| `strictDraft` without `consumeJti` | `config` |
+| bad signature, wrong issuer, expired, wrong nonce, disallowed algorithm | the underlying verification code (unchanged from `@atlasauth/pca-oidc`) |
+| `aud` is not exactly the one expected audience | `audience` |
+| `act` missing or without a string `sub` | `actor` |
+| `scope`/`scopes` missing, or a required scope absent | `scope` |
+| strict: wrong or missing `typ`, missing `client_id` or `jti`, `client_id` mismatch | `grant` |
+| strict: `jti` already used, or the `consumeJti` store throws or returns anything but `true` | `grant` |
 
 ## License
 

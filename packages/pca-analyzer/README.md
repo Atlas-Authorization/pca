@@ -1,5 +1,7 @@
 # @atlasauth/pca-analyzer
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Static analyzability of authority for Proof-Carrying Authority (PCA). PCA can verify one action and prove a quantitative trust-budget bound, but on its own it cannot answer "what can this whole delegated authority ever do?". This package decides that over PCA's predicate/caveat policy (reachability, vacuity, totality, delegation-safety subsumption, disjointness, equivalence, and conformance to a declared intent) without an SMT dependency.
 
 It is a sound, bounded decision procedure in the spirit of AWS Cedar's symbolic compiler (SymCC, arXiv:2403.04651), which decides policy equivalence, subsumption and always-allow/deny with counterexamples. Instead of discharging to Z3, it exploits a finite-distinguishing-value property of PCA's predicate theory and decides by enumeration against the real `evaluatePredicates` from `@atlasauth/pca`.
@@ -92,12 +94,19 @@ favourably chosen, and the one action-tied caveat, `reversibility_max`, becomes 
   concrete resource in `reachable`, where there is nothing to enumerate.)
 - **cross-field `ref` conditions** — a comparison whose operand is another field (`a != env.b`); the two
   fields co-vary and are not resolved statically.
+- **ordering against a non-numeric operand** (`lt`/`lte`/`gt`/`gte` with a string, boolean, array or null): the verifier orders strings, and only finite numeric thresholds partition the value line into the cells the enumeration relies on. Before 0.5 such a policy could be "proved" to always deny; a differential test against the verifier found it.
 - **whole-`action.params` conditions** (a condition on the container rather than a `.subfield`).
 - **grid overflow** — a representative grid larger than `maxCombinations` (default 200,000); no
   enumeration is performed.
 
+A value that is not a policy is an empty policy (it admits nothing and nothing throws), and a `maxCombinations` that is not a non-negative finite number falls back to the default so the cap cannot be switched off.
+
 The soundness contract: a proven verdict (`approximate` falsy) is correct for the fragment above; an
 `approximate` verdict is never a false "safe". 
+
+## Checked against the verifier
+
+`differential/verifier.diff.test.ts` generates policies and actions (with the generators of `@atlasauth/pca-invariants`) and compares every answer with `evaluatePredicates` and `evaluateCaveats`: a policy is never called unreachable or always-deny when the verifier admits a concrete action, a `subsumes` or `disjoint` "yes" is never refuted by an action, and every witness or counterexample is real. It runs 1,500 cases per property by default; set `PCA_DIFF_RUNS` and `PCA_DIFF_SEED` for more.
 
 ## Status
 

@@ -1,5 +1,7 @@
 # @atlasauth/pca-fhe
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Homomorphic evaluation of PCA's risk gate. PCA admits a machine-only action while the trust budget covers its cost (`kappa * r <= B`, where `r` is a weighted sum of six normalized risk inputs). This package runs that exact functional over encrypted risk inputs using BFV from Microsoft SEAL (via `node-seal`): the evaluator computes the weighted risk and the admission slack without ever seeing the plaintext inputs, and only the key holder decrypts the verdict.
 
 ## Install

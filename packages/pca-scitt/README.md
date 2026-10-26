@@ -1,5 +1,7 @@
 # @atlasauth/pca-scitt
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 SCITT transparency receipts for Proof-Carrying Authority (RFC 9943 architecture, RFC 9942 COSE Receipts). Each verified PCActn (or verdict) is signed as a COSE Signed Statement (`COSE_Sign1`), appended to an append-only RFC 6962 Merkle log, and returned with a COSE Receipt carrying an RFC 9162 inclusion proof against the log root. A third party can check it with only the statement, the receipt and a pinned root or the transparency service's public key.
 
 Self-contained: a small deterministic CBOR codec (RFC 8949 core-deterministic) and `node:crypto` for signing and hashing. Algorithms: `EdDSA` and `ES256`. The log is an RFC 9162 SHA-256 Merkle tree whose leaf entries are the raw Signed Statement bytes, so an independent RFC 9162 verifier can check a receipt's inclusion proof given the statement bytes. Receipts carry a detached payload, as RFC 9942 recommends.
@@ -45,7 +47,7 @@ verifyReceipt(receipt, statement, {});                  // false: no trust ancho
 
 ## Status
 
-Experimental and unaudited. `TransparencyService` is an in-memory reference implementation (it recomputes the Merkle tree on each registration), suitable for tests and small logs; it is not a production transparency service.
+Experimental and unaudited. This package is a signer and VERIFIER of statements and receipts. `TransparencyService` is an in-memory reference log (it recomputes the Merkle tree on each registration and forgets everything on restart) for tests and demos; it is also exported from `@atlasauth/pca-scitt/testing`, and that is where to import it from. It is not a production transparency service: run a real one and verify its receipts with `verifyReceipt`.
 
 What is validated:
 

@@ -68,6 +68,10 @@ describe('matchesBinding', () => {
     expect(matchesBinding(p, { min_measurement: { svn: 43 } }).ok).toBe(false); // SVN too low
   });
 
+  it('min_measurement: a function carrying an svn property is not an {svn} object', () => {
+    const fn = Object.assign(() => 1, { svn: 1 });
+    expect(matchesBinding(p, { min_measurement: fn as never })).toEqual({ ok: false, reasons: ['min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)'] });
+  });
   it('min_measurement svn is strict and fails closed (0.4.2)', () => {
     for (const mm of [{ svn: '42' }, { svn: Number.NaN }, { svn: -1 }, { svn: 1.5 }, { svn: -0 }, {}, { svn: 1, x: 1 }, null, 5, ['x']] as never[]) {
       expect(matchesBinding(p, { min_measurement: mm })).toEqual({ ok: false, reasons: ['min_measurement is malformed: it must be a non-empty string or {svn: n} with n a non-negative safe integer (fail closed)'] });

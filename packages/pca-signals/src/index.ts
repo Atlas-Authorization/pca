@@ -406,3 +406,134 @@ export function streamProcessor(
   }
   return state;
 }
+
+// ================================================================================================
+// Receiver: verify + replay-guard + fold, fail-closed (additive; `verifySET` / `applySET` are unchanged).
+// ================================================================================================
+
+/**
+ * A durable `jti` replay store for received SETs. `addIfAbsent` MUST be atomic: of N concurrent calls with the
+ * same `jti` exactly one returns `true`. An entry may be dropped once `nowSec >= expiresAtSec`. Back it with a
+ * shared store (SQL unique key, Redis `SET NX EX`) when more than one process receives SETs; check yours with
+ * {@link runSetReplayStoreConformance}.
+ */
+export interface SetReplayStore {
+  addIfAbsent(jti: string, expiresAtSec: number, nowSec: number): boolean | Promise<boolean>;
+}
+
+/** Single-process test double / small deployments only: state is lost on restart and not shared across processes. */
+export function createInMemorySetReplayStore(): SetReplayStore {
+  const seen = new Map<string, number>();
+  return {
+    addIfAbsent(jti, expiresAtSec, nowSec) {
+      for (const [k, exp] of seen) if (nowSec >= exp) seen.delete(k);
+      if (seen.has(jti)) return false;
+      seen.set(jti, expiresAtSec);
+      return true;
+    },
+  };
+}
+
+/**
+ * Conformance suite for a {@link SetReplayStore}. Returns the list of failed checks (empty = conformant). Pass a
+ * factory that returns a FRESH, empty store on each call.
+ */
+export async function runSetReplayStoreConformance(make: () => SetReplayStore): Promise<string[]> {
+  const failures: string[] = [];
+  const check = (ok: boolean, name: string): void => {
+    if (!ok) failures.push(name);
+  };
+  const s = make();
+  check((await s.addIfAbsent('a', 200, 100)) === true, 'first sight of a jti returns true');
+  check((await s.addIfAbsent('a', 200, 101)) === false, 'second sight of the same jti returns false');
+  check((await s.addIfAbsent('b', 200, 101)) === true, 'a different jti is independent');
+  check((await s.addIfAbsent('a', 200, 199)) === false, 'still seen one second before expiry');
+  const t = make();
+  await t.addIfAbsent('c', 200, 100);
+  check((await t.addIfAbsent('c', 400, 200)) === true, 'an expired entry may be added again (nowSec >= expiresAtSec)');
+  const u = make();
+  const wins = (await Promise.all(Array.from({ length: 16 }, () => u.addIfAbsent('race', 200, 100)))).filter(Boolean).length;
+  check(wins === 1, `16 concurrent adds of one jti: exactly one wins (got ${wins})`);
+  return failures;
+}
+
+/** Why {@link receiveSET} refused a token. Every refusal is a value, never a throw. */
+export type ReceiveSetCode =
+  | 'misconfigured'
+  | 'oversize'
+  | 'malformed'
+  | 'verify_failed'
+  | 'iat_missing'
+  | 'iat_future'
+  | 'iat_stale'
+  | 'replay'
+  | 'replay_store_error';
+
+export type ReceiveSetResult = { ok: true; parsed: ParsedSet } | { ok: false; code: ReceiveSetCode; reason: string };
+
+/** Options for {@link receiveSET}. Every field except the clock ones is REQUIRED; a missing one is `misconfigured`. */
+export interface ReceiveSetOptions {
+  issuer: string | string[];
+  audience: string | string[];
+  /** Required replay store; there is no default. */
+  replayStore: SetReplayStore;
+  /** Revocation state to fold the verified events into. */
+  state: RevocationState;
+  /** Oldest acceptable `iat` age in seconds. Required: it also bounds how long the replay store must remember a `jti`. */
+  maxAgeSec: number;
+  /** Seconds a SET's `iat` may be ahead of the receiver (default 60). */
+  clockSkewSec?: number;
+  /** Pin "now" (epoch seconds), for tests. */
+  nowSec?: number;
+  /** Reject a SET string longer than this (default 16384). */
+  maxBytes?: number;
+}
+
+const fails = (code: ReceiveSetCode, reason: string): ReceiveSetResult => ({ ok: false, code, reason });
+
+/**
+ * The recommended receive path: size cap, canonical spelling, EdDSA signature, `typ`, required `iss` and `aud`,
+ * `iat` freshness window, atomic `jti` replay guard, then fold into `state`. Order matters: the `jti` is recorded
+ * only after every other check passed, so a forged token cannot burn a real SET's id. Fails closed on every error,
+ * including a replay store that throws (the SET is NOT applied).
+ */
+export async function receiveSET(set: string, verifyKey: VerifyKey, opts: ReceiveSetOptions): Promise<ReceiveSetResult> {
+  if (
+    !opts ||
+    opts.issuer === undefined ||
+    opts.audience === undefined ||
+    typeof opts.replayStore?.addIfAbsent !== 'function' ||
+    !opts.state ||
+    !Number.isFinite(opts.maxAgeSec) ||
+    opts.maxAgeSec <= 0
+  ) {
+    return fails('misconfigured', 'issuer, audience, replayStore, state and a positive maxAgeSec are all required');
+  }
+  if (typeof set !== 'string' || set.length > (opts.maxBytes ?? 16384)) return fails('oversize', 'SET is not a string or exceeds maxBytes');
+  try {
+    assertCanonicalCompactJws(set);
+  } catch (e) {
+    return fails('malformed', e instanceof Error ? e.message : 'not a canonical compact JWS');
+  }
+  const nowSec = opts.nowSec ?? Math.floor(Date.now() / 1000);
+  let parsed: ParsedSet;
+  try {
+    parsed = await verifySET(set, verifyKey, { issuer: opts.issuer, audience: opts.audience, currentDate: new Date(nowSec * 1000) });
+  } catch (e) {
+    return fails('verify_failed', e instanceof Error ? e.message : 'verification failed');
+  }
+  const iat = parsed.payload.iat;
+  if (typeof iat !== 'number' || !Number.isFinite(iat)) return fails('iat_missing', 'SET has no numeric iat');
+  const skew = opts.clockSkewSec ?? 60;
+  if (iat > nowSec + skew) return fails('iat_future', 'SET iat is in the future');
+  if (nowSec - iat > opts.maxAgeSec) return fails('iat_stale', `SET is older than ${opts.maxAgeSec}s`);
+  let fresh: boolean;
+  try {
+    fresh = await opts.replayStore.addIfAbsent(parsed.jti, iat + opts.maxAgeSec + skew, nowSec);
+  } catch (e) {
+    return fails('replay_store_error', e instanceof Error ? e.message : 'replay store failed');
+  }
+  if (fresh !== true) return fails('replay', `jti '${parsed.jti}' has already been received`);
+  applySET(opts.state, parsed);
+  return { ok: true, parsed };
+}

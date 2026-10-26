@@ -1,5 +1,7 @@
 # @atlasauth/pca-agent
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Agent-side client for Proof-Carrying Authority (PCA). It commits a plan, builds and signs a PCActn (a proof-carrying action) for a plan node, posts it to a resource server, handles step-up approval, delegates attenuated authority to sub-agents, and checks ledger inclusion receipts.
 
 The client talks to a resource server that exposes the PCA HTTP surface: `POST /v1/pca/plans`, `POST /v1/pca/actions` and `GET /v1/pca/stepups/:id` (the hosted Atlas API does, and so can your own server). `act` emits a proof; it does not authorize anything on its own. The resource server's verifier decides allow, step-up or deny.

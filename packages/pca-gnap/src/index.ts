@@ -389,6 +389,14 @@ export function grantedAccessOf(chain: CapabilityChain): GnapResourceAccess[] {
 
 /** Resolve the b64u Ed25519 holder key from a request's client key (or an explicit override). */
 export function resolveHolder(req: GnapGrantRequest, holderOverride?: string): string {
+  // Supported subset (contract): the client key proof method is `jwsd`, nothing else. A declared `httpsig`, `mtls`,
+  // `jwsd-vc`, an unknown method, or a missing method is refused even when a holder override is supplied.
+  const declared = typeof req.client === 'object' && req.client !== null ? req.client.key : undefined;
+  if (typeof declared === 'object' && declared !== null) {
+    const proof: unknown = declared.proof;
+    const method = typeof proof === 'string' ? proof : isRecord(proof) ? proof.method : undefined;
+    if (method !== 'jwsd') throw new GnapError(`unsupported client key proof method: ${typeof method === 'string' ? method : 'none'} (only jwsd is supported)`);
+  }
   if (holderOverride !== undefined) {
     const h = asEd25519(holderOverride);
     if (h === null) throw new GnapError('holder override is not a canonical base64url Ed25519 public key');

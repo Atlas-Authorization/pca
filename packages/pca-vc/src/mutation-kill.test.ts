@@ -5,7 +5,7 @@
 import { generateKeyPairSync, sign as nodeSign, type KeyObject } from 'node:crypto';
 import { SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
-import type { AgentPassport } from '@atlasauth/pca';
+import type { AgentPassport } from '@atlasauth/pca/ext/attestation';
 import {
   AGENT_PASSPORT_CONTEXT,
   AGENT_PASSPORT_VC_TYPE,
@@ -174,7 +174,7 @@ describe('verifyPassportVC', () => {
   const vc0 = { '@context': [VC_CONTEXT, AGENT_PASSPORT_CONTEXT], type: ['VerifiableCredential', AGENT_PASSPORT_VC_TYPE], credentialSubject: cs0 };
   async function craft(over: { vc?: unknown; payload?: Record<string, unknown>; header?: Record<string, unknown>; discs?: string[]; key?: KeyObject; cs?: Record<string, unknown>; vcOver?: Record<string, unknown> } = {}) {
     const vc = 'vc' in over ? over.vc : { ...vc0, ...(over.vcOver ?? {}), credentialSubject: over.cs ?? cs0 };
-    const payload: Record<string, unknown> = { iss: 'did:key:zISS', ...(vc === undefined ? {} : { vc }), ...(over.payload ?? {}) };
+    const payload: Record<string, unknown> = { iss: 'did:key:zISS', sub: (over.cs ?? cs0).id, ...(vc === undefined ? {} : { vc }), ...(over.payload ?? {}) };
     const jwt = await new SignJWT(payload).setProtectedHeader({ alg: 'EdDSA', typ: 'vc+sd-jwt', ...(over.header ?? {}) } as never).sign(over.key ?? kp.privateKey);
     return [jwt, ...(over.discs ?? [])].map((p) => `${p}~`).join('');
   }

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-fhe",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Homomorphic risk-gate evaluation for PCA: the evaluator computes the weighted risk functional + admission slack over ENCRYPTED risk inputs (node-seal / Microsoft SEAL BFV) and never sees the plaintext — only the authorized key holder decrypts the verdict.",
   "keywords": [
     "homomorphic encryption",
@@ -55,5 +55,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

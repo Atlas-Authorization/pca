@@ -130,7 +130,7 @@ describe('PCA end-to-end loop (spec §20.1)', () => {
     expect(d1.r).toBeLessThanOrEqual(policy.theta1);
     const v1 = await verifyPCActnCore(pc1, { grant: G, audience: 'e2e-rs', nowEpoch: now });
     expect(v1.allow).toBe(true);
-    for (const k of ['cap_chain', 'plan_inclusion', 'leaf_signature', 'counter'])
+    for (const k of ['cap_chain', 'plan_inclusion', 'leaf_signature', 'counter_format'])
       expect(v1.checks[k]).toBe('pass');
     expect(v1.checks.plan_root_authorized).toBe('not-enforced');
     expect(v1.checks.threshold).toBe('not-enforced');

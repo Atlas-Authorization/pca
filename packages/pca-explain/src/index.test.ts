@@ -80,13 +80,23 @@ describe('explainVerification', () => {
 
     const ex = explainVerification(p, vr, { now: NOW });
     expect(ex.verdict).toBe('allow');
-    expect(ex.passed).toEqual(expect.arrayContaining(['wire', 'version', 'audience', 'validity', 'cap_chain', 'plan_inclusion', 'leaf_signature', 'counter']));
+    expect(ex.passed).toEqual(expect.arrayContaining(['wire', 'version', 'audience', 'validity', 'cap_chain', 'plan_inclusion', 'leaf_signature', 'counter_format']));
     expect(ex.decisive).toBeUndefined();
 
     const text = ex.toText();
     expect(text).toContain('ALLOW');
     expect(text).toContain(`aud "${AUD}" matches`);
     expect(text).toMatch(/leaf signature|leaf holder/);
+  });
+
+  it('an unsupported check is presented as unsupported, never as passed (0.5)', async () => {
+    const f = fixture();
+    const p = buildActn(f, { amount: 100 }, 0.1);
+    const vr = await verifyPCActnCore(p, { grant: f.grant, nowEpoch: NOW, audience: AUD });
+    const ex = explainVerification(p, { ...vr, checks: { ...vr.checks, bond: 'unsupported' } }, { now: NOW });
+    expect(ex.checks.find((c) => c.name === 'bond')).toMatchObject({ status: 'unsupported', detail: 'the PCActn carries a feature this verifier does not implement (never a pass)' });
+    expect(ex.passed).not.toContain('bond');
+    expect(ex.toText()).toMatch(/\? bond\s+the PCActn carries a feature this verifier does not implement/);
   });
 
   it('DENY (broken signature): pinpoints the leaf hop with a remedy', async () => {

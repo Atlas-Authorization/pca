@@ -1,5 +1,7 @@
 # @atlasauth/pca-explain
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Plain-language proof traces for Proof-Carrying Authority decisions. Given a PCActn and the result of the verifier, it explains why the action was allowed or denied: which checks passed, the first failing check with a concrete fix, which capability granted the action, which caveat narrowed or failed, and the risk, threshold and budget path. It also renders an attenuation trace for a delegation chain.
 
 Everything is pure and read-only: it never re-authorizes anything and never throws, so malformed input degrades to a best-effort explanation.
@@ -50,6 +52,12 @@ For the policy decision (admit, step-up or deny), pass the PCActn and the `Polic
 - `explainDecision(pcactn, decision, { envelope?, context? })` returns a `DecisionExplanation`.
 - `explainChain(chain)` returns a `ChainExplanation` with per-hop `hops` and `toText()`.
 - `VERIFY_CHECK_ORDER`: the normative check order used for the trace.
+
+## What an explanation will and will not say
+
+- It never says allow unless the verifier did. `explainVerification` reports an allow only for an explicit `allow: true` with per-check statuses and no failing check; `explainDecision` only for an explicit `admit: true`. A truthy value, an allow that a failing check contradicts, an allow with no per-check evidence, and a missing or malformed input are all explained as denials, and nothing throws.
+- `explainChain(chain)` shows what a chain claims and labels itself `UNVERIFIED`; `explainChain(chain, { verify: true })` also records whether signatures, links and caveat rules hold.
+- Text built from untrusted fields (audience, verb, resource, caveat values, verifier reasons) goes through `cleanText`: JWTs, bearer credentials, URL userinfo, `token=` / `password=` pairs and long token runs become `[redacted]`, and text is cut to 400 characters. A net, not a proof.
 
 ## Status
 

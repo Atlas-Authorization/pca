@@ -1,3 +1,5 @@
+import { decodeCanonicalBase64url } from './strict-jws';
+import { setAssuranceLabel } from './assurance';
 import { x509ValidAt } from './x509-validity';
 import { snapshotConfig } from './config-snapshot';
 /**
@@ -238,8 +240,8 @@ export function parseMaaJwt(token: string): ParsedMaaJwt {
   let headerObj: unknown;
   let payloadObj: unknown;
   try {
-    headerObj = JSON.parse(Buffer.from(h, 'base64url').toString('utf8'));
-    payloadObj = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
+    headerObj = JSON.parse(decodeCanonicalBase64url(h).toString('utf8'));
+    payloadObj = JSON.parse(decodeCanonicalBase64url(p).toString('utf8'));
   } catch (e) {
     throw new TypeError(`parseMaaJwt: malformed JSON segment: ${e instanceof Error ? e.message : 'unknown'}`);
   }
@@ -256,7 +258,12 @@ export function parseMaaJwt(token: string): ParsedMaaJwt {
     ...(asStringArray(headerRec.x5c) !== undefined ? { x5c: asStringArray(headerRec.x5c) } : {}),
     ...(asString(headerRec.typ) !== undefined ? { typ: asString(headerRec.typ) } : {}),
   };
-  const signature = new Uint8Array(Buffer.from(s, 'base64url'));
+  let signature: Uint8Array;
+  try {
+    signature = new Uint8Array(decodeCanonicalBase64url(s));
+  } catch (e) {
+    throw new TypeError(`parseMaaJwt: malformed signature segment: ${e instanceof Error ? e.message : 'unknown'}`);
+  }
   if (signature.length === 0) throw new TypeError('parseMaaJwt: empty signature');
   return { header, payload: payloadRec, signingInput: utf8(`${h}.${p}`), signature };
 }
@@ -616,7 +623,12 @@ function transformBinding(binding: Uint8Array, mode: AzureMaaPolicy['reportDataH
  * Wire it in: `createAttestationVerifier({ trustedAttestorKeys: [], hardwareVerifier: createAzureMaaVerifier(opts), resolveDocument })`,
  * or add it as one `AttestationRoot` in a `createMultiRootVerifier` policy.
  */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createAzureMaaVerifier(opts: AzureMaaVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createAzureMaaVerifierUnlabelled(opts), { level: 'hardware', vendor: 'azure-maa' });
+}
+
+function createAzureMaaVerifierUnlabelled(opts: AzureMaaVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts || !Array.isArray(opts.trustedIssuers) || opts.trustedIssuers.length === 0) {

@@ -33,7 +33,7 @@ signatures, threshold step-up, zero-knowledge compliance, MPC policy evaluation,
 is an additive, independently-adoptable rung on top of the base wire.
 
 **This repository is the flagship.** It carries the reference **TypeScript** implementation (the
-`@atlasauth/pca` core plus 83 published `@atlasauth/pca*` packages), the full explainer
+`@atlasauth/pca` core plus 84 published `@atlasauth/pca*` packages), the full explainer
 docs and diagrams, the interactive playground, and the shared conformance corpus. The nine native
 verifiers in other languages live in their own repos and pass this same corpus — see
 [`verifiers/`](./verifiers) and [`ECOSYSTEM.md`](./ECOSYSTEM.md) for the whole map.
@@ -172,13 +172,14 @@ source) are in [`docs/diagrams`](./docs/diagrams).
 
 ## Packages
 
-This repo publishes **83** TypeScript packages under the
+This repo publishes **84** TypeScript packages under the
 [`@atlasauth`](https://www.npmjs.com/org/atlasauth) scope. The core is `@atlasauth/pca`; everything else
 is a framework adapter, crypto rung, protocol bridge, or agent-framework integration that builds on it.
 
 | Package | What it does |
 |---------|--------------|
 | [`@atlasauth/pca`](packages/pca) | Proof-Carrying Authority core: canonical hashing, Ed25519 and post-quantum signatures, Merkle plan commitments, attenuable capability chains, hardware attestation verification, and the PCActn verifier. |
+| [`create-pca-app`](packages/create-pca-app) | Scaffold a working Proof-Carrying Authority app in seconds: npm create pca-app@latest — mint a capability, build + sign a proof-carrying action, and verify it offline (valid passes, tampered fails). |
 | [`@atlasauth/pca-a2a`](packages/pca-a2a) | A2A (Agent2Agent) adapter for PCA: verify/attach proof-carrying actions on A2A task send/receive, validate Signed Agent Cards, and an AP2 payment-mandate profile. |
 | [`@atlasauth/pca-abe`](packages/pca-abe) | Proof-carrying encryption for PCA: attribute/policy-based encryption on BLS12-381 so a tool payload decrypts only for a holder whose capability satisfies the policy — binding confidentiality to proven authority. |
 | [`@atlasauth/pca-acp`](packages/pca-acp) | Agentic Commerce (ACP) + x402 adapter for PCA: mint an ACP delegated one-time payment token (bound to session+merchant+amount+expiry) AS a PCA proof, and an x402/HTTP-402 facilitator hook that gates settlement on a verified PCActn. |
@@ -245,7 +246,7 @@ is a framework adapter, crypto rung, protocol bridge, or agent-framework integra
 | [`@atlasauth/pca-rotate`](packages/pca-rotate) | Key rotation + subtree revocation for PCA: rotate an agent holder key or a principal/root key by re-issuing the chain under new keys, and revoke-and-reissue a compromised delegation subtree, emitting revocation records. |
 | [`@atlasauth/pca-schema`](packages/pca-schema) | JSON Schema (draft 2020-12) for the PCA wire types — PCActn, capability/grant, discovery doc — plus a tiny validator, so any language can codegen types and validate payloads. |
 | [`@atlasauth/pca-scim`](packages/pca-scim) | SCIM 2.0 /agents provisioning for PCA: expose the agent-passport registry as a SCIM resource (and push-provision to Entra Agent ID / Okta), so PCA agents live in the enterprise directory with lifecycle/governance. |
-| [`@atlasauth/pca-scitt`](packages/pca-scitt) | SCITT transparency receipts for PCA (RFC 9943/9942): register each verified PCActn as a COSE Signed Statement and return/verify the COSE inclusion receipt, turning PCA's decision record into standards-shaped, externally-verifiable append-only audit evidence. |
+| [`@atlasauth/pca-scitt`](packages/pca-scitt) | SCITT transparency receipts for PCA (RFC 9943/9942): sign PCA decision records as COSE Signed Statements and verify COSE inclusion and consistency receipts from any RFC 9162 transparency log. An in-memory reference log for tests is under /testing. |
 | [`@atlasauth/pca-sdjwt`](packages/pca-sdjwt) | SD-JWT serialization of a PCActn for PCA: emit/verify a PCActn (and its capability claims) as a selectively-disclosable SD-JWT so PCA proofs drop into existing JWT/SD-JWT verifiers and align with WIMSE / AP2 mandate shape. |
 | [`@atlasauth/pca-siem`](packages/pca-siem) | SIEM export for PCA decisions: emit each verified/denied action as an OCSF Authorization event (and CEF), streamable to Splunk/Elastic/Datadog/Sentinel — the security-event feed complementing OTel traces. |
 | [`@atlasauth/pca-signals`](packages/pca-signals) | Shared Signals Framework (CAEP/SSF) for PCA: build + verify Security Event Tokens (RFC 8417) for grant revocation and mid-run kill-switch propagation to in-flight agents. |

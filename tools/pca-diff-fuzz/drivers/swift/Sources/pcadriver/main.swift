@@ -149,6 +149,12 @@ func one(_ c: JSONValue, rawHasLoneSurrogate: Bool) -> JObject {
         var out: JObject = ["allow": .bool(why == nil), "checks": .object(["chain": .bool(why == nil)])]
         if let w = why, w.contains(PCASuites.unsupportedSuiteReason) { out["unsupported_suite"] = .string(w) }
         return out
+    case "policy":
+        // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+        // evaluateCaveats(policyCaveats(grant, chain), context) as {allow, failed}
+        guard let o = try? StrictJSON.parseLenient(raw), o.isObject else { return ["error": .string("exception:policy")] }
+        let pr = PCA.evaluateCaveats(PCA.policyCaveats(grant: o.get("grant") ?? .null, chain: o.get("chain")), context: o.get("context") ?? .null)
+        return ["allow": .bool(pr.ok), "failed": strArray(pr.failed)]
     case _ where kind.hasPrefix("intent_"):
         // a lone surrogate in the input reaches the primitive as the sentinel scalar, which every v2 rule treats as one
         guard let input = try? StrictJSON.parseLenient(raw),

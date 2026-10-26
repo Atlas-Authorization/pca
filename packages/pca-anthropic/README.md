@@ -1,5 +1,7 @@
 # @atlasauth/pca-anthropic
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Anthropic (Claude) adapter for Proof-Carrying Authority (PCA). It sits between a Claude `tool_use` block and the `tool_result` you send back: it turns the block into a PCActn (a signed proof-carrying action) using a PCA `Agent`, runs your handler with the proof in hand, and returns the `tool_result` block, including the error-shaped result Claude expects when a tool is declined or throws.
 
 It does not authorize anything itself: it attaches a proof, and the resource server's verifier decides. A handler that forgets to forward the proof just produces a downstream call without a valid PCActn, which fails server-side.
@@ -53,7 +55,7 @@ const toolResults = await handleToolUses(
 
 ## Status
 
-Experimental. The underlying cryptography in `@atlasauth/pca` has not been independently audited.
+Production tier: this package signs; it does not authorize. The resource server's verifier decides. The underlying cryptography in `@atlasauth/pca` has not been independently audited.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

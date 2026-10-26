@@ -40,7 +40,6 @@
 
 import {
   type Capability,
-  type FrostParticipantShare,
   ML_DSA_65_PUBLIC_KEY_BYTES,
   type MlDsaKeyPair,
   type PCActn,
@@ -52,7 +51,6 @@ import {
   assembleThreshold,
   b64u,
   decodeB64uStrict,
-  frostCosign,
   mlDsa65Sign,
   mlDsa65VerifyB64u,
   sha256,
@@ -61,6 +59,7 @@ import {
   verifyB64u,
   snapshotConfig,
 } from '@atlasauth/pca';
+import { type FrostParticipantShare, frostCosign } from '@atlasauth/pca/ext/frost';
 
 export * as experimental from './experimental/lattice-threshold';
 

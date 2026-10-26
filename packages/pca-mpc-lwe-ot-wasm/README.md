@@ -1,5 +1,7 @@
 # @atlasauth/pca-mpc-lwe-ot-wasm
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The **post-quantum, maliciously-secure endemic base-OT lattice core** for `@atlasauth/pca-mpc`.
 
 `@atlasauth/pca-mpc`'s its ML-KEM base-OT module is a *semi-honest* ML-KEM base OT: a malicious receiver can keep

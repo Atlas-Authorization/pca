@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-mpc-lwe-ot-wasm",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Post-quantum endemic (Masny-Rindal) base-OT lattice core for @atlasauth/pca-mpc: Kyber-768 IND-CPA (K-PKE) from the vetted pqc_kyber reference crate compiled to WebAssembly, plus the ring arithmetic + uniform-ring random oracle the additive endemic construction needs. Removes the semi-honest ML-KEM base OT's malicious-receiver residue under decisional Module-LWE.",
   "keywords": [
     "oblivious transfer",
@@ -57,5 +57,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

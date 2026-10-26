@@ -22,7 +22,9 @@ import { commitPlan, conditionsDigest, type PlanNode } from './merkle';
 import { PCACTN_VERSION, encodePCActn, signPCActn, verifyPCActnCore, type PCActn } from './pcactn';
 import { DEFAULT_RISK_POLICY } from './risk';
 import { AUD, NOW, setup } from './server/fixture.test-util';
-import { memoryPcaStore, requirePCA, type PcaStateStore } from './server/require-pca';
+import { memoryPcaStore, pcaStateKey, requirePCA as requirePCA05, type PcaStateStore } from './server/require-pca';
+const requirePCA = (o: Parameters<typeof requirePCA05>[0]): ReturnType<typeof requirePCA05> => requirePCA05({ insecureAllowUnboundOperation: true, multiInstance: false, ...o }); // unbound and single-instance on purpose: these tests are not about operation binding or store scope (see breaking-05.test.ts)
+
 
 const revocation = () => ({ enforced: true, ok: true });
 const ZERO_RISK = { reversibility: 1, blastRadius: 0, confidence: 1, semanticDistance: 0, taint: 0 };
@@ -49,7 +51,7 @@ describe('T-008: counter and budget races (concurrent verifiers sharing one stor
     const a = s.mk(s.plan[0]!, { counter: 5 });
     const rs = await Promise.all(Array.from({ length: 50 }, () => g(req(a))));
     expect(rs.filter((r) => r.ok)).toHaveLength(1);
-    for (const r of rs.filter((x) => !x.ok)) expect(!r.ok && r.verdict.checks.counter).toBe('fail');
+    for (const r of rs.filter((x) => !x.ok)) expect(!r.ok && r.verdict.checks.replay).toBe('fail');
   });
 
   it('two independent guard instances over ONE store also admit exactly one', async () => {
@@ -86,7 +88,7 @@ describe('T-008: counter and budget races (concurrent verifiers sharing one stor
   it('parallel spends never exceed the budget and no debit is lost', async () => {
     const s = setup();
     const store = memoryPcaStore();
-    const key = `${s.grant.id}:${s.aPub}`;
+    const key = pcaStateKey(s.grant.id, s.aPub, undefined, AUD);
     await store.put(key, { budget: { B: 1, tau: NOW, asOf: NOW } });
     const g = makeGuard(s, store, spend(s));
     const rs = await Promise.all(Array.from({ length: 40 }, (_, i) => g(req(s.mk(s.plan[1]!, { counter: i + 1 })))));

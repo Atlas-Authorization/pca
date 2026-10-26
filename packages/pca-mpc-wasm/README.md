@@ -1,5 +1,7 @@
 # @atlasauth/pca-mpc-wasm
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A **constant-time** Ed25519 base-OT curve core for `@atlasauth/pca-mpc`, compiled to WebAssembly.
 
 `@atlasauth/pca-mpc` ships a correct, malicious-hardened pure-JS prime-order group, but its BigInt modular arithmetic is **not** constant-time and cannot be in pure JS (a language/runtime boundary); the pure-JS path remains the fallback. The base OT multiplies **secret**

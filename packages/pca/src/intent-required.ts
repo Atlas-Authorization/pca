@@ -128,9 +128,14 @@ export function signIntentRequired(body: IntentRequiredBody, kid: string, siteSe
   return { ...body, sig: { alg: resolveSigAlg(suite?.alg ?? 'ed25519')!.alg as SigAlg, kid, value: parts.sig, ...(parts.pq_sig !== undefined ? { pq_value: parts.pq_sig } : {}) } };
 }
 
-/** Verify a site-signed body against the site's discovery keys (the same key list as the action schema). */
+/**
+ * Verify a site-signed body against the site's discovery keys (the same key list as the action schema). Without `now` only
+ * the signature is checked (no expiry): a caller that acts on the question must pass the clock, or use
+ * {@link verifyIntentRequiredAt}. A `now` that is present but not a safe integer is refused, never coerced.
+ */
 export function verifyIntentRequired(b: unknown, keys: readonly ActionSchemaKey[], now?: number): { ok: true } | { ok: false; reason: string } {
   try {
+    if (now !== undefined && !(typeof now === 'number' && Number.isSafeInteger(now))) return { ok: false, reason: 'the verifier clock is not a safe integer (fail closed)' };
     const e = intentRequiredShapeError(b);
     if (e) return { ok: false, reason: e };
     const s = b as SignedIntentRequired;
@@ -147,6 +152,12 @@ export function verifyIntentRequired(b: unknown, keys: readonly ActionSchemaKey[
   } catch (err) {
     return { ok: false, reason: `malformed intent_required: ${(err as Error).message}` };
   }
+}
+
+/** {@link verifyIntentRequired} with the clock REQUIRED: a missing or non-integer `now` is a denial, so expiry can never be skipped. */
+export function verifyIntentRequiredAt(b: unknown, keys: readonly ActionSchemaKey[], now: number): { ok: true } | { ok: false; reason: string } {
+  if (!(typeof now === 'number' && Number.isSafeInteger(now))) return { ok: false, reason: 'the verifier clock is not a safe integer (fail closed)' };
+  return verifyIntentRequired(b, keys, now);
 }
 
 /** The RFC 9457 response for an Intent Layer outcome (status 403; `pca` carries the signed body for intent_required). */

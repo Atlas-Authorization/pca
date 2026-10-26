@@ -11,8 +11,10 @@ import { hashCanonical } from './hash';
 import { paramsDigest, commitPlan, type PlanNode } from './merkle';
 import { strictParse } from './strict-json';
 import { encodePCActn } from './pcactn';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
 import { AUD, NOW, setup } from './server/fixture.test-util';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /** A base identifier plus every kind of "looks the same" variant. All of them are byte-different from the base. */
 const BASE = 'caf\u00e9-payments'; // NFC: precomposed e-acute

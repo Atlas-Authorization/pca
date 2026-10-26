@@ -1,5 +1,7 @@
 # @atlasauth/pca-bbs
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 BBS signatures (BLS12-381-SHA-256, following the IRTF CFRG BBS draft) for Proof-Carrying Authority (PCA). A PCA capability is issued as a multi-message BBS credential, then presented with selective disclosure and an unlinkable zero-knowledge proof of possession. An agent can reveal only the attributes a tool needs (for example the scope caveat) while hiding the rest (holder, budget, expiry), and two presentations of the same credential cannot be correlated.
 
 There are two layers:

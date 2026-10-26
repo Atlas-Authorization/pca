@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { b64u, generateKeyPair, signIntentObservation, signJudgeVerdict } from '@atlasauth/pca';
+import { b64u, generateKeyPair } from '@atlasauth/pca';
+import { signIntentObservation, signJudgeVerdict } from '@atlasauth/pca/ext/intent';
 import {
   admitter,
   checkIntentConformance,

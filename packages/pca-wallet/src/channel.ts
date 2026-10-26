@@ -1,4 +1,6 @@
-import { decodeB64uStrict, hashCanonical, verifyIntentRequired, type ActionSchemaKey, type Reversibility, type SignedIntentRequired } from '@atlasauth/pca';
+import { decodeB64uStrict, hashCanonical } from '@atlasauth/pca';
+import { verifyIntentRequired, type ActionSchemaKey, type SignedIntentRequired } from '@atlasauth/pca/ext/intent';
+import { type Reversibility } from '@atlasauth/pca/ext/research';
 import { cellRep, cellStats, DEFAULT_HARM, type HarmModel, type IntentLearner, type Omega, type VerbSpace } from '@atlasauth/pca-intent';
 import { verifyAssertion, type CredentialPublicKey } from '@atlasauth/pca-webauthn';
 import { boxCells, cellInBox, cellOfAction, coordsOfCell, flatIndex, resolveCoords, type CellBox } from './box';

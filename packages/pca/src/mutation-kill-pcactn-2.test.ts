@@ -29,12 +29,12 @@ describe('verifyPCActnCore: status marks and exact reasons', () => {
     expect(r.allow).toBe(true);
     expect(r.checks).toMatchObject({
       wire: 'pass', version: 'pass', audience: 'pass', validity: 'pass', cap_chain: 'pass', grant_ref_bound: 'pass',
-      plan_inclusion: 'pass', plan_root_authorized: 'not-enforced', leaf_signature: 'pass', counter: 'pass', taint_gate: 'not-enforced',
+      plan_inclusion: 'pass', plan_root_authorized: 'not-enforced', leaf_signature: 'pass', counter_format: 'pass', taint_gate: 'not-enforced',
     });
   });
-  it('bond_ref marks bond not-enforced; absent leaves it unmarked', async () => {
+  it('bond_ref marks bond unsupported; absent leaves it unmarked', async () => {
     const s = setup();
-    expect((await core(s, s.mk(s.plan[0]!, { extra: { bond_ref: 'b' } }))).checks.bond).toBe('not-enforced');
+    expect((await core(s, s.mk(s.plan[0]!, { extra: { bond_ref: 'b' } }))).checks.bond).toBe('unsupported');
     expect((await core(s, s.mk(s.plan[0]!))).checks.bond).toBeUndefined();
   });
   it('a non-safe-integer verifier clock is a validity failure with its own reason', async () => {
@@ -64,10 +64,10 @@ describe('verifyPCActnCore: status marks and exact reasons', () => {
   });
   it('counter must be a non-negative safe integer (0 allowed)', async () => {
     const s = setup();
-    expect((await core(s, s.mk(s.plan[0]!, { counter: 0 }))).checks.counter).toBe('pass');
+    expect((await core(s, s.mk(s.plan[0]!, { counter: 0 }))).checks.counter_format).toBe('pass');
     const r = await core(s, s.mk(s.plan[0]!, { extra: { counter: -1 } }));
-    expect(r.checks.counter).toBe('fail');
-    expect(r.reason).toBe('counter: missing or not a non-negative safe integer');
+    expect(r.checks.counter_format).toBe('fail');
+    expect(r.reason).toBe('counter_format: missing or not a non-negative safe integer');
     for (const c of [1.5, '1', null]) {
       expect((await core(s, s.mk(s.plan[0]!, { extra: { counter: c } }))).allow, String(c)).toBe(false);
     }

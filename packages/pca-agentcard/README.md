@@ -1,5 +1,7 @@
 # @atlasauth/pca-agentcard
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Signed agent cards and AgentFacts for Proof-Carrying Authority (PCA). A self-declared agent card is easy to spoof; this package builds an A2A Agent Card that is signed (an `AgentCardSignature`, a detached JWS via `jose`) and points at the agent's PCA passport and a proof-verification endpoint. It also issues an AgentFacts document that keeps self-asserted claims separate from claims a named third-party attestor vouches for, with verification that is fail-closed on bad signatures, expired windows and subject mismatches. Card signatures are interoperable with `@atlasauth/pca-a2a`.
 
 ## Install
@@ -13,7 +15,7 @@ Depends on `@atlasauth/pca` and `jose` (installed transitively).
 ## Usage
 
 ```ts
-import { issuePassport } from '@atlasauth/pca';
+import { issuePassport } from '@atlasauth/pca/ext/attestation';
 import {
   buildAgentCard, issueSignedAgentCard, verifyAgentCard,
   issueAgentFacts, verifyAgentFacts,
@@ -60,7 +62,9 @@ Verification accepts either a single `key` or a `jwks`. A card only proves who s
 
 ## Status
 
-Experimental. The AgentFacts JSON-LD context is a placeholder for the canonical NANDA context, and the Agent Card model is structural rather than a full A2A implementation. `toRegistryEntry` does not re-verify; a registry should verify on ingest. The cryptography is unaudited.
+Experimental and unaudited. Card signing is pinned to A2A 1.0.0 (section 8.4): pass `profile: 'a2a-1.0'` and a `kid` to `issueSignedAgentCard` for the standard signing input (`BASE64URL(header).BASE64URL(payload)`, `typ: "JOSE"`); the default stays the detached unencoded-payload form, and `verifyAgentCard` accepts both. The signed bytes are strict canonical JSON, equal to RFC 8785 for strings and integers.
+
+The AgentFacts document is a PCA profile, not NANDA-conformant: NANDA publishes no resolvable JSON-LD context, so `AGENT_FACTS_CONTEXT` holds an identifier chosen here (override it with `context`). The Agent Card model is structural rather than a full A2A implementation. `toRegistryEntry` does not re-verify; a registry should verify on ingest.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

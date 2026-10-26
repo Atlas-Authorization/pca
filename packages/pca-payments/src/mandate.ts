@@ -56,6 +56,8 @@ export interface PaymentMandateParams {
   goal?: string;
   /** Deterministic salt for the goal commitment (tests); random 16 bytes otherwise. */
   goalSalt?: string;
+  /** Require X, Y, the cumulative cap and any replenish to be safe integers (minor units). Default false (B10). */
+  strictMinorUnits?: boolean;
   /** Decision-time anchor (epoch ms) for the initial budget + period caveats. Default `Date.now()`. */
   now?: number;
 }
@@ -91,6 +93,11 @@ const isFiniteNum = (x: unknown): x is number => typeof x === 'number' && Number
 
 /** Validate the params and throw on anything that would make an incoherent mandate. */
 function validate(p: PaymentMandateParams): void {
+  if (p.strictMinorUnits) {
+    for (const [k, v] of [['perTransactionCap', p.perTransactionCap], ['autoApproveThreshold', p.autoApproveThreshold], ['cumulativeCap', p.cumulativeCap], ['replenishPerCosign', p.replenishPerCosign ?? 0]] as const) {
+      if (!Number.isSafeInteger(v)) throw new Error(`buildPaymentMandate: ${k} must be a safe integer in minor units (strictMinorUnits)`);
+    }
+  }
   if (!Array.isArray(p.merchants) || p.merchants.length === 0) {
     throw new Error('buildPaymentMandate: at least one allowlisted merchant is required');
   }

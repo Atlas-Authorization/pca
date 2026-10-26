@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-attest-eat",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Per-session attestation freshness + channel binding for PCA (IETF SEAT / RA-TLS), emitting EAT (RFC 9711) with a RATS appraisal-policy split — so TEE evidence can't be replayed.",
   "keywords": [
     "eat",
@@ -56,5 +56,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

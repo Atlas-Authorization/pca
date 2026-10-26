@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RISK_POLICY,
-  type FrostParticipantShare,
   type MlDsaKeyPair,
   type PCActn,
   type PlanNode,
@@ -9,14 +8,13 @@ import {
   b64u,
   buildPCActn,
   encodeKey,
-  frostCosign,
-  frostTrustedDealerKeygen,
   generateKeyPair,
   mintGrant,
   mlDsa65Keygen,
   mlDsa65Sign,
   thresholdMessage,
 } from '@atlasauth/pca';
+import { type FrostParticipantShare, frostCosign, frostTrustedDealerKeygen } from '@atlasauth/pca/ext/frost';
 import {
   HYBRID_CLASSICAL_ALG,
   HYBRID_PQ_ALG,

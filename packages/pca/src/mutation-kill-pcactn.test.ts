@@ -10,7 +10,9 @@ import { generateKeyPair, encodeKey } from './keys';
 import { PCACTN_MAX_LIFETIME_MS, PCACTN_MAX_SKEW_MS, signPCActnSuite, verifyPCActnCore, type Hook, type PCActn } from './pcactn';
 import { signRevocationEpoch } from './revocation';
 import { AUD, NOW, setup } from './server/fixture.test-util';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /** A well-formed (canonical 43-char b64u) id that is NOT the given one: flip the first character only. */
 const otherId = (id: string): string => (id[0] === 'A' ? 'B' : 'A') + id.slice(1);
@@ -126,12 +128,12 @@ describe('verifyPCActnCore: plan, signature, counter', () => {
   });
   it('counter: 0 and a large safe integer pass; negative, fractional and unsafe fail with the reason', async () => {
     const s = setup();
-    expect((await core(s, s.mk(s.plan[0]!, { counter: 0 }))).checks.counter).toBe('pass');
-    expect((await core(s, s.mk(s.plan[0]!, { counter: Number.MAX_SAFE_INTEGER }))).checks.counter).toBe('pass');
+    expect((await core(s, s.mk(s.plan[0]!, { counter: 0 }))).checks.counter_format).toBe('pass');
+    expect((await core(s, s.mk(s.plan[0]!, { counter: Number.MAX_SAFE_INTEGER }))).checks.counter_format).toBe('pass');
     for (const bad of [-1, 1.5]) {
       const r = await core(s, s.mk(s.plan[0]!, { counter: bad }));
       expect(r.allow).toBe(false);
-      expect(r.checks.counter === 'fail' || r.checks.wire === 'fail').toBe(true);
+      expect(r.checks.counter_format === 'fail' || r.checks.wire === 'fail').toBe(true);
     }
   });
 });
@@ -259,10 +261,10 @@ describe('verifyPCActnCore: hooks, attestation gate, zk, bond, errors', () => {
     expect((await core(s, withZk, { hooks: { zk: off } })).checks.zk_compliance).toBe('fail');
     expect('zk_compliance' in (await core(s, s.mk(s.plan[0]!))).checks).toBe(false);
   });
-  it('a bond_ref is surfaced as not-enforced; absent records nothing', async () => {
+  it('a bond_ref is surfaced as unsupported (0.5); absent records nothing', async () => {
     const s = setup();
     const r = await core(s, s.mk(s.plan[0]!, { extra: { bond_ref: 'bond-1' } }));
-    if (r.checks.wire !== 'fail') expect(r.checks.bond).toBe('not-enforced');
+    if (r.checks.wire !== 'fail') expect(r.checks.bond).toBe('unsupported');
     expect('bond' in (await core(s, s.mk(s.plan[0]!))).checks).toBe(false);
   });
   it('a throwing hook is a malformed deny with the message, never an exception; wire failures are terminal and prefixed', async () => {
@@ -290,7 +292,8 @@ describe('verifyPCActnCore: hooks, attestation gate, zk, bond, errors', () => {
 
 describe('verifyPCActn: wrapper behaviours', () => {
   const ctx = (s: ReturnType<typeof setup>) => ({ plan: s.plan, risk: s.lowRisk, params: {} });
-  const base = (s: ReturnType<typeof setup>) => ({ grant: s.grant, now: NOW, audience: AUD });
+  // `require: []`: these tests read the report, they are not about the 0.5 default required checks (see server/breaking-05.test.ts)
+  const base = (s: ReturnType<typeof setup>) => ({ grant: s.grant, now: NOW, audience: AUD, require: [] as string[] });
   it('non-objects and undecodable text fail closed with the documented reasons', async () => {
     const s = setup();
     const n = await verifyPCActn(null as never, base(s));
@@ -409,7 +412,7 @@ describe('verifyPCActn: wrapper behaviours', () => {
     expect(r.allow).toBe(false);
     expect(r.reasons).toContain('revocation: required check is not-enforced (default-deny: not enforced by this resource server)');
     expect(r.reasons).toContain('nonexistent: required check is absent (default-deny: not enforced by this resource server)');
-    expect(r.reasons.some((x) => x.startsWith('counter:'))).toBe(false);
+    expect(r.reasons.some((x) => x.startsWith('counter_format:'))).toBe(false);
   });
 });
 
@@ -449,13 +452,14 @@ describe('signPCActnSuite: fail-closed key-material errors name the missing fami
 describe('verifyPCActn: survivors of the second mutation round', () => {
   const budget = { B: 1, tau: NOW, asOf: NOW };
   const ctxOf = (s: ReturnType<typeof setup>, extra: Record<string, unknown> = {}) => ({ plan: s.plan, risk: s.lowRisk, params: {}, budget, ...extra });
-  const base = (s: ReturnType<typeof setup>) => ({ grant: s.grant, now: NOW, audience: AUD });
+  // `require: []`: these tests read the report, they are not about the 0.5 default required checks (see server/breaking-05.test.ts)
+  const base = (s: ReturnType<typeof setup>) => ({ grant: s.grant, now: NOW, audience: AUD, require: [] as string[] });
 
   it('an allow verdict reports the exact pass statuses (so a "required" check cannot be satisfied by an empty status)', async () => {
     const s = setup();
-    const v = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctxOf(s, { planAuthorized: true }), require: ['grant_ref', 'params_digest', 'plan_root_authorized', 'budget', 'audience', 'counter', 'grant_ref_bound', 'policy', 'delegated_caveats'] });
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctxOf(s, { planAuthorized: true }), require: ['grant_ref', 'params_digest', 'plan_root_authorized', 'budget', 'audience', 'counter_format', 'grant_ref_bound', 'policy', 'delegated_caveats'] });
     expect(v.allow).toBe(true);
-    expect(v.checks).toMatchObject({ grant_ref: 'pass', params_digest: 'pass', plan_root_authorized: 'pass', budget: 'pass', policy: 'pass', delegated_caveats: 'pass', audience: 'pass', counter: 'pass', grant_ref_bound: 'pass' });
+    expect(v.checks).toMatchObject({ grant_ref: 'pass', params_digest: 'pass', plan_root_authorized: 'pass', budget: 'pass', policy: 'pass', delegated_caveats: 'pass', audience: 'pass', counter_format: 'pass', grant_ref_bound: 'pass' });
   });
 
   it('enforceRequired never double-reports a check that already failed', async () => {

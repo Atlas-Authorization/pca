@@ -5,30 +5,34 @@
  * the host env untouched. Fixture: the intent-v2.test.ts §4 walkthrough.
  */
 import { describe, expect, it } from 'vitest';
-import { validateWireV2 } from './wire';
+import { validateWireV2 } from './pcactn-full'; // the intent slots are validated by the full entry (Core alone refuses them)
+import {
+  b64u,
+  buildPCActn,
+  paramsDigest,
+  publicKeyOf,
+  sha256,
+  signPCActn,
+  utf8,
+  verifyPCActn as verifyPCActn05,
+  verifyPCActnCore,
+  type PCActn,
+} from './index';
 import {
   actionSchemaDigest,
   actionSchemaKeyOf,
-  b64u,
-  buildPCActn,
   mintSessionGrant,
-  paramsDigest,
-  publicKeyOf,
   sessionRootDigest,
-  sha256,
   signActionSchema,
-  signPCActn,
   signSessionRoot,
-  utf8,
-  verifyPCActn,
-  verifyPCActnCore,
   type AccumulatorDecl,
   type IntentSessionWire,
   type IntentV2Context,
-  type PCActn,
   type SessionRootBody,
   type UnsignedActionSchema,
-} from './index';
+} from './ext/intent';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 
 const seed = (l: string) => sha256(utf8(`intent-v2-test/${l}`));
@@ -158,7 +162,7 @@ const resign = (p: PCActn): PCActn => {
 
 // ---- V1: action schemas ---------------------------------------------------------------------------------------
 
-const denied = (v: { reasons: string[] }) => v.reasons.some((r) => r.includes('no predicate permits'));
+const denied = (v: { reasons: string[] }) => v.reasons.some((r) => r.includes('no predicate permits') || r.includes(' not satisfied for '));
 const KS = ['acc', 'mon', 'canon', 'world', 'prov', 'class'] as const;
 const forgedEnv = Object.fromEntries(KS.map((k) => [k, { f: 'forged' }]));
 const forgedPreds = KS.map((k) => ({ verb: 'air.book', resource: '*', where: [{ field: `env.${k}.f`, op: 'eq' as const, value: 'forged' }] }));

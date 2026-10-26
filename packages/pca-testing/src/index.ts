@@ -202,3 +202,6 @@ export function tamper(encoded: string, mutate: (p: Record<string, unknown>) => 
   mutate(rec);
   return encodePCActn(decodePCActn(JSON.stringify(rec)));
 }
+
+// Shared acceptance matrix for resource-server adapters (the authorize pipeline through each framework's plumbing).
+export * from './adapter-acceptance';

@@ -1,5 +1,7 @@
 # @atlasauth/pca-verified-core
 
+> Maturity: **stable** (stable core). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The **decision logic** of the Proof-Carrying Authority (PCA) verifier, written in [Dafny](https://dafny.org), machine-proved
 for all inputs (no bounds on chain length, share count or operation sequence), and compiled to JavaScript.
 

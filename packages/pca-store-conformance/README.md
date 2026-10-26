@@ -1,5 +1,7 @@
 # @atlasauth/pca-store-conformance
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A conformance kit for Proof-Carrying Authority replay and counter stores. A PCA verifier refuses a replayed action by
 consuming its nonce exactly once (`consumeOnce`) and by advancing per-stream counters (`advance`). This kit runs concurrent
 clients against **your** store adapter, with restarts and process crashes, records the history, and checks it for

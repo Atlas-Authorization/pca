@@ -1,5 +1,7 @@
 # @atlasauth/pca-compliance
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Turn Proof-Carrying Authority (PCA) proofs and decision records into auditor-ready compliance evidence, pre-mapped to the control language auditors already use: EU AI Act Art. 12 (record-keeping) and Art. 50 (transparency), ISO/IEC 42001 clauses, and SOC 2 CC6 (logical access).
 
 Everything here is pure and read-only. It consumes the real shapes from `@atlasauth/pca` (a PCActn, the core verifier result, the policy decision, the capability chain, threshold co-signatures) and re-authorizes nothing. What it foregrounds:
@@ -60,3 +62,8 @@ Source and issues: https://github.com/Atlas-Authorization/pca
 ## License
 
 MIT - see LICENSE
+
+## Control-status report over an activity stream
+
+`frameworkReport(framework, { policy, events, decisions?, hasGoalCommitment?, erasureSupported? })` maps a console activity stream onto EU AI Act, SOC 2 and GDPR control language and returns pass, warn or fail per control (`frameworkReportToMarkdown` renders it). A control passes only when the supplied records evidence it: with no events, monitoring and minimisation warn; a policy with no predicates does not evidence least privilege. It is an evidence mapping, not a certification. This replaces `complianceReport` / `reportToMarkdown` from `@atlasauth/pca`, which were removed in 0.5.
+

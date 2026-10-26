@@ -1,5 +1,7 @@
 # @atlasauth/pca-vc
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Emit the PCA **agent passport** in the converging verifiable-identity formats: a **W3C Verifiable
 Credential 2.0** (as an **SD-JWT VC**) bound to a **did:key**, and request signatures per **RFC 9421 HTTP
 Message Signatures** using the **Web Bot Auth** `Signature-Agent` pattern.
@@ -41,7 +43,7 @@ import {
   didKeyFromEd25519, passportToVC, verifyPassportVC,
   signRequestMessage, verifyRequestSignature,
 } from '@atlasauth/pca-vc';
-import { issuePassport } from '@atlasauth/pca';
+import { issuePassport } from '@atlasauth/pca/ext/attestation';
 import { generateKeyPairSync } from 'node:crypto';
 
 const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -70,13 +72,13 @@ const ok = verifyRequestSignature({ method: 'POST', url: 'https://api.acme.com/v
 
 - `didKeyFromEd25519(publicKey: Uint8Array): string` / `ed25519FromDidKey(did): Uint8Array`
 - `passportToVC(passport, { issuerKey, issuerDid, subjectDid, ttlSec? }): Promise<string>`
-- `verifyPassportVC(vc, issuerVerifyKey): Promise<{ passport, issuerDid, subjectDid }>`
+- `verifyPassportVC(vc, issuerVerifyKey, { expectedIssuerDid? }): Promise<{ passport, issuerDid, subjectDid }>`
 - `signRequestMessage({ method, url, headers, key, keyid, created?, signatureAgent? }): { signatureInput, signature, signatureAgent? }`
 - `verifyRequestSignature({ method, url, headers, signatureInput, signature, signatureAgent? }, verifyKey): boolean`
 
 ## Status
 
-Experimental. The SD-JWT VC and Web Bot Auth specifications are drafts and may change, and the cryptography in the PCA stack has not been independently audited. Untrusted `did:key` identifiers are length-bounded before the (quadratic) base58 decode.
+Experimental. Pinned to: W3C Verifiable Credentials Data Model 2.0 (`@context` v2), SD-JWT per RFC 9901, SD-JWT VC with the `vc+sd-jwt` media type of the drafts before the rename to `dc+sd-jwt` (`dc+sd-jwt` is rejected), RFC 9421 and the Web Bot Auth draft. The SD-JWT VC and Web Bot Auth specifications are drafts and may change, and the cryptography in the PCA stack has not been independently audited. Untrusted `did:key` identifiers are length-bounded before the (quadratic) base58 decode.
 
 What is validated:
 
@@ -84,7 +86,7 @@ What is validated:
 - SD-JWT VC: the credential verifies with the independent `@sd-jwt/core` 0.22.0 library (nested `credentialSubject._sd` disclosures resolve, a withheld disclosure stays hidden). `_sd_alg` is emitted at the top level of the payload, as RFC 9901 requires (credentials from releases that put it inside `credentialSubject` are rejected). `verifyPassportVC` is fail-closed: it pins EdDSA (a raw public key can no longer be used as an HMAC secret), checks `typ`, the VC 2.0 `@context` and credential type, `_sd_alg`, duplicate or unexpected disclosures, expiry and tampering.
 - RFC 9421 signatures interoperate in both directions with the Python `http-message-signatures` 2.0.1 library (Ed25519), including rejection of a tampered method, URL, header or signature. `verifyRequestSignature` can require covered components and a maximum signature age.
 
-Not validated: the RFC 9421 appendix test vectors (which use derived components such as `@path` that this package does not sign), the Web Bot Auth key-directory flow, and conformance of the emitted VC against a W3C JSON-LD validator. `verifyPassportVC` does not check that the `iss` DID matches the verification key you pass; do that in your key-resolution step.
+Not validated: the RFC 9421 appendix test vectors (which use derived components such as `@path` that this package does not sign), the Web Bot Auth key-directory flow, and conformance of the emitted VC against a W3C JSON-LD validator. `verifyPassportVC` checks that the JWT `sub` equals `credentialSubject.id`; it does not check that the `iss` DID matches the verification key you pass, so pin it with `expectedIssuerDid` (or resolve the key from the DID yourself). The second `@context` entry is this package's own agent-passport vocabulary and is not fetched or schema-validated.
 
 ## License
 

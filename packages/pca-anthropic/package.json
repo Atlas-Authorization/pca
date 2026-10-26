@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-anthropic",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Anthropic (Claude) adapter for Proof-Carrying Authority: turn a tool_use block into a PCActn and build the tool_result with the proof attached.",
   "keywords": [
     "anthropic",
@@ -60,5 +60,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production"
   }
 }
