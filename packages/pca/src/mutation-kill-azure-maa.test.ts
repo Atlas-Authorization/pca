@@ -53,8 +53,8 @@ describe('parseMaaJwt', () => {
     expect(() => parseMaaJwt(`${j({ alg: '' })}.${j({})}.${sig}`)).toThrow('header has no alg');
     expect(() => parseMaaJwt(`${j({ alg: 5 })}.${j({})}.${sig}`)).toThrow('header has no alg');
   });
-  it('an undecodable signature segment is an empty signature', () => {
-    expect(() => parseMaaJwt(`${j({ alg: 'ES256' })}.${j({})}.%%%`)).toThrow(new TypeError('parseMaaJwt: empty signature'));
+  it('an undecodable signature segment is refused as non-canonical (it used to decode to an empty signature)', () => {
+    expect(() => parseMaaJwt(`${j({ alg: 'ES256' })}.${j({})}.%%%`)).toThrow(new TypeError('parseMaaJwt: malformed signature segment: non-canonical compact JWS: bad-character'));
   });
   it('keeps only string kid/jku/typ and an all-string x5c; payload and signing input are exact', () => {
     const h = j({ alg: 'ES256', kid: 'k', jku: 'https://j', typ: 'JWT', x5c: ['a', 'b'] });

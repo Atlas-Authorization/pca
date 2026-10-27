@@ -34,10 +34,10 @@
  * monotonically (a flow can never become MORE trusted by passing through a combinator).
  */
 
-import type { DlpOutcome } from '@atlasauth/pca';
+import type { DlpOutcome } from '@atlasauth/pca/ext/research';
 
 // Re-export the shared allow/step_up/deny vocabulary so callers gate PCA actions with ONE outcome type.
-export type { DlpOutcome } from '@atlasauth/pca';
+export type { DlpOutcome } from '@atlasauth/pca/ext/research';
 
 // ── provenance ──────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -82,18 +82,68 @@ export interface Tagged<T> {
   readonly cap: Capability;
 }
 
+/**
+ * A Set that cannot be changed after construction. `Object.freeze(new Set())` does NOT stop `add` / `delete`: a holder of a
+ * tagged value could add a sink to its `readers` or remove a source from its lineage. The mutators throw instead.
+ */
+class ImmutableSet<T> extends Set<T> {
+  private sealed = false;
+  constructor(items: Iterable<T>) {
+    super();
+    for (const x of items) Set.prototype.add.call(this, x);
+    this.sealed = true;
+    Object.freeze(this);
+  }
+  override add(x: T): this {
+    if (this.sealed) throw new TypeError('capability sets are immutable');
+    return super.add(x);
+  }
+  override delete(): boolean {
+    throw new TypeError('capability sets are immutable');
+  }
+  override clear(): void {
+    throw new TypeError('capability sets are immutable');
+  }
+}
+
+/** Every Tagged value this module made. A structurally identical object from anywhere else (JSON, a hand-built literal) is not one. */
+const MINTED = new WeakSet<object>();
+
+/** True only for a value created by `tag`, `fromTrustedQuery`, `fromToolOutput`, `fromSource` or `derive`. */
+export function isTagged(x: unknown): x is Tagged<unknown> {
+  return typeof x === 'object' && x !== null && MINTED.has(x);
+}
+
+const mint = <T>(value: T, cap: Capability): Tagged<T> => {
+  const t = Object.freeze({ value, cap });
+  MINTED.add(t);
+  return t;
+};
+
 function freezeCap(cap: Capability): Capability {
+  const sources = new ImmutableSet<Provenance>(cap.sources);
   const frozen: Capability = {
-    sources: Object.freeze(new Set(cap.sources)),
+    sources,
     isTrusted: cap.isTrusted,
-    ...(cap.readers !== undefined ? { readers: Object.freeze(new Set(cap.readers)) } : {}),
+    ...(cap.readers !== undefined ? { readers: new ImmutableSet<string>(cap.readers) } : {}),
   };
   return Object.freeze(frozen);
 }
 
 /** Tag a raw value with an explicit capability (escape hatch; prefer the boundary constructors below). */
 export function tag<T>(value: T, cap: Capability): Tagged<T> {
-  return Object.freeze({ value, cap: freezeCap(cap) });
+  if (cap === null || typeof cap !== 'object' || !(cap.sources instanceof Set) || typeof cap.isTrusted !== 'boolean') {
+    throw new TypeError('tag: a capability needs a set of sources and a boolean isTrusted');
+  }
+  if (cap.readers !== undefined && !(cap.readers instanceof Set)) throw new TypeError('tag: readers must be a Set when given');
+  if (cap.isTrusted) {
+    // Trust must be earned by a source: "trusted, derived from nothing" and "trusted, from a tool" are contradictions.
+    if (cap.sources.size === 0) throw new TypeError('tag: a trusted capability needs at least one source');
+    for (const src of cap.sources) {
+      if (typeof src === 'string' && src.startsWith('tool:')) throw new TypeError('tag: tool output can never be trusted');
+    }
+  }
+  return mint(value, freezeCap(cap));
 }
 
 // ── boundary constructors (the trust assumption lives HERE) ─────────────────────────────────────────────
@@ -196,9 +246,10 @@ export function derive<A, B, C, T>(
 ): Tagged<T>;
 export function derive<T>(inputs: readonly Tagged<unknown>[], combine: (...values: unknown[]) => T): Tagged<T>;
 export function derive<T>(inputs: readonly Tagged<unknown>[], combine: (...values: unknown[]) => T): Tagged<T> {
+  if (!Array.isArray(inputs) || !inputs.every(isTagged)) throw new TypeError('derive: every input must be a tagged value made by this module');
   const value = combine(...inputs.map((t) => t.value));
   const cap = combineCaps(inputs.map((t) => t.cap));
-  return Object.freeze({ value, cap });
+  return mint(value, cap);
 }
 
 // ── sinks + the policy interpreter ──────────────────────────────────────────────────────────────────────
@@ -243,6 +294,13 @@ const sortedSources = (cap: Capability): Provenance[] => [...cap.sources].sort()
  * sink denied sources, sink allow-list, external-sink exfiltration, sensitive-sink trust requirement.
  */
 export function classifyFlow(value: Tagged<unknown>, sink: Sink): FlowDecision {
+  // No tag made by this module = no provenance = no flow. Never a throw, never an allow.
+  if (!isTagged(value)) {
+    return { outcome: 'deny', reason: 'value carries no provenance tag made by this module (fail closed)', path: [] };
+  }
+  if (sink === null || typeof sink !== 'object' || typeof sink.id !== 'string' || sink.id.length === 0 || sink.accepts === null || typeof sink.accepts !== 'object') {
+    return { outcome: 'deny', reason: 'the sink is not a valid sink (fail closed)', path: sortedSources(value.cap) };
+  }
   const cap = value.cap;
   const p = sink.accepts;
 
@@ -349,13 +407,35 @@ export function checkAction(
   action: PcaStyleAction,
   taggedArgs: readonly Tagged<unknown>[],
   policy: FlowGovernor,
+  opts: { expectedArgs?: number } = {},
 ): ActionDecision {
-  const sink = policy.sinkFor(action);
+  let sink: Sink;
+  try {
+    sink = policy.sinkFor(action);
+  } catch {
+    return { outcome: 'deny', sink: '(unresolved)', reason: 'the sink for this action could not be resolved (fail closed)' };
+  }
+  if (sink === null || typeof sink !== 'object' || typeof sink.id !== 'string' || sink.id.length === 0) {
+    return { outcome: 'deny', sink: '(unresolved)', reason: 'the sink for this action is not a valid sink (fail closed)' };
+  }
+  if (!Array.isArray(taggedArgs)) return { outcome: 'deny', sink: sink.id, reason: 'the tagged arguments are not a list (fail closed)' };
+  // An action whose arguments were not all tagged would otherwise look like "no data flows anywhere". When the caller
+  // knows how many arguments the action has, a mismatch is a refusal.
+  if (opts.expectedArgs !== undefined && taggedArgs.length !== opts.expectedArgs) {
+    return { outcome: 'deny', sink: sink.id, reason: `expected ${opts.expectedArgs} tagged argument(s), got ${taggedArgs.length} (fail closed)` };
+  }
   let worst: ActionDecision = { outcome: 'allow', sink: sink.id };
 
   for (let i = 0; i < taggedArgs.length; i++) {
     const arg = taggedArgs[i];
-    if (arg === undefined) continue; // noUncheckedIndexedAccess: array holes can't carry a flow
+    if (arg === undefined) {
+      // A hole in the list is an argument nobody tagged.
+      if (!(i in taggedArgs)) {
+        worst = { outcome: 'deny', sink: sink.id, arg: i, reason: 'an argument was not tagged (fail closed)' };
+        break;
+      }
+      continue;
+    }
     const d = classifyFlow(arg, sink);
     if (SEVERITY[d.outcome] > SEVERITY[worst.outcome]) {
       worst = {
@@ -399,6 +479,7 @@ export interface DualContext<Q, P, R> {
  * then enforces at every sink. Throws if `query` is not trusted — a mis-use that would defeat the pattern.
  */
 export function dualContext<Q, P, R>(ctx: DualContext<Q, P, R>): { plan: P; result: Tagged<R> } {
+  if (!isTagged(ctx?.query)) throw new TypeError('dualContext: the query must be a tagged value made by this module');
   if (!ctx.query.cap.isTrusted) {
     throw new Error(
       'dualContext: the privileged planner may only run on a TRUSTED query; ' +
@@ -407,6 +488,8 @@ export function dualContext<Q, P, R>(ctx: DualContext<Q, P, R>): { plan: P; resu
   }
   const plan = ctx.plan(ctx.query.value); // planner sees ONLY the trusted query value
   const result = ctx.quarantine(plan); // untrusted content handled here; returns a capability-tagged result
+  // Raw text from the quarantined handler would re-enter the trusted flow with no capability at all.
+  if (!isTagged(result)) throw new TypeError('dualContext: the quarantined handler must return a tagged value made by this module');
   return { plan, result };
 }
 

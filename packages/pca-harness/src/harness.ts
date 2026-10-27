@@ -229,6 +229,19 @@ export class Harness {
     if (typeof opts.audience !== 'string' || opts.audience.length === 0) {
       throw new Error('Harness: `audience` is required (the resource-server / instance id PCActns are for)');
     }
+    if (!(opts.agentSecret instanceof Uint8Array) || opts.agentSecret.length !== 32) {
+      throw new Error('Harness: `agentSecret` must be a 32-byte Ed25519 secret key');
+    }
+    if (!Array.isArray(opts.plan) || opts.plan.length === 0) {
+      throw new Error('Harness: `plan` must be a non-empty array (an empty plan authorises nothing)');
+    }
+    if (new Set(opts.plan.map((n) => n.id)).size !== opts.plan.length) {
+      throw new Error('Harness: plan node ids must be unique');
+    }
+    const b = opts.budget;
+    if (!b || !Number.isFinite(b.B) || b.B < 0 || !Number.isFinite(b.tau) || !Number.isFinite(b.asOf)) {
+      throw new Error('Harness: `budget` must have finite B >= 0, tau and asOf');
+    }
     this.grant = opts.grant;
     this.chain = opts.chain ?? [opts.grant];
     this.agentSecret = opts.agentSecret;
@@ -284,7 +297,13 @@ export class Harness {
    *   4. SIGN — only now is the PCActn built and signed with the leaf holder key.
    */
   async step(proposeAction: ProposeAction): Promise<StepResult> {
-    const candidate = await proposeAction();
+    // The oracle is a model/API call: a throw or reject is a refusal, never an unhandled error.
+    let candidate: Candidate;
+    try {
+      candidate = await proposeAction();
+    } catch (e) {
+      return { ok: false, reason: 'bad_candidate', detail: `oracle failed: ${(e as Error)?.message ?? 'unknown error'}` };
+    }
 
     // (0) Shape check — the oracle is untrusted, so validate before use.
     if (
@@ -320,9 +339,18 @@ export class Harness {
     }
 
     // (2) TAINT FOLD — untrusted input lineage raises risk.
-    const inputs = Array.isArray(candidate.inputs) ? candidate.inputs : [];
-    const taint = inputs.some((i) => i && i.provenance === 'untrusted') ? 1 : 0;
-    const trustedRefs = inputs.filter((i) => i && i.provenance === 'trusted').map((i) => i.ref);
+    // Fail closed: only a well-formed 'trusted' input is trusted; any other shape or label (null, a typo,
+    // a missing ref) counts as untrusted lineage, and a non-array `inputs` is itself a bad candidate.
+    if (candidate.inputs !== undefined && !Array.isArray(candidate.inputs)) {
+      return { ok: false, reason: 'bad_candidate', detail: 'candidate.inputs is not an array' };
+    }
+    const inputs: CandidateInput[] = (candidate.inputs ?? []).map((i) =>
+      i && typeof i === 'object' && i.provenance === 'trusted' && typeof i.ref === 'string'
+        ? i
+        : { ref: typeof i?.ref === 'string' ? i.ref : '', provenance: 'untrusted' as const },
+    );
+    const taint = inputs.some((i) => i.provenance === 'untrusted') ? 1 : 0;
+    const trustedRefs = inputs.filter((i) => i.provenance === 'trusted').map((i) => i.ref);
     const riskInputs: RiskInputs = { ...this.baseRisk, taint };
     // Round to 6 d.p.: riskScore is a float sum whose full precision can exceed the 15-significant-digit
     // plain-decimal bound the canonical wire form requires for fractional fields. Rounding once here keeps the

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-dataflow",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "CaMeL-style capability-tagged data-flow model for PCA: provenance capabilities propagate through combinators and a policy interpreter gates value→sink flows for provable non-exfiltration — the positive complement to the heuristic DLP/taint in @atlasauth/pca.",
   "keywords": [
     "camel",
@@ -53,5 +53,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

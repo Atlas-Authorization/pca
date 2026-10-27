@@ -1,0 +1,23 @@
+// The one Goal IR, its proved compiler front door, the principal review flow and the intent-fidelity program.
+export * from './ir';
+export { IrError, encodeGoal, decodeGoal, encodeOntology, encodeAct, encodeHist, decodePolicy } from './codec';
+export * from './compiler';
+export * from './digests';
+export * from './sign';
+export { renderCard, cond as renderCond, quantity as renderQuantity } from './card';
+export { liftLegacy, type LiftOptions } from './legacy';
+export { refDecide, refExplain, type RefExplain } from './refsem';
+export * from './normalize';
+export * from './fmt';
+export * from './ontology';
+export * from './ontologies';
+export * from './interpret';
+export * from './disambiguate';
+export * from './examples';
+export * from './nversion';
+export * from './roundtrip';
+export * from './precedent';
+export * from './drift';
+export * from './crc';
+export * from './bench';
+export * from './review';

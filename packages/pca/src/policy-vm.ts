@@ -11,6 +11,7 @@ import {
   evaluateCaveats,
   evaluatePredicates,
   isSafeRegexSource,
+  namedUnmetLimitReason,
   type ActionContext,
   type Predicate,
   type CaveatContext,
@@ -234,7 +235,14 @@ function provedOr<T>(proved: () => T, ts: () => T): T {
   return ts();
 }
 function predicatesStep(predicates: Predicate[], action: ActionContext): { allowed: boolean; reason?: string } {
-  return provedOr(() => vmOf().evaluatePredicates(predicates, action), () => evaluatePredicates(predicates, action));
+  return provedOr(
+    () => {
+      const r = vmOf().evaluatePredicates(predicates, action);
+      // the proved kernel decides; its denial wording is the plain one, so name the unmet limit as the hand-written path does (B6)
+      return !r.allowed && r.reason?.startsWith('no predicate permits') ? { ...r, reason: namedUnmetLimitReason(predicates, action) ?? r.reason } : r;
+    },
+    () => evaluatePredicates(predicates, action),
+  );
 }
 function caveatsStep(caveats: Capability['caveats'], cctx: CaveatContext, action: ActionContext): { ok: boolean; failed: string[] } {
   return provedOr(() => vmOf().evaluateCaveats(caveats, agentCaveatContext(cctx, action), 'agent'), () => evaluateAgentCaveats(caveats, cctx, action));

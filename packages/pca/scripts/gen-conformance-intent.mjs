@@ -15,7 +15,8 @@
 import { createHash } from 'node:crypto';
 import { cloneJson, readCore, writeCore } from './conformance-io.mjs';
 
-const pca = process.env.PCA_SRC ? await import('../src/index.ts') : await import('../dist/index.js');
+import { loadPca } from './pca-all.mjs';
+const pca = await loadPca();
 
 const seed = (l) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const mk = (l) => { const sk = seed(l); return { sk, pub: pca.b64u(pca.publicKeyOf(sk)) }; };
@@ -23,7 +24,7 @@ const principal = mk('principal'), agent = mk('agent');
 const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 const KEYMAP = { chain: 'cap_chain' };
 const SALT = 'c2FsdC1pbnRlbnQtY29uZm9ybWFuY2U';
 

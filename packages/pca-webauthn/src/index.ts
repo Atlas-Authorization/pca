@@ -330,6 +330,11 @@ export function stepUpChallengeB64u(pcActnOrDigest: PCActn | PCActnBody | string
 // Assertion verification.
 // ================================================================================================
 
+/** Input size caps (bytes): real values are ~37-200, ~150-400 and 64-72 bytes respectively. */
+export const MAX_AUTHENTICATOR_DATA_BYTES = 4096;
+export const MAX_CLIENT_DATA_BYTES = 8192;
+export const MAX_SIGNATURE_BYTES = 1024;
+
 /** The parts of a WebAuthn assertion the server verifies (bytes already base64url-decoded). */
 export interface Assertion {
   /** `response.authenticatorData`. */
@@ -358,6 +363,18 @@ export interface VerifyExpectations {
    * enrolled authenticator is known to sign low-S (or when signature bytes are used as an identifier).
    */
   requireLowS?: boolean;
+  /**
+   * The signature counter you stored for this credential at its last successful assertion (0 when new). When given, the
+   * W3C clone-detection rule is enforced AFTER the signature verifies: if either the reported or the stored counter is
+   * non-zero, the reported counter must be strictly greater, otherwise the assertion is refused and
+   * {@link VerifyExpectations.onSignCountRegression} is called. Both zero means the authenticator has no counter (most
+   * synced passkeys) and passes. After an accepted assertion, store the returned `signCount` yourself.
+   */
+  storedSignCount?: number;
+  /** Called (once) when the counter rule above refuses an assertion whose signature DID verify: a possible cloned authenticator. */
+  onSignCountRegression?: (info: { storedSignCount: number; reportedSignCount: number }) => void;
+  /** Refuse an assertion whose clientData says `crossOrigin: true` (the ceremony ran inside a cross-origin iframe). Off by default. */
+  rejectCrossOrigin?: boolean;
 }
 
 /** A successful verification, with the facts the caller may want to record. */
@@ -396,6 +413,9 @@ export function verifyAssertion(assertion: Assertion, expect: VerifyExpectations
     if (!(authenticatorData instanceof Uint8Array)) return fail('authenticatorData is not bytes');
     if (!(clientDataJSON instanceof Uint8Array)) return fail('clientDataJSON is not bytes');
     if (!(signature instanceof Uint8Array)) return fail('signature is not bytes');
+    if (authenticatorData.length > MAX_AUTHENTICATOR_DATA_BYTES) return fail('authenticatorData is too large');
+    if (clientDataJSON.length > MAX_CLIENT_DATA_BYTES) return fail('clientDataJSON is too large');
+    if (signature.length > MAX_SIGNATURE_BYTES) return fail('signature is too large');
     if (typeof expect.rpId !== 'string' || expect.rpId.length === 0) return fail('rpId is required');
     if (!Array.isArray(expect.origins) || expect.origins.length === 0) return fail('origins allowlist is empty');
 
@@ -426,6 +446,7 @@ export function verifyAssertion(assertion: Assertion, expect: VerifyExpectations
     if (!bytesEqual(gotChallenge, expChallenge)) return fail('clientData.challenge does not match the step-up challenge');
 
     const origin = client['origin'];
+    if (expect.rejectCrossOrigin === true && client['crossOrigin'] === true) return fail('clientData.crossOrigin is true');
     if (typeof origin !== 'string') return fail('clientData.origin is missing');
     if (!expect.origins.includes(origin)) return fail(`clientData.origin "${origin}" is not in the allowlist`);
 
@@ -458,6 +479,16 @@ export function verifyAssertion(assertion: Assertion, expect: VerifyExpectations
       signatureValid = verifyEd25519Strict(key.raw, signedData, signature);
     }
     if (!signatureValid) return fail('assertion signature did not verify');
+
+    // --- signature counter (clone detection); only after the signature verified, so forged input cannot trigger the hook ---
+    if (expect.storedSignCount !== undefined) {
+      const stored = expect.storedSignCount;
+      if (!Number.isInteger(stored) || stored < 0 || stored > 0xffffffff) return fail('storedSignCount is not a uint32');
+      if ((parsed.signCount !== 0 || stored !== 0) && parsed.signCount <= stored) {
+        expect.onSignCountRegression?.({ storedSignCount: stored, reportedSignCount: parsed.signCount });
+        return fail('signCount did not increase (possible cloned authenticator)');
+      }
+    }
 
     return { ok: true, alg: key.alg, signCount: parsed.signCount, flags: parsed.flags };
   } catch (e) {

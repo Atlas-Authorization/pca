@@ -28,14 +28,20 @@ describe('DER header / length handling (via parseTbsExtensions)', () => {
     throwsRange(() => parseTbsExtensions(B(0x1f, 0x00)), 'DER: multi-byte tags are not supported');
     throwsRange(() => parseTbsExtensions(B(0x3f, 0x00)), 'DER: multi-byte tags are not supported');
   });
-  it('length forms: indefinite / over three length octets refused; one, two and three accepted', () => {
+  it('length forms: indefinite / over three length octets refused; non-minimal forms refused; minimal one, two and three octet forms accepted', () => {
     throwsRange(() => parseTbsExtensions(B(0x30, 0x80, 0x00)), 'DER: unsupported length form');
     throwsRange(() => parseTbsExtensions(B(0x30, 0x84, 0, 0, 0, 0)), 'DER: unsupported length form');
-    expect(parseTbsExtensions(B(0x30, 0x81, 0x00)).size).toBe(0);
-    expect(parseTbsExtensions(B(0x30, 0x82, 0x00, 0x00)).size).toBe(0);
-    expect(parseTbsExtensions(B(0x30, 0x83, 0x00, 0x00, 0x00)).size).toBe(0);
-    expect(parseTbsExtensions(B(0x30, 0x82, 0x00, 0x02, 0x05, 0x00)).size).toBe(0); // length 2 in two octets
-    expect(parseTbsExtensions(B(0x30, 0x83, 0x00, 0x00, 0x02, 0x05, 0x00)).size).toBe(0);
+    // DER: the shortest form only (0.5 hardening; OpenSSL and pkijs both accept the lax forms, see x509-differential.test.ts)
+    throwsRange(() => parseTbsExtensions(B(0x30, 0x81, 0x00)), 'DER: non-minimal length (long form below 128)');
+    throwsRange(() => parseTbsExtensions(B(0x30, 0x81, 0x7f, ...new Array(127).fill(0))), 'DER: non-minimal length (long form below 128)');
+    throwsRange(() => parseTbsExtensions(B(0x30, 0x82, 0x00, 0x00)), 'DER: non-minimal length (leading zero)');
+    throwsRange(() => parseTbsExtensions(B(0x30, 0x82, 0x00, 0x02, 0x05, 0x00)), 'DER: non-minimal length (leading zero)');
+    throwsRange(() => parseTbsExtensions(B(0x30, 0x83, 0x00, 0x00, 0x00)), 'DER: non-minimal length (leading zero)');
+    throwsRange(() => parseTbsExtensions(B(0x30, 0x83, 0x00, 0x01, 0x00, ...new Array(256).fill(0))), 'DER: non-minimal length (leading zero)');
+    // minimal long forms: 128 (one octet), 256 (two octets), 65536 (three octets); the body is empty elements `00 00`
+    expect(parseTbsExtensions(B(0x30, 0x81, 0x80, ...new Array(128).fill(0))).size).toBe(0);
+    expect(parseTbsExtensions(B(0x30, 0x82, 0x01, 0x00, ...new Array(256).fill(0))).size).toBe(0);
+    expect(parseTbsExtensions(B(0x30, 0x83, 0x01, 0x00, 0x00, ...new Array(65536).fill(0))).size).toBe(0);
   });
   it('truncated length octets', () => {
     throwsRange(() => parseTbsExtensions(B(0x30, 0x82, 0x01)), 'DER: truncated length');

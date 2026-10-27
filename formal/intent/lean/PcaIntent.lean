@@ -18,3 +18,6 @@ import PcaIntent.Trajectory
 import PcaIntent.Lazy
 import PcaIntent.V2Misc
 import PcaIntent.Stats
+import PcaIntent.PrincipalAggregate
+import PcaIntent.Meet
+import PcaIntent.Crc

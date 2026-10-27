@@ -6,12 +6,16 @@ import { type Capability } from '../capability';
 import { readEnvelope } from '../envelope';
 import { hashCanonical } from '../hash';
 import { merkleRoot, planNodeLeaf, type PlanNode } from '../merkle';
-import { decodePCActn, verifyPCActnCore, type CheckStatus, type PCActn, type VerifyHooks } from '../pcactn';
+import { decodePCActn, type CheckStatus, type EnforcementGates, type PCActn, type VerifyHooks } from '../pcactn';
+import { verifyPCActnCore } from '../pcactn-full';
 import { decide, evaluateAgentCaveats, resolveReversibilityClass } from '../policy-vm';
 import type { SigAlg } from '../pq';
 import type { IntentPolicy } from '../intent-binding';
 import { type IntentV2Context, decideIntentV2 } from '../intent-v2';
+import { decisionOf, foldV2Reasons, modelPathsRead } from '../decision';
 import { checkRevocationEpoch, type RevocationEpoch } from '../revocation';
+import { classRank } from '../reversibility';
+import { type AssuranceReport, type AssuranceRequirement, assuranceReport, refreshAssurance, unmetAssurance } from '../assurance';
 import { type RequiredThreshold, type RiskInputs, type TrustBudget } from '../risk';
 
 
@@ -56,7 +60,13 @@ export interface PcaContext {
    * `lastAcceptedEpoch`, and bound to the PCActn's signed `freshness.epoch` (an action that predates the
    * epoch is rejected). Reported as the `freshness` check; absent = `not-enforced`.
    */
-  revocationEpoch?: { epoch: RevocationEpoch; guardianPublic: string; lastAcceptedEpoch?: number };
+  revocationEpoch?: {
+    epoch: RevocationEpoch;
+    guardianPublic: string;
+    lastAcceptedEpoch?: number;
+    /** Verifier-side maximum age of the epoch (`now - issued_at`), on top of its signed `not_after`. Absent: no age cap. */
+    maxAgeMs?: number;
+  };
   /**
    * The dead-man liveness beacon for the grant (P2-4). When present the verifier REQUIRES it to be genuine
    * (signed by one of the pinned `issuers`: the grant principal and/or operator), for this `instance`, covering
@@ -81,11 +91,12 @@ export interface VerifyPCActnOptions {
   now?: number;
   context?: PcaContext;
   /**
-   * Minimum enforcement rung: every named check MUST be 'pass'; one that is 'not-enforced' (or absent)
-   * is treated as a failure (default-deny). Default: none (the library verifier reports, the caller
-   * decides) - `requirePCA` defaults this to {@link DEFAULT_REQUIRED_CHECKS}.
+   * Minimum enforcement rung: every named check MUST be 'pass'; one that is 'not-enforced', 'unsupported' (or absent)
+   * is treated as a failure (default-deny). Default (0.5): {@link DEFAULT_REQUIRED_CHECKS}, so a verdict is an allow only
+   * when the replay counter, revocation, plan authorization, audience, validity and grant binding all passed. Pass `[]`
+   * to get the report alone and decide yourself (the 0.4 behaviour).
    */
-  require?: string[];
+  require?: readonly string[];
   /**
    * Suite policy (F-4): the only signature suites accepted for the PCActn leaf and every delegation hop
    * (absent `alg` == `'ed25519'`). Unset: every registered suite, with the PQ key of any hybrid / pure-PQ signer
@@ -109,10 +120,62 @@ export interface VerifyPCActnOptions {
    * grant has no PQ key to pin and passes. Unset: `pq_pin` is not reported (the stored grant alone roots the key).
    */
   pqPins?: Readonly<Record<string, string>>;
+  /**
+   * The operation the caller WILL EXECUTE, taken from the server's own routing / handler (never from the PCActn). When
+   * set, the `operation` check passes only if the signed `action.verb` and `action.resource` equal it and, when `params`
+   * is given, the signed `params_digest` opens to exactly these params. Those params are then the action params the
+   * predicates and caveats read (a `context.params` that hashes differently fails `operation`). Absent: no `operation`
+   * check (unchanged).
+   */
+  operation?: PcaOperation;
+  /**
+   * Opt-in enforcement gates forwarded to the core verifier (M1 taint / M3 freshness / M5 attestation; see
+   * `EnforcementGates`). Each gate that is set FAILS CLOSED. Absent: unchanged ('not-enforced').
+   */
+  enforce?: EnforcementGates;
+  /**
+   * Risk inputs the server MUST supply in `context.risk` (finite numbers). A missing one fails the `risk_inputs` check
+   * with its name, instead of being priced at the worst case. `semanticDistance` also counts as supplied when
+   * `context.plan` is given (the Policy VM derives it from the server's plan). Absent or empty: no `risk_inputs` check.
+   */
+  requireRiskInputs?: readonly (keyof RiskInputs)[];
+  /** Attach the per-check assurance report (`verdict.assurance`, see `assurance.ts`). Absent: no report (unchanged). */
+  assurance?: boolean;
+  /**
+   * High-assurance policy (0.5, additive): e.g. `{ attestation: 'hardware', zk: 'snark', signature: 'pq' }`. Adds an
+   * `assurance` check that fails, and denies, when the evidence for a listed dimension is weaker, missing, failed
+   * (invalid / expired), unlabelled, preview (FROST / DKG / MPC) or unsupported. Implies `assurance: true`.
+   */
+  requireAssurance?: AssuranceRequirement;
+  /**
+   * Checks whose status may be `unsupported` without denying (0.5). A PCActn that carries a feature this verifier does
+   * not implement (today: `bond_ref`, check `bond`) reports that check as `unsupported`, never `pass`, and is denied
+   * unless the check is listed here.
+   */
+  allowUnsupported?: readonly string[];
+}
+
+/** An operation as the resource server will execute it: verb, resource and the exact params. */
+export interface PcaOperation {
+  verb: string;
+  resource: string;
+  params?: Record<string, unknown>;
 }
 
 /** The minimum enforcement profile a resource server should demand (see `requirePCA`). */
-export const DEFAULT_REQUIRED_CHECKS = ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'] as const;
+export const DEFAULT_REQUIRED_CHECKS = ['counter_format', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'] as const;
+
+/**
+ * The profile a STATEFUL resource server demands (`requirePCA`, `authorize`): the stateless profile plus `replay`, the
+ * strictly-increasing-counter check against stored state (it is `not-enforced`, so the request is denied, without a store).
+ * 0.5 (B6): the old `counter` check is split into `counter_format` (stateless, well-formed counter) and `replay`.
+ */
+export const STATEFUL_REQUIRED_CHECKS = ['counter_format', 'replay', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'] as const;
+
+/** Old check names a `require` list may still use. `counter` meant the format check statelessly and the replay check with a store. */
+function resolveRequiredName(name: string, checks: Record<string, CheckStatus>): string {
+  return name === 'counter' && !('counter' in checks) ? ('replay' in checks ? 'replay' : 'counter_format') : name;
+}
 
 /** Who the verdict says authorized this: the registry-resolved principal behind the grant. */
 export interface PcaPrincipalInfo {
@@ -123,25 +186,19 @@ export interface PcaPrincipalInfo {
   verified: boolean;
 }
 
-/**
- * Severity of a reversibility class, over BOTH vocabularies the verifier sees: the RS strictness enum (`costly`) and the
- * caveat enum (`rate_limited`, see predicates.REVERSIBILITY_ORDER), which sit on the same middle tier. `rate_limited` used to
- * be missing here, so it ranked as an unknown (most restrictive) class: a declared `rate_limited` then counted as STRICTER
- * than an authoritative `costly` and replaced it as the effective class (which `reversibility_max` caveats read), and passed
- * against an authoritative `irreversible`.
- */
-const CLASS_RANK: Record<string, number> = { reversible: 0, rate_limited: 1, costly: 1, irreversible: 2 };
-/** Unknown class strings are the most restrictive (fail closed). */
-const classRank = (c: unknown): number => (typeof c === 'string' && Object.prototype.hasOwnProperty.call(CLASS_RANK, c) ? CLASS_RANK[c]! : 2);
+
+/** The proved decision core knows three statuses; `unsupported` is carried beside its fold and read back as `not-enforced` there. */
+type Proved = Exclude<CheckStatus, 'unsupported'>;
+const provedOf = (s: CheckStatus): Proved => (s === 'unsupported' ? 'not-enforced' : s);
 
 /**
  * Default-deny: turn every required check that is not 'pass' into a failure. Mutates + returns the verdict.
  * Exported so framework adapters that finish checks after `verifyPCActn` (e.g. the replay counter) can apply it last.
  */
 export function enforceRequired(v: PcaVerdict, required: readonly string[]): PcaVerdict {
-  const r = enforceRequiredVerified<string, string>(v.allow, Object.entries(v.checks) as [string, CheckStatus][], v.reasons, required, (name, was) => `${name}: required check is ${was ?? 'absent'} (default-deny: not enforced by this resource server)`);
+  const r = enforceRequiredVerified<string, string>(v.allow, Object.entries(v.checks).map(([k, c]) => [k, provedOf(c)] as [string, Proved]), v.reasons, required.map((n) => resolveRequiredName(n, v.checks)), (name, was) => `${name}: required check is ${v.checks[name] === 'unsupported' ? 'unsupported' : (was ?? 'absent')} (default-deny: not enforced by this resource server)`);
   v.allow = r.allow;
-  for (const [k, c] of r.checks) v.checks[k] = c;
+  for (const [k, c] of r.checks) v.checks[k] = v.checks[k] === 'unsupported' && c === 'not-enforced' ? 'unsupported' : c;
   v.reasons.splice(0, v.reasons.length, ...r.reasons);
   return v;
 }
@@ -157,6 +214,12 @@ export interface PcaVerdict {
   budget?: TrustBudget;
   /** Registry-resolved principal behind the grant (attached by the server / `requirePCA({ resolvePrincipal })`). */
   principal?: PcaPrincipalInfo;
+  /**
+   * What each check rests on (0.5, additive; see `assurance.ts`): per check, its outcome (`unsupported` for a feature
+   * this verifier does not implement, never a pass) and, on a pass, the level of the evidence. Present only when asked
+   * for (`assurance: true` or `requireAssurance`); `authorize()` always reports it.
+   */
+  assurance?: AssuranceReport;
 }
 
 const WORST_THRESHOLD: RequiredThreshold = { t: 3, proof: 'strong', optimisticAllowed: false };
@@ -172,6 +235,13 @@ function failClosed(reason: string, checks: Record<string, CheckStatus> = {}): P
 }
 
 export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOptions): Promise<PcaVerdict> {
+  const v = await verifyPCActnChecks(pcactn, opts);
+  // a verdict that stopped before the checks ran (undecodable, wire, verifier error) still reports its outcomes when asked
+  if ((opts.assurance === true || opts.requireAssurance !== undefined) && v.assurance === undefined) v.assurance = assuranceReport({ checks: v.checks });
+  return v;
+}
+
+async function verifyPCActnChecks(pcactn: PCActn | string, opts: VerifyPCActnOptions): Promise<PcaVerdict> {
   try {
     let p: PCActn;
     try {
@@ -182,7 +252,10 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
     if (p === null || typeof p !== 'object') return failClosed('PCActn is not an object');
 
     const now = opts.now ?? Date.now();
-    const ctx = opts.context ?? {};
+    const op = opts.operation;
+    // The operation's params are the action params (predicates, caveats, digest); a context that disagrees is flagged below.
+    const ctxParams = opts.context?.params;
+    const ctx: PcaContext = op?.params !== undefined ? { ...opts.context, params: op.params } : (opts.context ?? {});
     // F-1: remember the threshold the hook says it enforced, so it can be compared with the SERVER-derived t below.
     let hookT: number | undefined;
     const userThreshold = opts.hooks?.threshold;
@@ -196,16 +269,27 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
           },
         }
       : opts.hooks;
-    const intentV2 = opts.intentV2 ? { ...opts.intentV2, params: opts.intentV2.params ?? ctx.params } : undefined;
+    // Rules 20 and 21 read the signed envelope of the stored grant (`units`, `tighten`, model-derived paths in `where`): when it
+    // carries any, the v2 pipeline needs the plaintext params and the host env even if the host configured no v2 context.
+    const grantEnv = readEnvelope(opts.grant);
+    const needsModelRules = grantEnv !== null && (grantEnv.units !== undefined || grantEnv.tighten !== undefined || grantEnv.model_polarity !== undefined || modelPathsRead([grantEnv.predicates]).length > 0);
+    const intentV2: IntentV2Context | undefined =
+      opts.intentV2 || needsModelRules ? { ...(opts.intentV2 ?? {}), params: opts.intentV2?.params ?? ctx.params, env: opts.intentV2?.env ?? ctx.env } : undefined;
+    // one run of the v2 pipeline feeds the predicate env (below) and the degraded-polarity report
+    const v2d = p.intent_session !== undefined || needsModelRules ? decideIntentV2(p, opts.grant, intentV2, now) : undefined;
     // pca-unsafe-root: allow the full verifier's own grant parameter; callers pass their stored grant (pca-a2a's pinned-issuer root is admitted only with pqPins)
-    const core = await verifyPCActnCore(p, { grant: opts.grant, nowEpoch: now, audience: opts.audience, hooks, allowedSuites: opts.allowedSuites, allowUnboundPq: opts.allowUnboundPq, intent: opts.intent, intentV2 });
+    const core = await verifyPCActnCore(p, { grant: opts.grant, nowEpoch: now, audience: opts.audience, hooks, allowedSuites: opts.allowedSuites, allowUnboundPq: opts.allowUnboundPq, intent: opts.intent, intentV2, ...(opts.enforce !== undefined ? { enforce: opts.enforce } : {}) });
     // A wire-form failure is terminal (normative): nothing else is evaluated on a malformed object.
     if (core.checks.wire === 'fail') return failClosed(core.reason ?? 'wire: malformed PCActn', { wire: 'fail' });
-    let vs = VerdictState.init<string, string>(Object.entries(core.checks) as [string, CheckStatus][], !core.allow && core.reason ? [core.reason] : []);
+    const unsupported = Object.entries(core.checks).filter(([, c]) => c === 'unsupported').map(([n]) => n);
+    let vs = VerdictState.init<string, string>(Object.entries(core.checks).map(([n, c]) => [n, provedOf(c)] as [string, Proved]), !core.allow && core.reason ? [core.reason] : []);
+    // the core keeps only its FIRST failure reason; the v2 checks are the escalate-class ones, so every failed one is reported
+    // (a failing check with no reason of its own is read as a hard failure, never as an escalation)
+    if (v2d) for (const r of foldV2Reasons(vs.reasons, v2d.checks).slice(vs.reasons.length)) vs = vs.push(r);
     const fail = (name: string, why: string) => {
       vs = vs.fail(name, () => `${name}: ${why}`);
     };
-    const mark = (name: string, s: CheckStatus) => {
+    const mark = (name: string, s: Proved) => {
       vs = vs.set(name, s);
     };
 
@@ -221,6 +305,16 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
     // grant_ref binds the object to this grant
     if (p.grant_ref === opts.grant.id) mark('grant_ref', 'pass');
     else fail('grant_ref', 'does not reference the supplied grant');
+
+    // the proof must be for the operation the server will execute: verb, resource and (when given) the exact params
+    if (op) {
+      const signed = `${String(p.action?.verb)} on ${String(p.action?.resource)}`;
+      if (typeof op.verb !== 'string' || typeof op.resource !== 'string') fail('operation', 'the server operation has no verb / resource (fail closed)');
+      else if (p.action?.verb !== op.verb || p.action?.resource !== op.resource) fail('operation', `the proof is for ${signed}, but this operation is ${op.verb} on ${op.resource}`);
+      else if (op.params !== undefined && hashCanonical(op.params) !== p.action?.params_digest) fail('operation', `the proof's params_digest does not match the params of this ${op.verb} operation`);
+      else if (op.params !== undefined && ctxParams !== undefined && hashCanonical(ctxParams) !== hashCanonical(op.params)) fail('operation', 'context.params differ from the operation params');
+      else mark('operation', 'pass');
+    }
 
     // params plaintext must open the committed digest
     if (ctx.params !== undefined) {
@@ -251,10 +345,13 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
         grantRef: opts.grant.id,
         lastAcceptedEpoch: ctx.revocationEpoch.lastAcceptedEpoch,
         pcactnEpoch: p.freshness?.epoch,
+        ...(ctx.revocationEpoch.maxAgeMs !== undefined ? { maxAgeMs: ctx.revocationEpoch.maxAgeMs } : {}),
       });
-      if (r.ok) mark('freshness', 'pass');
-      else fail('freshness', r.reason ?? 'revocation epoch rejected');
-    } else mark('freshness', 'not-enforced');
+      // an `enforce.freshness` failure from the core stands (a passing epoch never overwrites it)
+      if (r.ok) {
+        if (vs.get('freshness') !== 'fail') mark('freshness', 'pass');
+      } else fail('freshness', r.reason ?? 'revocation epoch rejected');
+    } else if (vs.get('freshness') === undefined) mark('freshness', 'not-enforced');
 
     {
       const bc = ctx.beacon;
@@ -303,6 +400,12 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
     // Taint: ONLY an RS-supplied value counts. The agent's `provenance.taint_level` is untrusted (it can only
     // lower risk), so a missing RS taint fails closed to the worst case in the Policy VM.
     const risk: Partial<RiskInputs> = { ...ctx.risk };
+    if (opts.requireRiskInputs?.length) {
+      const supplied = (k: keyof RiskInputs) => (typeof risk[k] === 'number' && Number.isFinite(risk[k])) || (k === 'semanticDistance' && ctx.plan !== undefined);
+      const missing = opts.requireRiskInputs.filter((k) => !supplied(k));
+      if (missing.length) fail('risk_inputs', `required risk input(s) not supplied by the server: ${missing.join(', ')}`);
+      else mark('risk_inputs', 'pass');
+    }
 
     // Reversibility: the RS's authoritative class wins; the agent may only be STRICTER.
     const declared = p.action?.reversibility_class;
@@ -319,7 +422,7 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
     const actionCtx = {
       action: { verb: p.action?.verb, resource: p.action?.resource, params: ctx.params, reversibility_class: reversibility },
       subject: ctx.subject,
-      env: v2Env(p, opts.grant, intentV2, now, ctx.env),
+      env: v2Env(p, v2d, ctx.env),
       // Signed `tool_binding` (D): binds the semantic firewall (`tool_schema` caveats) to the tool the agent signed.
       ...(typeof p.tool_binding === 'string' ? { toolBinding: p.tool_binding } : {}),
     };
@@ -377,14 +480,36 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
       return `threshold: t=${t} (${d.requiredThreshold.proof}) required but no threshold verifier is enforced`;
     });
 
+    const required = opts.require ?? DEFAULT_REQUIRED_CHECKS;
+    const wantAssurance = opts.assurance === true || opts.requireAssurance !== undefined;
+    // pca-unsafe-root: allow the verifier's own grant parameter (opts.grant), read only to label the assurance report
+    const assuranceSrc = { pcactn: p, grant: opts.grant, hooks: opts.hooks, attestationHook: opts.enforce?.attestation?.verifier ?? opts.hooks?.attestation, thresholdT: hookT, allowUnboundPq: opts.allowUnboundPq, ...(v2d?.legacy_model_polarity === true ? { degraded: { tighten: "model_polarity 'legacy': a grant reads a model-derived value in where (rule 21)" } } : {}) };
+    if (opts.requireAssurance) {
+      const unmet = unmetAssurance(assuranceReport({ ...assuranceSrc, checks: Object.fromEntries(vs.checks) as Record<string, CheckStatus> }), opts.requireAssurance);
+      if (unmet === undefined) mark('assurance', 'pass');
+      else vs = vs.fail('assurance', () => unmet);
+    }
+
     const allow = vs.finalAllow(d.releaseGuardianShare, core.allow);
     const checks = Object.fromEntries(vs.checks) as Record<string, CheckStatus>;
+    for (const n of unsupported) if (checks[n] === 'not-enforced') checks[n] = 'unsupported';
     const reasons = vs.reasons;
+    // B7: a feature the PCActn carries but this verifier does not implement is never a pass, and denies unless allowed.
+    const refused = unsupported.filter((n) => !(opts.allowUnsupported ?? []).includes(n));
+    if (refused.length > 0) {
+      const out: PcaVerdict = { allow: false, r: d.r, requiredThreshold: d.requiredThreshold, checks, reasons: [...reasons, ...refused.map((n) => `${n}: unsupported: the PCActn carries a feature this verifier does not implement (list it in allowUnsupported to accept it)`)] };
+      enforceRequired(out, required);
+      if (wantAssurance) out.assurance = refreshAssurance(assuranceReport({ ...assuranceSrc, checks }), out.checks);
+      return out;
+    }
     const out: PcaVerdict = allow
       ? { allow, r: d.r, requiredThreshold: d.requiredThreshold, checks, reasons, budget: ctx.budget ? d.budget : undefined }
       : { allow: false, r: d.r, requiredThreshold: d.requiredThreshold, checks, reasons };
-    if (opts.require?.length) enforceRequired(out, opts.require);
+    enforceRequired(out, required);
+    // an escalation keeps the post-decision budget: an answered escalation (requirePCA) is admitted with it, never free
+    if (!out.allow && ctx.budget && decisionOf(out) === 'escalate') out.budget = d.budget;
     out.reasons = withDeniedFallback(out.allow, out.reasons, 'denied');
+    if (wantAssurance) out.assurance = refreshAssurance(assuranceReport({ ...assuranceSrc, checks }), out.checks);
     return out;
   } catch (e) {
     return failClosed(`verifier error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
@@ -392,12 +517,12 @@ export async function verifyPCActn(pcactn: PCActn | string, opts: VerifyPCActnOp
 }
 
 /** The predicate `env`: the host's, with the verifier-computed v2 members (see intent-v2.ts IntentV2Env). */
-function v2Env(p: PCActn, grant: Capability, ctx: IntentV2Context | undefined, now: number, env: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+function v2Env(p: PCActn, v2d: ReturnType<typeof decideIntentV2> | undefined, env: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (p.intent_session === undefined) return env;
   // only the verifier computes these members: whatever the host passed under these names is dropped
   const rest: Record<string, unknown> = { ...(env ?? {}) };
   for (const k of ['acc', 'mon', 'canon', 'world', 'prov', 'class']) delete rest[k];
-  const d = decideIntentV2(p, grant, ctx, now).env ?? {};
+  const d = v2d?.env ?? {};
   for (const [k, v] of Object.entries(d)) if (v !== undefined) rest[k] = v;
   return rest;
 }

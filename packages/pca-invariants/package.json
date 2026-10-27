@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-invariants",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Property-based verification of PCA's core safety invariants (attenuation monotonicity, budget soundness, fail-closed) across thousands of randomly-generated capability chains and policies.",
   "keywords": [
     "property-based testing",
@@ -53,5 +53,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

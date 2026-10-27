@@ -1,5 +1,7 @@
 # @atlasauth/pca-payments
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 **Experimental prototype.** A payment mandate (merchant and category allowlists, per-transaction and cumulative caps, an auto-approve threshold, a hard ceiling, and bonded refunds) expressed as a Proof-Carrying Authority (PCA) Root Intent Grant, for agentic payments. A charge at or under the auto-approve threshold is autonomous; above it needs a human co-sign; off-allowlist, wrong-currency or over-ceiling charges are denied.
 
 ## Install
@@ -45,7 +47,7 @@ const next = settleCharge(mandate, decision); // thread the debited budget to th
 
 ## Status
 
-Experimental. `authorizeCharge` computes a mandate decision and the derived trust budget; it does not authorize on its own, and the resource server's verifier remains the authority at run time. Use integer minor units for amounts in production to avoid float drift. Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca); its cryptography has not been independently audited.
+Experimental. `authorizeCharge` computes a mandate decision and the derived trust budget; it does not authorize on its own, and the resource server's verifier remains the authority at run time. Amounts are integer minor units: `authorizeCharge` denies a fractional, negative, NaN or unsafe amount (reason `amount_not_integer_minor_units`) and `chargeToPCActn` throws; pass `strictMinorUnits: true` to `buildPaymentMandate` to require integer terms too. The charge must be built by your server from its own order, never from a value the agent supplies. For a cumulative cap that holds across processes and concurrent charges, use `authorizeChargeAtomic` with a durable `ChargeBudgetStore` (an atomic compare-and-set; a missing store throws `ChargeStoreError`); `@atlasauth/pca-payments/testing` has a single-process reference store for tests. Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca); its cryptography has not been independently audited.
 
 ## License
 

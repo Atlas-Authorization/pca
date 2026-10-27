@@ -26,6 +26,8 @@ import { canonicalizeStrict, compareUtf8 } from './hash';
 import { type MapPolicy, decideMapDisclosure } from './intent-map-commit';
 import { freeRecord, isPlainObject, isSafeInt, isSafeNonNeg, ownGet, suiteCapabilityError } from './intent-strict';
 import { resolveSigAlg } from './pq';
+import { readEnvelope } from './envelope';
+import { decideTighten, decideUnits, modelPathsRead } from './decision';
 
 /** Shape of the verifier context a check reads (lists are arrays, records plain objects, numbers safe integers). */
 const optObj = (v: unknown) => v === undefined || isPlainObject(v);
@@ -43,7 +45,8 @@ export function intentV2ContextError(ctx: unknown): string | null {
   if (pol !== undefined) {
     // closed member sets; every flag is a JSON boolean and every number a safe integer when present (absent = default)
     const pr = pol as Record<string, unknown>;
-    for (const k of Object.keys(pr)) if (k !== 'session' && k !== 'schema' && k !== 'acc' && k !== 'map') return `policy: unknown member '${k}'`;
+    for (const k of Object.keys(pr)) if (k !== 'session' && k !== 'schema' && k !== 'acc' && k !== 'map' && k !== 'model_polarity') return `policy: unknown member '${k}'`;
+    if (pr.model_polarity !== undefined && pr.model_polarity !== 'strict' && pr.model_polarity !== 'legacy') return "policy.model_polarity must be 'strict' or 'legacy'";
     const ps = pr.session;
     if (!optObj(ps)) return 'policy.session must be an object';
     if (ps !== undefined) {
@@ -76,6 +79,7 @@ export function intentV2ContextError(ctx: unknown): string | null {
     }
   }
   if (!optObj(ctx.params)) return 'params must be an object';
+  if (!optObj(ctx.env)) return 'env must be an object';
   for (const k of ['schema', 'session', 'acc'] as const) if (!optObj(ctx[k])) return `${k} must be an object`;
   const M = ctx.map;
   if (!optObj(M)) return 'map must be an object';
@@ -172,6 +176,12 @@ export interface IntentV2Policy {
   acc?: { max_receipt_age_s?: number; max_keyset_age_s?: number };
   /** Rule 19 (V15): require a committed map and bound its claimed residual risk (ε). */
   map?: MapPolicy;
+  /**
+   * Rule 21 compatibility: `'legacy'` lets a grant read model-derived env paths in `predicates[].where` (reported degraded);
+   * `'strict'` forbids it even for a grant whose envelope says `model_polarity: 'legacy'`. Absent: the envelope decides
+   * (default strict).
+   */
+  model_polarity?: 'strict' | 'legacy';
 }
 
 /** Everything the v2 checks read. All of it is VERIFIER state (its store, its configuration), never the agent's. */
@@ -179,6 +189,8 @@ export interface IntentV2Context {
   policy?: IntentV2Policy;
   /** Plaintext action params; must hash to `action.params_digest`. */
   params?: Record<string, unknown>;
+  /** Host-supplied env members `tighten[]` rules may read (e.g. `judge`); the verifier-computed members replace same-named ones. */
+  env?: Record<string, unknown>;
   /** Accepted schemas (current first, then previous versions still inside their acceptance window) and the site keys. */
   schema?: { docs: ActionSchema[]; keys: ActionSchemaKey[] };
   session?: {
@@ -219,7 +231,7 @@ export interface IntentV2Context {
 }
 
 export interface IntentV2Check {
-  name: 'schema' | 'intent_session' | 'layers' | 'accumulators' | 'map' | 'facts' | 'provenance' | 'classes';
+  name: 'schema' | 'intent_session' | 'layers' | 'accumulators' | 'map' | 'facts' | 'provenance' | 'classes' | 'units' | 'tighten';
   ok: boolean;
   reason?: string;
 }
@@ -243,6 +255,10 @@ export interface IntentV2Decision {
   env?: IntentV2Env;
   /** The schema the action was checked against (when `schema` passed). */
   schema?: ActionSchema;
+  /** Worlds decided by a single oracle (their `env.world.<name>` is model-derived, rule 21). */
+  single_source?: string[];
+  /** Rule 21 compatibility mode in effect: a grant reads model-derived paths and was accepted as legacy (report it degraded). */
+  legacy_model_polarity?: boolean;
 }
 
 interface PcactnView {
@@ -462,7 +478,11 @@ function accStep(p: PcactnView, ctx: IntentV2Context | undefined, now: number): 
   return { ok: true, env };
 }
 
-/** Run the v2 checks (never throws: an internal error fails the check being evaluated). */
+/**
+ * Run the v2 checks (never throws: an internal error fails the check being evaluated). `p.intent_session` must have passed
+ * `validateIntentSessionWire` (the core verifier wire-checks the PCActn first): a committed member of the wrong type is read as
+ * absent here, so a host that calls this function directly validates the member itself.
+ */
 export function decideIntentV2(p: PcactnView, grant: Capability, ctx: IntentV2Context | undefined, now: number): IntentV2Decision {
   const out: IntentV2Decision = { checks: [] };
   const present = p?.intent_session !== undefined;
@@ -470,7 +490,7 @@ export function decideIntentV2(p: PcactnView, grant: Capability, ctx: IntentV2Co
   const ctxErr = intentV2ContextError(ctx);
   if (ctxErr !== null) {
     // a malformed verifier context fails closed: every v2 check that could be reported fails with the reason
-    const committed = present && p.intent_session!.map_form === 'commit';
+    const committed = present && (p.intent_session as { map_form?: unknown } | null)?.map_form === 'commit';
     for (const name of ['schema', 'intent_session', ...(present ? (['accumulators'] as const) : []), ...(committed ? (['map'] as const) : [])] as const) out.checks.push({ name, ok: false, reason: `malformed v2 context: ${ctxErr}` });
     return out;
   }
@@ -526,11 +546,60 @@ export function decideIntentV2(p: PcactnView, grant: Capability, ctx: IntentV2Co
         else out.checks.push({ name, ok: false, reason: c === 'question' ? `intent_required: ${wb.reason ?? 'a question is required'}` : (wb.reason ?? 'rejected') });
       }
       if (wb.outcome !== 'deny') out.env = { ...out.env, ...(wb.env.world ? { world: wb.env.world } : {}), ...(wb.env.prov ? { prov: wb.env.prov } : {}), ...(wb.env.class ? { class: wb.env.class } : {}) };
+      if (wb.single_source?.length) out.single_source = [...wb.single_source];
     }
   } else if (mapActive) {
     run('map', () => mapStep(p, ctx));
   }
+  modelRules(p, grant, ctx, out, run, action);
   return out;
+}
+
+/** The predicate lists a model-derived path could widen: the grant's allow-list and the ceilings (V5 layers). */
+function allowSidePredicates(env: { predicates?: unknown } | null, ctx: IntentV2Context | undefined): unknown[] {
+  const lists: unknown[] = [env?.predicates];
+  const L = ctx?.layers as Record<string, { predicates?: unknown } | undefined> | undefined;
+  if (L && typeof L === 'object') for (const k of ['org', 'site', 'std']) lists.push(L[k]?.predicates);
+  return lists;
+}
+
+/**
+ * Rules 20 and 21, evaluated last (after `classes`, so the verifier-computed `env` is complete). Both read the signed
+ * ENVELOPE of the stored grant:
+ *   `units` (20): reported iff `envelope.units` is present.
+ *   `tighten` (21): reported iff `envelope.tighten` or a `model_polarity` (envelope or policy) is present, or a grant-side
+ *   `where` reads a model-derived env path (so that case is refused, never silently skipped). A PCActn with none of these
+ *   verifies byte-identically to a verifier without the two rules.
+ */
+function modelRules(
+  p: PcactnView,
+  grant: Capability,
+  ctx: IntentV2Context | undefined,
+  out: IntentV2Decision,
+  run: (name: IntentV2Check['name'], f: () => Step) => Step,
+  action: { verb: string; resource: string; params: Record<string, unknown> },
+): void {
+  const env = readEnvelope(grant);
+  const preds = allowSidePredicates(env, ctx);
+  if (env?.units !== undefined) {
+    run('units', () => {
+      const s = out.schema !== undefined ? { ok: true as const, doc: out.schema } : schemaStep(p, ctx);
+      if (!s.ok) return s;
+      const doc = s.doc!;
+      const v = schemaVerb(doc, action.verb);
+      const d = decideUnits({ units: env.units, schema_units: doc.units, verb_params: v?.params, verb: action.verb, predicates: preds });
+      return d.ok ? { ok: true } : bad(d.reason);
+    });
+  }
+  const single = out.single_source ?? [];
+  const polarity = ctx?.policy?.model_polarity === 'strict' ? undefined : ctx?.policy?.model_polarity ?? env?.model_polarity;
+  if (env?.tighten !== undefined || polarity !== undefined || ctx?.policy?.model_polarity !== undefined || modelPathsRead(preds, single).length > 0) {
+    run('tighten', () => {
+      const r = decideTighten({ predicates: preds, tighten: env?.tighten, polarity, single_source: single, context: { action, env: { ...(ctx?.env ?? {}), ...(out.env ?? {}) } } });
+      if (r.legacy) out.legacy_model_polarity = true;
+      return r.outcome === 'ok' ? { ok: true } : bad(r.reason ?? 'refused');
+    });
+  }
 }
 
 /**

@@ -1,0 +1,32 @@
+name: Goal vectors (PHP runner)
+
+# The PHP replay of the pca-goal vector corpus (goal digests, decision + witness of every probe, the fn vectors), independent of the
+# SDK: a port of the reference semantics (adversarial/src/oracle.ts). Same triggers as goal-vectors.yml; it must agree with the
+# TypeScript, Go, Rust and Python runners on the same corpus.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: PHP vector runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Replay every vector
+        working-directory: packages/pca-conformance/runners/goal
+        run: php php/run.php ../../vectors/goal

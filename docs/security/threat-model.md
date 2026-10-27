@@ -7,7 +7,7 @@ order: 30
 
 This page is the integrator-facing threat model for Proof-Carrying Authority (PCA). It states what we protect, who we assume the attacker is, what each attacker can and cannot do, a catalogue of concrete attacks with the mechanism that stops each one, and the guarantees PCA documents as a result.
 
-Read it together with the [Trust model](./trust-model.md), which says what each party is trusted for and where the current release is a reference rather than a hardened component. Auditors: the mapping from every attack and guarantee below to the automated tests that exercise it is in [Traceability](./traceability.md).
+Read it together with the [Trust model](./trust-model.md), which says what each party is trusted for and where the current release is a reference rather than a hardened component, and the [Security contract](./security-contract.md), which states the invariants a resource server relies on and where each one is enforced today. Auditors: the mapping from every attack and guarantee below to the automated tests that exercise it is in [Traceability](./traceability.md).
 
 **Status, stated plainly.** PCA is in preview. It has an extensive automated test suite and cross-language conformance vectors, but it has **not had an external cryptographic or security audit**. Do not make a preview deployment the sole control over high-value or irreversible actions. Every mitigation below names the mechanism and its assumptions; where a mitigation depends on something the integrator must operate (a replay store, a revocation-root feed, an independent witness), that is called out as an assumption and not hidden.
 
@@ -159,7 +159,7 @@ Each entry has a stable ID. IDs never change meaning and are referenced from [Tr
 - **Impact.** Large aggregate effect from many individually benign actions.
 - **Mitigation.** The trust budget: each machine-only action debits the budget; depletion forces step-up even for low-risk actions. The total risk-weighted autonomous activity between two human recharges is at most `bMax / κ`.
 - **Guarantee.** G-7. **Assumes the verifier computes or vouches for the risk inputs** rather than trusting the agent's `risk_claim`, and persists the meter.
-- **Residual.** Within the bound, the agent can do anything low-risk; the bound caps the total, not each action. The hosted surface uses a neutral blast-radius constant unless the integrator supplies one.
+- **Residual.** Within the bound, the agent can do anything low-risk; the bound caps the total, not each action. The hosted surface takes blast radius from a per-class table (0.5 for reversible and costly, 0.75 for irreversible actions) unless the grant commits objective risk facts, so it is a heuristic, not a measurement, for non-monetary actions.
 - **Detection.** Budget-depletion step-ups; immune-system drift scores.
 
 ### T-008 Counter and budget races across nodes
@@ -168,7 +168,7 @@ Each entry has a stable ID. IDs never change meaning and are referenced from [Tr
 - **Impact.** Double execution or over-spend beyond the budget.
 - **Mitigation.** Counter and budget state belong in a shared store with atomic check-and-set. A single-node store denies replay and drains the budget.
 - **Guarantee.** G-5/G-7 hold only per atomic store.
-- **Residual.** **There is no automated concurrency test of a multi-node store in this release; atomicity is the integrator's store's property.** See the traceability gaps list.
+- **Residual.** **Atomicity is the integrator's store's property.** Concurrent verifiers over one store are tested in-process, and the hosted surface is tested with several servers and operating-system processes on one database. `requirePCA` reads, then writes, its state: across processes it is safe only when the store supplies `withKeyLock` (its default lock is in-process), or when replay is checked with `guardPCActnReplay` over an atomic `ReplayStore` / `CounterStore`.
 - **Detection.** Duplicate counter values in audit logs.
 
 ### T-009 Time-of-check to time-of-use
@@ -195,7 +195,7 @@ Each entry has a stable ID. IDs never change meaning and are referenced from [Tr
 - **Impact.** Verification under a weaker scheme.
 - **Mitigation.** The suite identifier and PQ public key are part of the signed body; unknown suites fail closed; a hybrid requires **both** components to verify; wire validation forbids fields a suite does not use. Applies to actions, capabilities, guardian shares, tree heads, witness cosignatures and attestation documents.
 - **Guarantee.** G-9.
-- **Residual.** A pure-PQ action is accepted only under the PQ key committed by the holder's `holder_pq` (F-4); a holder minted without one cannot present a PQ-suite action unless the verifier sets the legacy `allowUnboundPq`. The root grant's own PQ key is pinned only by byte-equality with the verifier's stored grant.
+- **Residual.** A pure-PQ action is accepted only under the PQ key committed by the holder's `holder_pq` (F-2); a holder minted without one cannot present a PQ-suite action unless the TypeScript verifier sets the legacy `allowUnboundPq` (the native verifiers have no such opt-out). A PQ root grant is accepted only when it is byte-identical to the verifier's stored grant or its `pq_pk` equals a verifier-side pin for the issuer; when both exist they must agree. The same rules hold in all nine native verifiers.
 - **Detection.** Wire-validation failures.
 
 ### T-012 Threshold downgrade and role confusion
@@ -350,7 +350,7 @@ Each entry has a stable ID. IDs never change meaning and are referenced from [Tr
 - **Attack.** The vendor service (or one signing key) is compromised and mints false evidence.
 - **Preconditions.** Vendor-side compromise.
 - **Impact.** False attestation under that root.
-- **Mitigation.** Compose independent roots in an N-of-M policy with required roots; roots that disagree on the measured or operator identity deny; a failing required root denies the whole attestation.
+- **Mitigation.** Compose independent roots in an N-of-M policy with required roots; roots that disagree on the measured or operator identity deny; a failing required root denies the whole attestation. A forged quote that validates under a compromised root is tested against a genuine second root: it is denied below threshold, when the genuine root is required, and when the identities disagree.
 - **Guarantee.** G-10 (multi-root only).
 - **Residual.** **With a single root, that vendor is a trusted third party.**
 - **Detection.** Root-disagreement denials.
@@ -451,9 +451,9 @@ Each entry has a stable ID. IDs never change meaning and are referenced from [Tr
 - **Attack.** An agent acts on an under-collateralized or dishonest claim; a challenger files frivolous disputes; a fabricated fraud proof is submitted.
 - **Preconditions.** A reversible action on the optimistic path.
 - **Impact.** Unrecoverable effects; false slashing.
-- **Mitigation.** Irreversible actions are refused on the optimistic path; under-collateralized opens are refused; open-count and amount caps; split over 100% refused; settlements are tamper-evident; fraud proofs are recomputed by an oracle (the challenger's asserted value is never substituted); honest claims survive frivolous disputes and the griefer's counter-bond is slashed.
+- **Mitigation.** Irreversible actions are refused on the optimistic path; under-collateralized opens are refused; open-count and amount caps; split over 100% refused; settlements are tamper-evident; fraud proofs are recomputed by an oracle (the challenger's asserted value is never substituted); honest claims survive frivolous disputes and the griefer's counter-bond is slashed. With the durable bond ledger: every transition is atomic and retry-safe, the challenge window runs on the ledger's clock (a claimant who backdates the claim or supplies a time cannot move it, and a clock that steps back cannot reopen it), a slash must present the exact claim that was registered, and a missing store, guardian key or clock denies. See C-13.
 - **Guarantee.** G-14.
-- **Residual.** **No escrow, real-value slashing or rollback of effects is implemented**; settlement is an integrator's layer.
+- **Residual.** **Effects are not rolled back**: undoing a reversible effect after a slash is the application's job. The bond ledger keeps internal accounting in a store you provide (or in memory, for the test double), and the hosted surface escrows on its own internal ledger; neither moves real money through an external payment rail.
 - **Detection.** Dispute outcomes.
 
 ### Transparency, revocation and liveness
@@ -462,8 +462,8 @@ Each entry has a stable ID. IDs never change meaning and are referenced from [Tr
 - **Attack.** The log operator shows different histories to different parties, or rewrites past entries.
 - **Preconditions.** Operator control of the log.
 - **Impact.** Repudiation, hidden actions.
-- **Mitigation.** Merkle consistency proofs; a rewritten history is inconsistent with an old head; two validly witnessed heads at the same size with different roots are cryptographic proof of equivocation; a witness threshold (k-of-n, duplicates once, unknown ignored) is fail-closed; the signed `prev_root` hash-chain is enforced; cross-organization heads need pinned witnesses and consistency.
-- **Guarantee.** G-12. **Requires independent witnesses and a monitor**; this release operates no third-party witnesses.
+- **Mitigation.** Merkle consistency proofs; a durable ledger refuses to open over a store that lost entries, edited one or holds a forged or inconsistent checkpoint, and verifies the chain at every checkpoint boundary; a reference witness service cosigns only heads consistent with the last it cosigned and stores equivocating pairs as evidence; a rewritten history is inconsistent with an old head; two validly witnessed heads at the same size with different roots are cryptographic proof of equivocation; a witness threshold (k-of-n, duplicates once, unknown ignored) is fail-closed; the signed `prev_root` hash-chain is enforced; cross-organization heads need pinned witnesses and consistency.
+- **Guarantee.** G-12 (C-14). **Requires independent witnesses and a monitor**; this release operates no third-party witnesses. The reference witness is shipped; operating it independently is the deployer's job.
 - **Residual.** Without independent witnesses a malicious operator can still present split views to non-communicating parties.
 - **Detection.** Equivocation proofs.
 
@@ -529,7 +529,7 @@ Each entry has a stable ID. IDs never change meaning and are referenced from [Tr
 - **Impact.** Forged authority, heads, receipts.
 - **Mitigation.** Optional ML-DSA-65 and hybrid suites across actions, capabilities, guardian shares, tree heads, witness cosignatures and attestation; hybrid requires both; opt-in `less-cat1` / `hybrid-ed25519-less-cat1` suites (LESS, a code-based NIST additional-signature Round 2 candidate) for a third, non-lattice hardness family on PCActn leaves and capability hops; the LESS backend is an optional package, and when it is absent the suites fail closed; PQ threshold quorum certificates with assumption diversity (including hash-based signers); a PQ co-signed guardian share on top of FROST.
 - **Guarantee.** G-9, G-17.
-- **Residual.** **Default surfaces are classical.** Pure ML-DSA is not holder-bound; the Groth16 backend (BN254) is not PQ. LESS is a candidate, not a standard: its wasm build is verified by the official known-answer tests, a native-vs-wasm differential, sanitizers and robustness tests but is unaudited, has no independent implementation, and its public key is ~97 KB; use it only in the hybrid. LESS suites are implemented by the TypeScript reference only; the other verifiers reject them as an unknown `alg`. The LESS suites are wired into PCActn leaves and capability hops, not yet into every other signed surface.
+- **Residual.** **Default surfaces are classical.** A PQ signer is trusted only through a `holder_pq` commitment, a verifier-side pin or the stored grant, so a classical break of the key that minted that commitment still matters; the Groth16 backend (BN254) is not PQ. LESS is a candidate, not a standard: its wasm build is verified by the official known-answer tests, a native-vs-wasm differential, sanitizers and robustness tests but is unaudited, has no independent implementation, and its public key is ~97 KB; use it only in the hybrid. LESS is verified by the TypeScript reference and, where the shared LESS library is present, by the Go (cgo build), Rust (`less` feature), Python, Ruby, PHP, .NET, Java and Kotlin (Java 22 or later) verifiers; Swift refuses it with `unsupported_suite`, as does any verifier whose runtime lacks the library. The LESS suites are wired into PCActn leaves and capability hops, not yet into every other signed surface.
 - **Detection.** Not applicable.
 
 ### T-048 Supply-chain compromise of a dependency
@@ -568,6 +568,248 @@ Each entry has a stable ID. IDs never change meaning and are referenced from [Tr
 - **Residual.** A holder can still act under a root capability it legitimately holds; the check does not limit how many capabilities a principal mints. A verifier that keys state on something other than the bound `grant_ref` is outside this check.
 - **Detection.** Denials naming `grant_ref_bound`; the `grant-ref-bound` adversarial category in the cross-language conformance corpus.
 
+### T-052 Agent passport forgery, relay or downgrade
+- **Attack.** Present an agent passport that the issuer never made, or one made for another agent, or one that has expired or been revoked: edit its claims (model, weights, operator), set `hardware_rooted` to true without hardware behind it, replay a passport lifted from another agent, strip a post-quantum suite back to Ed25519, replay stale or foreign hardware evidence, or trigger a passport refusal to burn the agent's single-use PCActn.
+- **Preconditions.** The attacker can present a passport and a PCActn to a resource server that requires one; it may hold a captured genuine passport or the issuer's public key, but not the issuer's signing key, the agent's signing key or the hardware root.
+- **Impact.** A weaker, different or unattested agent is admitted as a measured, hardware-rooted one, so an `agent_binding` or a trust policy keyed on identity is bypassed.
+- **Mitigation.** The passport is signed by a trusted issuer over a domain-separated canonical body that includes the claims, the suite, the PQ key, the validity window, the subject key and the hardware evidence, so any edit fails `bad_signature`; the issuer must be in the verifier's trust list; a non-Ed25519 suite verifies only under a PQ key the verifier pinned for that issuer; the subject must equal the PCActn's leaf holder, which the guard verifies; the passport must be inside `nbf`..`exp` and not revoked, and a missing or failing revocation source denies; `hardware_rooted` is accepted only with evidence that a configured hardware verifier validates, bound to the subject key and the passport id, whose measured identity equals the claims, and whose signed age is within `maxEvidenceAgeMs`; the passport is checked before the PCActn is verified or its counter advances, so a refusal consumes nothing.
+- **Guarantee.** G-19 (with G-9 for the suite, G-10 for the hardware evidence).
+- **Residual.** A compromised issuer key or hardware root signs anything; revocation is only as fresh as the source supplied; a hardware passport is as strong as the vendor verifier, which remain experimental, and the Go, Python and Rust verifiers each ship ports of them (a hardware-rooted passport is refused there unless a verifier is supplied or configured as the default); a valid passport proves the identity claims, not that the agent behaves.
+- **Detection.** `passport: <reason>` denials with a distinct reason per cause; the `passport` entry of the assurance report.
+### Intent layer
+
+### T-053 Intent substitution and drift
+- **Attack.** The agent (or text it ingested) presents an action that the principal never asked for, under a grant that was issued for something else, or keeps using a grant after the task changed.
+- **Preconditions.** A grant whose goal commitment names a signed intent; an agent that controls the action it signs.
+- **Impact.** An action outside the principal's intent is authorized.
+- **Mitigation.** The signed `intent` member opens the grant's goal commitment (reference, map digest, salt); an active policy refuses a PCActn without it and bounds the claimed fidelity and residual risk; a session root binds every action to its schema, task map and delta chain, each signed by a session principal; the action must conform to the signed action schema (closed world: an undeclared parameter, an out-of-domain value or an unknown verb is refused); the grant's ceilings (organisation, site, standard) are checked before the task layers.
+- **Guarantee.** G-20.
+- **Residual.** The layer proves the action is bound to a signed statement and stays inside committed bounds. It does not prove that the statement, the map or its fidelity estimate describe what the principal meant.
+- **Detection.** Denials naming `intent`, `schema`, `intent_session` or `layers`.
+
+### T-054 Forged, stale or substituted oracle, classifier and label assertions
+- **Attack.** Forge a world fact, an offer set, a classifier verdict or a data-class label; replay an old one; use one for another subject, session or content; stuff a quorum with keys the verifier did not pin.
+- **Preconditions.** An agent or tool that can deliver artifacts alongside the PCActn.
+- **Impact.** A decision is taken on a value no trusted issuer asserted.
+- **Mitigation.** Every artifact is signed by a key the verifier itself pinned (never a key the artifact names), bound to the session, subject or content digest it is about, and committed by digest in the signed `intent_session` member; facts and offer sets carry a freshness bound with an explicit clock-skew limit and a quorum of distinct pinned oracles; a verdict counts once per judge; an unsupported signature suite is refused with its own reason; a missing, unpinned, stale or off-subject artifact denies.
+- **Guarantee.** G-21.
+- **Residual.** The signature, the binding and the freshness are verified. Whether an oracle's value, a classifier's label or an issuer's data class is correct is not: each is a signed assertion by its issuer, and a quorum of pinned issuers that are wrong or collude is accepted. A classifier verdict has no expiry of its own, only the session and content it is bound to.
+- **Detection.** Denials naming `facts`, `provenance` or `classes`; the vote counts returned with a classifier decision.
+
+### T-055 Cap and sequence evasion by splitting
+- **Attack.** Split a purchase into many small actions, spread them over sessions or windows, race concurrent admissions, replay a sequencer receipt, or restart the verifier to reset a counter.
+- **Preconditions.** An agent that can issue many actions within one session.
+- **Impact.** A cap (spend, count, distinct recipients, maximum) or an ordering rule (a prerequisite, a deadline) is exceeded.
+- **Mitigation.** The verifier recomputes the post-action value of every accumulator from its own state (the pre-state of the action's group, computed under the session lock) or from a sequencer-signed reservation receipt bound to this action, audience and session; the agent's claimed post value must equal it and stay inside the declared domain; a counted event stamped after the candidate time is never dropped from a window; an event with an unreadable time or value fails the admission; receipts have bounded age, a key set with a bounded age and a version that can only move forward, and a sequence number that must rise; monitors are folded over the same history.
+- **Guarantee.** G-20.
+- **Residual.** The pre-state must come from a linearizable store. The in-process store is volatile: a restart resets every cap, so a deployment passes `requireDurable` and supplies a durable store. Accumulators bound what is admitted, not what the admitted actions do.
+- **Detection.** Denials naming `accumulators`; reservations in the session history.
+
+### T-056 Intent, session or delta revocation lag
+- **Attack.** Keep acting after the principal revoked the intent map, the session or a delta grant.
+- **Preconditions.** A revocation that has not reached the verifier yet.
+- **Impact.** Actions admitted after the revocation.
+- **Mitigation.** A signed revocation epoch from the dedicated authority named in the session root must be presented, no older than the stricter of the policy and the root bound, and its list must be exactly the signed set; the verifier's tracked last epoch makes the sequence append-only (a dropped id, a rollback or two sets under one number is refused); every id the action relies on (session, map, each delta, the standing profile) must be absent.
+- **Guarantee.** G-20.
+- **Residual.** An action admitted before the revocation reached the authority's next epoch is valid until the age bound; the exposure is the epoch age bound plus the clock skew limit.
+- **Detection.** Denials naming `intent_session` with a `revocation:` reason.
+
+### T-057 Question forgery and elicitation abuse
+- **Attack.** Forge or replay a site question, answer on the agent's behalf, or flood the principal until they approve.
+- **Preconditions.** An agent that can relay messages between the site and the principal.
+- **Impact.** An approval the principal did not give.
+- **Mitigation.** A question is a body signed by the site under a key in its discovery document, bound to the session, map, schema, action digest and cell; it has an expiry that the verifier enforces when it is given a clock (`verifyIntentRequiredAt` requires one); the number of questions is itself an accumulator with a cap that the wallet holds.
+- **Guarantee.** G-20.
+- **Residual.** A principal can still approve a harmful action when asked (N-1).
+- **Detection.** Question counts per session.
+
+### T-110 A compiled policy that is wider than the goal it was compiled from
+- **Attack.** A goal-to-policy compiler that drops a prohibition, lets an added constraint widen the result (a non-monotone compile), mis-lowers a window, or turns an unknown condition into Allow.
+- **Preconditions.** A principal who signs a goal and trusts the policy compiled from it.
+- **Impact.** The agent is authorized for actions the signed goal does not permit.
+- **Mitigation.** The compiler is proved in Dafny: the compiled policy decides exactly as the goal's reference semantics (soundness as an equality), adding a constraint never grows the allow set, Unknown never yields Allow, and a draft with holes compiles to its most restrictive completion. The extracted code is checked byte-identical in CI and run differentially on five compiler targets.
+- **Guarantee.** C-40, C-41, C-42, C-44.
+- **Residual.** The goal-to-meaning gap (the principal meant something else) is not provable and is measured elsewhere; the Dafny toolchain and the thin glue are trusted (see trusted-base).
+- **Detection.** The differential transcripts and the mutation-sensitivity tests.
+
+### T-111 Unit, currency or kind confusion inside a goal
+- **Attack.** A limit stated in cents compared with an amount in dollars, EUR against USD, a text compared with an ordering, an undeclared verb or parameter.
+- **Preconditions.** A goal or a legacy limit that mixes units.
+- **Impact.** A limit that is 100 times too loose, or no limit at all.
+- **Mitigation.** Typing rejects ill-typed goals instead of coercing; a typed condition evaluated on a conforming action never compares two units; there is no float and no implicit conversion; a money limit on a verb with no amount field is an error.
+- **Guarantee.** C-43.
+- **Residual.** An ontology that mis-declares a unit is trusted like an action schema.
+- **Detection.** Type reasons returned by the compiler.
+
+### T-112 A clause the principal never saw
+- **Attack.** A goal whose signed bytes contain a grant, bound or escalation the human-readable card does not show.
+- **Preconditions.** A card produced by a lossy renderer.
+- **Impact.** The principal signs more than they read.
+- **Mitigation.** The card encoding is injective: parsing the rendering gives back the exact goal, so anything the policy permits is on the card.
+- **Guarantee.** C-45.
+- **Residual.** The phrase table that turns the token stream into text is trusted glue; the principal may still misread.
+- **Detection.** The field-by-field card test.
+### T-130 Goal substitution after review
+- **Attack.** Attach a reviewer's approval to a different goal text, a different compiled policy, another ontology version or another model's output; or mint the grant for a statement that was never what the reviewer saw.
+- **Preconditions.** An agent, interpreter or wallet that handles the draft between the reviewer and the minting step.
+- **Impact.** The grant authorizes something the reviewer did not approve.
+- **Mitigation.** The reviewer signs digests of the whole Goal, the compiled policy, the rendered card, the ontology, the confirmed examples, the instruction text and the model set; the loader recomputes all of them (it recompiles the policy itself) and refuses on any difference; the grant's goal commitment (v3) opens to the goal and policy digests, so a verifier configured with them refuses a grant for anything else. A natural-language approval v2 binds the instruction, the model id and the prompt.
+- **Guarantee.** G-20.
+- **Residual.** The reviewer's signature proves a pinned key approved these digests, not that a person understood them; the instruction may not mean what the Goal says; a legacy v1 natural-language approval still loads for one release and does not cover the instruction; the native verifiers do not yet read the v3 configuration.
+- **Detection.** `loadApprovedGoal` refusal reasons; `intent` denials with the v3 reason.
+
+### T-131 Reviewer overload and hidden widening
+- **Attack.** Bury a widening in a very large card or diff, or in many small changes, so that a reviewer approves without reading it.
+- **Preconditions.** An interpreter or editor that controls the size and shape of what the reviewer is shown.
+- **Impact.** An approved widening nobody read.
+- **Mitigation.** Hard caps on every part of the card and the diff; a goal or diff over a cap is refused, not shortened; the diff lists widenings first, treats everything it cannot prove narrower as a widening, never treats an ontology, principal or acknowledgement change as neutral, and shows the actions newly allowed when the compiler can enumerate them; wildcards, holes and a delegation that need not narrow are rendered in red; a caller can only tighten the caps.
+- **Guarantee.** G-20.
+- **Residual.** A person can still approve a harmful widening they were shown (N-1).
+- **Detection.** `card_too_large`, `diff_too_large` and `too_many_widenings` refusals.
+### T-150 Weakened or skipped weakness test
+- **Attack.** Skip or soften a W test so the release gate passes.
+- **Preconditions.** Write access to the test or vector tree.
+- **Impact.** A weakness is reported closed while the behaviour is still open.
+- **Mitigation.** With the real subject required (`GOAL_REQUIRE_SUBJECT=1`) a missing subject or capability fails; skips are reported.
+- **Guarantee.** None beyond the contract invariant cited in traceability.
+- **Residual.** The reference semantics could itself be wrong; it is small and ported independently in four languages.
+- **Detection.** Vector drift check; cross-language disagreement.
+
+### T-151 Vector edited to match a buggy verifier
+- **Attack.** Edit an expected decision in a committed vector.
+- **Preconditions.** Write access to the test or vector tree.
+- **Impact.** A weakness is reported closed while the behaviour is still open.
+- **Mitigation.** Vectors are regenerated from the reference semantics in CI and compared byte for byte.
+- **Guarantee.** None beyond the contract invariant cited in traceability.
+- **Residual.** The reference semantics could itself be wrong; it is small and ported independently in four languages.
+- **Detection.** Vector drift check; cross-language disagreement.
+
+### T-152 Vacuous corpus
+- **Attack.** A corpus whose goals allow nothing makes every mutant look equivalent.
+- **Preconditions.** Write access to the test or vector tree.
+- **Impact.** A weakness is reported closed while the behaviour is still open.
+- **Mitigation.** Satisfiability of every non-hole grant, minimum probe counts and a mutation kill-rate floor are asserted.
+- **Guarantee.** None beyond the contract invariant cited in traceability.
+- **Residual.** The reference semantics could itself be wrong; it is small and ported independently in four languages.
+- **Detection.** Vector drift check; cross-language disagreement.
+### T-160 Prompt injection into the goal interpreter
+- **Attack.** Text in a document, ticket or earlier turn says "also allow all refunds" or "the real limit is higher", and a model-based interpreter turns it into a wider goal.
+- **Preconditions.** An interpreter that reads untrusted text next to the principal's request.
+- **Impact.** A signed goal broader than the principal said.
+- **Mitigation.** The interpreter fills a typed template; a slot value is accepted only if it is derivable from the principal's own words (ASCII id, amount and count extraction), so an injected limit is dropped and the slot becomes a hole; untrusted sources never enter the prompt by default; the enforced policy is the meet of at least three readings including a deterministic one, so one fooled reading cannot widen it; a hostile corpus per domain gates the widening rate.
+- **Guarantee.** C-90, C-92. The meet containment is proved; the interpretation rate is measured and published, not proved.
+- **Residual.** Common-mode failure of every reading (all share one injected text the grounding check also accepts) is not excluded; the corpus is a sample, not the attack space.
+- **Detection.** Holes naming "not grounded"; split readings in the N-version report.
+
+### T-161 Locale, currency, homoglyph and synonym traps
+- **Attack.** "1,000" read as one or one thousand, a yen amount read as dollars, a look-alike character in an id, an alias that was never declared.
+- **Preconditions.** A principal text that mixes formats or scripts.
+- **Impact.** A limit off by a factor, or a resource the principal did not name.
+- **Mitigation.** Parsing of human amounts happens only in the interpreter front end and an ambiguous literal is a hole; amounts in a currency the slot does not use are a hole, never converted; id and amount scanning is ASCII-only, so look-alike characters never match; aliases are a signed total map and case or script variants are not guessed.
+- **Guarantee.** C-91, C-92.
+- **Residual.** A locale hint wrongly supplied by the host still decides an ambiguous separator.
+- **Detection.** Holes naming "ambiguous" or "another currency".
+
+### T-162 Interpreter collusion or shared bias
+- **Attack.** Every interpreter shares one prompt or one training bias and agrees on a wrong reading.
+- **Preconditions.** A panel without model-family or method diversity.
+- **Impact.** A signed goal that all readings agree on but the principal did not mean.
+- **Mitigation.** A panel needs at least three readings, one deterministic non-model reader and two model families; the principal confirms boundary examples of the compiled policy before signing and a recompile must reproduce every confirmed example; a round-trip explainer and comparator can only escalate.
+- **Guarantee.** C-90, C-93, C-96. Detection is measured; safety against one faithful reading is proved.
+- **Residual.** Agreement on a wrong reading that is also confirmed by a fatigued principal.
+- **Detection.** Escalation and false-restriction rates per domain.
+
+### T-163 Forged or replayed escalation answer
+- **Attack.** An answer is forged, replayed onto another policy or action cell, stretched past the amount the principal saw, or used after expiry or revocation.
+- **Preconditions.** A holder of past answers or the log store.
+- **Impact.** A widening the principal never signed.
+- **Mitigation.** An answer is signed by the principal over the policy digest, the decision cell and the exact quantity ceilings per parameter and unit; the log is hash-chained and append-only; a recorded decision is flipped only by a principal-signed revocation; precedents apply only to Escalate and never turn a Deny into an Allow; a tampered log leaves the decision at Escalate.
+- **Guarantee.** C-94.
+- **Residual.** A principal worn down into approving (T-057).
+- **Detection.** Chain verification failures; precedents hit per cell.
+
+### T-164 Drift monitor evasion or reset
+- **Attack.** An agent stays just under the profile, or resets the monitor state to clear its strikes.
+- **Preconditions.** An agent acting for many steps.
+- **Impact.** A slow drift from the goal is admitted.
+- **Mitigation.** The monitor can only turn Allow into Escalate; its strike count never decreases; its state is sealed with a key held outside the agent and a failed seal locks it down.
+- **Guarantee.** C-95.
+- **Residual.** No guarantee that a given drift is detected; it is measured.
+- **Detection.** Strike counts and lockdowns.
+
+### T-165 Calibration shift
+- **Attack.** The model, prompt, ontology version or goal distribution changes after calibration, so the published rate no longer applies.
+- **Preconditions.** A model or ontology update.
+- **Impact.** A widening rate higher than published.
+- **Mitigation.** The published guarantee lists its assumptions; a new ontology version, model or prompt requires recalibration and a re-run of the gate; the calibration picks the most conservative level that passes both the conformal condition and an upper-bound gate with a margin.
+- **Guarantee.** C-97.
+- **Residual.** Exchangeability is an empirical assumption.
+- **Detection.** Scheduled live evaluation results per model set.
+### T-120 Escalation collapsed into allow
+- **Attack.** A host or adapter maps a refusal that means "ask a human" to success, or an answer meant for one action is replayed onto another.
+- **Preconditions.** A resource server that reads only the HTTP status, or an attacker who holds one valid answer.
+- **Impact.** An action runs that the principal never approved.
+- **Mitigation.** The decision is a ternary lattice; `escalate` is `ok: false` on every guard; an answer is signed by a pinned principal and bound to the policy digest, the exact PCActn and the history head, and is spent by the replay counter.
+- **Guarantee.** G-22.
+- **Residual.** A principal who answers allow to a harmful question (N-1).
+- **Detection.** The `decision` and `escalation` members of refusals; the `tighten` and `units` checks.
+
+### T-121 Forged or stale escalation answer
+- **Attack.** Forge an answer, present one signed for another grant, action or history state, or present an expired one.
+- **Preconditions.** No principal key (forgery) or a captured answer.
+- **Impact.** An unapproved action.
+- **Mitigation.** Pinned signer keys, closed canonical wire, bindings and a 24 h cap; a `deny` answer and an unpinned signer refuse.
+- **Guarantee.** G-22.
+- **Residual.** A captured answer is valid for its own action until the counter spends it.
+- **Detection.** The `decision` and `escalation` members of refusals; the `tighten` and `units` checks.
+
+### T-122 Unit and currency confusion
+- **Attack.** A policy limit written in dollars is evaluated against a parameter the schema declares in cents (or EUR against USD), widening it a hundredfold.
+- **Preconditions.** A policy and a schema that disagree on units.
+- **Impact.** A limit that is not the limit the principal wrote.
+- **Mitigation.** Rule 20 compares the policy unit tag with the signed schema unit and refuses a mismatch or an untagged term; nothing is converted.
+- **Guarantee.** G-23.
+- **Residual.** Only grants that carry `units` are checked; a schema that declares the wrong unit is an error of the site.
+- **Detection.** The `decision` and `escalation` members of refusals; the `tighten` and `units` checks.
+
+### T-123 A model signal widens a decision
+- **Attack.** A wrong, hostile or compromised classifier, judge or single oracle flips a label so a grant matches that should not, or an injected document steers a model to "ok".
+- **Preconditions.** A grant whose `where` reads a model-derived value.
+- **Impact.** An allow the principal did not grant.
+- **Mitigation.** Rule 21 refuses model-derived paths in a grant `where` and allows them only in `tighten[]`, which can only escalate or deny; `model_polarity: legacy` is reported degraded.
+- **Guarantee.** G-24.
+- **Residual.** The model can still cause extra escalations (availability, never safety).
+- **Detection.** The `decision` and `escalation` members of refusals; the `tighten` and `units` checks.
+
+---
+
+### T-140 Splitting across sessions, delegated agents or sites (W8, W9)
+- **Attack.** Open many sessions, or delegate to many sub-agents on separate grants, each with a full cap; or split one purchase into many small ones across them. Race concurrent admissions.
+- **Preconditions.** An agent or principal that can start more than one session or delegate.
+- **Impact.** A principal, org or fleet cap is exceeded by the number of sessions.
+- **Mitigation.** An accumulator with `scope: principal | org | fleet` counts every session and agent of that scope in one state keyed by the scope id, never by a grant or session. The state lives in a `BudgetLedger`; a reservation is admitted only if the post-value stays within the cap, checked in the same atomic step that records it, and counts at once. Admission re-reads and retries when the key moved (compare-and-swap on the version), and a multi-scope action rolls back the earlier reservations when a later one is refused.
+- **Guarantee.** G-70.
+- **Residual.** The ledger must be linearizable per key. The cap bounds what is admitted, not what an admitted action does. A host that does not name the scope id for a scoped accumulator gets a deny, never a session-only fallback.
+- **Detection.** Denials naming `aggregate: over_cap`; the reservation list per key.
+
+### T-141 Freeing budget that was spent, or crediting budget that was never held
+- **Attack.** Release or expire a reservation whose effect already ran, release an id that was never reserved, commit a reservation that was released and reused, or drive expiry with a skewed clock.
+- **Preconditions.** A caller of the ledger with a wrong clock or a buggy or malicious settlement path.
+- **Impact.** Budget is spent twice.
+- **Mitigation.** The effect is bracketed by `start`, recorded before it runs. Expiry frees only a reservation that was never started and the ledger orders start against expiry, so no clock can free a started effect and an expired reservation can never start. A committed entry is never released, a released one is never committed, and releasing an unknown id changes nothing. A release is a signed event bound to its reservation and can be anchored in a transparency log.
+- **Guarantee.** G-71.
+- **Residual.** The host releases only when the effect did not happen (the signed release makes a wrong release attributable). A crash after the effect leaves the reservation counted until it is committed or released with evidence: over-restriction, never overspend.
+- **Detection.** Signed release events; refused settlements.
+
+### T-142 A volatile or forgetful ledger resets the cap
+- **Attack.** Restart the process, or point the verifier at an in-memory or lossy ledger, so every cap reads zero again.
+- **Preconditions.** A deployment that uses a non-durable store for a shared aggregate.
+- **Impact.** Every cap restarts from zero.
+- **Mitigation.** Admission refuses a ledger whose `durable` is not true for any non-session scope (`not_durable`). The conformance kit fails a ledger that claims durability and loses state, and one that claims durability while being volatile.
+- **Guarantee.** G-72.
+- **Residual.** `durable` is a claim the operator makes; the conformance run is what checks it.
+- **Detection.** The `not_durable` error at start-up of the admission path.
+
 ## 5. Documented guarantees
 
 A guarantee states what PCA proves and the assumptions under which it holds. If an assumption fails, so does the guarantee.
@@ -580,7 +822,7 @@ A guarantee states what PCA proves and the assumptions under which it holds. If 
 - **G-6 Threshold authorization.** An action requiring `t` is accepted only with valid shares from `t` distinct keys of the registered role-bound signer set; shares cannot be re-purposed across roles, thresholds or signer sets. *Assumes:* the shares reside in separate trust domains and fewer than `t` are compromised.
 - **G-7 Bounded autonomous risk.** Machine-only actions between two human recharges carry total risk at most `bMax / κ`. *Assumes:* the verifier computes or vouches for the risk inputs, and persists the budget meter atomically.
 - **G-8 Revocation and liveness.** A revoked capability (leaf or ancestor) cannot present a valid non-membership proof; revocation epochs and beacons are time-bounded and rollback-protected. *Assumes:* the verifier supplies current time and persists the last accepted epoch/seq; the guarantee is bounded by the configured freshness window.
-- **G-9 Suite agility without downgrade.** The signature suite and any PQ public key are inside the signed body; unknown suites fail closed; a hybrid requires both components. The PQ public key of a hybrid or pure-PQ signer is bound to its holder through the signed `holder_pq` commitment, so an Ed25519 forger cannot substitute its own ML-DSA key (F-2); a verifier may restrict suites with `allowedSuites` (F-4). Every OTHER signed surface that names an Ed25519 identity and carries its own `pq_pk` (liveness beacons, revocation epochs, tree heads, witness cosignatures, software attestations, semantic-judge verdicts, state attestations, settlement records, safety certificates) verifies through the one helper `verifyPinnedSuite`: a pure-PQ or hybrid artifact is accepted only when its `pq_pk` equals the PQ key the VERIFIER pins for that identity (`pqPins`, e.g. from a signed `signPqBinding` verified with `pqPinFor`), and is refused when no pin exists (R2-01). *Assumes:* the pins were obtained from the identity out of band, the `holder_pq` was minted honestly, and `allowUnboundPq` is not set on any surface. In the hosted API, pure-PQ and hybrid beacons and cosignatures are refused until a principal registers a pin. The chain ROOT is covered the same way (R3-01): a root has no parent holding a `holder_pq` commitment, so a pure-PQ or hybrid root hop is accepted only under a verifier-side pin for `root.issuer` (`ChainPolicy.pqPins`) or when it is byte-identical to the verifier's own stored grant (`ChainPolicy.trustedRoot`); with neither it is refused, so a root "issued by" any principal can no longer be forged under the root's own `pq_pk`. The rule is structural, not per-surface: `verifyWithSuite` accepts only an opaque `PinnedPqKey` that `resolvePqVerifyKey` alone can mint (pin, `holder_pq` commitment, or a verifier-configured key), and `scripts/check-pq-pinning.mjs` (run as a test) fails the build on any production file that verifies a PQ signature outside that choke point without an allowlisted reason. PQ pins are `PqBinding`s signed over `(identity, pq, epoch, aud)` (R3-06): the audience is the instance, the epoch is monotone per identity, a registry keeps a tombstone with the last epoch when a pin is deleted, and a binding with an epoch at or below it is refused, so a served binding cannot be replayed after a rotation, across instances, or as a junk key. *Assumes (legacy):* the holder's `holder_pq` was minted honestly and `allowUnboundPq` is not set. *Residual:* the non-TypeScript verifiers (R3-03) do not yet implement the `holder_pq` / root-pin rules.
+- **G-9 Suite agility without downgrade.** The signature suite and any PQ public key are inside the signed body; unknown suites fail closed; a hybrid requires both components. The PQ public key of a hybrid or pure-PQ signer is bound to its holder through the signed `holder_pq` commitment, so an Ed25519 forger cannot substitute its own ML-DSA key (F-2); a verifier may restrict suites with `allowedSuites` (F-4). Every OTHER signed surface that names an Ed25519 identity and carries its own `pq_pk` (liveness beacons, revocation epochs, tree heads, witness cosignatures, software attestations, semantic-judge verdicts, state attestations, settlement records, safety certificates) verifies through the one helper `verifyPinnedSuite`: a pure-PQ or hybrid artifact is accepted only when its `pq_pk` equals the PQ key the VERIFIER pins for that identity (`pqPins`, e.g. from a signed `signPqBinding` verified with `pqPinFor`), and is refused when no pin exists (R2-01). *Assumes:* the pins were obtained from the identity out of band, the `holder_pq` was minted honestly, and `allowUnboundPq` is not set on any surface. In the hosted API, pure-PQ and hybrid beacons and cosignatures are refused until a principal registers a pin. The chain ROOT is covered the same way (R3-01): a root has no parent holding a `holder_pq` commitment, so a pure-PQ or hybrid root hop is accepted only under a verifier-side pin for `root.issuer` (`ChainPolicy.pqPins`) or when it is byte-identical to the verifier's own stored grant (`ChainPolicy.trustedRoot`); with neither it is refused, so a root "issued by" any principal can no longer be forged under the root's own `pq_pk`. The rule is structural, not per-surface: `verifyWithSuite` accepts only an opaque `PinnedPqKey` that `resolvePqVerifyKey` alone can mint (pin, `holder_pq` commitment, or a verifier-configured key), and `scripts/check-pq-pinning.mjs` (run as a test) fails the build on any production file that verifies a PQ signature outside that choke point without an allowlisted reason. PQ pins are `PqBinding`s signed over `(identity, pq, epoch, aud)` (R3-06): the audience is the instance, the epoch is monotone per identity, a registry keeps a tombstone with the last epoch when a pin is deleted, and a binding with an epoch at or below it is refused, so a served binding cannot be replayed after a rotation, across instances, or as a junk key. *Assumes (legacy):* the holder's `holder_pq` was minted honestly and `allowUnboundPq` is not set. The nine native verifiers (Go, Python, Rust, Java, Kotlin, .NET, PHP, Ruby, Swift) enforce the same rules: a post-quantum hop or leaf key must match the signer's `holder_pq` commitment, a post-quantum root needs a verifier-side pin for its issuer or byte-equality with the stored grant (and a pin that disagrees with the stored grant is refused), and an optional `allowed_suites` policy applies. They have no `allowUnboundPq` opt-out, so they are fail-closed. Pinned by the 26 `pqbind-*` vectors and the 31 `chain_pin` vectors, which every native runner executes. *Residual:* suites a verifier does not implement are refused with `unsupported_suite`, so post-quantum coverage differs by language (see the per-language suite matrix that ships with the conformance suite).
 - **G-10 Attestation binding and policy.** Accepted evidence is bound to the holder, grant, epoch and a server nonce, chains to a pinned vendor root of the correct family, is non-debug, meets configured TCB/collateral/revocation policy, and matches the allowlisted measurement (and hardware-measured weights where a root provides them and the policy requires them). Multiple independent roots must corroborate and reconcile to one identity when configured. *Assumes:* correct pins and allowlists; silicon and vendor roots are honest; with a single root, that vendor is trusted.
 - **G-11 Trust-anchor lifecycle.** Allowlist manifests are signed, versioned and expiring, and rollback is rejected; vendor signing-key rotation is accepted only with overlap or an operator-signed re-pin, with no trust-on-first-use. *Assumes:* the verifier persists the highest accepted version and key-trust state; initial pins are correct.
 - **G-12 Tamper-evident history.** The ledger is append-only with consistency proofs; equivocation is provable from two witnessed heads; a witness threshold is fail-closed. *Assumes:* independent witnesses exist and a monitor compares heads; this does not prevent censorship.
@@ -590,6 +832,16 @@ A guarantee states what PCA proves and the assumptions under which it holds. If 
 - **G-16 Bounded verification cost on hostile input.** Parser depth and size, chain depth, tool-schema validation and regex predicates have fixed bounds and fail closed. *Assumes:* upstream layers cap request bodies before reaching the parser.
 - **G-17 PQ quorum certificates.** A PQ quorum proof requires `t` distinct valid member signatures; the set identity binds `t`, keys, suites and diversity so these cannot be altered after the fact. *Assumes:* assumption diversity is configured as intended.
 - **G-18 Constitutional vetoes.** Prohibitions veto matching actions independent of plan and permission, fail closed on malformed invariants, and produce signed, replayable evidence. *Assumes:* the invariants express what you intend.
+- **G-19 Agent identity binding.** A passport that a resource server requires is accepted only if a trusted issuer signed exactly these claims for the key that signed the PCActn, it is inside its validity window and not revoked, a post-quantum suite verifies only under a pinned issuer key, and a hardware-rooted claim rests on evidence a configured hardware verifier validated for that key, that matches the claims and is within the evidence age ceiling; a refused passport consumes no replay state. *Assumes:* the issuer keys, pins, revocation source and hardware verifier are configured correctly; the issuer signs only claims it checked; the agent key is not shared.
+- **G-20 Intent binding and bounds.** An accepted action is bound to a signed statement of intent (through the grant's goal commitment or a session root), conforms to the signed action schema, stays inside the grant's ceilings, and keeps every accumulator and monitor inside its declared bound, recomputed from verifier-held state or a sequencer-signed receipt; revocation of the intent, session or a delta takes effect within the stated age bound; every missing, malformed or unsupported component denies. *Assumes:* the verifier pins its own keys and supplies its own clock; the session history comes from a linearizable (and, for caps that must survive a restart, durable) store.
+- **G-21 Assertions are verified, not believed.** A world fact, offer set, classifier verdict or data-class label is used only if it is signed by a key the verifier pinned, bound to the session, subject or content it is about, committed in the signed `intent_session` member, and (for facts and offer sets) fresh. *Assumes:* the pinned issuers are honest. The guarantee is about the assertion's authenticity and binding, not its truth.
+- **G-70 Aggregate soundness.** For every interleaving of admissions through a linearizable durable ledger, the counted total of a principal, org or fleet aggregate never exceeds its cap, and the sum of the effects that ran never exceeds it; two sessions of one principal share one cap. Model-checked (TLA+, with expected-fail mutants for each defect) and proved (Lean). *Assumes:* a linearizable per-key ledger, a verifier that supplies the scope ids.
+- **G-71 Spent budget is never freed.** An effect that ran is never released or expired; only a reservation that never started expires, under any clock. *Assumes:* the host releases only when the effect did not happen.
+- **G-72 No cap reset on restart.** A principal, org or fleet aggregate is refused a ledger that is not durable. *Assumes:* the durability claim of the ledger is checked with the conformance kit.
+
+- **G-22 Escalation never becomes allow.** A verifier decision is deny, escalate or allow; escalate is admitted only with a principal-signed answer bound to this policy, this PCActn and this history head, spent by the replay counter, and never upgrades a deny. *Assumes:* the principal keys are pinned by the verifier and the principal answers with care (N-1).
+- **G-23 Unit safety.** With `envelope.units`, an action whose schema unit differs from the policy tag is refused. *Assumes:* the signed action schema declares the true unit.
+- **G-24 A model can only tighten.** For every policy and every model oracle the decision is at most the oracle-free one; model-derived values are forbidden in a grant `where`; an undecidable condition never allows. *Assumes:* nothing about the model.
 
 ## 6. Non-goals: what PCA does not protect against
 
@@ -598,9 +850,10 @@ A guarantee states what PCA proves and the assumptions under which it holds. If 
 - **N-3 Confidentiality.** PCA gives integrity and authorization, not secrecy of traffic, plans or arguments (except the commitment-only compliance path).
 - **N-4 Harm inside the authorized set.** In-plan, in-policy, taint-clean, low-risk actions are allowed by design, up to the trust-budget bound.
 - **N-5 Third-party hosts.** Cloud providers, silicon vendors and attestation services are trusted for what they sign. A single compromised vendor root defeats that root. Side channels, physical attacks and availability of the TEE are out of scope.
+- **N-6 Correctness of a judgement.** The intent layer does not decide whether a classifier's label, an oracle's value, an issuer's data class, a semantic judge's score or the fidelity estimate of an intent map is right. It proves that the assertion is signed by a pinned issuer, bound to this action and fresh, and that the action stays inside the committed bounds.
 - **N-6 Classical roots are not post-quantum.** Default signatures, FROST, the Groth16 backend and vendor attestation roots are classical. PQ and hybrid suites are opt-in, and vendor roots are outside our control.
 - **N-7 Cryptographic assurance.** **No external cryptographic or security audit has been performed.** The FROST signer and DKG are reference implementations that are not hardened against side channels and have no official DKG test vector. Do not rely on them to custody production keys without independent review.
-- **N-8 Economic settlement.** The optimistic path has claims, windows and fraud proofs, but no escrow, real-value slashing or effect rollback.
+- **N-8 Economic settlement.** The optimistic path has claims, windows, fraud proofs and a bond ledger that escrows and slashes balances, but no external payment rail and no rollback of effects.
 - **N-9 Semantic judgement of meaning.** Semantic distance is a plan-graph proxy; judge ensembles are statistical, not adversarially robust.
 - **N-10 Server state you must provide.** Counters, budget meters, revocation roots and nonces must be persisted atomically by the resource server. A verifier that does not keep them is replayable and can be over-spent.
 - **N-11 Availability.** Dropping or delaying messages, and verification flooding, are not prevented.

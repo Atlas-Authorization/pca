@@ -4,6 +4,7 @@
 // canon : strict parse + canonicalizeStrict + hashStrict of ANY JSON text
 // intent_*: an Intent Layer v2 primitive (raw = its `input` as JSON text); the line carries `result` in the `expect` shape
 import net.atlasauth.pca.ActionSchema;
+import net.atlasauth.pca.Caveats;
 import net.atlasauth.pca.IntentClassifier;
 import net.atlasauth.pca.IntentJs;
 import net.atlasauth.pca.IntentMap;
@@ -157,6 +158,14 @@ public class Driver {
                             allowed(co.get("allowed_suites")), (Map<String, Object>) co.get("pq_pins"), (Map<String, Object>) co.get("trusted_root"));
                         r = "{\"id\":" + esc(id) + ",\"allow\":" + why.isEmpty() + ",\"checks\":{\"chain\":" + why.isEmpty() + "}"
                             + (why.contains(Pq.UNSUPPORTED_SUITE) ? ",\"unsupported_suite\":" + esc(why) : "") + "}";
+                    } else if (kind.equals("policy")) {
+                        // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+                        // evaluateCaveats(policyCaveats(grant, chain), context) as {allow, failed}
+                        Map<String, Object> pv = (Map<String, Object>) Json.parseLenient(raw);
+                        Caveats.Result pr = Caveats.evaluateCaveats(Caveats.policyCaveats(pv.get("grant"), pv.get("chain")), pv.get("context"));
+                        StringBuilder fl = new StringBuilder("[");
+                        for (int k = 0; k < pr.failed.size(); k++) fl.append(k == 0 ? "" : ",").append(esc(pr.failed.get(k)));
+                        r = "{\"id\":" + esc(id) + ",\"allow\":" + pr.ok + ",\"failed\":" + fl.append("]") + "}";
                     } else if (kind.startsWith("intent_")) {
                         // Intent Layer v2 primitives: raw = JSON text of the primitive's `input`; result = its `expect` shape.
                         Map<String, Object> res = intentPrimitive(kind, Json.parseLenient(raw));

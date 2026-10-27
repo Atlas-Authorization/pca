@@ -119,10 +119,15 @@ function escapeGh(s: string): string {
   return s.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
 }
 
+/** Workflow-command PROPERTY values must also escape `:` and `,`, or a file name can add properties or end the command. */
+function escapeGhProp(s: string): string {
+  return escapeGh(s).replace(/:/g, '%3A').replace(/,/g, '%2C');
+}
+
 function printGithub(results: LabeledFindings[], write: (s: string) => void): void {
   for (const r of results) {
     for (const f of r.findings) {
-      const props = [`file=${escapeGh(r.label)}`, `title=${escapeGh(f.rule)}`].join(',');
+      const props = [`file=${escapeGhProp(r.label)}`, `title=${escapeGhProp(f.rule)}`].join(',');
       const loc = f.where !== undefined ? `${f.where}: ` : '';
       write(`::${GH_LEVEL[f.severity]} ${props}::${escapeGh(`${loc}${f.message}`)}`);
     }
@@ -153,6 +158,7 @@ export function run(argv: readonly string[], write: (s: string) => void = (s) =>
   if (args.format === 'github') printGithub(results, write);
   else printText(results, args.quiet, write);
 
+  if (summary.reason) write(`error: ${summary.reason}`);
   write(
     `\n${summary.ok ? 'PASS' : 'FAIL'} — ${summary.counts.error} error(s), ${summary.counts.warn} warning(s), ${summary.counts.info} info across ${results.length} policy/policies (fail threshold: ${summary.maxSeverity})`,
   );

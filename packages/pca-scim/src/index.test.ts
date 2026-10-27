@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { issuePassport, type AgentPassport, type PassportIdentity } from '@atlasauth/pca';
+import { issuePassport, type AgentPassport, type PassportIdentity } from '@atlasauth/pca/ext/attestation';
 import {
   AGENT_SCHEMA_URN,
   ENTRA_AGENT_EXTENSION_URN,
@@ -28,7 +28,7 @@ const PATCH_OP = 'urn:ietf:params:scim:api:messages:2.0:PatchOp';
 
 function handler() {
   const store = createMemoryStore();
-  return { store, h: scimHandler(store, { baseUrl: 'https://scim.acme.com/scim/v2', now: NOW }) };
+  return { store, h: scimHandler(store, { baseUrl: 'https://scim.acme.com/scim/v2', now: NOW, authenticate: () => true }) };
 }
 
 /** A SCIM POST body in the flat IdP form. */
@@ -56,6 +56,81 @@ function asList(body: unknown): ScimListResponse {
 function asError(body: unknown): ScimErrorBody {
   return body as ScimErrorBody;
 }
+
+describe('required authentication hook (fail closed)', () => {
+  const make = (authenticate: unknown) =>
+    scimHandler(createMemoryStore(), { authenticate: authenticate as never, now: NOW });
+  const deny = (res: { status: number; body: unknown; headers: Record<string, string> }) => {
+    expect(res.status).toBe(401);
+    expect(res.headers['www-authenticate']).toBe('Bearer');
+    expect(res.body).toEqual({ schemas: [ERROR_SCHEMA], status: '401', detail: 'authentication required' });
+  };
+
+  it('throws at construction when neither authenticate nor allowUnauthenticated is given', () => {
+    expect(() => scimHandler(createMemoryStore())).toThrow(TypeError);
+    expect(() => scimHandler(createMemoryStore(), { authenticate: 'yes' as never })).toThrow(TypeError);
+  });
+
+  it('allowUnauthenticated: true is the explicit opt-out', () => {
+    const h = scimHandler(createMemoryStore(), { allowUnauthenticated: true });
+    expect(h({ method: 'GET' }).status).toBe(200);
+  });
+
+  it('401 when authenticate returns false, throws, or returns a non-true value (incl. a Promise)', () => {
+    for (const fn of [() => false, () => { throw new Error('x'); }, () => Promise.resolve(true), () => 'yes', () => 1, () => undefined]) {
+      const h = make(fn);
+      deny(h({ method: 'GET' }));
+      deny(h({ method: 'POST', body: createBody() }));
+      deny(h({ method: 'DELETE', id: 'x' }));
+    }
+  });
+
+  it('does not touch the store when denied', () => {
+    const store = createMemoryStore();
+    const h = scimHandler(store, { authenticate: () => false });
+    h({ method: 'POST', body: createBody() });
+    expect(store.all()).toEqual([]);
+  });
+
+  it('passes the request to authenticate and admits on exactly true', () => {
+    const seen: string[] = [];
+    const h = make((r: { method: string }) => { seen.push(r.method); return true; });
+    expect(h({ method: 'GET' }).status).toBe(200);
+    expect(seen).toEqual(['GET']);
+  });
+});
+
+describe('unsupported filters are rejected, never ignored (RFC 7644 3.4.2.2)', () => {
+  const bad = [
+    'displayName co "x"', 'displayName sw "x"', 'displayName pr', 'displayName ne "x"',
+    'displayName eq "a" and active eq true', 'displayName eq "a" or active eq true', 'not (active eq true)',
+    'capabilities[value eq "a"]', 'meta.created gt "2020-01-01T00:00:00Z"', 'unknownAttr eq "x"', 'displayName eq x',
+    'displayName eq', ' ', 'displayName eq "unterminated', 'a'.repeat(2000),
+  ];
+  for (const filter of bad) {
+    it(`400 invalidFilter for ${JSON.stringify(filter.slice(0, 40))}`, () => {
+      const { h } = handler();
+      h({ method: 'POST', body: createBody() });
+      const res = h({ method: 'GET', query: { filter } });
+      expect(res.status).toBe(400);
+      const e = asError(res.body);
+      expect(e.schemas).toEqual([ERROR_SCHEMA]);
+      expect(e.status).toBe('400');
+      expect(e.scimType).toBe('invalidFilter');
+    });
+  }
+  it('a non-string filter is 400 invalidFilter', () => {
+    const { h } = handler();
+    const res = h({ method: 'GET', query: { filter: ['a'] as never } });
+    expect(res.status).toBe(400);
+    expect(asError(res.body).scimType).toBe('invalidFilter');
+  });
+  it('an empty filter lists everything (RFC: absent filter)', () => {
+    const { h } = handler();
+    h({ method: 'POST', body: createBody() });
+    expect(asList(h({ method: 'GET', query: { filter: '' } }).body).totalResults).toBe(1);
+  });
+});
 
 describe('POST /Agents — register a passport', () => {
   it('creates an Agent, returns 201 with a well-formed SCIM resource, and registers the passport', () => {

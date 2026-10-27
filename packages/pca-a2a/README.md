@@ -1,5 +1,7 @@
 # @atlasauth/pca-a2a
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A2A (Agent2Agent) adapter for Proof-Carrying Authority (PCA). A2A defines how agents discover each other and exchange tasks; it does not prove that a relayed request is authorized by the principal behind it. This package binds PCA proofs onto three A2A surfaces, failing closed throughout:
 
 1. **Proof-carrying tasks** - attach a PCActn (a signed single-action proof with its capability chain) to a Task or Message under a namespaced `metadata` key, and verify it on receipt.
@@ -81,7 +83,11 @@ server-derived threshold. `result` is the `PcaVerdict` (plus `reason`).
 
 ## Status
 
-Experimental. The A2A object model here is structural and permissive, not a full A2A SDK. The Payment Mandate shape follows the AP2 vocabulary but its JSON-LD context is a placeholder and PCA-specific fields live in a non-standard `x_pca` extension; validate against the official AP2 schemas before production use. The cryptography is unaudited.
+Experimental and unaudited. Pinned to A2A 1.0.0 (Agent Card signing, section 8.4).
+
+- Agent Card signatures: by default a detached JWS with an unencoded payload (`b64:false`). Pass `profile: 'a2a-1.0'` (and a `kid`) to `issueSignedAgentCard` to produce the A2A 1.0 form (`BASE64URL(header).BASE64URL(payload)`, `typ: "JOSE"`), which any A2A 1.0 verifier can check. `verifyAgentCard` accepts both forms. The signed bytes are this package's strict canonical JSON, which equals RFC 8785 for strings and integers but rejects values RFC 8785 would serialize as floats.
+- The A2A object model is structural and permissive, not a full A2A SDK.
+- The payment mandate is a PCA-defined envelope, not an AP2 credential: AP2 mandates are SD-JWTs (use `@atlasauth/pca-ap2`) and AP2 defines no JSON-LD context, so `A2A_AP2_CONTEXT` is an identifier chosen here. Amounts are integers in minor units; a float, negative or unsafe amount is refused when building and when verifying. PCA fields live in the non-standard `x_pca` extension.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-mpc-wasm",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Constant-time Ed25519 base-OT curve core (curve25519-dalek, compiled to WebAssembly): a drop-in, genuinely constant-time replacement for @atlasauth/pca-mpc's pure-BigInt ec.ts curve ops.",
   "keywords": [
     "curve25519",
@@ -57,5 +57,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "hardened"
   }
 }

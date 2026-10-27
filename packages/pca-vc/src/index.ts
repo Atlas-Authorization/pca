@@ -27,7 +27,7 @@
 import { createHash, randomBytes, sign as nodeSign, verify as nodeVerify, type KeyObject } from 'node:crypto';
 import { SignJWT, jwtVerify, type KeyLike, type JWTPayload } from 'jose';
 import { assertCanonicalCompactJws, decodeCanonicalBase64url } from '@atlasauth/pca';
-import type { AgentPassport } from '@atlasauth/pca';
+import type { AgentPassport } from '@atlasauth/pca/ext/attestation';
 
 // ---------------------------------------------------------------------------------------------------
 // small JSON + base64url + narrowing helpers (no `any`)
@@ -234,7 +234,11 @@ export interface VerifiedPassportVC {
  * in `credentialSubject._sd` (an unrecognised disclosure is rejected). Any tamper — a flipped JWT byte, a
  * forged disclosure — fails. Returns the reconstructed passport plus the issuer/subject DIDs.
  */
-export async function verifyPassportVC(vc: string, issuerVerifyKey: KeyLike | Uint8Array): Promise<VerifiedPassportVC> {
+export async function verifyPassportVC(
+  vc: string,
+  issuerVerifyKey: KeyLike | Uint8Array,
+  options: { expectedIssuerDid?: string } = {},
+): Promise<VerifiedPassportVC> {
   const parts = vc.split('~');
   const jwt = parts[0];
   if (jwt === undefined || jwt === '') throw new Error('pca-vc: empty SD-JWT');
@@ -295,6 +299,10 @@ export async function verifyPassportVC(vc: string, issuerVerifyKey: KeyLike | Ui
 
   const issuerDid = asString(payload.iss, 'iss');
   const subjectDid = asString(cs.id, 'credentialSubject.id');
+  // The JWT `sub` and the VC subject id are the same identity; a disagreement is a malformed or spliced credential.
+  if (payload.sub !== subjectDid) throw new Error('pca-vc: sub does not match credentialSubject.id');
+  // The verification key is the caller's; binding it to the claimed issuer is theirs unless they pin the DID here.
+  if (options.expectedIssuerDid !== undefined && issuerDid !== options.expectedIssuerDid) throw new Error('pca-vc: iss does not match expectedIssuerDid');
   return { passport, issuerDid, subjectDid };
 }
 

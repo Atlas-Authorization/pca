@@ -16,7 +16,8 @@ export type RuleId =
   | 'redundant-caveat'
   | 'dangerous-reachability'
   | 'missing-safety-floor'
-  | 'malformed-policy';
+  | 'malformed-policy'
+  | 'internal-error';
 
 /** A single problem the linter found. `where` is a human-readable location hint inside the policy. */
 export interface Finding {
@@ -107,8 +108,10 @@ export interface LintSummary {
   maxSeverity: Severity;
   /** True when nothing at or above `maxSeverity` was found. */
   ok: boolean;
-  /** 0 when `ok`, else 1. */
+  /** 0 when `ok`, 1 when a finding reaches the threshold, 2 when nothing was linted. */
   exitCode: number;
+  /** Set when `ok` is false for a reason other than a finding: nothing was linted. */
+  reason?: string;
 }
 
 /** Severity ordering used for thresholds. Higher = more severe. */

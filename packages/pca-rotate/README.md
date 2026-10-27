@@ -1,5 +1,7 @@
 # @atlasauth/pca-rotate
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Key rotation and subtree revocation for Proof-Carrying Authority capability chains. When an agent key or a principal (root) key is rotated or compromised, the chain it carried must be re-issued under a fresh key and the old key named in a revocation record. Chains are re-issued with the real `mintRoot` / `delegate` builders from `@atlasauth/pca`, carrying exactly the original caveats, so a re-issue can never widen authority. Every function returns the new chain together with a `RevocationRecord` a revocation registry (for example `@atlasauth/pca-revoke`) can consume.
 
 ## Install
@@ -34,6 +36,12 @@ const { revocations, reissued } = compromisedKeyFlow(oldChain, compromisedHolder
 ```
 
 `revokeAndReissueSubtree(chain, holder, opts)` is the single-record variant of `compromisedKeyFlow`. A compromised root holder cannot be fixed this way; use `rotatePrincipalKey`. Secrets passed in must match the keys in the chain or the call throws.
+
+## Revoke what was replaced, all or nothing
+
+`applyRotation(registry, revocation, reissuedChain?)` revokes every capability id a rotation replaced in a `RevocationRegistry` (from `@atlasauth/pca-revoke`, or anything with `revoke`, `unrevoke` and `lookup`). If one write fails, the ones this call added are removed again and the error is rethrown. It refuses a record that names no capability, and a re-issued chain that shares an id with the revoked set. It revokes capability ids only: after an agent-key rotation the old key still signs the re-issued leaf, so revoking the key itself would deny the new chain.
+
+Rotating onto the key being rotated out, and a non-finite `now`, are refused.
 
 ## Status
 

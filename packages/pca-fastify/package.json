@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-fastify",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Fastify plugin/preHandler for Proof-Carrying Authority: verifies the inbound PCActn, attaches the verdict, or replies 401/403 with a WWW-Authenticate challenge.",
   "keywords": [
     "fastify",
@@ -47,6 +47,7 @@
     }
   },
   "devDependencies": {
+    "@atlasauth/pca-testing": "workspace:*",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
@@ -60,5 +61,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production"
   }
 }

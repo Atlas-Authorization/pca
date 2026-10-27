@@ -1,5 +1,7 @@
 # @atlasauth/pca-ai-sdk
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Vercel AI SDK adapter for Proof-Carrying Authority (PCA). `withPCA` wraps an AI SDK tool so every call first builds a PCActn (a signed proof-carrying action) with a PCA `Agent`, fails fast if the agent's local dry-run would be denied, hands the proof to your code so it can be forwarded to the resource server, and then runs the original `execute`. The wrapped tool keeps the same shape, so it drops straight into `tools`.
 
 It does not authorize anything itself: it attaches a proof, and the resource server's verifier decides. If the wrapper is bypassed, the downstream action simply lacks a valid PCActn and fails server-side.
@@ -51,7 +53,7 @@ An over-limit or out-of-scope call throws before `execute` runs (set `failFast: 
 
 ## Status
 
-Experimental. The underlying cryptography in `@atlasauth/pca` has not been independently audited.
+Production tier: this package signs; it does not authorize. The resource server's verifier decides. The underlying cryptography in `@atlasauth/pca` has not been independently audited.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

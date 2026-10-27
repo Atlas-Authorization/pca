@@ -1,5 +1,7 @@
 # @atlasauth/pca-ciba
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A CIBA (OpenID Connect Client-Initiated Backchannel Authentication) on-ramp for Proof-Carrying Authority (PCA) step-up. It turns a risk-gated step-up into a standard asynchronous human-approval flow, interrupting a person only for the actions that actually need it.
 
 In CIBA a backend opens an `auth_req_id`, the human is notified out of band, and the decision comes back by poll or ping/push. The `binding_message` carries the human-readable approval context, so the thing approved on the phone is the thing the agent is about to do ("Approve stripe.refund $480 on charge:ch_1 - because you asked support-bot to 'reconcile October refunds'").
@@ -81,9 +83,42 @@ Provider limits to know about: Keycloak accepts a `binding_message` of at most 5
 
 `toCibaAuthRequest(stepUp, opts?)` is the pure mapping from a step-up to a CIBA request, if you want to drive your own broker or a real OpenID provider.
 
+## Durable approvals
+
+`createCibaBroker` is an in-memory, single-process test double. For anything that must survive a restart or run in more than one process, use `createDurableCibaBroker({ store })`, which implements the asynchronous `ApprovalBroker` interface (`start`, `poll`, `token`, `resolve`, `get`) over an `ApprovalStore` (a JSON key-value store with compare-and-set). `createFileApprovalStore(path)` is a durable reference store for one process; back `ApprovalStore` with a database row version for several. `createMemoryApprovalStore()` is a test double.
+
+```ts
+import { createDurableCibaBroker, createFileApprovalStore } from '@atlasauth/pca-ciba';
+
+const broker = createDurableCibaBroker({
+  store: createFileApprovalStore('./approvals.json'), // required
+  decisionTtlSec: 300,                                 // how long an approval stays redeemable
+});
+const req = await broker.start(review.request);
+await broker.resolve(req.auth_req_id, 'approve', authenticatedUser); // the decider's identity is yours to authenticate
+const out = await broker.token(req.auth_req_id);                       // { ok: true, ... } exactly once
+```
+
+Failure modes of the durable broker:
+
+| Situation | Result |
+| --- | --- |
+| No `store`, or `decisionTtlSec` not a positive number | `TypeError` at construction |
+| `resolve` with an empty `by`, or a decision other than `approve`/`deny` | throws, nothing recorded |
+| `resolve` on a request already approved, denied or expired (replay, race, late approval) | throws `already <status>`; the first decision stands; exactly one concurrent `resolve` wins |
+| `token` before a decision | `authorization_pending` |
+| `token` sooner than `interval` | `slow_down`, interval grows by 5 s |
+| `token` after the request or the approval expired (`decisionTtlSec` after the decision) | `expired_token` |
+| `token` on a denied request | `access_denied` |
+| `token` replayed after a successful redemption, or an unknown id | `invalid_grant` |
+| `poll`/`resolve` on an unknown id | throws; `get` returns `undefined` |
+| Stored record malformed or file corrupt | throws (no approval) |
+| Store keeps refusing the compare-and-set | throws after 8 tries |
+| `onComplete` throws | the decision stays recorded |
+
 ## Status
 
-Experimental. The broker is in-memory and models the CIBA lifecycle without any network; a production deployment would swap in a real OpenID provider. The package computes approval envelopes and the derived trust budget and authorises nothing on its own: `cibaDecisionToCosign` is only the budget-level effect. The cryptographic cosign (FROST) is produced and verified separately, and the resource server's verifier remains the authority. Cryptography in PCA is unaudited.
+Experimental. The default broker is in-memory (see Durable approvals for the persistent one) and models the CIBA lifecycle without any network; a production deployment would swap in a real OpenID provider. The package computes approval envelopes and the derived trust budget and authorises nothing on its own: `cibaDecisionToCosign` is only the budget-level effect. The cryptographic cosign (FROST) is produced and verified separately, and the resource server's verifier remains the authority. Cryptography in PCA is unaudited.
 
 The human decision is **unauthenticated data**. `resolve` and `cibaDecisionToCosign` take the decision string as given: the client does not verify the ID token, and the approval recharges the trust budget generically without being cryptographically bound to the action the human was shown. Do not treat a CIBA approval as an authorisation of a specific action; only the verified cosign (a signature over `thresholdMessage` of that PCActn) is. Verify the provider's ID token yourself, and bind the `binding_message` to the action digest, before you let a decision recharge a budget.
 
@@ -93,7 +128,7 @@ Validated against a real provider: Keycloak 26.8.0 (official release distributio
 
 Observed provider behaviour that differs from the specification: Keycloak does not honour `requested_expiry` (it returns its own `expires_in`), does not require `openid` in `scope`, reports an unknown user as `invalid_request` with description `invalid_user` rather than `unknown_user_id`, reports a bad client secret as `unauthorized_client`, and its stock user resolver supports `login_hint` only (`login_hint_token` and `id_token_hint` are refused with `invalid_user` unless a custom resolver is installed).
 
-Not validated: other providers (Auth0, Descope, Stytch and others were not tried), PUSH mode, signed authentication requests, `user_code`, `login_hint_token` and `id_token_hint` against a provider that supports them, and the in-memory broker's own token-endpoint behaviour against any real client. The in-memory broker remains a test double.
+Not validated: other providers (Auth0, Descope, Stytch and others were not tried), PUSH mode, signed authentication requests, `user_code`, `login_hint_token` and `id_token_hint` against a provider that supports them, and the in-memory broker's own token-endpoint behaviour against any real client. The in-memory broker remains a test double. The durable broker is covered by unit tests only; the file store is correct for a single process.
 
 ## License
 

@@ -1,5 +1,7 @@
 # @atlasauth/pca-ap2
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 AP2 (Agent Payments Protocol) mandates as real SD-JWT credentials, bound to a Proof-Carrying Authority (PCA) grant.
 
 AP2 models agentic payments as a chain of mandates: an open mandate signed by the user's trusted surface that delegates to an agent key and carries constraints, then a closed mandate signed by the agent that settles one concrete purchase. This package issues and verifies the checkout and payment mandates (`mandate.checkout.1`, `mandate.checkout.open.1`, `mandate.payment.1`, `mandate.payment.open.1`) in the SD-JWT format defined by the official AP2 JSON Schemas: integer minor-unit amounts, selective disclosure, ES256 (P-256) keys, and a key-binding JWT at each hop.
@@ -40,7 +42,9 @@ The PCActn's signed nonce commits to the transaction id, payee, amount, instrume
 
 ## Status
 
-Experimental. Mandates are checked against the official AP2 JSON Schemas and documentation at github.com/google-agentic-commerce/AP2, commit `e1ea56db72a6385bce3e5c1112b3a56ce60acb43` (2026-04-29; still the head of `main` when this package was last updated). The schemas and example payloads are committed with source URLs and sha256.
+Experimental. Single use and cumulative spend: `redeemPurchase(checkout, payment, options, ledger)` verifies a purchase and redeems it once, taking the usage context from a durable `PurchaseLedger` (an atomic `reserve` / `release`; a missing or failing ledger denies) instead of a caller-supplied one. A usage context with a NaN, negative or fractional counter is refused by the budget and recurrence constraints. `@atlasauth/pca-ap2/testing` has a single-process reference ledger for tests.
+
+ Mandates are checked against the official AP2 JSON Schemas and documentation at github.com/google-agentic-commerce/AP2, commit `e1ea56db72a6385bce3e5c1112b3a56ce60acb43` (2026-04-29; still the head of `main` when this package was last updated). The schemas and example payloads are committed with source URLs and sha256.
 
 What is verified, and how:
 

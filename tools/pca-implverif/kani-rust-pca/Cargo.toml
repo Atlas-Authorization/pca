@@ -17,6 +17,11 @@ fips204 = "0.4"
 # the remaining signature-suite verifiers of sdks/rust-pca (same versions and features)
 fips205 = { version = "0.4", default-features = false, features = ["slh_dsa_sha2_128f", "slh_dsa_sha2_256s"] }
 fn-dsa-vrfy = "0.4"
+# vendor hardware-attestation verifiers (attest/)
+p256 = { version = "0.13", features = ["ecdsa"] }
+p384 = { version = "0.13", features = ["ecdsa"] }
+rsa = "0.9"
+sha1 = "0.10"
 
 [lints.rust]
 unexpected_cfgs = { level = "allow" }

@@ -1,5 +1,7 @@
 # @atlasauth/pca-mpc-wasm
 
+> Maturity: **hardened** (experimental: hardened, awaiting audit). The engineering is done and evidenced by tests, differential checks and a mutation gate; it awaits the independent review of the Ed25519 base-OT core it wraps. It is never production until that review is done, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A **constant-time** Ed25519 base-OT curve core for `@atlasauth/pca-mpc`, compiled to WebAssembly.
 
 `@atlasauth/pca-mpc` ships a correct, malicious-hardened pure-JS prime-order group, but its BigInt modular arithmetic is **not** constant-time and cannot be in pure JS (a language/runtime boundary); the pure-JS path remains the fallback. The base OT multiplies **secret**
@@ -47,7 +49,7 @@ pnpm --filter @atlasauth/pca-mpc-wasm test         # WASM-vs-@noble parity
 
 ## Status
 
-Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Experimental and unaudited.** The constant-time claim covers the secret-scalar operations inside the wasm module, is inherited from `curve25519-dalek`, and has not been independently measured or audited.
+Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Hardened, awaiting audit (unaudited).** The constant-time claim covers the secret-scalar operations inside the wasm module, is inherited from `curve25519-dalek`, and has not been independently measured or audited.
 
 What is validated:
 

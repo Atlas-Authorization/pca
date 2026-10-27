@@ -1,3 +1,4 @@
+import { setAssuranceLabel } from './assurance';
 import { x509ValidAt } from './x509-validity';
 import { snapshotConfig } from './config-snapshot';
 /**
@@ -297,7 +298,12 @@ function gpuMeasurementsDigest(report: ParsedNvidiaSpdmReport): string {
 }
 
 /** Build a `HardwareAttestationVerifier` for genuine NVIDIA Hopper/Blackwell GPU-CC evidence. Fails closed. */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createNvidiaSpdmVerifier(opts: NvidiaSpdmVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createNvidiaSpdmVerifierUnlabelled(opts), { level: 'hardware', vendor: 'nvidia-spdm' });
+}
+
+function createNvidiaSpdmVerifierUnlabelled(opts: NvidiaSpdmVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts || !Array.isArray(opts.rootSpkiSha256) || opts.rootSpkiSha256.length === 0) {
@@ -329,6 +335,8 @@ export function createNvidiaSpdmVerifier(opts: NvidiaSpdmVerifierOptions): Hardw
         } catch (e) {
           return fail(`GPU attestation report parse failed: ${e instanceof Error ? e.message : 'unknown'}`);
         }
+        // SPDM 1.1+ is the first version with the signed GET_MEASUREMENTS nonce/transcript layout parsed here; request and response must agree
+        if (report.request.version < 0x11 || report.response.version !== report.request.version) return fail(`SPDM version 0x${report.request.version.toString(16)}/0x${report.response.version.toString(16)} is not an accepted GET_MEASUREMENTS version`);
         if (!verifyNvidiaSpdmSignature(report, chain.leaf.publicKey)) return fail('GPU attestation report signature does not verify under the device identity key');
 
         if (!input.expected) return fail('no expected attestation binding supplied');

@@ -223,7 +223,7 @@ describe('§ replay (freshness binding)', () => {
     const neg = signPCActn({ ...body(0), counter: -1 }, S.secretKey);
     const r = await verifyPCActnCore(neg, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
-    expect(r.checks.counter).toBe('fail');
+    expect(r.checks.counter_format).toBe('fail');
   });
 });
 

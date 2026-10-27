@@ -1,5 +1,7 @@
 # @atlasauth/pca-cli
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The `pca` developer CLI for Proof-Carrying Authority (PCA). Decode a PCActn, run the verifier and see why it passed or failed each check, mint a throwaway dev keypair, simulate a policy over a list of actions, and emit a `.well-known/pca-configuration` discovery document.
 
 ## Install

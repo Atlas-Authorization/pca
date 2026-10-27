@@ -1,0 +1,76 @@
+name: Goal adversarial suite and cross-language vectors
+
+# W1..W23 post-spec tests, the seeded IR-grammar corpus, compiler mutation tests, and the vector corpus replayed by the TypeScript, Go,
+# Rust and Python runners (all four must agree on goal digests and every decision + witness). When packages/pca-goal/package.json exists
+# and the extracted compiler is committed, the suite also runs against the real compiler with GOAL_REQUIRE_SUBJECT=1: a missing capability FAILS.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suite:
+    name: adversarial suite (TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Vectors are byte-identical to a fresh generation
+        run: node packages/pca-goal/adversarial/src/vectors.ts --check
+      - name: Real compiler present? (the extracted Dafny compiler is committed as generated/pca_goal.js after its first green proof run)
+        id: real
+        run: |
+          if [ -f packages/pca-goal/package.json ] && [ -f packages/pca-verified-core/generated/pca_goal.js ]; then echo "yes=true" >> "$GITHUB_OUTPUT"; else echo "yes=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: pnpm/action-setup@v4
+        if: steps.real.outputs.yes == 'true'
+      - name: Build the real subject
+        if: steps.real.outputs.yes == 'true'
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-goal...
+          pnpm --filter @atlasauth/pca-goal... run build
+      - name: Weakness, corpus, monotonicity, mutation and vector tests
+        env:
+          GOAL_REQUIRE_SUBJECT: ${{ steps.real.outputs.yes == 'true' && '1' || '0' }}
+        working-directory: packages/pca-goal
+        run: node --test adversarial/test/*.test.ts
+
+  runners:
+    name: ${{ matrix.lang }} vector runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: [python, go, rust]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        if: matrix.lang == 'python'
+        with: { python-version: '3.12' }
+      - uses: actions/setup-go@v5
+        if: matrix.lang == 'go'
+        with: { go-version: '1.22' }
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.lang == 'rust'
+      - uses: Swatinem/rust-cache@v2
+        if: matrix.lang == 'rust'
+        with: { workspaces: packages/pca-conformance/runners/goal/rust }
+      - name: Replay every vector
+        working-directory: packages/pca-conformance/runners/goal
+        run: |
+          case "${{ matrix.lang }}" in
+            python) python3 -I py/run.py ../../vectors/goal ;;
+            go) (cd go && go run . ../../../vectors/goal) ;;
+            rust) (cd rust && cargo run --release -- ../../../vectors/goal) ;;
+          esac

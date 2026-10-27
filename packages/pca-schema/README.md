@@ -1,5 +1,7 @@
 # @atlasauth/pca-schema
 
+> Maturity: **stable** (stable core). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 JSON Schema (draft 2020-12) for the Proof-Carrying Authority wire types — **PCActn**,
 **capability / grant**, and the **discovery document** — so any language can codegen types and
 validate payloads.

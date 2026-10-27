@@ -80,3 +80,9 @@ df_bad_takeover_nofence  | DurableFence | NoStaleAccepted | Clients={c1,c2,c3};M
 df_bad_takeover_nofence_safe | DurableFence | Safe | Clients={c1,c2,c3};MaxG=13;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=FALSE;OpCrash=TRUE;MaxOpCrash=1;Takeover=TRUE;TakeoverFence=FALSE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=TRUE | fail
 df_bad_no_inherit        | DurableFence | Safe | Clients={c1,c2,c3};MaxG=13;MaxRec=1;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=TRUE;OpCrash=TRUE;MaxOpCrash=1;Takeover=TRUE;TakeoverFence=TRUE;Inherit=FALSE;ReRunFair=FALSE;FenceFiles=TRUE | fail
 df_bad_fence_rmw         | DurableFence | Safe | Clients={c1,c2,c3};MaxG=15;MaxRec=2;Fence=TRUE;HeadCheck=TRUE;HeadRepair=TRUE;TakeLock=TRUE;FencePin=TRUE;Crash=TRUE;OpCrash=TRUE;MaxOpCrash=2;Takeover=TRUE;TakeoverFence=TRUE;Inherit=TRUE;ReRunFair=FALSE;FenceFiles=FALSE | fail
+esc_good            | Escalation | Safe | Actions={a1,a2};Policies={p1,p2};MaxHead=3;Mode="good" | pass
+esc_bad_implicit    | Escalation | NoImplicitAllow | Actions={a1,a2};Policies={p1,p2};MaxHead=3;Mode="bad_implicit" | fail
+esc_bad_rebind      | Escalation | AnswerBound | Actions={a1,a2};Policies={p1,p2};MaxHead=3;Mode="bad_rebind" | fail
+esc_bad_nohead      | Escalation | AnswerBound | Actions={a1,a2};Policies={p1,p2};MaxHead=3;Mode="bad_nohead" | fail
+esc_bad_nospend     | Escalation | AnswerOnce | Actions={a1,a2};Policies={p1,p2};MaxHead=3;Mode="bad_nospend" | fail
+esc_bad_deny_up     | Escalation | NoDenyAdmitted | Actions={a1,a2};Policies={p1,p2};MaxHead=3;Mode="bad_deny_up" | fail

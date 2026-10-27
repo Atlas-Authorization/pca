@@ -1,6 +1,9 @@
 /**
  * PCA fuzz driver. Usage (from repo root):
  *   packages/pca/node_modules/.bin/tsx tools/pca-audit/fuzz/fuzz.ts --target <substr|all> --ms 20000 --seed 1 [--list]
+ *   ... --regress [--iters N]        deterministic gate: replay crashers/ + N fixed-seed inputs per target (PR gate)
+ *   ... --budget-seconds 600         bounded CI run: the budget is shared evenly by the selected targets; exit 1 on a finding
+ *   ... --dump-corpus [DIR]          write every target's seeds to DIR (default corpus/)
  *
  * For each selected target: mutate seeds for a bounded wall-clock budget; every input is classified (lib.ts). Anything
  * that is not `ok` or a typed throw is written to crashers/<target>/<hash>.json together with the verdict, and the
@@ -14,6 +17,7 @@ import { exercise, mulberry32, type Rng, type Verdict } from './lib';
 import { coreTargets, type Target } from './targets-core';
 import { attestTargets } from './targets-attest';
 import { ecosystemTargets } from './targets-ecosystem';
+import { cryptoTargets } from './targets-crypto';
 
 const wire = (v: unknown): unknown => JSON.parse(JSON.stringify(v ?? null));
 const here = dirname(fileURLToPath(import.meta.url));
@@ -22,10 +26,11 @@ const arg = (n: string, d: string) => {
   return i >= 0 ? process.argv[i + 1]! : d;
 };
 
-export const allTargets = (): Target<any>[] => [...coreTargets(), ...attestTargets(), ...ecosystemTargets()];
+export const allTargets = (): Target<any>[] => [...coreTargets(), ...attestTargets(), ...ecosystemTargets(), ...cryptoTargets()];
 
 export async function fuzzTarget(t: Target<any>, ms: number, seed: number, maxIter = Infinity) {
   const rng: Rng = mulberry32(seed);
+  await t.setup?.();
   const seeds = t.seeds();
   const counts: Record<string, number> = {};
   const typed = new Map<string, number>();
@@ -54,11 +59,24 @@ export async function fuzzTarget(t: Target<any>, ms: number, seed: number, maxIt
 
 async function main() {
   const sel = arg('target', 'all');
-  const ms = Number(arg('ms', '15000'));
   const seed = Number(arg('seed', '1'));
   const all = allTargets();
+  // --budget-seconds N: CI mode, N seconds of wall clock shared evenly by the selected targets (exit non-zero on any finding)
+  const budget = Number(arg('budget-seconds', '0'));
+  const nSel = all.filter((t) => sel === 'all' || t.name.toLowerCase().includes(sel.toLowerCase())).length || 1;
+  const ms = budget > 0 ? Math.max(500, Math.floor((budget * 1000) / nSel)) : Number(arg('ms', '15000'));
   if (process.argv.includes('--list')) {
     for (const t of all) console.log(t.name);
+    return;
+  }
+  if (process.argv.includes('--dump-corpus')) {
+    // Write every target's seed inputs as JSON (one file per target) so the corpus a CI run starts from is reviewable.
+    const out = arg('dump-corpus', '') || join(here, 'corpus');
+    mkdirSync(out, { recursive: true });
+    for (const t of all) {
+      await t.setup?.();
+      writeFileSync(join(out, `${t.name.replace(/[^a-z0-9]+/gi, '_').slice(0, 48)}.json`), JSON.stringify({ target: t.name, seeds: t.seeds().map(wire) }, null, 1));
+    }
     return;
   }
   if (process.argv.includes('--regress')) {
@@ -111,4 +129,7 @@ async function main() {
   void existsSync;
   if (bad) process.exitCode = 1;
 }
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) await main();
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  await main();
+  process.exit(process.exitCode ?? 0); // snarkjs leaves curve worker threads running
+}

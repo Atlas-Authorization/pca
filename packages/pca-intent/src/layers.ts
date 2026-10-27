@@ -1,4 +1,5 @@
-import { b64u, canonicalBytesStrict, decodeB64uStrict, LAYER_CEILINGS, publicKeyOf, sign, utf8, verifyB64u, type CeilingKind, type LayerDecision } from '@atlasauth/pca';
+import { b64u, canonicalBytesStrict, decodeB64uStrict, publicKeyOf, sign, utf8, verifyB64u } from '@atlasauth/pca';
+import { LAYER_CEILINGS, type CeilingKind, type LayerDecision } from '@atlasauth/pca/ext/intent';
 import type { IntentLearner } from './learner';
 import { aggregateIntentMaps, normalizeRule, ruleAdmits, type AggregationRule, type NormalRule } from './multi';
 import type { IntentMap } from './map';
@@ -25,7 +26,7 @@ import { admitter, type Admitter, type PolicyInput } from './policy';
  * joint rule of `multi.ts` (unanimity, quorum(k), weighted, vetoers): {@link verifyQuorumApprovals}.
  */
 
-export { decideLayerCeilings, decideLayers, LAYER_CEILINGS, type CeilingKind, type LayerCeilings, type LayerDecision, type LayeredGrant, type LayerPolicy } from '@atlasauth/pca';
+export { decideLayerCeilings, decideLayers, LAYER_CEILINGS, type CeilingKind, type LayerCeilings, type LayerDecision, type LayeredGrant, type LayerPolicy } from '@atlasauth/pca/ext/intent';
 
 const CEILINGS: readonly CeilingKind[] = LAYER_CEILINGS;
 

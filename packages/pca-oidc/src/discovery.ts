@@ -39,6 +39,24 @@ export interface DiscoverOidcOptions {
   fetch?: typeof fetch;
   /** AbortSignal for the discovery request. */
   signal?: AbortSignal;
+  /** Reject a discovery document larger than this many bytes (default {@link DEFAULT_MAX_DISCOVERY_BYTES}). */
+  maxBytes?: number;
+  /**
+   * Require `https:` for the issuer and for the advertised `jwks_uri` (default false, kept for
+   * compatibility with local test issuers; production relying parties should set it).
+   */
+  requireHttps?: boolean;
+}
+
+/** Default size cap for a discovery document (1 MiB). */
+export const DEFAULT_MAX_DISCOVERY_BYTES = 1024 * 1024;
+
+function isHttps(u: string): boolean {
+  try {
+    return new URL(u).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 const WELL_KNOWN = '/.well-known/openid-configuration';
@@ -58,6 +76,9 @@ export async function discoverOidc(issuer: string, opts: DiscoverOidcOptions = {
   if (typeof issuer !== 'string' || issuer.length === 0) {
     throw new OidcDiscoveryError('discoverOidc: issuer must be a non-empty string');
   }
+  if (opts.requireHttps === true && !isHttps(issuer)) {
+    throw new OidcDiscoveryError(`discoverOidc: issuer '${issuer}' is not an https URL`);
+  }
   const doFetch = opts.fetch ?? globalThis.fetch;
   if (typeof doFetch !== 'function') {
     throw new OidcDiscoveryError('discoverOidc: no fetch implementation available (pass opts.fetch)');
@@ -75,10 +96,20 @@ export async function discoverOidc(issuer: string, opts: DiscoverOidcOptions = {
   if (!res.ok) {
     throw new OidcDiscoveryError(`discoverOidc: ${url} returned HTTP ${res.status}`);
   }
+  const maxBytes = opts.maxBytes ?? DEFAULT_MAX_DISCOVERY_BYTES;
+  const declared = Number(res.headers?.get('content-length'));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new OidcDiscoveryError(`discoverOidc: ${url} response exceeds ${maxBytes} bytes`);
+  }
   let body: unknown;
   try {
-    body = await res.json();
+    const text = await res.text();
+    if (new TextEncoder().encode(text).length > maxBytes) {
+      throw new OidcDiscoveryError(`discoverOidc: ${url} response exceeds ${maxBytes} bytes`);
+    }
+    body = JSON.parse(text);
   } catch (cause) {
+    if (cause instanceof OidcDiscoveryError) throw cause;
     throw new OidcDiscoveryError(`discoverOidc: ${url} did not return valid JSON`, { cause });
   }
   const meta = asMetadata(body);
@@ -86,6 +117,9 @@ export async function discoverOidc(issuer: string, opts: DiscoverOidcOptions = {
   // against mix-up where a document is served from an unexpected origin).
   if (meta.issuer !== issuer) {
     throw new OidcDiscoveryError(`discoverOidc: metadata issuer '${meta.issuer}' does not match requested '${issuer}'`);
+  }
+  if (opts.requireHttps === true && !isHttps(meta.jwks_uri)) {
+    throw new OidcDiscoveryError(`discoverOidc: jwks_uri '${meta.jwks_uri}' is not an https URL`);
   }
   return meta;
 }

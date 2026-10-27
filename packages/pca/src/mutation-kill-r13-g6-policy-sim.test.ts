@@ -49,7 +49,9 @@ describe('simulate: risk value', () => {
 
 describe('simulate: uncatalogued verbs', () => {
   it('a granted uncatalogued verb under the dollars model is treated as irreversible, blast 0.8 (no throw)', () => {
-    const p = compilePolicy({ permissions: { stripe: ['refund'], acme: ['x'] }, limits: { refund: '$100' } });
+    const c = compilePolicy({ permissions: { stripe: ['refund'], acme: ['x'] }, limits: { refund: '$100' } });
+    // W7b keeps the human co-sign tiers when anything granted is irreversible; pin the dollars-model tiers so the pricing is what is tested
+    const p = { ...c, riskPolicy: { ...c.riskPolicy, theta1: 1, theta2: 1 } };
     expect(settle(() => simulate(p, [{ verb: 'acme.x', resource: 'r' }]).results[0])).toEqual(
       ok({ action: { verb: 'acme.x', resource: 'r' }, outcome: 'auto', t: 1, r: 0.8, budgetAfter: 20 }),
     );
@@ -165,7 +167,8 @@ describe('lintPolicy: exact findings', () => {
     expect(lintPolicy(r).filter((l) => l.code === 'no-step-up-band')).toStrictEqual([
       { level: 'info', code: 'no-step-up-band', message: 'theta2 ≥ 1: no action triggers a human step-up until the budget is exhausted' },
     ]);
-    const m = compilePolicy({ permissions: { stripe: ['refund', 'payout'] }, limits: { refund: '$100', payout: '$100' } });
+    const c = compilePolicy({ permissions: { stripe: ['refund', 'payout'] }, limits: { refund: '$100', payout: '$100' } });
+    const m = { ...c, riskPolicy: { ...c.riskPolicy, theta1: 1, theta2: 1 } }; // W7b: compilePolicy itself keeps the tiers when anything is irreversible
     expect(lintPolicy(m).filter((l) => l.code === 'no-step-up-band')).toStrictEqual([
       { level: 'warn', code: 'no-step-up-band', message: 'theta2 ≥ 1: no action triggers a human step-up until the budget is exhausted — including irreversible actions' },
     ]);

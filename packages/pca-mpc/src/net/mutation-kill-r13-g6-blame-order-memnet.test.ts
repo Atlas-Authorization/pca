@@ -52,11 +52,11 @@ describe('blame round under a forced message order (in-memory mesh)', () => {
       fail2(e, skip);
     };
     const run = (i: number) =>
-      runParty({ id: i, n: 3, Q: 2, input: V[i]!, mesh: net.mesh(i) as unknown as never, offline: 'trusted-dealer', sessionId: 'sess', ...(i === 0 ? { behavior: { kind: 'mac-lie', round: 'mul1' }, unsafeTestHooks: true } : {}) }).then(
+      runParty({ id: i, n: 3, Q: 2, input: V[i]!, mesh: net.mesh(i) as unknown as never, offline: 'trusted-dealer', insecureTrustedDealer: true, sessionId: 'sess', ...(i === 0 ? { behavior: { kind: 'mac-lie', round: 'mul1' }, unsafeTestHooks: true } : {}) }).then(
         (r: PartyResult) => ({ ok: true as const, r }),
         (e: unknown) => ({ ok: false as const, e }),
       );
-    const dealer = runDealer({ n: 3, Q: 2, mesh: net.mesh(3) as unknown as never, seed: 7n }).catch(() => undefined);
+    const dealer = runDealer({ insecureTrustedDealer: true, n: 3, Q: 2, mesh: net.mesh(3) as unknown as never, seed: 7n }).catch(() => undefined);
     const [, , o1, o2] = await Promise.all([dealer, run(0), run(1), run(2)]);
     expect(held21).toBeDefined();
     expect(held12).toBeDefined();

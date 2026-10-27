@@ -1,5 +1,7 @@
 # @atlasauth/pca-oprf
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 RFC 9497 oblivious pseudorandom functions (OPRF, VOPRF, POPRF on `ristretto255-SHA512`) plus two Proof-Carrying Authority use cases built on them:
 
 - **Private revocation checks**: ask whether a capability id is revoked without telling the revocation service which capability you mean.

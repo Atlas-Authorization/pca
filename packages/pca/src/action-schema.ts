@@ -96,7 +96,10 @@ export interface ActionVerbDecl {
   reversibility_by?: ReversibilityBy;
   mcp?: { tool: string };
   openapi?: { operationId: string };
-  /** Owned by later milestones (W-B / V9 / V14); validated here only as containers. */
+  /**
+   * Reserved extension members: signed with the schema and carried unchanged, checked only for their container type, and
+   * NOT read by any verification step (no check enforces what they say). A site must not rely on them for enforcement.
+   */
   harm?: Record<string, unknown>;
   world?: unknown[];
   effects?: Record<string, unknown>;
@@ -121,7 +124,7 @@ export interface ActionSchema {
   aud: string;
   version: string;
   units?: Record<string, { kind: string; currency?: string; exponent?: number }>;
-  /** Monitored state variables (V9 frames); a container here. */
+  /** Reserved extension member (state variables): signed and carried, checked only to be an array, not read by any check. */
   state?: unknown[];
   verbs: ActionVerbDecl[];
   sig: ActionSchemaSig;
@@ -523,6 +526,77 @@ export interface JsonSchemaLike {
   ['x-pca-sensitivity']?: Sensitivity;
   ['x-pca-unit']?: string;
   ['x-pca-accumulates-into']?: string[];
+  /** Local references (`#/...`) are resolved by the importers; anything else is flagged in `todo`. */
+  $ref?: string;
+  nullable?: boolean;
+  properties?: Record<string, JsonSchemaLike>;
+  required?: string[];
+  exclusiveMinimum?: number;
+  exclusiveMaximum?: number;
+  anyOf?: JsonSchemaLike[];
+  oneOf?: JsonSchemaLike[];
+  allOf?: JsonSchemaLike[];
+  const?: unknown;
+}
+
+/** Where the importers resolve `#/...` references and where they report what they could not represent. */
+interface ImportCtx {
+  root: unknown;
+  todo: string[];
+}
+const MAX_REF_DEPTH = 8;
+
+/** Follow a local `#/a/b` JSON pointer in `root`; undefined when absent, not local, or not an object. */
+function pointer(root: unknown, ref: string): unknown {
+  if (!ref.startsWith('#/')) return undefined;
+  let cur: unknown = root;
+  for (const raw of ref.slice(2).split('/')) {
+    const seg = raw.replace(/~1/g, '/').replace(/~0/g, '~');
+    if (cur === null || typeof cur !== 'object' || !Object.prototype.hasOwnProperty.call(cur, seg)) return undefined;
+    cur = (cur as Record<string, unknown>)[seg];
+  }
+  return cur !== null && typeof cur === 'object' ? cur : undefined;
+}
+
+/**
+ * Flatten what a parameter declaration cannot carry: follow local `$ref`s, merge `allOf`, and collapse `anyOf` / `oneOf`
+ * to its single non-null variant (or to the union of string constants). Whatever remains unrepresentable (a remote or
+ * cyclic reference, a real union) is flagged in `todo` and left as an empty schema, which the caller declares `string`
+ * (a placeholder that rejects every non-string value: the draft fails closed until the developer refines it).
+ */
+function flattenSchema(s: JsonSchemaLike | undefined, c: ImportCtx, where: string, depth = 0): JsonSchemaLike {
+  if (s === undefined || s === null || typeof s !== 'object') return {};
+  if (depth > MAX_REF_DEPTH) {
+    c.todo.push(`${where}: schema nesting or reference chain deeper than ${MAX_REF_DEPTH} (declared string; refine or drop)`);
+    return {};
+  }
+  let cur: JsonSchemaLike = s;
+  if (typeof s.$ref === 'string') {
+    const target = pointer(c.root, s.$ref);
+    if (target === undefined) {
+      c.todo.push(`${where}: reference '${s.$ref.slice(0, 120)}' is not a local reference that resolves (declared string; refine or drop)`);
+      return {};
+    }
+    const { $ref: _r, ...siblings } = s;
+    cur = { ...flattenSchema(target as JsonSchemaLike, c, where, depth + 1), ...siblings };
+  }
+  if (Array.isArray(cur.allOf)) {
+    const { allOf, ...rest } = cur;
+    cur = allOf.map((m) => flattenSchema(m, c, where, depth + 1)).reduce<JsonSchemaLike>((a, m) => ({ ...a, ...m, properties: { ...a.properties, ...m.properties }, required: [...(a.required ?? []), ...(m.required ?? [])] }), {});
+    cur = { ...cur, ...rest };
+  }
+  const alts = cur.anyOf ?? cur.oneOf;
+  if (Array.isArray(alts)) {
+    const { anyOf: _a, oneOf: _o, ...rest } = cur;
+    const live = alts.map((m) => flattenSchema(m, c, where, depth + 1)).filter((m) => !(m.type === 'null' || (Array.isArray(m.type) && m.type.every((x) => x === 'null'))));
+    if (live.length === 1) return { ...live[0]!, ...rest };
+    const consts = live.map((m) => (typeof m.const === 'string' ? [m.const] : Array.isArray(m.enum) && m.enum.every((x) => typeof x === 'string') ? (m.enum as string[]) : null));
+    if (live.length > 1 && consts.every((x) => x !== null)) return { ...rest, type: 'string', enum: [...new Set(consts.flat() as string[])] };
+    c.todo.push(`${where}: a union of ${live.length} schemas has no schema representation (declared string; refine or drop)`);
+    return rest;
+  }
+  if (cur.const !== undefined && cur.enum === undefined && typeof cur.const === 'string') cur = { ...cur, enum: [cur.const] };
+  return cur;
 }
 
 /**
@@ -530,7 +604,9 @@ export interface JsonSchemaLike {
  * `free`: the developer lowers it explicitly, and the wallet floor still applies). Unrepresentable shapes (objects,
  * numbers with fractions) become `string` placeholders flagged in `todo` so the developer must decide.
  */
-function declOfJsonSchema(name: string, s: JsonSchemaLike, required: boolean, todo: string[]): ActionParamDecl {
+function declOfJsonSchema(name: string, schema: JsonSchemaLike, required: boolean, c: ImportCtx): ActionParamDecl {
+  const todo = c.todo;
+  const s = flattenSchema(schema, c, `action.params.${name}`);
   const t = Array.isArray(s.type) ? s.type.find((x) => x !== 'null') : s.type;
   const base = {
     semantic: s['x-pca-semantic'] ?? 'unknown',
@@ -544,8 +620,8 @@ function declOfJsonSchema(name: string, s: JsonSchemaLike, required: boolean, to
     return {
       type: 'integer',
       ...base,
-      ...(Number.isSafeInteger(s.minimum) ? { min: s.minimum } : {}),
-      ...(Number.isSafeInteger(s.maximum) ? { max: s.maximum } : {}),
+      ...(Number.isSafeInteger(s.minimum) ? { min: s.minimum } : Number.isSafeInteger(s.exclusiveMinimum) ? { min: s.exclusiveMinimum! + 1 } : {}),
+      ...(Number.isSafeInteger(s.maximum) ? { max: s.maximum } : Number.isSafeInteger(s.exclusiveMaximum) ? { max: s.exclusiveMaximum! - 1 } : {}),
       ...(s['x-pca-unit'] ? { unit: s['x-pca-unit'] } : {}),
       ...(s['x-pca-accumulates-into'] ? { accumulates_into: s['x-pca-accumulates-into'] } : {}),
     };
@@ -554,7 +630,7 @@ function declOfJsonSchema(name: string, s: JsonSchemaLike, required: boolean, to
   if (t === 'string' && s.format === 'date') return { type: 'date', ...base };
   if (t === 'string') return { type: 'string', ...base, ...(enumStrings ? { values: enumStrings } : {}), ...(Number.isSafeInteger(s.maxLength) && s.maxLength! > 0 ? { max_len: s.maxLength } : {}) };
   if (t === 'array') {
-    const it = s.items ?? {};
+    const it = flattenSchema(s.items, c, `action.params.${name}[]`);
     const itEnum = Array.isArray(it.enum) && it.enum.every((x) => typeof x === 'string') ? (it.enum as string[]) : undefined;
     if (s.uniqueItems && itEnum) return { type: 'set', ...base, values: itEnum, ...(Number.isSafeInteger(s.minItems) ? { min_items: s.minItems } : {}), ...(Number.isSafeInteger(s.maxItems) ? { max_items: s.maxItems } : {}) };
     const itT = Array.isArray(it.type) ? it.type[0] : it.type;
@@ -585,15 +661,17 @@ export function draftSchemaFromMcpTools(tools: readonly McpToolLike[], site: { s
   const todo: string[] = [];
   const verbs: ActionVerbDecl[] = [];
   for (const t of tools) {
-    const props = t.inputSchema?.properties ?? {};
-    const req = new Set(t.inputSchema?.required ?? []);
+    const c: ImportCtx = { root: t.inputSchema, todo };
+    const input = flattenSchema(t.inputSchema as JsonSchemaLike | undefined, c, `${t.name}: inputSchema`);
+    const props = input.properties ?? {};
+    const req = new Set(input.required ?? []);
     const params: Record<string, ActionParamDecl> = {};
     for (const name of Object.keys(props).sort(compareUtf8)) {
       if (!/^[A-Za-z0-9_]{1,64}$/.test(name)) {
         todo.push(`${t.name}: parameter '${name}' is not a schema name ([A-Za-z0-9_]{1,64}); rename it`);
         continue;
       }
-      params['action.params.' + name] = declOfJsonSchema(name, props[name]!, req.has(name), todo);
+      params['action.params.' + name] = declOfJsonSchema(name, props[name]!, req.has(name), c);
     }
     const h = reversibilityFromMcpHints(t.annotations);
     const verb = (site.verbPrefix ?? '') + t.name;
@@ -605,32 +683,102 @@ export function draftSchemaFromMcpTools(tools: readonly McpToolLike[], site: { s
 }
 
 /** A minimal OpenAPI 3.1 document view (paths -> operations with JSON request bodies). */
+export interface OpenApiParameterLike {
+  $ref?: string;
+  name?: string;
+  in?: string;
+  required?: boolean;
+  description?: string;
+  schema?: JsonSchemaLike;
+}
+export interface OpenApiRequestBodyLike {
+  $ref?: string;
+  content?: Record<string, { schema?: JsonSchemaLike }>;
+}
 export interface OpenApiLike {
-  paths?: Record<string, Record<string, { operationId?: string; description?: string; requestBody?: { content?: Record<string, { schema?: { properties?: Record<string, JsonSchemaLike>; required?: string[] } }> }; 'x-pca-verb'?: string; 'x-pca-reversibility'?: SchemaReversibility; 'x-pca-kind'?: 'read' | 'write' }>>;
+  /** Operations by method; a path item's own `parameters` array applies to every operation under it. */
+  paths?: Record<string, Record<string, unknown>>;
+  /** Targets of local `#/components/...` references. */
+  components?: Record<string, unknown>;
+}
+interface OpenApiOperationLike {
+  operationId?: string;
+  description?: string;
+  parameters?: OpenApiParameterLike[];
+  requestBody?: OpenApiRequestBodyLike;
+  'x-pca-verb'?: string;
+  'x-pca-reversibility'?: SchemaReversibility;
+  'x-pca-kind'?: 'read' | 'write';
+}
+/** The JSON media type of a request body: `application/json` first, else any `application/*+json`. */
+function jsonBodySchema(b: OpenApiRequestBodyLike | undefined): JsonSchemaLike | undefined {
+  const content = b?.content;
+  if (content === undefined || content === null || typeof content !== 'object') return undefined;
+  const key = Object.keys(content).sort(compareUtf8).find((k) => k.toLowerCase() === 'application/json') ?? Object.keys(content).sort(compareUtf8).find((k) => /^application\/[^;]*\+json(;|$)/i.test(k));
+  return key === undefined ? undefined : content[key]?.schema;
 }
 
-/** Draft schema from OpenAPI: one verb per operation with an `operationId` (`x-pca-verb` names it, else the id). */
+/**
+ * Draft schema from OpenAPI: one verb per operation with an `operationId` (`x-pca-verb` names it, else the id). The
+ * parameters are the operation's path and query parameters (path-item parameters included, the operation's own winning)
+ * plus the properties of its JSON request body; local `$ref`s are followed. Header and cookie parameters are not action
+ * parameters and are flagged in `todo`, as is any name the two sources share (the body declaration is kept).
+ */
 export function draftSchemaFromOpenApi(doc: OpenApiLike, site: { site: string; aud: string; version: string }): DraftSchema {
   const todo: string[] = [];
   const verbs: ActionVerbDecl[] = [];
+  const c: ImportCtx = { root: doc, todo };
+  const deref = <T extends { $ref?: string }>(x: T | undefined): T | undefined => {
+    if (x === undefined || x === null || typeof x !== 'object') return undefined;
+    if (typeof x.$ref !== 'string') return x;
+    const t = pointer(doc, x.$ref) as T | undefined;
+    if (t === undefined) todo.push(`reference '${x.$ref.slice(0, 120)}' is not a local reference that resolves`);
+    return t;
+  };
+  const seen = new Set<string>();
   for (const path of Object.keys(doc.paths ?? {}).sort(compareUtf8)) {
     const ops = doc.paths![path]!;
+    const shared = Array.isArray(ops.parameters) ? (ops.parameters as OpenApiParameterLike[]) : [];
     for (const method of Object.keys(ops).sort(compareUtf8)) {
-      const op = ops[method]!;
-      if (!op || typeof op !== 'object' || !op.operationId) continue;
+      const op = ops[method] as OpenApiOperationLike | undefined;
+      if (!op || typeof op !== 'object' || Array.isArray(op) || !op.operationId) continue;
       const read = op['x-pca-kind'] ? op['x-pca-kind'] === 'read' : method.toLowerCase() === 'get' || method.toLowerCase() === 'head';
-      const sch = op.requestBody?.content?.['application/json']?.schema;
-      const props = sch?.properties ?? {};
-      const req = new Set(sch?.required ?? []);
+      const verb = op['x-pca-verb'] ?? op.operationId;
+      if (seen.has(verb)) todo.push(`${verb}: declared by more than one operation; give each a distinct x-pca-verb`);
+      seen.add(verb);
       const params: Record<string, ActionParamDecl> = {};
-      for (const name of Object.keys(props).sort(compareUtf8)) {
+      const addName = (name: string, sch: JsonSchemaLike, required: boolean, source: string) => {
         if (!/^[A-Za-z0-9_]{1,64}$/.test(name)) {
           todo.push(`${op.operationId}: parameter '${name}' is not a schema name; rename it`);
+          return;
+        }
+        const key = 'action.params.' + name;
+        if (params[key] !== undefined) {
+          todo.push(`${op.operationId}: '${name}' is declared by both the ${source} and another source; kept the first`);
+          return;
+        }
+        params[key] = declOfJsonSchema(name, sch, required, c);
+      };
+      // request body first (it wins a name clash), then the operation's own parameters over the path item's
+      const body = flattenSchema(jsonBodySchema(deref(op.requestBody)), c, `${op.operationId}: request body`);
+      const bprops = body.properties ?? {};
+      const breq = new Set(body.required ?? []);
+      for (const name of Object.keys(bprops).sort(compareUtf8)) addName(name, bprops[name]!, breq.has(name), 'request body');
+      const merged = new Map<string, OpenApiParameterLike>();
+      for (const raw of [...shared, ...(Array.isArray(op.parameters) ? op.parameters : [])]) {
+        const q = deref(raw);
+        if (!q || typeof q.name !== 'string' || typeof q.in !== 'string') continue;
+        merged.set(`${q.in}:${q.name}`, q);
+      }
+      for (const key of [...merged.keys()].sort(compareUtf8)) {
+        const q = merged.get(key)!;
+        if (q.in !== 'path' && q.in !== 'query') {
+          todo.push(`${op.operationId}: ${q.in} parameter '${q.name}' is not an action parameter (the schema sees path, query and body parameters only)`);
           continue;
         }
-        params['action.params.' + name] = declOfJsonSchema(name, props[name]!, req.has(name), todo);
+        const sch = { ...(q.schema ?? {}), ...(q.description && !(q.schema ?? {}).description ? { description: q.description } : {}) };
+        addName(q.name!, sch, q.in === 'path' || q.required === true, `${q.in} parameters`);
       }
-      const verb = op['x-pca-verb'] ?? op.operationId;
       const rev = op['x-pca-reversibility'] ?? (read ? 'reversible' : 'irreversible');
       if (!read && !op['x-pca-reversibility']) todo.push(`${verb}: reversibility (drafted irreversible)`);
       verbs.push({ verb, kind: read ? 'read' : 'write', params, reversibility: rev, openapi: { operationId: op.operationId }, ...(op.description ? { description: op.description.slice(0, 1024) } : {}) });

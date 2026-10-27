@@ -369,3 +369,42 @@ describe('canonical-spelling gate (re-encoded ID-JAG strings are rejected)', () 
     }
   });
 });
+
+describe('strictDraft (draft-04 section 3.1 shape)', () => {
+  const mint = async (payload: Record<string, unknown>, typ?: string): Promise<string> => {
+    const now = Math.floor(Date.now() / 1000);
+    return new SignJWT({ iss: ISSUER, sub: HUMAN, aud: AUDIENCE, iat: now, exp: now + 300, jti: 'j1', client_id: 'res-app', act: { sub: AGENT_ID }, scope: 'a', ...payload })
+      .setProtectedHeader({ alg: 'EdDSA', kid: KID, ...(typ !== undefined ? { typ } : {}) }).sign(signingKey);
+  };
+  const settle = (p: Promise<IdJagGrant>) => p.then(() => 'ok', (e: IdJagVerificationError) => `${e.code}: ${e.message}`);
+  const base = { issuer: ISSUER, audience: AUDIENCE, key: undefined as unknown as KeyLike };
+  const o = (extra: object = {}) => ({ ...base, key: publicKey, strictDraft: true, consumeJti: () => true, ...extra });
+  const TYP = 'oauth-id-jag+jwt';
+
+  it('accepts a conforming grant and consumes the jti once', async () => {
+    const seen: string[] = [];
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ clientId: 'res-app', consumeJti: (j: string) => { seen.push(j); return true; } })))).toBe('ok');
+    expect(seen).toEqual(['j1']);
+  });
+  it('refuses without consumeJti (config)', async () => {
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ consumeJti: undefined })))).toBe('config: verifyIdJag: strictDraft requires opts.consumeJti (single-use store)');
+  });
+  it('refuses wrong or missing typ', async () => {
+    expect(await settle(verifyIdJag(await mint({}), o()))).toBe('grant: ID-JAG header typ must be "oauth-id-jag+jwt"');
+    expect(await settle(verifyIdJag(await mint({}, 'JWT'), o()))).toBe('grant: ID-JAG header typ must be "oauth-id-jag+jwt"');
+  });
+  it('refuses missing or mismatched client_id', async () => {
+    expect(await settle(verifyIdJag(await mint({ client_id: undefined }, TYP), o()))).toBe('grant: ID-JAG is missing "client_id"');
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ clientId: 'other' })))).toBe('grant: ID-JAG client_id does not match the expected client');
+  });
+  it('refuses a missing jti, a replayed jti and a failing store', async () => {
+    expect(await settle(verifyIdJag(await mint({ jti: undefined }, TYP), o()))).toBe('grant: ID-JAG is missing "jti"');
+    const m = 'grant: ID-JAG jti was already used or the single-use store failed';
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ consumeJti: () => false })))).toBe(m);
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ consumeJti: () => { throw new Error('db'); } })))).toBe(m);
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ consumeJti: () => 'yes' as unknown as boolean })))).toBe(m);
+  });
+  it('default (non-strict) behaviour is unchanged: no typ/client_id/jti needed', async () => {
+    expect(await settle(verifyIdJag(await mint({ client_id: undefined, jti: undefined }), { issuer: ISSUER, audience: AUDIENCE, key: publicKey }))).toBe('ok');
+  });
+});

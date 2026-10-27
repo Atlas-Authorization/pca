@@ -1,12 +1,13 @@
 /**
  * r13 mutation kills for nl.ts: the exact grounding prompt, parseNLPolicy on hostile model output (null, non-object
  * members, non-string actions and limits, trailing prose after a leading brace), policyFromNL lints with an injected
- * catalog, and agentFromNL's error message and option pass-through (catalog, aud, holder, now).
+ * catalog, and agentFromApprovedNL's option pass-through (catalog, aud, holder, now).
  */
 import { describe, expect, it } from 'vitest';
 import { buildCatalog, defineAction, DEFAULT_CATALOG } from './catalog';
 import { generateKeyPair } from './keys';
-import { agentFromNL, nlPrompt, parseNLPolicy, policyFromNL } from './nl';
+import { b64u } from './hash';
+import { agentFromApprovedNL, approveDraft, draftPolicyFromNL, nlPrompt, parseNLPolicy, policyFromNL } from './nl';
 
 /** Run f, capturing its value or its error (name + message), so a mutant that throws fails an assertion, not an error. */
 const settle = <T>(f: () => T) => {
@@ -100,19 +101,18 @@ describe('policyFromNL', () => {
   });
 });
 
-describe('agentFromNL', () => {
+describe('agentFromApprovedNL', () => {
   const principal = generateKeyPair();
-  it('names the unknown verbs, or none, when nothing is grantable', async () => {
-    await expect(agentFromNL({ instruction: 'x', goal: 'g', principal, catalog: CAT, complete: () => '{"permissions":{"bank":["fly","run"]}}' })).rejects.toThrow(
-      new Error('agentFromNL: the instruction yielded no grantable permissions (unknown verbs: bank.fly, bank.run)'),
-    );
-    await expect(agentFromNL({ instruction: 'x', goal: 'g', principal, catalog: CAT, complete: () => '{}' })).rejects.toThrow(
-      new Error('agentFromNL: the instruction yielded no grantable permissions (unknown verbs: none)'),
-    );
-  });
+  const reviewer = generateKeyPair();
+  const pinned = [b64u(reviewer.publicKey)];
+  const mint = async (extra: { aud?: string; holder?: ReturnType<typeof generateKeyPair>; now?: number }) => {
+    const draft = await draftPolicyFromNL({ instruction: 'x', catalog: CAT, complete: () => '{"permissions":{"bank":["peek"]}}' });
+    const approval = approveDraft(draft, reviewer.secretKey, { now: extra.now });
+    return agentFromApprovedNL({ draft, approval, reviewers: pinned, catalog: CAT, goal: draft.instruction, principal, ...extra }).agent;
+  };
   it('passes catalog, aud, holder and now through to the agent', async () => {
     const holder = generateKeyPair();
-    const { agent: a } = await agentFromNL({ instruction: 'x', goal: 'g', principal, catalog: CAT, aud: 'rs.example', holder, now: 12345, complete: () => '{"permissions":{"bank":["peek"]}}' });
+    const a = await mint({ aud: 'rs.example', holder, now: 12345 });
     expect(a.holder).toBe(holder);
     expect(a.budget.tau).toBe(12345);
     expect(settle(() => a.policy.actions.map((s) => s.verb))).toEqual({ ok: true, value: ['bank.peek'] });
@@ -120,7 +120,7 @@ describe('agentFromNL', () => {
     expect(() => a.act('bank.peek', '/r')).not.toThrow();
   });
   it('without aud, act needs one', async () => {
-    const { agent: a } = await agentFromNL({ instruction: 'x', goal: 'g', principal, catalog: CAT, complete: () => '{"permissions":{"bank":["peek"]}}' });
+    const a = await mint({});
     expect(() => a.act('bank.peek', '/r')).toThrow('act: aud');
   });
 });

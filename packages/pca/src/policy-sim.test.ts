@@ -47,10 +47,11 @@ describe('lintPolicy', () => {
     expect(codes).toContain('broad-resource'); // files.delete irreversible, resource '*'
   });
 
-  it('warns that irreversible actions auto-admit when theta2 ≥ 1 (dollars model)', () => {
+  it('keeps the human step-up band for an irreversible action under a $ limit (W7b); warns only when a caller forces theta2 >= 1', () => {
     const policy = compilePolicy({ permissions: { stripe: ['payout'] }, limits: { payout: '$50' } });
-    const l = lintPolicy(policy).find((x) => x.code === 'no-step-up-band');
-    expect(l?.level).toBe('warn'); // payout is irreversible
+    expect(lintPolicy(policy).find((x) => x.code === 'no-step-up-band')).toBeUndefined();
+    const forced = compilePolicy({ permissions: { stripe: ['payout'] }, limits: { payout: '$50' }, riskPolicy: { theta1: 1, theta2: 1 } });
+    expect(lintPolicy(forced).find((x) => x.code === 'no-step-up-band')?.level).toBe('warn');
   });
 
   it('is quiet on a tight, well-bounded policy', () => {

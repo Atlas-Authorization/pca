@@ -1,5 +1,7 @@
 # @atlasauth/pca-harness
 
+> Maturity: **hardened** (experimental: hardened, awaiting audit). It awaits an independent review and a hardware attestation of the harness build (today the measurement is self-asserted by the signer). It is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A reference orchestration harness for Proof-Carrying Authority. It wraps an untrusted model or tool (the "oracle") and enforces the PCA invariants around it, so the model never holds a signing key. The oracle only proposes an action; the harness checks it against the principal-authorized plan, folds input taint into the risk score, meters the trust budget, and only then signs a PCActn. A compromised or prompt-injected oracle therefore cannot produce an out-of-plan action.
 
 The trusted piece is this small, auditable harness rather than the opaque model, and `harnessMeasurement()` gives a digest of the harness's policy surface that a resource server can allowlist.
@@ -57,9 +59,26 @@ const attestation = createHarnessAttestationVerifier({ measurements: [harness.ha
 - `createHarnessAttestationVerifier({ measurements, required?, expectedModelId? })`: a fail-closed attestation hook that admits only allowlisted harness measurements.
 - `computeHarnessMeasurement`, `ENFORCED_CHECKS`, `HARNESS_VERSION`, `HARNESS_MODEL_ID`.
 
+## Where it fits
+
+`@atlasauth/pca-agent` is the general agent-side wrapper. This package is the narrower mediator for deployments where the model is a black-box API: the model only proposes, and the harness checks the plan, folds taint into risk, meters the budget and signs. Pass `createHarnessAttestationVerifier` as `hooks.attestation` to `verifyPCActn` or `requirePCA` so a resource server accepts only allowlisted harness builds.
+
 ## Status
 
-Experimental prototype. An `over_budget` result means the action needs a human step-up; the harness does not run that ceremony. The harness measurement is self-asserted by the signer and is not hardware-attested: trust rests on the operator choosing to allowlist it, and on the leaf signature verifying. The cryptography is unaudited.
+Hardened reference mediator, awaiting audit. Every malformed input fails closed with a typed refusal and nothing is signed:
+
+| Input | Outcome |
+|---|---|
+| oracle throws or rejects | `bad_candidate`, detail `oracle failed: <message>` |
+| candidate null, or missing `nodeId`, `verb` or `resource` | `bad_candidate` |
+| `inputs` present but not an array | `bad_candidate` |
+| an input that is not exactly `{ ref: string, provenance: 'trusted' }` (null, a typo, no ref) | counted as untrusted lineage (taint 1), never as trusted |
+| node id not in the committed plan, or verb or resource differs from the node | `out_of_plan` |
+| params do not match the node's committed digest | `bad_candidate` |
+| budget cannot cover the risk cost of a machine-only action | `over_budget`, step-up to a human required |
+| empty plan, duplicate node ids, a secret that is not 32 bytes, a non-finite or negative budget, an empty audience | the constructor throws |
+
+An `over_budget` result means the action needs a human step-up; the harness does not run that ceremony. The harness measurement is self-asserted by the signer and is not hardware-attested: trust rests on the operator choosing to allowlist it, and on the leaf signature verifying. The cryptography is unaudited.
 
 ## License
 

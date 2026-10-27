@@ -81,7 +81,7 @@ const CASES: [string, () => { build: (o: never) => unknown; opts: unknown; use: 
   ['createRevocationChecker', () => ({ build: createRevocationChecker, opts: { proofFor: () => undefined, ids: () => ['a'], pqPins: { a: 'b' }, guardianPublic: 'g', root: () => 'r' }, use: async (v) => (v as (c: never) => unknown)(CTX) })],
   ['createThresholdVerifier', () => ({ build: createThresholdVerifier, opts: { signerSet: [{ role: 'agent', key: 'k' }, { role: 'human', key: 'h' }], t: 2 }, use: async (v) => (v as (c: never) => unknown)(CTX) })],
   ['createMaaKeyTrust', () => ({ build: createMaaKeyTrust, opts: { policy: { trustedIssuers: ['https://x.attest.azure.net'], pins: ['aa'] }, store: new NullStore(), fetch: async () => { throw new Error('offline'); } }, use: (v) => (v as { getTrustAnchors: (i: string, o: unknown) => Promise<unknown> }).getTrustAnchors('https://x.attest.azure.net', { nowMs: 1 }) })],
-  ['requirePCA', () => ({ build: requirePCA, opts: { audience: 'aud', resolveGrant: async () => null, require: ['attestation'], realm: 'r', budgetStore: new NullStore() }, use: (v) => (v as (r: never) => Promise<unknown>)({ method: 'POST', url: '/x', headers: { 'pca-action': 'e30' } } as never) })],
+  ['requirePCA', () => ({ build: requirePCA, opts: { audience: 'aud', resolveGrant: async () => null, require: ['attestation'], realm: 'r', budgetStore: new NullStore(), insecureAllowUnboundOperation: true, multiInstance: false }, use: (v) => (v as (r: never) => Promise<unknown>)({ method: 'POST', url: '/x', headers: { 'pca-action': 'e30' } } as never) })],
 ];
 
 describe('verifier factories never read the caller configuration after construction', () => {

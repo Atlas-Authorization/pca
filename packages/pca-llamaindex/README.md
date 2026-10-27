@@ -1,5 +1,7 @@
 # @atlasauth/pca-llamaindex
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 LlamaIndex.TS adapter for Proof-Carrying Authority (PCA). `withPCA` wraps a `FunctionTool` so every call first builds a signed PCActn (failing fast if the agent's own grant does not permit it), hands you the proof to forward to the resource server, and then runs the original tool.
 
 ## Install

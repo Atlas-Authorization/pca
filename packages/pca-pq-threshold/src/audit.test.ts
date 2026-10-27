@@ -9,20 +9,19 @@ import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import {
   DEFAULT_RISK_POLICY,
-  type FrostParticipantShare,
   type PCActn,
   type PlanNode,
   attenuate,
   b64u,
   buildPCActn,
   encodeKey,
-  frostTrustedDealerKeygen,
   generateKeyPair,
   mintGrant,
   mlDsa65Keygen,
   mlDsa65Sign,
   thresholdMessage,
 } from '@atlasauth/pca';
+import { type FrostParticipantShare, frostTrustedDealerKeygen } from '@atlasauth/pca/ext/frost';
 import {
   MAX_PQ_SIGNER_ENTRIES,
   createHybridThresholdVerifier,

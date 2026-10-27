@@ -64,8 +64,6 @@ import {
   type CapabilityChain,
   type CheckStatus,
   type EnforcementGates,
-  type EnvelopeIntent,
-  type IntentPolicy,
   type KeyPair,
   type PCActn,
   type PCActnBody,
@@ -75,8 +73,6 @@ import {
   b64u,
   buildPCActn,
   delegate,
-  intentGoal,
-  intentMapDigest,
   mintGrant,
   mintRoot,
   notEnforced,
@@ -89,6 +85,12 @@ import {
   utf8,
   verifyPCActnCore,
 } from '@atlasauth/pca';
+import {
+  type EnvelopeIntent,
+  type IntentPolicy,
+  intentGoal,
+  intentMapDigest,
+} from '@atlasauth/pca/ext/intent';
 
 /** Semver of the vector set. Bump on ANY change to the bytes of `vectors.json`. */
 export const CONFORMANCE_VERSION = '1.2.0';
@@ -104,7 +106,7 @@ export const CHECK_ORDER = [
   'plan_inclusion',
   'plan_root_authorized',
   'leaf_signature',
-  'counter',
+  'counter_format',
   // Intent Layer M2: reported only when the PCActn carries `intent` or the verifier's intent policy is active.
   'intent',
   'taint_gate',
@@ -341,7 +343,7 @@ const BASE_CHECKS: Record<string, CheckStatus> = {
   plan_inclusion: 'pass',
   plan_root_authorized: 'not-enforced',
   leaf_signature: 'pass',
-  counter: 'pass',
+  counter_format: 'pass',
   taint_gate: 'not-enforced',
   attestation: 'not-enforced',
   threshold: 'not-enforced',
@@ -450,7 +452,7 @@ export function generateVectorSet(): ConformanceVectorSet {
       pcactn: resign({ ...VALID, counter: -1 }),
       aud: AUD,
       verifyOptions: base(),
-      expect: failingBase('counter'),
+      expect: failingBase('counter_format'),
     },
     {
       id: 'intent_bound',

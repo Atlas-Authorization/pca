@@ -1,5 +1,7 @@
 # @atlasauth/pca-conformance
 
+> Maturity: **stable** (stable core). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Canonical Proof-Carrying Authority (PCA) conformance vectors and a differential harness, so every PCA verifier implementation can show it agrees on accept or reject for the same inputs. The vectors are generated deterministically (fixed keys, fixed clock) and each one carries the full expected per-check outcome, not just allow or deny: the first failed check and the status of every check in evaluation order.
 
 The harness is language-neutral. A verifier under test is a plain function from a PCActn and its verify input to a verdict, so a Go, Rust, Python or other runner can mirror it over the same serialized vector set.

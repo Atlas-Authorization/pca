@@ -24,7 +24,7 @@ Deterministic serialization of a JSON value:
 
 ### Predicate string order
 
-The `lt`/`lte`/`gt`/`gte` predicate operators order strings by the byte-wise order of their UTF-8 encoding (Unicode code point order), the same order used for object keys above. No normalisation, case folding or locale applies, and a string containing a lone surrogate is unordered (the condition is false). Shared vectors: `packages/pca-conformance/predicate-string-order.json`.
+The `lt`/`lte`/`gt`/`gte` predicate operators order strings by the byte-wise order of their UTF-8 encoding (Unicode code point order), the same order used for object keys above. No normalisation, case folding or locale applies, and a string containing a lone surrogate is unordered (the condition is false). Shared vectors: [`predicate-string-order.json`](https://github.com/Atlas-Authorization/pca/blob/main/packages/pca-conformance/predicate-string-order.json) in the conformance package.
 
 ### Hash
 
@@ -174,7 +174,7 @@ The leaf `sig` (and `pq_sig` for a hybrid leaf) signs exactly these 50 bytes; th
 
 ### Core checks
 
-`verifyPCActnCore` evaluates, in order: `wire` (the structural and lexical rules above; a failure is terminal and nothing else is evaluated); `version`; `audience`; `validity`; `cap_chain` (root equals grant by `capHash`, then chain rules); `grant_ref_bound` (the signed `grant_ref` must be a non-empty string byte-equal to `cap_chain[0].id`, the root capability's id; compared exactly, fails closed on an empty chain); `plan_inclusion`; `leaf_signature`; `counter` (a non-negative integer; strict monotonicity versus stored state is the resource server's job). `plan_root_authorized`, `taint_gate`, `attestation`, `threshold`, `revocation`, `zk_compliance` and `bond` report `not-enforced` unless a hook or the layer above supplies them. `allow` is true iff no check is `fail`.
+`verifyPCActnCore` evaluates, in order: `wire` (the structural and lexical rules above; a failure is terminal and nothing else is evaluated); `version`; `audience`; `validity`; `cap_chain` (root equals grant by `capHash`, then chain rules); `grant_ref_bound` (the signed `grant_ref` must be a non-empty string byte-equal to `cap_chain[0].id`, the root capability's id; compared exactly, fails closed on an empty chain); `plan_inclusion`; `leaf_signature`; `counter_format` (a format check only: a non-negative integer. A `counter_format: pass` from the core verifier does **not** mean the action was not replayed; strict monotonicity against stored state is the `replay` check of the stateful layer, such as `guardPCActnReplay` or `requirePCA` with a store). `plan_root_authorized`, `threshold`, `revocation` and `bond` report `not-enforced` unless a hook or the layer above supplies them. `taint_gate`, `freshness` and `attestation` become real, fail-closed checks when the verifier passes the matching `enforce` gate (`enforce.taint`, `enforce.freshness`, `enforce.attestation`) or a hook; otherwise they report `not-enforced`. A PCActn that carries `zk_compliance` fails that check unless a ZK hook verifies it. `allow` is true iff no check is `fail`, so a caller that needs a check must also require it to be `pass` (for example `require` in `verifyPCActn`, or `requirePCA`'s default list).
 
 ## Signature suites
 
@@ -199,7 +199,15 @@ FN-DSA is a pure suite (no hybrid is defined). It is usable on capability hops (
 
 Revocation epochs, liveness beacons, tree heads, witness cosignatures, legacy witnessed heads, bond settlements, safety certificates, state attestations, judge verdicts, software attestations and quorum shares all accept every suite in the table above through one signer-options type, `SignerSuiteOpts` (`{ alg, mlDsa | mlDsa87 | slhDsa | slhDsa256s | fnDsa512 | fnDsa1024 | lessCat1 }`; FN-DSA and LESS key material also carry a 32-byte `signSeed`). The wire format is the one described above and does not change per surface: a non-default suite adds `alg` and `pq_pk` to the signed body (so neither can be swapped or stripped) and `sig`, plus `pq_sig` for a hybrid, outside it. The default `ed25519` bytes are unchanged. The verifier takes the PQ key from its own pin for the named identity (`pqPins`, built with `signPqBinding` / `pqPinFor`), never from the artifact: an artifact whose `pq_pk` is not the pin, or any non-ed25519 artifact with no pin, is refused unless the verifier sets `allowUnboundPq`. A quorum share's key is the `pq_pk` registered for its role in the signer set, which may be any suite's key.
 
-The LESS signature is variable length (its last byte is the number of opened seed-tree leaves), so its length is checked as a range on a 16-byte grid rather than as one exact size. LESS is a NIST additional-signature Round 2 candidate, not a standard, and the suites are implemented by the TypeScript reference only: the other verifiers reject them as an unknown `alg`. They are not part of the conformance vectors.
+The LESS signature is variable length (its last byte is the number of opened seed-tree leaves), so its length is checked as a range on a 16-byte grid rather than as one exact size. LESS is a NIST additional-signature Round 2 candidate, not a standard.
+
+Not every verifier implements every suite. Every verifier knows all fourteen suite names and refuses a suite it cannot run with a reason containing `unsupported_suite` (fail closed, never a downgrade, never an "unknown `alg`" error). Support for the less common suites:
+
+- **FN-DSA** (`fn-dsa-512`, `fn-dsa-1024`): the TypeScript reference (with `@atlasauth/pca-fndsa-wasm` loaded) and the Rust verifier. Go, Python, Ruby, PHP, .NET, Java, Kotlin and Swift refuse it.
+- **LESS** (`less-cat1`, `hybrid-ed25519-less-cat1`): the TypeScript reference (with the optional `@atlasauth/pca-less-wasm`); Go when built with `-tags less` and cgo; Rust with the `less` cargo feature; Python, Ruby, PHP and .NET when the shared `libatlas_less` library is found; Java and Kotlin when that library is found and the runtime is Java 22 or later. Swift refuses it.
+- **ML-DSA and SLH-DSA**: every verifier, with runtime conditions in a few: Swift needs CryptoKit's ML-DSA (Apple OS 26 or later, or the Linux build) and does not implement SLH-DSA; Python, Ruby and PHP need OpenSSL 3.5 or later (Python can also use `dilithium-py` for ML-DSA).
+
+Each verifier reports what it can verify in its current runtime through a capability manifest, and the full per-language matrix ships with the conformance suite. FN-DSA and LESS have their own vector files (`fndsa-vectors.json`, `less-vectors.json`) rather than entries in `vectors.json`.
 
 ## Threshold signature (multi-signature form)
 

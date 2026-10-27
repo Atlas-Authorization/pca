@@ -18,7 +18,7 @@ import {
   type JWTVerifyGetKey,
   type KeyLike,
 } from 'jose';
-import { x509ValidAt } from '@atlasauth/pca';
+import { x509ValidAt } from '@atlasauth/pca/ext/attestation';
 import { assertCanonicalCompactJws } from '@atlasauth/pca';
 // Integrate with the REAL core identity primitives — the holder is an Ed25519 public key, encoded
 // and validated exactly as the core does it.
@@ -67,7 +67,9 @@ export type SpiffeErrorCode =
   | 'chain_path_len'
   | 'chain_expired'
   | 'chain_untrusted_root'
-  | 'chain_too_long';
+  | 'chain_too_long'
+  | 'trust_bundle_unavailable'
+  | 'trust_bundle_invalid';
 
 /** A validation/parse failure with a stable `code`. */
 export class SpiffeError extends Error {
@@ -589,3 +591,5 @@ export function svidToHolder(svid: JwtSvid | X509Svid, holderKey?: string | Uint
 export function holderToSpiffeId(holder: SpiffeHolder): string {
   return parseSpiffeId(holder.spiffeId).id;
 }
+
+export { createTrustBundleSource, type TrustBundle, type TrustBundleSource, type TrustBundleSourceOptions } from './bundle';

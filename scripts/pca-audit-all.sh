@@ -13,7 +13,8 @@
 #                                equivalent mutant names exactly ONE site (line text + occurrence) that still exists
 #   2c unsafe trusted-root scan    no template/example/doc/README/sample/playground takes the trusted root from the request or cap_chain[0] (R5-B1)
 #   2d PQ pinning scan             every PQ verification routes through the pinned choke point (R3-01, widened R5-B2)
-#   3  threat-model traceability  every T-001..T-051 attack and G-xx guarantee maps to an existing test
+#   3  threat-model traceability  every T-001..T-051 attack and G-xx guarantee and C-1..C-11 security-contract invariant maps to an existing test
+#   3b retired statements      no public doc / README / shipped comment repeats a statement the 0.4.2 review found stale
 #   4  eslint-plugin-security     any finding not triaged in tools/pca-audit/static/triage.json fails
 #   5  supply chain               CycloneDX SBOM per published package, lockfile integrity, install-script scan
 #   6  timing harness self-check  the leaky positive control must be flagged by the dudect-style harness
@@ -51,6 +52,7 @@ step "2b mutation-equivalents ledgers"   bash -c "node tools/pca-audit/check-equ
 step "2c unsafe trusted-root scan"       bash -c "node scripts/check-unsafe-trusted-root.mjs --self-test && node scripts/check-unsafe-trusted-root.mjs"
 step "2d PQ pinning scan"               bash -c "node scripts/check-pq-pinning.mjs --self-test && node scripts/check-pq-pinning.mjs"
 step "3 threat-model traceability"       node scripts/check-pca-traceability.mjs
+step "3b retired public statements"      node scripts/check-pca-stale-docs.mjs --self-test
 step "4 eslint-plugin-security triage"   node tools/pca-audit/static/check-eslint.mjs
 step "5 supply chain (SBOM, lock, scripts)" bash -c "node tools/pca-audit/supply/sbom.mjs --out '$OUT/sbom' && node tools/pca-audit/supply/check.mjs '$OUT/sbom/summary.json'"
 step "5b playground bundle fresh"      bash tools/pca-playground/check-fresh.sh

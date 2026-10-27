@@ -1,38 +1,39 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RISK_POLICY,
-  INTENT_ANCHOR_LOG,
-  TransparencyLedger,
-  intentAnchorCommit,
-  signTreeHead,
-  verifyIntentAnchor,
   b64u,
   buildPCActn,
-  decideIntentBinding,
   encodeMlDsaPublicKey,
+  mintGrant,
+  mlDsa65Keygen,
+  publicKeyOf,
+  sha256,
+  signPCActn,
+  utf8,
+  verifyPCActnCore,
+  type PCActn,
+} from './index';
+import {
+  INTENT_ANCHOR_LOG,
+  intentAnchorCommit,
+  verifyIntentAnchor,
+  decideIntentBinding,
   intentGoal,
   intentGoalCommit,
   intentMapDigest,
   intentRef,
-  mintGrant,
-  mlDsa65Keygen,
   parseIntentGoal,
-  publicKeyOf,
-  sha256,
   signIntentMapAttestation,
   signIntentObservation,
   signIntentStatement,
-  signPCActn,
-  utf8,
   validateIntentWire,
   verifyIntentMapAttestation,
   verifyIntentObservation,
   verifyIntentStatement,
-  verifyPCActnCore,
   type EnvelopeIntent,
   type IntentMapLike,
-  type PCActn,
-} from './index';
+} from './ext/intent';
+import { TransparencyLedger, signTreeHead } from './ext/ledger';
 
 const key = (l: string) => sha256(utf8('intent-test/' + l));
 const PRINCIPAL = key('principal');

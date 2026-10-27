@@ -528,6 +528,9 @@ export const DEFAULT_NUM_RUNS = 1000;
 export function checkInvariants(opts: CheckInvariantsOptions = {}): InvariantResult[] {
   const numRuns = opts.numRuns ?? DEFAULT_NUM_RUNS;
   const seed = opts.seed ?? DEFAULT_SEED;
+  // A check that runs zero (or NaN) cases passes vacuously: refuse instead of reporting "ok".
+  if (!Number.isSafeInteger(numRuns) || numRuns < 1) throw new RangeError('checkInvariants: numRuns must be a positive integer');
+  if (!Number.isSafeInteger(seed)) throw new RangeError('checkInvariants: seed must be an integer');
   const results: InvariantResult[] = [];
   for (const inv of INVARIANTS) {
     try {

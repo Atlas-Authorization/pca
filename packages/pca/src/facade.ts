@@ -142,6 +142,12 @@ export interface CompiledPolicy {
   limits: Record<string, ParsedLimit>;
   /** The RAW limit input as given (keys may be bare action names or FQ verbs); lets the linter flag unmatched keys. */
   inputLimits: Limits;
+  /**
+   * W5: limits this offline compiler can only APPROXIMATE. A `$N/period` limit becomes a per-call ceiling of N plus a grant
+   * lifetime of one period; it is NOT a renewing per-window cap. Use `@atlasauth/pca-goal` (`liftLegacy` + the proved
+   * compiler) for an exact `period` bound. Empty when every limit is exact.
+   */
+  approximations: string[];
 }
 
 /** Conservative fallback for a verb not in the catalog: treat as irreversible, high blast radius. */
@@ -202,6 +208,10 @@ export function compilePolicy(opts: {
   const predicates: Predicate[] = actions.map((s) => {
     const where: NonNullable<Predicate['where']> = [];
     const lim = limitFor(s);
+    // W6: a money limit on a verb with no amount field would compile to NO ceiling, silently unbounded: refuse instead.
+    if (lim && lim.unit === 'usd' && !s.amountField) {
+      throw new Error(`compilePolicy: '$' limit on '${s.verb}' but the catalog gives that verb no amount field, so the limit could not be enforced`);
+    }
     if (lim && lim.unit === 'usd' && s.amountField) {
       where.push({ field: `action.params.${s.amountField}`, op: 'lte', value: lim.amount });
       where.push({ field: `action.params.${s.amountField}`, op: 'gte', value: 0 });
@@ -221,10 +231,8 @@ export function compilePolicy(opts: {
   if (periods.length) caveats.push({ type: 'expires', at: now + Math.min(...periods) });
 
   const countLimits = Object.values(limits).filter((l) => l.unit === 'count' && l.periodMs);
-  if (countLimits.length === 1) {
-    const cl = countLimits[0]!;
-    caveats.push({ type: 'rate', max: cl.amount, per_secs: Math.max(1, Math.round(cl.periodMs! / 1000)) });
-  }
+  // W7a: one rate caveat per count limit (caveats are ANDed), so adding a second limit can only narrow, never drop the first.
+  for (const cl of countLimits) caveats.push({ type: 'rate', max: cl.amount, per_secs: Math.max(1, Math.round(cl.periodMs! / 1000)) });
 
   // Budget model.
   const dollarLimits = Object.values(limits).filter((l) => l.unit === 'usd');
@@ -233,6 +241,7 @@ export function compilePolicy(opts: {
     : opts.budgetModel === 'risk' ? 'risk'
     : dollarLimits.length > 0 ? 'dollars' : 'risk';
 
+  const hasIrreversible = actions.some((s) => s.reversibility === 'irreversible');
   let riskPolicy: RiskPolicy;
   if (model === 'dollars' && dollarLimits.length > 0) {
     // "spend = risk" exact (mirrors mandateRiskPolicy): γ=1, κ = largest per-call cap, bMax = Σ caps.
@@ -240,8 +249,10 @@ export function compilePolicy(opts: {
     const bMax = dollarLimits.reduce((a, l) => a + l.amount, 0);
     riskPolicy = {
       weights: { alpha: 0, beta: 0, gamma: 1, delta: 0, epsilon: 0, zeta: 0 },
-      theta1: 1, // within-cap actions auto-approve (over-cap is denied by the ceiling predicate)
-      theta2: 1,
+      // W7b: within-cap actions auto-approve ONLY when nothing granted is irreversible; otherwise the default human
+      // co-sign tiers stay, so adding a `$` limit can never remove a step-up the risk model required.
+      theta1: hasIrreversible ? DEFAULT_RISK_POLICY.theta1 : 1,
+      theta2: hasIrreversible ? DEFAULT_RISK_POLICY.theta2 : 1,
       kappa: kappa > 0 ? kappa : 1,
       lambda: 0,
       rho: DEFAULT_RISK_POLICY.rho,
@@ -256,7 +267,9 @@ export function compilePolicy(opts: {
   const bad = validateRiskPolicy(riskPolicy);
   if (bad) throw new Error(`compilePolicy: derived risk policy invalid: ${bad}`);
 
-  return { predicates, caveats, riskPolicy, actions, budgetModel: model, limits, inputLimits: { ...rawLimits } };
+  const approximations = Object.entries(limits).filter(([, l]) => l.unit === 'usd' && l.periodMs !== undefined)
+    .map(([v, l]) => `${v}: $${l.amount}/period is a per-call ceiling plus a one-period grant lifetime, not a renewing window cap`);
+  return { predicates, caveats, riskPolicy, actions, budgetModel: model, limits, inputLimits: { ...rawLimits }, approximations };
 }
 
 // ---- the agent handle -----------------------------------------------------------------------------

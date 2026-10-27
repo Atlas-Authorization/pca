@@ -2,7 +2,7 @@
 
 See the full release notes in [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
 
-## 0.4.2 (2026-10-25)
+## Unreleased (0.4.2)
 
 Security (0.4.2, r13 mutation review): `verifyAttestation` and `createAttestationVerifier` accepted an attestation when the verifier clock was not a finite number (`nowMs` NaN / Infinity / a string, or an `opts.now` hook returning one): every validity-window and nonce-age comparison came out false, which read as "within the window" and "fresh" (fail open). A non-finite clock is now refused (`verifier clock is not a finite time (fail closed)`). The verified-core twin already refused it.
 

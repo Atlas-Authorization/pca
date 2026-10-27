@@ -19,7 +19,7 @@ import {
   type McpToolLike,
   type SchemaReversibility,
   type UnsignedActionSchema,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 
 /** Anything that lists tools like an MCP client / server (`tools/list`), or the list itself. */
 export type ToolSource = readonly McpToolLike[] | { listTools(): Promise<{ tools: McpToolLike[] }> | { tools: McpToolLike[] } };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MemoryIntentSessionStore, accPreState, admitIntentAction, inWindow, type AccumulatorDecl, type IntentEvent } from './index';
+import { MemoryIntentSessionStore, accPreState, admitIntentAction, inWindow, type AccumulatorDecl, type IntentEvent } from './ext/intent';
 
 /**
  * 0.4.2 SECURITY: a counted event stamped AFTER the candidate's time must count toward the cap (spec §2.1,

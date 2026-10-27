@@ -1,5 +1,23 @@
 {
  "about": "Surviving Stryker mutants individually justified as equivalent (no input changes any observable result) or unreachable, ONE ENTRY PER MUTATION SITE. Checked by tools/pca-audit/stryker/check-equivalents.mjs. Keyed by package, file, mutator, original text, replacement, trimmed source line and occurrence (which copy of that line text in the file); lineno is a hint only and multiplicity covers the same mutant reported more than once on one line.",
+ "also_audited_packages": [
+  "pca-connect",
+  "pca-connectors",
+  "pca-control-evals",
+  "pca-dataflow",
+  "pca-doctor",
+  "pca-events",
+  "pca-explain",
+  "pca-harness",
+  "pca-less-wasm",
+  "pca-otel",
+  "pca-policy-ci",
+  "pca-rag",
+  "pca-revoke",
+  "pca-rotate",
+  "pca-store-conformance"
+ ],
+ "also_audited_note": "Packages in the Stryker plan (.github/scripts/ts-stryker-plan.mjs) that have no equivalent-mutant entries yet: their survivors must be killed by tests or listed here with a reason; the merge job fails on an unlisted survivor. A package with entries is in the plan by that alone.",
  "equivalents": [
   {
    "file": "src/replay.ts",
@@ -578,16 +596,6 @@
   },
   {
    "file": "src/server/verify.ts",
-   "mutator": "StringLiteral",
-   "original": "'revocation epoch rejected'",
-   "replacement": "\"\"",
-   "line": "else fail('freshness', r.reason ?? 'revocation epoch rejected');",
-   "occurrence": 1,
-   "lineno": 237,
-   "reason": "Fallback message used only if the sub-verifier returns a failure without a reason; every in-tree verifier supplies one."
-  },
-  {
-   "file": "src/server/verify.ts",
    "mutator": "ArrayDeclaration",
    "original": "[]",
    "replacement": "[\"Stryker was here\"]",
@@ -1004,26 +1012,6 @@
    "occurrence": 1,
    "lineno": 245,
    "reason": "Redundant guards: decodePCActn never returns null/non-object, raw===null is handled above, and a non-object p has no string grant_ref so the third operand denies identically."
-  },
-  {
-   "file": "src/server/require-pca.ts",
-   "mutator": "StringLiteral",
-   "original": "''",
-   "replacement": "\"Stryker was here!\"",
-   "line": "const key = `${grant.id}:${leafHolder ?? ''}`;",
-   "occurrence": 1,
-   "lineno": 257,
-   "reason": "Key suffix only used when leafHolder is defined (state read and write are gated on leafHolder); the withKeyLock key is grant.id."
-  },
-  {
-   "file": "src/server/require-pca.ts",
-   "mutator": "ConditionalExpression",
-   "original": "verdict.checks.counter === 'pass'",
-   "replacement": "true",
-   "line": "} else if (verdict.checks.counter === 'pass') {",
-   "occurrence": 1,
-   "lineno": 300,
-   "reason": "Without a store the core counter check is 'pass' for every wire-valid PCActn (non-integer / negative counters are wire failures), so the guard is always true there."
   },
   {
    "file": "src/server/require-pca.ts",
@@ -2859,16 +2847,6 @@
    "occurrence": 1,
    "lineno": 141,
    "reason": "Strict noble fromHex already rejects any non-canonical encoding and toRawBytes(fromHex(b)) round-trips, so this belt-and-braces check can never fire (loop bound/message/condition unobservable)."
-  },
-  {
-   "file": "src/frost.ts",
-   "mutator": "EqualityOperator",
-   "original": "i < 32",
-   "replacement": "i <= 32",
-   "line": "for (let i = 0; i < 32; i++) {",
-   "occurrence": 1,
-   "lineno": 76,
-   "reason": "Writing out[32] on a 32-byte Uint8Array is ignored; same bytes."
   },
   {
    "file": "src/frost.ts",
@@ -6313,16 +6291,6 @@
    "mutator": "StringLiteral",
    "original": "'not-enforced'",
    "replacement": "\"\"",
-   "line": "} else mark('freshness', 'not-enforced');",
-   "occurrence": 1,
-   "lineno": 238,
-   "reason": "The 'not-enforced' status strings: the verified-core VerdictState.set keeps the status core.checks already initialised for these names ('not-enforced' for an absent context element), asserted in verify.mutation-kill-3.test.ts; overwriting with an empty literal is not observable in the verdict."
-  },
-  {
-   "file": "src/server/verify.ts",
-   "mutator": "StringLiteral",
-   "original": "'not-enforced'",
-   "replacement": "\"\"",
    "line": "mark('beacon', 'not-enforced');",
    "occurrence": 1,
    "lineno": 259,
@@ -6407,16 +6375,6 @@
    "occurrence": 1,
    "lineno": 213,
    "reason": "planDecision ignores the match flag when no plan is supplied."
-  },
-  {
-   "file": "src/server/verify.ts",
-   "mutator": "LogicalOperator",
-   "original": "!core.allow && core.reason",
-   "replacement": "!core.allow || core.reason",
-   "line": "let vs = VerdictState.init<string, string>(Object.entries(core.checks) as [string, CheckStatus][], !core.allow && core.reason ? [core.reason] : []);",
-   "occurrence": 1,
-   "lineno": 185,
-   "reason": "core.reason is only set when core.allow is false."
   },
   {
    "file": "src/server/verify.ts",
@@ -6686,36 +6644,6 @@
    "line": "typeof p.sig === 'string',",
    "occurrence": 1,
    "lineno": 659,
-   "reason": "validateWireV2 runs first and is terminal (wire failure returns before this point), and it guarantees aud is a non-empty string, grant_ref canonical b64u string, sig a string, counter a safe integer and freshness.beacon_ref a string (wire.ts lines 82-94, 148-149), so these type/emptiness re-checks are always true on the glue path; audience kinds map 'string' to the same verdict as any non-null/absent value."
-  },
-  {
-   "file": "src/pcactn.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof p.counter === 'number' && Number.isSafeInteger(p.counter)",
-   "replacement": "true",
-   "line": "if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter', 'pass');",
-   "occurrence": 1,
-   "lineno": 667,
-   "reason": "validateWireV2 runs first and is terminal (wire failure returns before this point), and it guarantees aud is a non-empty string, grant_ref canonical b64u string, sig a string, counter a safe integer and freshness.beacon_ref a string (wire.ts lines 82-94, 148-149), so these type/emptiness re-checks are always true on the glue path; audience kinds map 'string' to the same verdict as any non-null/absent value."
-  },
-  {
-   "file": "src/pcactn.ts",
-   "mutator": "LogicalOperator",
-   "original": "typeof p.counter === 'number' && Number.isSafeInteger(p.counter)",
-   "replacement": "typeof p.counter === 'number' || Number.isSafeInteger(p.counter)",
-   "line": "if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter', 'pass');",
-   "occurrence": 1,
-   "lineno": 667,
-   "reason": "validateWireV2 runs first and is terminal (wire failure returns before this point), and it guarantees aud is a non-empty string, grant_ref canonical b64u string, sig a string, counter a safe integer and freshness.beacon_ref a string (wire.ts lines 82-94, 148-149), so these type/emptiness re-checks are always true on the glue path; audience kinds map 'string' to the same verdict as any non-null/absent value."
-  },
-  {
-   "file": "src/pcactn.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof p.counter === 'number'",
-   "replacement": "true",
-   "line": "if (counterStatus(typeof p.counter === 'number' && Number.isSafeInteger(p.counter) && p.counter >= 0) === 'pass') mark('counter', 'pass');",
-   "occurrence": 1,
-   "lineno": 667,
    "reason": "validateWireV2 runs first and is terminal (wire failure returns before this point), and it guarantees aud is a non-empty string, grant_ref canonical b64u string, sig a string, counter a safe integer and freshness.beacon_ref a string (wire.ts lines 82-94, 148-149), so these type/emptiness re-checks are always true on the glue path; audience kinds map 'string' to the same verdict as any non-null/absent value."
   },
   {
@@ -14192,16 +14120,6 @@
    "occurrence": 1,
    "lineno": 1341,
    "reason": "Guards a comparison whose right operand is the guarded value: when the value is undefined, 'x > undefined' is always false, so forcing the guard true (or || instead of &&, or forcing a conjunct true) leaves the result unchanged; when the guard is true the value is a number and both versions agree."
-  },
-  {
-   "file": "src/mesh.ts",
-   "mutator": "EqualityOperator",
-   "original": "a.head.domain < b.head.domain",
-   "replacement": "a.head.domain <= b.head.domain",
-   "line": "return { seen: [...this.seen.values()].map((s) => ({ head: { ...s.head }, rev_ids: [...s.rev] })).sort((a, b) => (a.head.domain < b.head.domain ? -1 : 1)) };",
-   "occurrence": 1,
-   "lineno": 471,
-   "reason": "Comparator tie-break: seen is a Map keyed by head.domain, so two entries never share a domain; the equal case (< vs <=) cannot occur."
   },
   {
    "file": "src/mesh.ts",
@@ -24081,732 +23999,6 @@
   },
   {
    "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "bytes === null || x === null",
-   "replacement": "bytes === null && x === null",
-   "line": "if (bytes === null || x === null || x === 0n || BigInt('0x' + Buffer.from(bytes).toString('hex')) >= R) return null;",
-   "occurrence": 1,
-   "lineno": 185,
-   "reason": "canonicalScalar: bytesToScalar already rejects non-32-byte input and reduces mod R; a null byte-array or null scalar is rejected by the following comparisons/throw in mskScalars (same 'invalid master secret key'); >= R is unreachable because unb64u of canonical b64u(32) can equal R only for the exact modulus, which bytesToScalar maps to 0 and x === 0n rejects."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "bytes === null",
-   "replacement": "false",
-   "line": "if (bytes === null || x === null || x === 0n || BigInt('0x' + Buffer.from(bytes).toString('hex')) >= R) return null;",
-   "occurrence": 1,
-   "lineno": 185,
-   "reason": "canonicalScalar: bytesToScalar already rejects non-32-byte input and reduces mod R; a null byte-array or null scalar is rejected by the following comparisons/throw in mskScalars (same 'invalid master secret key'); >= R is unreachable because unb64u of canonical b64u(32) can equal R only for the exact modulus, which bytesToScalar maps to 0 and x === 0n rejects."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "x === null",
-   "replacement": "false",
-   "line": "if (bytes === null || x === null || x === 0n || BigInt('0x' + Buffer.from(bytes).toString('hex')) >= R) return null;",
-   "occurrence": 1,
-   "lineno": 185,
-   "reason": "canonicalScalar: bytesToScalar already rejects non-32-byte input and reduces mod R; a null byte-array or null scalar is rejected by the following comparisons/throw in mskScalars (same 'invalid master secret key'); >= R is unreachable because unb64u of canonical b64u(32) can equal R only for the exact modulus, which bytesToScalar maps to 0 and x === 0n rejects."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "EqualityOperator",
-   "original": "BigInt('0x' + Buffer.from(bytes).toString('hex')) >= R",
-   "replacement": "BigInt('0x' + Buffer.from(bytes).toString('hex')) > R",
-   "line": "if (bytes === null || x === null || x === 0n || BigInt('0x' + Buffer.from(bytes).toString('hex')) >= R) return null;",
-   "occurrence": 1,
-   "lineno": 185,
-   "reason": "canonicalScalar: bytesToScalar already rejects non-32-byte input and reduces mod R; a null byte-array or null scalar is rejected by the following comparisons/throw in mskScalars (same 'invalid master secret key'); >= R is unreachable because unb64u of canonical b64u(32) can equal R only for the exact modulus, which bytesToScalar maps to 0 and x === 0n rejects."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "OptionalChaining",
-   "original": "mpk?.f",
-   "replacement": "mpk.f",
-   "line": "const memoKey = isString(mpk?.h) && isString(mpk?.f) && isString(mpk?.egga) ? `${mpk.h}|${mpk.f}|${mpk.egga}` : null;",
-   "occurrence": 1,
-   "lineno": 209,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "OptionalChaining",
-   "original": "mpk?.egga",
-   "replacement": "mpk.egga",
-   "line": "const memoKey = isString(mpk?.h) && isString(mpk?.f) && isString(mpk?.egga) ? `${mpk.h}|${mpk.f}|${mpk.egga}` : null;",
-   "occurrence": 1,
-   "lineno": 209,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "memoKey === null",
-   "replacement": "false",
-   "line": "const hit = memoKey === null ? undefined : mpkMemo.get(memoKey);",
-   "occurrence": 1,
-   "lineno": 210,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "memoKey !== null",
-   "replacement": "true",
-   "line": "if (memoKey !== null) {",
-   "occurrence": 1,
-   "lineno": 222,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "mpkMemo.size >= MPK_MEMO_MAX",
-   "replacement": "true",
-   "line": "if (mpkMemo.size >= MPK_MEMO_MAX) mpkMemo.delete(mpkMemo.keys().next().value as string);",
-   "occurrence": 1,
-   "lineno": 223,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "mpkMemo.size >= MPK_MEMO_MAX",
-   "replacement": "false",
-   "line": "if (mpkMemo.size >= MPK_MEMO_MAX) mpkMemo.delete(mpkMemo.keys().next().value as string);",
-   "occurrence": 1,
-   "lineno": 223,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "CallExpression",
-   "original": "mpkMemo.delete(mpkMemo.keys().next().value as string);",
-   "replacement": ";",
-   "line": "if (mpkMemo.size >= MPK_MEMO_MAX) mpkMemo.delete(mpkMemo.keys().next().value as string);",
-   "occurrence": 1,
-   "lineno": 223,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "EqualityOperator",
-   "original": "mpkMemo.size >= MPK_MEMO_MAX",
-   "replacement": "mpkMemo.size > MPK_MEMO_MAX",
-   "line": "if (mpkMemo.size >= MPK_MEMO_MAX) mpkMemo.delete(mpkMemo.keys().next().value as string);",
-   "occurrence": 1,
-   "lineno": 223,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "EqualityOperator",
-   "original": "mpkMemo.size >= MPK_MEMO_MAX",
-   "replacement": "mpkMemo.size < MPK_MEMO_MAX",
-   "line": "if (mpkMemo.size >= MPK_MEMO_MAX) mpkMemo.delete(mpkMemo.keys().next().value as string);",
-   "occurrence": 1,
-   "lineno": 223,
-   "reason": "parseMpk memo: a pure cache keyed by the three strings; hit or miss returns an equal ParsedMpk, eviction only bounds memory. Correctness of both paths is asserted (repeat encrypt with same/other mpk, 20 distinct mpks)."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "hb === null",
-   "replacement": "false",
-   "line": "const h = hb === null ? null : g2FromBytes(hb);",
-   "occurrence": 1,
-   "lineno": 215,
-   "reason": "Null-propagation guards: when unb64u returned null the ternary passes null to the next stage, whose own check (g1FromBytes/g2FromBytes on null throws -> caught -> null, or the following === null throw) refuses identically."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "fb === null",
-   "replacement": "false",
-   "line": "const f = fb === null ? null : g1FromBytes(fb);",
-   "occurrence": 1,
-   "lineno": 216,
-   "reason": "Null-propagation guards: when unb64u returned null the ternary passes null to the next stage, whose own check (g1FromBytes/g2FromBytes on null throws -> caught -> null, or the following === null throw) refuses identically."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "db === null",
-   "replacement": "false",
-   "line": "const d = db === null ? null : g1FromBytes(db);",
-   "occurrence": 1,
-   "lineno": 281,
-   "reason": "Null-propagation guards: when unb64u returned null the ternary passes null to the next stage, whose own check (g1FromBytes/g2FromBytes on null throws -> caught -> null, or the following === null throw) refuses identically."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "djb === null",
-   "replacement": "false",
-   "line": "const dj = djb === null ? null : g1FromBytes(djb);",
-   "occurrence": 1,
-   "lineno": 296,
-   "reason": "Null-propagation guards: when unb64u returned null the ternary passes null to the next stage, whose own check (g1FromBytes/g2FromBytes on null throws -> caught -> null, or the following === null throw) refuses identically."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "dpb === null",
-   "replacement": "false",
-   "line": "const dpj = dpb === null ? null : g2FromBytes(dpb);",
-   "occurrence": 1,
-   "lineno": 297,
-   "reason": "Null-propagation guards: when unb64u returned null the ternary passes null to the next stage, whose own check (g1FromBytes/g2FromBytes on null throws -> caught -> null, or the following === null throw) refuses identically."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "cb === null",
-   "replacement": "false",
-   "line": "const c = cb === null ? null : g2FromBytes(cb);",
-   "occurrence": 1,
-   "lineno": 450,
-   "reason": "Null-propagation guards: when unb64u returned null the ternary passes null to the next stage, whose own check (g1FromBytes/g2FromBytes on null throws -> caught -> null, or the following === null throw) refuses identically."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "cpb === null",
-   "replacement": "false",
-   "line": "const cp = cpb === null ? null : g1FromBytes(cpb);",
-   "occurrence": 1,
-   "lineno": 451,
-   "reason": "Null-propagation guards: when unb64u returned null the ternary passes null to the next stage, whose own check (g1FromBytes/g2FromBytes on null throws -> caught -> null, or the following === null throw) refuses identically."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "c0b === null",
-   "replacement": "false",
-   "line": "const c0 = c0b === null ? null : g2FromBytes(c0b);",
-   "occurrence": 1,
-   "lineno": 502,
-   "reason": "Null-propagation guards: when unb64u returned null the ternary passes null to the next stage, whose own check (g1FromBytes/g2FromBytes on null throws -> caught -> null, or the following === null throw) refuses identically."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof a === 'string' && a.length > 0",
-   "replacement": "true",
-   "line": "for (const a of extraAttributes) if (typeof a === 'string' && a.length > 0) attrs.add(a);",
-   "occurrence": 1,
-   "lineno": 263,
-   "reason": "keygenForCapability extra attributes: an empty or non-string extra yields a key attribute that keygenForAttributes skips (same typeof/length filter at abe.ts:238), so the pre-filter is redundant."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof a === 'string'",
-   "replacement": "true",
-   "line": "for (const a of extraAttributes) if (typeof a === 'string' && a.length > 0) attrs.add(a);",
-   "occurrence": 1,
-   "lineno": 263,
-   "reason": "keygenForCapability extra attributes: an empty or non-string extra yields a key attribute that keygenForAttributes skips (same typeof/length filter at abe.ts:238), so the pre-filter is redundant."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "typeof a === 'string' && a.length > 0",
-   "replacement": "typeof a === 'string' || a.length > 0",
-   "line": "for (const a of extraAttributes) if (typeof a === 'string' && a.length > 0) attrs.add(a);",
-   "occurrence": 1,
-   "lineno": 263,
-   "reason": "keygenForCapability extra attributes: an empty or non-string extra yields a key attribute that keygenForAttributes skips (same typeof/length filter at abe.ts:238), so the pre-filter is redundant."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "a.length > 0",
-   "replacement": "true",
-   "line": "for (const a of extraAttributes) if (typeof a === 'string' && a.length > 0) attrs.add(a);",
-   "occurrence": 1,
-   "lineno": 263,
-   "reason": "keygenForCapability extra attributes: an empty or non-string extra yields a key attribute that keygenForAttributes skips (same typeof/length filter at abe.ts:238), so the pre-filter is redundant."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "EqualityOperator",
-   "original": "a.length > 0",
-   "replacement": "a.length >= 0",
-   "line": "for (const a of extraAttributes) if (typeof a === 'string' && a.length > 0) attrs.add(a);",
-   "occurrence": 1,
-   "lineno": 263,
-   "reason": "keygenForCapability extra attributes: an empty or non-string extra yields a key attribute that keygenForAttributes skips (same typeof/length filter at abe.ts:238), so the pre-filter is redundant."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "cached !== undefined",
-   "replacement": "false",
-   "line": "if (cached !== undefined) return cached;",
-   "occurrence": 1,
-   "lineno": 290,
-   "reason": "parseKey attr() memo: pure cache of a deterministic parse."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "CallExpression",
-   "original": "memo.set(name, out);",
-   "replacement": ";",
-   "line": "memo.set(name, out);",
-   "occurrence": 1,
-   "lineno": 300,
-   "reason": "parseKey attr() memo: pure cache of a deterministic parse."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "StringLiteral",
-   "original": "'internal: share/child mismatch'",
-   "replacement": "\"\"",
-   "line": "if (child === undefined || share === undefined) throw new PcaEncryptionError('internal: share/child mismatch');",
-   "occurrence": 1,
-   "lineno": 355,
-   "reason": "distribute(): children and shares arrays are built with equal length from the tree, so the undefined guard (noUncheckedIndexedAccess narrowing) cannot fire."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "child === undefined || share === undefined",
-   "replacement": "false",
-   "line": "if (child === undefined || share === undefined) throw new PcaEncryptionError('internal: share/child mismatch');",
-   "occurrence": 1,
-   "lineno": 355,
-   "reason": "distribute(): children and shares arrays are built with equal length from the tree, so the undefined guard (noUncheckedIndexedAccess narrowing) cannot fire."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "child === undefined || share === undefined",
-   "replacement": "child === undefined && share === undefined",
-   "line": "if (child === undefined || share === undefined) throw new PcaEncryptionError('internal: share/child mismatch');",
-   "occurrence": 1,
-   "lineno": 355,
-   "reason": "distribute(): children and shares arrays are built with equal length from the tree, so the undefined guard (noUncheckedIndexedAccess narrowing) cannot fire."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "child === undefined",
-   "replacement": "false",
-   "line": "if (child === undefined || share === undefined) throw new PcaEncryptionError('internal: share/child mismatch');",
-   "occurrence": 1,
-   "lineno": 355,
-   "reason": "distribute(): children and shares arrays are built with equal length from the tree, so the undefined guard (noUncheckedIndexedAccess narrowing) cannot fire."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "share === undefined",
-   "replacement": "false",
-   "line": "if (child === undefined || share === undefined) throw new PcaEncryptionError('internal: share/child mismatch');",
-   "occurrence": 1,
-   "lineno": 355,
-   "reason": "distribute(): children and shares arrays are built with equal length from the tree, so the undefined guard (noUncheckedIndexedAccess narrowing) cannot fire."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof plaintext === 'string'",
-   "replacement": "false",
-   "line": "const pt = typeof plaintext === 'string' ? new TextEncoder().encode(plaintext) : plaintext;",
-   "occurrence": 1,
-   "lineno": 385,
-   "reason": "TextEncoder.encode of a string vs passing the string through: Uint8Array expected by seal; a string would throw inside seal and the test asserts string and bytes plaintexts both round-trip."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "StringLiteral",
-   "original": "'string'",
-   "replacement": "\"\"",
-   "line": "const pt = typeof plaintext === 'string' ? new TextEncoder().encode(plaintext) : plaintext;",
-   "occurrence": 1,
-   "lineno": 385,
-   "reason": "TextEncoder.encode of a string vs passing the string through: Uint8Array expected by seal; a string would throw inside seal and the test asserts string and bytes plaintexts both round-trip."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "x.of.length === 0",
-   "replacement": "false",
-   "line": "if (!isPosInt(x.t) || !Array.isArray(x.of) || x.of.length === 0) return null;",
-   "occurrence": 1,
-   "lineno": 413,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "x.of.length >= MAX_POLICY_NODES",
-   "replacement": "false",
-   "line": "if (x.t > x.of.length || x.of.length >= MAX_POLICY_NODES) return null;",
-   "occurrence": 1,
-   "lineno": 414,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "EqualityOperator",
-   "original": "x.of.length >= MAX_POLICY_NODES",
-   "replacement": "x.of.length > MAX_POLICY_NODES",
-   "line": "if (x.t > x.of.length || x.of.length >= MAX_POLICY_NODES) return null;",
-   "occurrence": 1,
-   "lineno": 414,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)",
-   "replacement": "false",
-   "line": "if (!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)) return null;",
-   "occurrence": 1,
-   "lineno": 431,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct)",
-   "replacement": "false",
-   "line": "if (!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)) return null;",
-   "occurrence": 1,
-   "lineno": 431,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)",
-   "replacement": "(!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct)) && !isString(x.tag)",
-   "line": "if (!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)) return null;",
-   "occurrence": 1,
-   "lineno": 431,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct)",
-   "replacement": "(!isString(x.salt) || !isString(x.c0) || !isString(x.iv)) && !isString(x.ct)",
-   "line": "if (!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)) return null;",
-   "occurrence": 1,
-   "lineno": 431,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "!isString(x.salt) || !isString(x.c0) || !isString(x.iv)",
-   "replacement": "false",
-   "line": "if (!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)) return null;",
-   "occurrence": 1,
-   "lineno": 431,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "!isString(x.salt) || !isString(x.c0) || !isString(x.iv)",
-   "replacement": "(!isString(x.salt) || !isString(x.c0)) && !isString(x.iv)",
-   "line": "if (!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)) return null;",
-   "occurrence": 1,
-   "lineno": 431,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "!isString(x.salt) || !isString(x.c0)",
-   "replacement": "false",
-   "line": "if (!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)) return null;",
-   "occurrence": 1,
-   "lineno": 431,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "!isString(x.salt) || !isString(x.c0)",
-   "replacement": "!isString(x.salt) && !isString(x.c0)",
-   "line": "if (!isString(x.salt) || !isString(x.c0) || !isString(x.iv) || !isString(x.ct) || !isString(x.tag)) return null;",
-   "occurrence": 1,
-   "lineno": 431,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "salt === null || iv === null || body === null || tag === null || c0 === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "salt === null || iv === null || body === null || tag === null || c0 === null",
-   "replacement": "(salt === null || iv === null || body === null || tag === null) && c0 === null",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "salt === null || iv === null || body === null || tag === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "salt === null || iv === null || body === null || tag === null",
-   "replacement": "(salt === null || iv === null || body === null) && tag === null",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "salt === null || iv === null || body === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "salt === null || iv === null || body === null",
-   "replacement": "(salt === null || iv === null) && body === null",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "salt === null || iv === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "LogicalOperator",
-   "original": "salt === null || iv === null",
-   "replacement": "salt === null && iv === null",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "salt === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "body === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "iv === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "tag === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "c0 === null",
-   "replacement": "false",
-   "line": "if (salt === null || iv === null || body === null || tag === null || c0 === null) return null;",
-   "occurrence": 1,
-   "lineno": 503,
-   "reason": "parseCiphertext/parseKemTree structural guards are layered: every field is re-validated by unb64u/g1FromBytes/g2FromBytes during plan()/decrypt (null -> decrypt returns null), so a skipped guard yields the same null at decrypt; parseCiphertext's own output is separately asserted for each malformed field."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "BooleanLiteral",
-   "original": "false",
-   "replacement": "true",
-   "line": "if (lambda === null) return false;",
-   "occurrence": 1,
-   "lineno": 478,
-   "reason": "plan()/collect(): break after t branches is an optimisation; kind label 'gate' is read only through the discriminant in collect; lambda null / child undefined are unreachable because Lagrange points are distinct (1..n) and branch indices are validated."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "BooleanLiteral",
-   "original": "false",
-   "replacement": "true",
-   "line": "if (child === undefined || !collect(child.sub, frMul(w, lambda[i] ?? 0n), out)) return false;",
-   "occurrence": 1,
-   "lineno": 481,
-   "reason": "plan()/collect(): break after t branches is an optimisation; kind label 'gate' is read only through the discriminant in collect; lambda null / child undefined are unreachable because Lagrange points are distinct (1..n) and branch indices are validated."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "of.length >= node.t",
-   "replacement": "false",
-   "line": "if (of.length >= node.t) break; // enough branches recovered; no need to look at more.",
-   "occurrence": 1,
-   "lineno": 459,
-   "reason": "plan()/collect(): break after t branches is an optimisation; kind label 'gate' is read only through the discriminant in collect; lambda null / child undefined are unreachable because Lagrange points are distinct (1..n) and branch indices are validated."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "EqualityOperator",
-   "original": "of.length >= node.t",
-   "replacement": "of.length > node.t",
-   "line": "if (of.length >= node.t) break; // enough branches recovered; no need to look at more.",
-   "occurrence": 1,
-   "lineno": 459,
-   "reason": "plan()/collect(): break after t branches is an optimisation; kind label 'gate' is read only through the discriminant in collect; lambda null / child undefined are unreachable because Lagrange points are distinct (1..n) and branch indices are validated."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "StringLiteral",
-   "original": "'gate'",
-   "replacement": "\"\"",
-   "line": "return of.length < node.t ? null : { kind: 'gate', of };",
-   "occurrence": 1,
-   "lineno": 461,
-   "reason": "plan()/collect(): break after t branches is an optimisation; kind label 'gate' is read only through the discriminant in collect; lambda null / child undefined are unreachable because Lagrange points are distinct (1..n) and branch indices are validated."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "lambda === null",
-   "replacement": "false",
-   "line": "if (lambda === null) return false;",
-   "occurrence": 1,
-   "lineno": 478,
-   "reason": "plan()/collect(): break after t branches is an optimisation; kind label 'gate' is read only through the discriminant in collect; lambda null / child undefined are unreachable because Lagrange points are distinct (1..n) and branch indices are validated."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "ConditionalExpression",
-   "original": "child === undefined",
-   "replacement": "false",
-   "line": "if (child === undefined || !collect(child.sub, frMul(w, lambda[i] ?? 0n), out)) return false;",
-   "occurrence": 1,
-   "lineno": 481,
-   "reason": "plan()/collect(): break after t branches is an optimisation; kind label 'gate' is read only through the discriminant in collect; lambda null / child undefined are unreachable because Lagrange points are distinct (1..n) and branch indices are validated."
-  },
-  {
-   "package": "pca-abe",
    "file": "src/bls.ts",
    "mutator": "ConditionalExpression",
    "original": "v !== 0n",
@@ -25090,50 +24282,6 @@
    "occurrence": 1,
    "lineno": 34,
    "reason": "splitSecret n < 1 is implied by t <= n with t >= 1; Horner loop start index above range reads undefined coeff (?? 0n) and adds zero; recoverSecret undefined guards are TypeScript narrowing for equal-length arrays."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
-   "line": "} catch {",
-   "occurrence": 1,
-   "lineno": 389,
-   "reason": "encryptForPolicy: aad(header) cannot throw because normalizePolicy guarantees well-formed UTF-16 attrs, positive-integer thresholds and <=10 gate levels (JSON depth <=32), and every other header field is a b64u string or constant; the catch is unreachable."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
-   "line": "} catch {",
-   "occurrence": 2,
-   "lineno": 512,
-   "reason": "decrypt: pairingProduct cannot throw because every pair holds a parsed, subgroup-checked, non-identity point or a non-zero scalar multiple of one (a zero scalar would already throw in g1Mul outside this try), so pairingBatch's ZERO/validity checks never fire; the catch is unreachable."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "BlockStatement",
-   "original": "<multiline>",
-   "replacement": "{}",
-   "line": "} catch {",
-   "occurrence": 3,
-   "lineno": 522,
-   "reason": "decrypt: this catch IS reachable (e.g. an unselected leaf attr with a lone surrogate), but with it emptied headerAad is undefined and open() calls decipher.setAAD(undefined), which throws ERR_INVALID_ARG_TYPE inside open's own try and returns null, the same result as `return null`."
-  },
-  {
-   "package": "pca-abe",
-   "file": "src/abe.ts",
-   "mutator": "StringLiteral",
-   "original": "'policy cannot be authenticated (header outside the canonical JSON profile)'",
-   "replacement": "\"\"",
-   "line": "throw new PcaEncryptionError('policy cannot be authenticated (header outside the canonical JSON profile)');",
-   "occurrence": 1,
-   "lineno": 390,
-   "reason": "Fail-closed catch blocks around canonical-header/AEAD steps: an empty catch would let the exception propagate from a decrypt that is specified to return null, or the encrypt-side header failure; the inputs reaching them (non-canonical header) are asserted via the null/throw tests, but the throwing statements are unreachable from valid typed inputs."
   },
   {
    "package": "pca-abe",
@@ -30284,36 +29432,6 @@
    "reason": "an absent accumulates_into and the one-element placeholder list differ only when the queried unit is literally the placeholder text, which is not a unit id (UNIT_ID_RE) any schema can declare"
   },
   {
-   "file": "src/action-schema.ts",
-   "mutator": "ArrayDeclaration",
-   "original": "[]",
-   "replacement": "[\"Stryker was here\"]",
-   "line": "const req = new Set(t.inputSchema?.required ?? []);",
-   "occurrence": 1,
-   "lineno": 589,
-   "reason": "an absent required list and the placeholder list differ only for a parameter literally named 'Stryker was here', which is not a schema name ([A-Za-z0-9_]{1,64}) and is skipped first"
-  },
-  {
-   "file": "src/action-schema.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof op !== 'object'",
-   "replacement": "false",
-   "line": "if (!op || typeof op !== 'object' || !op.operationId) continue;",
-   "occurrence": 1,
-   "lineno": 620,
-   "reason": "a primitive op has no operationId, so the following !op.operationId test continues the loop either way"
-  },
-  {
-   "file": "src/action-schema.ts",
-   "mutator": "ArrayDeclaration",
-   "original": "[]",
-   "replacement": "[\"Stryker was here\"]",
-   "line": "const req = new Set(sch?.required ?? []);",
-   "occurrence": 1,
-   "lineno": 624,
-   "reason": "same as the MCP importer: only a parameter literally named 'Stryker was here' could differ, and that is not a schema name"
-  },
-  {
    "package": "pca-verified-core",
    "file": "src/ext-attest.ts",
    "mutator": "ConditionalExpression",
@@ -30488,28 +29606,6 @@
    "occurrence": 1,
    "lineno": 666,
    "reason": "an empty chain gives chain[-1] = undefined, which is not a record, so leafHolder is undefined exactly as on the untaken branch"
-  },
-  {
-   "package": "pca-a2a",
-   "file": "src/index.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof amt.value !== 'number'",
-   "replacement": "false",
-   "line": "if (!isRecord(amt) || typeof amt.value !== 'number' || !Number.isFinite(amt.value) || typeof amt.currency !== 'string') return 'payment mandate amount is malformed';",
-   "occurrence": 1,
-   "lineno": 679,
-   "reason": "!Number.isFinite(amt.value) on the same line is true for every non-number, so the typeof test is redundant"
-  },
-  {
-   "package": "pca-a2a",
-   "file": "src/index.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof params.amount !== 'number'",
-   "replacement": "false",
-   "line": "if (!own(params, 'amount') || typeof params.amount !== 'number' || !Number.isFinite(params.amount)) return 'the PCActn params carry no numeric amount to bind the mandate amount to';",
-   "occurrence": 1,
-   "lineno": 680,
-   "reason": "!Number.isFinite(params.amount) on the same line is true for every non-number, so the typeof test is redundant"
   },
   {
    "package": "pca-a2a",
@@ -34220,16 +33316,6 @@
    "occurrence": 1,
    "lineno": 100,
    "reason": "At this point mm is not a string (handled above); for any other non-null primitive Object.keys(mm) is [] (length 0), so bound is undefined either way."
-  },
-  {
-   "file": "src/passport.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof bound !== 'number'",
-   "replacement": "false",
-   "line": "if (typeof bound !== 'number' || !Number.isSafeInteger(bound) || bound < 0 || Object.is(bound, -0)) {",
-   "occurrence": 1,
-   "lineno": 101,
-   "reason": "Number.isSafeInteger(bound) in the next operand is already false for every non-number, so the typeof test is redundant."
   },
   {
    "file": "src/server/verify.ts",

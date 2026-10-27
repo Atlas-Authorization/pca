@@ -1,5 +1,7 @@
 # @atlasauth/pca-fastify
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Fastify `preHandler` for Proof-Carrying Authority. `pcaFastify()` verifies the inbound PCActn with the `requirePCA` guard from `@atlasauth/pca`, attaches `{ verdict, pcactn }` to the request on success, and otherwise replies `401` or `403` with a `WWW-Authenticate` challenge (which short-circuits the route). It is default-deny: a required check that is not enforced denies.
 
 ## Install
@@ -18,20 +20,23 @@ npm i fastify
 import { pcaFastify, type PcaAttachment } from '@atlasauth/pca-fastify';
 import { memoryPcaStore } from '@atlasauth/pca';
 
+const store = memoryPcaStore();                   // replay counters + budgets; production: a shared store with withKeyLock
+
 app.post(
   '/refunds',
   {
     preHandler: pcaFastify({
       audience: 'ins_acme',                       // the audience a PCActn must name
       resolveGrant: async (ref) => grants.get(ref) ?? null, // your root-grant store
-      budgetStore: memoryPcaStore(),              // replay counter + budget; use a shared store in production
+      budgetStore: store,
+      operation: (req) => ({ verb: 'stripe.refund', resource: `charge:${(req.body as any)?.charge}`, params: (req.body as any)?.params }), // the operation THIS route executes, from your routing, never from the proof
       hooks: { revocation: myRevocationChecker }, // e.g. built with createRevocationChecker from @atlasauth/pca
       context: async (req, pcactn) => ({
         plan: knownPlan(pcactn),                  // the plan your server knows for this action
         planAuthorized: true,                     // only if the principal authorized that plan root
         params: (req.body as any)?.params,
-        risk: { reversibility: 1, blastRadius: 0, confidence: 1, semanticDistance: 0, taint: 0 },
-        budget: { B: 500, tau: 0, asOf: Date.now() },
+        // risk inputs you can vouch for; price the refund from its verified amount (a $42 refund spends 42 of 500)
+        risk: { reversibility: 1, blastRadius: Number((req.body as any)?.params?.amount) / 500, confidence: 1, semanticDistance: 0, taint: 0 },
       }),
     }),
   },
@@ -42,15 +47,68 @@ app.post(
 );
 ```
 
-The client sends the PCActn as a `PCA-Action: <base64url>` header (see `pcaHeaders` in `@atlasauth/pca`) or a JSON body `{ pcactn }`; the default extractor reads both. Rename the attached property with `attachAs` and override the deny response with `onDeny(result, req, reply)`. All other options are those of `requirePCA`; see `@atlasauth/pca`.
+`operation` is required: it names the verb, resource and params the route executes, so a valid proof for another operation (or other params) is refused before your handler runs. The trust budget starts at the grant's signed `bMax` and the store keeps the spent budget. The client sends the PCActn as a `PCA-Action: <base64url>` header (see `pcaHeaders` in `@atlasauth/pca`) or a JSON body `{ pcactn }`; the default extractor reads both. Rename the attached property with `attachAs` and override the deny response with `onDeny(result, req, reply)`. All other options are those of `requirePCA`; see `@atlasauth/pca`.
 
-By default the `counter`, `revocation` and `plan_root_authorized` checks (plus audience, validity and grant binding) must pass, which is why `budgetStore`, `hooks.revocation` and `context()` are supplied above. `insecureAllowUnenforced: true` turns that off and is for local development only.
+By default the `counter`, `revocation` and `plan_root_authorized` checks (plus audience, validity and grant binding) must pass, which is why `budgetStore`, `hooks.revocation` and `context()` are supplied above. `insecureAllowUnenforced: true` turns that off and is for local development only; `insecureAllowUnboundOperation: true` keeps the 0.4 guard that is not bound to an operation (migration only).
 
 The verifier decides, not the client's proof.
 
+## Binding to the operation (`operation`)
+
+Pass `operation` to bind each request to the operation your handler will execute, then run the side effect through `executeAuthorized`:
+
+```ts
+import { pcaFastify, type PcaAttachment } from '@atlasauth/pca-fastify';
+import { atomicMemoryPcaStore, executeAuthorized, memoryOperationStore } from '@atlasauth/pca';
+
+const operations = memoryOperationStore();        // operation records; production: durableOperationStore or your DB
+
+app.post(
+  '/refunds',
+  {
+    preHandler: pcaFastify({
+      audience: 'ins_acme',
+      resolveGrant: async (ref) => grants.get(ref) ?? null,
+      budgetStore: atomicMemoryPcaStore(),         // production: a shared store (atomic `claim` or `withKeyLock`)
+      hooks: { revocation: myRevocationChecker },
+      // what this route executes, from YOUR routing and the parsed body (never from the PCActn)
+      operation: (req) => ({ verb: 'stripe.refund', resource: `charge:${(req.body as any).chargeId}`, params: req.body as any }),
+      plan: 'single-step',                         // a one-step action: the grant alone limits it
+    }),
+  },
+  async (req, reply) => {
+    const pca = (req as unknown as { pca: PcaAttachment }).pca; // { verdict, pcactn, operation }
+    const out = await executeAuthorized(pca, ({ idempotencyKey }) => refunds.create(req.body, { idempotencyKey }), {
+      store: operations,
+      recheck: async () => ({ ok: !(await isRevoked()) }),
+    });
+    return reply.code(out.status === 'committed' ? 200 : 409).send(out);
+  },
+);
+```
+
+The client sends the PCActn in the `PCA-Action` header and the operation's params as the JSON body.
+
+With `operation` set, every request goes through `authorize` from `@atlasauth/pca` instead of `requirePCA`:
+
+- `resolveGrant`, `budgetStore` and `hooks.revocation` are required. A missing one denies every request and names the missing component.
+- The PCActn must be for exactly this verb, resource and params. A proof signed for $50 cannot be used for a $400 body.
+- The grant's limits and caveats evaluate the params you return here, not the agent's.
+- On success the attachment also carries `operation`: `{ verb, resource, params_digest, id }`. `id` identifies this one authorization.
+
+`executeAuthorized` runs the side effect at most once per `id`:
+
+- It records the operation as `pending`, then `committed` or `failed`.
+- It passes `id` as the idempotency key for the downstream call.
+- Before an irreversible operation it runs your `recheck` (is the grant still not revoked, has the approval not lapsed). If the recheck fails, nothing runs.
+- A second execution of the same `id` is answered from the record.
+- If the process crashed mid-way, the operation is reported as `aborted` (it never started) or `uncertain` (it may have happened), never silently re-run.
+
+Use a shared, durable `OperationStore` in production (`durableOperationStore`, or your database with an atomic insert and a conditional update). Without `operation`, the middleware behaves exactly as above.
+
 ## Status
 
-Experimental. Part of Proof-Carrying Authority; the cryptography is unaudited.
+Production tier: a thin adapter over `requirePCA` from `@atlasauth/pca`, which makes every decision. Part of Proof-Carrying Authority; the cryptography has not been independently audited.
 
 ## License
 

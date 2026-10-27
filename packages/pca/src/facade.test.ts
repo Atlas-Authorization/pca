@@ -131,3 +131,28 @@ describe('agent()', () => {
     expect(() => a.act('gmail.send', 'msg:1', {})).toThrow(/aud/);
   });
 });
+
+describe('goal-to-decision regressions (W5-W7)', () => {
+  it('W7a: adding a second count limit never drops the first rate caveat', () => {
+    const one = compilePolicy({ permissions: { gmail: ['send'] }, limits: { send: '5/day' }, now: 0 });
+    const two = compilePolicy({ permissions: { gmail: ['send'], slack: ['post_message'] }, limits: { send: '5/day', post_message: '9/hour' }, now: 0 });
+    const rates = (c: { caveats: { type: string }[] }) => c.caveats.filter((x) => x.type === 'rate');
+    expect(rates(one)).toHaveLength(1);
+    expect(rates(two)).toEqual([{ type: 'rate', max: 5, per_secs: 86_400 }, { type: 'rate', max: 9, per_secs: 3_600 }]);
+  });
+  it('W7b: a $ limit keeps the default co-sign tiers when an irreversible action is granted', () => {
+    const p = compilePolicy({ permissions: { stripe: ['payout'] }, limits: { payout: '$50' } });
+    expect(p.riskPolicy.theta1).toBeLessThan(1);
+    expect(p.riskPolicy.theta2).toBeLessThan(1);
+    const q = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$50' } });
+    expect(q.riskPolicy.theta2).toBe(1); // nothing irreversible granted: within-cap auto-approve is unchanged
+  });
+  it('W6: a $ limit on a verb with no amount field is an error, not a silent no-op', () => {
+    expect(() => compilePolicy({ permissions: { stripe: ['create_customer'] }, limits: { create_customer: '$10' } })).toThrow(/amount field/);
+    expect(() => compilePolicy({ permissions: { acme: ['pay'] }, limits: { pay: '$10' } })).toThrow(/amount field/);
+  });
+  it('W5: a $/period limit is reported as an approximation; an unwindowed one is exact', () => {
+    expect(compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$200/day' }, now: 0 }).approximations).toHaveLength(1);
+    expect(compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$200' }, now: 0 }).approximations).toEqual([]);
+  });
+});

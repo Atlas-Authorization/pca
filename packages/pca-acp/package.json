@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-acp",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Agentic Commerce (ACP) + x402 adapter for PCA: mint an ACP delegated one-time payment token (bound to session+merchant+amount+expiry) AS a PCA proof, and an x402/HTTP-402 facilitator hook that gates settlement on a verified PCActn.",
   "keywords": [
     "agentic commerce",
@@ -54,5 +54,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "experimental"
   }
 }

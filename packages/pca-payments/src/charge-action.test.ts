@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
-  TransparencyLedger,
   encodeKey,
   generateKeyPair,
   pcactnDigest,
-  verifyClaim,
-  verifyLedgerInclusion,
   verifyPCActnCore,
 } from '@atlasauth/pca';
+import { TransparencyLedger, verifyLedgerInclusion } from '@atlasauth/pca/ext/ledger';
+import { verifyClaim } from '@atlasauth/pca/ext/optimistic';
 import { buildPaymentMandate, type PaymentMandateParams } from './mandate';
 import { chargeToPCActn, openChargeBond } from './charge-action';
 

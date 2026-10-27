@@ -1,5 +1,7 @@
 # @atlasauth/pca-spiffe
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Bridge Proof-Carrying Authority agent identity with SPIFFE / SPIRE workload identity. A SPIFFE workload is the kind of attested, non-human principal PCA calls an agent holder. This package validates SPIFFE IDs, verifies JWT-SVIDs, parses and verifies X.509-SVIDs, and maps a SPIFFE ID to and from a PCA holder (a base64url Ed25519 public key usable as `Capability.holder`).
 
 ## Install
@@ -55,7 +57,44 @@ What is validated:
 
 `parseX509Svid` rejects CA certificates and certificates without `digitalSignature` (releases before this one accepted any certificate with a single URI SAN), and `verifyJwtSvid` refuses HMAC algorithms even when given raw key bytes.
 
-Not validated: certificate revocation and name constraints are not checked (a critical extension this package does not understand makes verification fail); `verifyX509Svid` has not been compared against go-spiffe's own chain verifier; trust bundle retrieval and rotation, the Workload API, and SPIFFE federation are out of scope.
+Not validated: certificate revocation and name constraints are not checked (a critical extension this package does not understand makes verification fail); `verifyX509Svid` has not been compared against go-spiffe's own chain verifier; the Workload API and SPIFFE federation are out of scope. Bundle refresh is yours to fetch; `createTrustBundleSource` (below) caches it and fails closed.
+
+## Trust bundle refresh (fail closed)
+
+`createTrustBundleSource` wraps your own bundle fetch (Workload API, bundle endpoint, file) and hands out a JWT key resolver and the X.509 authorities. All three timing options are required.
+
+```ts
+import { createTrustBundleSource, verifyJwtSvid, verifyX509Svid } from '@atlasauth/pca-spiffe';
+
+const bundle = createTrustBundleSource({
+  fetch: async () => ({ jwks: await getJwks(), x509Authorities: await getRootPems() }), // may reject
+  refreshMs: 60_000,   // re-fetch when the cached bundle is older than this
+  maxStaleMs: 300_000, // never use a bundle older than this since its last successful fetch
+});
+await verifyJwtSvid(token, { audience: 'rs', trustDomain: 'example.org', key: bundle.jwtKey });
+verifyX509Svid(chainPem, { trustDomain: 'example.org', roots: await bundle.x509Roots() });
+```
+
+A successful refresh replaces the bundle (nothing is merged), so a removed authority stops being trusted at the next refresh. Concurrent callers share one fetch.
+
+## Failure modes
+
+Every failure throws a `SpiffeError` (or a `jose` error for signature, expiry and key-selection failures); nothing returns a partial result.
+
+| Missing or invalid | Result (`code`) |
+|---|---|
+| bundle never fetched successfully, fetch rejects | `trust_bundle_unavailable` |
+| bundle fetched but has no authorities or is malformed | `trust_bundle_invalid` (a previous good bundle is kept until `maxStaleMs`) |
+| last good fetch older than `maxStaleMs` | `trust_bundle_unavailable` (or `_invalid`), every call |
+| JWT-SVID: no `trustDomain`, empty `audience` | `missing_trust_domain`, `missing_audience` |
+| JWT-SVID: `none` / `HS*` / empty algorithm list | `forbidden_algorithm` |
+| JWT-SVID: non-canonical token spelling | `malformed_token` |
+| JWT-SVID: bad signature, unknown `kid`, wrong `aud`, expired, `nbf` in the future | `jose` error (`ERR_JWS_SIGNATURE_VERIFICATION_FAILED`, `ERR_JWKS_NO_MATCHING_KEY`, `ERR_JWT_CLAIM_VALIDATION_FAILED`, `ERR_JWT_EXPIRED`) |
+| JWT-SVID: no `exp`, bad `typ`, bad or foreign `sub` | `missing_exp`, `invalid_typ`, `invalid_subject`, `trust_domain_mismatch` |
+| X.509-SVID: not a certificate, unknown critical extension | `malformed_certificate`, `unsupported_critical_extension` |
+| X.509-SVID leaf: no or several URI SANs, CA flag, wrong key usage, root path | `no_uri_san`, `multiple_uri_san`, `leaf_is_ca`, `leaf_no_digital_signature`, `leaf_cert_sign`, `leaf_crl_sign`, `leaf_root_path` |
+| chain: empty, too long, wrong trust domain, expired, bad signature, signer not a CA, no `keyCertSign`, path length exceeded, no bundle authority | `chain_empty`, `chain_too_long`, `chain_trust_domain_mismatch`, `chain_expired`, `chain_signature`, `chain_not_ca`, `chain_no_key_cert_sign`, `chain_path_len`, `chain_untrusted_root` |
+| `svidToHolder` given an unverified SVID, a wrong holder key, a missing proof or `cnf.jwk` | `unverified_svid`, `invalid_holder_key`, `holder_binding_failed` |
 
 ## License
 

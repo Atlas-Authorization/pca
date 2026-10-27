@@ -23,7 +23,10 @@ export {
   ExpiredNoRefreshError,
   RefreshFailedError,
   UnknownConnectionError,
+  StoreError,
 } from './errors';
+
+export { type KeyWrapper, LocalKeyWrapper, EncryptedConnectionStore } from './encrypted-store';
 
 export {
   type ProviderConfig,
@@ -37,7 +40,6 @@ export {
   type ConnectionKey,
   type ConnectionStore,
   type StoredConnection,
-  InMemoryConnectionStore,
   cloneConnection,
 } from './store';
 

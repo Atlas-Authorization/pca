@@ -1,5 +1,7 @@
 # @atlasauth/pca-webbotauth
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Web Bot Auth for Proof-Carrying Authority. It signs outbound agent HTTP requests with RFC 9421 HTTP Message
 Signatures in the `web-bot-auth` profile (Ed25519, `Signature-Agent`, `tag="web-bot-auth"`), so a PCA agent
 can pass automated-traffic bot verification, and can optionally carry its per-action PCActn proof in the
@@ -78,14 +80,14 @@ if (res.valid) {
   `clockSkewSec`, `maxAgeSec`, `requiredTag`, `requireExpires`, `label`, and `expectedPCActn` (with proof). Strict by default (breaking, R2-12): the signature must cover `@authority @method @path` (and `@query` when the URL has a query string; override with `requiredComponents`), `expires - created` may not exceed `maxLifetimeSec` (default 300; `Infinity` disables), and `replayCache` (`memoryReplayCache()` or your own `ReplayCache` over a shared store) makes each signature single-use, keyed on `keyid` plus the `nonce` or the signature bytes. `signRequest` adds `@query` automatically when the URL has one.
 - `buildKeyDirectory`, `resolveFromDirectory`, `jwkThumbprint`, `directoryHandler(keys)` - the key
   directory (JWKS) and a framework-agnostic handler for `WELL_KNOWN_DIRECTORY_PATH`.
+- `fetchKeyDirectory(url, options?)` - fetches a published directory fail-closed: https only, no redirects, status 200, the directory media type, a size cap, a timeout, and every key a well-formed Ed25519 JWK (otherwise it throws; it never returns a partial directory). A directory key's `nbf` / `exp` window is enforced when you verify with `jwks`.
 - `proofHeaders`, `decodeProofHeader` - encode and decode the `PCA-Action` header.
 
 ## Status
 
 A valid signature proves that the holder of the `keyid` key signed this request's method, authority, path
 and covered headers inside the freshness window. It does not by itself prove the action is authorized; that
-is the job of the PCActn verifier in `@atlasauth/pca`. The Web Bot Auth and directory specifications are
-IETF drafts and may change. The cryptography has not been independently audited.
+is the job of the PCActn verifier in `@atlasauth/pca`. Pinned to RFC 9421, RFC 9530 and the Web Bot Auth architecture draft-05 (HTTP message signatures directory draft as published with it). These are IETF drafts and may change. The cryptography has not been independently audited.
 
 What is validated:
 

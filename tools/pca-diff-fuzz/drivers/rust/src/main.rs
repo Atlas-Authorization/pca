@@ -56,6 +56,12 @@ fn one(c: &Value) -> Value {
             }
         }
         r
+    } else if kind == "policy" {
+        // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+        // evaluate_caveats(policy_caveats(grant, chain), context) as {allow, failed}
+        let o: Value = match serde_json::from_str(&raw) { Ok(v) => v, Err(_) => return json!({"error": "exception:policy"}) };
+        let (ok, failed) = evaluate_caveats(&policy_caveats(&o["grant"], &o["chain"]), &o["context"]);
+        json!({"allow": ok, "failed": failed})
     } else if kind.starts_with("intent_") {
         // Intent Layer v2 primitives: raw = JSON text of the primitive's `input`; result = that primitive's `expect` shape.
         let i: Value = match serde_json::from_str(&raw) { Ok(v) => v, Err(_) => return json!({"error": format!("exception:{kind}")}) };

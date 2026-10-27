@@ -1,5 +1,7 @@
 # @atlasauth/pca-mpc-lwe-ot-wasm
 
+> Maturity: **hardened** (experimental: hardened, awaiting audit). The engineering is done and evidenced by tests, differential checks and a mutation gate; it awaits an independent review of the Module-LWE base OT, whose Kyber core is used without the Fujisaki-Okamoto transform (a documented non-standard use that standard ML-KEM does not offer). It is never production until that review is done, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The **post-quantum, maliciously-secure endemic base-OT lattice core** for `@atlasauth/pca-mpc`.
 
 `@atlasauth/pca-mpc`'s its ML-KEM base-OT module is a *semi-honest* ML-KEM base OT: a malicious receiver can keep
@@ -86,11 +88,11 @@ decryption-failure probability inherited from the primitive.
 
 ## Status
 
-Experimental. The Kyber core is a prototype use of a non-FO primitive and has not been independently audited.
+Hardened, awaiting audit. The endemic OT needs the bare K-PKE encrypt and decrypt (an ML-KEM encapsulation applies the Fujisaki-Okamoto transform, whose re-encryption check makes a uniformly random public key unusable, which is the property the construction rests on), so this package cannot sit behind the standard ML-KEM interface; using one would bring back the semi-honest base OT that the endemic construction exists to replace. What is standard is everything around it: the encrypt and decrypt halves are checked against the official FIPS 203 vectors (below), and `@atlasauth/pca-mpc` now forms every K-PKE key with FIPS 203 `K-PKE.KeyGen` taken from the audited `@noble/post-quantum` ML-KEM (checked against the official key-generation vectors), instead of this core's pre-standard `kpkeKeygen`. Not independently audited.
 
 **What is validated.** The K-PKE encrypt and decrypt core is checked against NIST's official ACVP vectors for ML-KEM-768 (FIPS 203): all 25 encapsulation vectors (ciphertext and shared secret reproduced exactly) and all 10 decapsulation vectors, including the implicit-rejection cases, by composing this core with the FIPS 203 wrapper hashes. It is also cross-checked against an independent implementation (kyber-py 1.2.0): encryption is byte-identical, decryption interoperates in both directions, and `hashToRing` matches an independent transcription of the FIPS 203 `SampleNTT` algorithm.
 
-**Known difference from ML-KEM.** The underlying library derives K-PKE keys from the seed as `G(d)`, while FIPS 203 uses `G(d || k)`. `kpkeKeygen` therefore does not reproduce the official ML-KEM key-generation vectors and is not an ML-KEM key generator; the keys it produces are valid K-PKE keys (they interoperate with kyber-py in both directions). The Fujisaki-Okamoto transform is intentionally bypassed, so this package is not an ML-KEM implementation and offers no chosen-ciphertext security on its own. Constant-time behavior and the endemic-OT construction built on top are not covered by these tests.
+**Known difference from ML-KEM (no longer on the path used by `@atlasauth/pca-mpc`).** The underlying library derives K-PKE keys from the seed as `G(d)`, while FIPS 203 uses `G(d || k)`. `kpkeKeygen` therefore does not reproduce the official ML-KEM key-generation vectors and is not an ML-KEM key generator; the keys it produces are valid K-PKE keys (they interoperate with kyber-py in both directions). The Fujisaki-Okamoto transform is intentionally bypassed, so this package is not an ML-KEM implementation and offers no chosen-ciphertext security on its own. Constant-time behavior and the endemic-OT construction built on top are not covered by these tests.
 
 ## Build provenance
 

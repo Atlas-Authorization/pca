@@ -165,6 +165,17 @@ Section 3 mirrors its core part in Dafny.
    replay stores are unchanged from `verified-core.md`.
 8. **Not shrunk at all**: parsing and wire validation, the Policy VM, freshness/attestation/ZK/bond verification, cryptographic security of any primitive, side channels.
 
+## 6b. Goal compiler (goal-to-decision, 0.5)
+
+| Component | What is proved | What is trusted |
+|---|---|---|
+| `formal/dafny/GoalIr.dfy`, `GoalCompile.dfy`, `GoalWitness.dfy`, `GoalRender.dfy`, `Goal.dfy` | soundness of the compiler as an equality with the goal's reference semantics (G-T1), monotonicity (G-T2), provenance witness and its checker (G-T3), the compiler half of the ternary decision (G-T4), canonicity (G-T5), unit safety (G-T6), hole safety (G-T7), lossless card (G-T10). Zero `assume`, `{:axiom}`, `extern`. | The pinned Dafny toolchain (section 1). |
+| `GoalPvmTie.dfy` | The goal's Kleene operators equal PolicyVm's `Tri` operators. | Verification only; not extracted. |
+| `packages/pca-verified-core/src/goal.ts`, `packages/pca-goal/src/codec.ts` (glue) | Nothing: strict tape encoding and decoding, no decision logic. Round trips are tested; a codec bug changes what is compiled, so the glue is listed here. | The glue, the phrase table of `renderCard`, the SHA-256 of `policyDigest`. |
+| `generated/pca_goal.js` | Byte-identical to a fresh Dafny compile (CI `ts-dafny-ext-check.sh Goal`). Five-target transcript equality (`difftargets/goal-ci-check.sh`: C#, Go, Java, Python, JavaScript, and the production bridge). | The Dafny JavaScript runtime (hardened as for the other generated files). |
+
+Not claimed: that the goal is what the principal meant, that the ontology matches the site's real API, or that a store supplying history aggregates is linearizable.
+
 ## 7. Reproducing
 
 ```bash

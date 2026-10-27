@@ -1,5 +1,7 @@
 # @atlasauth/pca-sdjwt
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 SD-JWT serialization of a Proof-Carrying Authority action proof (PCActn), so PCA proofs drop into existing JWT / SD-JWT tooling. The standard claims (`iss`, `sub`, `aud`, `iat`, `exp`, `ver`) stay in the clear; the capability claims (`action`, `plan`, `cap_chain`, `sig`, and so on) are selectively disclosable, with optional holder key binding (KB-JWT). It is a bridge, not a replacement: the PCActn's own canonical signature rides along as a disclosable `sig` claim and stays the source of truth.
 
 ## Install
@@ -42,12 +44,13 @@ else console.error(res.reason);
 ## API
 
 - `issuePcaSdJwt(pcactn, options)`, `present(sdjwt, claimNames, options?)`, `verifyPcaSdJwt(sdjwt, options)`.
+- `verifyRecovered(result, coreOptions)`: re-verifies a successful `verifyPcaSdJwt` result with PCA Core (chain, plan inclusion, leaf signature, audience, validity) by rebuilding the exact PCActn from the recovered claims. It denies when a required claim (`action`, `cap_chain`, `plan`, `sig`, `grant_ref`, `counter`) was withheld, when `iss`/`sub` disagree with the chain, or when the exact-millisecond `iat_ms`/`exp_ms` claims are missing or inconsistent. Pass your own stored `grant` and your `audience`.
 - Key helpers: `ed25519PublicJwk`, `importEd25519PrivateKey`, `importEd25519PublicKey` (bridge raw PCA Ed25519 keys to jose).
 - Constants: `PCA_CAPABILITY_CLAIMS`, `SD_ALG`, `PCA_SD_JWT_TYP`, `KB_JWT_TYP`, `DEFAULT_SIGNING_ALG`.
 
 ## Status
 
-Experimental. Verifying an SD-JWT checks the issuer's JWT signature, disclosure digests and key binding. It does not re-run the PCA verification of the embedded chain, plan and `sig`; do that with `@atlasauth/pca` on the recovered claims. The cryptography is unaudited.
+Experimental. Pinned to RFC 9901 (SD-JWT and SD-JWT+KB). Verifying an SD-JWT checks the issuer's JWT signature, disclosure digests and key binding. On its own it does not re-run the PCA verification of the embedded chain, plan and `sig`; call `verifyRecovered` for that. The cryptography is unaudited.
 
 What is validated:
 

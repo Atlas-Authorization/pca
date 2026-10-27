@@ -1,5 +1,7 @@
 # @atlasauth/pca-aggsig
 
+> Maturity: **experimental**. Its API may change or be removed in any release, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 BLS12-381 signature aggregation for Proof-Carrying Authority (PCA). A whole delegation chain's per-hop signatures, or a transparency-ledger witness quorum's cosignatures, collapse into one 96-byte aggregate that is checked with a single pairing-product verification. The scheme is BLS with proof-of-possession (`draft-irtf-cfrg-bls-signature`), minimal-pubkey-size variant (48-byte G1 keys, 96-byte G2 signatures).
 
 ## Install

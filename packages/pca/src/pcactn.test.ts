@@ -65,7 +65,7 @@ describe('verifyPCActnCore', () => {
     const { grant, mk } = build();
     const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-1' });
     expect(r.allow).toBe(true);
-    expect(r.checks).toMatchObject({ wire: 'pass', version: 'pass', audience: 'pass', validity: 'pass', cap_chain: 'pass', plan_inclusion: 'pass', leaf_signature: 'pass', counter: 'pass', attestation: 'not-enforced', threshold: 'not-enforced', revocation: 'not-enforced' });
+    expect(r.checks).toMatchObject({ wire: 'pass', version: 'pass', audience: 'pass', validity: 'pass', cap_chain: 'pass', plan_inclusion: 'pass', leaf_signature: 'pass', counter_format: 'pass', attestation: 'not-enforced', threshold: 'not-enforced', revocation: 'not-enforced' });
   });
   it('tampered action breaks plan inclusion (and signature)', async () => {
     const { grant, mk } = build();
@@ -104,7 +104,7 @@ describe('verifyPCActnCore', () => {
     const { grant, mk, S } = build();
     const { sig: _s, ...body } = mk(0);
     const neg = signPCActn({ ...body, counter: -1 }, S.secretKey);
-    expect((await verifyPCActnCore(neg, { grant, nowEpoch: NOW })).checks.counter).toBe('fail');
+    expect((await verifyPCActnCore(neg, { grant, nowEpoch: NOW })).checks.counter_format).toBe('fail');
     const bad = signPCActn({ ...body, counter: 'x' as unknown as number }, S.secretKey);
     expect((await verifyPCActnCore(bad, { grant, nowEpoch: NOW })).checks.wire).toBe('fail');
     const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { revocation: () => ({ enforced: true, ok: false, reason: 'revoked' }) } });
