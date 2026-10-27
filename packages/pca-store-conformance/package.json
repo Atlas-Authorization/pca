@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-store-conformance",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Conformance kit for PCA replay / counter stores: record concurrent histories against YOUR store adapter (with crashes and restarts) and check them for linearizability against the consumeOnce / advance contract.",
   "keywords": [
     "linearizability",

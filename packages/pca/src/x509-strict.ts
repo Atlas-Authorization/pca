@@ -29,7 +29,9 @@ function readTlv(b: Uint8Array, off: number, limit = b.length): Tlv {
     if (n === 0 || n > 3) throw new RangeError('DER: unsupported length form');
     if (p + n > limit) throw new RangeError('DER: truncated length');
     len = 0;
+    if (n > 1 && b[p] === 0) throw new RangeError('DER: non-minimal length (leading zero)');
     for (let i = 0; i < n; i++) len = (len << 8) | b[p + i]!;
+    if (len < 0x80) throw new RangeError('DER: non-minimal length (long form below 128)');
     p += n;
   }
   if (p + len > limit) throw new RangeError('DER: element overruns its parent');
@@ -62,6 +64,7 @@ function oidEquals(b: Uint8Array, t: Tlv, want: Uint8Array): boolean {
 export function readCertRoleInfo(certDer: Uint8Array): CertRoleInfo {
   const outer = readTlv(certDer, 0);
   if (outer.tag !== 0x30) throw new RangeError('certificate is not a DER SEQUENCE');
+  if (outer.end !== certDer.length) throw new RangeError('trailing bytes after the certificate');
   const tbs = readTlv(certDer, outer.start, outer.end);
   if (tbs.tag !== 0x30) throw new RangeError('certificate has no tbsCertificate');
   const info: CertRoleInfo = { hasBasicConstraints: false, ca: false, hasKeyUsage: false, keyCertSign: false };
@@ -113,6 +116,7 @@ export function readCertRoleInfo(certDer: Uint8Array): CertRoleInfo {
         info.hasKeyUsage = true;
         const bs = readTlv(certDer, next.start, next.end);
         if (bs.tag !== 0x03 || bs.end - bs.start < 2) throw new RangeError('keyUsage is not a BIT STRING');
+        if (certDer[bs.start]! > 7) throw new RangeError('keyUsage BIT STRING has more than 7 unused bits');
         info.keyCertSign = (certDer[bs.start + 1]! & 0x04) !== 0;
       }
     }
@@ -212,6 +216,18 @@ export function tbsOfCertificate(certDer: Uint8Array): Uint8Array {
 /** {@link parseTbsExtensions} over a whole certificate. */
 export function parseCertExtensions(certDer: Uint8Array): Map<string, CertExtension> {
   return parseTbsExtensions(tbsOfCertificate(certDer));
+}
+
+/** The only critical extensions the attestation chain verifiers understand: BasicConstraints and keyUsage. */
+export const RECOGNISED_CRITICAL_EXTENSIONS: ReadonlySet<string> = new Set(['2.5.29.19', '2.5.29.15']);
+
+/**
+ * RFC 5280 4.2: a certificate with a critical extension the verifier does not recognise must be rejected. Returns the
+ * first such extension's OID, or undefined. Throws on a malformed extension table (callers deny).
+ */
+export function unrecognisedCriticalExtension(certDer: Uint8Array, recognised: ReadonlySet<string> = RECOGNISED_CRITICAL_EXTENSIONS): string | undefined {
+  for (const [oid, e] of parseCertExtensions(certDer)) if (e.critical && !recognised.has(oid)) return oid;
+  return undefined;
 }
 
 /**

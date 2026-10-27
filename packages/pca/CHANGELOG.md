@@ -2,6 +2,10 @@
 
 See the full release notes in [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
 
+## 0.4.3 (2026-10-27)
+
+Security (0.4.3): the hardware attestation verifiers (AMD SEV-SNP, Intel DCAP / TDX, Azure Attestation, Google Confidential Space) now refuse evidence with a second encoding: a SEV-SNP report must be exactly 1184 bytes with zero reserved signature bytes; DCAP quotes may carry only zero bytes after the signature data; Intel PCK chains reject unrecognised critical extensions; the X.509 reader rejects trailing bytes, non-minimal DER lengths and keyUsage with more than 7 unused bits; MAA and Confidential Space tokens must be canonical base64url. Previously accepted malleable evidence is now rejected. See docs/pca/CHANGELOG.md.
+
 ## 0.4.2 (2026-10-25)
 
 Security (0.4.2, r13 mutation review): `verifyAttestation` and `createAttestationVerifier` accepted an attestation when the verifier clock was not a finite number (`nowMs` NaN / Infinity / a string, or an `opts.now` hook returning one): every validity-window and nonce-age comparison came out false, which read as "within the window" and "fresh" (fail open). A non-finite clock is now refused (`verifier clock is not a finite time (fail closed)`). The verified-core twin already refused it.

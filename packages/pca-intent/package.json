@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-intent",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "private": true,
   "description": "PCA Intent Layer prototype: intent as a measurable object. Outcome space from the grant vocabulary, version-space / Bayesian elicitation with maximal-disagreement boundary-witness questions, residual-risk and fidelity estimates, conservative grant synthesis, content-addressed Intent Maps, signed intent statements and a deterministic grant renderer.",
   "license": "MIT",

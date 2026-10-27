@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-less-wasm",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "LESS (code-equivalence, NIST additional-signature Round 2 candidate) signature backend for @atlasauth/pca: the official LESS reference C compiled to WebAssembly with a portable, dependency-free loader (Node >=20, browsers, Deno, Bun, edge). Verified by the official KATs, a native-vs-wasm differential, sanitizers and robustness tests; unaudited, not a standard.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

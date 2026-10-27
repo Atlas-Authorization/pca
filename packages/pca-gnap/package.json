@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-gnap",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "GNAP (RFC 9635) bridge for PCA, defining an agent-GNAP profile: map a GNAP grant request/response + continuation to an attenuated PCA capability, with GNAP continuation mapped to FROST/CIBA step-up and key-bound (jwsd) requests.",
   "keywords": [
     "gnap",

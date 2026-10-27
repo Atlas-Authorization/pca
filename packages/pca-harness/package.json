@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-harness",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Reference orchestration harness for Proof-Carrying Authority: wraps an untrusted model/tool oracle and enforces the PCA invariants around it. Experimental prototype.",
   "keywords": [
     "orchestration harness",

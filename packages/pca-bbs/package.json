@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-bbs",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "BBS signatures (CFRG draft) for PCA: issue a capability as a multi-message BBS credential, then present it with selective disclosure + unlinkable zero-knowledge proof-of-possession, so an agent reveals only the attributes a tool needs and uses can't be correlated.",
   "keywords": [
     "bbs signatures",

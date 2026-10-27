@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-analyzer",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Static authority analyzer for Proof-Carrying Authority: a sound, bounded decision procedure over PCA's predicate/caveat policy (reachability, vacuity/totality, delegation-safety subsumption, disjointness, equivalence, and declared-intent conformance) with counterexamples.",
   "keywords": [
     "static analysis",

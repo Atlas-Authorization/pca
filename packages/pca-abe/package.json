@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-abe",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Proof-carrying encryption for PCA: attribute/policy-based encryption on BLS12-381 so a tool payload decrypts only for a holder whose capability satisfies the policy — binding confidentiality to proven authority.",
   "keywords": [
     "attribute-based encryption",

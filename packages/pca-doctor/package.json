@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-doctor",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "pca-doctor: check a live PCA deployment's assumptions (clock skew, replay-store atomicity and durability, trusted-proxy config, suite / PQ-pin policy, root-caveat enforcement) and print pass / warn / fail with a remediation per check.",
   "keywords": [
     "doctor",

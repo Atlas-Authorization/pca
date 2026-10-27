@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-events",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Typed step-up lifecycle events + signed webhooks for Proof-Carrying Authority: build, HMAC-sign and verify step-up.created/approved/denied/expired events so integrators can run their own inbox, Slack bot or audit sink.",
   "keywords": [
     "webhooks",

@@ -2,6 +2,18 @@
 
 All notable changes to the `@atlasauth/pca*` packages and `create-pca-app`. Every package in the family is versioned in lockstep, so a release bumps all of them together. While the version is 0.x, minor releases may contain breaking changes.
 
+## 0.4.3 (2026-10-27)
+
+### Security
+
+- **Hardware attestation verifiers accepted evidence with more than one encoding, and two certificate-handling gaps.** This release makes the AMD SEV-SNP, Intel DCAP / TDX, Azure Attestation (MAA) and Google Confidential Space verifiers strict. Evidence that older versions accepted is now refused:
+  - **AMD SEV-SNP:** a report of any length of 816 bytes or more was accepted, and non-zero bytes in the reserved part of the signature block were ignored. A report must now be exactly 1184 bytes with those reserved bytes zero.
+  - **Intel DCAP / TDX:** non-zero bytes after the declared signature data were ignored. Only zero padding (as Azure appends) may follow. A certificate in the PCK chain carrying a critical extension the verifier does not recognise is now rejected (RFC 5280 section 4.2), as the AMD chain already did.
+  - **X.509 / DER reader:** trailing bytes after a certificate, non-minimal DER lengths, and a keyUsage bit string declaring more than 7 unused bits are rejected. The last case could grant a certificate the CA role that OpenSSL refuses.
+  - **Azure Attestation (MAA) and Confidential Space tokens:** header, payload and signature segments must be canonical unpadded base64url. Padding, stray characters and non-zero trailing bits were previously ignored, and an undecodable signature segment now fails as `malformed signature segment` instead of `empty signature`.
+
+  No signature check was weakened before this release and no forged evidence is known to have been accepted: the gaps let altered encodings of genuine evidence, or a certificate role OpenSSL would not grant, through. If you verify hardware attestation, upgrade. If you store or replay evidence, make sure it is the exact bytes the hardware produced. Affects `@atlasauth/pca` only; the native verifiers do not ship these hardware verifiers in 0.4.x. Advisory text: see the 0.4.3 security advisory.
+
 ## 0.4.2 (2026-10-25)
 
 ### Security

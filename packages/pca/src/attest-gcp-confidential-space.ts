@@ -1,3 +1,4 @@
+import { decodeCanonicalBase64url } from './strict-jws';
 import { x509ValidAt } from './x509-validity';
 import { snapshotConfig } from './config-snapshot';
 /**
@@ -249,8 +250,8 @@ export function parseGcpCsJwt(token: string): ParsedGcpCsJwt {
   let headerObj: unknown;
   let payloadObj: unknown;
   try {
-    headerObj = JSON.parse(Buffer.from(h, 'base64url').toString('utf8'));
-    payloadObj = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
+    headerObj = JSON.parse(decodeCanonicalBase64url(h).toString('utf8'));
+    payloadObj = JSON.parse(decodeCanonicalBase64url(p).toString('utf8'));
   } catch (e) {
     throw new TypeError(`parseGcpCsJwt: malformed JSON segment: ${e instanceof Error ? e.message : 'unknown'}`);
   }
@@ -267,7 +268,12 @@ export function parseGcpCsJwt(token: string): ParsedGcpCsJwt {
     ...(asStringArray(headerRec.x5c) !== undefined ? { x5c: asStringArray(headerRec.x5c) } : {}),
     ...(asString(headerRec.typ) !== undefined ? { typ: asString(headerRec.typ) } : {}),
   };
-  const signature = new Uint8Array(Buffer.from(s, 'base64url'));
+  let signature: Uint8Array;
+  try {
+    signature = new Uint8Array(decodeCanonicalBase64url(s));
+  } catch (e) {
+    throw new TypeError(`parseGcpCsJwt: malformed signature segment: ${e instanceof Error ? e.message : 'unknown'}`);
+  }
   if (signature.length === 0) throw new TypeError('parseGcpCsJwt: empty signature');
   // signingInput is the ASCII bytes of the compact `header.payload` prefix.
   return { header, payload: payloadRec, signingInput: new Uint8Array(Buffer.from(`${h}.${p}`, 'ascii')), signature };

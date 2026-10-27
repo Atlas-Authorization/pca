@@ -25,7 +25,7 @@ import { x509ValidAt } from './x509-validity';
  */
 import { p256 } from '@noble/curves/p256';
 import { sha256 } from './hash';
-import { checkChainRoles, ecPointFromKey } from './x509-strict';
+import { checkChainRoles, ecPointFromKey, unrecognisedCriticalExtension } from './x509-strict';
 import { attestationBinding } from './attestation';
 import type { ExpectedAttestationBinding, MeasuredIdentity } from './attestation';
 
@@ -299,6 +299,8 @@ export function parseDcapQuote(quote: Uint8Array): ParsedDcapQuote {
   // The PEM may carry a trailing NUL; decode as latin1 and keep only up to the last END CERTIFICATE.
   const pckChainPem = new TextDecoder('latin1').decode(quote.slice(o, o + innerSize));
 
+  // Azure pads the quote with zero bytes after the declared signature data; anything else there is unverified data riding along.
+  if (quote.subarray(sigEnd).some((x) => x !== 0)) throw new RangeError('parseDcapQuote: non-zero bytes after the signature data');
   return { version, attKeyType, teeType, header, tdReportBody, quoteSignature, akPubRaw, qeReportBody, qeReportSignature, qeAuthData, pckChainPem };
 }
 
@@ -489,6 +491,10 @@ export async function verifyIntelPckChainX509(opts: {
     // CA roles: issuers are CAs, the leaf is not.
     const roleFail = checkChainRoles(ordered.map((c) => new Uint8Array(c.raw)));
     if (roleFail) return { ok: false, reason: roleFail };
+    for (let i = 0; i < ordered.length; i++) {
+      const crit = unrecognisedCriticalExtension(new Uint8Array(ordered[i]!.raw)); // throws on a malformed extension table: caught below, fail closed
+      if (crit) return { ok: false, reason: `PCK chain certificate at depth ${i} has an unrecognised critical extension ${crit}` };
+    }
 
     const leafPk = leaf.publicKey;
     if (leafPk.asymmetricKeyType !== 'ec') return { ok: false, reason: `PCK leaf key is not EC (got ${leafPk.asymmetricKeyType ?? 'unknown'})` };

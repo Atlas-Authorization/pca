@@ -7,8 +7,8 @@
       "type": "library",
       "bom-ref": "root",
       "name": "@atlasauth/pca-verified-core",
-      "version": "0.4.1",
-      "purl": "pkg:npm/%40atlasauth/pca-verified-core@0.4.1",
+      "version": "0.4.3",
+      "purl": "pkg:npm/%40atlasauth/pca-verified-core@0.4.3",
       "licenses": [
         {
           "license": {

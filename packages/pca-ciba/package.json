@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-ciba",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "CIBA (Client-Initiated Backchannel Authentication) bridge for PCA FROST step-up: turn a step-up request into a backchannel human-approval flow with risk-adaptive gating.",
   "keywords": [
     "ciba",

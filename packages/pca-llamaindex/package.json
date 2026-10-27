@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-llamaindex",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "LlamaIndex.TS adapter for Proof-Carrying Authority: wrap a FunctionTool so each call emits a PCActn before it runs.",
   "keywords": [
     "llamaindex",

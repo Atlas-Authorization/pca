@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-payments",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Payment-mandate reference for Proof-Carrying Authority: merchant/category allowlists, per-transaction and cumulative caps, auto-approve threshold, hard ceiling and bonded refunds expressed as PCA capabilities. Experimental prototype.",
   "keywords": [
     "payments",

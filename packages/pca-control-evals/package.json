@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-control-evals",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Empirical adversarial control-evaluation harness for PCA: a seeded red-team/blue-team game (Redwood-style AI Control) that scores safety = P(a possibly-misaligned agent cannot cause an unacceptable outcome) + usefulness against PCA's verifier/budget/step-up/DLP/immune controls. Complements the analytic Σrisk ≤ bMax/κ bound.",
   "keywords": [
     "ai control",

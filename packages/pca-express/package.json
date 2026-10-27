@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-express",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Express middleware for Proof-Carrying Authority: requirePCA() verifies the inbound PCActn and attaches the verdict, or answers 401/403 with a WWW-Authenticate challenge.",
   "keywords": [
     "express",
