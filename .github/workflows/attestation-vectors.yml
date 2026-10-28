@@ -1,0 +1,96 @@
+name: Attestation vectors (generated, deterministic)
+
+# conformance/attestation-evidence-vectors.json and conformance/passport-vectors.json are produced by RUNNING the TypeScript
+# verifiers over every row; the generator fails when a row outcome contradicts its intent. This job regenerates both and fails
+# when the committed files differ; the regenerated files are uploaded so a stale file can be replaced.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: regenerate and compare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Build dependencies
+        run: pnpm -r --filter=@atlasauth/pca^... run build
+      - name: Regenerate attestation evidence vectors
+        working-directory: packages/pca
+        run: pnpm exec tsx scripts/gen-conformance-attestation.ts
+      - name: Regenerate passport vectors
+        working-directory: packages/pca
+        run: pnpm exec tsx scripts/gen-conformance-passport.ts
+      - name: Collect the files that changed
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/regen"
+          git status --porcelain -- packages/pca/conformance | awk '{print $2}' | while read -r f; do mkdir -p "$RUNNER_TEMP/regen/$(dirname "$f")"; cp "$f" "$RUNNER_TEMP/regen/$f"; done
+          find "$RUNNER_TEMP/regen" -type f | sed "s|$RUNNER_TEMP/regen/||"
+      - name: Upload regenerated files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-vectors
+          path: ${{ runner.temp }}/regen
+          if-no-files-found: ignore
+      - name: Committed files are what the generators produce
+        run: test -z "$(git status --porcelain -- packages/pca/conformance)" || { git status --porcelain -- packages/pca/conformance; exit 1; }
+
+  ap2-crosscheck-fixture:
+    name: regenerate the AP2 cross-check fixture (artifact only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-ap2...
+      - name: Build dependencies
+        run: pnpm -r --filter=@atlasauth/pca-ap2^... run build
+      - name: Generate fixtures/crosscheck/mine.json
+        working-directory: packages/pca-ap2
+        run: |
+          pnpm exec tsc -p tsconfig.json --noEmit false --outDir dist/xc
+          AP2_FIXTURES="$PWD/fixtures" node crosscheck/generate.cjs
+      - uses: astral-sh/setup-uv@v5
+      - name: Independent implementations (official AP2 Python SDK, sd-jwt JavaScript libraries)
+        working-directory: packages/pca-ap2
+        run: |
+          set -e
+          W="$RUNNER_TEMP/ap2x"; mkdir -p "$W"
+          uv venv "$W/py"
+          uv pip install --python "$W/py/bin/python" cryptography==46.0.5 jwcrypto==1.5.6 pydantic==2.12.5 sd-jwt==0.10.4
+          git init -q "$W/ap2src" && git -C "$W/ap2src" remote add origin https://github.com/google-agentic-commerce/AP2.git
+          git -C "$W/ap2src" sparse-checkout set code/sdk/python
+          git -C "$W/ap2src" fetch -q --depth 1 origin e1ea56db72a6385bce3e5c1112b3a56ce60acb43
+          git -C "$W/ap2src" checkout -q FETCH_HEAD
+          AP2_SRC="$W/ap2src/code/sdk/python" "$W/py/bin/python" -I crosscheck/ap2_sdk.py
+          npm i --prefix "$W/sdjwt" @sd-jwt/core@0.22.0 @sd-jwt/crypto-nodejs@0.19.0
+          SDJWT_LIB="$W/sdjwt" node crosscheck/sdjwt-js.cjs
+      - name: Upload the fixture
+        uses: actions/upload-artifact@v4
+        with:
+          name: ap2-crosscheck-mine
+          path: packages/pca-ap2/fixtures/crosscheck/*.json

@@ -1,0 +1,45 @@
+name: Guide examples B
+
+# The runnable companions of five guides (obligations, leases and break glass; the token vault proxy; spend rails; the sandbox;
+# the MCP pca_need flow): examples/pca-guides-b. Each script prints its outcomes and exits non-zero if one differs from the guide.
+on:
+  push:
+    branches: [main, 'ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  examples:
+    name: pca-guides-b (typecheck and run each script)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=pca-guides-b...
+      - name: Build the packages the examples import
+        run: pnpm --filter pca-guides-b^... run build
+      - name: Typecheck
+        run: pnpm --filter pca-guides-b run typecheck
+      - name: Obligations, leases and break glass
+        run: pnpm --filter pca-guides-b run obligations-leases-break-glass
+      - name: Token vault proxy
+        run: pnpm --filter pca-guides-b run token-vault-proxy
+      - name: Spend rails
+        run: pnpm --filter pca-guides-b run spend-rails
+      - name: Sandbox
+        run: pnpm --filter pca-guides-b run sandbox
+      - name: MCP pca_need
+        run: pnpm --filter pca-guides-b run mcp-pca-need

@@ -3,6 +3,7 @@
  * the uncatalogued fallbacks reaching predicates and caveats, deny / step-up reasons, the rate window threading, peak and
  * autonomous risk) and the exact lintPolicy findings (codes, levels, messages and the boundaries of each rule).
  */
+import { RATE_LIMITED_REFUND_CATALOG } from './rate-limited-refund.test-util';
 import { describe, expect, it } from 'vitest';
 import { compilePolicy, type CompiledPolicy } from './facade';
 import { lintPolicy, simulate } from './policy-sim';
@@ -49,9 +50,10 @@ describe('simulate: risk value', () => {
 
 describe('simulate: uncatalogued verbs', () => {
   it('a granted uncatalogued verb under the dollars model is treated as irreversible, blast 0.8 (no throw)', () => {
-    const p = compilePolicy({ permissions: { stripe: ['refund'], acme: ['x'] }, limits: { refund: '$100' } });
-    expect(settle(() => simulate(p, [{ verb: 'acme.x', resource: 'r' }]).results[0])).toEqual(
-      ok({ action: { verb: 'acme.x', resource: 'r' }, outcome: 'auto', t: 1, r: 0.8, budgetAfter: 20 }),
+    const p = compilePolicy({ permissions: { stripe: ['refund'], acme: ['x'] }, limits: { refund: '$100' }, catalog: RATE_LIMITED_REFUND_CATALOG });
+    expect(settle(() => simulate(p, [{ verb: 'acme.x', resource: 'r' }], { catalog: RATE_LIMITED_REFUND_CATALOG }).results[0])).toEqual(
+      // W7b: an uncatalogued verb is irreversible, so the default co-sign tiers stay and r = 0.8 needs a human (the pre-W7b value was auto)
+      ok({ action: { verb: 'acme.x', resource: 'r' }, outcome: 'step_up', t: 3, r: 0.8, reason: 'requires tier 3', budgetAfter: 100 }),
     );
   });
   it("the action context's reversibility_class is 'irreversible' for an uncatalogued verb and the spec class otherwise", () => {
@@ -142,15 +144,17 @@ describe('lintPolicy: exact findings', () => {
     expect(settle(() => lintPolicy({ ...p, predicates: [] }).map((l) => l.code))).toEqual(ok(['broad-resource']));
   });
   it('broad-resource fires from rate_limited up, with the exact message', () => {
-    const p = compilePolicy({ permissions: { github: ['merge_pr'] } });
+    const p = compilePolicy({ permissions: { calendar: ['delete_event'] } });
     expect(lintPolicy(p)).toStrictEqual([
-      { level: 'warn', code: 'broad-resource', message: "'github.merge_pr' (rate_limited) matches ANY resource — consider a resource prefix" },
+      { level: 'warn', code: 'broad-resource', message: "'calendar.delete_event' (rate_limited) matches ANY resource — consider a resource prefix" },
     ]);
   });
   it('an unlimited money action is flagged', () => {
     const p = compilePolicy({ permissions: { stripe: ['charge'] } });
     expect(lintPolicy(p)).toStrictEqual([
       { level: 'warn', code: 'money-unbounded', message: "money action 'stripe.charge' has no per-call limit — spend is bounded only by the trust budget" },
+      // a charge is irreversible now (one definition with the Goal IR ontology), so the broad-resource warning applies too
+      { level: 'warn', code: 'broad-resource', message: "'stripe.charge' (irreversible) matches ANY resource — consider a resource prefix" },
     ]);
   });
   it('an uncatalogued verb is reported as info', () => {
@@ -161,14 +165,13 @@ describe('lintPolicy: exact findings', () => {
     ]);
   });
   it('theta2 >= 1: info without irreversible actions, warn (with the suffix) when any is irreversible', () => {
-    const r = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$100' } });
+    const r = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$100' }, catalog: RATE_LIMITED_REFUND_CATALOG });
     expect(lintPolicy(r).filter((l) => l.code === 'no-step-up-band')).toStrictEqual([
       { level: 'info', code: 'no-step-up-band', message: 'theta2 ≥ 1: no action triggers a human step-up until the budget is exhausted' },
     ]);
     const m = compilePolicy({ permissions: { stripe: ['refund', 'payout'] }, limits: { refund: '$100', payout: '$100' } });
-    expect(lintPolicy(m).filter((l) => l.code === 'no-step-up-band')).toStrictEqual([
-      { level: 'warn', code: 'no-step-up-band', message: 'theta2 ≥ 1: no action triggers a human step-up until the budget is exhausted — including irreversible actions' },
-    ]);
+    // W7b: granting an irreversible action keeps the default co-sign tiers, so theta2 < 1 and there is nothing to flag
+    expect(lintPolicy(m).filter((l) => l.code === 'no-step-up-band')).toStrictEqual([]);
   });
   it('large-autonomy: bMax/kappa strictly above 100, positive kappa only', () => {
     const with_ = (kappa: number, bMax: number) => lintPolicy({ ...base(), riskPolicy: { ...base().riskPolicy, kappa, bMax } });

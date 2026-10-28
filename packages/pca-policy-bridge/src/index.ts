@@ -18,3 +18,5 @@ export { regoToPca } from './rego';
 export { openfgaToPca } from './openfga';
 export { decide } from './types';
 export type { BridgeResult, TranslationReport, PolicySource } from './types';
+export { celToCondition, celToPredicate, celConditionsToPca, parseCel } from './cel';
+export type { CelSchema, CelVar, CelType, CelResult, CelError, CelErrorCode, CelNode } from './cel';

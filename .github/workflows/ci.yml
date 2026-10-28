@@ -29,6 +29,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install
         run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
       # PCA_SRC=1 reads @atlasauth/pca from src, but its workspace dependencies (@atlasauth/pca-verified-core, ...) still
@@ -39,7 +41,10 @@ jobs:
         run: |
           set -euo pipefail
           TSX=packages/pca/node_modules/.bin/tsx
-          for g in gen-conformance-intent-v2.mjs gen-conformance-intent-wb.mjs gen-conformance-intent-map.mjs; do
+          # the layered corpus (conformance/LAYERS.md): policy + stateful vectors, then the layer manifest (last: it reads them); the decision
+          # corpus (rules 20-21, the ternary decision, escalation answers under every suite) and the end-to-end model-rules corpus are
+          # regenerated here too: a committed expectation that differs from the TypeScript reference fails the unchanged-corpus gate below
+          for g in gen-conformance-intent-v2.mjs gen-conformance-intent-wb.mjs gen-conformance-intent-map.mjs gen-conformance-policy.mjs gen-conformance-stateful.mjs gen-conformance-decision.mjs gen-conformance-k1.mjs gen-provenance-vectors.mjs gen-conformance-model-rules.mjs gen-conformance-layers.mjs; do
             [ -f "packages/pca/scripts/$g" ] || { echo "skip (absent in this tree): $g"; continue; }
             echo "::group::$g"; PCA_SRC=1 "$TSX" "packages/pca/scripts/$g"; echo "::endgroup::"
           done
@@ -48,6 +53,12 @@ jobs:
         run: |
           git status --porcelain -- packages/pca/conformance
           git diff --stat --exit-code -- packages/pca/conformance
+      - name: The regenerated corpus (commit these files when the gate above fails)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-conformance
+          path: packages/pca/conformance/*.json
 
   test:
     name: packages shard ${{ matrix.shard }}/8
@@ -69,6 +80,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install (lockfile pinned)
         run: pnpm install --frozen-lockfile --filter=. $BUILD_FILTER
       - name: Build (shard packages + their dependencies)
@@ -80,9 +93,52 @@ jobs:
         run: |
           curl -fsSL -o "$RUNNER_TEMP/circom" https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
           chmod +x "$RUNNER_TEMP/circom"
-          CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
+          PCA_DEV_SETUP=1 CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
       - name: Test
         run: pnpm -r --no-bail $TEST_FILTER run test
+      # the vendor-attestation conformance vectors are produced by RUNNING the TypeScript verifiers; the committed file must be
+      # exactly what the generator writes (the same check runs inside the test suite). On drift the regenerated file is attached
+      # so it can be committed; the Go / Rust / Python suites replay the committed file.
+      - name: Attestation vectors are current
+        if: contains(format('{0} ', env.TEST_FILTER), '--filter=@atlasauth/pca ')
+        working-directory: packages/pca
+        run: |
+          npx tsx scripts/gen-conformance-passport.ts --check && npx tsx scripts/gen-conformance-attestation.ts --check || { npx tsx scripts/gen-conformance-passport.ts && npx tsx scripts/gen-conformance-attestation.ts && node scripts/gen-conformance-layers.mjs && echo "regenerated: commit packages/pca/conformance/{attestation-evidence-vectors,passport-vectors,layers}.json" && exit 1; }
+      # operation records, plan lifecycle, revocation staleness and assurance labels: recorded from the TypeScript implementation;
+      # every native replays the committed files (a missing file fails its suite)
+      - name: Native-parity vectors are current
+        if: contains(format('{0} ', env.TEST_FILTER), '--filter=@atlasauth/pca ')
+        working-directory: packages/pca
+        run: |
+          npx tsx scripts/gen-conformance-native-parity.ts --check || { npx tsx scripts/gen-conformance-native-parity.ts && echo "regenerated: commit packages/pca/conformance/{operation,plan,staleness,assurance}-vectors.json" && exit 1; }
+      # the forbid-wins certificate and linked-template vectors are produced by the TypeScript reference; the committed files must be
+      # exactly what the generators write (the same check runs inside the test suite). Python, Go and Ruby replay them.
+      - name: Forbid-certificate and policy-link vectors are current
+        if: contains(format('{0} ', env.TEST_FILTER), '--filter=@atlasauth/pca ')
+        working-directory: packages/pca
+        run: |
+          # the sibling packages do not depend on tsx: run theirs with the core package's
+          TSX="$PWD/node_modules/.bin/tsx"
+          npx tsx scripts/gen-conformance-forbid-certificate.ts --check
+          npx tsx scripts/gen-conformance-policy-link.ts --check
+          npx tsx scripts/gen-conformance-pca-grant.ts --check
+          (cd ../pca-grants && "$TSX" scripts/gen-blueprint-vectors.ts --check)
+          (cd ../pca-grants && "$TSX" scripts/gen-lease-vectors.ts --check)
+          (cd ../pca-grants && "$TSX" scripts/gen-break-glass-vectors.ts --check)
+          (cd ../pca-a2a && "$TSX" scripts/gen-a2a-vectors.ts --check)
+          npx tsx scripts/gen-k5-vectors.ts --check
+          npx tsx scripts/gen-authorize-workflow-fixtures.ts --check
+          (cd ../pca-attest-eat && "$TSX" scripts/gen-sigstore-vectors.ts --check)
+      - name: Attach regenerated attestation vectors
+        if: failure() && contains(format('{0} ', env.TEST_FILTER), '--filter=@atlasauth/pca ')
+        uses: actions/upload-artifact@v4
+        with:
+          name: attestation-evidence-vectors
+          path: |
+            packages/pca/conformance/attestation-evidence-vectors.json
+            packages/pca/conformance/passport-vectors.json
+            packages/pca/conformance/layers.json
+          if-no-files-found: ignore
 
   model-conformance:
     name: model-to-code conformance (smoke)
@@ -97,6 +153,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install
         run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
       - name: Build (the harness loads the built packages)
@@ -105,3 +163,65 @@ jobs:
         run: bash verify/run-conformance.sh smoke
       - name: Every stage ran cases, 0 disagreements, model mutants killed (no vacuous pass)
         run: python3 .github/scripts/formal-conformance-check.py .verify-work/conformance 0 smoke
+
+  maturity:
+    name: every published package declares its maturity tier
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # tier in every manifest, a matching "Maturity:" line in every README header, experimental said where it applies
+      - run: node .github/scripts/maturity-check.mjs
+
+  witness:
+    # The reference transparency-log witness (tools/pca-witness): its unit tests (cosigning rules, durable head, HTTP server) and
+    # the container end-to-end (image builds, runs unprivileged on a read-only root, cosign round trip, head survives a restart).
+    name: reference witness (tests + container end-to-end)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Build (the end-to-end fixture reads packages/pca/dist)
+        run: pnpm -r --filter=@atlasauth/pca... run build
+      # tools/pca-witness is not a workspace member: it resolves vitest through the core package's install
+      - name: Unit tests
+        run: |
+          ln -sfn "$PWD/packages/pca/node_modules" tools/pca-witness/node_modules
+          packages/pca/node_modules/.bin/vitest run --root tools/pca-witness
+      - name: Container end-to-end
+        run: sh tools/pca-witness/e2e.sh
+
+  pack-check:
+    # What release.yml checks on a tag, on every release-candidate push: every non-private package packs, the tarball holds every file
+    # its manifest exports (pca-revoke ./file and ./conformance, pca-connect ./testing, pca-store-conformance ./examples/*), no tests or
+    # secrets, and all tarballs install together and load.
+    name: every package packs and loads (tarball audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install (lockfile pinned)
+        run: pnpm install --frozen-lockfile
+      - name: Build the release set
+        run: |
+          read -ra FILTERS <<< "$(node .github/scripts/release-npm.mjs filters)"
+          pnpm -r "${FILTERS[@]}" run build
+      - name: "Release check (offline: the release set is unpublished at its RC version)"
+        run: node scripts/pca-release-check.mjs --offline --budget-kb=1536

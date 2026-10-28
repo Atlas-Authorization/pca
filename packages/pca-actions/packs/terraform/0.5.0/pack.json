@@ -1,0 +1,61 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "terraform",
+  "version": "0.5.0",
+  "ns": [
+    "terraform"
+  ],
+  "count": 654,
+  "root": "GSt_bEo02R5pLsmkOnUEluJI4AAYTNmxQQ8yY6G9MFQ",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 641,
+    "unreviewed": 13
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Hand written from public Terraform CLI and provider documentation (command and resource type names). Provider schemas are MPL-2.0 licensed and are not redistributed; no schema text is carried.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/terraform.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "22c976e315cc5e79d342c997b9449dc7b7e7f5329c025572f1afe7aad47fd2ec"
+  },
+  "shards": [
+    {
+      "file": "defs/000-terraform_apply.jsonl",
+      "count": 654,
+      "bytes": 431108,
+      "sha256": "8176c8f4d083ef4f2cee4e3fc9636c6ac4755ac35d18b02cc0794fa13f856488",
+      "first": "terraform.apply",
+      "last": "terraform.workspace_select"
+    }
+  ],
+  "stats": {
+    "total": 654,
+    "authored": 641,
+    "unreviewed": 13,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "exec": 26,
+      "provision": 214,
+      "update": 222,
+      "delete": 215,
+      "privilege": 183,
+      "create": 1,
+      "read": 5,
+      "export": 1
+    }
+  }
+}

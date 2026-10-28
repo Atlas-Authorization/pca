@@ -5,7 +5,7 @@
  * rejection reason. The positive control is a report signed by the forged VCEK.
  */
 import { describe, it, expect } from 'vitest';
-import { parseSevSnpReport } from '@atlasauth/pca';
+import { parseSevSnpReport } from '@atlasauth/pca/ext/attestation';
 import { ecdsaSign } from './test-support/forge-x509';
 import { serializeSevSnpReport } from './test-support/sevsnp-report';
 import { FORGE_CHIP, FORGE_NA, FORGE_NB, amdVcekExtensions, ext, forgeAmdChain, type AmdChainOptions } from './test-support/forge-amd';

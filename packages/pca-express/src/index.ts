@@ -15,14 +15,17 @@
  * structural, so this stays compatible across Express 4 and 5.
  */
 
-import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
-import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/pca';
+import { requirePCA, requireAuthorized, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
+import type { AuthorizeOptions, AuthorizedOperation, PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore, RequireAuthorizedOptions } from '@atlasauth/pca';
 import type { PCActn } from '@atlasauth/pca';
 
 /** Structural shim of an Express request (only `headers`/`body` are read; the rest passes through). */
 export interface ExpressRequestLike {
   headers: Record<string, string | string[] | undefined>;
   body?: unknown;
+  method?: string;
+  originalUrl?: string;
+  url?: string;
   [k: string]: unknown;
 }
 
@@ -39,6 +42,8 @@ export type ExpressNextLike = (err?: unknown) => void;
 export interface PcaAttachment {
   verdict: Extract<PcaGuardResult, { ok: true }>['verdict'];
   pcactn: PCActn;
+  /** The operation the decision is bound to (only with the `operation` option). */
+  operation?: AuthorizedOperation;
 }
 
 export interface PcaExpressOptions extends RequirePcaOptions {
@@ -46,23 +51,33 @@ export interface PcaExpressOptions extends RequirePcaOptions {
   attachAs?: string;
   /** Override the 401/403 response (otherwise a JSON error + WWW-Authenticate is sent). */
   onDeny?: (result: Extract<PcaGuardResult, { ok: false }>, req: ExpressRequestLike, res: ExpressResponseLike) => void;
+  /**
+   * The operation each request will execute, from your routing (verb / resource for the route, the parsed body as
+   * params), never from the PCActn. When set, requests are authorized by `authorize` (the strict pipeline: `budgetStore`
+   * and `hooks.revocation` are required, and a proof for another operation, other params, or params outside the grant
+   * is refused before your handler runs) and the bound `operation` is attached with the verdict. Absent: `requirePCA`,
+   * unchanged.
+   */
+  operation?: RequirePcaOptions['operation'];
+  /** With `operation`: `'single-step'` accepts a one-node plan equal to the bound operation (see `authorize`). */
+  plan?: AuthorizeOptions['plan'];
 }
 
 /** Build an Express middleware that requires a valid PCActn on the request. */
 export function pcaExpress(options: PcaExpressOptions) {
   const attachAs = options.attachAs ?? 'pca';
   const onDeny = options.onDeny;
-  const guard = requirePCA(options);
+  const guard = options.operation ? requireAuthorized(options as RequireAuthorizedOptions) : requirePCA(options);
   return async (req: ExpressRequestLike, res: ExpressResponseLike, next: ExpressNextLike): Promise<void> => {
     let result: PcaGuardResult;
     try {
-      result = await guard({ headers: req.headers, body: req.body } as PcaRequestLike);
+      result = await guard({ headers: req.headers, body: req.body, method: req.method, url: req.originalUrl ?? req.url } as PcaRequestLike);
     } catch (e) {
       next(e);
       return;
     }
     if (result.ok) {
-      (req as Record<string, unknown>)[attachAs] = { verdict: result.verdict, pcactn: result.pcactn };
+      (req as Record<string, unknown>)[attachAs] = { verdict: result.verdict, pcactn: result.pcactn, ...(result.operation ? { operation: result.operation } : {}) };
       next();
       return;
     }
@@ -72,9 +87,9 @@ export function pcaExpress(options: PcaExpressOptions) {
     }
     res.status(result.status);
     if (result.wwwAuthenticate) res.set('WWW-Authenticate', result.wwwAuthenticate);
-    res.json({ error: result.verdict.reasons?.[0] ?? 'forbidden', verdict: result.verdict });
+    res.json({ error: result.verdict.reasons?.[0] ?? 'forbidden', verdict: result.verdict, decision: result.decision ?? 'deny', ...(result.escalation ? { escalation: result.escalation } : {}) });
   };
 }
 
-export { requirePCA, defaultExtract, memoryPcaStore };
+export { requirePCA, requireAuthorized, defaultExtract, memoryPcaStore };
 export type { PcaGuardResult, RequirePcaOptions, PcaStateStore };

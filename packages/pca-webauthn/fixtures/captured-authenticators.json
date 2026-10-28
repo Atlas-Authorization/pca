@@ -1,0 +1,54 @@
+{
+ "source": "Assertions captured from real authenticators, as published in the test fixtures of SimpleWebAuthn (packages/server, verifyAuthenticationResponse tests). SimpleWebAuthn is MIT licensed, Copyright (c) 2020 Matthew Miller; the license text accompanies the fixture in LICENSE-simplewebauthn-fixtures.",
+ "cases": [
+  {
+   "name": "U2F-class security key, signCount 144 (stored 143)",
+   "rpId": "dev.dontneeda.pw",
+   "origin": "https://dev.dontneeda.pw",
+   "challenge": "dG90YWxseVVuaXF1ZVZhbHVlRXZlcnlUaW1l",
+   "authenticatorData": "PdxHEOnAiLIp26idVjIguzn3Ipr_RlsKZWsa-5qK-KABAAAAkA",
+   "clientDataJSON": "eyJjaGFsbGVuZ2UiOiJkRzkwWVd4c2VWVnVhWEYxWlZaaGJIVmxSWFpsY25sVWFXMWwiLCJjbGllbnRFeHRlbnNpb25zIjp7fSwiaGFzaEFsZ29yaXRobSI6IlNIQS0yNTYiLCJvcmlnaW4iOiJodHRwczovL2Rldi5kb250bmVlZGEucHciLCJ0eXBlIjoid2ViYXV0aG4uZ2V0In0",
+   "signature": "MEUCIQDYXBOpCWSWq2Ll4558GJKD2RoWg958lvJSB_GdeokxogIgWuEVQ7ee6AswQY0OsuQ6y8Ks6jhd45bDx92wjXKs900",
+   "publicKey": "pQECAyYgASFYIIheFp-u6GvFT2LNGovf3ZrT0iFVBsA_76rRysxRG9A1Ilgg8WGeA6hPmnab0HAViUYVRkwTNcN77QBf_RR0dv3lIvQ",
+   "storedSignCount": 143,
+   "libraryVerdict": true
+  },
+  {
+   "name": "same device, first use on the site (signCount 0)",
+   "rpId": "dev.dontneeda.pw",
+   "origin": "https://dev.dontneeda.pw",
+   "challenge": "dG90YWxseVVuaXF1ZVZhbHVlRXZlcnlBc3NlcnRpb24",
+   "authenticatorData": "PdxHEOnAiLIp26idVjIguzn3Ipr_RlsKZWsa-5qK-KABAAAAAA",
+   "clientDataJSON": "eyJjaGFsbGVuZ2UiOiJkRzkwWVd4c2VWVnVhWEYxWlZaaGJIVmxSWFpsY25sQmMzTmxjblJwYjI0IiwiY2xpZW50RXh0ZW5zaW9ucyI6e30sImhhc2hBbGdvcml0aG0iOiJTSEEtMjU2Iiwib3JpZ2luIjoiaHR0cHM6Ly9kZXYuZG9udG5lZWRhLnB3IiwidHlwZSI6IndlYmF1dGhuLmdldCJ9",
+   "signature": "MEQCIBu6M-DGzu1O8iocGHEj0UaAZm0HmxTeRIE6-nS3_CPjAiBDsmIzy5sacYwwzgpXqfwRt_2vl5yiQZ_OAqWJQBGVsQ",
+   "publicKey": "pQECAyYgASFYIGmaxR4mBbukc2QhtW2ldhAAd555r-ljlGQN8MbcTnPPIlgg9CyUlE-0AB2fbzZbNgBvJuRa7r6o2jPphOmtyNPR_kY",
+   "storedSignCount": 0,
+   "libraryVerdict": true
+  },
+  {
+   "name": "Android passkey with devicePubKey extension data (UP, UV, ED)",
+   "rpId": "try-webauthn.appspot.com",
+   "origin": "android:apk-key-hash:gx7sq_pxhxhrIQdLyfG0pxKwiJ7hOk2DJQ4xvKd438Q",
+   "challenge": "iZsVCztrDW7D2U_GHCIlYKLwV2bCsBTRqVQUnJXn9Tk",
+   "authenticatorData": "DXX8xWP9p3nbLjQ-6kiYiHWLeFSdSTpP2-oc2WqjHMSFAAAAAKFsZGV2aWNlUHViS2V5pWNkcGtYTaUBAgMmIAEhWCCZGqvtneQnGp7erYgG-dyW1tzNDEdiU6VRBInsg3m-WyJYIKCXPP3tu3nif-9O50gWc_szElBN3KVDTP0jQx1q0p7aY3NpZ1hHMEUCIElSbNKK72tOYhp9WTbStQSVL8CuIxOk8DV6r_-uqWR0AiEAnVE6yu-wsyx2Wq5v66jClGhe_2P_HL8R7PIQevT-uPhlbm9uY2VAZXNjb3BlQQBmYWFndWlkULk_2WHy5kYvsSKCACJH3ng",
+   "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiaVpzVkN6dHJEVzdEMlVfR0hDSWxZS0x3VjJiQ3NCVFJxVlFVbkpYbjlUayIsIm9yaWdpbiI6ImFuZHJvaWQ6YXBrLWtleS1oYXNoOmd4N3NxX3B4aHhocklRZEx5ZkcwcHhLd2lKN2hPazJESlE0eHZLZDQzOFEiLCJhbmRyb2lkUGFja2FnZU5hbWUiOiJjb20uZmlkby5leGFtcGxlLmZpZG8yYXBpZXhhbXBsZSJ9",
+   "signature": "MEYCIQDlRuxY7cYre0sb3T6TovQdfYIUb72cRZYOQv_zS9wN_wIhAOvN-fwjtyIhWRceqJV4SX74-z6oALERbC7ohk8EdVPO",
+   "publicKey": "pQECAyYgASFYILTrxTUQv3X4DRM6L_pk65FSMebenhCx3RMsTKoBm-AxIlggEf3qk5552QLNSh1T1oQs7_2C2qysDwN4r4fCp52Hsqs",
+   "storedSignCount": 0,
+   "libraryVerdict": false
+  },
+  {
+   "name": "localhost development assertion (UP, signCount from the authenticator)",
+   "rpId": "localhost",
+   "origin": "http://localhost:8000",
+   "challenge": "eyJhY3R1YWxDaGFsbGVuZ2UiOiJLM1F4T2puVkpMaUdsblZFcDV2YTVRSmVNVldOZl83UFlndXRnYkF0QVVBIiwiYXJiaXRyYXJ5RGF0YSI6InNpZ25NZVBsZWFzZSJ9",
+   "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFYftypQ",
+   "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiZXlKaFkzUjFZV3hEYUdGc2JHVnVaMlVpT2lKTE0xRjRUMnB1VmtwTWFVZHNibFpGY0RWMllUVlJTbVZOVmxkT1psODNVRmxuZFhSbllrRjBRVlZCSWl3aVlYSmlhWFJ5WVhKNVJHRjBZU0k2SW5OcFoyNU5aVkJzWldGelpTSjkiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwMDAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+   "signature": "MEUCIByFAVGfkoKPEzynp-37BX_HOXSaC6-58-ELjB7BG9opAiEAyD_1mN9YAPrphcwpzK3ym2Xx8EjAapgQ326mKgQ1pW0",
+   "publicKey": "pQECAyYgASFYILTrxTUQv3X4DRM6L_pk65FSMebenhCx3RMsTKoBm-AxIlggEf3qk5552QLNSh1T1oQs7_2C2qysDwN4r4fCp52Hsqs",
+   "storedSignCount": 0,
+   "libraryVerdict": true
+  }
+ ],
+ "note": "libraryVerdict is what @simplewebauthn/server 14.0.3 returns for the row (the third row's signature does not verify under its listed key: that library test only reads its extension output). This package must agree on every row."
+}

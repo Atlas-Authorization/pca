@@ -1,0 +1,61 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "zendesk",
+  "version": "0.5.0",
+  "ns": [
+    "zendesk"
+  ],
+  "count": 110,
+  "root": "EhdRP9DpRinoFP8vQXK1Ot_KSInPRNdjaoVB3tXEtDw",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 97,
+    "unreviewed": 13
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Hand written from Zendesk public developer documentation (operation names only). The published OpenAPI file carries no stated licence permitting redistribution, so none of it is copied.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/zendesk.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "e1d05e46a27016b77b8fc68c81e09e088c0af980a0daa6059c6dadcf0d07519e"
+  },
+  "shards": [
+    {
+      "file": "defs/000-zendesk_account.jsonl",
+      "count": 110,
+      "bytes": 58486,
+      "sha256": "ba5386de3b97e4a746cb50fcf320e6b3803b7f6ed43687b5d916cb151bb9dfc1",
+      "first": "zendesk.account.update_settings",
+      "last": "zendesk.webhook.update"
+    }
+  ],
+  "stats": {
+    "total": 110,
+    "authored": 97,
+    "unreviewed": 13,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "privilege": 8,
+      "create": 16,
+      "delete": 20,
+      "read": 46,
+      "publish": 2,
+      "update": 19,
+      "send": 2,
+      "export": 1
+    }
+  }
+}

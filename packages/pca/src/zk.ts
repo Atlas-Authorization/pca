@@ -1,4 +1,6 @@
 import { snapshotConfig } from './config-snapshot';
+import { ceremonyOf, type CeremonyTranscript } from './zk-ceremony';
+import { type AssuranceLabel, type ZkSystem, assuranceLabelOf, setAssuranceLabel } from './assurance';
 /**
  * §9B — Zero-knowledge proof-of-compliance (intent privacy from the Resource Server).
  *
@@ -44,6 +46,7 @@ import { publicKeyOf, sign, verifyB64u } from './keys';
 import type { Capability } from './capability';
 import { type PCActn, type HookResult, type VerifyContext, type ZkVerifier } from './pcactn';
 import { type DecideInput, decide } from './policy-vm';
+import type { AttestationDocument, ExpectedAttestationBinding, HardwareAttestationVerifier } from './attestation';
 
 const DOMAIN = 'atlas-pca/zk-compliance/v1\0';
 
@@ -153,6 +156,10 @@ export function createAttestedComplianceProver(attestorSecret: Uint8Array): Atte
  * Plug it in via `createZkVerifier({ snarkBackend })`; it receives ONLY commitments as public inputs,
  * preserving the privacy property.
  */
+/**
+ * Assurance (0.5): a backend declares its proof system with `setAssuranceLabel(backend, { level: <ZkSystem> })`; the
+ * library's own backends do. `createZkVerifier` reports that system on a pass (an unlabelled backend is `unknown`).
+ */
 export interface SnarkBackend {
   verify(input: {
     /** The opaque proof carried in `pcactn.zk_compliance`. */
@@ -160,6 +167,32 @@ export interface SnarkBackend {
     publicInputs: { action_commit: string; policy_commit: string; plan_commit: string };
     ctx: VerifyContext;
   }): boolean | Promise<boolean>;
+}
+
+/** `grantRef` of the binding a prover VM's hardware quote carries (see {@link proverKeyBinding}). */
+export const ZK_PROVER_BINDING_REF = 'atlas-pca/zk-prover/v1';
+
+/**
+ * The value the prover VM must put in its hardware quote's report_data so that the quote vouches for ITS key:
+ * `attestationBinding(proverKeyBinding(proverPublicKey, epoch, nonce))`. A quote taken for another key, epoch or nonce
+ * does not bind.
+ */
+export function proverKeyBinding(proverPublicKey: string, epoch: number, nonce: string): ExpectedAttestationBinding {
+  return { holderPub: proverPublicKey, grantRef: ZK_PROVER_BINDING_REF, epoch, nonce };
+}
+
+/** Binds the attested-VM prover key to hardware evidence of the VM measurement. */
+export interface ProverAttestationOpts {
+  /**
+   * A vendor verifier (SEV-SNP, TDX, Azure MAA, ...) or a multi-root verifier. It MUST carry a `hardware` or
+   * `multi_root` assurance label: a software or unlabelled verifier is refused at construction. Its evidence resolver
+   * receives a stub document whose `attestor` is the prover's public key, so it can look up that prover's quote.
+   */
+  hardwareVerifier: HardwareAttestationVerifier;
+  /** The binding the quote must carry for this prover key (server-known epoch and nonce). Throwing denies. */
+  expectedBinding(proverPublicKey: string): ExpectedAttestationBinding | Promise<ExpectedAttestationBinding>;
+  /** REQUIRED, non-empty: accepted measured runtime measurements (the VM image). Accept-all is not permitted. */
+  measurements: string[];
 }
 
 export interface ZkVerifierOpts {
@@ -173,6 +206,18 @@ export interface ZkVerifierOpts {
   policyCommitments?: string[];
   /** Supplied => delegate proof verification to a real ZK backend (the statement is the proof). */
   snarkBackend?: SnarkBackend;
+  /**
+   * Prover keys that are no longer trusted (a retired or compromised prover VM). A statement signed by one is denied
+   * even when the key is still listed in `trustedProverKeys`. Rotation = add the new key to `trustedProverKeys`, put
+   * the old one here, then drop it from `trustedProverKeys` once its statements have expired.
+   */
+  revokedProverKeys?: string[];
+  /**
+   * ATTESTED-VM, HARDWARE-BOUND (0.5): require hardware evidence that the prover key lives in an attested VM with an
+   * allowlisted measurement, instead of trusting the key alone. See {@link ProverAttestationOpts}. Attested-VM mode only
+   * (ignored with `snarkBackend`). Absent => the prover key is trusted as configured, and the assurance label says so.
+   */
+  proverAttestation?: ProverAttestationOpts;
   /** Clock for freshness, epoch ms (default `Date.now`). */
   now?: () => number;
   /** Allowed clock skew (ms) for issued_at/expires_at (default 0). A statement with
@@ -191,9 +236,31 @@ export interface ZkVerifierOpts {
  * In BOTH modes the verifier uses only commitments — never the plaintext policy or plan.
  */
 export function createZkVerifier(opts: ZkVerifierOpts): ZkVerifier {
-  opts = snapshotConfig(opts, { keep: ['snarkBackend'] }); // freeze the configuration: later edits by the caller must not change what this verifier enforces
+  opts = snapshotConfig(opts, { keep: ['snarkBackend', 'proverAttestation'] }); // freeze the configuration: later edits by the caller must not change what this verifier enforces
+  // Assurance label (0.5) from the configuration: attested-VM mode is a signed statement, not a proof; SNARK mode is the
+  // backend's declared system (`unknown` when it declares none).
+  const pa = opts.snarkBackend ? undefined : opts.proverAttestation;
+  if (pa !== undefined) {
+    const hw = assuranceLabelOf(pa.hardwareVerifier);
+    if (hw?.level !== 'hardware' && hw?.level !== 'multi_root') throw new TypeError('createZkVerifier: proverAttestation.hardwareVerifier must carry a hardware or multi_root assurance label');
+    if (!Array.isArray(pa.measurements) || pa.measurements.length === 0 || pa.measurements.some((m) => typeof m !== 'string' || m === '')) throw new TypeError('createZkVerifier: proverAttestation.measurements must be a non-empty allowlist');
+    if (typeof pa.expectedBinding !== 'function') throw new TypeError('createZkVerifier: proverAttestation.expectedBinding must be a function');
+  }
+  const hwLabel = pa ? assuranceLabelOf(pa.hardwareVerifier) : undefined;
+  const label: AssuranceLabel = opts.snarkBackend
+    ? (assuranceLabelOf(opts.snarkBackend) ?? { level: 'unknown' satisfies ZkSystem })
+    : hwLabel
+      ? { level: 'attested_vm_hw' satisfies ZkSystem, vendor: `hardware-bound:${hwLabel.vendor ?? hwLabel.level}` }
+      : { level: 'attested_vm' satisfies ZkSystem };
+  return setAssuranceLabel(zkHook(opts), label);
+}
+
+function zkHook(opts: ZkVerifierOpts): ZkVerifier {
 
   const trusted = new Set(Array.isArray(opts.trustedProverKeys) ? opts.trustedProverKeys : []);
+  const revoked = new Set(Array.isArray(opts.revokedProverKeys) ? opts.revokedProverKeys : []);
+  const pa = opts.snarkBackend ? undefined : opts.proverAttestation;
+  const paMeasurements = pa ? new Set(pa.measurements) : undefined;
   const expectedPolicy = Array.isArray(opts.policyCommitments) ? new Set(opts.policyCommitments) : undefined;
   const clock = opts.now ?? (() => Date.now());
   const skew = Number.isFinite(opts.clockSkewMs) ? Math.max(0, opts.clockSkewMs as number) : 0;
@@ -225,6 +292,7 @@ export function createZkVerifier(opts: ZkVerifierOpts): ZkVerifier {
       if (st.v !== 1 || st.mode !== 'attested-vm') return fail('unrecognized compliance statement');
       if (st.released !== true) return fail('statement does not assert release');
       if (typeof st.prover !== 'string' || !trusted.has(st.prover)) return fail('prover key is not trusted');
+      if (revoked.has(st.prover)) return fail('prover key is revoked');
 
       const { sig, ...body } = st as ComplianceStatement;
       if (typeof sig !== 'string' || !verifyB64u(st.prover, statementMessage(body as ComplianceStatementBody), sig)) {
@@ -244,6 +312,17 @@ export function createZkVerifier(opts: ZkVerifierOpts): ZkVerifier {
       if (st.plan_commit !== planCommit) return fail('statement does not bind to this plan commitment');
       if (typeof st.policy_commit !== 'string' || !wantPolicy.has(st.policy_commit)) {
         return fail('statement policy commitment is not an expected policy');
+      }
+
+      // hardware binding of the prover key (last: it is the expensive check). Every outcome other than a bound,
+      // measured, allowlisted identity denies.
+      if (pa && paMeasurements) {
+        const expected = await pa.expectedBinding(st.prover);
+        const hw = await pa.hardwareVerifier.verify({ document: { attestor: st.prover, mode: 'hardware' } as unknown as AttestationDocument, ctx, nowMs, expected });
+        if (!hw || hw.ok !== true) return fail(`prover hardware evidence invalid: ${hw ? (hw.reason ?? 'no reason given') : 'no result'}`);
+        if (hw.bound !== true) return fail('prover hardware evidence does not bind the prover key');
+        if (!hw.measured || typeof hw.measured.runtime_measurement !== 'string') return fail('prover hardware evidence carries no measured identity');
+        if (!paMeasurements.has(hw.measured.runtime_measurement)) return fail('prover VM measurement is not allowlisted');
       }
 
       return { enforced: true, ok: true };
@@ -413,7 +492,21 @@ export const DEFAULT_WASM_PATH = (): string => pjoin(circuitsBuild(), 'complianc
 /** Default path to the Groth16 proving key (`compliance_final.zkey`). */
 export const DEFAULT_ZKEY_PATH = (): string => pjoin(circuitsBuild(), 'compliance_final.zkey');
 
+/** Evidence that a verifying key came from a multi-party ceremony: the published transcript and its pinned SHA-256. */
+export interface CeremonyEvidence {
+  transcript: CeremonyTranscript;
+  /** SHA-256 (hex) of the canonical transcript, published out of band by the coordinator. */
+  sha256: string;
+}
+
+/** `multi-party` only for an explicit verifying key backed by pinned ceremony evidence; the bundled fixtures are single-party. */
+function ceremonyLabel(opts: { verificationKey?: object; ceremony?: CeremonyEvidence }, circuit: string): 'single-party' | 'multi-party' {
+  return ceremonyOf(opts.verificationKey, opts.ceremony && { ...opts.ceremony, circuit });
+}
+
 export interface Groth16BackendOpts {
+  /** Ceremony evidence for `verificationKey`; without it the backend reports `ceremony: single-party`. */
+  ceremony?: CeremonyEvidence;
   /** The verifying-key JSON object (snarkjs vkey). When omitted, loads `verificationKeyPath`. */
   verificationKey?: object;
   /** Path to a `verification_key.json`; defaults to the bundled circuit fixture. */
@@ -432,7 +525,7 @@ export interface Groth16BackendOpts {
  */
 export function createGroth16SnarkBackend(opts: Groth16BackendOpts = {}): SnarkBackend {
   const getVkey = lazyVkey(opts, DEFAULT_VKEY_PATH);
-  return {
+  return setAssuranceLabel<SnarkBackend>({
     async verify({ proof, publicInputs }): Promise<boolean> {
       const env = proof as Partial<Groth16ComplianceProof> | null | undefined;
       if (!env || typeof env !== 'object') return false;
@@ -451,7 +544,7 @@ export function createGroth16SnarkBackend(opts: Groth16BackendOpts = {}): SnarkB
       const groth16 = await loadGroth16();
       return await groth16.verify(await getVkey(), ps, g16);
     },
-  };
+  }, { level: 'groth16' satisfies ZkSystem, ceremony: ceremonyLabel(opts, 'pca-compliance-v1') });
 }
 
 /** The private compliance witness (never revealed by the proof) + the public commitments to bind to. */
@@ -619,6 +712,84 @@ export function policyVmStructHash(fields: Array<number | string | bigint>): Dig
   for (let i = 0; i < 16; i++) hi = (hi << 8n) | BigInt(digest[i]!);
   for (let i = 16; i < 32; i++) lo = (lo << 8n) | BigInt(digest[i]!);
   return { hi: hi.toString(), lo: lo.toString() };
+}
+
+// ===============================================================================================
+// §9B — Risk-bound Policy-VM circuit 'pca-policyvm-v2' (circuits/policyvm_bound.circom, BN254).
+//
+// The same statement and constraints as 'pca-policyvm-v1' plus two public outputs, riskHi / riskLo: the sha256 of the five
+// risk magnitudes the prover otherwise supplies unattested (revScore, taint, conf, age, rFloorIn). A verifier that knows
+// the attested values recomputes the digest with `policyVmRiskHash` and pins it (`expectRiskHash`), so the proven risk,
+// tier and admit bit cannot come from magnitudes the prover chose. v1 is untouched. There is no committed v2 key: it is
+// built by circuits/policyvm_bound.setup.sh (dev-only, single party) or a ceremony, and bundled nowhere.
+// ===============================================================================================
+
+/** Public-signal layout of 'pca-policyvm-v2' (snarkjs order: outputs, then declared public inputs). */
+export const POLICYVM_BOUND_PUBLIC_SIGNAL = {
+  actionHi: 0, actionLo: 1, policyHi: 2, policyLo: 3, planHi: 4, planLo: 5,
+  r: 6, t: 7, admit: 8, riskHi: 9, riskLo: 10,
+  allow: 11, now: 12, blast: 13, delegationDepth: 14, recentCount: 15, allocChild: 16,
+} as const;
+export const POLICYVM_BOUND_PUBLIC_SIGNAL_COUNT = 17;
+/** The risk magnitudes the v2 circuit commits to, in struct order. */
+export const POLICYVM_BOUND_RISK_FIELDS = ['revScore', 'taint', 'conf', 'age', 'rFloorIn'] as const;
+
+/** The opaque proof carried in `pcactn.zk_compliance` for the risk-bound circuit (BN254 only). */
+export interface PolicyVmBoundComplianceProof {
+  system: 'groth16-bn254';
+  circuit: 'pca-policyvm-v2';
+  proof: unknown;
+  /** Public signals in `POLICYVM_BOUND_PUBLIC_SIGNAL` order (length `POLICYVM_BOUND_PUBLIC_SIGNAL_COUNT`). */
+  publicSignals: string[];
+}
+
+/**
+ * The sha256 commitment of the circuit's risk struct, as the two public halves `riskHi` / `riskLo`: the five risk
+ * magnitudes (revScore, taint, conf, age, rFloorIn; fixed-point, scale 1e6) in `POLICYVM_BOUND_RISK_FIELDS` order.
+ */
+export function policyVmRiskHash(fields: readonly [number | string | bigint, number | string | bigint, number | string | bigint, number | string | bigint, number | string | bigint]): DigestHalves {
+  if (!Array.isArray(fields) || fields.length !== POLICYVM_BOUND_RISK_FIELDS.length) throw new Error('policyVmRiskHash: need exactly 5 risk fields');
+  return policyVmStructHash(fields as Array<number | string | bigint>);
+}
+
+/** Decode the public signals of a v2 proof: the v1 statement plus the risk commitment. */
+export function decodePolicyVmBoundPublic(publicSignals: string[]): ReturnType<typeof decodePolicyVmPublic> & { riskHash: DigestHalves } {
+  const P = POLICYVM_BOUND_PUBLIC_SIGNAL;
+  const s = (i: number) => publicSignals[i]!;
+  return {
+    actionHash: { hi: s(P.actionHi), lo: s(P.actionLo) },
+    policyHash: { hi: s(P.policyHi), lo: s(P.policyLo) },
+    planHash: { hi: s(P.planHi), lo: s(P.planLo) },
+    riskHash: { hi: s(P.riskHi), lo: s(P.riskLo) },
+    r: s(P.r), t: s(P.t), admit: s(P.admit), allow: s(P.allow),
+    now: s(P.now), blast: s(P.blast), delegationDepth: s(P.delegationDepth),
+    recentCount: s(P.recentCount), allocChild: s(P.allocChild),
+  };
+}
+
+/** Where the dev-only setup puts the v2 verifying key / sample proof / prover artifacts (all gitignored). */
+export const POLICYVM_BOUND_VKEY_PATH = (): string => pjoin(circuitsBuild(), 'policyvm_bound_vkey.json');
+export const POLICYVM_BOUND_SAMPLE_PROOF_PATH = (): string => pjoin(circuitsBuild(), 'policyvm_bound_sample_proof.json');
+export const POLICYVM_BOUND_WASM_PATH = (): string => pjoin(circuitsBuild(), 'policyvm_bound_js', 'policyvm_bound.wasm');
+export const POLICYVM_BOUND_ZKEY_PATH = (): string => pjoin(circuitsBuild(), 'policyvm_bound_final.zkey');
+
+/** Version record of one circuit, from the committed circuit-versions.json (see circuits/circuit-version.mjs). */
+export interface CircuitVersion {
+  circuit: string;
+  /** SHA-256 over the circuit's whole .circom source set (own files, includes, circomlib files) plus the pinned compiler. */
+  sourceSha256: string;
+  circom: string;
+  circomlib: string;
+}
+
+/** The committed version of a circuit id (`pca-compliance-v1`, `pca-policyvm-v1`, `pca-policyvm-v2`); throws on an unknown id. */
+export async function circuitVersion(id: string): Promise<CircuitVersion> {
+  const v = (await readJsonFile(pjoin(policyVmCircuits(), 'circuit-versions.json'))) as {
+    circom: string; circomlib: string; circuits: Record<string, { source_sha256: string }>;
+  };
+  const c = Object.prototype.hasOwnProperty.call(v.circuits, id) ? v.circuits[id] : undefined;
+  if (!c) throw new Error(`circuitVersion: unknown circuit ${JSON.stringify(id)}`);
+  return { circuit: id, sourceSha256: c.source_sha256, circom: v.circom, circomlib: v.circomlib };
 }
 
 // ===============================================================================================
@@ -904,6 +1075,11 @@ export interface PolicyVmVerifyOpts {
   verificationKeyPath?: string;
   /** RT-07: pin the public context signals; any mismatch makes verification return false. */
   expect?: PolicyVmExpectSource;
+  /**
+   * Pin the risk commitment (`policyVmRiskHash` over the attested risk magnitudes). Only the risk-bound circuit
+   * ('pca-policyvm-v2') carries one: when set, a v1 proof, or a v2 proof with different halves, is refused.
+   */
+  expectRiskHash?: DigestHalves;
 }
 
 const POLICYVM_CONTEXT_BOUND = 1n << 64n;
@@ -934,8 +1110,8 @@ function signalMatchesPin(signal: string | undefined, pin: PolicyVmSignalPin): b
  * is not a canonical decimal below 2^64: the circuit's comparators run on un-range-checked public
  * inputs, so a field-negative `now` (p - k) would otherwise satisfy `now < expiresAt`.
  */
-export function policyVmContextMatches(ps: string[], expectSrc?: PolicyVmExpectSource): boolean {
-  const P = POLICYVM_PUBLIC_SIGNAL;
+export function policyVmContextMatches(ps: string[], expectSrc?: PolicyVmExpectSource, layout: typeof POLICYVM_PUBLIC_SIGNAL | typeof POLICYVM_BOUND_PUBLIC_SIGNAL = POLICYVM_PUBLIC_SIGNAL): boolean {
+  const P = layout;
   for (const idx of [P.now, P.blast, P.delegationDepth, P.recentCount, P.allocChild]) {
     const sig = ps[idx];
     if (typeof sig !== 'string' || !/^(0|[1-9][0-9]*)$/.test(sig) || BigInt(sig) >= POLICYVM_CONTEXT_BOUND) return false;
@@ -973,17 +1149,22 @@ export function policyVmContextMatches(ps: string[], expectSrc?: PolicyVmExpectS
  * `groth16.verify` is curve-agnostic given the matching vkey, so the verification itself is shared.
  */
 export async function verifyPolicyVmProof(env: unknown, opts: PolicyVmVerifyOpts = {}): Promise<boolean> {
-  const p = env as Partial<AnyPolicyVmComplianceProof> | null | undefined;
+  const p = env as Partial<AnyPolicyVmComplianceProof | PolicyVmBoundComplianceProof> | null | undefined;
   if (!p || typeof p !== 'object') return false;
-  if (p.circuit !== 'pca-policyvm-v1') return false;
+  const bound = p.circuit === 'pca-policyvm-v2';
+  if (p.circuit !== 'pca-policyvm-v1' && !bound) return false;
   const isBls = p.system === 'groth16-bls12-381';
-  if (p.system !== 'groth16-bn254' && !isBls) return false;
+  if (p.system !== 'groth16-bn254' && !(isBls && !bound)) return false; // the risk-bound circuit is BN254 only
+  const L = bound ? POLICYVM_BOUND_PUBLIC_SIGNAL : POLICYVM_PUBLIC_SIGNAL;
   const ps = p.publicSignals;
-  if (!Array.isArray(ps) || ps.length !== POLICYVM_PUBLIC_SIGNAL_COUNT || p.proof == null) return false;
-  if (ps[POLICYVM_PUBLIC_SIGNAL.allow] !== '1') return false;
+  if (!Array.isArray(ps) || ps.length !== (bound ? POLICYVM_BOUND_PUBLIC_SIGNAL_COUNT : POLICYVM_PUBLIC_SIGNAL_COUNT) || p.proof == null) return false;
+  if (ps[L.allow] !== '1') return false;
+  if (opts.expectRiskHash !== undefined) {
+    if (!bound || ps[POLICYVM_BOUND_PUBLIC_SIGNAL.riskHi] !== opts.expectRiskHash.hi || ps[POLICYVM_BOUND_PUBLIC_SIGNAL.riskLo] !== opts.expectRiskHash.lo) return false;
+  }
   if (!isCanonicalGroth16Envelope(p, isBls ? 'bls12-381' : 'bn254')) return false;
-  if (!policyVmContextMatches(ps, opts.expect)) return false;
-  const defaultVkeyPath = isBls ? POLICYVM_BLS12381_VKEY_PATH : POLICYVM_VKEY_PATH;
+  if (!policyVmContextMatches(ps, opts.expect, L)) return false;
+  const defaultVkeyPath = bound ? POLICYVM_BOUND_VKEY_PATH : isBls ? POLICYVM_BLS12381_VKEY_PATH : POLICYVM_VKEY_PATH;
   const vkey: object = opts.verificationKey ?? (await readJsonFile(opts.verificationKeyPath ?? defaultVkeyPath()));
   try {
     const groth16 = await loadGroth16();
@@ -994,6 +1175,8 @@ export async function verifyPolicyVmProof(env: unknown, opts: PolicyVmVerifyOpts
 }
 
 export interface PolicyVmBackendOpts extends PolicyVmVerifyOpts {
+  /** Ceremony evidence for `verificationKey`; without it the backend reports `ceremony: single-party`. */
+  ceremony?: CeremonyEvidence;
   /**
    * Optional in-circuit struct-hash binding. When set, the proof's public hash halves must equal these
    * — the RS recomputes them with `policyVmStructHash` over the fixed-layout fields it expects. This is
@@ -1008,6 +1191,15 @@ export interface PolicyVmBackendOpts extends PolicyVmVerifyOpts {
 /** Two 128-bit halves at `hiIdx`/`loIdx` match the expected digest (or no expectation was set). */
 function policyVmHalvesMatch(ps: string[], hiIdx: number, loIdx: number, want?: DigestHalves): boolean {
   return !want || (ps[hiIdx] === want.hi && ps[loIdx] === want.lo);
+}
+
+/**
+ * Assurance label of a Policy-VM backend: `policyvm_snark` only when the proof is bound to this action, policy and plan
+ * (all three `expect*Hash`); without them a valid proof may be for another compliant action, so the label is `unknown`.
+ */
+function policyVmLabel(opts: PolicyVmBackendOpts): AssuranceLabel {
+  const ceremony = ceremonyLabel(opts, 'pca-policyvm-v1');
+  return opts.expectActionHash && opts.expectPolicyHash && opts.expectPlanHash ? { level: 'policyvm_snark' satisfies ZkSystem, ceremony } : { level: 'unknown' satisfies ZkSystem, vendor: 'policyvm-unbound', ceremony };
 }
 
 /** Shared struct-hash binding over the proof's public signals (used by both curve backends). */
@@ -1029,13 +1221,14 @@ function policyVmStructHashesMatch(ps: string[] | undefined, opts: PolicyVmBacke
  */
 export function createPolicyVmSnarkBackend(opts: PolicyVmBackendOpts = {}): SnarkBackend {
   const getVkey = lazyVkey(opts, POLICYVM_VKEY_PATH);
-  return {
+  return setAssuranceLabel<SnarkBackend>({
     async verify({ proof }): Promise<boolean> {
       const env = proof as Partial<PolicyVmComplianceProof> | null | undefined;
+      if (env?.circuit !== 'pca-policyvm-v1') return false;
       if (!policyVmStructHashesMatch(env?.publicSignals, opts)) return false;
       return verifyPolicyVmProof(env, { verificationKey: await getVkey(), expect: opts.expect });
     },
-  };
+  }, policyVmLabel(opts));
 }
 
 /**
@@ -1045,13 +1238,51 @@ export function createPolicyVmSnarkBackend(opts: PolicyVmBackendOpts = {}): Snar
  */
 export function createPolicyVmSnarkBackendBls12381(opts: PolicyVmBackendOpts = {}): SnarkBackend {
   const getVkey = lazyVkey(opts, POLICYVM_BLS12381_VKEY_PATH);
-  return {
+  return setAssuranceLabel<SnarkBackend>({
     async verify({ proof }): Promise<boolean> {
       const env = proof as Partial<PolicyVmComplianceProofBls12381> | null | undefined;
+      if (env?.circuit !== 'pca-policyvm-v1') return false;
       if (!policyVmStructHashesMatch(env?.publicSignals, opts)) return false;
       return verifyPolicyVmProof(env, { verificationKey: await getVkey(), expect: opts.expect });
     },
-  };
+  }, policyVmLabel(opts));
+}
+
+export interface PolicyVmBoundBackendOpts extends PolicyVmVerifyOpts {
+  /** Ceremony evidence for `verificationKey`; without it the backend reports `ceremony: single-party`. */
+  ceremony?: CeremonyEvidence;
+  expectActionHash?: DigestHalves;
+  expectPolicyHash?: DigestHalves;
+  expectPlanHash?: DigestHalves;
+  /** The attested risk commitment (`policyVmRiskHash`); required for the `policyvm_snark` label and enforced when set. */
+  expectRiskHash?: DigestHalves;
+}
+
+/**
+ * A `SnarkBackend` over the risk-bound circuit ('pca-policyvm-v2', BN254). Same checks as `createPolicyVmSnarkBackend`
+ * on the action / policy / plan halves, plus the risk commitment. It carries the `policyvm_snark` label only when all
+ * four commitments are pinned; with fewer the label is `unknown`. There is no bundled verifying key: pass
+ * `verificationKey` / `verificationKeyPath`, or the one built by circuits/policyvm_bound.setup.sh is read.
+ */
+export function createPolicyVmBoundSnarkBackend(opts: PolicyVmBoundBackendOpts = {}): SnarkBackend {
+  const getVkey = lazyVkey(opts, POLICYVM_BOUND_VKEY_PATH);
+  const P = POLICYVM_BOUND_PUBLIC_SIGNAL;
+  const ceremony = ceremonyLabel(opts, 'pca-policyvm-v2');
+  const bound = opts.expectActionHash && opts.expectPolicyHash && opts.expectPlanHash && opts.expectRiskHash;
+  return setAssuranceLabel<SnarkBackend>({
+    async verify({ proof }): Promise<boolean> {
+      const env = proof as Partial<PolicyVmBoundComplianceProof> | null | undefined;
+      if (env?.circuit !== 'pca-policyvm-v2' || !Array.isArray(env.publicSignals)) return false;
+      const ps = env.publicSignals;
+      if (
+        !policyVmHalvesMatch(ps, P.actionHi, P.actionLo, opts.expectActionHash) ||
+        !policyVmHalvesMatch(ps, P.policyHi, P.policyLo, opts.expectPolicyHash) ||
+        !policyVmHalvesMatch(ps, P.planHi, P.planLo, opts.expectPlanHash) ||
+        !policyVmHalvesMatch(ps, P.riskHi, P.riskLo, opts.expectRiskHash)
+      ) return false;
+      return verifyPolicyVmProof(env, { verificationKey: await getVkey(), expect: opts.expect, expectRiskHash: opts.expectRiskHash });
+    },
+  }, bound ? { level: 'policyvm_snark' satisfies ZkSystem, ceremony } : { level: 'unknown' satisfies ZkSystem, vendor: 'policyvm-unbound', ceremony });
 }
 
 export interface PolicyVmProverOpts {
@@ -1077,4 +1308,16 @@ export async function provePolicyVmCompliance(
   const groth16 = await loadGroth16();
   const { proof, publicSignals } = await groth16.fullProve(input, opts.wasmPath ?? POLICYVM_WASM_PATH(), opts.zkeyPath ?? POLICYVM_ZKEY_PATH());
   return { system: 'groth16-bn254', circuit: 'pca-policyvm-v1', proof, publicSignals };
+}
+
+/** Generate a REAL risk-bound ('pca-policyvm-v2') proof; same witness inputs as `provePolicyVmCompliance`. Throws on a non-compliant witness. */
+export async function provePolicyVmBoundCompliance(
+  witness: Record<string, number | string | bigint>,
+  opts: PolicyVmProverOpts = {},
+): Promise<PolicyVmBoundComplianceProof> {
+  const input: Record<string, string> = {};
+  for (const [k, v] of Object.entries(witness)) input[k] = String(v);
+  const groth16 = await loadGroth16();
+  const { proof, publicSignals } = await groth16.fullProve(input, opts.wasmPath ?? POLICYVM_BOUND_WASM_PATH(), opts.zkeyPath ?? POLICYVM_BOUND_ZKEY_PATH());
+  return { system: 'groth16-bn254', circuit: 'pca-policyvm-v2', proof, publicSignals };
 }

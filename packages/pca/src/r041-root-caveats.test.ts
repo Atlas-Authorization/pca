@@ -10,7 +10,9 @@ import { commitPlan, conditionsDigest, type PlanNode } from './merkle';
 import { PCACTN_VERSION, signPCActn, type PCActn } from './pcactn';
 import { decide, rootCaveats } from './policy-vm';
 import { DEFAULT_RISK_POLICY } from './risk';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 const NOW = Date.UTC(2026, 9, 11, 12, 0, 0);
 const AUD = 'rs-r041';
@@ -64,7 +66,7 @@ function world(rootExtra: Caveat[], hopExtra: Caveat[] = []) {
   };
   const verify = (params: Record<string, unknown>) => {
     const { p, plan } = mk(params);
-    return verifyPCActn(p, { grant, audience: AUD, now: NOW, context: { params, plan, planAuthorized: true, risk: lowRisk, budget } });
+    return verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant, audience: AUD, now: NOW, context: { params, plan, planAuthorized: true, risk: lowRisk, budget } });
   };
   const dec = (params: Record<string, unknown>) =>
     decide({ grant, chain, action: { action: { verb: 'pay', resource: 'invoice:42', params, reversibility_class: 'reversible' } }, risk: lowRisk, budget, now: NOW });

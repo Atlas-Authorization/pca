@@ -1,0 +1,13 @@
+[
+  {
+    "id": "web-openapi-v2",
+    "repo": "slackapi/slack-api-specs",
+    "ref": "bc08db49625630e3585bf2f1322128ea04f2a7f3",
+    "path": "web-api/slack_web_openapi_v2.json",
+    "sha256": "742a5c977180a829df8767cf57bc417d99b3713583aee83741efb9c08ca731e7",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/slackapi/slack-api-specs/blob/master/LICENSE",
+    "bytes": 1237332
+  }
+]

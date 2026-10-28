@@ -1,0 +1,8 @@
+{
+ "target": "scitt verifyReceipt (mutated receipt)",
+ "seeds": [
+  {
+   "b64": "0oRNowEnD6EBYnRzGQGLAaEZAYyhIIFEgwEAgPZYQBA/vCGuWuqOlYmK2bt/1H5bgGWXhrqLfex5EyPCtikabBrHVlHVR4nU1CNKMBNgxgAvmw73E2ZP1DttMhKV3w8="
+  }
+ ]
+}

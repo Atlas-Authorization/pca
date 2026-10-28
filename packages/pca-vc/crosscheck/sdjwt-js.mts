@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { generateKeyPairSync, verify as nodeVerify } from 'node:crypto';
-import { issuePassport } from '@atlasauth/pca';
+import { issuePassport } from '@atlasauth/pca/ext/attestation';
 import { didKeyFromEd25519, passportToVC } from '../src/index.ts';
 
 const lib = process.env.SDJWT_LIB;

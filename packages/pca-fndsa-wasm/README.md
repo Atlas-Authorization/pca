@@ -1,5 +1,7 @@
 # @atlasauth/pca-fndsa-wasm
 
+> Maturity: **hardened** (hardened, awaiting final standard and independent audit). The engineering is done and evidenced by tests and a mutation gate; it awaits the final FIPS 206 text (the draft's key and signature encodings may change before the crate's 1.0) and an independent review of the wasm binding. It is never production until then, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The **FN-DSA (Falcon, FIPS 206) signature backend** for `@atlasauth/pca`'s post-quantum suite
 registry. It provides key generation, signing and — the operation the PCA verifier actually performs
 — **signature verification**, for the two standardized parameter sets:
@@ -71,6 +73,20 @@ pnpm test         # vitest: round-trips, cross-implementation vectors and negati
 ```
 
 Native round-trip and tamper tests for the FN-DSA arithmetic live in `crate/src/lib.rs` (`cargo test`).
+
+## Fail-closed table
+
+Each row is pinned by a test that asserts the exact outcome.
+
+| Missing or wrong | Result |
+|---|---|
+| Unknown parameter set | `FnDsaError` "unsupported FN-DSA variant: ..." |
+| Seed, signing key, verifying key or signature of the wrong size | `FnDsaError` naming the field, expected and actual size |
+| Message longer than `MSG_CAP` | `FnDsaError` (sign and verify); exactly `MSG_CAP` is accepted |
+| Well-sized but undecodable verifying key, all-zero or all-0xFF signature | `verify` false |
+| Well-sized but undecodable signing key | `FnDsaError` "wasm sign failed" |
+| `.wasm` file missing or corrupt | importing the package throws; there is no JavaScript fallback |
+| Signature from the other parameter set | `FnDsaError` (size mismatch) |
 
 ## Standard status (honest note)
 

@@ -8,8 +8,8 @@ import {
   buildPCActn,
   commitPlan as commitPlanLocal,
   delegate as delegateCap,
-  verifyLedgerInclusion,
 } from '@atlasauth/pca';
+import { entryCommit, verifyLedgerInclusion } from '@atlasauth/pca/ext/ledger';
 
 export type FetchLike = (
   url: string,
@@ -36,6 +36,8 @@ export interface Receipt {
   commit: string;
   root: string;
   size?: number;
+  /** Entry salt, when the server discloses it: lets the client check the entry commits to THIS action. */
+  salt?: string;
   inclusion_proof: InclusionProof;
 }
 
@@ -84,6 +86,11 @@ export interface CreateAgentOptions {
   /** Stamp a fresh random per-action `nonce` (default true). */
   nonce?: boolean;
   fetch?: FetchLike;
+  /**
+   * Verify the ledger inclusion proof of every receipt before reporting `allowed` (default true; an allow whose
+   * receipt does not verify is an error, never an allow). Set false only for a test double that has no real ledger.
+   */
+  verifyReceipts?: boolean;
   /** Initial counter (last used); the first act() uses counter+1. Default 0. */
   counter?: number;
   budget?: TrustBudget;
@@ -123,11 +130,28 @@ const newNonce = (): string => {
   return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
 };
 
+const isBudget = (b: unknown): b is TrustBudget =>
+  b !== null && typeof b === 'object' && [(b as TrustBudget).B, (b as TrustBudget).tau, (b as TrustBudget).asOf].every((x) => typeof x === 'number' && Number.isFinite(x));
+
+const receiptBinds = (r: Receipt, pcactn: PCActn): boolean => {
+  try {
+    return typeof r.salt === 'string' && entryCommit(r.salt, pcactn) === r.commit;
+  } catch {
+    return false;
+  }
+};
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function createAgent(opts: CreateAgentOptions): AgentClient {
   if (typeof opts.audience !== 'string' || opts.audience.length === 0) {
     throw new PcaAgentError('build_failed', 'createAgent: `audience` is required (the resource-server / Atlas instance id PCActns are for)');
+  }
+  try {
+    const u = new URL(opts.rsBaseUrl);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('scheme');
+  } catch {
+    throw new PcaAgentError('build_failed', 'createAgent: `rsBaseUrl` must be an absolute http(s) URL');
   }
   const base = opts.rsBaseUrl.replace(/\/+$/, '');
   const doFetch: FetchLike = opts.fetch ?? ((u, i) => (globalThis as unknown as { fetch: FetchLike }).fetch(u, i));
@@ -173,10 +197,11 @@ export function createAgent(opts: CreateAgentOptions): AgentClient {
         throw new PcaAgentError('bad_response', `plan commit failed (${res.status})`, res.status);
       }
       const remote = res.json.plan_root;
-      if (typeof remote === 'string' && remote !== local) {
-        throw new PcaAgentError('bad_response', 'server plan_root differs from the locally computed root', res.status);
+      // The server must echo the root it committed: a missing root cannot be told apart from a server that stored another plan.
+      if (typeof remote !== 'string' || remote !== local) {
+        throw new PcaAgentError('bad_response', 'server plan_root is missing or differs from the locally computed root', res.status);
       }
-      plan = nodes;
+      plan = nodes.map((n) => ({ ...n }));
       planRoot = local;
       return { planRoot: local };
     },
@@ -228,11 +253,21 @@ export function createAgent(opts: CreateAgentOptions): AgentClient {
         }
         return { status: 'step_up', stepupId: id, requiredT: typeof t === 'number' ? t : 2, pcactn };
       }
-      const verdict = (j.verdict ?? { allow: j.allow === true }) as Verdict;
-      if (verdict.budget) budget = verdict.budget;
-      if (res.status >= 200 && res.status < 300 && (j.allow === true || verdict.allow)) {
+      const rawVerdict = j.verdict;
+      const verdict = (rawVerdict !== null && typeof rawVerdict === 'object' && !Array.isArray(rawVerdict) ? rawVerdict : { allow: j.allow === true }) as Verdict;
+      // Allow only on an explicit boolean `true` from every place the server states it (a truthy string or a
+      // contradiction between `allow` and `verdict.allow` is a deny).
+      const allowed = res.status >= 200 && res.status < 300 && verdict.allow === true && (j.allow === undefined || j.allow === true);
+      if (isBudget(verdict.budget)) budget = verdict.budget;
+      if (allowed) {
         const receipt = j.receipt as Receipt | undefined;
-        if (!receipt) return { status: 'error', error: new PcaAgentError('bad_response', 'allow without receipt', res.status) };
+        if (!receipt || typeof receipt !== 'object') return { status: 'error', error: new PcaAgentError('bad_response', 'allow without receipt', res.status) };
+        if (opts.verifyReceipts !== false) {
+          if (!client.verifyReceipt(receipt)) return { status: 'error', error: new PcaAgentError('bad_response', 'allow receipt inclusion proof does not verify', res.status) };
+          if (receipt.salt !== undefined && !receiptBinds(receipt, pcactn)) {
+            return { status: 'error', error: new PcaAgentError('bad_response', 'allow receipt does not commit to this action', res.status) };
+          }
+        }
         return { status: 'allowed', verdict, receipt, pcactn };
       }
       return { status: 'denied', verdict, httpStatus: res.status, pcactn };
@@ -242,11 +277,20 @@ export function createAgent(opts: CreateAgentOptions): AgentClient {
       const pollMs = o.pollMs ?? 1000;
       const deadline = Date.now() + (o.timeoutMs ?? 5 * 60_000);
       for (;;) {
-        const res = await call('GET', `/v1/pca/stepups/${encodeURIComponent(stepupId)}`);
+        let res;
+        try {
+          res = await call('GET', `/v1/pca/stepups/${encodeURIComponent(stepupId)}`);
+        } catch (e) {
+          throw new PcaAgentError('network', (e as Error).message);
+        }
         const s = res.json.status;
-        if (s === 'approved' || s === 'denied' || s === 'expired') {
+        // Only a 2xx answer can approve; a non-2xx answer that says "approved" is not an approval.
+        const ok = res.status >= 200 && res.status < 300;
+        if (ok && (s === 'approved' || s === 'denied' || s === 'expired')) {
           return { ...res.json, status: s } as StepUpOutcome;
         }
+        // 4xx other than 429 is final (unknown or foreign step-up): stop polling, never approve.
+        if (res.status >= 400 && res.status < 500 && res.status !== 429) return { status: 'denied', httpStatus: res.status };
         if (Date.now() + pollMs > deadline) return { status: 'timeout' };
         await sleep(pollMs);
       }
@@ -267,6 +311,7 @@ export function createAgent(opts: CreateAgentOptions): AgentClient {
         ...(opts.now ? { now: opts.now } : {}),
         ...(opts.nonce !== undefined ? { nonce: opts.nonce } : {}),
         fetch: doFetch,
+        ...(opts.verifyReceipts !== undefined ? { verifyReceipts: opts.verifyReceipts } : {}),
         counter: 0,
       });
       return sub;

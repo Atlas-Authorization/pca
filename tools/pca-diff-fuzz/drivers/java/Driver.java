@@ -4,6 +4,8 @@
 // canon : strict parse + canonicalizeStrict + hashStrict of ANY JSON text
 // intent_*: an Intent Layer v2 primitive (raw = its `input` as JSON text); the line carries `result` in the `expect` shape
 import net.atlasauth.pca.ActionSchema;
+import net.atlasauth.pca.Authorize;
+import net.atlasauth.pca.Caveats;
 import net.atlasauth.pca.IntentClassifier;
 import net.atlasauth.pca.IntentJs;
 import net.atlasauth.pca.IntentMap;
@@ -157,6 +159,23 @@ public class Driver {
                             allowed(co.get("allowed_suites")), (Map<String, Object>) co.get("pq_pins"), (Map<String, Object>) co.get("trusted_root"));
                         r = "{\"id\":" + esc(id) + ",\"allow\":" + why.isEmpty() + ",\"checks\":{\"chain\":" + why.isEmpty() + "}"
                             + (why.contains(Pq.UNSUPPORTED_SUITE) ? ",\"unsupported_suite\":" + esc(why) : "") + "}";
+                    } else if (kind.equals("policy")) {
+                        // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+                        // Authorize.evaluateAgentCaveats(policyCaveats(grant, chain), context, {action}, toolCall) as {allow, failed}: the
+                        // agent-native evaluator (predicates + tool_schema); the tool call is the signed verb + params (the reference's toolCallOf)
+                        Map<String, Object> pv = (Map<String, Object>) Json.parseLenient(raw);
+                        Map<String, Object> pctx = (Map<String, Object>) pv.get("context");
+                        Object pact = pctx.get("action");
+                        Map<String, Object> pam = pact instanceof Map ? (Map<String, Object>) pact : null;
+                        Map<String, Object> pactx = new LinkedHashMap<>();
+                        pactx.put("action", pact);
+                        Map<String, Object> pcall = new LinkedHashMap<>();
+                        pcall.put("tool", pam != null && pam.get("verb") instanceof String ? pam.get("verb") : "");
+                        pcall.put("args", pam != null && pam.get("params") instanceof Map ? pam.get("params") : new LinkedHashMap<String, Object>());
+                        Caveats.Result pr = Authorize.evaluateAgentCaveats(Caveats.policyCaveats(pv.get("grant"), pv.get("chain")), pctx, pactx, pcall);
+                        StringBuilder fl = new StringBuilder("[");
+                        for (int k = 0; k < pr.failed.size(); k++) fl.append(k == 0 ? "" : ",").append(esc(pr.failed.get(k)));
+                        r = "{\"id\":" + esc(id) + ",\"allow\":" + pr.ok + ",\"failed\":" + fl.append("]") + "}";
                     } else if (kind.startsWith("intent_")) {
                         // Intent Layer v2 primitives: raw = JSON text of the primitive's `input`; result = its `expect` shape.
                         Map<String, Object> res = intentPrimitive(kind, Json.parseLenient(raw));

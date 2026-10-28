@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Proof-Carrying Authority core: canonical hashing, Ed25519 and post-quantum signatures, Merkle plan commitments, attenuable capability chains, hardware attestation verification, and the PCActn verifier.",
   "keywords": [
     "capability",
@@ -36,11 +36,36 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "default": "./dist/core.js"
+    },
     "./durable-state": {
       "types": "./dist/durable-state.d.ts",
       "default": "./dist/durable-state.js"
     },
+    "./ext/*": {
+      "types": "./dist/ext/*.d.ts",
+      "default": "./dist/ext/*.js"
+    },
+    "./durable-mesh-witness": {
+      "types": "./dist/durable-mesh-witness.d.ts",
+      "default": "./dist/durable-mesh-witness.js"
+    },
     "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "core": [
+        "dist/core.d.ts"
+      ],
+      "durable-state": [
+        "dist/durable-state.d.ts"
+      ],
+      "ext/*": [
+        "dist/ext/*.d.ts"
+      ]
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -61,12 +86,20 @@
     "@xmldom/xmldom": "0.8.15",
     "asn1js": "3.0.10",
     "pkijs": "3.4.1",
-    "snarkjs": "^0.7.5",
     "xml-crypto": "6.1.2"
+  },
+  "peerDependencies": {
+    "snarkjs": "^0.7.5"
+  },
+  "peerDependenciesMeta": {
+    "snarkjs": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "circomlib": "^2.0.5",
     "fast-check": "^3.23.1",
+    "snarkjs": "^0.7.5",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
@@ -77,12 +110,34 @@
     "LICENSE",
     "circuits/*.circom",
     "circuits/*.sh",
-    "circuits/*vkey.json"
+    "circuits/*vkey.json",
+    "circuits/circuit-versions.json"
   ],
   "engines": {
     "node": ">=20"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "stable",
+    "features": {
+      "core": "stable",
+      "pq-signatures": "stable",
+      "server": "production",
+      "durable-state": "production",
+      "threshold-multisig": "production",
+      "frost": "hardened",
+      "attestation-software": "production",
+      "attestation": "hardened",
+      "zk-compliance": "hardened",
+      "optimistic": "production",
+      "intent": "production",
+      "intent-frontier": "production",
+      "ledger": "hardened",
+      "kem": "hardened",
+      "product-layer": "production",
+      "entropy": "hardened"
+    }
   }
 }
