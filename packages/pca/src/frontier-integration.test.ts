@@ -200,9 +200,13 @@ describe('objective-risk binding (resolveObjectiveRisk)', () => {
     expect(resolveObjectiveRisk({ grant: g, action: act, instance: undefined })).toMatchObject({ mode: 'mismatch', onMismatch: 'deny' });
   });
 
-  it('on_mismatch: heuristic is honoured; malformed commitments always deny', () => {
+  it('B16: on_mismatch heuristic is honoured only when the verifier opts in; malformed commitments always deny', () => {
     const g = grant(commitment({ on_mismatch: 'heuristic' }));
-    expect(resolveObjectiveRisk({ grant: g, action: act, instance: undefined })).toMatchObject({ mode: 'mismatch', onMismatch: 'heuristic' });
+    const drifted = { ...instanceCfg, graph: { nodes: [], edges: [] } };
+    expect(resolveObjectiveRisk({ grant: g, action: act, instance: undefined })).toMatchObject({ mode: 'mismatch', onMismatch: 'deny' });
+    expect(resolveObjectiveRisk({ grant: g, action: act, instance: drifted })).toMatchObject({ mode: 'mismatch', onMismatch: 'deny' });
+    expect(resolveObjectiveRisk({ grant: g, action: act, instance: { ...drifted, allow_heuristic_fallback: true } })).toMatchObject({ mode: 'mismatch', onMismatch: 'heuristic' });
+    expect(resolveObjectiveRisk({ grant: g, action: act, instance: { ...drifted, allow_heuristic_fallback: 'yes' as never } })).toMatchObject({ onMismatch: 'deny' });
     const bad = grant({ v: 1, embedder: 'nope' });
     expect(resolveObjectiveRisk({ grant: bad, action: act, instance: instanceCfg })).toMatchObject({ mode: 'mismatch', onMismatch: 'deny' });
     const wrongModel = grant(commitment({ embedder: { scheme: 'native', model_id: 'native:other', config: DEFAULT_NATIVE_CONFIG } }));

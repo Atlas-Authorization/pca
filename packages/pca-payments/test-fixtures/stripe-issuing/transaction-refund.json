@@ -1,0 +1,9 @@
+{
+  "id": "ipi_4",
+  "object": "issuing.transaction",
+  "type": "refund",
+  "amount": 400,
+  "currency": "usd",
+  "authorization": "iauth_1",
+  "card": "ic_card_1"
+}

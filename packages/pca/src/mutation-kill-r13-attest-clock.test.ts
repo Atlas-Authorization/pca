@@ -57,7 +57,7 @@ describe('verifier clock', () => {
   });
   it('a hook whose clock returns NaN refuses', async () => {
     const hook = createAttestationVerifier({ trustedAttestorKeys: [ATT_PUB], resolveDocument: () => doc(), expectedBinding: () => EXPECTED, now: () => Number.NaN });
-    const r = await hook(mkCtx());
+    const r: any = await hook(mkCtx());
     expect(r.ok).toBe(false);
     expect(r.reason).toBe('verifier clock is not a finite time (fail closed)');
   });

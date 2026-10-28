@@ -1,79 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import {
-  MemoryIntentSessionStore,
   RevocationSet,
-  accContextFor,
-  accPost,
-  accPreState,
-  accReceiptDigest,
-  actionSchemaDigest,
-  actionSchemaKeyOf,
-  admitIntentAction,
   b64u,
   buildDiscoveryDocument,
   buildPCActn,
-  checkSessionRevocation,
-  conformAction,
-  decideIntentV2,
-  intentV2Active,
-  deltaRevocationId,
-  draftSchemaFromMcpTools,
-  draftSchemaFromOpenApi,
   envelopeCaveatEvaluator,
-  intentActionDigest,
-  intentProblem,
-  intentSessionCaveatError,
-  mapRevocationId,
-  mintSessionGrant,
-  monitorState,
   parseDiscoveryDocument,
   paramsDigest,
-  pcactnReservationDigest,
   publicKeyOf,
-  reversibilityOf,
-  revocationExposureEnd,
-  sessionRevocationId,
-  sessionRevocationScope,
-  sessionRootDigest,
-  settleIntentEvent,
   sha256,
-  signAccReceipt,
-  signSequencerKeySet,
   mlDsa65Keygen,
   encodeMlDsaPublicKey,
-  accReceiptShapeError,
-  actionSchemaShapeError,
-  sequencerKeySetShapeError,
-  signActionSchema,
-  signIntentRequired,
   signPCActn,
   signRevocationEpoch,
-  signSessionRoot,
   utf8,
-  validateIntentSessionWire,
   validateWireV2,
-  verbReversibility,
-  verifyActionSchema,
-  verifyIntentRequired,
-  verifyPCActn,
+  verifyPCActn as verifyPCActn05,
   verifyPCActnCore,
-  verifyReceiptAgainstHolder,
-  sequencerKeySetDigest,
-  trackedKeySetError,
-  verifySessionRoot,
-  walletFloorOverrides,
-  type AccumulatorDecl,
-  type ActionSchema,
-  type IntentEvent,
-  type IntentSessionWire,
-  type IntentV2Context,
-  type MonitorDecl,
   type PCActn,
-  type SessionRoot,
-  type SessionRootBody,
-  type UnsignedActionSchema,
 } from './index';
+import { accContextFor, accPost, accPreState, accReceiptDigest, actionSchemaDigest, actionSchemaKeyOf, admitIntentAction, checkSessionRevocation, conformAction, decideIntentV2, intentV2Active, deltaRevocationId, draftSchemaFromMcpTools, draftSchemaFromOpenApi, intentActionDigest, intentProblem, intentSessionCaveatError, mapRevocationId, mintSessionGrant, monitorState, pcactnReservationDigest, reversibilityOf, revocationExposureEnd, sessionRevocationId, sessionRevocationScope, sessionRootDigest, settleIntentEvent, signAccReceipt, signSequencerKeySet, accReceiptShapeError, actionSchemaShapeError, sequencerKeySetShapeError, signActionSchema, signIntentRequired, signSessionRoot, validateIntentSessionWire, verbReversibility, verifyActionSchema, verifyIntentRequired, verifyReceiptAgainstHolder, sequencerKeySetDigest, trackedKeySetError, verifySessionRoot, walletFloorOverrides, type AccumulatorDecl, type ActionSchema, type IntentEvent, type IntentSessionWire, type IntentV2Context, type MonitorDecl, type SessionRoot, type SessionRootBody, type UnsignedActionSchema } from './ext/intent';
+import { MemoryIntentSessionStore } from './intent-history-testing';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 // ---- fixture: the §4 walkthrough, scaled down ----------------------------------------------------------------
 const seed = (l: string) => sha256(utf8(`intent-v2-test/${l}`));
@@ -194,7 +144,7 @@ const ctx = (over: Partial<IntentV2Context> = {}): IntentV2Context => ({
   acc: { state: { trip_spend: { sum: 0 } }, monitors: {} },
   ...over,
 });
-const core = (p: PCActn, grant: typeof G0, c: IntentV2Context | undefined) => verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: AUD, ...(c ? { intentV2: c } : {}) });
+const core = (p: PCActn, grant: typeof G0, c: IntentV2Context | undefined) => verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD, ...(c ? { intentV2: c } : {}) });
 const resign = (p: PCActn): PCActn => {
   const { sig: _s, ...body } = p;
   void _s;
@@ -612,8 +562,8 @@ describe('accumulators and the session store (T11, LIN)', () => {
     // the claim is the honest post value (the agent cannot claim another: the core check compares)
     const post = (acc.state.trip_spend as { sum: number }).sum + (params.total as number);
     const p = build(G0, { salt: 'salt0', map: MAP0, is: is0({ acc: [{ id: 'trip_spend', post }] }), params });
-    const v = await verifyPCActn(p, { grant: G0, audience: AUD, now: NOW, context: { params }, intentV2: ctx({ params, acc: acc as IntentV2Context['acc'] }) });
-    const predicateDenied = v.reasons.some((r) => r.includes('no predicate permits'));
+    const v = await verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: G0, audience: AUD, now: NOW, context: { params }, intentV2: ctx({ params, acc: acc as IntentV2Context['acc'] }) });
+    const predicateDenied = v.reasons.some((r) => r.includes('no predicate permits') || r.includes(' not satisfied for '));
     return { allow: v.checks.accumulators === 'pass' && !predicateDenied, v };
   };
 
@@ -631,7 +581,7 @@ describe('accumulators and the session store (T11, LIN)', () => {
         const store = new MemoryIntentSessionStore();
         await Promise.all(
           amounts.map((total, i) =>
-            admitIntentAction(store, {
+            admitIntentAction(store, { requireDurable: false,
               session: SESSION,
               root: S,
               schema: SCHEMA,
@@ -654,7 +604,7 @@ describe('accumulators and the session store (T11, LIN)', () => {
     const store = new MemoryIntentSessionStore();
     const ev = (id: string, total: number, t: number): Omit<IntentEvent, 'status'> => ({ id, verb: 'air.book', resource: 'r', params: { ...PARAMS, total }, t });
     for (const [id, total] of [['a', 10_000], ['b', 20_000]] as const) {
-      await admitIntentAction(store, { session: SESSION, root: S, schema: SCHEMA, event: ev(id, total, NOW), verify: async () => ({ allow: true }) });
+      await admitIntentAction(store, { requireDurable: false, session: SESSION, root: S, schema: SCHEMA, event: ev(id, total, NOW), verify: async () => ({ allow: true }) });
     }
     await settleIntentEvent(store, SESSION, 'a', 'released');
     const h = store.snapshot(SESSION);

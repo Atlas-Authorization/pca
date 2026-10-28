@@ -1,4 +1,5 @@
-import { FRICTIONS, type Friction, type Reversibility } from '@atlasauth/pca';
+import { FRICTIONS, type Friction } from '@atlasauth/pca/ext/intent';
+import { type Reversibility } from '@atlasauth/pca/ext/research';
 
 const isFriction = (x: unknown): x is Friction => typeof x === 'string' && (FRICTIONS as readonly string[]).includes(x);
 

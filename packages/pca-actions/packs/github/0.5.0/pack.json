@@ -1,0 +1,71 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "github",
+  "version": "0.5.0",
+  "ns": [
+    "github"
+  ],
+  "count": 1242,
+  "root": "dlIHWHPZXFb9AAv4v7ceJLBFSleNfXyhxgi84WfNWOg",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 1116,
+    "unreviewed": 126
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "GitHub publishes the REST API description (github/rest-api-description) under the MIT licence. Operation ids, parameter names/types/bounds and short summaries are carried; the trait review is ours.",
+  "sources": [
+    {
+      "id": "api-github-com",
+      "kind": "openapi",
+      "uri": "https://github.com/github/rest-api-description/blob/755ee33b4a81d51f6f07a902cce26cbec3b822f2/descriptions/api.github.com/api.github.com.json",
+      "spec_digest": "sha256:3177ad6a86ca04c57a9bef3fc24e28a339efb8eb040c6f950af3d3ed2fee7fa3",
+      "licence": "MIT",
+      "licence_url": "https://github.com/github/rest-api-description/blob/main/LICENSE.md"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "b0bf61a67f9931132b6ea392b6640cd92ec3cb96f944f7f42f7ed947ec3163bf"
+  },
+  "shards": [
+    {
+      "file": "defs/000-github_actions.jsonl",
+      "count": 778,
+      "bytes": 716534,
+      "sha256": "db99139650988bc7a9efb2ffb1fe3869bc904a4c73b4275f933d4522af116376",
+      "first": "github.actions.add_hosted_runner_group_org_2",
+      "last": "github.orgs.list_org_role_teams"
+    },
+    {
+      "file": "defs/001-github_orgs.jsonl",
+      "count": 464,
+      "bytes": 437177,
+      "sha256": "d96e31f8520dbb8e8b8f4544b1f7800cc67002d75ef7ab5e8cc813e6bae94791",
+      "first": "github.orgs.list_org_role_users",
+      "last": "github.users.update_authenticated"
+    }
+  ],
+  "stats": {
+    "total": 1242,
+    "authored": 1116,
+    "unreviewed": 126,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "create": 139,
+      "privilege": 150,
+      "exec": 21,
+      "delete": 187,
+      "update": 200,
+      "export": 13,
+      "read": 644,
+      "publish": 28,
+      "send": 1,
+      "provision": 2
+    }
+  }
+}

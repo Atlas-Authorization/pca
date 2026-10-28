@@ -40,7 +40,6 @@ import {
   type Signer,
   type VerifyHooks,
   DEFAULT_REQUIRED_CHECKS,
-  canonicalBytes,
   createThresholdVerifier,
   hashCanonical,
   pcactnDigest,
@@ -57,6 +56,8 @@ import {
   type KeyLike,
 } from 'jose';
 import { assertCanonicalJwsSegments } from '@atlasauth/pca';
+import { jcsBytes, validateAgentCard1 } from './a2a-card';
+export { jcsBytes, validateAgentCard1 } from './a2a-card';
 
 // ===================================================================================================
 // Extension identifier
@@ -66,7 +67,8 @@ import { assertCanonicalJwsSegments } from '@atlasauth/pca';
  * The URI-namespaced A2A extension key a PCActn rides under on a Task's / Message's `metadata`. A2A
  * extensions are identified by URI and carried in `metadata`, so a non-PCA-aware peer simply ignores it.
  */
-export const PCA_A2A_EXTENSION_URI = 'https://atlasauth.net/a2a/ext/pca/v2' as const;
+import { PCA_A2A_EXTENSION_URI } from './ext-uri';
+export { PCA_A2A_EXTENSION_URI };
 
 // ===================================================================================================
 // Minimal structural A2A object model (permissive — real peers carry many more fields)
@@ -354,7 +356,17 @@ function isJwk(k: VerifyKeyInput): k is JWK {
 function cardSigningBytes(card: AgentCard): Uint8Array {
   const { signatures: _signatures, ...rest } = card;
   void _signatures;
-  return canonicalBytes(rest);
+  return jcsBytes(rest); // RFC 8785, as A2A 1.0 section 8.4 requires
+}
+
+/** JWS payload member for `protectedB64`: raw bytes under `b64:false` (legacy detached profile), else the base64url text (A2A 1.0). */
+function payloadFor(protectedB64: string, payload: Uint8Array): Uint8Array | string {
+  try {
+    const h = JSON.parse(Buffer.from(protectedB64, 'base64url').toString('utf8')) as { b64?: unknown };
+    return h !== null && typeof h === 'object' && h.b64 === false ? payload : Buffer.from(payload).toString('base64url');
+  } catch {
+    return payload; // unparsable header: jose rejects it
+  }
 }
 
 export interface IssueAgentCardOptions {
@@ -362,8 +374,16 @@ export interface IssueAgentCardOptions {
   alg?: string;
   /** The PCA passport reference to embed so the card points at verifiable proof-of-authority. */
   passport?: A2APassportRef | { id: string };
-  /** Optional JWS `kid` (set it when verifiers resolve the key from a JWKS). */
+  /** Optional JWS `kid` (set it when verifiers resolve the key from a JWKS). Required for the `'a2a-1.0'` profile. */
   kid?: string;
+  /**
+   * `'pca-detached'` (default, unchanged): unencoded detached payload (`b64:false`). `'a2a-1.0'`: the signing input
+   * of A2A 1.0 section 8.4 (`BASE64URL(header) . BASE64URL(payload)`, header carries `alg`, `kid`, `typ:"JOSE"`), so
+   * any A2A 1.0 verifier can check the card. Needs `kid` (the spec makes it mandatory) or it throws.
+   */
+  profile?: 'pca-detached' | 'a2a-1.0';
+  /** `'a2a-1.0'`: refuse to sign a card that does not match the A2A 1.0 `AgentCard` message (see {@link validateAgentCard1}). */
+  schema?: 'a2a-1.0';
 }
 
 /**
@@ -384,13 +404,19 @@ export async function issueSignedAgentCard(
 
   // Embed the passport reference BEFORE signing so the signature covers it.
   const toSign: AgentCard = { ...card, ...(passport ? { pcaPassport: passport } : {}) };
+  if (opts.schema === 'a2a-1.0') {
+    const problems = validateAgentCard1(toSign);
+    if (problems.length > 0) throw new Error(`issueSignedAgentCard: the card does not match the A2A 1.0 schema: ${problems.join('; ')}`);
+  }
   const payload = cardSigningBytes(toSign);
 
   const key: KeyLike | Uint8Array = isJwk(signingKey) ? await importJWK(signingKey, alg) : signingKey;
+  if (opts.profile === 'a2a-1.0' && (typeof opts.kid !== 'string' || opts.kid.length === 0)) {
+    throw new Error("issueSignedAgentCard: the 'a2a-1.0' profile requires a kid");
+  }
   const protectedHeader: Record<string, unknown> = {
     alg,
-    b64: false,
-    crit: ['b64'],
+    ...(opts.profile === 'a2a-1.0' ? { typ: 'JOSE' } : { b64: false, crit: ['b64'] }),
     ...(opts.kid !== undefined ? { kid: opts.kid } : {}),
     ...(passport ? { [PCA_PASSPORT_HEADER]: passport.id } : {}),
   };
@@ -409,6 +435,8 @@ export interface VerifyAgentCardOptions {
   key?: VerifyKeyInput;
   /** Expected JWS algorithm for `importJWK` of a plain JWK `key` (default `'EdDSA'`). */
   alg?: string;
+  /** `'a2a-1.0'`: also require the card to match the A2A 1.0 `AgentCard` message (see {@link validateAgentCard1}). */
+  schema?: 'a2a-1.0';
 }
 
 /** The outcome of validating a signed Agent Card. */
@@ -438,6 +466,10 @@ export async function verifyAgentCard(
   if (!Array.isArray(signatures) || signatures.length === 0) {
     return { ok: false, reason: 'agent card carries no signatures' };
   }
+  if (opts.schema === 'a2a-1.0') {
+    const problems = validateAgentCard1(card);
+    if (problems.length > 0) return { ok: false, reason: `agent card does not match the A2A 1.0 schema: ${problems.join('; ')}` };
+  }
 
   let resolver: KeyResolver;
   try {
@@ -466,7 +498,7 @@ export async function verifyAgentCard(
     if (!sig || typeof sig.protected !== 'string' || typeof sig.signature !== 'string') {
       return { ok: false, reason: `signature ${i} is malformed` };
     }
-    const input: FlattenedJWSInput = { protected: sig.protected, payload, signature: sig.signature };
+    const input: FlattenedJWSInput = { protected: sig.protected, payload: payloadFor(sig.protected, payload) as never, signature: sig.signature };
     try {
       assertCanonicalJwsSegments(sig.protected, sig.signature); // canonical-spelling gate BEFORE jose
       // Split the call so each branch matches a single flattenedVerify overload (key vs. key-resolver).
@@ -493,16 +525,16 @@ export async function verifyAgentCard(
 // ===================================================================================================
 
 /**
- * JSON-LD contexts for the AP2 VDC envelope — the SAME values `@atlasauth/pca-ap2` uses, so this profile
- * is wire-compatible with the full AP2 chain. The second entry is a placeholder for the canonical AP2
- * context URL (replace before production).
+ * `@context` of the PCA payment-mandate envelope. This is a PCA-DEFINED envelope, NOT an AP2 credential:
+ * AP2 mandates are SD-JWTs (see `@atlasauth/pca-ap2`) and AP2 publishes no JSON-LD context. The second entry is
+ * an identifier this package chose and nobody resolves; do not treat the envelope as AP2 wire format.
  */
 export const A2A_AP2_CONTEXT: readonly string[] = [
   'https://www.w3.org/2018/credentials/v1',
   'https://ap2-protocol.org/context/v0.2',
 ];
 
-/** ISO-4217 currency + decimal value (use minor units in production to avoid float drift). */
+/** ISO-4217 currency + `value` in INTEGER MINOR UNITS (cents). Non-integer or unsafe values are refused (no float drift). */
 export interface A2AMonetaryAmount {
   currency: string;
   value: number;
@@ -607,6 +639,9 @@ export function a2aPaymentMandateFromPca(pcActn: PCActn, opts: PaymentMandateOpt
   if (issuer === undefined) {
     throw new Error('a2aPaymentMandateFromPca: no issuerPublic given and the PCActn has no capability chain');
   }
+  if (!Number.isSafeInteger(opts.amount.value) || opts.amount.value < 0) {
+    throw new Error('a2aPaymentMandateFromPca: amount.value must be a non-negative integer in minor units');
+  }
   const humanPresent = opts.humanPresent ?? (opts.humanSignerSet ? verifiedHumanPresent(pcActn, opts.humanSignerSet) : false);
   const now = opts.now ?? Date.now();
 
@@ -676,8 +711,8 @@ function mandateBindingError(m: A2APaymentMandateContents, pcActn: PCActn, param
   for (const [k, v] of bound) if (!own(x, k) || typeof x[k] !== 'string' || x[k] !== v) return `payment mandate x_pca.${k} is not the PCActn's`;
   // amount + currency: the authorized params MUST carry both, and the mandate must state exactly them
   const amt = m.amount as unknown;
-  if (!isRecord(amt) || typeof amt.value !== 'number' || !Number.isFinite(amt.value) || typeof amt.currency !== 'string') return 'payment mandate amount is malformed';
-  if (!own(params, 'amount') || typeof params.amount !== 'number' || !Number.isFinite(params.amount)) return 'the PCActn params carry no numeric amount to bind the mandate amount to';
+  if (!isRecord(amt) || !Number.isSafeInteger(amt.value) || (amt.value as number) < 0 || typeof amt.currency !== 'string') return 'payment mandate amount is malformed (value must be a non-negative integer in minor units)';
+  if (!own(params, 'amount') || !Number.isSafeInteger(params.amount) || (params.amount as number) < 0) return 'the PCActn params carry no integer minor-unit amount to bind the mandate amount to';
   if (!own(params, 'currency') || typeof params.currency !== 'string') return 'the PCActn params carry no currency to bind the mandate currency to';
   if (amt.value !== params.amount || amt.currency !== params.currency) return 'payment mandate amount / currency differ from the authorized PCActn params';
   // payee and instrument: bound whenever either side names one (a mandate cannot widen or drop what the action fixed)
@@ -742,3 +777,8 @@ export async function verifyA2APaymentMandate(
   if (!require.includes('params_digest')) require.push('params_digest');
   return verifyPcActn(pcActn, { ...opts, context, requireChecks: require });
 }
+
+// K6: PCA binding for A2A authorization (AUTH_REQUIRED mapping, extension declaration, per-hop delegation, push tokens).
+export * from './a2a-auth';
+export * from './a2a-receipt';
+export * from './a2a-extended-card';

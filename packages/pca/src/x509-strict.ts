@@ -255,6 +255,28 @@ export function checkChainRoles(orderedDer: readonly Uint8Array[]): string | und
   }
 }
 
+/** Critical extensions the JWS / SPDM chain verifiers process or can safely ignore: BasicConstraints, KeyUsage and ExtendedKeyUsage. */
+export const CHAIN_CRITICAL_OK: ReadonlySet<string> = new Set([...RECOGNISED_CRITICAL_EXTENSIONS, '2.5.29.37']);
+
+/**
+ * The shared chain profile of the MAA x5c, GCP x5c and NVIDIA device chain verifiers (0.5, B15): CA roles over the ordered
+ * chain (leaf first; see {@link checkChainRoles}) and no unrecognised critical extension on any certificate. Returns a
+ * failure reason or undefined. A DER read failure is a failure.
+ */
+export function strictChainError(orderedDer: readonly Uint8Array[]): string | undefined {
+  const roles = checkChainRoles(orderedDer);
+  if (roles) return roles;
+  try {
+    for (const [i, der] of orderedDer.entries()) {
+      const oid = unrecognisedCriticalExtension(der, CHAIN_CRITICAL_OK);
+      if (oid) return `certificate at depth ${i} has an unrecognised critical extension ${oid}`;
+    }
+    return undefined;
+  } catch (e) {
+    return `certificate extension parse failed: ${e instanceof Error ? e.message : 'invalid'}`;
+  }
+}
+
 const CURVES = {
   'P-256': { crv: 'P-256', coord: 32 },
   'P-384': { crv: 'P-384', coord: 48 },

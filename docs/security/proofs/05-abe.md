@@ -1,5 +1,22 @@
 # 05. `pca-abe`: BSW07 ciphertext-policy ABE adapted to a type-3 pairing
 
+> **Superseded in 0.5.** `pca-abe` now implements FAME (Agrawal and Chase, CCS 2017), which has its own adaptive-security proof in the type-3 setting. Everything below analyses the earlier BSW07 adaptation and is kept as a record. Its generic-group Lean development (`abeB`, the transfer lemma, `abe_ggm_cpa`) has been removed from the repository with that scheme; only the Shamir access-tree lemmas (`Abe.lean`: `reconstruction`, `privacy`, `no_recovery`) remain, because FAME's span program is that sharing.
+
+## Formal status of the current scheme (FAME)
+
+| Claim | Status | Where |
+|---|---|---|
+| Decryption correctness for any span program and any random-oracle values: `sum_t keyProd_t C0_t + keyProd_2 C0_2 - sum_l ctProd_l pow_l = (d_0 a_0 + d_2) s_0 + (d_1 a_1 + d_2) s_1` whenever the weights satisfy `sum_i w_i M_ij = [j = j0]`; the blinding terms and every hash value cancel | Machine-checked (core Lean, standard axioms only, no `sorry`) | `formal/computational/lean/PcaComp/Fame.lean`, `decrypt_exponent` |
+| The tree-derived weights solve the span program: for every plan whose gates satisfy the Lagrange moment equations `sum_i lambda_i x_i^k = [k = 0]` (`k < t`), `sum_i w_i M_ij = [j = secret column]` for every column, where `M` is built with fresh columns per gate exactly as `buildRows` does | Machine-checked (core Lean, standard axioms only, no `sorry`); the moment equations for `lagrangeAtZero` are a unit test | `formal/computational/lean/PcaComp/Span.lean`, `span_program_solved`; `fame.test.ts` |
+| CPA security and collusion resistance of the ABE layer | **Not mechanised.** Taken as the published theorem (NA-FAME): adaptive security in the random-oracle model under the SXDH-family assumption, type-3 setting | Agrawal and Chase 2017 |
+| KEM-DEM wrapper (HKDF-SHA256 random oracle, AES-256-GCM one-time IND-CPA) on top of an ideal FAME key | Proved in CryptoVerif for the model body, with the FAME hop as the stated assumption; the tool has no pairing-group model, so the ABE layer cannot be modelled there. Total bound: `NE * Adv_FAME` plus the tool's `4 NE Penc + (NE^2 + 2 qH NE)/|G_T|` | `formal/cryptoverif/fame_kemdem.cv` (negative control `NEG_fame_known_k`) |
+| Equivalence with an independent implementation | Byte-for-byte on six policies, the reference decrypting by Gaussian elimination | `packages/pca-abe` differential test and `test-oracle/gen_vectors_fame.py` |
+
+Not established: the security of FAME itself (NA-FAME, the published theorem; no generic-group or other mechanised proof exists in this repository for FAME); the hash-to-curve behaving as a random oracle; the moment equations of the Lagrange coefficients (tested, and proved in `Abe.lean` for the interpolation, but not connected symbolically to `Span.lean`); CCA security; policies repeating an attribute (refused).
+
+Why there is no generic-group proof for FAME here, unlike the withdrawn BSW07 one: that proof was a polynomial-independence argument tailored to one scheme's key shape (about 1,400 lines of Mathlib), and FAME's keys carry three components per attribute with two-sided hash masks, so the argument has to be redone, not ported. It was not attempted without a Mathlib build to check it against; the paper's own proof is a reduction to a matrix Diffie-Hellman assumption, not a generic-group argument.
+
+
 Code read in full: `packages/pca-abe/src/{abe,bls,sss,policy,aead,attributes}.ts`. Tags: **[P]**, **[PM]**, **[R]**, **[O]** as in `01-core.md`.
 The package is documented as research-grade and unaudited (README Status). Nothing here changes that.
 

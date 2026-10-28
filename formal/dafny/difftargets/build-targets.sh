@@ -13,7 +13,7 @@ mkdir -p "$OUT"
 for t in $TARGETS; do
   rm -rf "$OUT/$t"
   echo "== dafny build --target:$t"
-  ( cd "$HERE" && dafny build Harness.dfy --standard-libraries --target:$t --no-verify --allow-warnings -o "$OUT/$t/h" ) 2>&1 | grep -vE "^$|did not attempt verification|Warning: type parameter|^ *[0-9]* \||^ *\|" || true
+  ( cd "$HERE" && dafny build "${HARNESS:-Harness}.dfy" --standard-libraries --target:$t --no-verify --allow-warnings -o "$OUT/$t/h" ) 2>&1 | grep -vE "^$|did not attempt verification|Warning: type parameter|^ *[0-9]* \||^ *\|" || true
 done
 # js needs bignumber.js next to the output (Dafny's integer runtime); the pinned version is in ../TOOLCHAIN.lock
 if echo "$TARGETS" | grep -qw js; then ( cd "$OUT/js" && mkdir -p node_modules && ( [ -d /work/ws/tsx/node_modules/bignumber.js ] && cp -r /work/ws/tsx/node_modules/bignumber.js node_modules/ || npm i --no-save bignumber.js@9.3.1 >/dev/null 2>&1 ) ); fi

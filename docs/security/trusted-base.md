@@ -165,6 +165,29 @@ Section 3 mirrors its core part in Dafny.
    replay stores are unchanged from `verified-core.md`.
 8. **Not shrunk at all**: parsing and wire validation, the Policy VM, freshness/attestation/ZK/bond verification, cryptographic security of any primitive, side channels.
 
+## 6b. Goal compiler (goal-to-decision, 0.5)
+
+| Component | What is proved | What is trusted |
+|---|---|---|
+| `formal/dafny/GoalIr.dfy`, `GoalCompile.dfy`, `GoalWitness.dfy`, `GoalRender.dfy`, `Goal.dfy` | soundness of the compiler as an equality with the goal's reference semantics (G-T1), monotonicity (G-T2), provenance witness and its checker (G-T3), the compiler half of the ternary decision (G-T4), canonicity (G-T5), unit safety (G-T6), hole safety (G-T7), lossless card (G-T10). Zero `assume`, `{:axiom}`, `extern`. | The pinned Dafny toolchain (section 1). |
+| `GoalPvmTie.dfy` | The goal's Kleene operators equal PolicyVm's `Tri` operators. | Verification only; not extracted. |
+| `packages/pca-verified-core/src/goal.ts`, `packages/pca-goal/src/codec.ts` (glue) | Nothing: strict tape encoding and decoding, no decision logic. Round trips are tested; a codec bug changes what is compiled, so the glue is listed here. | The glue, the phrase table of `renderCard`, the SHA-256 of `policyDigest`. |
+| `generated/pca_goal.js` | Byte-identical to a fresh Dafny compile (CI `ts-dafny-ext-check.sh Goal`). Five-target transcript equality (`difftargets/goal-ci-check.sh`: C#, Go, Java, Python, JavaScript, and the production bridge). | The Dafny JavaScript runtime (hardened as for the other generated files). |
+
+Not claimed: that the goal is what the principal meant, that the ontology matches the site's real API, or that a store supplying history aggregates is linearizable.
+
+## 6c. Action kit trait algebra (0.5)
+
+| Component | What is proved | What is trusted |
+|---|---|---|
+| `formal/intent/lean/PcaIntent/TraitAlg.lean` | Lean 4, core only (no library lemmas), no `sorry`; every theorem audited for axioms. T1 the profile order is a partial order with a least upper bound and a least element; T2 traits only add; T3 inheritance and clamping; T4 the floor decision is antitone and the final decision is the meet; T5 an accepting registry's closure adds nothing, extending a registry leaves core floors unchanged, custom traits cannot lower them; T6 registry growth (an unpinned action is never allowed, a prohibit always denies, the decision of an existing action is unchanged); T7 positive selectors are monotone and a negated one is not. | Lean's three standard axioms. |
+| `formal/dafny/TraitExpand.dfy` | The same statements on executable finite sets with a total closure (eight rounds, the maximum implication depth a registry accepts) and the join of floors; plus finite height (a strict increase raises a cardinality measure). Zero `assume`, `{:axiom}`, `extern`. Verified in CI by the pinned toolchain. | The pinned Dafny toolchain (section 1). The JavaScript compile is produced in CI; it is not yet wired into the TypeScript implementation, which is checked against the same statements by 100,000-case property tests and the shared vectors. |
+| `packages/pca-actions/src/traits.ts`, `core-traits.ts`, `effective.ts`, `digest.ts` (implementation) | Nothing by proof: these are tested (properties, exact outcomes, 423 shared vectors) and mutation-tested. A divergence from the model would be a bug the vectors and properties are built to find. | The implementation, the core trait table (digest-pinned), the implication tables. |
+
+Registry, evolution and pinning (track A4) add no proof and no trusted component beyond the registry and principal keys the verifier pins: the semantic diff, pack verification, the pin decision and rule 22 are tested (properties with real signatures, a brute-force soundness oracle with negative controls, exact outcomes, shared vectors) and live in `packages/pca-actions/src/{diff,evolve,pack,registry,rule22}.ts` and `packages/pca/src/action-pin.ts`. The soundness of the diff is a tested property, not a theorem: it holds for the dimensions the model expresses (accepted calls, effective profile, resource, aliases), and anything else is classified `incomparable`.
+
+Not claimed: that an author tagged the right effects and roles, or that an importer's suggestion is right (a measured, reviewed property); that the TypeScript closure equals the proved closure for registries deeper than eight (the loader refuses them).
+
 ## 7. Reproducing
 
 ```bash

@@ -1,0 +1,16 @@
+{
+  "name": "__PCA_APP_NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Proof-Carrying Authority end-to-end demo: a local resource server, a FROST t-of-n guardian and an agent play nine scripted outcomes (allow, deny, step-up, replay, tamper, budget, attenuation, offline receipts). Exits nonzero if any outcome deviates.",
+  "scripts": {
+    "start": "node run.mjs",
+    "step": "node run.mjs --step",
+    "json": "node run.mjs --json"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "^0.5.0",
+    "@atlasauth/pca-fetch": "^0.5.0"
+  }
+}

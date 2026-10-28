@@ -1,5 +1,7 @@
 # @atlasauth/pca-less-wasm
 
+> Maturity: **hardened** (hardened, awaiting independent audit and final standard). The engineering is finished and evidenced, but it awaits an independent code and cryptanalysis review and a NIST outcome for LESS, and it is outside the stable and production tiers. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 **LESS** code-based signatures for [`@atlasauth/pca`](https://www.npmjs.com/package/@atlasauth/pca): the
 official LESS reference C compiled to WebAssembly, with a tiny portable loader that has **no dependency
 and no `node:` import** -- it runs in Node >= 20, browsers, Web Workers, Deno, Bun and edge runtimes.
@@ -60,18 +62,42 @@ so no init call is needed. The only host import the wasm needs is WASI `random_g
 `globalThis.crypto.getRandomValues`; **if Web Crypto is missing, keygen/sign throw (fail closed)** rather
 than seed from anything weaker, while verification (which needs no randomness) keeps working.
 
+## Fail-closed behaviour
+
+| Missing or invalid | Result |
+|---|---|
+| Web Crypto absent when keygen or sign needs randomness | throws `LessError`; it never seeds from anything weaker. Verification still works |
+| A public key of the wrong length passed to `verify` | returns `false` |
+| A public key of the wrong length passed to `open`, or a secret key of the wrong length passed to `sign` | throws `LessError` |
+| An empty, truncated, oversized or garbage signature | `verify` / `open` return `false` and never throw; the instance stays usable |
+| A trailing seed count above the published maximum, or padding bits set in a coset row | refused before the reference verifier sees it |
+| A signature with an extra, non-canonical seed slot | refused (`open` returns `ok: false`) |
+| A wrong or modified message | `verify` returns `false` |
+| The wasm not yet initialised on a browser or edge path | throws `LessError` telling you to call `initLess` |
+| The wasm file unreadable, or its parameter set not the pinned one | throws `LessError` |
+| `initLess` given a URL that answers with an HTTP error | throws `LessError` |
+| A wasm allocation or reference call that fails | throws `LessError` |
+
+## Limits
+
+- It is a NIST Round 2 candidate and not a standard. Use it in a hybrid with a classical signature.
+- It has had no independent audit and has no second implementation to compare against.
+- Key generation and signing are not constant time. Run them only where timing cannot be observed.
+- One parameter set is compiled in (category 1, short signatures); the public key is about 97 KB.
+- Verification refuses only the malformed encodings found so far; absence of other forms is tested, not proved.
+
 ## Build provenance
 
 | | |
 |---|---|
 | Artifact | `wasm/less_cat1.wasm`, 96,720 bytes |
 | SHA-256 | `473d20c2713ef30ab3b4cb3ac2b59c51f801501fa49ad046b999cb53afa77957` (recorded in `wasm/BUILD.json`) |
-| Source | the LESS reference with the Atlas verifier fixes, vendored in `sdks/pca-less-c` (https://github.com/Atlas-Authorization/LESS, branch `atlas-verifier-hardening`, commit `0b8b9a07ce029bd9af12d701f5093c5ca0d9418b` = upstream https://github.com/less-sig/LESS `6383430b9123e69d2ef6a6224f930972e3225610` plus the fixes of defects 1-3 below), `Reference_Implementation/`, `-DCATEGORY=252 -DTARGET=45` (CC0) |
+| Source | the LESS reference with the Atlas verifier fixes, vendored in the PCA repository (https://github.com/Atlas-Authorization/LESS, branch `atlas-verifier-hardening`, commit `0b8b9a07ce029bd9af12d701f5093c5ca0d9418b` = upstream https://github.com/less-sig/LESS `6383430b9123e69d2ef6a6224f930972e3225610` plus the fixes of defects 1-3 below), `Reference_Implementation/`, `-DCATEGORY=252 -DTARGET=45` (CC0) |
 | Toolchain | wasi-sdk 25.0 (clang 19.1.5-wasi-sdk, recorded in the wasm's `producers` section), release tarball pinned by SHA-256, `-O2 -std=c99`, portable scalar C (no AVX/NEON defines), `-mexec-model=reactor`, 8 MiB stack |
-| Added C | the ~40-line seam `scripts/less_wasm_glue.c`: seeds the reference CSPRNG and exposes flat buffers |
-| Reproduce | `scripts/build-wasm.sh` (x86_64 Linux or arm64 macOS: downloads and hash-checks wasi-sdk 25.0, checks the source digest, writes `wasm/less_cat1.wasm` and `wasm/BUILD.json`), then `node scripts/embed-wasm.mjs` |
+| Added C | the ~40-line seam `less_wasm_glue.c`: seeds the reference CSPRNG and exposes flat buffers |
+| Reproduce | the build script (x86_64 Linux or arm64 macOS: downloads and hash-checks wasi-sdk 25.0, checks the source digest, writes `wasm/less_cat1.wasm` and `wasm/BUILD.json`), then the embed script |
 
-The build is reproducible: the same script gives the same SHA-256 on x86_64 Linux (farm job `q261012-203714-gvc8`) and on
+The build is reproducible: the same script gives the same SHA-256 on x86_64 Linux and on
 arm64 macOS (2026-10-12). The previous artifact (`2d6c8141...`, built from the UNPATCHED upstream by an earlier script whose
 log was not kept) was never shown to be bit-identical to a rebuild; this one is. The new artifact reproduces the official KAT
 100/100 (keygen and signing are unchanged by the fixes).
@@ -90,7 +116,7 @@ of "Build provenance"; its official KAT run (100/100) was repeated on 2026-10-12
 
 | Check | Result |
 |---|---|
-| Official KAT (`Utilities/KAT_Generation/KAT/PQCsignKAT_97484.rsp`, the file whose pk length = this build's 97,484 B; upstream ships 7 `.rsp`, one per parameter set, 100 entries each) reproduced by the **wasm** | **100/100** byte-identical (pk, sk, signed message) and all open (`src/kat.test.ts`, compact digest committed in `src/kat/`) |
+| Official KAT (`Utilities/KAT_Generation/KAT/PQCsignKAT_97484.rsp`, the file whose pk length = this build's 97,484 B; upstream ships 7 `.rsp`, one per parameter set, 100 entries each) reproduced by the **wasm** | **100/100** byte-identical (pk, sk, signed message) and all open (compact digest committed with the tests) |
 | Same KAT, native clang `-O2` | 100/100 |
 | Same KAT, Homebrew clang 22 `-O3 -fsanitize=undefined` | 100/100 |
 | Same KAT, apple clang `-O0 -fsanitize=address,undefined -fno-sanitize-recover` | 100/100, no sanitizer findings (valid-input path) |
@@ -99,8 +125,8 @@ of "Build provenance"; its official KAT run (100/100) was repeated on 2026-10-12
 | Differential wasm vs native ASan/UBSan `-O0` | 10/10, same |
 | Exhaustive single-bit flips of every bit of one valid signature (native `-O2`) | 10,370 flips run, **0 accepted**; 6 more (final byte, see defect 1) skipped by the harness as they crash the raw reference |
 | Native-vs-wasm accept/reject agreement on 100 tampered signatures | identical |
-| Structure-aware fuzz of the raw native verifier (`scripts/fuzz-open.mjs`) | Unmasked random bodies / cf rows crash under UBSan+ASan (defect 2); forged digests crash ASan on an unpadded buffer (defect 3). With padding bits cleared and the buffer padded: ~760 malformed signatures under ASan/UBSan (4 structure classes), 0 sanitizer findings, 0 accepted |
-| Wasm negative suite (`src/robustness.test.ts`, 12 tests) | tamper (sampled across all regions), wrong message/key/size, truncation (prefix and suffix), oversize, 400 garbage buffers, repeat-determinism, region complements/reversal: all rejected, never throws |
+| Structure-aware fuzz of the raw native verifier (the fuzz driver) | Unmasked random bodies / cf rows crash under UBSan+ASan (defect 2); forged digests crash ASan on an unpadded buffer (defect 3). With padding bits cleared and the buffer padded: ~760 malformed signatures under ASan/UBSan (4 structure classes), 0 sanitizer findings, 0 accepted |
+| Wasm negative suite (12 tests) | tamper (sampled across all regions), wrong message/key/size, truncation (prefix and suffix), oversize, 400 garbage buffers, repeat-determinism, region complements/reversal: all rejected, never throws |
 
 Not available / not run: `valgrind` (does not run on this macOS), LeakSanitizer (unsupported on
 arm64 macOS), MSan, a second *wasm* toolchain (no wasi-sdk on this machine). The wasm and native builds
@@ -128,9 +154,9 @@ All three are in the public-input path (a forged *signature*), so they matter to
    bytes beyond the end of the signature (native ASan `heap-buffer-overflow`, 16-byte read, 0 bytes after
    the buffer). Read-only; not shown to leak anything.
 
-Fixes (in the compiled C, `sdks/pca-less-c/README.md`): `crypto_sign_open` rejects an input shorter than its trailing
+Fixes (in the compiled C): `crypto_sign_open` rejects an input shorter than its trailing
 byte claims (1); `CheckCanonicalAction` rejects any padding bit (2); `crypto_sign_open` requires the stored seed count to
-equal the number of seeds the challenge makes `RebuildGGM` read (3). Wrapper guards (in `src/core.ts`, kept as a second
+equal the number of seeds the challenge makes `RebuildGGM` read (3). Wrapper guards (kept as a second
 layer): the same length and padding checks, a zero-filled `signatureMax`-byte tail after the signed message, and the
 canonical seed count check described under "Malleability". Honest output never trips these: every KAT and
 several hundred freshly generated signatures pass through them. After the mitigations, the same fuzz classes run clean
@@ -144,7 +170,7 @@ arbitrary bytes with the trailing seed count raised by one (count <= 11): it rea
 ignores the rest, so one valid signature had up to 2^128 accepted variants per extra seed slot. Single-bit flips (below)
 cannot find this. Fix 3 refuses it in the compiled reference, and `open` refuses any signature that still opens with its
 last seed dropped and its count lowered by one (a non-canonical seed count) even under an unpatched binary. Both forms
-are vectors in packages/pca/conformance/less-vectors.json that every verifier must refuse.
+are vectors in the shared conformance corpus (less-vectors.json) that every verifier must refuse.
 
 No other alternative encoding of a valid signature was found to verify: 0 of 10,370 single-bit variants,
 plus region complement/reversal/cross-message tests. Signing the same (key, message) twice yields two
@@ -169,8 +195,9 @@ Evidence that does **not** exist yet:
   controls stay near 1 to 2 and a deliberately leaky comparison is detected. Valgrind with the secret key marked undefined reports 47 key-dependent
   contexts at 32 source lines after declassifying what a signature publishes. Treat signing and key generation as **not constant time**: only run them
   where timing cannot be observed by an adversary. Verification handles only public data and is unaffected.
-- A reproducible wasm build in CI (today it is a manual off-box build; the script pins the upstream commit, but a
-  bit-identical rebuild of the shipped file has not been demonstrated).
+- Nothing further on build reproducibility: a CI job rebuilds the artifact from the pinned sources and toolchain on every
+  change and fails unless it is bit-identical to the shipped file, and a second job checks it against the unmodified upstream
+  reference built natively (plain and ASan/UBSan) on random keys and messages.
 
 ### Reproducing
 

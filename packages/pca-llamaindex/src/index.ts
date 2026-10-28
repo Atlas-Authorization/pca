@@ -14,7 +14,7 @@
  * decides. A bypassed wrapper just means the action lacks a valid PCActn and fails server-side.
  */
 
-import { type Agent, type PcaCall, bridgeToolCall, guard, pcaHeaders } from '@atlasauth/pca';
+import { type Agent, type PcaCall, bridgeToolCall, guard, pcaHeaders, recordInput, recordMessages, recordPrincipal } from '@atlasauth/pca';
 
 /**
  * Minimal structural shape of a LlamaIndex FunctionTool. `call` is a METHOD (not an arrow property) on
@@ -62,4 +62,30 @@ export function withPCA<ARGS extends Record<string, unknown>, RESULT>(
   return { ...tool, call: (input: ARGS) => run(input) };
 }
 
-export { bridgeToolCall, pcaHeaders, type PcaCall };
+/** Minimal structural shape of a LlamaIndex chat / query engine or agent (`chat({message})`, `query({query})`). */
+export interface LlamaIndexEngine {
+  chat?(params: unknown): unknown;
+  query?(params: unknown): unknown;
+  [k: string]: unknown;
+}
+
+/**
+ * Provenance by default: wrap a chat / query engine or agent so every `chat` / `query` first records the principal's request
+ * (`message`, `query`, or a string; `chatHistory` user turns are the principal, tool turns untrusted). Tools wrapped by {@link withPCA}
+ * record every result, and each PCActn carries the provenance bundle the server's default gate reads.
+ */
+export function withPCAEngine<E extends LlamaIndexEngine>(agent: Agent, engine: E): E {
+  const out = Object.create(Object.getPrototypeOf(engine) as object, Object.getOwnPropertyDescriptors(engine)) as E;
+  for (const m of ['chat', 'query'] as const) {
+    const f = engine[m];
+    if (typeof f !== 'function') continue;
+    (out as LlamaIndexEngine)[m] = (params: unknown) => {
+      if (params !== null && typeof params === 'object' && Array.isArray((params as { chatHistory?: unknown }).chatHistory)) recordMessages(agent, (params as { chatHistory: unknown[] }).chatHistory);
+      recordInput(agent, params);
+      return f.call(engine, params);
+    };
+  }
+  return out;
+}
+
+export { bridgeToolCall, pcaHeaders, recordInput, recordMessages, recordPrincipal, type PcaCall };

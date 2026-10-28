@@ -24,7 +24,7 @@ setTimeout(() => {
 }, 1500);
 `,
       );
-      const r = await launchLocal({ n: 1, vectors: [{ allow: 1, t: 1, rQuant: 2 }], mainJs: js, killAfterMs: 60_000 });
+      const r = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 1, vectors: [{ allow: 1, t: 1, rQuant: 2 }], mainJs: js, killAfterMs: 60_000 });
       expect(r.outputs.map((o) => o.json)).toEqual([{ vanished: true }, { vanished: true }]);
     } finally {
       rmSync(dir, { recursive: true, force: true });

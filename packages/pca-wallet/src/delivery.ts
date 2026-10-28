@@ -1,4 +1,5 @@
-import { verifyIntentRequired, type ActionSchemaKey, type ApprovalDelivery, type FetchLike, type SignedIntentRequired, type TextChannelConfig, type WebhookChannelConfig } from '@atlasauth/pca';
+import { type ApprovalDelivery, type FetchLike, type TextChannelConfig, type WebhookChannelConfig } from '@atlasauth/pca';
+import { verifyIntentRequired, type ActionSchemaKey, type SignedIntentRequired } from '@atlasauth/pca/ext/intent';
 import { cleanText } from './card';
 
 /**

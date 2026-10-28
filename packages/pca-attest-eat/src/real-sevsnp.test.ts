@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { X509Certificate, type KeyObject } from 'node:crypto';
-import { parseSevSnpReport, toHex } from '@atlasauth/pca';
+import { parseSevSnpReport, toHex } from '@atlasauth/pca/ext/attestation';
 import {
   AMD_MILAN_ARK_SPKI_SHA384,
   KNOWN_AMD_ARK_SPKI_SHA384,

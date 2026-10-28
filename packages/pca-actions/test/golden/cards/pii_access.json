@@ -1,0 +1,30 @@
+{
+ "trait": "pca.pii_access",
+ "card": {
+  "verb": "golden.pii_access",
+  "title": "Do the pii access thing",
+  "text": "Do the pii access thing. This action touches personal data.",
+  "risk": "elevated",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "resource_scope"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.pii_access"
+ ],
+ "floor": {
+  "risk": 1,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "resource_scope"
+  ],
+  "context": [],
+  "prules": []
+ }
+}

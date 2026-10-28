@@ -1,5 +1,7 @@
 # @atlasauth/pca-vdf
 
+> Maturity: **hardened** (hardened, awaiting independent audit). The engineering is done and evidenced by tests, differential checks and a mutation gate; it awaits an independent review of the Wesolowski proof handling and the timelock binding (the modulus is the public RSA-2048 challenge number, whose factors nobody is known to hold). It is never production until that review is done, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A Verifiable Delay Function (VDF) timelock for Proof-Carrying Authority. It gives irreversible actions a
 mandatory cooling-off period that is verifiable offline with no trusted clock: an action is released only
 when a Wesolowski VDF proof shows that `steps` sequential modular squarings were performed on an input
@@ -79,9 +81,23 @@ verifyTimelock('a', proof, { steps: 200, N: dev.N, allowInsecureDevModulus: true
 - `RSA_2048_CHALLENGE_MODULUS` / `DEFAULT_MODULUS` - the RSA-2048 challenge number, as a modulus of
   unknown factorisation.
 
+## Where it fits, and what happens when something is missing
+
+Use it as a release gate for an irreversible action that must wait a minimum time even if every signature is valid, without trusting a clock: the approval workflow stores `requireTimelock(...)` with the action; once the beacon is published a prover runs `proveTimelockElapsed`; the executor calls `verifyTimelock` before it acts, next to the usual PCA verification. If a trusted server clock and an approval step are enough for your case, use those; this adds a proof of elapsed sequential work, not a time stamp.
+
+| Missing or wrong | Result |
+|---|---|
+| No beacon | the requirement cannot be built; `requireTimelock` throws |
+| Modulus from `insecureDevSetup`, under 2048 bits, even, prime, a square or with a small factor | refused; `verifyTimelock` returns `false` |
+| Proof for another action, beacon, step count or modulus | `false` |
+| `y` or `pi` zero, a multiple of the modulus, or non-canonical (`> N/2`) | `false` (the detailed verifier names the reason) |
+| Fewer steps than required | `false` |
+| Malformed proof object | `false`, never a throw |
+| Challenge prime | derived by trial division, Miller-Rabin over 25 prime bases and a strong Lucas test (Baillie-PSW structure), identically by prover and verifier |
+
 ## Status
 
-Experimental and unaudited. What the test suite now establishes, and what it does not:
+Hardened, awaiting independent audit. What the test suite now establishes, and what it does not:
 
 **Validated**
 
@@ -127,7 +143,7 @@ Experimental and unaudited. What the test suite now establishes, and what it doe
   semiprime has unknown factors, and it cannot recognise a dev modulus generated in another process. For real
   use supply a modulus from an unknown-order ceremony or the challenge number. A class-group VDF, which needs
   no trusted setup, is not implemented.
-- The challenge prime is derived with a fixed set of Miller-Rabin bases rather than a certified-prime proof.
+- The challenge prime is derived with a fixed set of Miller-Rabin bases plus a strong Lucas test rather than a certified-prime proof (no known counterexample to that combination).
 - A VDF measures sequential work, not seconds. Use `calibrateSteps` with a conservative adversary speedup
   and treat the resulting wall-clock time as a floor, not an exact timer.
 - No side-channel review (BigInt arithmetic is not constant time) and no independent audit.

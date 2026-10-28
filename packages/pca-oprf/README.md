@@ -1,5 +1,7 @@
 # @atlasauth/pca-oprf
 
+> Maturity: **hardened** (hardened, awaiting independent audit). The engineering is done and evidenced by all RFC 9497 vectors, an independent implementation, abuse tests and a mutation gate; it awaits an independent review (O-1) of the private-revocation and private-rate-limit compositions. It is never production until that review is done, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 RFC 9497 oblivious pseudorandom functions (OPRF, VOPRF, POPRF on `ristretto255-SHA512`) plus two Proof-Carrying Authority use cases built on them:
 
 - **Private revocation checks**: ask whether a capability id is revoked without telling the revocation service which capability you mean.
@@ -51,9 +53,32 @@ The same `(identifier, window)` always yields the same token (counts aggregate);
 - Revocation: `buildRevocationSet`, `makeRevocationEvaluator`, `isRevokedPrivate`
 - Rate limiting: `rateToken`, `rateTokenHex`, `makeRateEvaluator`, `privateRateToken`, `RateWindowCounter`
 
+## Fail-closed behavior
+
+Every row is pinned by a test that asserts the exact outcome.
+
+| Missing or malformed input | Result |
+|---|---|
+| Element encoding is the identity, the wrong length, non-canonical or a "negative" ristretto encoding | `deserializeElement` throws |
+| Scalar at or above the group order, or the wrong length | `deserializeScalar` throws |
+| Zero or order-sized blind | `blind` throws |
+| Server receives an identity blinded element; client receives an identity evaluated element | throws |
+| Secret key zero or out of range | throws everywhere |
+| Verifiable mode: proof missing, truncated, non-canonical, made under another key, or for another element | `finalize` throws; no output |
+| Verifiable mode: public key is the identity | `finalize` throws |
+| Partially oblivious mode: public info differs from the one the proof was made under | `finalizePoprf` throws |
+| Key and info that make the tweaked key the identity | refused |
+| Input longer than 65535 bytes, or ill-formed UTF-16 text | rejected |
+| Seed under 32 bytes | `deriveKeyPair` throws |
+| Entropy source stuck at zero | `randomScalar`, `blind` and `randomKeyPair` throw promptly |
+| Revocation service omits the proof in verifiable mode, or the set has no public key | `isRevokedPrivate` fails closed |
+| Rate-limit server omits the proof | `privateRateToken` refuses |
+
+Known limits, stated in the tests: base mode is not verifiable (a lying service can cause a false "not revoked"), and `finalizePoprf` trusts the caller-supplied tweaked key.
+
 ## Status
 
-Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Experimental and unaudited.**
+Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Hardened, awaiting independent audit.**
 
 What is validated:
 

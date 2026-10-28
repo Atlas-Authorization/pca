@@ -1,0 +1,18 @@
+{
+ "source": "RFC 9635 section 7.3.3 (Detached JWS), non-normative example. The RFC text is licensed under the Revised BSD License for code components (BCP 78 / IETF Trust Legal Provisions).",
+ "detachedJws": "eyJhbGciOiJSUzI1NiIsImNyZWF0ZWQiOjE2MTg4ODQ0NzUsImh0bSI6IlBPU1QiLCJraWQiOiJnbmFwLXJzYSIsInR5cCI6ImduYXAtYmluZGluZytqd3NkIiwidXJpIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20vZ25hcCJ9.PGiVuOZUcN1tRtUS6tx2b4cBgw9mPgXG3IPB3wY7ctc.fUq-SV-A1iFN2MwCRW_yolVtT2_TZA2h5YeXUoi5F2Q2iToC0Tc4drYFOSHIX68knd68RUA7yHqCVP-ZQEd6aL32H69e9zuMiw6O_s4TBKB3vDOvwrhYtDH6fX2hP70cQoO-47OwbqP-ifkrvI3hVgMX9TfjVeKNwnhoNnw3vbu7SNKeqJEbbwZfpESaGepS52xNBlDNMYBQQXxM9OqKJaXffzLFEl-Xe0UnfolVtBraz3aPrPy1C6a4uT7wLda3PaTOVtgysxzii3oJWpuz0WP5kRujzDFwX_EOzW0jsjCSkL-PXaKSpZgEjNjKDMg9irSxUISt1C1T6q3SzRgfuQ",
+ "rsaPublicKey": {
+  "kty": "RSA",
+  "kid": "gnap-rsa",
+  "alg": "RS256",
+  "e": "AQAB",
+  "n": "hYOJ-XOKISdMMShn_G4W9m20mT0VWtQBsmBBkI2cmRt4Ai8BfYdHsFzAtYKOjpBR1RpKpJmVKxIGNy0g6Z3ad2XYsh8KowlyVy8IkZ8NMwSrcUIBZGYXjHpwjzvfGvXH_5KJlnR3_uRUp4Z4Ujk2bCaKegDn11V2vxE41hqaPUnhRZxe0jRETddzsE3mu1SK8dTCROjwUl14mUNo8iTrTm4n0qDadz8BkPo-uv4BC0bunS0K3bA_3UgVp7zBlQFoFnLTO2uWp_muLEWGl67gBq9MO3brKXfGhi3kOzywzwPTuq-cVQDyEN7aL0SxCb3Hc4IdqDaMg8qHUyObpPitDQ"
+ },
+ "content": "{\n    \"access_token\": {\n        \"access\": [\n            \"dolphin-metadata\"\n        ]\n    },\n    \"interact\": {\n        \"start\": [\"redirect\"],\n        \"finish\": {\n            \"method\": \"redirect\",\n            \"uri\": \"https://client.foo/callback\",\n            \"nonce\": \"VJLO6A4CAYLBXHTR0KRO\"\n        }\n    },\n    \"client\": {\n      \"key\": {\n        \"proof\": \"jwsd\",\n        \"jwk\": {\n            \"kid\": \"gnap-rsa\",\n            \"kty\": \"RSA\",\n            \"e\": \"AQAB\",\n            \"alg\": \"RS256\",\n            \"n\": \"hYOJ-XOKISdMMShn_G4W9m20mT0VWtQBsmBBkI2cmRt4Ai8BfYdHsFzAtYKOjpBR1RpKpJmVKxIGNy0g6Z3ad2XYsh8KowlyVy8IkZ8NMwSrcUIBZGYXjHpwjzvfGvXH_5KJlnR3_uRUp4Z4Ujk2bCaKegDn11V2vxE41hqaPUnhRZxe0jRETddzsE3mu1SK8dTCROjwUl14mUNo8iTrTm4n0qDadz8BkPo-uv4BC0bunS0K3bA_3UgVp7zBlQFoFnLTO2uWp_muLEWGl67gBq9MO3brKXfGhi3kOzywzwPTuq-cVQDyEN7aL0SxCb3Hc4IdqDaMg8qHUyObpPitDQ\"\n        }\n      }\n      \"display\": {\n        \"name\": \"My Client Display Name\",\n        \"uri\": \"https://client.foo/\"\n      },\n    }\n}",
+ "contentLength": 983,
+ "notes": [
+  "The RFC example is signed with RS256; this package signs and verifies EdDSA only, so it refuses it.",
+  "The printed Detached-JWS has the payload digest in its middle segment; the encoded header spells typ as gnap-binding+jwsd while the text and the media type registration say gnap-binding-jwsd.",
+  "The digest in the example is not the SHA-256 of the printed content (983 bytes, same length as the printed Content-Length): a known inconsistency in the RFC text. The signature itself is valid over header.digest."
+ ]
+}

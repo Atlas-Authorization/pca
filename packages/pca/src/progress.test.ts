@@ -1,23 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  type Goal,
-  InMemoryStateSource,
-  PotentialRegistry,
-  ProgressTracker,
-  type ProgressStep,
-  type StateObservation,
-  type StateSource,
-  commitGoal,
-  dagWeightedPotential,
-  signProgressStep,
-  stateDigest,
-  trajectoryHead,
-  verifyGoalCommitment,
-  verifyProgressStep,
-  verifySignedProgressStep,
-  verifySignedTrajectory,
-  verifyTrajectory,
-} from './progress';
+import { type Goal, InMemoryStateSource, PotentialRegistry, ProgressTracker, type ProgressStep, type StateObservation, type StateSource, commitGoal, dagWeightedPotential, signProgressStep, stateDigest, trajectoryHead, verifyGoalCommitment } from './progress';
+import { verifyProgressStep, verifySignedProgressStep, verifySignedTrajectory, verifyTrajectory } from './test-support/progress-selfreported';
 import { b64u } from './hash';
 import { generateKeyPair, sign } from './keys';
 

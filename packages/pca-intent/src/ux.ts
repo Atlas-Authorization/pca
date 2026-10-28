@@ -1,4 +1,5 @@
-import { DEFAULT_CATALOG, hashCanonical, type Catalog } from '@atlasauth/pca';
+import { hashCanonical } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, type Catalog } from '@atlasauth/pca/ext/research';
 import type { Question } from './learner';
 import { numCells, repValue, type Dim, type Omega } from './omega';
 import type { AdaptiveAnswer, PartialAnswer } from './refine';

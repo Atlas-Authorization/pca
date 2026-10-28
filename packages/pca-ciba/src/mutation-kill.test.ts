@@ -1,7 +1,8 @@
 /** Mutation-kill tests for the CIBA binding-message builder, request validation and broker. Exact strings, exact boundaries. */
 import { describe, expect, it } from 'vitest';
 import type { RiskPolicy, StepUpRequest, TrustBudget } from '@atlasauth/pca';
-import { cibaDecisionToCosign, createCibaBroker, requiresCiba, toCibaAuthRequest } from './index';
+import { cibaDecisionToCosign, requiresCiba, toCibaAuthRequest } from './index';
+import { createCibaBroker } from './testing';
 
 const su = (o: Record<string, unknown> = {}): StepUpRequest =>
   ({ id: 'su-1', verb: 'stripe.payout', resource: 'acct:1', tier: 3, reason: 'r', goalCommit: '', r: 0.5, ...o }) as unknown as StepUpRequest;

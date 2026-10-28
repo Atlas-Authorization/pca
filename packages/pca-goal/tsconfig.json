@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "outDir": "./dist", "rootDir": ".", "types": ["node"] }, "include": ["src/**/*", "test/**/*.ts", "benchmarks/**/*.ts"], "exclude": ["benchmarks/record.ts", "test/gen-goal-cases.ts"] }

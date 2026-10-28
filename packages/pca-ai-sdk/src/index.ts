@@ -14,7 +14,7 @@
  * decides. A bypassed wrapper just means the action lacks a valid PCActn and fails server-side.
  */
 
-import { type Agent, type PcaCall, bridgeToolCall, guard, pcaHeaders } from '@atlasauth/pca';
+import { type Agent, type PcaCall, bridgeToolCall, guard, pcaHeaders, recordInput, recordMessages, recordPrincipal } from '@atlasauth/pca';
 
 /**
  * Minimal structural shape of an AI SDK tool (v4 `parameters` / v5 `inputSchema`). `execute` is a
@@ -80,4 +80,16 @@ export function withPCATools<T extends Record<string, AiSdkTool>>(
   return out as T;
 }
 
-export { bridgeToolCall, pcaHeaders, type PcaCall };
+/**
+ * Provenance by default: wrap `generateText` / `streamText` (or any call taking `{prompt}` / `{messages}`) so the principal's request
+ * is recorded before the model runs: `prompt` and user messages are the principal, tool messages and tool-result parts are untrusted.
+ * Tools wrapped by {@link withPCA} record every result, and each PCActn carries the provenance bundle the server's default gate reads.
+ */
+export function withPCAGenerate<P, R>(agent: Agent, fn: (params: P) => R): (params: P) => R {
+  return (params: P) => {
+    recordInput(agent, params);
+    return fn(params);
+  };
+}
+
+export { bridgeToolCall, pcaHeaders, recordInput, recordMessages, recordPrincipal, type PcaCall };

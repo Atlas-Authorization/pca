@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { compilePolicy } from './facade';
+import { RATE_LIMITED_REFUND_CATALOG as catalog } from './rate-limited-refund.test-util';
 import { lintPolicy, simulate } from './policy-sim';
 
 describe('simulate', () => {
   it('classifies auto / step_up / deny and threads the dollar budget', () => {
     // $100/day refund budget: κ=100, bMax=100. Each $40 refund costs 40 budget.
-    const policy = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$100/day' }, now: 0 });
+    const policy = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$100/day' }, now: 0, catalog });
     const rep = simulate(policy, [
       { verb: 'stripe.refund', resource: 'charge:1', params: { amount: 40, currency: 'usd' }, at: 1 }, // auto, B 100→60
       { verb: 'stripe.refund', resource: 'charge:2', params: { amount: 40, currency: 'usd' }, at: 2 }, // auto, B 60→20
       { verb: 'stripe.refund', resource: 'charge:3', params: { amount: 40, currency: 'usd' }, at: 3 }, // budget can't cover → step_up
       { verb: 'stripe.refund', resource: 'charge:4', params: { amount: 500, currency: 'usd' }, at: 4 }, // over cap → deny
       { verb: 'stripe.payout', resource: 'acct:1', params: { amount: 1 }, at: 5 }, // ungranted → deny
-    ]);
+    ], { catalog });
     expect(rep.results[0]!.outcome).toBe('auto');
     expect(rep.results[1]!.outcome).toBe('auto');
     expect(rep.results[2]!.outcome).toBe('step_up');
@@ -47,10 +48,11 @@ describe('lintPolicy', () => {
     expect(codes).toContain('broad-resource'); // files.delete irreversible, resource '*'
   });
 
-  it('warns that irreversible actions auto-admit when theta2 ≥ 1 (dollars model)', () => {
+  it('keeps the human step-up band for an irreversible action under a $ limit (W7b); warns only when a caller forces theta2 >= 1', () => {
     const policy = compilePolicy({ permissions: { stripe: ['payout'] }, limits: { payout: '$50' } });
-    const l = lintPolicy(policy).find((x) => x.code === 'no-step-up-band');
-    expect(l?.level).toBe('warn'); // payout is irreversible
+    expect(lintPolicy(policy).find((x) => x.code === 'no-step-up-band')).toBeUndefined();
+    const forced = compilePolicy({ permissions: { stripe: ['payout'] }, limits: { payout: '$50' }, riskPolicy: { theta1: 1, theta2: 1 } });
+    expect(lintPolicy(forced).find((x) => x.code === 'no-step-up-band')?.level).toBe('warn');
   });
 
   it('is quiet on a tight, well-bounded policy', () => {

@@ -1,0 +1,52 @@
+name: LESS wasm (reproducible build + native differential)
+# The shipped LESS wasm artifact must be what the pinned sources and the pinned wasi-sdk produce, byte for byte, and must
+# agree byte for byte with the unmodified upstream reference built natively (plain and ASan/UBSan) on random keys and messages.
+# The unit suite (official KAT, robustness, portability) runs in the packages shards of ci.yml.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/pca-less-wasm/**'
+      - 'sdks/pca-less-c/**'
+  schedule:
+    - cron: '41 4 * * 2'
+
+permissions:
+  contents: read
+
+jobs:
+  reproducible-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild from the pinned sources and toolchain (tarball and source digests are checked by the script)
+        run: bash packages/pca-less-wasm/scripts/build-wasm.sh "$RUNNER_TEMP/rebuild"
+      - name: Rebuilt artifact equals the shipped one and the recorded digest
+        run: |
+          want=$(node -p "require('./packages/pca-less-wasm/wasm/BUILD.json').wasm_sha256")
+          got=$(sha256sum "$RUNNER_TEMP/rebuild/less_cat1.wasm" | cut -d' ' -f1)
+          ship=$(sha256sum packages/pca-less-wasm/wasm/less_cat1.wasm | cut -d' ' -f1)
+          echo "recorded $want rebuilt $got shipped $ship"
+          test "$want" = "$got" && test "$want" = "$ship"
+
+  differential:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - name: Build the upstream reference natively (pinned commit)
+        run: bash packages/pca-less-wasm/scripts/build-native.sh "$RUNNER_TEMP/less-nat"
+      - name: wasm vs native, random seeds and messages (gcc -O2 and ASan/UBSan variants)
+        working-directory: packages/pca-less-wasm
+        env:
+          LESS_NATIVE_DIR: ${{ runner.temp }}/less-nat/bin
+          LESS_VARIANTS: O2,O0asan
+          LESS_DIFF_N: '100'
+          LESS_DIFF_N_ASAN: '10'
+        run: npx vitest run src/crosscheck.test.ts

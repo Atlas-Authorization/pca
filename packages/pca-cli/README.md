@@ -1,5 +1,7 @@
 # @atlasauth/pca-cli
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The `pca` developer CLI for Proof-Carrying Authority (PCA). Decode a PCActn, run the verifier and see why it passed or failed each check, mint a throwaway dev keypair, simulate a policy over a list of actions, and emit a `.well-known/pca-configuration` discovery document.
 
 ## Install
@@ -45,7 +47,7 @@ The command functions (`cmdDecode`, `cmdExplain`, `cmdKeygen`, `cmdSimulate`, `c
 
 ## Status
 
-`decode`, `explain` and `simulate` are read-only inspectors for development. `explain` verifies against the grant in the PCActn's own capability chain, so its verdict is the local, grant-relative view; checks that need server-side state (revocation, attestation, threshold co-signatures, taint) are shown as not enforced. Nothing here authorizes anything: the resource server's verifier, with its stored counter and revocation state, remains the authority. Cryptography in PCA is unaudited.
+`decode`, `explain` and `simulate` are read-only inspectors for development. `explain` verifies against the grant in the PCActn's own capability chain, so its verdict is the local, grant-relative view; checks that need server-side state (revocation, attestation, threshold co-signatures, taint) are shown as not enforced. Nothing here authorizes anything: the resource server's verifier, with its stored counter and revocation state, remains the authority.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

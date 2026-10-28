@@ -1,0 +1,498 @@
+name: Action kit
+
+# Track A1 of the action kit (docs/pca/specs/action-kit.md): the @atlasauth/pca-actions package (typecheck, unit, property
+# tests of the trait algebra T1..T7 at 10^5 cases, exact-outcome tests, the shared conformance vectors), the signed-schema v2
+# tests in @atlasauth/pca, the Dafny proof (formal/dafny/TraitExpand.dfy, hash-pinned toolchain, compiled to JS as an artifact),
+# the Lean proof (formal/intent/lean/PcaIntent/TraitAlg.lean, core Lean, axiom audit of every theorem) and Stryker on the
+# algebra and digest modules (every survivor killed or ledgered in packages/pca-actions/mutation-equivalents.json).
+# Track A2 adds the `authoring` job: the YAML loader and TypeScript builder (one digest across forms for 200 generated actions,
+# hostile-input refusals), the 24 lint rules with a positive and a negative fixture each, the example/property test runner, the
+# importers, the pack signing, the `pca actions` CLI (unit tests and the README hello world from an empty directory with the
+# built CLI) and the `actions` create-pca-app template.
+on:
+  push:
+    branches: [main, 'ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: pca-actions tests, vectors, schema v2
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=@atlasauth/pca-actions...
+      - name: Build dependencies and the package
+        run: pnpm --filter @atlasauth/pca-actions... run build
+      - name: Typecheck (src, tests, scripts)
+        run: pnpm --filter @atlasauth/pca-actions run typecheck
+      - name: Unit, property (10^5 cases), exact-outcome and vector-replay tests
+        run: pnpm --filter @atlasauth/pca-actions run test
+      - name: The committed vectors are byte-identical to a fresh generation
+        run: pnpm --filter @atlasauth/pca-actions exec tsx scripts/vectors.ts --check
+      - name: The facade's built-in catalog is generated from the built-in defs (byte-identical)
+        run: pnpm --filter @atlasauth/pca-actions exec tsx scripts/gen-catalog.ts --check
+      - name: Facade, catalog, NL grounding, revocation staleness and policy-sim tests (derived catalog, one reversibility vocabulary)
+        run: pnpm --filter @atlasauth/pca exec vitest run catalog facade nl policy-sim budget-forecast revocation-staleness authorize-execution authorize-risk p7-research-modules
+      - name: Goal IR trait selectors, role params and derived domain ontologies
+        run: |
+          pnpm -r --filter=@atlasauth/pca-goal^... run build
+          pnpm --filter @atlasauth/pca-goal exec vitest run test/selectors.test.ts test/domain-ontologies.test.ts
+      - name: Schema v1 behaviour is unchanged and the extension surfaces are pinned
+        run: pnpm --filter @atlasauth/pca exec vitest run action-schema ext-surface core-surface intent-v2
+      - name: Importers, bounds and hostile input (reference bombs, cycles, truncated descriptors), fuzz of all six importers
+        run: pnpm --filter @atlasauth/pca-actions exec vitest run import
+      - name: Suggestion rules (union-only property tests, signed rule sets, model assist) and review attestations
+        run: pnpm --filter @atlasauth/pca-actions exec vitest run suggest review
+      - name: The synthetic suggestion corpus is a fresh generation
+        run: pnpm --filter @atlasauth/pca-actions exec tsx scripts/gen-corpus.ts --check
+      - name: The published rule set matches the rules in source (signed at release time with a supplied key)
+        run: pnpm --filter @atlasauth/pca-actions exec tsx scripts/emit-rules.ts --check
+      - name: Model assist (recorded fake transport) and exact confirm/attestation outcomes
+        run: pnpm --filter @atlasauth/pca-actions exec vitest run providers review-exact eval
+      - name: eval-suggest (hold-out recall floors on 9,578 real-spec operations, Clopper-Pearson bounds; generated set is a regression set)
+        run: pnpm --filter @atlasauth/pca-actions exec tsx scripts/eval-suggest.ts --out "$RUNNER_TEMP/eval-suggest"
+      - name: Rules vs the catalog packs, when the packs are in this checkout (agreement table, not a gate)
+        run: |
+          if [ -d packages/pca-actions/packs ]; then pnpm --filter @atlasauth/pca-actions exec tsx scripts/xcheck-packs.ts packs --out "$RUNNER_TEMP/eval-suggest/xcheck-packs.md"; fi
+      - name: Adjudicated disagreements (pack under-label and rule over-flag rates with 95% bounds; rules scored on the tune and hold-out sides)
+        run: |
+          if [ -d packages/pca-actions/packs ]; then
+            pnpm --filter @atlasauth/pca-actions exec tsx scripts/adjudicate.ts estimate packs corpus/adjudication.tsv corpus/adjudication-population.json --out "$RUNNER_TEMP/eval-suggest/adjudication-estimate.md"
+            pnpm --filter @atlasauth/pca-actions exec tsx scripts/adj-rules.ts > "$RUNNER_TEMP/eval-suggest/adj-rules.txt"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-eval-suggest
+          path: ${{ runner.temp }}/eval-suggest/
+          if-no-files-found: ignore
+      - name: Pins, evolution records, re-approvals and the rule 22 context (pca side)
+        run: pnpm --filter @atlasauth/pca exec vitest run action-pin intent-dod1-audit envelope decision-escalation
+      - name: Unconfirmed means maximally dangerous - effective traits, rule 22 on confirmations, selectors, the shared vectors (C-440..442)
+        run: |
+          pnpm --filter @atlasauth/pca-actions exec vitest run test/def.test.ts test/algebra.test.ts test/confirmation.test.ts test/verifier.test.ts test/diff.test.ts test/review.test.ts
+          pnpm --filter @atlasauth/pca exec vitest run action-pin
+          pnpm -r --filter=@atlasauth/pca-goal^... run build
+          pnpm --filter @atlasauth/pca-goal exec vitest run test/selectors.test.ts
+      - name: The built-in definitions' release attestation verifies when the release step has run (PCA_REQUIRE_BUILTIN_RELEASE=1 in the release pipeline)
+        run: pnpm --filter @atlasauth/pca-actions exec tsx scripts/sign-builtins.ts --check
+      - name: The native verifiers and the zkVM guest replay the shared vectors (workflow guard)
+        run: node scripts/check-pca-actions-natives.mjs
+      - name: Security contract traceability (C-200..205, C-320..325, C-340..343, C-780..784, C-360..366, C-440..442, T-300..306, T-420..425, T-440..443, T-460..466, T-720..727, T-730..734, T-540..542)
+        run: node scripts/check-pca-traceability.mjs
+
+  authoring:
+    name: Authoring, lint rules, pca actions CLI, template
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=@atlasauth/pca-actions... --filter=@atlasauth/pca-cli... --filter=create-pca-app... --filter=@atlasauth/pca-fetch... --filter=pca-quickstart... --filter=pca-demo... --filter=pca-payments... --filter=pca-delegation... --filter=pca-goal...
+      - name: Build the CLI, the template scaffolder and their dependencies
+        run: pnpm --filter @atlasauth/pca-cli... --filter create-pca-app... --filter @atlasauth/pca-fetch... --filter pca-quickstart... --filter pca-demo... --filter pca-payments... --filter pca-delegation... --filter pca-goal... run build
+      - name: Typecheck the CLI and the scaffolder
+        run: |
+          pnpm --filter @atlasauth/pca-cli run typecheck
+          pnpm --filter create-pca-app run typecheck
+      - name: Loader, builder and hostile input (builder == YAML == JSON digest for 200 generated actions)
+        run: pnpm --filter @atlasauth/pca-actions exec vitest run author
+      - name: Lint rules (24 rules, positive and negative fixture each, SARIF, pinned rule-list digest)
+        run: pnpm --filter @atlasauth/pca-actions exec vitest run lint
+      - name: Examples and property checks, explain goldens, diff oracle, build, pack signing, importers
+        run: pnpm --filter @atlasauth/pca-actions exec vitest run tooling
+      - name: pca actions commands (init to signed pack, tampering, import, diff)
+        run: pnpm --filter @atlasauth/pca-cli exec vitest run actions
+      - name: README hello world from an empty directory with the built CLI
+        run: bash .github/scripts/action-kit-cli-e2e.sh
+      - name: The actions template scaffolds, lints, tests, builds and type-checks
+        run: pnpm --filter create-pca-app exec vitest run templates-actions index templates-build
+      - name: The golden-path templates (payments, delegation, goal) type-check, RUN to their expected outcomes, and match their examples
+        run: pnpm --filter create-pca-app exec vitest run templates-run
+      - name: protect() secure defaults and the refusal guidance (explainRefusal)
+        run: |
+          pnpm --filter @atlasauth/pca exec vitest run src/server/protect src/refusal-help
+          pnpm --filter @atlasauth/pca-express exec vitest run src/protect
+
+  mutation:
+    name: Stryker (traits.ts, digest.ts)
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-actions...
+          pnpm --filter @atlasauth/pca-actions... run build
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      # The package's vitest config reaches a sibling package by a relative path, so the run is in place (no sandbox copy).
+      - name: Stryker
+        env:
+          PCA_PROP_RUNS: '300'
+          PCA_MUTATION_RUN: '1'
+        run: |
+          PKG=pca-actions INPLACE=1 bash tools/pca-audit/stryker/run.sh actions-core src/traits.ts src/digest.ts
+          mkdir -p "$RUNNER_TEMP/reports" && cp /tmp/pca-audit-stryker/actions-core.json "$RUNNER_TEMP/reports/"
+      - name: Every survivor is killed or ledgered
+        run: node tools/pca-audit/stryker/check-equivalents.mjs --package=pca-actions --ledger=packages/pca-actions/mutation-equivalents.json "$RUNNER_TEMP/reports/actions-core.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-stryker
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+
+  mutation-import:
+    name: Stryker (review, suggest, model, providers, limits)
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-actions...
+          pnpm --filter @atlasauth/pca-actions... run build
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      # The package's vitest config reaches a sibling package by a relative path, so the run is in place (no sandbox copy).
+      - name: Stryker
+        env:
+          PCA_PROP_RUNS: '300'
+          PCA_MUTATION_RUN: '1'
+        run: |
+          PKG=pca-actions INPLACE=1 bash tools/pca-audit/stryker/run.sh actions-import src/import/review.ts src/import/suggest.ts src/import/model.ts src/import/providers.ts src/import/limits.ts
+          mkdir -p "$RUNNER_TEMP/reports" && cp /tmp/pca-audit-stryker/actions-import.json "$RUNNER_TEMP/reports/"
+      - name: Every survivor is killed or ledgered
+        run: node tools/pca-audit/stryker/check-equivalents.mjs --package=pca-actions --ledger=packages/pca-actions/mutation-equivalents.json "$RUNNER_TEMP/reports/actions-import.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-stryker-import
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+  mutation-select:
+    name: Stryker (pca-goal selectors.ts)
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-goal...
+          pnpm -r --filter=@atlasauth/pca-goal^... run build
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      - name: Stryker
+        env:
+          PCA_MUTATION_RUN: '1'
+          VITEST_CONFIG: vitest.selectors.config.ts
+        run: |
+          PKG=pca-goal INPLACE=1 bash tools/pca-audit/stryker/run.sh goal-select src/selectors.ts
+          mkdir -p "$RUNNER_TEMP/reports" && cp /tmp/pca-audit-stryker/goal-select.json "$RUNNER_TEMP/reports/"
+      - name: Every survivor is killed or ledgered
+        run: node tools/pca-audit/stryker/check-equivalents.mjs --package=pca-goal --ledger=packages/pca-goal/mutation-equivalents.json "$RUNNER_TEMP/reports/goal-select.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-stryker-select
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+  mutation-approval:
+    name: Stryker (approval-render.ts, approval-profiles.ts; K7)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-actions...
+          pnpm --filter @atlasauth/pca-actions... run build
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      - name: Stryker
+        env:
+          PCA_MUTATION_RUN: '1'
+        run: |
+          PKG=pca-actions INPLACE=1 bash tools/pca-audit/stryker/run.sh actions-approval src/approval-render.ts src/approval-profiles.ts
+          mkdir -p "$RUNNER_TEMP/reports" && cp /tmp/pca-audit-stryker/actions-approval.json "$RUNNER_TEMP/reports/"
+      - name: Every survivor is killed or ledgered
+        run: node tools/pca-audit/stryker/check-equivalents.mjs --package=pca-actions --ledger=packages/pca-actions/mutation-equivalents.json "$RUNNER_TEMP/reports/actions-approval.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-stryker-approval
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+  # Every other source module of pca-actions and pca-goal (the jobs above cover traits, digest, the import review/suggest/model/
+  # providers/limits modules, the approval modules and goal selectors). Each matrix leg is one Stryker run; every survivor is
+  # killed or ledgered in the package's mutation-equivalents.json.
+  mutation-actions-rest:
+    name: Stryker (pca-actions ${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: authoring
+            files: src/author.ts src/build.ts src/lint.ts src/explain.ts src/test-runner.ts src/normalize.ts
+          - name: schema
+            files: src/def.ts src/validate.ts src/derive.ts src/effective.ts src/idpattern.ts src/core-traits.ts src/confirmation.ts src/rule22.ts
+          - name: packs
+            files: src/pack.ts src/registry.ts src/evolve.ts src/compat.ts src/diff.ts src/defdiff.ts src/selector.ts src/transparency.ts
+          - name: catalog
+            files: src/domain.ts src/builtin.ts src/builtin-review.ts src/facade-spec.ts
+          - name: importers
+            files: src/import/common.ts src/import/rules.ts src/import/pipeline.ts src/import/registry.ts src/import/mcp.ts src/import/jsonschema.ts src/import/openapi.ts src/import/asyncapi.ts src/import/graphql.ts src/import/grpc.ts src/import/eval.ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-actions...
+          pnpm --filter @atlasauth/pca-actions... run build
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      - name: Stryker
+        env:
+          PCA_PROP_RUNS: '300'
+          PCA_MUTATION_RUN: '1'
+        run: |
+          PKG=pca-actions INPLACE=1 bash tools/pca-audit/stryker/run.sh "actions-${{ matrix.name }}" ${{ matrix.files }}
+          mkdir -p "$RUNNER_TEMP/reports" && cp "/tmp/pca-audit-stryker/actions-${{ matrix.name }}.json" "$RUNNER_TEMP/reports/"
+      - name: Every survivor is killed or ledgered
+        run: node tools/pca-audit/stryker/check-equivalents.mjs --package=pca-actions --ledger=packages/pca-actions/mutation-equivalents.json "$RUNNER_TEMP/reports/actions-${{ matrix.name }}.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-stryker-${{ matrix.name }}
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+  mutation-goal-rest:
+    name: Stryker (pca-goal ${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: compile
+            files: src/ir.ts src/codec.ts src/compiler.ts src/crc.ts src/digests.ts src/normalize.ts src/legacy.ts src/refsem.ts src/roundtrip.ts
+          - name: interpret
+            files: src/interpret.ts src/ontology.ts src/disambiguate.ts src/nversion.ts src/precedent.ts src/drift.ts src/examples.ts
+          - name: review
+            files: src/review.ts src/sign.ts src/card.ts src/fmt.ts src/bench.ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-goal... --filter=@atlasauth/pca...
+          pnpm -r --filter=@atlasauth/pca-goal^... run build
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      - name: Stryker
+        env:
+          PCA_MUTATION_RUN: '1'
+        run: |
+          PKG=pca-goal INPLACE=1 bash tools/pca-audit/stryker/run.sh "goal-${{ matrix.name }}" ${{ matrix.files }}
+          mkdir -p "$RUNNER_TEMP/reports" && cp "/tmp/pca-audit-stryker/goal-${{ matrix.name }}.json" "$RUNNER_TEMP/reports/"
+      - name: Every survivor is killed or ledgered
+        run: node tools/pca-audit/stryker/check-equivalents.mjs --package=pca-goal --ledger=packages/pca-goal/mutation-equivalents.json "$RUNNER_TEMP/reports/goal-${{ matrix.name }}.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-stryker-goal-${{ matrix.name }}
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+  mutation-k9:
+    name: Stryker (K9 provenance gate, detector receipts, Sigstore verifier, trace rules, detector adapters)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-attest-eat... --filter=@atlasauth/pca-dataflow...
+          pnpm --filter @atlasauth/pca-attest-eat... --filter @atlasauth/pca-dataflow... run build
+          npm ci --prefix tools/pca-audit --no-audit --no-fund
+      - name: Stryker
+        env:
+          PCA_MUTATION_RUN: '1'
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports"
+          ONLY_TESTS=src/provenance-gate.test.ts,src/detector-receipt.test.ts PKG=pca bash tools/pca-audit/stryker/run.sh k9-core src/provenance-gate.ts src/detector-receipt.ts
+          PKG=pca-attest-eat bash tools/pca-audit/stryker/run.sh k9-sigstore src/sigstore.ts src/provenance.ts
+          PKG=pca-dataflow bash tools/pca-audit/stryker/run.sh k9-trace src/trace-rules.ts src/detectors.ts
+          cp /tmp/pca-audit-stryker/k9-core.json /tmp/pca-audit-stryker/k9-sigstore.json /tmp/pca-audit-stryker/k9-trace.json "$RUNNER_TEMP/reports/"
+      - name: Every survivor is killed or ledgered
+        run: |
+          node tools/pca-audit/stryker/check-equivalents.mjs --package=pca "$RUNNER_TEMP/reports/k9-core.json"
+          node tools/pca-audit/stryker/check-equivalents.mjs --package=pca-attest-eat "$RUNNER_TEMP/reports/k9-sigstore.json"
+          node tools/pca-audit/stryker/check-equivalents.mjs --package=pca-dataflow "$RUNNER_TEMP/reports/k9-trace.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-stryker-k9
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: ignore
+
+  dafny:
+    name: Dafny (TraitExpand)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Verify and compile with the hash-pinned Dafny
+        run: bash .github/scripts/action-kit-dafny.sh "$RUNNER_TEMP/dafny"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Differential - the extracted selector model equals the TypeScript expansion
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-goal...
+          pnpm -r --filter=@atlasauth/pca-goal^... run build
+          cp "$RUNNER_TEMP/dafny/pca_goalselect.js" packages/pca-verified-core/generated/pca_goalselect.js
+          PCA_GOALSELECT_REQUIRE=1 pnpm --filter @atlasauth/pca-goal exec vitest run test/selectors-diff.test.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-dafny
+          path: ${{ runner.temp }}/dafny/
+          if-no-files-found: ignore
+
+  lean:
+    name: Lean (TraitAlg)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Elaborate, scan and audit axioms
+        run: bash .github/scripts/action-kit-lean.sh "$RUNNER_TEMP/lean"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: action-kit-lean
+          path: ${{ runner.temp }}/lean/
+          if-no-files-found: ignore
+
+  packs:
+    name: catalog packs (verify, ledger, regenerate from pinned spec digests byte-identical)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-actions...
+      - name: Build dependencies
+        run: pnpm --filter @atlasauth/pca-actions... run build
+      - name: Offline verify (digests, Merkle roots, lint subset, sizes) and licence ledger
+        run: |
+          pnpm --filter @atlasauth/pca-actions exec tsx --tsconfig ../../scripts/actions-packs/tsconfig.json ../../scripts/actions-packs/gen.ts verify
+          pnpm --filter @atlasauth/pca-actions exec tsx --tsconfig ../../scripts/actions-packs/tsconfig.json ../../scripts/actions-packs/gen.ts ledger --check
+      # keyed by the pinned sha256 values (the sources files), so an unchanged pin never re-downloads
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/specs
+          key: pack-specs-${{ hashFiles('scripts/actions-packs/packs/*.sources.json') }}
+      - name: Regenerate every pack from its pinned spec bytes (digest checked) and require byte-identical output; twice
+        run: |
+          for i in 1 2; do
+            pnpm --filter @atlasauth/pca-actions exec tsx --tsconfig ../../scripts/actions-packs/tsconfig.json ../../scripts/actions-packs/gen.ts repro all --dir "$RUNNER_TEMP/specs"
+          done
+
+  registry-oracle:
+    name: Semantic diff oracle and pin properties
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-actions...
+          pnpm --filter @atlasauth/pca-actions... run build
+      # diff.test.ts: equal/narrow => the new definition accepts only calls the old one accepts, floors never fall (10^5
+      # mutants), plus three negative controls (a classifier with a hole is caught). pin.test.ts: a pinned grant follows a
+      # change iff it is equal/narrow or the principal approved it; registry growth never grants.
+      - name: Oracle (10^5 mutations) and pin properties
+        run: pnpm --filter @atlasauth/pca-actions exec vitest run test/diff.test.ts test/pin.test.ts
+
+  negative-controls:
+    name: Rollback, replay, fork, chain gap, forged floors and forged classes are refused
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-actions...
+          pnpm --filter @atlasauth/pca-actions... run build
+      - name: Registry (packs, shards, chain, tracker, transparency) and verifier (rule 22, pins) negative controls
+        run: pnpm --filter @atlasauth/pca-actions exec vitest run test/registry.test.ts test/verifier.test.ts
+      - name: Shared registry vectors replay and are byte-identical
+        run: |
+          pnpm --filter @atlasauth/pca-actions exec vitest run test/vectors.test.ts
+          pnpm --filter @atlasauth/pca-actions exec tsx scripts/vectors.ts --check
+
+  # The zkVM guest core (rule 22 vectors, the 621-vector set, v2 pipeline) lives in the pca-rust workspace (crates/zkvm-pca), not in this
+  # repository: its `zkvm-verify` CI job runs `cargo test -p pca-zkvm-core` against this repository's shared corpus.

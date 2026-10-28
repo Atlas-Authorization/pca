@@ -1,0 +1,147 @@
+name: Goal adversarial suite and cross-language vectors
+
+# W1..W23 post-spec tests, the seeded IR-grammar corpus, compiler mutation tests, and the vector corpus replayed by the TypeScript, Go,
+# Rust and Python runners (all four must agree on goal digests and every decision + witness). When packages/pca-goal/package.json exists
+# and the extracted compiler is committed, the suite also runs against the real compiler with GOAL_REQUIRE_SUBJECT=1: a missing capability FAILS.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suite:
+    name: adversarial suite (TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Vectors are byte-identical to a fresh generation
+        run: node packages/pca-goal/adversarial/src/vectors.ts --check
+      - name: Real compiler present? (the extracted Dafny compiler is committed as generated/pca_goal.js after its first green proof run)
+        id: real
+        run: |
+          if [ -f packages/pca-goal/package.json ] && [ -f packages/pca-verified-core/generated/pca_goal.js ]; then echo "yes=true" >> "$GITHUB_OUTPUT"; else echo "yes=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: pnpm/action-setup@v4
+        if: steps.real.outputs.yes == 'true'
+      - name: Build the real subject
+        if: steps.real.outputs.yes == 'true'
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-goal...
+          pnpm --filter @atlasauth/pca-goal... run build
+      - name: Weakness, corpus, monotonicity, mutation and vector tests
+        env:
+          GOAL_REQUIRE_SUBJECT: ${{ steps.real.outputs.yes == 'true' && '1' || '0' }}
+        working-directory: packages/pca-goal
+        run: node --test adversarial/test/*.test.ts
+
+  select-vectors:
+    name: selector vectors are byte-identical to a fresh generation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-goal...
+          pnpm -r --filter=@atlasauth/pca-goal^... run build
+          pnpm --filter @atlasauth/pca-goal exec tsx scripts/select-vectors.ts --check
+
+  runners:
+    name: ${{ matrix.lang }} vector runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: [python, go, rust]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        if: matrix.lang == 'python'
+        with: { python-version: '3.12' }
+      - uses: actions/setup-go@v5
+        if: matrix.lang == 'go'
+        with: { go-version: '1.22' }
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.lang == 'rust'
+      - uses: Swatinem/rust-cache@v2
+        if: matrix.lang == 'rust'
+        with: { workspaces: packages/pca-conformance/runners/goal/rust }
+      - name: Replay every vector
+        working-directory: packages/pca-conformance/runners/goal
+        run: |
+          case "${{ matrix.lang }}" in
+            python) python3 -I py/run.py ../../vectors/goal ;;
+            go) (cd go && go run . ../../../vectors/goal) ;;
+            rust) (cd rust && cargo run --release -- ../../../vectors/goal) ;;
+          esac
+      - name: Replay every selector vector (native expansion of the trait selectors, then the same probes)
+        working-directory: packages/pca-conformance/runners/goal
+        run: |
+          case "${{ matrix.lang }}" in
+            python) python3 -I py/run.py ../../vectors/goal-select ;;
+            go) (cd go && go run . ../../../vectors/goal-select) ;;
+            rust) (cd rust && cargo run --release -- ../../../vectors/goal-select) ;;
+          esac
+
+  runners-more:
+    name: ${{ matrix.lang }} vector runner (goals and selector goals)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { lang: php, os: ubuntu-latest }
+          - { lang: ruby, os: ubuntu-latest }
+          - { lang: java, os: ubuntu-latest }
+          - { lang: dotnet, os: ubuntu-latest }
+          - { lang: kotlin, os: ubuntu-latest }
+          - { lang: swift, os: macos-latest }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        if: matrix.lang == 'php'
+        with: { php-version: '8.3', coverage: none }
+      - uses: ruby/setup-ruby@v1
+        if: matrix.lang == 'ruby'
+        with: { ruby-version: '3.3' }
+      - uses: actions/setup-java@v4
+        if: matrix.lang == 'java' || matrix.lang == 'kotlin'
+        with: { distribution: temurin, java-version: '21' }
+      - uses: actions/setup-dotnet@v4
+        if: matrix.lang == 'dotnet'
+        with: { dotnet-version: '10.0.x' }
+      - name: Kotlin compiler (pinned release)
+        if: matrix.lang == 'kotlin'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/kotlinc.zip" https://github.com/JetBrains/kotlin/releases/download/v2.0.21/kotlin-compiler-2.0.21.zip
+          unzip -q "$RUNNER_TEMP/kotlinc.zip" -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/kotlinc/bin" >> "$GITHUB_PATH"
+      - name: Replay every goal vector and every selector vector
+        working-directory: packages/pca-conformance/runners/goal
+        run: |
+          for corpus in goal goal-select; do
+            V=../../vectors/$corpus
+            case "${{ matrix.lang }}" in
+              php) php php/run.php $V ;;
+              ruby) ruby ruby/run.rb $V ;;
+              java) java java/Run.java $V ;;
+              dotnet) (cd dotnet && dotnet run run.cs -- ../$V) ;;
+              kotlin) kotlinc kotlin/Run.kt -include-runtime -d "$RUNNER_TEMP/goal-runner.jar" && java -jar "$RUNNER_TEMP/goal-runner.jar" $V ;;
+              swift) (cd swift && swiftc -O GoalReplay.swift main.swift -o "$RUNNER_TEMP/goal-swift" && "$RUNNER_TEMP/goal-swift" ../$V) ;;
+            esac
+          done
