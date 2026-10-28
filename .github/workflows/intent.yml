@@ -48,6 +48,21 @@ jobs:
       - name: Intent Fidelity Benchmark
         if: steps.present.outputs.yes == 'true'
         run: bash .github/scripts/ts-intent-bench.sh "$RUNNER_TEMP/intent-bench" 300
+      - name: Goal-to-decision intent fidelity (typecheck, tests, per-domain benchmarks on recorded model outputs, hostile corpus gates)
+        if: steps.present.outputs.yes == 'true' && hashFiles('packages/pca-goal/package.json') != ''
+        env:
+          PCA_GOAL_REPORT_DIR: ${{ runner.temp }}/intent-fidelity
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-goal...
+          pnpm -r --filter=@atlasauth/pca-goal^... run build
+          pnpm --filter @atlasauth/pca-goal run typecheck
+          pnpm --filter @atlasauth/pca-goal run test
+      - uses: actions/upload-artifact@v4
+        if: always() && hashFiles('packages/pca-goal/package.json') != ''
+        with:
+          name: intent-fidelity-report
+          path: ${{ runner.temp }}/intent-fidelity/
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: always() && steps.present.outputs.yes == 'true'
         with:

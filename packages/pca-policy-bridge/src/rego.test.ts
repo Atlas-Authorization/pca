@@ -102,8 +102,8 @@ describe('regoToPca', () => {
     expect(predicates.length).toBe(1);
     expect(allow(predicates, { action: { verb: 'read', resource: 'r' }, env: { classification: 'public' } })).toBe(true);
     expect(allow(predicates, { action: { verb: 'read', resource: 'r' }, env: { classification: 'secret' } })).toBe(false);
-    // classification unknown => `not` fails closed (does not grant)
-    expect(allow(predicates, { action: { verb: 'read', resource: 'r' } })).toBe(false);
+    // `not input.p == lit` holds when the path is absent (Rego: the comparison is undefined), as in OPA
+    expect(allow(predicates, { action: { verb: 'read', resource: 'r' } })).toBe(true);
   });
 
   it('translates pure anchored matcher builtins: startswith → prefix, glob.match → like', () => {
@@ -116,7 +116,7 @@ describe('regoToPca', () => {
       }
       allow {
         input.action == "open"
-        glob.match("*.pdf", [], input.name)
+        glob.match("*.pdf", null, input.name)
       }
     `;
     const { predicates, report } = regoToPca(m);

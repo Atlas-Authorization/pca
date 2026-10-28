@@ -2,9 +2,20 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  sha256, DEFAULT_RISK_POLICY, type PlanNode, attenuate, b64u, buildPCActn, canonicalBytes, encodeKey, frostTrustedDealerKeygen, generateKeyPair,
-  mintGrant, mlDsa65Keygen, thresholdMessage,
+  sha256,
+  DEFAULT_RISK_POLICY,
+  type PlanNode,
+  attenuate,
+  b64u,
+  buildPCActn,
+  canonicalBytes,
+  encodeKey,
+  generateKeyPair,
+  mintGrant,
+  mlDsa65Keygen,
+  thresholdMessage,
 } from '@atlasauth/pca';
+import { frostTrustedDealerKeygen } from '@atlasauth/pca/ext/frost';
 import {
   MAX_GROUP_SIZE, MAX_PQ_SIGNER_ENTRIES, HYBRID_ARTIFACT_VERSION, createHybridThresholdVerifier, foldHybridStepUp, hybridThresholdSign, issueGroupDescriptor,
   signerSetCommitment, verifyGroupDescriptor, verifyHybridStepUp, verifyHybridThreshold,

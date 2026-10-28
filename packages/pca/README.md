@@ -1,5 +1,7 @@
 # @atlasauth/pca
 
+> Maturity: **stable** (stable core). Some features inside the package are in the production or hardened tier, listed in its manifest under `pca.features`. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Proof-Carrying Authority (PCA) core: authorization for AI agents where each action carries its own proof.
 Instead of handing an agent a bearer token, the principal signs a **Root Intent Grant** once. The agent then
 attaches a signed, self-describing **PCActn** to every action, and the resource server verifies it offline:
@@ -23,8 +25,10 @@ npm i @atlasauth/pca
 ```
 
 Node >= 20. The FN-DSA post-quantum suites use `@atlasauth/pca-fndsa-wasm`, which is installed
-automatically as a dependency. Optional dependencies (`@xmldom/xmldom`, `asn1js`, `pkijs`, `snarkjs`,
-`xml-crypto`) are used only by some attestation and zero-knowledge features.
+automatically as a dependency. Optional dependencies (`@xmldom/xmldom`, `asn1js`, `pkijs`, `xml-crypto`) are used
+only by some attestation features. Zero-knowledge proof verification needs `snarkjs`, an optional peer dependency that
+is not installed with this package: run `npm i snarkjs` to use it (and pin `underscore` to 1.13.8 or later with an
+`overrides` entry, because `snarkjs` pulls in a vulnerable `underscore` 1.13.6).
 
 ## Usage
 
@@ -85,7 +89,8 @@ Sending the same PCActn again is denied as a replay (the counter must increase).
 
 A resource server accepts an action only if the PCActn passes, in order: wire (strict canonical form),
 version, audience, validity window, capability chain (hash-linked, each hop signed, rooted at the grant),
-plan inclusion, leaf signature, and counter (anti-replay). Optional hooks add attestation, revocation and
+plan inclusion, leaf signature, and counter (a format check; replay is refused only by the stateful layer: `requirePCA`
+with a `budgetStore`, or `guardPCActnReplay`). Optional hooks add attestation, revocation and
 freshness, a liveness beacon, a taint gate, threshold (guardian or human) co-signs, and zero-knowledge
 compliance. Delegation can only narrow authority: caveats are append-only. Autonomous actions spend a trust
 budget, which bounds what an agent can do between human co-signs.
@@ -104,7 +109,11 @@ is offline against pinned roots; most hardware roots are classical (ECDSA or RSA
 Signed surfaces take an `alg` from the suite registry: `ed25519` (default), `ml-dsa-65`, `ml-dsa-87`,
 `slh-dsa-sha2-128f`, `slh-dsa-sha2-256s`, `fn-dsa-512`, `fn-dsa-1024`, and hybrid Ed25519 plus ML-DSA or
 SLH-DSA combinations. Key exchange uses a hybrid X25519 + ML-KEM-768 KEM (`hybridKemKeygen`,
-`hybridEncapsulate`).
+`hybridEncapsulate`), with ML-KEM-1024 and X-Wing variants, from `@atlasauth/pca/ext/kem`. This feature is
+hardened, awaiting independent audit: its ML-KEM component is checked against NIST ACVP FIPS 203 vectors
+(key generation, encapsulation, decapsulation with implicit rejection, and both key checks) and against an
+OpenSSL implementation of the hybrid. Encapsulation refuses a non-reduced ML-KEM key; a key read from
+storage or a peer should also go through `mlKemEncapsulationKeyCheck` / `mlKemDecapsulationKeyCheck`.
 
 FN-DSA (Falcon, FIPS 206) runs through `@atlasauth/pca-fndsa-wasm`, a WebAssembly build of the Rust `fn-dsa`
 crate. It is loaded lazily on first use. If it cannot be loaded, FN-DSA verification fails closed, and
@@ -121,6 +130,40 @@ const sig = signWithSuite('fn-dsa-512', {
 }, msg);
 verifyWithSuite('fn-dsa-512', { fnDsa512Pub: b64u(k.verifyingKey) }, msg, sig); // true
 ```
+
+## Core entry point
+
+`@atlasauth/pca/core` exports only PCA Core: mint a grant, delegate it, build a PCActn, verify it, evaluate the
+baseline caveats and guard against replay (34 names, all identical to the root exports). Start there; add the root
+entry when you need an extension. See the PCA Core page in the docs.
+
+```ts
+import { mintRoot, delegate, buildPCActn, verifyPCActnCore } from '@atlasauth/pca/core';
+```
+
+Core loads no experimental module. Its `verifyPCActnCore` does not evaluate the intent layer: a PCActn that carries
+an `intent` or `intent_session` member is refused at the wire check, and a verifier policy it cannot enforce denies.
+The root entry's `verifyPCActnCore` has the intent layer loaded.
+
+## Extensions (`@atlasauth/pca/ext/*`)
+
+The extension features are not exported from the root entry. Each one is a subpath, named after its feature in the
+maturity table: `ext/intent` (the intent layer), `ext/attestation`, `ext/frost`, `ext/zk`, `ext/optimistic`,
+`ext/ledger` and `ext/research`. Their tiers are in the maturity table: the intent layer (binding, enforcement and the
+frontier members `semanticThreshold`, `objectiveRisk`, `progress`), optimistic execution and the software attestation path
+are production, as is the product layer (`ext/research`: mesh, sessions, immune, reputation, safety certificates, natural-language policy review, DLP, guardian HA, contracts, console, forecast, simulation, catalog); FROST, zero-knowledge compliance, the ledger and key encapsulation are hardened, awaiting independent audit
+(zero-knowledge also awaits the trusted-setup ceremony, the ledger independent witnesses); the hardware verifiers and QRNG entropy are hardened, awaiting hardware evaluation. The hardened features are opt-in
+extensions outside the main path.
+
+```ts
+import { verifyPCActn } from '@atlasauth/pca';
+import { mintSessionGrant } from '@atlasauth/pca/ext/intent';
+import { frostTrustedDealerKeygen } from '@atlasauth/pca/ext/frost';
+```
+
+To give Core the intent layer, pass it in: `verifyPCActnCore(p, { ..., extensions: INTENT_EXTENSIONS })` with
+`INTENT_EXTENSIONS` from `@atlasauth/pca/ext/intent`. See *Upgrading to 0.5* in the docs for every default that changed
+in 0.5.
 
 ## Durable state (Node only)
 
@@ -156,15 +199,15 @@ Agent client `@atlasauth/pca-agent`; tool wrappers `@atlasauth/pca-ai-sdk`, `-la
 
 ## Status
 
-Pre-1.0 (0.3.0): the API may change between minor versions. The cryptography and protocol have not been
+Pre-1.0: the API may change between minor versions. The cryptography and protocol have not been
 independently audited, and this is not a substitute for a security review before you protect anything of
 value. **Offline, with no hooks and no `require` list, several checks report `not-enforced` and the verdict is
 still `allow: true`**: `plan_root_authorized` (the agent supplies its own plan, so plan inclusion alone proves
 nothing; it needs your own copy of the plan in `context.plan` plus `context.planAuthorized`), `revocation`,
 `threshold`, `attestation`, `freshness` and `beacon`. A resource server must either supply the hooks or demand the
 checks: `requirePCA` defaults `require` to `DEFAULT_REQUIRED_CHECKS` (counter, revocation, plan_root_authorized,
-audience, validity, grant_ref_bound) so an unenforced one denies; a bare `verifyPCActn` / `verifyPCActnCore` call does not. The zero-knowledge backend currently uses BN254 and is being moved toward a
-transparent, post-quantum backend; the AMD SEV-SNP root chain is classical.
+audience, validity, grant_ref_bound) so an unenforced one denies; a bare `verifyPCActn` / `verifyPCActnCore` call does not. The Groth16 zero-knowledge backends use BN254 or BLS12-381
+(classical, not post-quantum; the transparent STARK provers are separate Rust crates); the AMD SEV-SNP root chain is classical.
 
 The project audits itself in code: mutation testing of the security-critical modules, structure-aware fuzzing of
 every parser and verifier entry point (including the attestation evidence formats), static analysis, statistical
@@ -185,4 +228,4 @@ MIT - see LICENSE
 
 - No list (`allowedSuites`) means no restriction: the verifier accepts every signature suite it knows.
 - An empty list (`allowedSuites: []`) means refuse everything.
-- The hosted API defaults to `ed25519` plus the hybrids that include Ed25519, and refuses the pure post-quantum suites (`ml-dsa-*`, `slh-dsa-*`, `fn-dsa-*`, `less-cat1`) unless the operator lists them. To match it offline, pass `allowedSuites` exactly: `ed25519`, `hybrid-ed25519-ml-dsa-65`, `hybrid-nested-ed25519-ml-dsa-65`, `hybrid-ed25519-ml-dsa-87`, `hybrid-ed25519-slh-dsa-sha2-128f`, `hybrid-ed25519-slh-dsa-sha2-256s`, `hybrid-ed25519-less-cat1`. The effective hosted list is readable at `GET /v1/pca/suites`; see docs/pca/reference/wire-formats.md.
+- The hosted API defaults to `ed25519` plus the hybrids that include Ed25519, and refuses the pure post-quantum suites (`ml-dsa-*`, `slh-dsa-*`, `fn-dsa-*`, `less-cat1`) unless the operator lists them. To match it offline, pass `allowedSuites` exactly: `ed25519`, `hybrid-ed25519-ml-dsa-65`, `hybrid-nested-ed25519-ml-dsa-65`, `hybrid-ed25519-ml-dsa-87`, `hybrid-ed25519-slh-dsa-sha2-128f`, `hybrid-ed25519-slh-dsa-sha2-256s`, `hybrid-ed25519-less-cat1`. The effective hosted list is readable at `GET /v1/pca/suites`; see the [wire formats reference](https://github.com/Atlas-Authorization/pca/blob/main/docs/reference/wire-formats.md).

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "types": ["node"],
+    "noEmit": true,
+    "paths": {
+      "@atlasauth/pca": ["packages/pca/src/index.ts"],
+      "@atlasauth/pca/ext/intent": ["packages/pca/src/ext/intent.ts"],
+      "@atlasauth/pca-verified-core": ["packages/pca-verified-core/src/index.ts"],
+      "@atlasauth/pca-actions": ["packages/pca-actions/src/index.ts"]
+    }
+  },
+  "include": ["./**/*.ts"]
+}

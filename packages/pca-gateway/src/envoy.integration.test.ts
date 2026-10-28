@@ -31,6 +31,9 @@ import {
 } from '../test-support/envoy-harness';
 import { startGrpcCheckServer, type GrpcCheckServer } from '../test-support/envoy-grpc-server';
 
+/** Signature-only on purpose (0.5: an explicit mode): these tests are about routing, adapters and binding; full mode is in full-policy.test.ts. */
+const SIG_ONLY = { policy: { mode: 'signature-only' as const }, replayGuard: { claim: async () => true }, requireChecks: [] as string[] };
+
 const BIN = process.env.PCA_ENVOY_BIN;
 const AUD = 'ins_acme';
 
@@ -61,6 +64,7 @@ const gwBase: GatewayOptions = {
     { method: 'POST', path: '/payouts', capability: { verb: 'stripe.payout' } },
   ],
   resolveGrant: async (ref) => grants.get(ref) ?? null,
+  ...SIG_ONLY,
 };
 /** Strict: unmapped routes denied, single-use proofs. */
 const gwStrict = (): GatewayOptions => ({ ...gwBase, replayGuard: memoryReplayGuard() });

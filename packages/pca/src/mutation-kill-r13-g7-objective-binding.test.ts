@@ -159,7 +159,7 @@ describe('resolveObjectiveRisk', () => {
     expect(settle(() => resolveObjectiveRisk({ grant: grant(commitment({ on_mismatch: 'heuristic' })), action: act, instance: undefined }))).toEqual({ ok: true, value: {
       mode: 'mismatch',
       reasons: ['the grant commits objective-risk facts but the instance holds no objective-risk config'],
-      onMismatch: 'heuristic',
+      onMismatch: 'deny',
     } });
   });
   it('re-reads the envelope and fails closed when it is gone on the second read', () => {

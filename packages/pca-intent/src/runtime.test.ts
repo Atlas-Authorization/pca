@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { b64u, generateKeyPair, signIntentObservation, signJudgeVerdict } from '@atlasauth/pca';
+import { b64u, generateKeyPair } from '@atlasauth/pca';
+import { signIntentObservation, signJudgeVerdict } from '@atlasauth/pca/ext/intent';
+import { buildCatalog, defineAction } from '@atlasauth/pca/ext/research';
 import {
   admitter,
   checkIntentConformance,
@@ -34,7 +36,14 @@ import {
 const AMT = 'action.params.amount';
 const RCP = 'action.params.recipient';
 const slots: IntentSlots = { verbs: ['stripe.charge', 'stripe.refund', 'stripe.payout'], constraints: [{ path: AMT, max: 200 }, { path: RCP, oneOf: ['alice'] }] };
-const omega = deriveOmega({ policies: [], slots });
+// The built-in catalog files stripe.charge and stripe.refund as irreversible (money is final), so the routing classes under
+// test (allow / optimistic) need a catalog that says otherwise; payout stays irreversible.
+const catalog = buildCatalog([
+  defineAction({ connector: 'stripe', action: 'charge', reversibility: 'reversible', blastRadius: 0.2, amountField: 'amount', description: 'test charge' }),
+  defineAction({ connector: 'stripe', action: 'refund', reversibility: 'rate_limited', blastRadius: 0.5, amountField: 'amount', description: 'test refund' }),
+  defineAction({ connector: 'stripe', action: 'payout', reversibility: 'irreversible', blastRadius: 0.9, amountField: 'amount', description: 'test payout' }),
+]);
+const omega = deriveOmega({ policies: [], slots, catalog });
 const truth = admitter({
   predicates: ['stripe.charge', 'stripe.refund', 'stripe.payout'].map((verb) => ({ verb, resource: '*', where: [{ field: AMT, op: 'gte' as const, value: 0 }, { field: AMT, op: 'lte' as const, value: 200 }, { field: RCP, op: 'eq' as const, value: 'alice' }] })),
 });

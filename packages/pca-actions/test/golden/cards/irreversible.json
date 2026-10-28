@@ -1,0 +1,30 @@
+{
+ "trait": "pca.irreversible",
+ "card": {
+  "verb": "golden.irreversible",
+  "title": "Do the irreversible thing",
+  "text": "Do the irreversible thing. This action cannot be undone.",
+  "risk": "high",
+  "escalation": "confirm",
+  "reversibility": "irreversible",
+  "blast_ppm": 50000,
+  "needs": [],
+  "context": [
+   "fresh_revocation"
+  ]
+ },
+ "closure": [
+  "pca.irreversible"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "irreversible",
+  "blast_ppm": 0,
+  "esc": 1,
+  "caveats": [],
+  "context": [
+   "fresh_revocation"
+  ],
+  "prules": []
+ }
+}

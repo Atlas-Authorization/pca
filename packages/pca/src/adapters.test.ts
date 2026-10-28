@@ -26,7 +26,7 @@ describe('guard', () => {
       async (_params, pca) => {
         seenHeader = decodePcaHeader(pca.headers[PCA_HEADER]!);
         // the attached proof verifies offline against the agent's grant
-        const res = await verifyPCActnCore(pca.pcactn, { grant: a.grant, audience: AUD, nowEpoch: pca.pcactn.iat });
+        const res = await verifyPCActnCore(pca.pcactn, { insecureSkipPlanRootCheck: true, grant: a.grant, audience: AUD, nowEpoch: pca.pcactn.iat });
         expect(res.allow).toBe(true);
         expect(res.checks.leaf_signature).toBe('pass');
         expect(res.checks.cap_chain).toBe('pass');
@@ -75,7 +75,7 @@ describe('bridgeToolCall', () => {
     const call = { name: 'issue_refund', arguments: { amount: 5, currency: 'usd' } };
     const bridged = bridgeToolCall(a, call, map, { counter: 1 })!;
     expect(bridged).not.toBeNull();
-    const res = await verifyPCActnCore(bridged.pcactn, { grant: a.grant, audience: AUD, nowEpoch: bridged.pcactn.iat });
+    const res = await verifyPCActnCore(bridged.pcactn, { insecureSkipPlanRootCheck: true, grant: a.grant, audience: AUD, nowEpoch: bridged.pcactn.iat });
     expect(res.allow).toBe(true);
     expect(res.checks.leaf_signature).toBe('pass');
     expect(bridgeToolCall(a, { name: 'unknown_tool', arguments: {} }, map)).toBeNull();

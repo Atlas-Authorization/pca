@@ -1,0 +1,70 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "gitlab",
+  "version": "0.5.0",
+  "ns": [
+    "gitlab"
+  ],
+  "count": 1151,
+  "root": "71lxGMqHQ7WXBa6hfha0OglAwWRqLpWP2aiX3n_qBlg",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 1040,
+    "unreviewed": 111
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "The GitLab REST OpenAPI description is generated from the open source (MIT) GitLab repository. Operation paths, parameter names/types/bounds and short summaries are carried; the trait review is ours.",
+  "sources": [
+    {
+      "id": "openapi-v2",
+      "kind": "openapi",
+      "uri": "https://github.com/gitlabhq/gitlabhq/blob/d7b9a6176ab4e279465ba3ee09922cde2b74de47/doc/api/openapi/openapi_v2.yaml",
+      "spec_digest": "sha256:8ebe1956275851c760c9dd2b689bf163815f4fcd2a6717887dd94f7ab001db57",
+      "licence": "MIT",
+      "licence_url": "https://github.com/gitlabhq/gitlabhq/blob/master/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "718f18069e0339af9fe93ff56f2a490ebdea1fda05887f53106d3aa5daaeae52"
+  },
+  "shards": [
+    {
+      "file": "defs/000-gitlab_admin.jsonl",
+      "count": 664,
+      "bytes": 716578,
+      "sha256": "a7bef40c3d1ac1132894b8b5634d7a0255927c9d1782c6f1ec69fdc6583bab20",
+      "first": "gitlab.admin.batched_background_migrations.get",
+      "last": "gitlab.projects.merge_requests.draft_notes.publish"
+    },
+    {
+      "file": "defs/001-gitlab_projects.jsonl",
+      "count": 487,
+      "bytes": 525732,
+      "sha256": "3ae561d9d040ef1c97f12fc85f06864734e9cf3c601a5cfa3abf6f5d2ba66910",
+      "first": "gitlab.projects.merge_requests.draft_notes.update",
+      "last": "gitlab.web_commits.public_key.get"
+    }
+  ],
+  "stats": {
+    "total": 1151,
+    "authored": 1040,
+    "unreviewed": 111,
+    "skipped": {},
+    "dropped_params": 262,
+    "by_effect": {
+      "read": 515,
+      "privilege": 79,
+      "update": 306,
+      "create": 182,
+      "delete": 130,
+      "export": 9,
+      "send": 2,
+      "exec": 12,
+      "publish": 2
+    }
+  }
+}

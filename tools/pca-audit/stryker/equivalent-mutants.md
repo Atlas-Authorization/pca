@@ -39,3 +39,7 @@ seal and verify) and L397:44 (a function-valued caveat carrying a string `type` 
 
 Killed after the measurement (new tests in `src/server/verify.test.ts`): L158:56 and L201:33 (reasons from the core
 verifier and the beacon verifier are passed through verbatim).
+
+## First run pending (0.5 audit-readiness modules)
+
+`src/frost-dkg-channel.ts`, `src/frost-dkg-tls.ts`, the 0.5 additions to `src/zk.ts` (risk-bound circuit layout, `policyVmRiskHash`, the bound backend, `circuitVersion`) and `src/zk-ceremony.ts` (`circuitProvenance`, `checkCircuitProvenance`) are in the Stryker plan automatically (every `src/**/*.ts` of a package with ledger entries; none is excluded by `tsconfig.build.json` or `stryker.base.json`). They have not been measured yet: survivors are to be killed or ledgered after the first CI run.

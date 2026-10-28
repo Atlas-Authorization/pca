@@ -13,7 +13,6 @@ import {
 import { describe, expect, it } from 'vitest';
 import {
   ExpiredNoRefreshError,
-  InMemoryConnectionStore,
   NotAuthorizedError,
   RefreshFailedError,
   ScopeExceededError,
@@ -25,6 +24,8 @@ import {
   grantedOAuthScopes,
   oauthScopeCaveat,
 } from './index';
+import { InMemoryConnectionStore } from './testing';
+const mkVault = (o: ConstructorParameters<typeof TokenVault>[0] = {}) => new TokenVault({ strict: false, insecureBearerRelease: true, store: new InMemoryConnectionStore(), ...o });
 
 const NOW = 1_800_000_000_000;
 
@@ -100,7 +101,7 @@ describe('TokenVault.getConnectionToken', () => {
   it('releases a fresh token when an authorizing PCActn verifies (and records usage)', async () => {
     const { principal, agentId, grantFor, actn } = world();
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = mkVault({ store, now: () => NOW });
     await vault.putConnection({
       agentId,
       provider: 'google',
@@ -123,7 +124,7 @@ describe('TokenVault.getConnectionToken', () => {
   it('denies a PCActn whose capability covers no authority for the provider (not_authorized)', async () => {
     const { principal, agentId, grantFor, actn } = world();
     const store = new InMemoryConnectionStore();
-    const v = new TokenVault({ store, now: () => NOW });
+    const v = mkVault({ store, now: () => NOW });
     await v.putConnection({
       agentId,
       provider: 'google',
@@ -144,7 +145,7 @@ describe('TokenVault.getConnectionToken', () => {
   it('denies a chain not rooted at the connection\'s bound principal (not_authorized)', async () => {
     const { agentId, grantFor, actn } = world();
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = mkVault({ store, now: () => NOW });
     await vault.putConnection({
       agentId,
       provider: 'google',
@@ -161,7 +162,7 @@ describe('TokenVault.getConnectionToken', () => {
   it('denies a forged leaf signature (real PCActn verification, not a stub)', async () => {
     const { principal, agentId, grantFor, actn } = world();
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = mkVault({ store, now: () => NOW });
     await vault.putConnection({
       agentId,
       provider: 'google',
@@ -186,7 +187,7 @@ describe('TokenVault.getConnectionToken', () => {
   it('rejects requested scopes that exceed the grant (scope_exceeded)', async () => {
     const { principal, agentId, grantFor, actn } = world();
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = mkVault({ store, now: () => NOW });
     await vault.putConnection({
       agentId,
       provider: 'google',
@@ -219,7 +220,7 @@ describe('TokenVault.getConnectionToken', () => {
     const sub = delegate(grant, subAgentId, [oauthScopeCaveat('google', ['read'])], A.secretKey);
 
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = mkVault({ store, now: () => NOW });
     await vault.putConnection({
       agentId: subAgentId, // the connection belongs to the sub-agent (the chain's leaf holder)
       provider: 'google',
@@ -249,7 +250,7 @@ describe('TokenVault.getConnectionToken', () => {
     const { principal, agentId, grantFor, actn } = world();
     const store = new InMemoryConnectionStore();
     const { fetch, calls } = mockFetch(jsonResponse({ access_token: 'AT-2', expires_in: 3600, refresh_token: 'RT-2' }));
-    const vault = new TokenVault({
+    const vault = mkVault({
       store,
       now: () => NOW,
       fetch,
@@ -283,7 +284,7 @@ describe('TokenVault.getConnectionToken', () => {
   it('refuses when the token is stale and there is no refresh token (expired_no_refresh)', async () => {
     const { principal, agentId, grantFor, actn } = world();
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = mkVault({ store, now: () => NOW });
     await vault.putConnection({
       agentId,
       provider: 'google',
@@ -301,7 +302,7 @@ describe('TokenVault.getConnectionToken', () => {
     const { principal, agentId, grantFor, actn } = world();
     const store = new InMemoryConnectionStore();
     const { fetch } = mockFetch({ ok: false, status: 400, json: async () => ({}), text: async () => 'invalid_grant' });
-    const vault = new TokenVault({
+    const vault = mkVault({
       store,
       now: () => NOW,
       fetch,
@@ -328,7 +329,7 @@ describe('TokenVault.getConnectionToken', () => {
 
   it('reports unknown_connection for an agent/provider/connectionId with no stored connection', async () => {
     const { grantFor, actn } = world();
-    const vault = new TokenVault({ now: () => NOW });
+    const vault = mkVault({ now: () => NOW });
     await expect(
       vault.getConnectionToken(actn({ chain: [grantFor(['read'])] }), { provider: 'google', connectionId: 'missing' }),
     ).rejects.toBeInstanceOf(UnknownConnectionError);

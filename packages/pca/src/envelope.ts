@@ -3,6 +3,8 @@ import { b64u, canonicalizeStrict, hashCanonical } from './hash';
 import { mintRoot, type Capability, type Caveat } from './capability';
 import type { Predicate } from './predicates';
 import { validateRiskPolicy, type RiskPolicy } from './risk';
+import { templateRefError, tightenListError, unitTagsError, type TemplateRef, type TightenRule, type UnitTag } from './envelope-rules';
+import { type ActionPin, actionPinError } from './action-pin';
 
 /**
  * Policy envelope + Root Intent Grant (spec §5.1). The grant is a plain M0 root Capability whose
@@ -89,6 +91,33 @@ export interface Envelope {
    * server's admission path). Lives in the signed envelope, never in the PCActn: tampering breaks the grant signature.
    */
   progress?: unknown;
+  /**
+   * Rule 20 (`units`): the unit tag of every policy term that reads a unit-bearing action parameter, keyed by
+   * `action.params.<name>`. The verifier refuses an action whose signed schema declares another unit for that parameter
+   * (cents vs dollars, EUR vs USD), and a `where` term that reads a unit-bearing parameter without a tag.
+   */
+  units?: Record<string, UnitTag>;
+  /**
+   * Rule 21 (`tighten`): rules a MODEL-derived signal may fire (`env.class.*`, `env.prov.*`, `env.judge.*`, single-oracle
+   * `env.world.*`). They can only escalate or deny; model-derived paths are refused inside `predicates[].where`.
+   */
+  tighten?: TightenRule[];
+  /**
+   * `'legacy'`: this grant (minted before rule 21) reads model-derived paths in `predicates[].where`; it verifies under the
+   * compatibility mode and is reported as degraded. A verifier policy `model_polarity: 'strict'` overrides it.
+   */
+  model_polarity?: 'legacy';
+  /**
+   * Optional link to the signed policy template this grant was instantiated from (`policy-link.ts`, C-242). The verifier
+   * rebuilds the policy from (template, slots) and requires `predicates` / `caveats` to equal it; the grant signature covers it.
+   */
+  template_ref?: TemplateRef;
+  /**
+   * Action pins (action kit, section 7.2): this grant authorizes the verbs it names AS DEFINED by these digests. A definition
+   * that changed since is `def_changed` unless a signed evolution chain of `equal`/`narrow` steps (or the principal's
+   * re-approval of a widening step) connects the pinned digest to the presented one. See `action-pin.ts`.
+   */
+  actions?: ActionPin;
 }
 
 export const ENVELOPE_CAVEAT = 'envelope';
@@ -130,6 +159,21 @@ export function mintGrant(args: {
   if (typeof args.goal !== 'string' || args.goal.length === 0) throw new Error('mintGrant: goal required');
   const bad = validateRiskPolicy(args.envelope.risk_policy);
   if (bad) throw new Error(`mintGrant: ${bad}`);
+  if (args.envelope.units !== undefined) {
+    const ue = unitTagsError(args.envelope.units);
+    if (ue) throw new Error(`mintGrant: ${ue}`);
+  }
+  const te = tightenListError(args.envelope.tighten);
+  if (te) throw new Error(`mintGrant: ${te}`);
+  if (args.envelope.template_ref !== undefined) {
+    const re = templateRefError(args.envelope.template_ref);
+    if (re) throw new Error(`mintGrant: ${re}`);
+  }
+  if (args.envelope.actions !== undefined) {
+    const ae = actionPinError(args.envelope.actions);
+    if (ae) throw new Error(`mintGrant: ${ae}`);
+  }
+  if (args.envelope.model_polarity !== undefined && args.envelope.model_polarity !== 'legacy') throw new Error("mintGrant: model_polarity must be 'legacy' when present");
   const goalSalt = args.salt ?? b64u(randomBytes(16));
   const goalCommit = goalCommitOf(args.goal, goalSalt);
   const env: Envelope = plain({
@@ -140,6 +184,11 @@ export function mintGrant(args: {
     risk_policy: args.envelope.risk_policy,
     ...(args.envelope.objective_risk !== undefined ? { objective_risk: args.envelope.objective_risk } : {}),
     ...(args.envelope.progress !== undefined ? { progress: args.envelope.progress } : {}),
+    ...(args.envelope.units !== undefined ? { units: args.envelope.units } : {}),
+    ...(args.envelope.tighten !== undefined ? { tighten: args.envelope.tighten } : {}),
+    ...(args.envelope.model_polarity !== undefined ? { model_polarity: args.envelope.model_polarity } : {}),
+    ...(args.envelope.template_ref !== undefined ? { template_ref: args.envelope.template_ref } : {}),
+    ...(args.envelope.actions !== undefined ? { actions: args.envelope.actions } : {}),
   });
   canonicalizeStrict(env); // throws if not STRICT-canonical-encodable (every PCActn embeds the grant in its signed body)
   const grant = mintRoot({
