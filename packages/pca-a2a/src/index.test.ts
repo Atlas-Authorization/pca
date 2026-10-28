@@ -373,3 +373,29 @@ describe('canonical-spelling gate (re-encoded card-signature segments are reject
     }
   });
 });
+
+describe('Agent Card signature profile a2a-1.0 (A2A 1.0 section 8.4)', () => {
+  it('signs BASE64URL(header).BASE64URL(payload) with typ JOSE + kid, and verifies', async () => {
+    const { publicKey, privateKey } = await joseGenerateKeyPair('EdDSA', { extractable: true });
+    const signed = await issueSignedAgentCard({ name: 'a' }, privateKey, { kid: 'k1', profile: 'a2a-1.0' });
+    const hdr = JSON.parse(Buffer.from(signed.signatures![0]!.protected, 'base64url').toString());
+    expect(hdr).toEqual({ alg: 'EdDSA', typ: 'JOSE', kid: 'k1' });
+    // independent check with jose's own compact verify: reassemble header.payload.signature with the JCS payload
+    const { compactVerify } = await import('jose');
+    const payload = Buffer.from(JSON.stringify({ name: 'a' })).toString('base64url');
+    const compact = `${signed.signatures![0]!.protected}.${payload}.${signed.signatures![0]!.signature}`;
+    expect((await compactVerify(compact, publicKey)).payload.length).toBeGreaterThan(0);
+    expect(await verifyAgentCard(signed, { key: publicKey })).toEqual({ ok: true });
+  });
+  it('refuses to issue without a kid (the spec makes it mandatory)', async () => {
+    const { privateKey } = await joseGenerateKeyPair('EdDSA');
+    await expect(issueSignedAgentCard({ name: 'a' }, privateKey, { profile: 'a2a-1.0' })).rejects.toThrow("requires a kid");
+  });
+  it('a tampered card no longer verifies', async () => {
+    const { publicKey, privateKey } = await joseGenerateKeyPair('EdDSA');
+    const signed = await issueSignedAgentCard({ name: 'a' }, privateKey, { kid: 'k1', profile: 'a2a-1.0' });
+    const r = await verifyAgentCard({ ...signed, name: 'evil' }, { key: publicKey });
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/^signature 0 did not verify/);
+  });
+});

@@ -1,5 +1,7 @@
 # @atlasauth/pca-dataflow
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A capability-tagged, positive data-flow model for Proof-Carrying Authority (PCA). Where the heuristic DLP and taint scoring in `@atlasauth/pca` answer "how dirty is this action's lineage?", this package enforces a complementary property: an untrusted value cannot reach an exfiltrating sink.
 
 It follows CaMeL (Debenedetti, Shumailov et al., "Defeating Prompt Injections by Design", [arXiv:2503.18813](https://arxiv.org/abs/2503.18813)), which treats prompt injection as a data-flow problem rather than a detection problem:
@@ -51,9 +53,31 @@ Outcomes use the same `allow | step_up | deny` vocabulary as PCA's DLP, so a ver
 
 All functions are pure and deterministic, and capabilities can only lose trust through a combinator, never gain it.
 
+## Fail-closed behaviour
+
+| Missing or invalid | Result |
+|---|---|
+| A value that was not made by this module (a literal, JSON, a raw string, `null`) reaches `classifyFlow` or `checkAction` | `deny`, `no provenance tag made by this module`; never a throw, never an allow |
+| `derive` or `dualContext` is given such a value, or the quarantined handler returns raw text | throws `TypeError` |
+| `tag` is given a trusted capability with no sources, or with a `tool:` source | throws: trust must come from a source, and tool output is never trusted |
+| Someone calls `add`, `delete` or `clear` on a value's `readers` or `sources` | throws: capability sets are immutable, so a holder cannot add a sink or remove a source after the fact |
+| The governor throws or returns something that is not a sink, or the sink has no policy | `deny`, sink `(unresolved)` |
+| The argument list is not a list, has a hole, or its length differs from `expectedArgs` | `deny` |
+| An action with no arguments | `allow`: nothing flows to the sink. Pass `expectedArgs` when you know how many arguments the action has |
+
+Tagging at the boundary stays the one thing you must get right: a value you tag as trusted is trusted.
+
+## Limits
+
+- It tracks provenance of the values you tag; it does not look inside text, so it does not detect an injection, only stops a value of untrusted lineage reaching a sink that forbids it.
+- A value you tag as trusted is trusted. Wrong tagging at the boundary voids the guarantee, and nothing here can detect it.
+- Only flows you route through `derive`, `classifyFlow` or `checkAction` are tracked. Data copied out of a tagged value by ordinary code carries no tag.
+- It does not cover side channels, timing, or what a trusted value's recipient does next. It does not persist tags across processes.
+- Outcomes are advice to a verifier: it enforces nothing by itself until a verifier acts on them.
+
 ## Status
 
-This is a capability model, not a classifier. The non-exfiltration guarantee holds given correct tagging at the boundaries (the CaMeL assumption): if you label untrusted text as trusted, the guarantee is void, and this package does not detect that. Use it alongside the heuristic DLP and taint checks in `@atlasauth/pca` for defence in depth. Cryptography in PCA is unaudited.
+This is a capability model, not a classifier. The non-exfiltration guarantee holds given correct tagging at the boundaries (the CaMeL assumption): if you label untrusted text as trusted, the guarantee is void, and this package does not detect that. Use it alongside the heuristic DLP and taint checks in `@atlasauth/pca` for defence in depth.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

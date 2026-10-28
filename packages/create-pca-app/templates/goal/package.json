@@ -1,0 +1,19 @@
+{
+  "name": "__PCA_APP_NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "From a plain-English goal to an enforced policy: draft, review, sign, enforce.",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

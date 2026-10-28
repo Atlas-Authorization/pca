@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-a2a",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "A2A (Agent2Agent) adapter for PCA: verify/attach proof-carrying actions on A2A task send/receive, validate Signed Agent Cards, and an AP2 payment-mandate profile.",
   "keywords": [
     "a2a",
@@ -41,6 +41,7 @@
     "jose": "^5.9.6"
   },
   "devDependencies": {
+    "@atlasauth/pca-analyzer": "workspace:*",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
@@ -54,5 +55,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-ciba",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "CIBA (Client-Initiated Backchannel Authentication) bridge for PCA FROST step-up: turn a step-up request into a backchannel human-approval flow with risk-adaptive gating.",
   "keywords": [
     "ciba",
@@ -29,7 +29,15 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./conformance": {
+      "types": "./dist/store-conformance.d.ts",
+      "default": "./dist/store-conformance.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -54,5 +62,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

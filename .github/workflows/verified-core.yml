@@ -44,6 +44,20 @@ jobs:
         run: bash formal/dafny/build.sh --check
       - name: Standalone components (proofs + generated JS)
         run: bash .github/scripts/ts-dafny-ext-check.sh Regex Wire Merkle Taint Attest PolicyVm
+      - name: Goal compiler (proofs of G-T1..T7, T10; zero assume/axiom/extern; generated JS == fresh compile)
+        run: |
+          bash .github/scripts/ts-dafny-ext-check.sh Goal
+          cd formal/dafny && dafny verify GoalPvmTie.dfy --verify-included-files --allow-warnings --verification-time-limit 120 --resource-limit 0
+      - name: Fresh Goal compile (artifact, commit it as packages/pca-verified-core/generated/pca_goal.js when the check above reports a mismatch)
+        if: always()
+        run: |
+          cd formal/dafny && rm -rf .qbuild-Goal && dafny translate js Goal.dfy --include-runtime --no-verify --allow-warnings -o .qbuild-Goal/pca_goal
+          { cat .qbuild-Goal/pca_goal.js; printf '\n// ---- exports (appended by formal/dafny/build-ext.sh) ----\nmodule.exports = { _dafny, %s };\n' "$(grep -oE '^module +[A-Za-z0-9_]+' Goal.dfy | awk '{print $2}' | paste -sd, - | sed 's/,/, /g')"; } > "$RUNNER_TEMP/pca_goal.js"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pca_goal.js
+          path: ${{ runner.temp }}/pca_goal.js
       - name: Glue contract
         working-directory: formal/dafny
         run: dafny verify GlueContract.dfy --verify-included-files --allow-warnings --verification-time-limit 120 --resource-limit 0
@@ -61,11 +75,13 @@ jobs:
         with:
           node-version: 24
       - name: Install
-        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-verified-core... --filter=@atlasauth/pca...
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-verified-core... --filter=@atlasauth/pca... --filter=@atlasauth/pca-goal...
       - name: Build
-        run: pnpm -r --filter=@atlasauth/pca-verified-core... --filter=@atlasauth/pca... run build
+        run: pnpm -r --filter=@atlasauth/pca-verified-core... --filter=@atlasauth/pca... --filter=@atlasauth/pca-goal^... run build
       - name: Differential tests
         run: pnpm --filter @atlasauth/pca-verified-core test
+      - name: Goal compiler tests (extracted code required; monotonicity, soundness, witness, card, liftLegacy, mutation sensitivity)
+        run: PCA_GOAL_REQUIRE=1 pnpm --filter @atlasauth/pca-goal test
       - name: Wiring scan
         run: |
           if [ -f scripts/check-verified-core.sh ]; then bash scripts/check-verified-core.sh --scan-only
@@ -110,7 +126,7 @@ jobs:
         run: |
           curl -fsSL -o "$RUNNER_TEMP/circom" https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
           chmod +x "$RUNNER_TEMP/circom"
-          CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
+          PCA_DEV_SETUP=1 CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
       - name: Test (PCA_VERIFIED_CORE=1)
         if: steps.present.outputs.yes == 'true'
         env:
@@ -140,5 +156,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - uses: pnpm/action-setup@v4 # goal-ci-check.sh installs the workspace and runs tsx through pnpm
       - name: Toolchain pin + all-target transcript equality + miscompile self-test
         run: bash formal/dafny/difftargets/ci-check.sh
+      - name: Goal compiler - all-target transcript equality (cs, go, java, py, js) + production bridge
+        run: bash formal/dafny/difftargets/goal-ci-check.sh

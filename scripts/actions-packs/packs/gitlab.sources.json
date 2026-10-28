@@ -1,0 +1,13 @@
+[
+  {
+    "id": "openapi-v2",
+    "repo": "gitlabhq/gitlabhq",
+    "ref": "d7b9a6176ab4e279465ba3ee09922cde2b74de47",
+    "path": "doc/api/openapi/openapi_v2.yaml",
+    "sha256": "8ebe1956275851c760c9dd2b689bf163815f4fcd2a6717887dd94f7ab001db57",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/gitlabhq/gitlabhq/blob/master/LICENSE",
+    "bytes": 2451966
+  }
+]

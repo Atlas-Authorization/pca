@@ -272,7 +272,7 @@ if (cmd === 'run') {
     // own process group, so a timeout / memory kill takes the compiler and the test binary down with the driver
     // ulimit -d: a hard per-process heap cap, so a runaway allocation fails (the oracle crashes == detected) instead of
     // exhausting the job's cgroup before the watchdog below can react.
-    const p = spawn('bash', ['-c', `ulimit -d ${Math.floor(MAX_RSS / 1024)}; exec nice -n 19 swift test --scratch-path "$0" --filter "\${SWIFTMUT_FILTER:-AtlasPCAVerifyTests}"`, path.join(dir, '.b')], { cwd: dir, env: { ...process.env, PCA_CONFORMANCE_ADV: advPath, SWIFTMUT_FILE: m.file }, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    const p = spawn('bash', ['-c', `ulimit -d ${Math.floor(MAX_RSS / 1024)}; exec nice -n 19 swift test --scratch-path "$0" --filter "\${SWIFTMUT_FILTER:-${m.file.includes('/AtlasPCASQLite/') ? 'AtlasPCASQLiteTests' : 'AtlasPCAVerifyTests'}}"`, path.join(dir, '.b')], { cwd: dir, env: { ...process.env, PCA_CONFORMANCE_ADV: advPath, SWIFTMUT_FILE: m.file }, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
     let out = '';
     const add = (d) => { if (out.length < 16 << 20) out += d; };
     p.stdout.on('data', add); p.stderr.on('data', add);

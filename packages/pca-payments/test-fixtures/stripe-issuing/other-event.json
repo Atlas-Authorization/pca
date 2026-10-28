@@ -1,0 +1,41 @@
+{
+  "id": "evt_1",
+  "object": "event",
+  "api_version": "2025-03-31.basil",
+  "created": 1800000000,
+  "type": "issuing_authorization.created",
+  "livemode": false,
+  "data": {
+    "object": {
+      "id": "iauth_1",
+      "object": "issuing.authorization",
+      "approved": false,
+      "amount": 0,
+      "currency": "usd",
+      "status": "pending",
+      "card": {
+        "id": "ic_card_1",
+        "object": "issuing.card",
+        "status": "active",
+        "type": "virtual"
+      },
+      "merchant_data": {
+        "category": "computer_software_stores",
+        "category_code": "5734",
+        "city": "SAN FRANCISCO",
+        "country": "US",
+        "name": "STRIPE",
+        "network_id": "1234567890",
+        "postal_code": "94103",
+        "state": "CA"
+      },
+      "pending_request": {
+        "amount": 400,
+        "currency": "usd",
+        "merchant_amount": 400,
+        "merchant_currency": "usd"
+      },
+      "metadata": {}
+    }
+  }
+}

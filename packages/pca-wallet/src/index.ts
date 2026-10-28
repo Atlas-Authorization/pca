@@ -23,3 +23,4 @@ export * from './channel';
 export * from './population';
 export * from './handlers';
 export * from './delivery';
+export * from './escalation-pricing';

@@ -10,18 +10,19 @@ import {
   HDR_VDS,
   HDR_VDS_PROOFS,
   PROOF_TYPE_INCLUSION,
-  TransparencyService,
+  
   VDS_RFC9162_SHA256,
   decode,
   decodeInclusionProof,
   encode,
-  registerStatement,
+  
   signStatement,
   statementLeaf,
   statementPayload,
   verifyReceipt,
   verifyStatement,
 } from './index';
+import { TransparencyService, registerStatement } from './testing';
 
 const AUD = 'ins_scitt_test';
 

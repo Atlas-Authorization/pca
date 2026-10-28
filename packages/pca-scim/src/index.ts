@@ -26,20 +26,26 @@
  * so this runs on Node, an edge runtime or inside any web framework.
  */
 
+import { hashCanonical } from '@atlasauth/pca';
 import {
   type AgentPassport,
   type PassportIdentity,
   type PassportRegistry,
   buildRegistry,
-  hashCanonical,
   issuePassport,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/attestation';
 
 // ---------------------------------------------------------------------------
 // SCIM schema URNs
 // ---------------------------------------------------------------------------
 
-/** The custom SCIM 2.0 resource-schema urn for a PCA agent (its primary schema). */
+/**
+ * The SCIM 2.0 resource-schema urn for a PCA agent (its primary schema).
+ *
+ * This is a PCA-DEFINED extension schema. It is NOT registered with IANA or the IETF, even though the name sits under
+ * `urn:ietf:params:scim:schemas:`; it follows the in-progress SCIM `/Agents` direction and may change when a standard
+ * is published. A directory that validates schema URNs against the IANA registry will not know it.
+ */
 export const AGENT_SCHEMA_URN = 'urn:ietf:params:scim:schemas:atlas:2.0:Agent';
 /** SCIM 2.0 ListResponse message schema. */
 export const LIST_RESPONSE_SCHEMA = 'urn:ietf:params:scim:api:messages:2.0:ListResponse';
@@ -264,6 +270,10 @@ function readProjection(body: Record<string, unknown>): ScimProjection {
 export function scimToProvisioningRequest(value: unknown): ProvisioningRequest {
   const body = asRecord(value);
   if (!body) throw new ScimValueError('invalidSyntax', 'request body must be a JSON object');
+  // RFC 7644 3.3: `schemas` names what the body is. A body that declares schemas without the Agent one (a User or Group resource, say) is not an Agent.
+  if (body.schemas !== undefined && !(Array.isArray(body.schemas) && body.schemas.includes(AGENT_SCHEMA_URN))) {
+    throw new ScimValueError('invalidValue', `schemas must include ${AGENT_SCHEMA_URN}`);
+  }
   return { identity: readIdentity(body), projection: readProjection(body) };
 }
 
@@ -361,6 +371,7 @@ interface EqFilter {
 
 /** Parse the SCIM `attr eq "value"` / `attr eq true|false` subset. Throws {@link ScimValueError}. */
 export function parseFilter(filter: string): EqFilter {
+  if (typeof filter !== 'string') throw new ScimValueError('invalidFilter', 'filter must be a string');
   const m = /^\s*(\w+)\s+eq\s+(?:"((?:[^"\\]|\\.)*)"|(true|false))\s*$/i.exec(filter);
   if (!m) throw new ScimValueError('invalidFilter', `unsupported filter (only \`attr eq "value"\` is supported): ${filter}`);
   const attr = m[1] as string;
@@ -509,6 +520,14 @@ export interface ScimHandlerOptions {
   baseUrl?: string;
   /** Clock for `meta` timestamps. Default `Date.now`. */
   now?: () => number;
+  /**
+   * REQUIRED (unless `allowUnauthenticated` is set): authenticate and authorize the request (bearer token, mTLS
+   * identity, ...). Must return exactly `true` to admit it; `false`, a throw, a Promise or any other value yields 401.
+   * Synchronous: resolve async checks in your framework layer first and close over the result.
+   */
+  authenticate?: (req: ScimRequest) => boolean;
+  /** Explicit opt-out for tests and fully network-isolated deployments. Never the documented recommendation. */
+  allowUnauthenticated?: boolean;
 }
 
 const SCIM_CONTENT_TYPE = 'application/scim+json';
@@ -539,6 +558,10 @@ function parseIntParam(v: string | undefined, fallback: number): number {
  * by translating that framework's req/res to/from {@link ScimRequest}/{@link ScimResponse}.
  */
 export function scimHandler(store: AgentStore, options: ScimHandlerOptions = {}): (req: ScimRequest) => ScimResponse {
+  const authenticate = options.authenticate;
+  if (typeof authenticate !== 'function' && options.allowUnauthenticated !== true) {
+    throw new TypeError('scimHandler: `authenticate` is required (or pass allowUnauthenticated: true explicitly)');
+  }
   const metaInput = (): MetaInput => {
     const input: MetaInput = {};
     if (options.baseUrl !== undefined) input.baseUrl = options.baseUrl;
@@ -549,7 +572,7 @@ export function scimHandler(store: AgentStore, options: ScimHandlerOptions = {})
   const handleList = (query: Record<string, string | undefined> | undefined): ScimResponse => {
     let items = store.all().map((s) => s.resource);
     const filter = query?.filter;
-    if (filter !== undefined && filter !== '') {
+    if (filter !== undefined && (filter as unknown) !== '') {
       let parsed: EqFilter;
       try {
         parsed = parseFilter(filter);
@@ -638,6 +661,15 @@ export function scimHandler(store: AgentStore, options: ScimHandlerOptions = {})
   };
 
   return (req: ScimRequest): ScimResponse => {
+    if (typeof authenticate === 'function') {
+      let ok = false;
+      try {
+        ok = authenticate(req) === true;
+      } catch {
+        ok = false;
+      }
+      if (!ok) return { ...errorResponse(401, 'authentication required'), headers: { 'content-type': SCIM_CONTENT_TYPE, 'www-authenticate': 'Bearer' } };
+    }
     switch (req.method) {
       case 'GET':
         return req.id === undefined ? handleList(req.query) : handleGetOne(req.id);
@@ -796,5 +828,5 @@ export function pushToOkta(agent: ScimAgent, target: PushTarget): Promise<PushRe
 // Re-exports from the PCA core (so a provisioner only needs this package)
 // ---------------------------------------------------------------------------
 
-export { issuePassport, passportFingerprint, buildRegistry } from '@atlasauth/pca';
-export type { AgentPassport, PassportIdentity, PassportRegistry } from '@atlasauth/pca';
+export { issuePassport, passportFingerprint, buildRegistry } from '@atlasauth/pca/ext/attestation';
+export type { AgentPassport, PassportIdentity, PassportRegistry } from '@atlasauth/pca/ext/attestation';

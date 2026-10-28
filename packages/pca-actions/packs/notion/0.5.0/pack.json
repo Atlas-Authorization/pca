@@ -1,0 +1,61 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "notion",
+  "version": "0.5.0",
+  "ns": [
+    "notion"
+  ],
+  "count": 31,
+  "root": "w0cgrCx3wbRIJC3CenDrAzHkMrO69FVdZAqEliLcyU4",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 22,
+    "unreviewed": 9
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Hand written from the public Notion API reference (operation names only). Notion publishes no redistributable machine-readable specification we rely on, so none is copied.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/notion.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "8630a65387f7b6663e89a26cdca6044205fe98a2f8019fa8ad57c5fd198ee07a"
+  },
+  "shards": [
+    {
+      "file": "defs/000-notion_block.jsonl",
+      "count": 31,
+      "bytes": 15777,
+      "sha256": "937378caf211b54e6bf3e051f699c2c1025f525861c9ed0150e0a9e2c21166a1",
+      "first": "notion.block.append_children",
+      "last": "notion.workspace.export"
+    }
+  ],
+  "stats": {
+    "total": 31,
+    "authored": 22,
+    "unreviewed": 9,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "update": 7,
+      "delete": 3,
+      "read": 10,
+      "create": 5,
+      "privilege": 6,
+      "send": 2,
+      "publish": 1,
+      "export": 1
+    }
+  }
+}

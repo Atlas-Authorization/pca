@@ -2,9 +2,20 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  sha256, DEFAULT_RISK_POLICY, type PlanNode, attenuate, b64u, buildPCActn, canonicalBytes, encodeKey, frostTrustedDealerKeygen, generateKeyPair,
-  mintGrant, mlDsa65Keygen, thresholdMessage,
+  sha256,
+  DEFAULT_RISK_POLICY,
+  type PlanNode,
+  attenuate,
+  b64u,
+  buildPCActn,
+  canonicalBytes,
+  encodeKey,
+  generateKeyPair,
+  mintGrant,
+  mlDsa65Keygen,
+  thresholdMessage,
 } from '@atlasauth/pca';
+import { frostTrustedDealerKeygen } from '@atlasauth/pca/ext/frost';
 import {
   MAX_GROUP_SIZE, MAX_PQ_SIGNER_ENTRIES, HYBRID_ARTIFACT_VERSION, createHybridThresholdVerifier, foldHybridStepUp, hybridThresholdSign, issueGroupDescriptor,
   signerSetCommitment, verifyGroupDescriptor, verifyHybridStepUp, verifyHybridThreshold,
@@ -186,7 +197,9 @@ describe('verifyHybridThreshold: precise verdicts', () => {
   it('frost-side reasons, in precedence order', () => {
     for (const t of [0, -1, 1.5, NaN]) expect(V(art, { t })).toMatchObject({ ok: false, frost: false, reason: 't must be a positive integer' });
     expect(V(art, { groupKey: 'nope' })).toMatchObject({ ok: false, frost: false, reason: 'trusted FROST group key is not a canonical b64u(32) point' });
-    for (const bad of [undefined, null, 5, art2((a) => { a.frost = null; }), art2((a) => { a.frost = 5; }), art2((a) => { a.frost.alg = 'x'; })]) {
+    // a non-object artifact carries no version, which is refused before the FROST part is read
+    for (const bad of [undefined, null, 5]) expect(V(bad)).toMatchObject({ ok: false, frost: false, reason: 'artifact version missing (pre-0.5 format is refused)' });
+    for (const bad of [art2((a) => { a.frost = null; }), art2((a) => { a.frost = 5; }), art2((a) => { a.frost.alg = 'x'; })]) {
       expect(V(bad)).toMatchObject({ ok: false, frost: false, reason: 'malformed or missing FROST part' });
     }
     expect(V(art, { groupDescriptor: null })).toMatchObject({ ok: false, frost: false, reason: 'no signed group descriptor: the threshold is unattested' });

@@ -56,6 +56,13 @@ function errText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Replace every occurrence of a secret in `text` so an error message can never carry one. */
+function redact(text: string, secrets: readonly (string | undefined)[]): string {
+  let out = text;
+  for (const s of secrets) if (s !== undefined && s.length > 0) out = out.split(s).join('[redacted]');
+  return out;
+}
+
 /** Parse an OAuth token-endpoint JSON body. Fails closed: a missing/empty `access_token` is a hard error. */
 function parseTokenResponse(body: unknown, provider: string): TokenResponse {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
@@ -101,6 +108,8 @@ export async function refreshConnection(args: {
   defaultTokenLifetimeMs: number;
 }): Promise<Pick<StoredConnection, 'accessToken' | 'refreshToken' | 'expiresAt' | 'scopes'>> {
   const provider = args.connection.provider;
+  // Everything the vault holds that must never appear in an error or a log line.
+  const secrets = [args.refreshToken, args.connection.accessToken, args.config?.clientSecret, ...Object.values(args.config?.extraParams ?? {})];
   if (args.config === undefined) throw new RefreshFailedError(provider, 'no provider token-endpoint config');
   if (args.fetch === undefined) throw new RefreshFailedError(provider, 'no fetch transport configured');
 
@@ -123,12 +132,12 @@ export async function refreshConnection(args: {
       body: formEncode(params),
     });
   } catch (e) {
-    throw new RefreshFailedError(provider, `transport error: ${errText(e)}`);
+    throw new RefreshFailedError(provider, `transport error: ${redact(errText(e), secrets)}`);
   }
   if (!res.ok) {
     let detail = '';
     try {
-      detail = (await res.text()).slice(0, 256);
+      detail = redact((await res.text()).slice(0, 256), secrets);
     } catch {
       detail = '<unreadable body>';
     }
@@ -138,8 +147,9 @@ export async function refreshConnection(args: {
   let json: unknown;
   try {
     json = await res.json();
-  } catch (e) {
-    throw new RefreshFailedError(provider, `unparseable JSON body: ${errText(e)}`);
+  } catch {
+    // The parser's message quotes the start of the body, which may hold a token: say nothing of it.
+    throw new RefreshFailedError(provider, 'unparseable JSON body');
   }
   const parsed = parseTokenResponse(json, provider);
 

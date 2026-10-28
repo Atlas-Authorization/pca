@@ -1,3 +1,4 @@
+import { setAssuranceLabel } from './assurance';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 backend — PUF (Physical Unclonable Function) UNCLONABLE attestation root.
@@ -193,12 +194,24 @@ export function fuzzyReproduce(responseBits: Uint8Array, helper: FuzzyExtractorH
   if (helper.n !== n) throw new RangeError('fuzzyReproduce: helper.n inconsistent with rep*messageBits');
   if (responseBits.length !== n) throw new RangeError(`fuzzyReproduce: response length ${responseBits.length} != ${n}`);
   assertBits(responseBits, 'fuzzyReproduce');
-  const sketchBits = unpackBits(unb64u(helper.sketch), n);
+  // A truncated or missing sketch/salt must not silently decode to zero bits (that would be a wrong-but-quiet key).
+  if (typeof helper.sketch !== 'string' || typeof helper.salt !== 'string') throw new RangeError('fuzzyReproduce: helper data missing sketch or salt');
+  let packedSketch: Uint8Array;
+  let salt: Uint8Array;
+  try {
+    packedSketch = unb64u(helper.sketch);
+    salt = unb64u(helper.salt);
+  } catch {
+    throw new RangeError('fuzzyReproduce: helper sketch or salt is not canonical base64url');
+  }
+  if (packedSketch.length !== Math.ceil(n / 8)) throw new RangeError('fuzzyReproduce: helper sketch has the wrong length');
+  if (salt.length !== 32) throw new RangeError('fuzzyReproduce: helper salt has the wrong length');
+  const sketchBits = unpackBits(packedSketch, n);
   const corrupted = xorBits(responseBits, sketchBits); // W' ⊕ s = C ⊕ e
   const mHat = repDecode(corrupted, helper.rep);
   const cHat = repEncode(mHat, helper.rep);
   const wRec = xorBits(cHat, sketchBits); // C_hat ⊕ s = recovered W (== enrollment W within the bound)
-  return extractKey(wRec, unb64u(helper.salt));
+  return extractKey(wRec, salt);
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
@@ -505,6 +518,8 @@ export interface PufEnrollment {
   helper: FuzzyExtractorHelper;
   /** `hashCanonical(helper)` — binds the helper so a swapped helper is detected (fail-closed). */
   helperCommitment: string;
+  /** Optional end of the enrollment's validity (epoch ms). Verifier-side registry data; a statement checked at or after it is refused. */
+  notAfter?: number;
 }
 
 /** A signed PUF attestation statement. Signed by the PUF-DERIVED key; the verifier checks it under the enrolled public key. */
@@ -603,18 +618,28 @@ export function createPufAttestor(provider: PufProvider, enrollment: PufEnrollme
 export interface PufEnrollmentRegistry {
   register(enrollment: PufEnrollment): void;
   lookup(providerId: string): PufEnrollment | undefined;
+  /** Revoke a provider id: `isRevoked` turns true and `lookup` returns nothing. Re-registering does NOT un-revoke. */
+  revoke(providerId: string): void;
+  isRevoked(providerId: string): boolean;
 }
 
 /** An in-memory PUF enrollment registry (later duplicates for an id overwrite earlier ones). */
 export function createPufEnrollmentRegistry(enrollments: PufEnrollment[] = []): PufEnrollmentRegistry {
   const byId = new Map<string, PufEnrollment>();
+  const revoked = new Set<string>();
   for (const e of Array.isArray(enrollments) ? enrollments : []) if (e && typeof e.providerId === 'string') byId.set(e.providerId, e);
   return {
     register(e) {
       if (e && typeof e.providerId === 'string') byId.set(e.providerId, e);
     },
     lookup(id) {
-      return byId.get(id);
+      return revoked.has(id) ? undefined : byId.get(id);
+    },
+    revoke(id) {
+      revoked.add(id);
+    },
+    isRevoked(id) {
+      return revoked.has(id);
     },
   };
 }
@@ -636,6 +661,8 @@ export interface PufVerifierOptions {
   policy: PufPolicy;
   /** Require the PUF-derived key to carry a PQ suite (default false). When set, an ed25519 PUF key is denied. */
   requirePq?: boolean;
+  /** Revocation check by provider id (e.g. `registry.isRevoked`). A revoked device is refused with its own reason. */
+  isRevoked?: (providerId: string) => boolean | Promise<boolean>;
   /** EVIDENCE SEAM: produce the signed PUF statement for an action. If omitted, the verifier fails closed. */
   resolveEvidence?: (
     document: AttestationDocument,
@@ -654,7 +681,12 @@ export interface PufVerifierOptions {
  *   5. applies the acceptance policy and returns the measured identity (`weights_measured: false`).
  * Fails CLOSED with a specific reason on any mismatch or error.
  */
+/** Assurance label (0.5): `software` (a PUF provider can be simulated in software, so this root never claims hardware). See `assurance.ts`. */
 export function createPufVerifier(opts: PufVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createPufVerifierUnlabelled(opts), { level: 'software', vendor: 'puf' });
+}
+
+function createPufVerifierUnlabelled(opts: PufVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts?.policy || !Array.isArray(opts.policy.measurements) || opts.policy.measurements.length === 0) {
@@ -677,8 +709,12 @@ export function createPufVerifier(opts: PufVerifierOptions): HardwareAttestation
         const st = await opts.resolveEvidence(input.document, input.ctx);
         if (!st || typeof st !== 'object' || typeof st.provider_id !== 'string' || typeof st.alg !== 'string') return fail('no PUF attestation statement for this action');
 
+        // revocation first: a revoked device must say so, not look merely unknown
+        if (opts.isRevoked && (await opts.isRevoked(st.provider_id))) return fail(`PUF enrollment for provider '${st.provider_id}' is revoked`);
         const enr = await opts.resolveEnrollment(st.provider_id, input.document, input.ctx);
         if (!enr) return fail(`no PUF enrollment registered for provider '${st.provider_id}'`);
+
+        if (enr.notAfter !== undefined && !(input.nowMs < enr.notAfter)) return fail('PUF enrollment has expired');
 
         // (1) helper integrity
         if (typeof enr.helperCommitment !== 'string' || enr.helperCommitment !== hashCanonical(enr.helper)) {

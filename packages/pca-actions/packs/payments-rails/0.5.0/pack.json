@@ -1,0 +1,71 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "payments-rails",
+  "version": "0.5.0",
+  "ns": [
+    "ach",
+    "adyen",
+    "cardnet",
+    "faster_payments",
+    "paypal",
+    "pix",
+    "rtp",
+    "sepa",
+    "swift",
+    "upi",
+    "wire"
+  ],
+  "count": 92,
+  "root": "NJDUyBmSur3KrjDp2l9mZPr89Z67Hdh90Jqv1d0FXVs",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 92,
+    "unreviewed": 0
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Written in-house from public standards facts (NACHA operating rules overview, EPC SEPA scheme names, ISO 20022 message families, card-network dispute concepts) and general payment-processor concepts; no third-party text or schema is carried.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/payments-rails.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "c56982aae9e12fa01bc3d2707c9020af106b36fa7e70fee287e9b52fa0e0ae95"
+  },
+  "shards": [
+    {
+      "file": "defs/000-ach_add_beneficiary.jsonl",
+      "count": 92,
+      "bytes": 71261,
+      "sha256": "aab935ba52ea929774fc506c0b103622be7e978eac0f44eb4b1810d031671aa2",
+      "first": "ach.add_beneficiary",
+      "last": "wire.set_standing_instruction"
+    }
+  ],
+  "stats": {
+    "total": 92,
+    "authored": 92,
+    "unreviewed": 0,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "create": 15,
+      "privilege": 8,
+      "delete": 21,
+      "update": 12,
+      "pay": 33,
+      "read": 22,
+      "provision": 2,
+      "sign": 2
+    }
+  }
+}

@@ -168,8 +168,7 @@ describe('ABE core: AEAD integrity (tamper)', () => {
 
   it('a tampered KEM header (AAD) fails even before the payload', () => {
     const { good, ct } = fresh();
-    if (ct.kem.kind !== 'leaf') throw new Error('expected leaf');
-    const tampered: AbeCiphertext = { ...ct, kem: { ...ct.kem, cp: flip(ct.kem.cp) } };
+    const tampered: AbeCiphertext = { ...ct, rows: [[flip(ct.rows[0]![0]), ct.rows[0]![1], ct.rows[0]![2]]] };
     expect(decrypt(good, tampered)).toBeNull();
   });
 });
@@ -189,7 +188,7 @@ describe('ABE core: malformed input is rejected (fail-closed)', () => {
     expect(parseCiphertext(null)).toBeNull();
     expect(parseCiphertext({})).toBeNull();
     expect(parseCiphertext({ v: 1, alg: 'nope' })).toBeNull();
-    expect(parseCiphertext({ v: 1, alg: 'bsw07-cpabe-bls12381-type3/lsss/aes-256-gcm', salt: '!', iv: 'a', ct: 'a', tag: 'a', kem: {} })).toBeNull();
+    expect(parseCiphertext({ v: 2, alg: 'fame-cpabe-bls12381-type3/aes-256-gcm', salt: '!', iv: 'a', ct: 'a', tag: 'a', tree: {} })).toBeNull();
   });
 
   it('decrypt returns null (never throws) on garbage ciphertext', () => {

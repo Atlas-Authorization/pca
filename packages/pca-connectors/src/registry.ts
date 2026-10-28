@@ -4,17 +4,29 @@
  * is seeded with the built-in catalog; callers who want isolation build their own with {@link createDefaultRegistry}.
  */
 
-import { type ProviderManifest, UnknownProviderError, assertManifest } from './manifest';
+import { ConnectorError, type ProviderManifest, UnknownProviderError, assertManifest, manifestDigest } from './manifest';
+import { hashCanonical } from '@atlasauth/pca';
 import { BUILTIN_MANIFESTS } from './providers';
 
 /** A mutable collection of provider manifests, keyed by id. */
 export class ProviderRegistry {
   private readonly byId = new Map<string, ProviderManifest>();
 
-  /** Validate and register (or replace) a manifest. Throws `ManifestValidationError` on a malformed input. */
-  register(manifest: ProviderManifest | unknown): ProviderManifest {
+  /**
+   * Validate and register a manifest. Throws `ManifestValidationError` on a malformed input, and refuses to replace a
+   * provider that is already registered: silently swapping the manifest of `google` would send its tokens to a different
+   * endpoint. Pass `replace: true` to do it on purpose; pass `expectedDigest` (see `manifestDigest`) to accept only
+   * the manifest you reviewed.
+   */
+  register(manifest: ProviderManifest | unknown, opts: { replace?: boolean; expectedDigest?: string } = {}): ProviderManifest {
     const valid = assertManifest(manifest);
-    this.byId.set(valid.id, valid);
+    if (opts.expectedDigest !== undefined && manifestDigest(valid) !== opts.expectedDigest) {
+      throw new ConnectorError(`manifest '${valid.id}' does not match the pinned digest`);
+    }
+    if (this.byId.has(valid.id) && opts.replace !== true) {
+      throw new ConnectorError(`provider '${valid.id}' is already registered; pass { replace: true } to replace it deliberately`);
+    }
+    this.byId.set(valid.id, Object.freeze(valid));
     return valid;
   }
 
@@ -57,8 +69,13 @@ export function createDefaultRegistry(): ProviderRegistry {
 export const defaultRegistry: ProviderRegistry = createDefaultRegistry();
 
 /** Validate and register a custom manifest onto the {@link defaultRegistry}. */
-export function registerProvider(manifest: ProviderManifest | unknown): ProviderManifest {
-  return defaultRegistry.register(manifest);
+export function registerProvider(manifest: ProviderManifest | unknown, opts?: { replace?: boolean; expectedDigest?: string }): ProviderManifest {
+  return defaultRegistry.register(manifest, opts);
+}
+
+/** A digest of the whole registry (every manifest, by id). Pin it to detect any change to the catalog. */
+export function catalogDigest(registry: ProviderRegistry = defaultRegistry): string {
+  return hashCanonical(registry.list().map((m) => [m.id, manifestDigest(m)]));
 }
 
 /** The manifest for `id` in the {@link defaultRegistry}, or `undefined`. */

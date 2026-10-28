@@ -10,121 +10,76 @@ export * from './regex-cache';
 export * from './merkle';
 export * from './capability';
 export * from './pcactn';
+// The full verifier entry points (Intent Layer loaded); they shadow the extension-free `verifyPCActnCore` / `validateWireV2` above.
+export { verifyPCActnCore, validateWireV2 } from './pcactn-full';
 export * from './pcactn-cheap-claims';
 export * from './threshold';
-export * from './frost';
-export * from './frost-dkg';
-export * from './frost-net';
-export * from './frost-pq';
 export * from './predicates';
+export * from './decision';
+export * from './obligations'; // decision obligations: an unsupported obligation turns allow into deny (K8)
+export * from './policy-classes'; // the classes consulted for a decision and who said no (K8)
+export * from './missing-context'; // typed missing context and the stored-wins rule (K8)
+export * from './escalation';
+export * from './approval-render';
+export * from './caveat-lang';
+export * from './provenance-gate';
+export * from './detector-receipt';
 export * from './risk';
 export * from './envelope';
-export * from './intent-binding';
-// Intent Layer v2 wire batch W-B (conformance rules 16-18): world facts, offer sets, per-parameter provenance, label
-// receipts and flows, classifier verdicts, and their composition for the verifier pipeline.
-export * from './intent-artifacts';
-export * from './oracle-facts';
-export * from './offer-set';
-export * from './label-receipts';
-export * from './param-provenance';
-export * from './intent-classifier';
-export * from './intent-env';
-export * from './intent-layers';
-export * from './intent';
-export * from './action-schema';
-export * from './intent-acc';
-export * from './intent-session-caveat';
-export * from './intent-session';
-export * from './intent-revocation';
-export * from './intent-required';
-export * from './intent-v2';
-export * from './intent-map-commit';
-export * from './intent-history';
 export * from './policy-vm';
-export * from './ledger';
 export * from './revocation';
-export * from './beacons';
+export * from './action-scopes'; // scopes derived from the confirmed action (K6)
+export * from './pca-need'; // the additive `pca_need` challenge parameter (K6)
+export * from './pca-grant-details'; // the `pca_grant` RFC 9396 authorization-details type (K6)
+// workflow (DAG) and read-side authorization (K5); the strict-shape helpers they share stay internal
+export {
+  WORKFLOW_DOMAIN, WF_RECEIPT_DOMAIN, WORKFLOW_LIMITS, admitStep, bindPromises, planRootAuthorized, signWorkflow, signStepReceipt, wfOutput, workflowDigest, receiptRef as wfReceiptRef,
+  validWorkflowBody, dagError, workflowCommitmentError, workflowReceiptError, valueDigest as wfValueDigest,
+} from './workflow';
+export type { K5Decision, SignedWorkflow, WorkflowBody, WfStep, WfEdge, WfReceipt, WfOutput, WfRequest, WfResult, AdmitInput } from './workflow';
+export {
+  READ_GRANT_DOMAIN, READ_RECEIPT_DOMAIN, redactRead, checkSink, readChainLabels, readGrantDigest, readReceiptRef, signReadGrant, signReadReceipt, validReadGrantBody,
+} from './readside';
+export {
+  memoryVault, redactReadWithVault, detokenize, signAggregateGrant, aggregateRead, emptyAggregateState, aggregateGrantDigest, validAggregateGrantBody, AGGREGATE_DOMAIN,
+} from './read-vault';
+export type { VaultEntry, VaultStore, DetokenizeInput, DetokenizeResult, AggregateRule, AggregateGrantBody, SignedAggregateGrant, AggregateState, AggregateInput, AggregateResult } from './read-vault';
+export type { ReadGrantBody, SignedReadGrant, ReadReceipt, ReadField, ReadInput, ReadResult, SinkInput } from './readside';
+export * from './fresh-at';// consistency tokens (`fresh_at`): the PCActn member + the verifier check
 export * from './replay'; // ReplayStore / CounterStore contract + guardPCActnReplay + reference in-memory store
-export * from './attestation';
-export * from './hardware-sevsnp';
-// Additional pluggable attestation roots for the multi-root N-of-M policy (see './attestation'). Namespaced
-// so each root's purpose-named helpers (e.g. the per-root ECDSA-P256 key wrappers and `toHex`) compose
-// without colliding with one another or with the flat SEV-SNP exports. HONEST PQ STATUS per root:
-//   - attestIntelTdx  — Intel TDX/DCAP quote parsing + offline verification primitives. CLASSICAL (ECDSA-P256).
-//   - attestPqSoftware — software/HSM root. POST-QUANTUM (ML-DSA / SLH-DSA, optional hybrid).
-//   - attestPuf       — PUF unclonable root. Unclonability is CLASSICAL; the derived key MAY carry a PQ suite.
-export * as attestIntelTdx from './attest-intel-tdx';
-export * as attestIntelCollateral from './attest-intel-collateral'; // Intel PCS collateral (TCB info, QE identity, CRLs) vs the genuine TDX quote
-//   - attestIntelDcap — the REAL Intel DCAP TDX quote as a first-class HardwareAttestationVerifier (quote + PCA binding,
-//     incl. Azure runtime-data binding checked against Intel's signature, + PCS collateral); joins the N-of-M policy. CLASSICAL.
-export * as attestIntelDcap from './attest-intel-dcap';
-//   - attestAmdSnp — the REAL AMD SEV-SNP report as a first-class HardwareAttestationVerifier with per-family ARK pins
-//     (Milan / Genoa / Turin, from AMD KDS) and Azure runtime-data binding checked against AMD's signature. CLASSICAL.
-export * as attestAmdSnp from './attest-amd-snp';
-//   - attestAzureMaa  — Azure-native MAA JWT root; covers BOTH SEV-SNP (sevsnpvm) and TDX (tdxvm) on
-//     Azure CVMs via the MAA token-signing chain. CLASSICAL (ES256 / RS256).
-export * as attestAzureMaa from './attest-azure-maa';
-//   - attestGcpConfidentialSpace — GCP-native Confidential Space attestation-token root; covers BOTH
-//     AMD SEV-SNP and Intel TDX on GCP CVMs via Google's attestation-service signing chain. CLASSICAL (RS256).
-export * as attestGcpConfidentialSpace from './attest-gcp-confidential-space';
-//   - attestNvidiaSpdm — NVIDIA GPU-CC root in the REAL wire format (SPDM transcript + X.509 device chain to the
-//     NVIDIA Device Identity CA, ECDSA P-384); validated on a genuine H100. CLASSICAL.
-export * as attestNvidiaSpdm from './attest-nvidia-spdm';
-//   - attestNvidiaRim — NVIDIA RIM golden measurements (signed XML, C14N via optional xml-crypto) + device-chain CRL
-//     revocation, wired into attestNvidiaSpdm through its `postVerify` hook. CLASSICAL.
-export * as attestNvidiaRim from './attest-nvidia-rim';
-export * as attestNvidiaOcsp from './attest-nvidia-ocsp';
-export * as attestPqSoftware from './attest-pq-software';
-export * as attestPuf from './attest-puf';
-export * from './optimistic';
-export * from './bond-settlement';
-export * from './zk';
-export * from './objective-binding';
-export * from './semantic-threshold';
-export * from './policy-debug';
-export * from './safety-certificate';
-export * from './catalog';
+export * from './catalog-risk';
 export * from './facade';
 
-// Frontier capabilities (docs/pca-frontier-research.md). Namespaced so their
-// APIs compose cleanly and don't collide (e.g. objectiveRisk.commitGoal vs
-// progress.commitGoal). Library-complete; server/wire integration is staged.
-export * as objectiveRisk from './objective-risk';
 export * as prohibitions from './prohibitions';
-export * as contracts from './contracts';
-export * as progress from './progress';
-export * as mesh from './mesh';
 export * as agentNative from './agent-native';
 export * as taint from './taint';
 
 export * from './adapters';
-export * from './policy-sim';
 export * from './approvals';
 export * from './approval-channels';
-export * from './immune';
 export * from './policy-templates';
-export * from './console';
-export * from './passport';
-export * from './dlp';
-export * from './reputation';
-export * from './compliance';
+export * from './forbid-certificate';
+export * from './policy-link';
 export * from './receipt';
-export * from './budget-forecast';
-export * from './session';
-export * from './nl';
-export * from './ha';
-export * from './kem';
 export * from './discovery';
-export * from './entropy';
-export * as pqThreshold from './pq-threshold';
-export * as attestAllowlist from './attest-allowlist';
-export * as attestMaaKeys from './attest-maa-keys';
-export * as attestMaaPins from './attest-maa-pins';
-export * as attestAllowlistAnchor from './attest-allowlist-anchor';
 // NOTE: './durable-state' is Node-only (node:fs) and is deliberately NOT re-exported here; import it via '@atlasauth/pca/durable-state'.
 // Resource-server verification (verdict + framework-neutral requirePCA guard). Lives HERE, not in any other product's SDK:
 // PCA stands alone; the framework middleware packages (pca-fetch/express/fastify/hono/next) depend only on this package.
 export * from './server/verify';
 export * from './server/require-pca';
+// The one authorization pipeline (requirePCA with every component required + binding to the executed operation).
+export * from './server/authorize';
+// One-call secure defaults for a resource server (grant list, replay store, revocation, single-step plan, catalog risk).
+export * from './server/protect';
+export * from './refusal-help';
+export * from './assurance';
+export * from './server/authorize-execution';
+// Operation records (execute at most once, recheck before an irreversible side effect, recovery) and the plan lifecycle.
+export * from './server/operations';
+export * from './server/plan-lifecycle';
+// Undo windows: reversible actions run now under a veto window; the durable undo ledger, tokens, receipts and the coordinator.
+export * from './undo';
+export * from './server/undo';
 export * from './config-snapshot';
-export * from './x509-validity';
+// Experimental extensions (FROST, attestation, ZK, optimistic, intent layer, ledger, research modules) are NOT exported here: import them from '@atlasauth/pca/ext/<name>'.
+export * from './chain-compact';
