@@ -1,7 +1,5 @@
 import { canonicalizeStrict, decodeB64uStrict } from './hash';
 import { validateShareSignatureWire, validateSignatureWire } from './pq';
-import { validateIntentWire } from './intent-binding';
-import { validateIntentSessionWire } from './intent-session';
 
 /**
  * PCActn wire format v2: the NORMATIVE structural + lexical rules a signed PCActn must satisfy BEFORE any
@@ -34,6 +32,8 @@ export const PCACTN_OPTIONAL_FIELDS = [
   'intent',
   // Intent Layer v2 (additive, SIGNED): the session member (see intent-session.ts, conformance rule 13).
   'intent_session',
+  // Consistency token (additive, SIGNED): the `fresh_at` member (see fresh-at.ts).
+  'fresh_at',
 ] as const;
 
 const KNOWN = new Set<string>([...PCACTN_REQUIRED_FIELDS, ...PCACTN_OPTIONAL_FIELDS]);
@@ -61,13 +61,26 @@ export const MAX_NONCE_LEN = 128;
  */
 const HOP_KEYS = new Set(['id', 'issuer', 'holder', 'body_digest', 'caveats', 'sig', 'parent', 'alg', 'pq_pk', 'pq_sig', 'holder_pq']);
 
+const NO_INTENT_EXT = (slot: string): string => `${slot} is an Intent Layer extension field and this verifier does not load the intent layer (use the root @atlasauth/pca entry, or import @atlasauth/pca/ext/intent and pass the extension)`;
+
+/**
+ * Validators for the optional Intent Layer slots. PCA Core does not load the intent layer (it is an extension,
+ * `@atlasauth/pca/ext/intent`): without a validator here, a PCActn that carries `intent` or `intent_session` is
+ * rejected at the wire check. The root `@atlasauth/pca` entry supplies both.
+ */
+export interface WireExtensions {
+  intent?: (v: unknown) => string | null;
+  intentSession?: (v: unknown) => string | null;
+  freshAt?: (v: unknown) => string | null;
+}
+
 /**
  * Validate the wire form. Returns `null` when well-formed, else a short reason. Never throws.
  * Does NOT judge semantic ranges (counter >= 0, proof index < size, chain depth <= 16, ver value): those are
  * their own checks. It judges: presence, JSON type, closed field sets, integer-ness, canonical base64url of
  * every fixed-length byte field, and that the whole body admits the strict canonical encoding.
  */
-export function validateWireV2(p: unknown): string | null {
+export function validateWireV2(p: unknown, ext?: WireExtensions): string | null {
   try {
     if (!isObj(p)) return 'PCActn is not an object';
     for (const k of Object.keys(p)) if (!KNOWN.has(k)) return `unknown field '${k}'`;
@@ -163,12 +176,19 @@ export function validateWireV2(p: unknown): string | null {
     if (p.tool_binding !== undefined && decodeB64uStrict(p.tool_binding, B32) === null) return "'tool_binding' is not canonical base64url (32 bytes)";
     if (p.progress_step !== undefined && !isObj(p.progress_step)) return "'progress_step' must be an object";
     if (p.intent !== undefined) {
-      const intentErr = validateIntentWire(p.intent);
+      if (ext?.intent === undefined) return NO_INTENT_EXT("'intent'");
+      const intentErr = ext.intent(p.intent);
       if (intentErr !== null) return intentErr;
     }
     if (p.intent_session !== undefined) {
-      const sessionErr = validateIntentSessionWire(p.intent_session);
+      if (ext?.intentSession === undefined) return NO_INTENT_EXT("'intent_session'");
+      const sessionErr = ext.intentSession(p.intent_session);
       if (sessionErr !== null) return sessionErr;
+    }
+    if (p.fresh_at !== undefined) {
+      if (ext?.freshAt === undefined) return "'fresh_at' is a consistency-token extension field and this verifier does not load it (use the root @atlasauth/pca entry)";
+      const faErr = ext.freshAt(p.fresh_at);
+      if (faErr !== null) return faErr;
     }
     if (p.prohibition_evidence !== undefined && !isObj(p.prohibition_evidence) && !Array.isArray(p.prohibition_evidence)) {
       return "'prohibition_evidence' must be an object or array";

@@ -10,7 +10,8 @@
     "pnpm": ">=9"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "scripts": {
     "build": "pnpm -r run build",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
+    "js-yaml": "^4.1.0",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   }

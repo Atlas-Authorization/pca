@@ -112,7 +112,11 @@ interface CertOpts {
   notBefore?: string;
   notAfter?: string;
   serial?: number;
+  /** Mark the certificate a CA (BasicConstraints + KeyUsage keyCertSign). */
+  ca?: boolean;
 }
+/** BasicConstraints CA:TRUE (critical) + KeyUsage keyCertSign|cRLSign: the B15 strict chain profile requires every issuer in an x5c chain to be a CA. */
+const CA_EXTENSIONS = Uint8Array.from(Buffer.from('a3233021300f0603551d130101ff040530030101ff300e0603551d0f0101ff040403020106', 'hex'));
 /** Mint a real X.509 DER certificate signed by `issuerPriv`. Returns the DER bytes. */
 function makeCert(o: CertOpts): Uint8Array {
   const alg = sigAlgId(o.issuerAlg);
@@ -124,6 +128,7 @@ function makeCert(o: CertOpts): Uint8Array {
     derSeq(derUtcTime(o.notBefore ?? '230101000000Z'), derUtcTime(o.notAfter ?? '350101000000Z')),
     name(o.subjectCn),
     o.subjectSpkiDer,
+    ...(o.ca ? [CA_EXTENSIONS] : []),
   );
   const sig = crypto.sign('sha256', Buffer.from(tbs), o.issuerPriv);
   return derSeq(tbs, alg, derBitString(new Uint8Array(sig)));
@@ -191,7 +196,7 @@ const EC_JWKS = ecJwk(EC, 'gcp-kid-ec');
 // An x5c-published RSA signing cert chained leaf←root (root pinned by SPKI).
 const CA = genRsa();
 const RSA_LEAF = genRsa();
-const CERT_ROOT = makeCert({ subjectSpkiDer: CA.spkiDer, subjectCn: 'gcp-attest-root', issuerCn: 'gcp-attest-root', issuerPriv: CA.priv, issuerAlg: 'rsa' });
+const CERT_ROOT = makeCert({ subjectSpkiDer: CA.spkiDer, subjectCn: 'gcp-attest-root', issuerCn: 'gcp-attest-root', issuerPriv: CA.priv, issuerAlg: 'rsa', ca: true });
 const CERT_LEAF = makeCert({ subjectSpkiDer: RSA_LEAF.spkiDer, subjectCn: 'gcp-attest-signer', issuerCn: 'gcp-attest-root', issuerPriv: CA.priv, issuerAlg: 'rsa' });
 const ROOT_PEM = new crypto.X509Certificate(Buffer.from(CERT_ROOT)).toString();
 const X5C_JWKS: GcpJwks = { keys: [{ kid: 'gcp-kid-x5c', kty: 'RSA', x5c: [b64(CERT_LEAF), b64(CERT_ROOT)] }] };

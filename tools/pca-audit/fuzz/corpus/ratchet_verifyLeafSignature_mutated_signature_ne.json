@@ -1,0 +1,30 @@
+{
+ "target": "ratchet verifyLeafSignature (mutated signature, never throws, never verifies)",
+ "seeds": [
+  {
+   "sig": {
+    "edSig": "OWLew28chml2SPY7Skno59CUchUdCHaSwUtteZoSt36rtWG7nUTjMxa1XdfydSH9TgF6OuLPDaI2IlM_VU8VDg",
+    "leafPubKey": "IH8PT1_ZEkA48lh4yC2yq7TWbKJJ_qmrTRLRW3GMAKY",
+    "merklePath": {
+     "index": 0,
+     "size": 8,
+     "path": [
+      {
+       "side": "R",
+       "hash": "Cfqmzv8Bw9txiH-_Z8Egd0OeL48D9usgF9jSiza3DhE"
+      },
+      {
+       "side": "R",
+       "hash": "DJq4lYZNoqlgOCGGFM2Df7hrwHSbQXxGAqIlMnqrG7A"
+      },
+      {
+       "side": "R",
+       "hash": "ibGWCzSHDbkK8eZeSYUDxBJ6ono5W3n-sUnLamFAfnc"
+      }
+     ]
+    },
+    "nullifier": "yibUi-6o2tUx44mNO1dZ43gbKGSaFXvu-1aB3Hq3OKE"
+   }
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+{ "private": true, "type": "module", "scripts": {
+  "vectors": "node --experimental-strip-types src/vectors.ts",
+  "vectors:check": "node --experimental-strip-types src/vectors.ts --check",
+  "test": "node --experimental-strip-types --test test/*.test.ts" } }

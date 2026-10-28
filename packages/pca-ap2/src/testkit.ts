@@ -83,6 +83,7 @@ export interface ScenarioOptions {
   amountMinor?: number;
   quantity?: number;
   unitPrice?: number;
+  /** Integer minor units (PCA terms are minor units of the mandate currency). */
   cumulativeCap?: number;
   perTransactionCap?: number;
   /** Attach a guardian + principal co-sign (needed for a charge above the auto-approve threshold). */
@@ -111,9 +112,9 @@ export function makeScenario(o: ScenarioOptions = {}): Scenario {
     agentPublic: pub(agentEd),
     merchants: [MERCHANT.id],
     currency: 'USD',
-    perTransactionCap: o.perTransactionCap ?? 500,
-    autoApproveThreshold: 50,
-    cumulativeCap: o.cumulativeCap ?? 1000,
+    perTransactionCap: o.perTransactionCap ?? 50_000,
+    autoApproveThreshold: 5_000,
+    cumulativeCap: o.cumulativeCap ?? 100_000,
     periodMs: 24 * 3_600_000,
     maxTransactionsPerPeriod: 5,
     now: NOW_MS,

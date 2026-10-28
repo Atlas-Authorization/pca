@@ -1,0 +1,607 @@
+File "map_commit_hiding.cv", line 32, characters 7-15:
+Warning: For booleans defined under no replication, the option cv_bit may be more appropriate than real_or_random (the default)
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... Done.
+Doing merge branches... No change.
+Proof of (one-session) secrecy of b failed:
+  at 25, bad usage(s) of b.
+Trying equivalence rom(H)... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Eliminated collisions between r_1 and r_1 Probability: 0.5 / |salt| * NL * NL
+Eliminated collisions between r_2 and r_2 Probability: 0.5 / |salt| * NL * NL
+Done.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on r_1 inside simplify... Done. Restarting simplify
+Eliminated collisions between leafin(?, r_1[ri_6], ?) and x1 Probability: qH * NL / |salt|
+(leafin(?, r_1[ri_6], ?) collides with a value independent of r_1[ri_6] with probability at most 1 / |salt|;
+ x1 does not depend on r_1[ri_6])
+Doing global dependency analysis on r_2 inside simplify... Done. Restarting simplify
+Eliminated collisions between leafin(?, r_2[ri_7], ?) and x1 Probability: qH * NL / |salt|
+(leafin(?, r_2[ri_7], ?) collides with a value independent of r_2[ri_7] with probability at most 1 / |salt|;
+ x1 does not depend on r_2[ri_7])
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... Done.
+Doing merge branches... Done.
+Proved one-session secrecy of b
+Proved secrecy of b
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     rs <-R salt;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(H(hk, x1))
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       r <-R salt;
+       v: lval <- (if b then w0 else w1);
+       return(H(hk, leafin(tC, r, v)))
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 2 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     rs <-R salt;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(H(hk, x1))
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       r <-R salt;
+       if b then
+         v: lval <- w0;
+         return(H(hk, leafin(tC, r, v)))
+       else
+         v: lval <- w1;
+         return(H(hk, leafin(tC, r, v)))
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on v (definition removed, all usages removed)
+  - Remove assignments on v (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+  {4}rs <-R salt;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(H(hk, x1))
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       r <-R salt;
+       if b then
+         return(H(hk, leafin(tC, r, w0)))
+       else
+         return(H(hk, leafin(tC, r, w1)))
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Remove random number generation at 4
+yields
+
+Game 4 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(H(hk, x1))
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       r <-R salt;
+       if b then
+         return(H(hk, leafin(tC, r, w0)))
+       else
+         return(H(hk, leafin(tC, r, w1)))
+     ))
+
+
+Applying move all binders
+  - Move random number generation r
+yields
+
+Game 5 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(H(hk, x1))
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r <-R salt;
+         return(H(hk, leafin(tC, r, w0)))
+       else
+         r <-R salt;
+         return(H(hk, leafin(tC, r, w1)))
+     ))
+
+
+Applying SA rename new without array accesses and remove assignments of findcond
+  - Rename variable r into r_2, r_1
+yields
+
+Game 6 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(H(hk, x1))
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         return(H(hk, leafin(tC, r_2, w0)))
+       else
+         r_1 <-R salt;
+         return(H(hk, leafin(tC, r_1, w1)))
+     ))
+
+
+Applying equivalence rom(H)
+  - Equivalence rom(H) with variables: hk -> hk_1
+yields
+
+Game 7 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return((x_O: hin <- x1; find [unique] u_8 = ri_8 <= qH suchthat defined(x_O[ri_8], r_3[ri_8]) && (x_O = x_O[ri_8]) then r_3[u_8] orfind u_7 = ri_7 <= NL suchthat defined(x_O_1[ri_7], r_4[ri_7]) && (x_O = x_O_1[ri_7]) then r_4[u_7] orfind u_6 = ri_6 <= NL suchthat defined(x_O_2[ri_6], r_5[ri_6]) && (x_O = x_O_2[ri_6]) then r_5[u_6] else r_3 <-R hout; r_3))
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         return((x_O_1: hin <- leafin(tC, r_2, w0); {67}find [unique] u_5 = ri_5 <= qH suchthat defined(x_O[ri_5], r_3[ri_5]) && (x_O_1 = x_O[ri_5]) then r_3[u_5] orfind u_4 = ri_4 <= NL suchthat defined(x_O_1[ri_4], r_4[ri_4]) && {80}(x_O_1 = x_O_1[ri_4]) then r_4[u_4] else r_4 <-R hout; r_4))
+       else
+         r_1 <-R salt;
+         return((x_O_2: hin <- leafin(tC, r_1, w1); {101}find [unique] u_2 = ri_2 <= qH suchthat defined(x_O[ri_2], r_3[ri_2]) && (x_O_2 = x_O[ri_2]) then r_3[u_2] orfind u = ri <= NL suchthat defined(x_O_2[ri], r_5[ri]) && {114}(x_O_2 = x_O_2[ri]) then r_5[u] else r_5 <-R hout; r_5))
+     ))
+
+
+Applying simplify (non-expanded game) [probability NL^2 / |salt|]
+  - Simplification pass
+    - Replaced (x_O_1 = x_O_1[ri_4]) with false at 80
+    - Remove branch 2 in find at 67
+    - Replaced (x_O_2 = x_O_2[ri]) with false at 114
+    - Remove branch 2 in find at 101
+yields
+
+Game 8 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return((x_O: hin <- x1; find [unique] u_8 = ri_8 <= qH suchthat defined(x_O[ri_8], r_3[ri_8]) && (x_O = x_O[ri_8]) then r_3[u_8] orfind u_7 = ri_7 <= NL suchthat defined(x_O_1[ri_7], r_4[ri_7]) && (x_O = x_O_1[ri_7]) then r_4[u_7] orfind u_6 = ri_6 <= NL suchthat defined(x_O_2[ri_6], r_5[ri_6]) && (x_O = x_O_2[ri_6]) then r_5[u_6] else r_3 <-R hout; r_3))
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         return((x_O_1: hin <- leafin(tC, r_2, w0); find [unique] u_5 = ri_5 <= qH suchthat defined(x_O[ri_5], r_3[ri_5]) && (x_O_1 = x_O[ri_5]) then r_3[u_5] else r_4 <-R hout; r_4))
+       else
+         r_1 <-R salt;
+         return((x_O_2: hin <- leafin(tC, r_1, w1); find [unique] u_2 = ri_2 <= qH suchthat defined(x_O[ri_2], r_3[ri_2]) && (x_O_2 = x_O[ri_2]) then r_3[u_2] else r_5 <-R hout; r_5))
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 9 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- x1;
+       find [unique] u_8 = ri_8 <= qH suchthat defined(x_O[ri_8], r_3[ri_8]) && (x_O = x_O[ri_8]) then
+         return(r_3[u_8])
+       orfind u_7 = ri_7 <= NL suchthat defined(x_O_1[ri_7], r_4[ri_7]) && (x_O = x_O_1[ri_7]) then
+         return(r_4[u_7])
+       orfind u_6 = ri_6 <= NL suchthat defined(x_O_2[ri_6], r_5[ri_6]) && (x_O = x_O_2[ri_6]) then
+         return(r_5[u_6])
+       else
+         r_3 <-R hout;
+         return(r_3)
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         x_O_1: hin <- leafin(tC, r_2, w0);
+         find [unique] u_5 = ri_5 <= qH suchthat defined(x_O[ri_5], r_3[ri_5]) && (x_O_1 = x_O[ri_5]) then
+           return(r_3[u_5])
+         else
+           r_4 <-R hout;
+           return(r_4)
+       else
+         r_1 <-R salt;
+         x_O_2: hin <- leafin(tC, r_1, w1);
+         find [unique] u_2 = ri_2 <= qH suchthat defined(x_O[ri_2], r_3[ri_2]) && (x_O_2 = x_O[ri_2]) then
+           return(r_3[u_2])
+         else
+           r_5 <-R hout;
+           return(r_5)
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on x_O (definition point kept, all usages removed)
+yields
+
+Game 10 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+       find [unique] u_8 = ri_8 <= qH suchthat defined(x1[ri_8], x_O[ri_8], r_3[ri_8]) && (x1 = x1[ri_8]) then
+         return(r_3[u_8])
+       orfind u_7 = ri_7 <= NL suchthat defined(x_O_1[ri_7], r_4[ri_7]) && (x1 = x_O_1[ri_7]) then
+         return(r_4[u_7])
+       orfind u_6 = ri_6 <= NL suchthat defined(x_O_2[ri_6], r_5[ri_6]) && (x1 = x_O_2[ri_6]) then
+         return(r_5[u_6])
+       else
+         r_3 <-R hout;
+         return(r_3)
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         x_O_1: hin <- leafin(tC, r_2, w0);
+         find [unique] u_5 = ri_5 <= qH suchthat defined(x1[ri_5], x_O[ri_5], r_3[ri_5]) && (x_O_1 = x1[ri_5]) then
+           return(r_3[u_5])
+         else
+           r_4 <-R hout;
+           return(r_4)
+       else
+         r_1 <-R salt;
+         x_O_2: hin <- leafin(tC, r_1, w1);
+         find [unique] u_2 = ri_2 <= qH suchthat defined(x1[ri_2], x_O[ri_2], r_3[ri_2]) && (x_O_2 = x1[ri_2]) then
+           return(r_3[u_2])
+         else
+           r_5 <-R hout;
+           return(r_5)
+     ))
+
+
+Applying simplify [probability qH * NL / |salt|]
+  - Global dependency analysis on r_1
+yields
+
+Game 11 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+       find [unique] u_8 = ri_8 <= qH suchthat defined(x1[ri_8], x_O[ri_8], r_3[ri_8]) && (x1 = x1[ri_8]) then
+         return(r_3[u_8])
+       orfind u_7 = ri_7 <= NL suchthat defined(x_O_1[ri_7], r_4[ri_7]) && (x1 = x_O_1[ri_7]) then
+         return(r_4[u_7])
+       else
+         r_3 <-R hout;
+         return(r_3)
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         x_O_1: hin <- leafin(tC, r_2, w0);
+         find [unique] u_5 = ri_5 <= qH suchthat defined(x1[ri_5], x_O[ri_5], r_3[ri_5]) && (x_O_1 = x1[ri_5]) then
+           return(r_3[u_5])
+         else
+           r_4 <-R hout;
+           return(r_4)
+       else
+         r_1 <-R salt;
+         x_O_2: hin <- leafin(tC, r_1, w1);
+         find [unique] 
+         else
+           r_5 <-R hout;
+           return(r_5)
+     ))
+
+
+Applying simplify [probability qH * NL / |salt|]
+  - Global dependency analysis on r_2
+yields
+
+Game 12 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+ {10}  find [unique] u_8 = ri_8 <= qH suchthat defined(x1[ri_8], x_O[ri_8], r_3[ri_8]) && (x1 = x1[ri_8]) then
+         return(r_3[u_8])
+       else
+         r_3 <-R hout;
+         return(r_3)
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         x_O_1: hin <- leafin(tC, r_2, w0);
+ {49}    find [unique] 
+         else
+           r_4 <-R hout;
+           return(r_4)
+       else
+         r_1 <-R salt;
+         x_O_2: hin <- leafin(tC, r_1, w1);
+ {64}    find [unique] 
+         else
+           r_5 <-R hout;
+           return(r_5)
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Find at 64 removed (else branch kept if any)
+    - Find at 49 removed (else branch kept if any)
+    - Replaced defined condition x1[ri_8], x_O[ri_8], r_3[ri_8] with r_3[ri_8], x1[ri_8] in find at 10
+yields
+
+Game 13 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_3[ri_8], x1[ri_8]) && (x1 = x1[ri_8]) then
+         return(r_3[u_8])
+       else
+         r_3 <-R hout;
+         return(r_3)
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         x_O_1: hin <- leafin(tC, r_2, w0);
+         r_4 <-R hout;
+         return(r_4)
+       else
+         r_1 <-R salt;
+         x_O_2: hin <- leafin(tC, r_1, w1);
+         r_5 <-R hout;
+         return(r_5)
+     ))
+
+
+Applying move all binders
+  - Move assignment to x_O
+yields
+
+Game 14 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_3[ri_8], x1[ri_8]) && (x1 = x1[ri_8]) then
+         return(r_3[u_8])
+       else
+         r_3 <-R hout;
+         return(r_3)
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       if b then
+         r_2 <-R salt;
+         x_O_1: hin <- leafin(tC, r_2, w0);
+         r_4 <-R hout;
+         return(r_4)
+       else
+         r_1 <-R salt;
+         x_O_2: hin <- leafin(tC, r_1, w1);
+         r_5 <-R hout;
+         return(r_5)
+     ))
+
+
+Applying SA rename new without array accesses and remove assignments of findcond
+  - Remove assignments on x_O_2 (definition removed, all usages removed)
+  - Remove assignments on x_O_1 (definition removed, all usages removed)
+yields
+
+Game 15 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_3[ri_8], x1[ri_8]) && (x1 = x1[ri_8]) then
+         return(r_3[u_8])
+       else
+         r_3 <-R hout;
+         return(r_3)
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+ {35}  if b then
+         r_2 <-R salt;
+         r_4 <-R hout;
+         return(r_4)
+       else
+         r_1 <-R salt;
+         r_5 <-R hout;
+         return(r_5)
+     ))
+
+
+Applying merge branches
+  - Merge branches of test at 35
+yields
+
+Game 16 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_3[ri_8], x1[ri_8]) && (x1 = x1[ri_8]) then
+         return(r_3[u_8])
+       else
+         r_3 <-R hout;
+         return(r_3)
+     ) | (
+       foreach iD <= ND do
+       c3() :=
+       rd <-R salt;
+       return(rd)
+     ) | (
+       foreach iL <= NL do
+       c1(w0: lval, w1: lval) :=
+       r_1 <-R salt;
+       r_5 <-R hout;
+       return(r_5)
+     ))
+
+
+Proved secrecy of b in game 16
+Adv[Game 1: secrecy of b] <= (4 * qH * NL + 2 * NL^2) / |salt| + Adv[Game 16: secrecy of b]
+Adv[Game 16: secrecy of b] <= 0
+RESULT Proved secrecy of b up to probability (2 * NL^2 + 4 * qH * NL) / |salt|
+All queries proved.

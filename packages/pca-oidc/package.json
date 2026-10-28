@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-oidc",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Root a PCA grant in a real OIDC-authenticated human: verify an ID token (discovery + JWKS) and map its subject/claims to the PCA principal.",
   "keywords": [
     "oidc",
@@ -54,5 +54,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

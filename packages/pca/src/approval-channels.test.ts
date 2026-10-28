@@ -27,7 +27,7 @@ const mkAgent = () =>
 
 /** A real pending step-up (tier >= 2) carrying goal-lineage, as the channels consume it. */
 function pendingStepUp(): StepUpRequest {
-  const r = reviewAction(mkAgent(), 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1, goal: 'process October payouts' });
+  const r = reviewAction(mkAgent(), 'stripe.payout', 'acct:1', { amount: 80 }, { insecureUnboundApproval: true, now: 1, goal: 'process October payouts' });
   if (r.kind !== 'step_up') throw new Error('expected a step_up');
   return r.request;
 }

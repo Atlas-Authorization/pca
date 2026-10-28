@@ -285,7 +285,7 @@ describe('FROST ⨯ PCActn', () => {
     // The FROST aggregate IS the ordinary Ed25519 leaf signature — no new verifier path.
     const pcactn = { ...draft, sig: b64u(aggregate) };
 
-    const res = await verifyPCActnCore(pcactn, { grant, audience: 'test-aud' });
+    const res = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud' });
     expect(res.allow).toBe(true);
     expect(res.checks.leaf_signature).toBe('pass');
     expect(res.checks.cap_chain).toBe('pass');
@@ -293,7 +293,7 @@ describe('FROST ⨯ PCActn', () => {
 
     // Tampering with the action (new counter) breaks the aggregate leaf signature.
     const tampered = { ...pcactn, counter: 8 };
-    const bad = await verifyPCActnCore(tampered, { grant });
+    const bad = await verifyPCActnCore(tampered, { insecureSkipPlanRootCheck: true, grant });
     expect(bad.allow).toBe(false);
     expect(bad.checks.leaf_signature).toBe('fail');
   });

@@ -1,0 +1,4 @@
+RESULT Proved forall s', s: sset_t, k: kappa_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> (s = s') up to probability Phash(time_1)
+RESULT Proved forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s)) up to probability Phash(time_5) + Phash(time_4) + Phash(time_3) + Psign(time_2, NO + ND, max(length(mkother, maxlength(game 3: o)), length(mkdesc, maxlength(game 3: x), maxlength(game 3: t), maxlength(game 3: n_1))))
+All queries proved.
+rc=0 secs=0

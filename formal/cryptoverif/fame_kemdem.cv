@@ -1,0 +1,54 @@
+(* PCA -- ABE-3: CPA security of the KEM-DEM wrapper of the ABE (`packages/pca-abe`, FAME; docs/pca/security/proofs/05-abe.md),
+   computational proof (CryptoVerif).
+
+   WHAT IS PROVED HERE, AND WHAT IS ASSUMED.  The ABE is FAME (Agrawal and Chase, CCS 2017) in a type-3 pairing group. Its KEM
+   key is K = T1^s1 * T2^s2 in G_T, and the content-encryption key is CEK = HKDF-SHA256(K, salt, "atlas-pca-abe/cek/v3"); the
+   payload is sealed with AES-256-GCM under one CEK per ciphertext (s1, s2 and the salt are fresh per encryption), the header
+   as AAD.  CryptoVerif has no model of pairing groups, so the ABE layer itself is NOT proved in this file.  It enters as ONE
+   explicit assumption, the paper's theorem: for an adversary whose key requests are all unqualified for the challenge policy
+   (adaptively chosen, random-oracle hash into G1), K is indistinguishable from a uniform element of G_T given the whole
+   public view, with advantage Adv_FAME (bounded in the paper by a constant times the SXDH / matrix-DDH advantage plus a
+   random-oracle term).  The game below therefore starts from the IDEAL game of that theorem: per encryption K is drawn
+   uniformly, and the ABE header, being public and independent of K in that game, is left out.  Overall bound:
+       Adv_ABE3 <= NE * Adv_FAME  +  (the bound this model proves).
+   HKDF is a random oracle (NA-ROM); the DEM is IND-CPA for one message per key (AES-256-GCM as a PRP-based one-time IND-CPA
+   scheme; integrity is not needed for CPA).  The earlier generic-group-model hop for the BSW07 adaptation (Lean) is
+   withdrawn together with that scheme; decryption correctness of FAME is machine-checked in Lean
+   (formal/computational/lean/PcaComp/Fame.lean).
+
+   q_cpa : secrecy of the challenge bit b (left-or-right encryption of equal-length messages). *)
+
+param NE.
+
+type gt [large, fixed].          (* G_T element K *)
+type hkey [fixed].
+type cek [large, fixed].
+type cleartext.
+type ciphertext.
+type salt_t [large, fixed].
+type hin.
+
+proba Penc.
+
+fun hkdfin(gt, salt_t): hin [data].
+expand ROM_hash(hkey, hin, cek, hkdf, hkdf_oracle, qH).
+expand IND_CPA_sym_enc(cek, cleartext, ciphertext, enc, dec, injbot, Z, Penc).
+
+query secret b.
+
+channel c0, cE, cE2.
+
+process
+  in(c0, ());
+  new hk: hkey;
+  new b: bool;
+  out(c0, ());
+  ( hkdf_oracle(hk)
+  | ! iE <= NE
+    in(cE, (m0: cleartext, m1: cleartext));
+    if Z(m0) = Z(m1) then
+    new k: gt;                      (* ideal FAME game (the paper's theorem, assumed): K uniform, independent of the view *)
+    new salt: salt_t;
+    let cek0 = hkdf(hk, hkdfin(k, salt)) in
+    let m = if b then m0 else m1 in
+    out(cE2, (salt, enc(m, cek0))) )

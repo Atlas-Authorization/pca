@@ -1,0 +1,60 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "slack",
+  "version": "0.5.0",
+  "ns": [
+    "slack"
+  ],
+  "count": 174,
+  "root": "lPEOwGkAOH4TiuQoUC0HzNhaVeZ0ZMCrUiOCR1ofm7U",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 134,
+    "unreviewed": 40
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "The Slack Web API OpenAPI description (slackapi/slack-api-specs) is MIT licensed. Method names, parameter names/types and short summaries are carried; the auth token parameter is dropped (the platform supplies it); the trait review is ours.",
+  "sources": [
+    {
+      "id": "web-openapi-v2",
+      "kind": "openapi",
+      "uri": "https://github.com/slackapi/slack-api-specs/blob/bc08db49625630e3585bf2f1322128ea04f2a7f3/web-api/slack_web_openapi_v2.json",
+      "spec_digest": "sha256:742a5c977180a829df8767cf57bc417d99b3713583aee83741efb9c08ca731e7",
+      "licence": "MIT",
+      "licence_url": "https://github.com/slackapi/slack-api-specs/blob/master/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "5fdd87b8273459313828045b7f905d757b5693dfe022f26e8f279bdeffd57cb7"
+  },
+  "shards": [
+    {
+      "file": "defs/000-slack_admin.jsonl",
+      "count": 174,
+      "bytes": 116180,
+      "sha256": "779fe542b82eefcb2c5712b40354f2673b33bea777d1f4a0f601541853e5b094",
+      "first": "slack.admin.apps.approve",
+      "last": "slack.workflows.update_step"
+    }
+  ],
+  "stats": {
+    "total": 174,
+    "authored": 134,
+    "unreviewed": 40,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "privilege": 42,
+      "update": 53,
+      "read": 71,
+      "create": 18,
+      "delete": 21,
+      "send": 7,
+      "publish": 2
+    }
+  }
+}

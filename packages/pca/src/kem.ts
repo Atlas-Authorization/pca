@@ -80,6 +80,18 @@ export function hybridKemKeygen(): HybridKemKeyPair {
   };
 }
 
+/** FIPS 203 §7.2 modulus check: every 12-bit coefficient of the 384*k-byte `t` part must be strictly below q = 3329. */
+function mlKemCoefficientsReduced(ek: Uint8Array, k: number): boolean {
+  for (let i = 0; i < 384 * k; i += 3) {
+    if ((ek[i]! | ((ek[i + 1]! & 0x0f) << 8)) >= 3329) return false;
+    if (((ek[i + 1]! >> 4) | (ek[i + 2]! << 4)) >= 3329) return false;
+  }
+  return true;
+}
+function requireReducedEk(ek: Uint8Array, k: number, who: string): void {
+  if (!mlKemCoefficientsReduced(ek, k)) throw new Error(`${who}: ML-KEM encapsulation key fails the FIPS 203 modulus check`);
+}
+
 /** Encapsulate to a recipient public key: returns the ciphertext (send it) + the shared secret (keep it). */
 export function hybridEncapsulate(recipientPublicKey: Uint8Array): HybridEncapsulation {
   if (recipientPublicKey.length !== HYBRID_PUBLIC_KEY_LEN) {
@@ -92,6 +104,7 @@ export function hybridEncapsulate(recipientPublicKey: Uint8Array): HybridEncapsu
   const ephPub = x25519.getPublicKey(ephPriv);
   const ssX = x25519.getSharedSecret(ephPriv, recipX);
 
+  requireReducedEk(recipMlkem, 3, 'hybridEncapsulate');
   const { cipherText: mlkemCt, sharedSecret: ssMlkem } = ml_kem768.encapsulate(recipMlkem);
 
   return {
@@ -252,6 +265,7 @@ export function xwingEncapsulateDerand(recipientPublicKey: Uint8Array, eseed: Ui
   const mlkemMsg = eseed.subarray(0, 32);
   const ekX = eseed.subarray(32, 64);
 
+  requireReducedEk(pkM, 3, 'xwingEncapsulateDerand');
   const { cipherText: ctM, sharedSecret: ssM } = ml_kem768.encapsulate(pkM, mlkemMsg);
   const ctX = x25519.getPublicKey(ekX);
   const ssX = x25519.getSharedSecret(ekX, pkX);
@@ -328,6 +342,7 @@ export function hybridEncapsulate1024(recipientPublicKey: Uint8Array): HybridEnc
   const ephPub = x25519.getPublicKey(ephPriv);
   const ssX = x25519.getSharedSecret(ephPriv, recipX);
 
+  requireReducedEk(recipMlkem, 4, 'hybridEncapsulate1024');
   const { cipherText: mlkemCt, sharedSecret: ssMlkem } = ml_kem1024.encapsulate(recipMlkem);
 
   return { ciphertext: cat(ephPub, mlkemCt), sharedSecret: combine1024(ssMlkem, ssX, ephPub, recipX) };
@@ -352,4 +367,32 @@ export function hybridDecapsulate1024(ciphertext: Uint8Array, secretKey: Uint8Ar
 
   const recipX = x25519.getPublicKey(xPriv);
   return combine1024(ssMlkem, ssX, ephPub, recipX);
+}
+
+// ==================================================================================================
+// FIPS 203 §7.2 / §7.3 input checks for ML-KEM keys that did not come from this process's own keygen
+// (a key read from storage or a peer). The hybrid and X-Wing entry points above do NOT run them on every call:
+// encapsulation enforces the §7.2 modulus check itself (it throws), while decapsulation
+// trusts a locally generated secret key. Call these before accepting an imported key.
+// ==================================================================================================
+
+const MLKEM_LEVELS = { 768: { k: 3, ml: ml_kem768 }, 1024: { k: 4, ml: ml_kem1024 } } as const;
+
+/** FIPS 203 §7.2 type and modulus check of an ML-KEM encapsulation key. Returns false for any wrong length or non-reduced coefficient; never throws. */
+export function mlKemEncapsulationKeyCheck(level: 768 | 1024, ek: Uint8Array): boolean {
+  const { k } = MLKEM_LEVELS[level];
+  if (!(ek instanceof Uint8Array) || ek.length !== 384 * k + 32) return false;
+  return mlKemCoefficientsReduced(ek, k);
+}
+
+/** FIPS 203 §7.3 check of an ML-KEM decapsulation key: length, embedded H(ek) and the embedded key's modulus check. Never throws. */
+export function mlKemDecapsulationKeyCheck(level: 768 | 1024, dk: Uint8Array): boolean {
+  const { k } = MLKEM_LEVELS[level];
+  if (!(dk instanceof Uint8Array) || dk.length !== 768 * k + 96) return false;
+  const ek = dk.subarray(384 * k, 768 * k + 32);
+  const h = dk.subarray(768 * k + 32, 768 * k + 64);
+  const want = sha3_256(ek);
+  let diff = 0;
+  for (let i = 0; i < 32; i++) diff |= want[i]! ^ h[i]!;
+  return diff === 0 && mlKemEncapsulationKeyCheck(level, ek);
 }

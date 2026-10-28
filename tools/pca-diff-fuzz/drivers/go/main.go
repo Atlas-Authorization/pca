@@ -88,6 +88,32 @@ func one(c in) (res map[string]any) {
 		}
 		return
 	}
+	if c.Kind == "policy" {
+		// Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+		// EvaluateAgentCaveats(PolicyCaveats(grant, chain), context, {action}, toolCall) as {allow, failed}: the agent-native
+		// evaluator (predicates + tool_schema); the tool call is the signed verb + params (the reference's toolCallOf)
+		pv, err := pca.ParseJSONLenient([]byte(c.Raw))
+		o, _ := pv.(map[string]any)
+		ctx, _ := o["context"].(map[string]any)
+		if err != nil || o == nil || ctx == nil {
+			res["error"] = "exception:policy"
+			return
+		}
+		act := ctx["action"]
+		am, _ := act.(map[string]any)
+		verb, _ := am["verb"].(string)
+		args, _ := am["params"].(map[string]any)
+		if args == nil {
+			args = map[string]any{}
+		}
+		ok, failed := pca.EvaluateAgentCaveats(pca.PolicyCaveats(o["grant"], o["chain"]), ctx, map[string]any{"action": act}, &pca.ToolCall{Tool: verb, Args: args})
+		if failed == nil {
+			failed = []string{}
+		}
+		res["allow"] = ok
+		res["failed"] = failed
+		return
+	}
 	if f, ok := v2Primitives[c.Kind]; ok {
 		in, err := pca.ParseJSONLenient([]byte(c.Raw))
 		if err != nil {

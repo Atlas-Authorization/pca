@@ -1,0 +1,62 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "jira",
+  "version": "0.5.0",
+  "ns": [
+    "jira"
+  ],
+  "count": 102,
+  "root": "jixhonJ4yLaEI2htmjtghQ2AsyFrAAfZ2RETo5nNqhU",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 85,
+    "unreviewed": 17
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Hand written from Atlassian public developer documentation (operation names only). The Jira Cloud OpenAPI description is under Atlassian developer terms that were not relied on for redistribution, so nothing from it is copied.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/jira.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "29ec92a9842dc5ea65a3f4a1dd79ab58ddce336ee8c6d55a7fd83909cce34452"
+  },
+  "shards": [
+    {
+      "file": "defs/000-jira_api_token.jsonl",
+      "count": 102,
+      "bytes": 51767,
+      "sha256": "b00cdb95645895e58956efa4ef1c6c0adaf7f7ef5fa2eedab1ba079220b04c40",
+      "first": "jira.api_token.create",
+      "last": "jira.workflow.update"
+    }
+  ],
+  "stats": {
+    "total": 102,
+    "authored": 85,
+    "unreviewed": 17,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "create": 18,
+      "privilege": 11,
+      "read": 37,
+      "exec": 1,
+      "delete": 15,
+      "update": 21,
+      "export": 1,
+      "send": 1,
+      "publish": 1
+    }
+  }
+}

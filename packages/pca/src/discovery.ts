@@ -94,6 +94,11 @@ export interface PcaDiscoveryDocument {
   metadata?: Record<string, unknown>;
   /** Intent Layer v2 block (see {@link PcaDiscoveryIntent}). */
   intent?: PcaDiscoveryIntent;
+  /**
+   * The decision-obligation kinds this resource server performs (`log`, `notify`, `redact`, `watermark`, `require_receipt`).
+   * A decision whose `allow` carries a kind outside this list is a deny at this server. Absent: none supported.
+   */
+  obligations_supported?: string[];
 }
 
 export interface BuildDiscoveryOptions {
@@ -106,10 +111,11 @@ export interface BuildDiscoveryOptions {
   trustedRoots?: string[];
   metadata?: Record<string, unknown>;
   intent?: PcaDiscoveryIntent;
+  obligationsSupported?: string[];
 }
 
 const DEFAULT_SUITES = ['ed25519', 'ml-dsa-65', 'hybrid-ed25519-ml-dsa-65'];
-const DEFAULT_REQUIRED = ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'];
+const DEFAULT_REQUIRED = ['counter_format', 'replay', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'];
 
 /** Build a well-formed discovery document. Throws on an empty audience. */
 export function buildDiscoveryDocument(opts: BuildDiscoveryOptions): PcaDiscoveryDocument {
@@ -126,6 +132,7 @@ export function buildDiscoveryDocument(opts: BuildDiscoveryOptions): PcaDiscover
     ...(opts.trustedRoots ? { trusted_roots: opts.trustedRoots } : {}),
     ...(opts.metadata ? { metadata: opts.metadata } : {}),
     ...(opts.intent ? { intent: parseDiscoveryIntent(opts.intent) } : {}),
+    ...(opts.obligationsSupported ? { obligations_supported: [...opts.obligationsSupported] } : {}),
   };
 }
 
@@ -152,6 +159,10 @@ export function parseDiscoveryDocument(value: unknown): PcaDiscoveryDocument {
   if (Array.isArray(v.trusted_roots) && v.trusted_roots.every((s) => typeof s === 'string')) doc.trusted_roots = v.trusted_roots as string[];
   if (v.metadata !== null && typeof v.metadata === 'object') doc.metadata = v.metadata as Record<string, unknown>;
   if (v.intent !== undefined) doc.intent = parseDiscoveryIntent(v.intent);
+  if (v.obligations_supported !== undefined) {
+    if (!Array.isArray(v.obligations_supported) || !v.obligations_supported.every((s) => typeof s === 'string')) throw new Error('parseDiscoveryDocument: obligations_supported must be a string[]');
+    doc.obligations_supported = [...(v.obligations_supported as string[])];
+  }
   return doc;
 }
 

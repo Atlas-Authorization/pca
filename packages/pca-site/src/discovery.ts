@@ -1,4 +1,5 @@
-import { parseDiscoveryIntent, resolveSigAlg, type ActionSchemaKey, type PcaDiscoveryDocument, type SigAlg } from '@atlasauth/pca';
+import { parseDiscoveryIntent, resolveSigAlg, type PcaDiscoveryDocument, type SigAlg } from '@atlasauth/pca';
+import { type ActionSchemaKey } from '@atlasauth/pca/ext/intent';
 import { isB64u32 } from '@atlasauth/pca-wallet';
 import { isAccessTier, type AccessTier } from './tiers';
 

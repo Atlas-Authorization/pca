@@ -1,0 +1,62 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "stripe",
+  "version": "0.5.0",
+  "ns": [
+    "stripe"
+  ],
+  "count": 517,
+  "root": "Qs-tkjW9t2Eeo8NMFzL_NOzcsXnoh5wLqSG949MbVeM",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 472,
+    "unreviewed": 45
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "Stripe publishes its OpenAPI description under the MIT licence. Operation names, parameter names/types/bounds and short operation summaries are carried; the trait review is ours.",
+  "sources": [
+    {
+      "id": "spec3-sdk",
+      "kind": "openapi",
+      "uri": "https://github.com/stripe/openapi/blob/52c7bc387eed75e31d86359708cb49748ef803cd/openapi/spec3.sdk.json",
+      "spec_digest": "sha256:622e04fb9ae98eb28b5a67c7c885af52a71ffa60e9230b2197f5b3e136651b1d",
+      "licence": "MIT",
+      "licence_url": "https://github.com/stripe/openapi/blob/master/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "31dc5ac10adc3238b22308d3de8e67455fddd0126fa4b7d299b85b8267ecce1f"
+  },
+  "shards": [
+    {
+      "file": "defs/000-stripe_account.jsonl",
+      "count": 517,
+      "bytes": 600089,
+      "sha256": "2955ce94b3c7c0db864597c8af11fd3d4882cea68b6372085677dc06ed75b486",
+      "first": "stripe.account.get",
+      "last": "stripe.webhook_endpoints.update"
+    }
+  ],
+  "stats": {
+    "total": 517,
+    "authored": 472,
+    "unreviewed": 45,
+    "skipped": {},
+    "dropped_params": 21,
+    "by_effect": {
+      "read": 260,
+      "privilege": 27,
+      "update": 88,
+      "delete": 48,
+      "provision": 3,
+      "pay": 30,
+      "create": 75,
+      "publish": 1,
+      "sign": 1
+    }
+  }
+}

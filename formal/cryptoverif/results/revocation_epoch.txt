@@ -1,0 +1,4 @@
+File "revocation_epoch.cv", line 49, characters 14-16:
+RESULT Proved forall t: times_t, r: root_t, s: scope_t, i: inst_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t)) up to probability Psign(time_1, NO + NP, max(length(mkother, maxlength(game 3: o_2)), length(mkepoch, maxlength(game 3: i_1), maxlength(game 3: s_1), maxlength(game 3: r_1), maxlength(game 3: t_1))))
+All queries proved.
+rc=0 secs=0

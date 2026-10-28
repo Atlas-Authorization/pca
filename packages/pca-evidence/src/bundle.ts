@@ -1,20 +1,22 @@
 import {
   hashCanonical,
   pcactnDigest,
-  type AccReceipt,
-  type ActionSchema,
   type Capability,
-  type ClassifierVerdict,
   type InclusionProof,
   type PCActn,
+} from '@atlasauth/pca';
+import {
+  type AccReceipt,
+  type ActionSchema,
+  type ClassifierVerdict,
   type PcaFact,
   type PcaLabels,
   type PcaOfferSet,
   type SessionRevocationEvidence,
   type SessionRoot,
   type SignedIntentStatement,
-  type SignedTreeHead,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
+import { type SignedTreeHead } from '@atlasauth/pca/ext/ledger';
 import type { IntentMap } from '@atlasauth/pca-intent';
 import type { SignedIntentAnswer } from '@atlasauth/pca-wallet';
 

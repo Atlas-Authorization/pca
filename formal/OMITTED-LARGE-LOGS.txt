@@ -1,5 +1,9 @@
 # Raw logs larger than 262144 bytes were not mirrored (size cap). Result summaries are kept.
 # Re-generate with the check scripts (see docs/public/verification-index.md); sha256 is of the original.
+cryptoverif/results/logs/NEG_bundle_principals_from_S.log  411422 bytes  sha256:d53e732a100e84f160dd5d0fcfc3f3581abd09bf8d48b6d58e9e6a60d46444f2
+cryptoverif/results/logs/NEG_delta_any_signer.log  358920 bytes  sha256:e92e5d90d7b239c86fa7d6f382fb47884793f5822fd0f802b7b383ee748e9407
+cryptoverif/results/logs/NEG_delta_no_root.log  323928 bytes  sha256:4d08c2c0f72f91b0cffcb5fe7135f0a0ecf2f27507d84a981fd6f2e52e75589e
+cryptoverif/results/logs/intent_delta.log  352348 bytes  sha256:c4fd96e3a8c4ef3fcb075fba781b3de2a6f5a5b98053cf5ee699f52430f1c545
 proverif/results/logs/pca_actn__TABLE_INSERT_FIRST__replay_inj.log  1830334 bytes  sha256:22d8331a61c6225fc6801c16d1649831e5f4231966c1d8c0b12f9788ed39fc6a
 proverif/results/v3/logs/pca_frost_sign__NONCE_REUSE__sig_needs_t_signers.log  548489 bytes  sha256:4a60607a7e6f34df4ad228993662bef689c1f1dae46758dc382e729174c1c611
 proverif/results/v3/logs/pca_scope_resource__NO_ANCESTOR_RES__root_scope_bounds_action.log  354505 bytes  sha256:206fdbb19b2c1f6f6c535e9d6505a059a47c630fa757c723c7dbc18fa35bdcdb

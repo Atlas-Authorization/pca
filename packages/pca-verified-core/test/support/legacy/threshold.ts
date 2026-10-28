@@ -135,7 +135,7 @@ function concat(...parts: Uint8Array[]): Uint8Array {
  * signerSetHash‖t-bound bytes — role `'agent'` — EXACTLY like guardian / principal. Previously the agent
  * share signed the bare `thresholdMessage`, relying only on the implicit one-key-one-role binding; that bare
  * form is NO LONGER accepted by {@link verifyThreshold} (a bare agent share is rejected). This is a clean
- * break on the threshold wire (PCA is Preview; all SDKs regenerate from the conformance corpus).
+ * break on the threshold wire (PCA is awaiting audit; all SDKs regenerate from the conformance corpus).
  *
  * The one thing that stays bare is the PCActn LEAF SIGNATURE `p.sig` itself: it signs `thresholdMessage`
  * directly because it predates knowing the signer set (the leaf-signed body is unchanged, and the

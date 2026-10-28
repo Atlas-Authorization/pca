@@ -7,10 +7,13 @@ import {
   type CaveatContext,
   type LeafCondition,
   type Predicate,
+  type PolicyClause,
   admit,
   allocationsMonotone,
   cost,
+  decideClauses,
   delegate,
+  prohibitions,
   encodeKey,
   evaluateCaveats,
   evaluateCondition,
@@ -477,6 +480,27 @@ export function determinismProperty() {
   );
 }
 
+/**
+ * Forbid-wins is monotone and order-independent (security contract C-240): adding a forbid clause to a policy can only
+ * move a decision DOWN (allow to escalate or deny, escalate to deny, never up), a forbid that matches always denies whatever
+ * the permits say, and the decision does not depend on the order of the clauses.
+ */
+export function forbidMonotoneProperty() {
+  const RANKS = { deny: 0, escalate: 1, allow: 2 } as const;
+  return fc.property(arbPredicateList, arbPredicateList, arbPredicateList, arbEvalPoint, fc.nat({ max: 5 }), (permits, forbids, extra, pt, rot) => {
+    const mk = (k: 'permit' | 'forbid' | 'escalate', ps: Predicate[], tag: string): PolicyClause[] => ps.map((when, i) => ({ id: `${tag}${i}`, kind: k, when }));
+    const base = [...mk('permit', permits, 'p'), ...mk('escalate', extra, 'e')];
+    const withForbid = [...base, ...mk('forbid', forbids, 'f')];
+    const before = decideClauses(base, pt.action).decision;
+    const after = decideClauses(withForbid, pt.action).decision;
+    if (RANKS[after] > RANKS[before]) return false; // adding a forbid must never grow the admit set
+    const anyForbid = forbids.some((when) => prohibitions.whenMatches(when, pt.action)); // computed without decideClauses
+    if (anyForbid && after !== 'deny') return false; // a matching forbid beats every permit
+    const rotated = [...withForbid.slice(rot % withForbid.length), ...withForbid.slice(0, rot % withForbid.length)];
+    return decideClauses(rotated, pt.action).decision === after; // order-independent
+  });
+}
+
 // =================================== runner / registry ==================================
 
 /** A named invariant whose `run` executes its property-based check at the given runs/seed. */
@@ -497,6 +521,7 @@ export const INVARIANTS: readonly Invariant[] = [
   { name: 'fail-closed:unknown-caveat-type', run: (nr, s) => fc.assert(unknownCaveatTypeDeniesProperty(), { numRuns: nr, seed: s }) },
   { name: 'fail-closed:forged-chain-rejected', run: (nr, s) => fc.assert(forgedChainRejectedProperty(), { numRuns: nr, seed: s }) },
   { name: 'fail-closed:garbage-chain-rejected', run: (nr, s) => fc.assert(garbageChainRejectedProperty(), { numRuns: nr, seed: s }) },
+  { name: 'forbid-monotone', run: (nr, s) => fc.assert(forbidMonotoneProperty(), { numRuns: nr, seed: s }) },
   { name: 'determinism', run: (nr, s) => fc.assert(determinismProperty(), { numRuns: nr, seed: s }) },
 ];
 
@@ -528,6 +553,9 @@ export const DEFAULT_NUM_RUNS = 1000;
 export function checkInvariants(opts: CheckInvariantsOptions = {}): InvariantResult[] {
   const numRuns = opts.numRuns ?? DEFAULT_NUM_RUNS;
   const seed = opts.seed ?? DEFAULT_SEED;
+  // A check that runs zero (or NaN) cases passes vacuously: refuse instead of reporting "ok".
+  if (!Number.isSafeInteger(numRuns) || numRuns < 1) throw new RangeError('checkInvariants: numRuns must be a positive integer');
+  if (!Number.isSafeInteger(seed)) throw new RangeError('checkInvariants: seed must be an integer');
   const results: InvariantResult[] = [];
   for (const inv of INVARIANTS) {
     try {

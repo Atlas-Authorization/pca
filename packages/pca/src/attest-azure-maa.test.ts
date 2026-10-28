@@ -109,7 +109,11 @@ interface CertOpts {
   notBefore?: string;
   notAfter?: string;
   serial?: number;
+  /** Mark the certificate a CA (BasicConstraints + KeyUsage keyCertSign). */
+  ca?: boolean;
 }
+/** BasicConstraints CA:TRUE (critical) + KeyUsage keyCertSign|cRLSign: the B15 strict chain profile requires every issuer in an x5c chain to be a CA. */
+const CA_EXTENSIONS = Uint8Array.from(Buffer.from('a3233021300f0603551d130101ff040530030101ff300e0603551d0f0101ff040403020106', 'hex'));
 /** Mint a real X.509 DER certificate signed by `issuerPriv`. Returns the DER bytes. */
 function makeCert(o: CertOpts): Uint8Array {
   const alg = sigAlgId(o.issuerAlg);
@@ -121,6 +125,7 @@ function makeCert(o: CertOpts): Uint8Array {
     derSeq(derUtcTime(o.notBefore ?? '230101000000Z'), derUtcTime(o.notAfter ?? '350101000000Z')),
     name(o.subjectCn),
     o.subjectSpkiDer,
+    ...(o.ca ? [CA_EXTENSIONS] : []),
   );
   const sig = crypto.sign('sha256', Buffer.from(tbs), o.issuerPriv); // ec => DER ECDSA; rsa => PKCS1
   return derSeq(tbs, alg, derBitString(new Uint8Array(sig)));
@@ -181,8 +186,8 @@ const X5C_RSA = [b64(CERT_RSA)];
 const ROOT = genEc();
 const INT = genEc();
 const LEAF = genEc();
-const CERT_ROOT = makeCert({ subjectSpkiDer: ROOT.spkiDer, subjectCn: 'maa-root', issuerCn: 'maa-root', issuerPriv: ROOT.priv, issuerAlg: 'ec' });
-const CERT_INT = makeCert({ subjectSpkiDer: INT.spkiDer, subjectCn: 'maa-int', issuerCn: 'maa-root', issuerPriv: ROOT.priv, issuerAlg: 'ec' });
+const CERT_ROOT = makeCert({ subjectSpkiDer: ROOT.spkiDer, subjectCn: 'maa-root', issuerCn: 'maa-root', issuerPriv: ROOT.priv, issuerAlg: 'ec', ca: true });
+const CERT_INT = makeCert({ subjectSpkiDer: INT.spkiDer, subjectCn: 'maa-int', issuerCn: 'maa-root', issuerPriv: ROOT.priv, issuerAlg: 'ec', ca: true });
 const CERT_LEAF = makeCert({ subjectSpkiDer: LEAF.spkiDer, subjectCn: 'maa-leaf', issuerCn: 'maa-int', issuerPriv: INT.priv, issuerAlg: 'ec' });
 const ROOT_PEM = new crypto.X509Certificate(Buffer.from(CERT_ROOT)).toString();
 

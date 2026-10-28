@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { agent, generateKeyPair, pcaHeaders, PCA_HEADER, type Capability } from '@atlasauth/pca';
 import { authorize, canonicalQuery, createGateway, requestBinding, type GatewayOptions } from './index';
 
+/** Signature-only on purpose (0.5: an explicit mode): these tests are about routing, adapters and binding; full mode is in full-policy.test.ts. */
+const SIG_ONLY = { insecureSkipPlanRootCheck: true, policy: { mode: 'signature-only' as const }, replayGuard: { claim: async () => true }, requireChecks: [] as string[] };
+
 describe('canonicalQuery: parameter names', () => {
   it('an empty name (a leading "=") is the name "", so two of them are a duplicate', () => {
     expect(() => canonicalQuery('=a&=b')).toThrow("duplicate query parameter ''");
@@ -28,6 +31,7 @@ describe('authorize: a request that cannot be bound is refused with the reason a
       audience: AUD,
       routes: [{ method: 'POST', path: '/refunds/*', capability: { verb: 'stripe.refund' } }],
       resolveGrant: async (r) => (r === pcactn.grant_ref ? (a.grant as Capability) : null),
+      ...SIG_ONLY,
     };
     const d = await authorize({ method: 'POST', path: '/refunds/ch_1', query: 'a=1;b=2', headers: { [PCA_HEADER.toLowerCase()]: pcaHeaders(encoded)[PCA_HEADER]! } }, opts);
     expect(d.allow).toBe(false);
@@ -53,6 +57,9 @@ describe('createGateway keeps behaviour / state members by reference', () => {
       audience: 'ins_keep',
       routes: [{ method: 'POST', path: '/refunds/*', capability: { verb: 'stripe.refund' } }],
       resolveGrant: async (r) => (r === pcactn.grant_ref ? (a.grant as Capability) : null),
+      insecureSkipPlanRootCheck: true,
+      policy: { mode: 'signature-only' },
+      requireChecks: [],
       replayGuard: replayGuard as never,
       hooks: hooks as never,
     });

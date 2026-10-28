@@ -1,0 +1,34 @@
+{
+ "trait": "pca.code_execution",
+ "card": {
+  "verb": "golden.code_execution",
+  "title": "Do the code execution thing",
+  "text": "Do the code execution thing. This action runs code or commands.",
+  "risk": "critical",
+  "escalation": "cosign",
+  "reversibility": "irreversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "resource_scope"
+  ],
+  "context": [
+   "sandbox_attested"
+  ]
+ },
+ "closure": [
+  "pca.code_execution"
+ ],
+ "floor": {
+  "risk": 3,
+  "rev": "irreversible",
+  "blast_ppm": 0,
+  "esc": 2,
+  "caveats": [
+   "resource_scope"
+  ],
+  "context": [
+   "sandbox_attested"
+  ],
+  "prules": []
+ }
+}
