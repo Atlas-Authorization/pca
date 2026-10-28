@@ -1,0 +1,59 @@
+name: Attestation vectors (generated, deterministic)
+
+# conformance/attestation-evidence-vectors.json and conformance/passport-vectors.json are produced by RUNNING the TypeScript
+# verifiers over every row; the generator fails when a row outcome contradicts its intent. This job regenerates both and fails
+# when the committed files differ; the regenerated files are uploaded so a stale file can be replaced.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: regenerate and compare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Build dependencies
+        run: pnpm -r --filter=@atlasauth/pca^... run build
+      - name: Regenerate attestation evidence vectors
+        working-directory: packages/pca
+        run: pnpm exec tsx scripts/gen-conformance-attestation.ts
+      - name: Regenerate passport vectors
+        working-directory: packages/pca
+        run: pnpm exec tsx scripts/gen-conformance-passport.ts
+      - name: Build the package under test
+        run: pnpm --filter @atlasauth/pca run build
+      - name: Regenerate the adversarial corpus
+        working-directory: packages/pca
+        run: node --stack-size=4000 scripts/gen-conformance-adv.mjs
+      - name: Collect the files that changed
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/regen"
+          git status --porcelain -- packages/pca/conformance | awk '{print $2}' | while read -r f; do mkdir -p "$RUNNER_TEMP/regen/$(dirname "$f")"; cp "$f" "$RUNNER_TEMP/regen/$f"; done
+          find "$RUNNER_TEMP/regen" -type f | sed "s|$RUNNER_TEMP/regen/||"
+      - name: Upload regenerated files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-vectors
+          path: ${{ runner.temp }}/regen
+          if-no-files-found: ignore
+      - name: Committed files are what the generators produce
+        run: test -z "$(git status --porcelain -- packages/pca/conformance)" || { git status --porcelain -- packages/pca/conformance; exit 1; }

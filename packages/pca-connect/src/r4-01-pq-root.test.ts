@@ -1,6 +1,8 @@
 import { type PlanNode, buildPCActn, encodeKey, encodeMlDsaPublicKey, generateKeyPair, mintRoot, mlDsa65Keygen } from '@atlasauth/pca';
 import { describe, expect, it } from 'vitest';
-import { InMemoryConnectionStore, NotAuthorizedError, TokenVault, oauthScopeCaveat } from './index';
+import { NotAuthorizedError, TokenVault, oauthScopeCaveat } from './index';
+import { InMemoryConnectionStore } from './testing';
+const mkVault = (o: ConstructorParameters<typeof TokenVault>[0] = {}) => new TokenVault({ strict: false, insecureBearerRelease: true, store: new InMemoryConnectionStore(), ...o });
 
 /** R4-01 follow-up: the vault takes the chain root from the PCActn; a PQ root must be authorised by a verifier-side pin. */
 const NOW = 1_800_000_000_000;
@@ -14,7 +16,7 @@ const caveats = [oauthScopeCaveat('google', ['read'])];
 const node: PlanNode = { id: 'use', verb: 'use_connection', resource: 'oauth:google' };
 
 async function vaultWith(pqPins?: Record<string, string>) {
-  const v = new TokenVault({ store: new InMemoryConnectionStore(), now: () => NOW, ...(pqPins ? { pqPins } : {}) });
+  const v = mkVault({ store: new InMemoryConnectionStore(), now: () => NOW, ...(pqPins ? { pqPins } : {}) });
   await v.putConnection({ agentId: aPub, provider: 'google', accessToken: 'AT', expiresAt: NOW + 3_600_000, scopes: ['read'], authority: { principal: vPub, scopes: ['read'] } });
   return v;
 }

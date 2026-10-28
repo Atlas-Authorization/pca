@@ -1,0 +1,69 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "travel",
+  "version": "0.5.0",
+  "ns": [
+    "cars",
+    "expense",
+    "flights",
+    "hotels",
+    "insurance",
+    "loyalty",
+    "rail",
+    "traveller",
+    "visa"
+  ],
+  "count": 58,
+  "root": "cp_9qgKHHrfVu5D44UiQpCfgNEXw6OtUcryjR349FCo",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 47,
+    "unreviewed": 11
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Written in-house from the general shape of public travel booking APIs and fare-rule concepts; no vendor text or schema is carried.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/travel.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "1d993c74c3fe88bfe16d1f4259c00fe8cf7f8beed8da1a2ff6377e5e7695973b"
+  },
+  "shards": [
+    {
+      "file": "defs/000-cars_book.jsonl",
+      "count": 58,
+      "bytes": 39153,
+      "sha256": "f1c1f87b2b827f021023185cdcd0975360beace1166f49f6a335a7a3beb0eaf5",
+      "first": "cars.book",
+      "last": "visa.check_requirements"
+    }
+  ],
+  "stats": {
+    "total": 58,
+    "authored": 47,
+    "unreviewed": 11,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "pay": 18,
+      "create": 9,
+      "delete": 5,
+      "update": 10,
+      "read": 21,
+      "send": 5,
+      "publish": 1,
+      "sign": 1
+    }
+  }
+}

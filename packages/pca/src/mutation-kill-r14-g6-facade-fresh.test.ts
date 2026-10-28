@@ -14,7 +14,7 @@ describe('facade rate caveat (fresh module)', () => {
   it('a $/period limit adds an expiry but no rate caveat; a count/period limit adds both', async () => {
     const f = await fresh();
     expect(f.compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$5/day' }, now: 0 }).caveats).toEqual([
-      { type: 'reversibility_max', class: 'rate_limited' },
+      { type: 'reversibility_max', class: 'irreversible' },
       { type: 'expires', at: DAY },
     ]);
     expect(f.compilePolicy({ permissions: { gmail: ['send'] }, limits: { send: '5/day' }, now: 0 }).caveats).toEqual([

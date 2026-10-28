@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { agent, generateKeyPair, pcaHeaders, PCA_HEADER, type Capability } from '@atlasauth/pca';
 import { authorize, requestBinding, type GatewayOptions } from './index';
 
+/** Signature-only on purpose (0.5: an explicit mode): these tests are about routing, adapters and binding; full mode is in full-policy.test.ts. */
+const SIG_ONLY = { policy: { mode: 'signature-only' as const }, replayGuard: { claim: async () => true }, requireChecks: [] as string[] };
+
 const AUD = 'ins_acme';
 
 /** RT-09: mint a proof whose params ARE the request binding for `path`. */
@@ -26,6 +29,7 @@ function cfg(m: ReturnType<typeof mint>, o?: Partial<GatewayOptions>): GatewayOp
     audience: AUD,
     routes: [{ method: 'POST', path: '/refunds/*', capability: { verb: 'stripe.refund' } }],
     resolveGrant: async (r) => (r === m.ref ? m.grant : null),
+    ...SIG_ONLY,
     ...o,
   };
 }
@@ -44,7 +48,7 @@ describe('RT-09 request binding', () => {
     const m = mint('/refunds/ch_1');
     const ok = await authorize({ method: 'POST', path: '/refunds/ch_1', headers: hdrs(m.encoded) }, cfg(m));
     expect(ok.allow).toBe(true);
-    const evil = await authorize({ method: 'POST', path: '/refunds/ch_1', query: 'to=attacker', headers: hdrs(m.encoded) }, cfg(m, { replayGuard: undefined }));
+    const evil = await authorize({ method: 'POST', path: '/refunds/ch_1', query: 'to=attacker', headers: hdrs(m.encoded) }, cfg(m));
     expect(evil.allow).toBe(false);
     expect(evil.code).toBe('request-mismatch');
   });

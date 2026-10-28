@@ -10,12 +10,12 @@ import {
   mintRoot,
 } from '@atlasauth/pca';
 import { describe, expect, it } from 'vitest';
+import { InMemoryConnectionStore } from '@atlasauth/pca-connect/testing';
 import {
   type ProviderManifest,
   type VaultFetch,
   type VaultHttpRequest,
   type VaultHttpResponse,
-  InMemoryConnectionStore,
   ManifestValidationError,
   ScopeExceededError,
   TokenVault,
@@ -158,7 +158,7 @@ describe('buildAuthorizeUrl (+ PKCE)', () => {
       clientId: 'cid-google',
       redirectUri: 'https://app.example/cb',
       scopes: ['openid', 'email'],
-      state: 'xyz',
+      state: 'xyz-0123456789abcdef',
       pkce: { verifier },
     });
     expect(url.startsWith('https://accounts.google.com/o/oauth2/v2/auth?')).toBe(true);
@@ -172,7 +172,7 @@ describe('buildAuthorizeUrl (+ PKCE)', () => {
     // Google-specific authParams flow through.
     expect(url).toContain('access_type=offline');
     expect(url).toContain('prompt=consent');
-    expect(state).toBe('xyz');
+    expect(state).toBe('xyz-0123456789abcdef');
     expect(pkce).toEqual({ verifier, challenge: pkceChallenge(verifier), method: 'S256' });
   });
 
@@ -196,7 +196,7 @@ describe('buildAuthorizeUrl (+ PKCE)', () => {
       clientId: 'c',
       redirectUri: 'https://app.example/cb',
       scopes: ['chat:write', 'channels:read'],
-      state: 's',
+      state: 's-0123456789abcdefg',
     }).url;
     expect(slackUrl).toContain('scope=chat%3Awrite%2Cchannels%3Aread'); // comma-joined
 
@@ -204,7 +204,7 @@ describe('buildAuthorizeUrl (+ PKCE)', () => {
     const shopUrl = buildAuthorizeUrl('shopify', {
       clientId: 'c',
       redirectUri: 'https://app.example/cb',
-      state: 's',
+      state: 's-0123456789abcdefg',
       vars: { shop: 'acme' },
     }).url;
     expect(shopUrl.startsWith('https://acme.myshopify.com/admin/oauth/authorize?')).toBe(true);
@@ -220,7 +220,7 @@ describe('exchangeCode / refresh feed the capability-bound vault', () => {
   it('exchangeCode populates the vault with a connection usable only via a verified PCActn', async () => {
     const { principal, agentId, grantFor, actn } = world('google');
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = new TokenVault({ strict: false, insecureBearerRelease: true, store, now: () => NOW });
     const { fetch, calls } = mockFetch(
       jsonResponse({ access_token: 'AT-1', refresh_token: 'RT-1', expires_in: 3600, scope: 'openid email' }),
     );
@@ -262,7 +262,7 @@ describe('exchangeCode / refresh feed the capability-bound vault', () => {
   it('refuses a release whose requested scope is not granted by the capability (scope_exceeded, via pca-connect)', async () => {
     const { principal, agentId, grantFor, actn } = world('google');
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = new TokenVault({ strict: false, insecureBearerRelease: true, store, now: () => NOW });
     const { fetch } = mockFetch(jsonResponse({ access_token: 'AT-1', expires_in: 3600, scope: 'openid email' }));
 
     // Connection bound to require BOTH openid and email.
@@ -303,7 +303,7 @@ describe('exchangeCode / refresh feed the capability-bound vault', () => {
 
     // 1. Standalone refresh(): rotate the token and re-bind.
     const store = new InMemoryConnectionStore();
-    const vault = new TokenVault({ store, now: () => NOW });
+    const vault = new TokenVault({ strict: false, insecureBearerRelease: true, store, now: () => NOW });
     const refreshMock = mockFetch(
       jsonResponse({ access_token: 'AT-2', refresh_token: 'RT-2', expires_in: 3600, scope: 'User.Read' }),
     );
@@ -328,6 +328,8 @@ describe('exchangeCode / refresh feed the capability-bound vault', () => {
     const store2 = new InMemoryConnectionStore();
     const autoMock = mockFetch(jsonResponse({ access_token: 'AT-3', expires_in: 3600 }));
     const vault2 = new TokenVault({
+      strict: false,
+      insecureBearerRelease: true,
       store: store2,
       now: () => NOW,
       fetch: autoMock.fetch,
@@ -351,7 +353,7 @@ describe('exchangeCode / refresh feed the capability-bound vault', () => {
 
   it('refuses refresh() for a provider whose manifest cannot refresh', async () => {
     const { principal, agentId } = world('github');
-    const vault = new TokenVault({ now: () => NOW });
+    const vault = new TokenVault({ strict: false, insecureBearerRelease: true, store: new InMemoryConnectionStore(), now: () => NOW });
     const { fetch } = mockFetch(jsonResponse({ access_token: 'x' }));
     await expect(
       refresh({

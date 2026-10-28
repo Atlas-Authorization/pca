@@ -27,6 +27,8 @@
  */
 
 import {
+  type AuthorizeInput,
+  type AuthorizeResult,
   type Capability,
   type CapabilityChain,
   type EnforcementGates,
@@ -248,7 +250,30 @@ export interface AuthzenPdpConfig {
   now?: () => number;
   /** Map an MCP tool name to the PCA capability (verb) it requires. Default: identity (verb === tool). */
   toolCapability?: (toolName: string) => string;
+  /**
+   * Deny every request that does not carry a signed PCActn (default true). `false` answers a request with no
+   * `pca_action` by STATIC admission only ("could this ever be allowed?"), which is a permit without any proof;
+   * use it only for a PEP that treats the answer as advisory.
+   */
+  requireProof?: boolean;
+  /**
+   * The Core authorizer (`createAuthorizer(...)` from `@atlasauth/pca`): replay counter, budget state and
+   * revocation. When set, a request that the Policy-VM would admit is ALSO run through it and denied unless
+   * it allows (the counter is consumed only for would-be-permitted requests, not for step-ups or denials).
+   * Without it the PDP verifies the proof's signatures, chain, audience and policy but keeps no replay state.
+   */
+  authorizer?: (input: AuthorizeInput) => Promise<AuthorizeResult>;
+  /**
+   * Deny every PCActn request when no `authorizer` is configured (default true): without replay and revocation
+   * state the same valid PCActn is accepted again and again. `false` runs the PDP stateless (verification only).
+   */
+  requireAuthorizer?: boolean;
+  /** Refuse a boxcar with more items than this (every item denied). Default {@link DEFAULT_MAX_EVALUATIONS}; `Infinity` removes the bound. */
+  maxEvaluations?: number;
 }
+
+/** Default bound on the items of one Access Evaluations request. */
+export const DEFAULT_MAX_EVALUATIONS = 100;
 
 export interface AuthzenPdp {
   /** AuthZEN Access Evaluation: one `{subject,action,resource,context}` → one decision. */
@@ -296,9 +321,10 @@ export function isCoazToolAuthorizationRequest(x: unknown): x is CoazToolAuthori
   return isRecord(x) && isAuthzenSubject(x.subject) && isRecord(x.tool) && typeof x.tool.name === 'string';
 }
 
-/** A denial response with machine + human rationale. */
-function deny(reason: string, id?: string): AccessEvaluationResponse {
+/** A denial response with machine + human rationale (and the AuthZEN 7.2.1 `error` member when `status` is given). */
+function deny(reason: string, id?: string, status?: number): AccessEvaluationResponse {
   const context: DecisionContext = { reason_admin: { denied: true, reason }, reason_user: { message: reason } };
+  if (status !== undefined) context.error = { status, message: reason };
   if (id !== undefined) context.id = id;
   return { decision: false, context };
 }
@@ -384,6 +410,7 @@ export function authzenPdp(config: AuthzenPdpConfig): AuthzenPdp {
 
       // ---- static path: no PCActn → "is this admissible under the declared authority at all?" ----
       if (carried === null) {
+        if (config.requireProof !== false) return deny('a signed PCActn is required (requireProof)');
         const admissible = admitsConcrete(ctx.policy, mapped);
         return admissible
           ? permit('statically admissible under the declared authority')
@@ -392,6 +419,9 @@ export function authzenPdp(config: AuthzenPdpConfig): AuthzenPdp {
 
       // ---- proof-carrying path: verify the PCActn, then run the Policy-VM decision ----
       const p = carried;
+      if (config.requireAuthorizer !== false && config.authorizer === undefined) {
+        return deny('no replay/revocation authorizer is configured (requireAuthorizer)');
+      }
 
       // The proof must be FOR the action the PEP is asking about (bind the signed action to the request):
       // verb + resource, and the request's attributes must hash to the PCActn's signed `params_digest`
@@ -448,6 +478,21 @@ export function authzenPdp(config: AuthzenPdpConfig): AuthzenPdp {
       }
 
       if (decision.admit) {
+        if (config.authorizer !== undefined) {
+          const az = await config.authorizer({
+            operation: { verb: mapped.verb, resource: mapped.resource, params: reqParams },
+            pcactn: p,
+          });
+          if (!az.allow) {
+            return {
+              decision: false,
+              context: {
+                reason_admin: { denied: true, stage: 'authorize', reason: az.reason },
+                reason_user: { message: 'the proof-carrying action was not authorized' },
+              },
+            };
+          }
+        }
         return {
           decision: true,
           context: { reason_admin: { stage: 'policy', risk: decision.r, threshold: decision.requiredThreshold } },
@@ -457,24 +502,32 @@ export function authzenPdp(config: AuthzenPdpConfig): AuthzenPdp {
       // Admissible but needs a guardian/human co-sign → AARP approval-required (step-up).
       return approvalRequired(p, decision, ctx.grant, now);
     } catch (err) {
-      return deny(`evaluation error (fail closed): ${err instanceof Error ? err.message : 'unknown'}`);
+      return deny(`evaluation error (fail closed): ${err instanceof Error ? err.message : 'unknown'}`, undefined, 500);
     }
   }
 
   async function evaluations(req: AccessEvaluationsRequest): Promise<AccessEvaluationsResponse> {
     if (!Array.isArray(req.evaluations)) return { evaluations: [] };
     const semantic: EvaluationsSemantic = req.options?.evaluations_semantic ?? 'execute_all';
+    const refuse = (reason: string) => ({ evaluations: req.evaluations.map(() => deny(reason, undefined, 400)) });
+    if (semantic !== 'execute_all' && semantic !== 'deny_on_first_deny' && semantic !== 'permit_on_first_permit') {
+      return refuse('unsupported evaluations_semantic');
+    }
+    const maxEvaluations = config.maxEvaluations ?? DEFAULT_MAX_EVALUATIONS;
+    if (req.evaluations.length > maxEvaluations) {
+      return refuse(`too many evaluations (limit ${maxEvaluations})`);
+    }
     const merged = req.evaluations.map((item) => mergeEvaluation(req, item));
 
     if (semantic === 'execute_all') {
-      const out = await Promise.all(merged.map((m) => (m === null ? Promise.resolve(deny('incomplete evaluation (missing subject/action/resource)')) : evaluate(m))));
+      const out = await Promise.all(merged.map((m) => (m === null ? Promise.resolve(deny('incomplete evaluation (missing subject/action/resource)', undefined, 400)) : evaluate(m))));
       return { evaluations: out };
     }
 
     // Short-circuit modes: evaluate sequentially, stop at the first matching decision.
     const out: AccessEvaluationResponse[] = [];
     for (const m of merged) {
-      const r = m === null ? deny('incomplete evaluation (missing subject/action/resource)') : await evaluate(m);
+      const r = m === null ? deny('incomplete evaluation (missing subject/action/resource)', undefined, 400) : await evaluate(m);
       out.push(r);
       if (semantic === 'deny_on_first_deny' && r.decision === false) break;
       if (semantic === 'permit_on_first_permit' && r.decision === true) break;
@@ -483,7 +536,13 @@ export function authzenPdp(config: AuthzenPdpConfig): AuthzenPdp {
   }
 
   async function evaluateTool(req: CoazToolAuthorizationRequest): Promise<CoazToolAuthorizationResponse> {
-    const capability = toolCapability(req.tool.name);
+    let capability: string;
+    try {
+      capability = toolCapability(req.tool.name);
+    } catch (err) {
+      const r = deny(`evaluation error (fail closed): ${err instanceof Error ? err.message : 'unknown'}`, undefined, 500);
+      return { decision: false, tool: req.tool.name, required_capability: '', ...(r.context !== undefined ? { context: r.context } : {}) };
+    }
     const mappedReq: AccessEvaluationRequest = {
       subject: req.subject,
       action: { name: capability, ...(req.tool.arguments !== undefined ? { properties: req.tool.arguments } : {}) },
@@ -586,12 +645,25 @@ export interface HandlerResponse {
  */
 export function authzenHandler(pdp: AuthzenPdp): (req: HandlerRequest) => Promise<HandlerResponse> {
   return async (req: HandlerRequest): Promise<HandlerResponse> => {
+    try {
+      return await route(req);
+    } catch {
+      // A PEP treats a non-200 as a deny; never leak internals.
+      return { status: 500, body: { error: 'internal error' } };
+    }
+  };
+  async function route(req: HandlerRequest): Promise<HandlerResponse> {
     switch (req.path) {
       case EVALUATION_PATH: {
         if (!isAccessEvaluationRequest(req.body)) return { status: 400, body: { error: 'invalid AuthZEN Access Evaluation request' } };
         return { status: 200, body: await pdp.evaluate(req.body) };
       }
       case EVALUATIONS_PATH: {
+        // AuthZEN section 7: an absent or empty `evaluations` array is a plain single Access Evaluation.
+        if (isRecord(req.body) && (req.body.evaluations === undefined || (Array.isArray(req.body.evaluations) && req.body.evaluations.length === 0))) {
+          if (!isAccessEvaluationRequest(req.body)) return { status: 400, body: { error: 'invalid AuthZEN Access Evaluations request' } };
+          return { status: 200, body: await pdp.evaluate(req.body) };
+        }
         if (!isAccessEvaluationsRequest(req.body)) return { status: 400, body: { error: 'invalid AuthZEN Access Evaluations request' } };
         return { status: 200, body: await pdp.evaluations(req.body) };
       }
@@ -602,5 +674,6 @@ export function authzenHandler(pdp: AuthzenPdp): (req: HandlerRequest) => Promis
       default:
         return { status: 404, body: { error: `unknown AuthZEN path: ${req.path}` } };
     }
-  };
+  }
 }
+export * from './search';

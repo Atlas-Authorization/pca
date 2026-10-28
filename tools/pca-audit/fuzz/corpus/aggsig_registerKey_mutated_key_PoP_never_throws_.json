@@ -1,0 +1,9 @@
+{
+ "target": "aggsig registerKey (mutated key / PoP never throws)",
+ "seeds": [
+  {
+   "pk": "i7ihXhv5kQBOh1wmqp6Vn/YFnMoVZTSjWcsHGph3xMWyQ8gHG1BSGk9M1xj4scnf",
+   "pop": "jD0mD8349zJ/ZpXlnpYBUqEUGFT/tXj3Z8v03C4Q25q4r02iHp9GJZq2Uxgzk+hNDYLKPRXFKkEw3XNTLPjor8WHdq2wKgkEb8HLW2m0sud4CU/829HafCm++iibgeO2"
+  }
+ ]
+}

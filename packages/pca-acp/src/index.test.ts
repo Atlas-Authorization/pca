@@ -13,7 +13,7 @@ import {
 import {
   AcpAuthorityError,
   ACP_DELEGATED_TOKEN_TYPE,
-  acpX402Verifier,
+  acpX402Verifier as acpX402VerifierStrictDefault,
   checkPaymentAuthority,
   extractPaymentAuthority,
   humanPresentCaveat,
@@ -22,11 +22,16 @@ import {
   type MintOptions,
   mintDelegatedPaymentToken,
   spendCapCaveat,
-  verifyDelegatedPaymentToken,
+  verifyDelegatedPaymentToken as verifyDelegatedPaymentTokenStrictDefault,
   x402Challenge,
   x402Settle,
   type X402PaymentPayload,
 } from './index';
+
+// 0.5: settlement is strict by default. These suites exercise the individual bindings, so they opt out; strict-by-default
+// itself is covered in strict-default.test.ts.
+const verifyDelegatedPaymentToken = (t: string, o: Parameters<typeof verifyDelegatedPaymentTokenStrictDefault>[1]) => verifyDelegatedPaymentTokenStrictDefault(t, { strict: false, ...o });
+const acpX402Verifier = (o: Parameters<typeof acpX402VerifierStrictDefault>[0]) => acpX402VerifierStrictDefault({ strict: false, ...o });
 
 // ---------------------------------------------------------------------------------------------------
 // Fixtures: real PCActns built via the core, carrying real payment caveats on their capability chain.

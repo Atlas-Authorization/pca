@@ -1,0 +1,146 @@
+name: Bridge cross-checks
+
+# Independent-implementation and live-server checks for the auth and token bridge packages (not auto-run by the package shards).
+on:
+  push:
+    branches: [main, 'ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-vectors:
+    name: python cross-check (${{ matrix.pkg }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [pca-txn-tokens, pca-idjag, pca-gnap]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 -m pip install cryptography
+      - run: pnpm install --frozen-lockfile --filter=@atlasauth/${{ matrix.pkg }}...
+      - run: pnpm --filter=@atlasauth/${{ matrix.pkg }}... run build
+      - name: Committed fixture equals regenerated
+        working-directory: packages/${{ matrix.pkg }}
+        run: |
+          python3 crosscheck/crosscheck.py
+          git diff --exit-code -- fixtures/python-vectors.json
+      - name: Our verdicts, then verified by the independent script
+        working-directory: packages/${{ matrix.pkg }}
+        run: |
+          PCA_CROSSCHECK_OUT=crosscheck/out/ours.json pnpm exec vitest run src/crosscheck.test.ts
+          python3 crosscheck/crosscheck.py --verify-ours crosscheck/out/ours.json
+
+  dpop-crosschecks:
+    name: pca-dpop server and mTLS cross-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - uses: astral-sh/setup-uv@v5
+      - run: pnpm install --frozen-lockfile --filter=@atlasauth/pca-dpop...
+      - run: pnpm --filter=@atlasauth/pca-dpop... run build
+      - name: Independent server (matrix)
+        working-directory: packages/pca-dpop
+        run: |
+          OUT=$(mktemp -d)
+          pnpm dlx tsx crosscheck/gen-matrix.mts > "$OUT/matrix.json"
+          uv run --with cryptography python crosscheck/server_crosscheck.py "$OUT/matrix.json"
+      - name: RFC 8705 certificate thumbprint (OpenSSL and cryptography)
+        working-directory: packages/pca-dpop
+        run: |
+          OUT=$(mktemp -d)
+          uv run --with cryptography python crosscheck/mtls_crosscheck.py "$OUT"
+
+  webauthn-live:
+    name: pca-webauthn live cross-check (simplewebauthn)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: pnpm install --frozen-lockfile --filter=@atlasauth/pca-webauthn...
+      - run: pnpm --filter=@atlasauth/pca-webauthn... run build
+      - run: npm i --prefix "$RUNNER_TEMP/swa" @simplewebauthn/server@14.0.3
+      - working-directory: packages/pca-webauthn
+        run: node crosscheck/live-crosscheck.mjs "$RUNNER_TEMP/swa/node_modules/@simplewebauthn/server"
+
+  spiffe-go:
+    name: pca-spiffe go-spiffe cross-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.23', cache-dependency-path: packages/pca-spiffe/crosscheck/go-spiffe/go.sum }
+      - run: pnpm install --frozen-lockfile --filter=@atlasauth/pca-spiffe...
+      - run: pnpm --filter=@atlasauth/pca-spiffe... run build
+      - name: go-spiffe verdicts
+        working-directory: packages/pca-spiffe/crosscheck/go-spiffe
+        run: |
+          go mod verify
+          go vet ./...
+          go run . --fixtures ../../fixtures --out "$RUNNER_TEMP/go-spiffe-verdicts.json"
+      - name: Compare with the TypeScript verdicts
+        working-directory: packages/pca-spiffe
+        env:
+          PCA_GO_SPIFFE_VERDICTS: ${{ runner.temp }}/go-spiffe-verdicts.json
+        run: pnpm exec vitest run src/go-spiffe.crosscheck.test.ts
+
+  ciba-keycloak:
+    name: pca-ciba keycloak integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - run: pnpm install --frozen-lockfile --filter=@atlasauth/pca-ciba...
+      - run: pnpm --filter=@atlasauth/pca-ciba... run build
+      - name: Keycloak up, live CIBA tests, down
+        working-directory: packages/pca-ciba
+        run: bash scripts/run-keycloak-ciba.sh all
+      - name: Keycloak log on failure
+        if: failure()
+        run: tail -n 100 "$HOME/.cache/pca-ciba-keycloak/keycloak.log" || true
+
+  check-witness:
+    # Each listed security check is neutralised in turn and its tests must FAIL (tools/pca-audit/check-witness.json).
+    name: check-removal witness (${{ matrix.pkg }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [pca-spiffe, pca-ciba, pca-scim]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: pnpm install --frozen-lockfile --filter=@atlasauth/${{ matrix.pkg }}...
+      - run: pnpm --filter=@atlasauth/${{ matrix.pkg }}... run build
+      - run: node scripts/pca-check-witness.mjs ${{ matrix.pkg }}

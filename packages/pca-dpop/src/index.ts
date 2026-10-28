@@ -19,6 +19,7 @@ import { EmbeddedJWK, SignJWT, calculateJwkThumbprint, decodeProtectedHeader, jw
 import type { JWK, JWTPayload, KeyLike } from 'jose';
 import { assertCanonicalCompactJws } from '@atlasauth/pca';
 import { type PCActn, b64u, sha256 } from '@atlasauth/pca';
+import { X509Certificate, createHmac, timingSafeEqual } from 'node:crypto';
 
 // ---- constants ---------------------------------------------------------------------------------
 
@@ -71,6 +72,99 @@ export interface JtiSeenSet {
   add(jti: string): unknown;
 }
 
+/**
+ * A durable, atomic `jti` replay store for DPoP proofs. `addIfAbsent` MUST be atomic: of N concurrent calls with the
+ * same key exactly one returns `true`. The key passed in is `<jkt>.<jti>`, so one key holder cannot burn another's `jti`.
+ * An entry may be dropped once `nowSec >= expiresAtSec`. Back it with a shared store (SQL unique key, Redis `SET NX EX`);
+ * check it with {@link runDpopReplayStoreConformance}.
+ */
+export interface DpopReplayStore {
+  addIfAbsent(key: string, expiresAtSec: number, nowSec: number): boolean | Promise<boolean>;
+}
+
+/** Default capacity of {@link createInMemoryDpopReplayStore}. */
+export const DPOP_INMEMORY_MAX_ENTRIES = 100_000;
+
+/**
+ * Single-process store, explicitly bounded: state is lost on restart and not shared across processes. When `maxEntries`
+ * live (unexpired) entries are held, a further new key makes `addIfAbsent` THROW (the verifier then refuses with
+ * `replay_store_error`) instead of evicting a live entry, so a flood can never reopen a replay window.
+ */
+export function createInMemoryDpopReplayStore(opts: { maxEntries?: number } = {}): DpopReplayStore {
+  const max = opts.maxEntries ?? DPOP_INMEMORY_MAX_ENTRIES;
+  if (!Number.isInteger(max) || max < 1) throw new DpopVerificationError('misconfigured', 'maxEntries must be a positive integer');
+  const seen = new Map<string, number>();
+  return {
+    addIfAbsent(key, expiresAtSec, nowSec) {
+      const held = seen.get(key);
+      if (held !== undefined && nowSec < held) return false;
+      if (held === undefined && seen.size >= max) {
+        for (const [k, exp] of seen) if (nowSec >= exp) seen.delete(k);
+        if (seen.size >= max) throw new Error('replay store is full');
+      }
+      seen.set(key, expiresAtSec);
+      return true;
+    },
+  };
+}
+
+/** Conformance suite for a {@link DpopReplayStore}: returns the failed checks (empty = conformant). `make` returns a FRESH empty store. */
+export async function runDpopReplayStoreConformance(make: () => DpopReplayStore): Promise<string[]> {
+  const failures: string[] = [];
+  const check = (ok: boolean, name: string): void => {
+    if (!ok) failures.push(name);
+  };
+  const s = make();
+  check((await s.addIfAbsent('a', 200, 100)) === true, 'first sight of a key returns true');
+  check((await s.addIfAbsent('a', 200, 101)) === false, 'second sight of the same key returns false');
+  check((await s.addIfAbsent('b', 200, 101)) === true, 'a different key is independent');
+  check((await s.addIfAbsent('a', 200, 199)) === false, 'still seen one second before expiry');
+  const t = make();
+  await t.addIfAbsent('c', 200, 100);
+  check((await t.addIfAbsent('c', 400, 200)) === true, 'an expired entry may be added again (nowSec >= expiresAtSec)');
+  const u = make();
+  const wins = (await Promise.all(Array.from({ length: 16 }, () => u.addIfAbsent('race', 200, 100)))).filter(Boolean).length;
+  check(wins === 1, `16 concurrent adds of one key: exactly one wins (got ${wins})`);
+  return failures;
+}
+
+/** Issues and checks stateless server DPoP nonces (RFC 9449 §8/§9): a timestamp MACed with a server secret. */
+export interface DpopNonceIssuer {
+  /** A fresh nonce to send in a `DPoP-Nonce` header. */
+  issue(nowSec?: number): string;
+  /** True only for a nonce this issuer minted that is at most `ttlSec` old (and not from the future). */
+  check(nonce: unknown, nowSec?: number): boolean;
+}
+
+/** Create a {@link DpopNonceIssuer}. `secret` must be at least 32 bytes; `ttlSec` is the nonce lifetime (default 300). */
+export function createDpopNonceIssuer(opts: { secret: Uint8Array; ttlSec?: number }): DpopNonceIssuer {
+  if (!(opts?.secret instanceof Uint8Array) || opts.secret.length < 32) {
+    throw new DpopVerificationError('misconfigured', 'nonce secret must be at least 32 bytes');
+  }
+  const ttl = opts.ttlSec ?? 300;
+  if (!Number.isFinite(ttl) || ttl <= 0) throw new DpopVerificationError('misconfigured', 'nonce ttlSec must be positive');
+  const mac = (ts: Buffer): Buffer => createHmac('sha256', opts.secret).update('dpop-nonce\0').update(ts).digest().subarray(0, 16);
+  return {
+    issue(nowSec = Math.floor(Date.now() / 1000)) {
+      const ts = Buffer.alloc(8);
+      ts.writeBigUInt64BE(BigInt(nowSec));
+      return Buffer.concat([ts, mac(ts)]).toString('base64url');
+    },
+    check(nonce, nowSec = Math.floor(Date.now() / 1000)) {
+      if (typeof nonce !== 'string') return false;
+      const raw = Buffer.from(nonce, 'base64url');
+      if (raw.length !== 24 || raw.toString('base64url') !== nonce) return false;
+      const ts = raw.subarray(0, 8);
+      if (!timingSafeEqual(raw.subarray(8), mac(ts))) return false;
+      const issued = Number(ts.readBigUInt64BE());
+      return issued <= nowSec + DPOP_CLOCK_SKEW_SEC && nowSec - issued <= ttl;
+    },
+  };
+}
+
+/** Largest accepted proof string (bytes). A real proof is well under 2 KiB; RSA keys are the largest. */
+export const DPOP_MAX_PROOF_BYTES = 8192;
+
 export interface CreateDpopProofInput {
   /** HTTP method (case-insensitive in; stored uppercased as `htm`). */
   method: string;
@@ -99,6 +193,16 @@ export interface VerifyDpopProofOptions {
   expectedJkt?: string;
   /** If given, a repeated `jti` is rejected and a fresh one is recorded. */
   seenJti?: JtiSeenSet;
+  /** Durable atomic replay store (see {@link DpopReplayStore}); keyed by `<jkt>.<jti>`. Preferred over `seenJti`. */
+  replayStore?: DpopReplayStore;
+  /**
+   * Default `true`: a verification with neither `replayStore` nor `seenJti` is refused (`replay_store_required`), because
+   * the verifier cannot detect replay without your store. Pass `false` only to opt out explicitly (e.g. a stateless
+   * pre-check whose replay is detected elsewhere).
+   */
+  requireReplayStore?: boolean;
+  /** Server nonce issuer: when given, the proof MUST carry a nonce this issuer minted and has not expired. */
+  nonceIssuer?: DpopNonceIssuer;
   /** Override "now" (epoch seconds) — for tests / fixed clocks. */
   nowSec?: number;
   /** If given, the proof MUST carry exactly this server-issued `nonce` (RFC 9449 §8/§9). */
@@ -143,6 +247,25 @@ export function dpopAlgForJwk(jwk: JWK): DpopAlg {
       return 'PS256';
     default:
       throw new DpopVerificationError('unsupported_key', `unsupported key type '${String(jwk.kty)}' for DPoP`);
+  }
+}
+
+/** True when the allow-listed JWS `alg` belongs to the key type of `jwk` (kty/crv). Unknown algs never match. */
+export function dpopAlgMatchesJwk(alg: string, jwk: JWK): boolean {
+  switch (alg) {
+    case 'EdDSA':
+      return jwk.kty === 'OKP' && (jwk.crv === 'Ed25519' || jwk.crv === 'Ed448');
+    case 'ES256':
+      return jwk.kty === 'EC' && jwk.crv === 'P-256';
+    case 'ES384':
+      return jwk.kty === 'EC' && jwk.crv === 'P-384';
+    case 'ES512':
+      return jwk.kty === 'EC' && jwk.crv === 'P-521';
+    case 'PS256':
+    case 'RS256':
+      return jwk.kty === 'RSA';
+    default:
+      return false;
   }
 }
 
@@ -201,6 +324,12 @@ export async function createDpopProof(input: CreateDpopProofInput): Promise<stri
  * {@link DpopVerificationError} on any failure; returns the verified claims + key thumbprint on success.
  */
 export async function verifyDpopProof(proof: string, opts: VerifyDpopProofOptions): Promise<DpopVerifyResult> {
+  if (opts.requireReplayStore !== false && opts.replayStore === undefined && opts.seenJti === undefined) {
+    throw new DpopVerificationError('replay_store_required', 'no replay store configured; replay cannot be detected');
+  }
+  if (typeof proof !== 'string' || proof.length > DPOP_MAX_PROOF_BYTES) {
+    throw new DpopVerificationError('oversize', `proof is not a string or exceeds ${DPOP_MAX_PROOF_BYTES} bytes`);
+  }
   // Reject a missing / non-public / absent-`jwk` header before trusting the signature.
   let header: ReturnType<typeof decodeProtectedHeader>;
   try {
@@ -214,6 +343,16 @@ export async function verifyDpopProof(proof: string, opts: VerifyDpopProofOption
     throw new DpopVerificationError('typ', `header typ must be '${DPOP_JWT_TYP}', got '${String(header.typ)}'`);
   }
   if (header.jwk === undefined) throw new DpopVerificationError('no_jwk', 'proof header has no embedded jwk');
+  // RFC 9449 §4.2: the header jwk MUST NOT contain a private key.
+  const hj: unknown = header.jwk;
+  if (typeof hj === 'object' && hj !== null && ['d', 'p', 'q', 'dp', 'dq', 'qi', 'k'].some((m) => m in hj)) {
+    throw new DpopVerificationError('private_jwk', 'proof header jwk contains private key material');
+  }
+
+  // The declared `alg` must belong to the embedded key's type (an EdDSA header over an RSA jwk is refused by name).
+  if (typeof header.alg === 'string' && (DPOP_ALLOWED_ALGS as readonly string[]).includes(header.alg) && !dpopAlgMatchesJwk(header.alg, header.jwk)) {
+    throw new DpopVerificationError('alg_jwk_mismatch', `alg '${header.alg}' does not match the embedded jwk key type`);
+  }
 
   // Signature: EmbeddedJWK verifies under the header `jwk`; `algorithms` pins the asymmetric suite.
   let payload: JWTPayload;
@@ -256,6 +395,10 @@ export async function verifyDpopProof(proof: string, opts: VerifyDpopProofOption
     throw new DpopVerificationError('nonce', 'proof nonce is missing or does not match the expected nonce');
   }
 
+  if (opts.nonceIssuer !== undefined && !opts.nonceIssuer.check(payload.nonce, now)) {
+    throw new DpopVerificationError('nonce', 'proof nonce is missing, forged or expired');
+  }
+
   // Access-token binding (RFC 9449 §4.2 / §7.1): when presented with an access token, `ath` must match.
   if (opts.accessToken !== undefined && payload.ath !== athFor(opts.accessToken)) {
     throw new DpopVerificationError('ath', 'proof ath is missing or does not match the access token');
@@ -265,6 +408,16 @@ export async function verifyDpopProof(proof: string, opts: VerifyDpopProofOption
   if (opts.seenJti !== undefined) {
     if (opts.seenJti.has(jti)) throw new DpopVerificationError('jti_replay', `jti '${jti}' has already been seen`);
     opts.seenJti.add(jti);
+  }
+
+  if (opts.replayStore !== undefined) {
+    let fresh: boolean;
+    try {
+      fresh = await opts.replayStore.addIfAbsent(`${jkt}.${jti}`, iat + opts.maxAgeSec + DPOP_CLOCK_SKEW_SEC, now);
+    } catch (e) {
+      throw new DpopVerificationError('replay_store_error', `replay store failed: ${errMsg(e)}`);
+    }
+    if (fresh !== true) throw new DpopVerificationError('jti_replay', `jti '${jti}' has already been seen`);
   }
 
   const nonce = typeof payload.nonce === 'string' ? payload.nonce : undefined;
@@ -299,6 +452,34 @@ export function mtlsCnf(certDerOrPem: Uint8Array | string): MtlsCnf {
   return { 'x5t#S256': b64u(sha256(der)) };
 }
 
+/** RFC 8705 §3.1 thumbprint of a certificate that PARSES as X.509: base64url(SHA-256(DER)). Throws `cert` otherwise. */
+export function mtlsThumbprint(certDerOrPem: Uint8Array | string): string {
+  let raw: Uint8Array;
+  try {
+    raw = new X509Certificate(typeof certDerOrPem === 'string' ? certDerOrPem : Buffer.from(certDerOrPem)).raw;
+  } catch (e) {
+    throw new DpopVerificationError('cert', `not an X.509 certificate: ${errMsg(e)}`);
+  }
+  return b64u(sha256(raw));
+}
+
+/**
+ * RFC 8705 §3.1 check: the presented client certificate (DER or PEM, as the TLS layer authenticated it) must hash to the
+ * `x5t#S256` of the token's `cnf`. Throws `cert` (unparseable certificate), `x5t_missing` (no usable thumbprint in `cnf`)
+ * or `x5t` (mismatch); returns the confirmation on success. This does not validate the TLS handshake or chain.
+ */
+export function assertMtlsBound(certDerOrPem: Uint8Array | string, cnf: unknown): MtlsCnf {
+  const want = typeof cnf === 'object' && cnf !== null ? (cnf as Record<string, unknown>)['x5t#S256'] : undefined;
+  if (typeof want !== 'string' || want.length === 0) throw new DpopVerificationError('x5t_missing', "cnf has no 'x5t#S256' thumbprint");
+  const got = mtlsThumbprint(certDerOrPem);
+  const a = Buffer.from(got);
+  const b = Buffer.from(want);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    throw new DpopVerificationError('x5t', 'client certificate thumbprint does not match cnf x5t#S256');
+  }
+  return { 'x5t#S256': got };
+}
+
 // ---- PCActn ↔ DPoP binding --------------------------------------------------------------------
 
 /**
@@ -330,6 +511,9 @@ export async function assertPcaDpop(
     url: string;
     maxAgeSec?: number;
     seenJti?: JtiSeenSet;
+    replayStore?: DpopReplayStore;
+    requireReplayStore?: boolean;
+    nonceIssuer?: DpopNonceIssuer;
     nowSec?: number;
     expectedNonce?: string;
     accessToken?: string;
@@ -342,6 +526,9 @@ export async function assertPcaDpop(
     maxAgeSec: opts.maxAgeSec ?? DPOP_DEFAULT_MAX_AGE_SEC,
     expectedJkt: jkt,
     ...(opts.seenJti !== undefined ? { seenJti: opts.seenJti } : {}),
+    ...(opts.replayStore !== undefined ? { replayStore: opts.replayStore } : {}),
+    ...(opts.requireReplayStore !== undefined ? { requireReplayStore: opts.requireReplayStore } : {}),
+    ...(opts.nonceIssuer !== undefined ? { nonceIssuer: opts.nonceIssuer } : {}),
     ...(opts.nowSec !== undefined ? { nowSec: opts.nowSec } : {}),
     ...(opts.expectedNonce !== undefined ? { expectedNonce: opts.expectedNonce } : {}),
     ...(opts.accessToken !== undefined ? { accessToken: opts.accessToken } : {}),

@@ -35,6 +35,7 @@ import {
 } from './pq';
 import { type InclusionProof, leafHash, merkleProof, merkleRoot } from './merkle';
 import { type RevocationChecker, type VerifyContext } from './pcactn';
+import { classRank } from './reversibility';
 
 const NODE = 0x01;
 
@@ -238,6 +239,74 @@ export const REVEPOCH_DOMAIN = 'atlas-pca/revepoch/v1\0';
 export const REVOCATION_EPOCH_REFRESH_MS = 60_000;
 /** How long a signed epoch is acceptable (> T so a refresh always lands before expiry). */
 export const REVOCATION_EPOCH_VALIDITY_MS = 5 * 60_000;
+/**
+ * Default verifier-side maximum age of revocation state for an IRREVERSIBLE action when a staleness policy is on: two
+ * refresh periods, so one missed re-sign is tolerated and a root captured before a revocation stops working within 2 min.
+ */
+export const REVOCATION_IRREVERSIBLE_MAX_AGE_MS = 2 * REVOCATION_EPOCH_REFRESH_MS;
+
+/**
+ * Verifier-side revocation staleness policy (0.5, additive: nothing changes unless you set it). The signer chooses
+ * `not_after`; this lets the VERIFIER cap how old (`now - issued_at`) the revocation state may be, with a stricter window
+ * for actions that cannot be undone. The class is the stricter of the server's authoritative class and the PCActn's signed
+ * `reversibility_class`; a missing or unknown class counts as irreversible (fail closed).
+ */
+export interface RevocationStalenessPolicy {
+  /** Maximum age for any action. Default {@link REVOCATION_EPOCH_VALIDITY_MS} (5 min). */
+  maxRevocationAgeMs?: number;
+  /**
+   * Per-class maximum age, each capped by `maxRevocationAgeMs`. Defaults: `irreversible`
+   * {@link REVOCATION_IRREVERSIBLE_MAX_AGE_MS} (2 min); `rate_limited` (the old name `costly` is still accepted for one release) = `maxRevocationAgeMs`.
+   */
+  staleness?: { irreversible?: number; rate_limited?: number; /** The old name of `rate_limited`, accepted for one release. */ costly?: number };
+  /**
+   * Accept revocation state that is not guardian-signed (a bare `root`) for an IRREVERSIBLE action. Default false: an
+   * unsigned root can be any root the verifier was handed, so irreversible actions need a signed epoch.
+   */
+  allowUnsignedRootForIrreversible?: boolean;
+}
+
+function checkPositiveMs(name: string, v: unknown): void {
+  if (v !== undefined && !(typeof v === 'number' && Number.isFinite(v) && v > 0)) {
+    throw new TypeError(`${name} must be a positive number of milliseconds`);
+  }
+}
+
+/** Throws a TypeError on a malformed policy (configuration error, raised at construction, never at request time). */
+export function validateRevocationStaleness(p: RevocationStalenessPolicy): void {
+  checkPositiveMs('maxRevocationAgeMs', p.maxRevocationAgeMs);
+  checkPositiveMs('staleness.irreversible', p.staleness?.irreversible);
+  checkPositiveMs('staleness.rate_limited', p.staleness?.rate_limited);
+  checkPositiveMs('staleness.costly', p.staleness?.costly);
+}
+
+/** True when the policy object turns the staleness check on (any age option set). */
+export const stalenessPolicyOn = (p: RevocationStalenessPolicy): boolean => p.maxRevocationAgeMs !== undefined || p.staleness !== undefined;
+
+/** The effective reversibility class: the stricter of the server's class and the signed one. Unknown/missing = irreversible. */
+export function effectiveReversibility(serverClass: string | undefined, signedClass: unknown): 'reversible' | 'rate_limited' | 'irreversible' {
+  const rank = Math.max(serverClass === undefined ? 0 : classRank(serverClass), classRank(signedClass));
+  return rank >= 2 ? 'irreversible' : rank === 1 ? 'rate_limited' : 'reversible';
+}
+
+/** The maximum age of revocation state the policy allows for an action of `cls`. */
+export function revocationMaxAgeMs(p: RevocationStalenessPolicy, cls: 'reversible' | 'rate_limited' | 'costly' | 'irreversible'): number {
+  const max = p.maxRevocationAgeMs ?? REVOCATION_EPOCH_VALIDITY_MS;
+  if (cls === 'irreversible') return Math.min(max, p.staleness?.irreversible ?? REVOCATION_IRREVERSIBLE_MAX_AGE_MS);
+  if (cls === 'rate_limited' || cls === 'costly') return Math.min(max, p.staleness?.rate_limited ?? p.staleness?.costly ?? max);
+  return max;
+}
+
+/**
+ * Age check of revocation state issued (or fetched from a trusted source) at `issuedAt`. Never throws. An unknown issue time
+ * is unverifiable and denies; a time more than 60 s in the future denies (same skew as the signed epoch check).
+ */
+export function checkRevocationAge(issuedAt: number | undefined, now: number, maxAgeMs: number, what = 'revocation state'): { ok: boolean; reason?: string } {
+  if (typeof issuedAt !== 'number' || !Number.isFinite(issuedAt)) return { ok: false, reason: `${what} age is unknown (unverifiable revocation state)` };
+  if (!(issuedAt <= now + 60_000)) return { ok: false, reason: `${what} issued in the future` };
+  if (!(now - issuedAt <= maxAgeMs)) return { ok: false, reason: `${what} is ${now - issuedAt} ms old, over the verifier's maximum of ${maxAgeMs} ms (stale revocation state)` };
+  return { ok: true };
+}
 
 export interface RevocationEpoch {
   /** UNSIGNED annotation: which guardian key epoch signed this (the signature is checked against `guardian`). */
@@ -323,6 +392,11 @@ export interface EpochCheckOptions extends PqPinPolicy {
   lastAcceptedEpoch?: number;
   /** The epoch the PCActn signed in `freshness.epoch`; must be >= the signed epoch (no pre-revocation action). */
   pcactnEpoch?: number;
+  /**
+   * Verifier-side maximum age (`now - issued_at`, ms). An epoch older than this is refused even before its signed
+   * `not_after`. Absent: only `not_after` bounds staleness (the signer's choice).
+   */
+  maxAgeMs?: number;
 }
 
 /** Verify a signed revocation epoch (signature, binding, expiry, rollback, PCActn freshness). Never throws. */
@@ -342,6 +416,10 @@ export function checkRevocationEpoch(ep: RevocationEpoch, o: EpochCheckOptions):
     if (o.grantRef !== undefined && ep.grant_ref !== o.grantRef) return { ok: false, reason: 'revocation epoch is for a different grant' };
     if (!(o.now <= ep.not_after)) return { ok: false, reason: 'revocation epoch expired (stale revocation root)' };
     if (!(ep.issued_at <= o.now + 60_000)) return { ok: false, reason: 'revocation epoch issued in the future' };
+    if (o.maxAgeMs !== undefined) {
+      const age = checkRevocationAge(ep.issued_at, o.now, o.maxAgeMs, 'revocation epoch');
+      if (!age.ok) return age;
+    }
     if (o.lastAcceptedEpoch !== undefined && ep.epoch < o.lastAcceptedEpoch) {
       return { ok: false, reason: `revocation epoch ${ep.epoch} is older than the last accepted ${o.lastAcceptedEpoch} (rollback)` };
     }
@@ -364,7 +442,7 @@ export function revokeMessage(grantRef: string, revokedCapId: string): Uint8Arra
   return m;
 }
 
-export interface RevocationCheckerOptions {
+export interface RevocationCheckerOptions extends RevocationStalenessPolicy {
   /** Trusted current revocation root for this verification (e.g. guardian-signed epoch root). With
    * `epoch` set this is optional: the signed epoch's root is used (and must equal this one if both given). */
   root?: (ctx: VerifyContext) => string | undefined;
@@ -389,6 +467,14 @@ export interface RevocationCheckerOptions {
   /** Which capability ids to check. Default: every `id` in the PCActn's cap_chain (a revoked
    * ancestor kills its descendants). */
   ids?: (ctx: VerifyContext) => string[];
+  /**
+   * With a staleness policy (`maxRevocationAgeMs` / `staleness`) and NO signed `epoch`: when the bare `root` was issued
+   * by (or fetched from) your trusted source, epoch ms. Unknown = unverifiable = denied. Ignored for a signed epoch (its
+   * signed `issued_at` is used).
+   */
+  rootIssuedAt?: (ctx: VerifyContext) => number | undefined;
+  /** Your authoritative reversibility class for the action (e.g. from the tool catalog). The PCActn's signed class can only make it stricter. */
+  reversibilityClass?: (ctx: VerifyContext) => string | undefined;
 }
 
 /**
@@ -397,26 +483,40 @@ export interface RevocationCheckerOptions {
  */
 export function createRevocationChecker(opts: RevocationCheckerOptions): RevocationChecker {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
+  validateRevocationStaleness(opts);
+  const staleness = stalenessPolicyOn(opts);
 
   return (ctx) => {
     let root = opts.root?.(ctx);
     let accepted: RevocationEpoch | undefined;
+    const now = ctx.nowEpoch ?? Date.now();
+    const cls = staleness ? effectiveReversibility(opts.reversibilityClass?.(ctx), ctx.pcactn.action?.reversibility_class) : undefined;
+    const maxAgeMs = cls ? revocationMaxAgeMs(opts, cls) : undefined;
     if (opts.epoch) {
       const ep = opts.epoch(ctx);
       if (!ep || !opts.guardianPublic) return { enforced: true, ok: false, reason: 'no signed revocation epoch' };
       const chk = checkRevocationEpoch(ep, {
         guardianPublic: opts.guardianPublic,
-        now: ctx.nowEpoch ?? Date.now(),
+        now,
         grantRef: ctx.pcactn.grant_ref,
         lastAcceptedEpoch: opts.lastAcceptedEpoch?.(ctx),
         pcactnEpoch: ctx.pcactn.freshness?.epoch,
         pqPins: opts.pqPins,
         allowUnboundPq: opts.allowUnboundPq,
+        ...(maxAgeMs !== undefined ? { maxAgeMs } : {}),
       });
       if (!chk.ok) return { enforced: true, ok: false, reason: chk.reason };
       if (root !== undefined && root !== ep.root) return { enforced: true, ok: false, reason: 'revocation root does not match the signed epoch' };
       root = ep.root;
       accepted = ep;
+    } else if (cls !== undefined && maxAgeMs !== undefined) {
+      // Unsigned-root path under a staleness policy: refused outright for an irreversible action (unless allowed), and
+      // otherwise held to the same age cap via the time YOUR trusted source issued the root.
+      if (cls === 'irreversible' && !opts.allowUnsignedRootForIrreversible) {
+        return { enforced: true, ok: false, reason: 'unsigned revocation root refused for an irreversible action (needs a guardian-signed epoch)' };
+      }
+      const age = checkRevocationAge(opts.rootIssuedAt?.(ctx), now, maxAgeMs, 'revocation root');
+      if (!age.ok) return { enforced: true, ok: false, reason: age.reason };
     }
     if (!root) return { enforced: true, ok: false, reason: 'no revocation root' };
     const ids = opts.ids ? opts.ids(ctx) : ctx.pcactn.cap_chain.map((c) => c.id);

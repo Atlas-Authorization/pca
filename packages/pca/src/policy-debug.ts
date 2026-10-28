@@ -25,8 +25,8 @@ import {
   type PCActn,
   type VerifyHooks,
   type VerifyResult,
-  verifyPCActnCore,
 } from './pcactn';
+import { verifyPCActnCore } from './pcactn-full';
 import {
   ageSinceTouch,
   cost,
@@ -149,13 +149,15 @@ function resolveRiskInputs(input: DecideInput, env: Envelope): { inputs: RiskInp
 }
 
 function term(name: RiskTerm, weight: number, raw: number, inverted: boolean): RiskTermContribution {
-  const input = clamp01(raw);
+  // a non-finite input is the worst case for its term (as decide() fills it), never NaN and never the safe end of an inverted term
+  const input = Number.isFinite(raw) ? clamp01(raw) : WORST[name];
   const effective = inverted ? 1 - input : input;
   return { term: name, weight: wt(weight), input, effective, contribution: wt(weight) * effective, inverted };
 }
 
 /** Decompose `riskScore(inputs, weights)` into its six additive terms. `rawSum` + clamp reproduce `decide`'s r. */
-export function explainRisk(inputs: RiskInputs, weights: RiskWeights, rFloor = 0): RiskExplanation {
+export function explainRisk(inputs: RiskInputs, weights: RiskWeights, rFloorIn = 0): RiskExplanation {
+  const rFloor = Number.isFinite(rFloorIn) ? rFloorIn : 0;
   const terms: RiskTermContribution[] = [
     term('semanticDistance', weights.alpha, inputs.semanticDistance, false),
     term('reversibility', weights.beta, inputs.reversibility, true),

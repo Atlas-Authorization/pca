@@ -40,6 +40,15 @@ import { decodeB64uStrict, hashCanonical } from './hash';
  *   "pca-intent:v2c:" || intent_session.session || ":" || map_digest
  * so a grant minted for the plain map digest never opens under the commit form and vice versa.
  *
+ * GOAL BINDING v3 (0.5, goal-to-decision; closes W1). When the verifier is configured with `IntentPolicy.approved_goal`
+ * ({ goal_digest, policy_digest }: the digests of the Goal IR the principal signed and of the policy compiled from it,
+ * both canonical base64url 32 bytes), step 2 opens the root grant's commitment against
+ *   "pca-intent:v3:" || goal_digest || ":" || policy_digest      (salt = `intent.goal_salt`, same domain and hash)
+ * and ONLY that: a v1/v2 grant (identity of the statement, not its meaning) does not open it, and a v3 grant does not open
+ * under a different goal or a different compiled policy. No wire change: the digests come from the verifier's own
+ * configuration (what it was told the principal approved), so the 9 native verifiers' `intent` wire is untouched. A
+ * verifier without `approved_goal` behaves exactly as before (v1/v2 retained).
+ *
  * The two ppm figures are SIGNED CLAIMS by the leaf holder. They are bound to `map_digest`, so a relying party that
  * fetches the map (server: GET /v1/pca/intent/maps/:digest) and replays it (`verifyIntentMap` in
  * `@atlasauth/pca-intent`) can check them; the core verifier gates on them as claimed and on the binding.
@@ -50,6 +59,8 @@ export const INTENT_GOAL_PREFIX = 'pca-intent:v1:';
 export const INTENT_GOAL_V2_PREFIX = 'pca-intent:v2:';
 /** Intent Layer v2 session grants over a COMMITTED map (rule 19): `pca-intent:v2c:<session>:<map_commit>`. */
 export const INTENT_GOAL_V2C_PREFIX = 'pca-intent:v2c:';
+/** Goal binding v3 (0.5): `pca-intent:v3:<goal_digest>:<policy_digest>`: commits to the signed Goal IR AND the compiled policy. */
+export const INTENT_GOAL_V3_PREFIX = 'pca-intent:v3:';
 /** Domain of the grant's salted goal commitment (`envelope.ts` goalCommitOf); restated so the rule is self-contained. */
 export const INTENT_GOAL_COMMIT_DOMAIN = 'atlas-pca/goal/v1\0';
 export const PPM_ONE = 1_000_000;
@@ -79,6 +90,32 @@ export interface IntentPolicy {
   min_fidelity_ppm?: number;
   /** Deny when the claimed `residual_risk_ppm` is above this. Setting it implies `require`. */
   max_residual_risk_ppm?: number;
+  /** v3 goal binding: the root grant must open against exactly this approved Goal IR + compiled policy. Implies `require`. */
+  approved_goal?: ApprovedGoalRef;
+}
+
+/** The digests a v3 goal commitment binds: b64u(32) of the signed Goal IR and of the policy compiled from it. */
+export interface ApprovedGoalRef {
+  goal_digest: string;
+  policy_digest: string;
+}
+
+/** Well-formed (both canonical b64u 32 bytes)? */
+export function isApprovedGoalRef(v: unknown): v is ApprovedGoalRef {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
+  const r = v as Record<string, unknown>;
+  return Object.keys(r).length === 2 && decodeB64uStrict(r.goal_digest, 32) !== null && decodeB64uStrict(r.policy_digest, 32) !== null;
+}
+
+/** The v3 goal string (what a minting wallet passes as `goal`). Throws on a malformed digest: never commit to garbage. */
+export function intentGoalV3(ref: ApprovedGoalRef): string {
+  if (!isApprovedGoalRef(ref)) throw new Error('intentGoalV3: goal_digest and policy_digest must be canonical base64url (32 bytes)');
+  return INTENT_GOAL_V3_PREFIX + ref.goal_digest + ':' + ref.policy_digest;
+}
+
+/** The v3 goal commitment for a salt (equals `goalCommitOf(intentGoalV3(ref), salt)` of envelope.ts). */
+export function intentGoalCommitV3(ref: ApprovedGoalRef, goal_salt: string): string {
+  return hashCanonical({ d: INTENT_GOAL_COMMIT_DOMAIN, goal: intentGoalV3(ref), salt: goal_salt });
 }
 
 /** The goal string that binds a grant to an intent statement (and optionally an Intent Map). */
@@ -128,7 +165,7 @@ export function validateIntentWire(v: unknown): string | null {
 
 /** True iff the policy is active (the `intent` check runs even for a PCActn without the field). */
 export function intentPolicyActive(policy: IntentPolicy | undefined): boolean {
-  return !!policy && (policy.require === true || policy.min_fidelity_ppm !== undefined || policy.max_residual_risk_ppm !== undefined);
+  return !!policy && (policy.require === true || policy.min_fidelity_ppm !== undefined || policy.max_residual_risk_ppm !== undefined || policy.approved_goal !== undefined);
 }
 
 /** The root grant's goal commitment: the FIRST `envelope` caveat's string `goal_commit`, else null. */
@@ -152,10 +189,16 @@ export function decideIntentBinding(intent: EnvelopeIntent | undefined, grant: u
     if (active && (!okBound(policy!.min_fidelity_ppm) || !okBound(policy!.max_residual_risk_ppm))) {
       return { status: 'fail', reason: 'intent policy misconfigured: thresholds must be non-negative safe integers (fail closed)' };
     }
+    if (active && policy!.approved_goal !== undefined && !isApprovedGoalRef(policy!.approved_goal)) {
+      return { status: 'fail', reason: 'intent policy misconfigured: approved_goal digests must be canonical base64url (32 bytes) (fail closed)' };
+    }
     if (intent === undefined) return { status: 'fail', reason: 'this verifier requires an intent binding but the PCActn carries none' };
     const commit = rootGoalCommit(grant);
     if (commit === null) return { status: 'fail', reason: 'the root grant carries no envelope goal commitment to bind the intent to' };
-    if (intentGoalCommit(intent, session, mapForm) !== commit) return { status: 'fail', reason: "intent ref / map_digest / goal_salt do not open the root grant's goal commitment" };
+    const v3 = policy?.approved_goal;
+    if (v3 !== undefined) {
+      if (intentGoalCommitV3(v3, intent.goal_salt) !== commit) return { status: 'fail', reason: "the root grant's goal commitment does not open to the approved goal and compiled policy (v3)" };
+    } else if (intentGoalCommit(intent, session, mapForm) !== commit) return { status: 'fail', reason: "intent ref / map_digest / goal_salt do not open the root grant's goal commitment" };
     if (policy?.min_fidelity_ppm !== undefined && !(intent.fidelity_ppm >= policy.min_fidelity_ppm)) {
       return { status: 'fail', reason: `intent fidelity ${intent.fidelity_ppm} ppm is below the policy minimum ${policy.min_fidelity_ppm}` };
     }

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-agent",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Agent-side client for Proof-Carrying Authority: commit a plan, act with a PCActn + threshold share, handle step-up, delegate to sub-agents, verify receipts.",
   "keywords": [
     "agent client",
@@ -53,5 +53,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

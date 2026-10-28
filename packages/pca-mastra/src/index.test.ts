@@ -86,7 +86,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     const { context, pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
       // default require → reads the encoded proof from runtimeContext.get('pca')
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
       verb: 'stripe.refund',
       onVerified: (_r, p) => (verifiedVerb = p.action.verb),
@@ -103,7 +103,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     const { context, pcactn } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
       require: () => pcactn, // object form, not a string, and not from the run context
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
     });
     await expect(tool.execute!({ context })).resolves.toEqual({ ok: true });
@@ -126,7 +126,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     };
     const guarded = withPcaTool(tool, {
       require: proofFromContextHeaders<ArgsWithHeaders>(),
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
     });
     await expect(guarded.execute!({ context: { ...context, headers: { 'PCA-Action': headerValue } } })).resolves.toEqual({ ok: true });
@@ -136,7 +136,7 @@ describe('withPcaTool — Mastra execution guard', () => {
   it('blocks a call with NO proof (typed PcaToolDenied/missing), original not called', async () => {
     const a = refundAgent();
     const sink: { ran?: unknown } = {};
-    const tool = withPcaTool(refundTool(sink), { verify: { grant: a.grant }, audience: AUD, verb: 'stripe.refund' });
+    const tool = withPcaTool(refundTool(sink), { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD, verb: 'stripe.refund' });
     const err = await Promise.resolve(
       tool.execute!({ context: { amount: 20, currency: 'usd', charge: 'ch_1' }, runtimeContext: runContext() }),
     ).catch((e: unknown) => e);
@@ -147,7 +147,7 @@ describe('withPcaTool — Mastra execution guard', () => {
   it('blocks a malformed proof (typed PcaToolDenied/malformed), original not called', async () => {
     const a = refundAgent();
     const sink: { ran?: unknown } = {};
-    const tool = withPcaTool(refundTool(sink), { verify: { grant: a.grant }, audience: AUD });
+    const tool = withPcaTool(refundTool(sink), { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD });
     const ctx: MastraToolExecuteContext<RefundArgs> = {
       context: { amount: 20, currency: 'usd', charge: 'ch_1' },
       runtimeContext: runContext({ pca: 'not-a-valid-pcactn' }),
@@ -162,7 +162,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     const sink: { ran?: unknown } = {};
     const { pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: 'ins_other', // the proof is bound to AUD, not this
     });
     const err = await Promise.resolve(tool.execute!(ctx)).catch((e: unknown) => e);
@@ -177,7 +177,7 @@ describe('withPcaTool — Mastra execution guard', () => {
     const sink: { ran?: unknown } = {};
     const { pcactn, ctx } = proveRefund(a, 20);
     const tool = withPcaTool(refundTool(sink), {
-      verify: { grant: a.grant, nowEpoch: pcactn.iat },
+      mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat },
       audience: AUD,
       verb: 'stripe.payout', // the proof is for stripe.refund
     });
@@ -188,7 +188,7 @@ describe('withPcaTool — Mastra execution guard', () => {
 
   it('preserves non-execute fields on the wrapped tool', () => {
     const a = refundAgent();
-    const tool = withPcaTool(refundTool({}), { verify: { grant: a.grant }, audience: AUD });
+    const tool = withPcaTool(refundTool({}), { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD });
     expect(tool.id).toBe('refund');
     expect(tool.description).toBe('Refund a charge');
     expect(tool.inputSchema).toEqual({ type: 'object' });
@@ -202,7 +202,7 @@ describe('pcaTools — record wrapper', () => {
     const sinks = { a: {} as { ran?: unknown }, b: {} as { ran?: unknown } };
     const wrapped = pcaTools(
       { refund: refundTool(sinks.a), refundTwo: refundTool(sinks.b) },
-      { verify: { grant: a.grant }, audience: AUD },
+      { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD },
     );
     for (const name of ['refund', 'refundTwo'] as const) {
       const err = await Promise.resolve(
@@ -220,7 +220,7 @@ describe('pcaTools — record wrapper', () => {
     const { context, pcactn, ctx } = proveRefund(a, 20);
     const wrapped = pcaTools(
       { refund: refundTool(sink) },
-      { verify: { grant: a.grant, nowEpoch: pcactn.iat }, audience: AUD, per: { refund: { verb: 'stripe.refund' } } },
+      { mode: 'signature-only', verify: { grant: a.grant, nowEpoch: pcactn.iat }, audience: AUD, per: { refund: { verb: 'stripe.refund' } } },
     );
     await expect(wrapped.refund.execute!(ctx)).resolves.toEqual({ ok: true });
     expect(sink.ran).toEqual(context);
@@ -231,7 +231,7 @@ describe('pcaTools — record wrapper', () => {
     const passthrough: MastraTool = { id: 'lookup', description: 'read', execute: async () => 'ok' };
     const wrapped = pcaTools(
       { refund: refundTool({}), lookup: passthrough },
-      { verify: { grant: a.grant }, audience: AUD, only: ['refund'] },
+      { mode: 'signature-only', verify: { grant: a.grant }, audience: AUD, only: ['refund'] },
     );
     expect(wrapped.lookup).toBe(passthrough); // identical reference = not wrapped
     expect(wrapped.refund).not.toBe(passthrough);
@@ -247,8 +247,8 @@ describe('workflow step-up helpers', () => {
 
   it('reviewStep flags a risky step as step_up and a safe step as auto', () => {
     const a = opsAgent();
-    const risky = reviewStep(a, 'deleteFile', { path: 'file:/etc/hosts' }, { intent });
-    const safe = reviewStep(a, 'readFile', {}, { intent });
+    const risky = reviewStep(a, 'deleteFile', { path: 'file:/etc/hosts' }, { intent, insecureUnboundApproval: true });
+    const safe = reviewStep(a, 'readFile', {}, { intent, insecureUnboundApproval: true });
     expect(risky.review.kind).toBe('step_up');
     if (risky.review.kind === 'step_up') {
       expect(risky.review.request.verb).toBe('files.delete');
@@ -260,8 +260,8 @@ describe('workflow step-up helpers', () => {
   it('pendingStepUps collects only the step_up reviews', () => {
     const a = opsAgent();
     const reviews = [
-      reviewStep(a, 'deleteFile', { path: 'file:/x' }, { intent }),
-      reviewStep(a, 'readFile', {}, { intent }),
+      reviewStep(a, 'deleteFile', { path: 'file:/x' }, { intent, insecureUnboundApproval: true }),
+      reviewStep(a, 'readFile', {}, { intent, insecureUnboundApproval: true }),
     ];
     expect(pendingStepUps(reviews).map((p) => p.step)).toEqual(['deleteFile']);
   });
@@ -277,7 +277,7 @@ describe('workflow step-up helpers', () => {
         return { deleted: true };
       },
     };
-    const guarded = guardStep(step, { agent: a, intent, onStepUp: (p) => seen.push(p.step) });
+    const guarded = guardStep(step, { agent: a, intent, insecureUnboundApproval: true, onStepUp: (p) => seen.push(p.step) });
     const err = await Promise.resolve(guarded.execute!({ inputData: { path: 'file:/etc/hosts' } })).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(PcaStepUpRequired);
     if (err instanceof PcaStepUpRequired) expect(err.request.verb).toBe('files.delete');
@@ -295,7 +295,7 @@ describe('workflow step-up helpers', () => {
         return { read: true };
       },
     };
-    const safeGuarded = guardStep(safeStep, { agent: a, intent });
+    const safeGuarded = guardStep(safeStep, { agent: a, intent, insecureUnboundApproval: true });
     await expect(safeGuarded.execute!({ inputData: {} })).resolves.toEqual({ read: true });
 
     const deleteStep: MastraStep<{ path: string }, { deleted: true }> = {
@@ -305,7 +305,7 @@ describe('workflow step-up helpers', () => {
         return { deleted: true };
       },
     };
-    const approvedGuarded = guardStep(deleteStep, { agent: a, intent, approved: () => true });
+    const approvedGuarded = guardStep(deleteStep, { agent: a, intent, insecureUnboundApproval: true, approved: () => true });
     await expect(approvedGuarded.execute!({ inputData: { path: 'file:/tmp/x' } })).resolves.toEqual({ deleted: true });
     expect(ran).toEqual(['readFile', 'deleteFile']);
   });
@@ -316,7 +316,7 @@ describe('workflow step-up helpers', () => {
       id: 'deleteFile',
       execute: async () => ({ deleted: true }),
     };
-    const guarded = guardStep(step, { agent: a, intent });
+    const guarded = guardStep(step, { agent: a, intent, insecureUnboundApproval: true });
     const err = await Promise.resolve(guarded.execute!({ inputData: { path: 'file:/x' } })).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(PcaStepDenied);
   });
