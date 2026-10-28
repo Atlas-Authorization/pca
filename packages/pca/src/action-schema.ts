@@ -24,6 +24,15 @@ const suiteErr = (alg: unknown) => suiteCapabilityError(alg, (a) => resolveSigAl
  * whole signed document (the PCActn signs it as `intent_session.schema`).
  *
  * CLOSED-WORLD CONFORMANCE (`conformAction`): see the function for the exact, ordered rule list.
+ *
+ * VERSION 2 (action kit, docs/pca/specs/action-kit.md section 2.4 / 10): `v: 2` is the same document plus normative verb
+ * members `effects` (a string list, replacing the reserved object of v1), `traits` (trait ids), `def` (the ActionDef
+ * digest) and `floors` (the materialized effective restriction profile); the document may carry `traits_digest`,
+ * `trait_defs` (custom traits) and `pack` (the pack the verbs come from). Parameters of a v2 verb may be named by a dotted
+ * path of up to three segments (the caller presents the flattened form) and may carry `role`, `format`, `tags` and
+ * `provenance_min`; three more types exist (`datetime`, `duration`, `object_ref`). A `v: 1` document is validated exactly
+ * as before (these members are unknown members there). The semantic checks of the new members (rule 22) live with the
+ * trait algebra in `@atlasauth/pca-actions`.
  */
 
 export const ACTION_SCHEMA_DOMAIN = 'atlas-pca/action-schema/v1\0';
@@ -35,8 +44,44 @@ export type Sensitivity = 'free' | 'material' | 'critical';
 export const SENSITIVITIES: readonly Sensitivity[] = ['free', 'material', 'critical'];
 export type SchemaReversibility = 'reversible' | 'rate_limited' | 'irreversible';
 export const SCHEMA_REVERSIBILITY: readonly SchemaReversibility[] = ['reversible', 'rate_limited', 'irreversible'];
-export type ParamType = 'string' | 'integer' | 'boolean' | 'date' | 'set' | 'array';
-export const PARAM_TYPES: readonly ParamType[] = ['string', 'integer', 'boolean', 'date', 'set', 'array'];
+export type ParamTypeV1 = 'string' | 'integer' | 'boolean' | 'date' | 'set' | 'array';
+export type ParamType = ParamTypeV1 | 'datetime' | 'duration' | 'object_ref';
+/** The v1 parameter types (a v1 document accepts exactly these). */
+export const PARAM_TYPES: readonly ParamTypeV1[] = ['string', 'integer', 'boolean', 'date', 'set', 'array'];
+/** The v2 parameter types: the v1 types plus `datetime` (RFC 3339 UTC `...Z`), `duration` (integer milliseconds) and `object_ref` (an id string). */
+export const PARAM_TYPES_V2: readonly ParamType[] = [...PARAM_TYPES, 'datetime', 'duration', 'object_ref'];
+
+/** v2 vocabularies (mirrors of the pca-actions tables; a parity test pins them). */
+export const SCHEMA_V2_EFFECTS: readonly string[] = ['read', 'create', 'update', 'delete', 'send', 'pay', 'exec', 'privilege', 'export', 'publish', 'provision', 'sign'];
+export const SCHEMA_V2_CAVEATS: readonly string[] = ['amount_cap', 'count_cap', 'window', 'resource_scope', 'recipient_scope', 'approval_ref', 'short_expiry', 'rate_cap'];
+export const SCHEMA_V2_PRULES: readonly string[] = ['array_bounded', 'export_bounded', 'id_not_wildcard', 'money_amount_bounded', 'money_has_currency', 'pay_has_idempotency', 'recipient_param_declared', 'secret_not_logged'];
+export const SCHEMA_V2_CONTEXT: readonly string[] = ['approval_ref', 'dry_run_first', 'fresh_revocation', 'idempotency', 'revocable', 'sandbox_attested'];
+export const SCHEMA_V2_TAGS: readonly string[] = ['pii', 'phi', 'pci', 'secret', 'credential', 'free_text_outbound', 'code', 'path', 'sql'];
+export const SCHEMA_V2_PROVENANCE: readonly string[] = ['first_party', 'tool', 'agent'];
+/**
+ * v2: the signed human confirmation of a verb (a review attestation, see pca-actions). Without a valid one - checked by rule 22
+ * against the verifier's pinned reviewer keys - a verb is UNCONFIRMED and must carry every trait of the registry.
+ */
+export interface SchemaConfirmation {
+  def_digest: string;
+  traits_digest: string;
+  facts_digest: string;
+  final_traits: string[];
+  dismissed: { trait: string; reason: string }[];
+  reviewer_kid: string;
+  ts: number;
+  sig: string;
+}
+/** The materialized restriction profile of a v2 verb (`floors`): see the trait algebra in pca-actions. */
+export interface SchemaFloors {
+  risk: number;
+  rev: SchemaReversibility;
+  blast_ppm: number;
+  esc: number;
+  caveats: string[];
+  context: string[];
+  prules: string[];
+}
 
 /** Limits (normative). */
 export const MAX_SCHEMA_VERBS = 256;
@@ -48,6 +93,8 @@ export const DEFAULT_MAX_LEN = 1024;
 export const DEFAULT_MAX_ITEMS = 64;
 /** A declared parameter path: `action.params.<name>`, top-level names only. */
 export const PARAM_PATH_RE = /^action\.params\.[A-Za-z0-9_]{1,64}$/;
+/** v2: `action.params.<name>` where name is up to three dotted segments (the flattened form of a nested body). */
+export const PARAM_PATH_RE_V2 = /^action\.params\.[A-Za-z0-9_]{1,64}(?:\.[A-Za-z0-9_]{1,64}){0,2}$/;
 /** An accumulation unit (`accumulates_into` entry, a unit id). */
 export const UNIT_ID_RE = /^[a-z0-9_]+(?:\.[a-z0-9_]+)*$/;
 
@@ -80,6 +127,14 @@ export interface ActionParamDecl {
   /** The site issues this value in its own signed responses (provenance, W-B). */
   issued_by_site?: boolean;
   description?: string;
+  /** v2: semantic role (`money.amount`, `party.payee`, ...). Drives the derived sensitivity floor. */
+  role?: string;
+  /** v2, string / object_ref: a checked format (`email`, `uuid`, `iso_currency`, `id:<type>`, ...). */
+  format?: string;
+  /** v2: parameter tags (`pii`, `secret`, `free_text_outbound`, ...). */
+  tags?: string[];
+  /** v2: the least trusted source this value may have. */
+  provenance_min?: 'first_party' | 'tool' | 'agent';
 }
 
 export interface ReversibilityBy {
@@ -96,12 +151,24 @@ export interface ActionVerbDecl {
   reversibility_by?: ReversibilityBy;
   mcp?: { tool: string };
   openapi?: { operationId: string };
-  /** Owned by later milestones (W-B / V9 / V14); validated here only as containers. */
+  /**
+   * Reserved extension members: signed with the schema and carried unchanged, checked only for their container type, and
+   * NOT read by any verification step (no check enforces what they say). A site must not rely on them for enforcement.
+   */
   harm?: Record<string, unknown>;
   world?: unknown[];
-  effects?: Record<string, unknown>;
+  /** v1: reserved object. v2: the normative effect list (sorted, distinct). */
+  effects?: Record<string, unknown> | string[];
   returns?: Record<string, unknown>;
   description?: string;
+  /** v2: trait ids (declared + implied), sorted and distinct. */
+  traits?: string[];
+  /** v2: the ActionDef digest this verb was derived from (b64u). */
+  def?: string;
+  /** v2: the materialized effective profile; a verifier checks it against the floors of `traits` (rule 22). */
+  floors?: SchemaFloors;
+  /** v2: the signed human confirmation (absent = unconfirmed = maximally dangerous). */
+  confirmation?: SchemaConfirmation;
 }
 
 export interface ActionSchemaSig {
@@ -115,15 +182,21 @@ export interface ActionSchemaSig {
 }
 
 export interface ActionSchema {
-  v: 1;
+  v: 1 | 2;
   kind: typeof ACTION_SCHEMA_KIND;
   site: string;
   aud: string;
   version: string;
   units?: Record<string, { kind: string; currency?: string; exponent?: number }>;
-  /** Monitored state variables (V9 frames); a container here. */
+  /** Reserved extension member (state variables): signed and carried, checked only to be an array, not read by any check. */
   state?: unknown[];
   verbs: ActionVerbDecl[];
+  /** v2: digest of the trait registry the floors were computed against. */
+  traits_digest?: string;
+  /** v2: custom trait definitions (core traits are embedded in verifiers). */
+  trait_defs?: unknown[];
+  /** v2: the pack the verbs come from. */
+  pack?: { ns: string; version: string; root: string };
   sig: ActionSchemaSig;
 }
 export type UnsignedActionSchema = Omit<ActionSchema, 'sig'>;
@@ -139,11 +212,14 @@ export interface ActionSchemaKey {
 }
 
 const DOC_KEYS = new Set(['v', 'kind', 'site', 'aud', 'version', 'units', 'state', 'verbs', 'sig']);
+const DOC_KEYS_V2 = new Set([...DOC_KEYS, 'traits_digest', 'trait_defs', 'pack']);
 const VERB_KEYS = new Set(['verb', 'kind', 'params', 'reversibility', 'reversibility_by', 'mcp', 'openapi', 'harm', 'world', 'effects', 'returns', 'description']);
+const VERB_KEYS_V2 = new Set([...VERB_KEYS, 'traits', 'def', 'floors', 'confirmation']);
 const PARAM_KEYS = new Set([
   'type', 'semantic', 'sensitivity', 'required', 'values', 'min', 'max', 'unit', 'max_len', 'items', 'min_items', 'max_items',
   'default', 'principal_neutral_default', 'accumulates_into', 'issued_by_site', 'description',
 ]);
+const PARAM_KEYS_V2 = new Set([...PARAM_KEYS, 'role', 'format', 'tags', 'provenance_min']);
 const SIG_KEYS = new Set(['alg', 'kid', 'value', 'pq_value']);
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
@@ -154,12 +230,12 @@ const u8len = (s: string): number => utf8(s).length;
 const isStr = (v: unknown, max = 256): v is string => typeof v === 'string' && v.length > 0 && !hasLoneSurrogate(v) && u8len(v) <= max;
 const own = (o: object, k: string) => ownHas(o, k);
 
-function paramDeclError(path: string, d: unknown, units: Record<string, unknown> | undefined): string | null {
-  if (!PARAM_PATH_RE.test(path)) return `parameter path '${path}' is not action.params.<name>`;
-  if (RESERVED_NAMES.has(path.slice('action.params.'.length))) return `parameter name '${path}' is reserved (__proto__ / constructor / prototype)`;
+function paramDeclError(path: string, d: unknown, units: Record<string, unknown> | undefined, v2 = false): string | null {
+  if (!(v2 ? PARAM_PATH_RE_V2 : PARAM_PATH_RE).test(path)) return `parameter path '${path}' is not action.params.<name>`;
+  if (path.slice('action.params.'.length).split('.').some((seg) => RESERVED_NAMES.has(seg))) return `parameter name '${path}' is reserved (__proto__ / constructor / prototype)`;
   if (!isObj(d)) return `${path}: declaration must be an object`;
-  for (const k of Object.keys(d)) if (!PARAM_KEYS.has(k)) return `${path}: unknown member '${k}'`;
-  if (!PARAM_TYPES.includes(d.type as ParamType)) return `${path}: unknown type`;
+  for (const k of Object.keys(d)) if (!(v2 ? PARAM_KEYS_V2 : PARAM_KEYS).has(k)) return `${path}: unknown member '${k}'`;
+  if (!((v2 ? PARAM_TYPES_V2 : PARAM_TYPES) as readonly unknown[]).includes(d.type)) return `${path}: unknown type`;
   if (!isStr(d.semantic, 128)) return `${path}: semantic must be a non-empty string`;
   if (!SENSITIVITIES.includes(d.sensitivity as Sensitivity)) return `${path}: unknown sensitivity`;
   if (d.required !== undefined && typeof d.required !== 'boolean') return `${path}: required must be a boolean`;
@@ -170,7 +246,7 @@ function paramDeclError(path: string, d: unknown, units: Record<string, unknown>
   }
   if (d.type === 'set' && d.values === undefined) return `${path}: a set needs values`;
   for (const k of ['min', 'max'] as const) {
-    if (d[k] !== undefined && (!isInt(d[k]) || (d.type !== 'integer' && !(d.type === 'array' && d.items === 'integer')))) return `${path}: ${k} must be a safe integer on an integer parameter`;
+    if (d[k] !== undefined && (!isInt(d[k]) || (d.type !== 'integer' && !(v2 && d.type === 'duration') && !(d.type === 'array' && d.items === 'integer')))) return `${path}: ${k} must be a safe integer on an integer parameter`;
   }
   if (isInt(d.min) && isInt(d.max) && d.min > d.max) return `${path}: min > max`;
   if (d.unit !== undefined && (d.type !== 'integer' || typeof d.unit !== 'string' || !units || !own(units, d.unit))) return `${path}: unit must name a declared unit of an integer parameter`;
@@ -191,12 +267,59 @@ function paramDeclError(path: string, d: unknown, units: Record<string, unknown>
   }
   if (d.issued_by_site !== undefined && typeof d.issued_by_site !== 'boolean') return `${path}: issued_by_site must be a boolean`;
   if (d.description !== undefined && !isStr(d.description, 1024)) return `${path}: description must be a string`;
+  if (v2) {
+    if (d.role !== undefined && !isStr(d.role, 128)) return `${path}: role must be a non-empty string`;
+    if (d.format !== undefined && (typeof d.format !== 'string' || formatCheck(d.format) === null || (d.type !== 'string' && d.type !== 'object_ref'))) return `${path}: format must be a known format on a string parameter`;
+    if (d.tags !== undefined && (!Array.isArray(d.tags) || d.tags.length > SCHEMA_V2_TAGS.length || new Set(d.tags).size !== d.tags.length || !d.tags.every((t) => SCHEMA_V2_TAGS.includes(t as string)))) return `${path}: tags must be distinct known tags`;
+    if (d.provenance_min !== undefined && !SCHEMA_V2_PROVENANCE.includes(d.provenance_min as string)) return `${path}: unknown provenance_min`;
+  }
   return null;
 }
 
-function verbDeclError(v: unknown, units: Record<string, unknown> | undefined): string | null {
+const TRAIT_ID_V2 = /^[a-z][a-z0-9_]{0,31}\.[a-z][a-z0-9_]{0,63}$/;
+/** Null if `c` is a well-formed `confirmation` (shape only; the signature check is rule 22). */
+export function confirmationShapeError(c: unknown): string | null {
+  if (!isObj(c)) return 'confirmation must be an object';
+  for (const k of Object.keys(c)) if (!['def_digest', 'traits_digest', 'facts_digest', 'final_traits', 'dismissed', 'reviewer_kid', 'ts', 'sig'].includes(k)) return `confirmation: unknown member '${k}'`;
+  if (decodeB64uStrict(c.def_digest, 32) === null || decodeB64uStrict(c.traits_digest, 32) === null || decodeB64uStrict(c.facts_digest, 32) === null) return 'confirmation: def_digest, traits_digest and facts_digest must be canonical base64url SHA-256 digests';
+  if (decodeB64uStrict(c.sig, 64) === null) return 'confirmation: sig must be a canonical base64url 64-byte signature';
+  const ft = c.final_traits;
+  if (!Array.isArray(ft) || ft.length > 64 || !ft.every((x) => typeof x === 'string' && TRAIT_ID_V2.test(x))) return 'confirmation: final_traits must be trait ids';
+  for (let i = 1; i < ft.length; i++) if (!((ft[i - 1] as string) < (ft[i] as string))) return 'confirmation: final_traits must be sorted and distinct';
+  const dm = c.dismissed;
+  if (!Array.isArray(dm) || dm.length > 64) return 'confirmation: dismissed must be an array';
+  for (const d of dm) {
+    if (!isObj(d) || Object.keys(d).some((k) => k !== 'trait' && k !== 'reason') || typeof d.trait !== 'string' || !TRAIT_ID_V2.test(d.trait) || !isStr(d.reason, 256)) return 'confirmation: dismissed entries must be {trait, reason}';
+  }
+  if (!isStr(c.reviewer_kid, 128)) return 'confirmation: reviewer_kid must be a non-empty string';
+  if (typeof c.ts !== 'number' || !Number.isSafeInteger(c.ts) || c.ts < 0) return 'confirmation: ts must be a non-negative safe integer';
+  return null;
+}
+
+/** Null if `f` is a well-formed materialized profile (shape only; the semantic check is rule 22). */
+export function schemaFloorsError(f: unknown): string | null {
+  if (!isObj(f)) return 'floors must be an object';
+  for (const k of Object.keys(f)) if (!['risk', 'rev', 'blast_ppm', 'esc', 'caveats', 'context', 'prules'].includes(k)) return `floors: unknown member '${k}'`;
+  const rng = (x: unknown, lo: number, hi: number) => isInt(x) && x >= lo && x <= hi;
+  if (!rng(f.risk, 0, 3) || !rng(f.esc, 0, 3)) return 'floors.risk and floors.esc must be integers in 0..3';
+  if (!SCHEMA_REVERSIBILITY.includes(f.rev as SchemaReversibility)) return 'floors.rev is not a reversibility class';
+  if (!rng(f.blast_ppm, 0, 1_000_000)) return 'floors.blast_ppm must be an integer in 0..1000000';
+  const sets: [string, (x: string) => boolean][] = [
+    ['caveats', (x) => SCHEMA_V2_CAVEATS.includes(x)],
+    ['context', (x) => SCHEMA_V2_CONTEXT.includes(x) || /^session_taint_max:[a-z_]{1,16}$/.test(x)],
+    ['prules', (x) => SCHEMA_V2_PRULES.includes(x)],
+  ];
+  for (const [name, ok] of sets) {
+    const a = f[name];
+    if (!Array.isArray(a) || a.length > 64 || !a.every((x) => typeof x === 'string' && ok(x))) return `floors.${name} must be an array of known entries`;
+    for (let i = 1; i < a.length; i++) if (!((a[i - 1] as string) < (a[i] as string))) return `floors.${name} must be sorted and distinct`;
+  }
+  return null;
+}
+
+function verbDeclError(v: unknown, units: Record<string, unknown> | undefined, v2 = false): string | null {
   if (!isObj(v)) return 'verb entry must be an object';
-  for (const k of Object.keys(v)) if (!VERB_KEYS.has(k)) return `verb entry: unknown member '${k}'`;
+  for (const k of Object.keys(v)) if (!(v2 ? VERB_KEYS_V2 : VERB_KEYS).has(k)) return `verb entry: unknown member '${k}'`;
   if (!isStr(v.verb, 128)) return 'verb entry: verb must be a non-empty string';
   const at = `verb '${v.verb}'`;
   if (v.kind !== 'read' && v.kind !== 'write') return `${at}: kind must be read or write`;
@@ -204,8 +327,11 @@ function verbDeclError(v: unknown, units: Record<string, unknown> | undefined): 
   const names = Object.keys(v.params);
   if (names.length > MAX_SCHEMA_PARAMS) return `${at}: more than ${MAX_SCHEMA_PARAMS} parameters`;
   for (const p of names) {
-    const e = paramDeclError(p, ownGet(v.params, p), units);
+    const e = paramDeclError(p, ownGet(v.params, p), units, v2);
     if (e) return `${at}: ${e}`;
+  }
+  if (v2) {
+    for (const p of names) for (const q of names) if (q !== p && q.startsWith(p + '.')) return `${at}: parameter '${p}' is both a value and the parent of '${q}'`;
   }
   if (v.reversibility !== undefined && !SCHEMA_REVERSIBILITY.includes(v.reversibility as SchemaReversibility)) return `${at}: unknown reversibility`;
   if (v.reversibility_by !== undefined) {
@@ -217,7 +343,23 @@ function verbDeclError(v: unknown, units: Record<string, unknown> | undefined): 
   }
   if (v.mcp !== undefined && (!isObj(v.mcp) || Object.keys(v.mcp).join() !== 'tool' || !isStr(v.mcp.tool, 128))) return `${at}: mcp must be {tool}`;
   if (v.openapi !== undefined && (!isObj(v.openapi) || Object.keys(v.openapi).join() !== 'operationId' || !isStr(v.openapi.operationId, 128))) return `${at}: openapi must be {operationId}`;
-  for (const k of ['harm', 'effects', 'returns'] as const) if (v[k] !== undefined && !isObj(v[k])) return `${at}: ${k} must be an object`;
+  for (const k of v2 ? (['harm', 'returns'] as const) : (['harm', 'effects', 'returns'] as const)) if (v[k] !== undefined && !isObj(v[k])) return `${at}: ${k} must be an object`;
+  if (v2) {
+    const ef = v.effects;
+    if (!Array.isArray(ef) || ef.length === 0 || ef.length > SCHEMA_V2_EFFECTS.length || !ef.every((x) => SCHEMA_V2_EFFECTS.includes(x as string))) return `${at}: effects must be 1..${SCHEMA_V2_EFFECTS.length} known effects`;
+    for (let i = 1; i < ef.length; i++) if (!((ef[i - 1] as string) < (ef[i] as string))) return `${at}: effects must be sorted and distinct`;
+    if ((v.kind === 'read') !== ef.every((x) => x === 'read')) return `${at}: kind read must hold exactly when every effect is read`;
+    const tr = v.traits;
+    if (!Array.isArray(tr) || tr.length > 64 || !tr.every((x) => typeof x === 'string' && /^[a-z][a-z0-9_]{0,31}\.[a-z][a-z0-9_]{0,63}$/.test(x))) return `${at}: traits must be trait ids`;
+    for (let i = 1; i < tr.length; i++) if (!((tr[i - 1] as string) < (tr[i] as string))) return `${at}: traits must be sorted and distinct`;
+    if (decodeB64uStrict(v.def, 32) === null) return `${at}: def must be a canonical base64url SHA-256 digest`;
+    const fe = schemaFloorsError(v.floors);
+    if (fe) return `${at}: ${fe}`;
+    if (v.confirmation !== undefined) {
+      const ce = confirmationShapeError(v.confirmation);
+      if (ce) return `${at}: ${ce}`;
+    }
+  }
   if (v.world !== undefined && !Array.isArray(v.world)) return `${at}: world must be an array`;
   if (v.description !== undefined && !isStr(v.description, 1024)) return `${at}: description must be a string`;
   return null;
@@ -227,8 +369,9 @@ function verbDeclError(v: unknown, units: Record<string, unknown> | undefined): 
 export function actionSchemaShapeError(doc: unknown, opts: { signed?: boolean } = {}): string | null {
   try {
     if (!isObj(doc)) return 'schema is not an object';
-    for (const k of Object.keys(doc)) if (!DOC_KEYS.has(k)) return `unknown member '${k}'`;
-    if (doc.v !== 1) return 'unsupported schema version';
+    for (const k of Object.keys(doc)) if (!(doc.v === 2 ? DOC_KEYS_V2 : DOC_KEYS).has(k)) return `unknown member '${k}'`;
+    if (doc.v !== 1 && doc.v !== 2) return 'unsupported schema version';
+    const v2 = doc.v === 2;
     if (doc.kind !== ACTION_SCHEMA_KIND) return `kind must be '${ACTION_SCHEMA_KIND}'`;
     if (!isStr(doc.site, 2048) || !isStr(doc.aud, 256) || !isStr(doc.version, 128)) return 'site, aud and version must be non-empty strings';
     if (doc.units !== undefined) {
@@ -242,10 +385,18 @@ export function actionSchemaShapeError(doc: unknown, opts: { signed?: boolean } 
       }
     }
     if (doc.state !== undefined && !Array.isArray(doc.state)) return 'state must be an array';
+    if (v2) {
+      if (doc.traits_digest !== undefined && decodeB64uStrict(doc.traits_digest, 32) === null) return 'traits_digest must be a canonical base64url SHA-256 digest';
+      if (doc.trait_defs !== undefined && (!Array.isArray(doc.trait_defs) || doc.trait_defs.length > 64 || !doc.trait_defs.every(isObj))) return 'trait_defs must be an array of up to 64 objects';
+      if (doc.pack !== undefined) {
+        const pk = doc.pack;
+        if (!isObj(pk) || Object.keys(pk).sort().join() !== 'ns,root,version' || !isStr(pk.ns, 64) || !isStr(pk.version, 128) || decodeB64uStrict(pk.root, 32) === null) return 'pack must be {ns, version, root}';
+      }
+    }
     if (!Array.isArray(doc.verbs) || doc.verbs.length === 0 || doc.verbs.length > MAX_SCHEMA_VERBS) return `verbs must be 1..${MAX_SCHEMA_VERBS} entries`;
     const seen = new Set<string>();
     for (const v of doc.verbs) {
-      const e = verbDeclError(v, doc.units as Record<string, unknown> | undefined);
+      const e = verbDeclError(v, doc.units as Record<string, unknown> | undefined, v2);
       if (e) return e;
       const name = (v as { verb: string }).verb;
       if (seen.has(name)) return `verb '${name}' is declared twice`;
@@ -353,6 +504,50 @@ function isCalendarDate(s: string): boolean {
 }
 const strOk = (x: unknown, maxLen: number): x is string => typeof x === 'string' && !hasLoneSurrogate(x) && u8len(x) <= maxLen;
 
+// ---- v2 string formats (syntactic checks, identical in every language; none consults a registry or the network) -------------
+const IBAN_RE = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/;
+function ibanOk(s: string): boolean {
+  if (!IBAN_RE.test(s)) return false;
+  let rem = 0;
+  for (const ch of s.slice(4) + s.slice(0, 4)) {
+    const v = ch >= 'A' ? ch.charCodeAt(0) - 55 : ch.charCodeAt(0) - 48;
+    rem = (v > 9 ? rem * 100 + v : rem * 10 + v) % 97;
+  }
+  return rem === 1;
+}
+function cidrOk(s: string): boolean {
+  const m4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/.exec(s);
+  if (m4) return [m4[1], m4[2], m4[3], m4[4]].every((o) => Number(o) <= 255 && String(Number(o)) === o) && Number(m4[5]) <= 32 && String(Number(m4[5])) === m4[5];
+  const m6 = /^([0-9a-fA-F:]{2,39})\/(\d{1,3})$/.exec(s);
+  return !!m6 && (m6[1]!.match(/:/g) ?? []).length >= 2 && !m6[1]!.includes(':::') && Number(m6[2]) <= 128 && String(Number(m6[2])) === m6[2];
+}
+const FORMAT_CHECKS: Record<string, (s: string) => boolean> = {
+  email: (s) => s.length <= 254 && /^[A-Za-z0-9._%+\-]{1,64}@[A-Za-z0-9\-]{1,63}(?:\.[A-Za-z0-9\-]{1,63})+$/.test(s),
+  url: (s) => /^[A-Za-z][A-Za-z0-9+.\-]{0,31}:\/\/[^\s/?#]+[^\s]*$/.test(s),
+  uri_https: (s) => /^https:\/\/[^\s/?#]+[^\s]*$/.test(s),
+  uuid: (s) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s),
+  iban: ibanOk,
+  phone_e164: (s) => /^\+[1-9][0-9]{6,14}$/.test(s),
+  cidr: cidrOk,
+  iso_country: (s) => /^[A-Z]{2}$/.test(s),
+  iso_currency: (s) => /^[A-Z]{3}$/.test(s),
+  semver: (s) => /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z\-]+(?:\.[0-9A-Za-z\-]+)*)?(?:\+[0-9A-Za-z\-]+(?:\.[0-9A-Za-z\-]+)*)?$/.test(s),
+  sha256: (s) => /^[0-9a-f]{64}$/.test(s),
+};
+const ID_FORMAT = /^id:[a-z0-9_]+(?:\.[a-z0-9_]+){0,3}$/;
+/** The checker of a v2 `format`, or null when the format is unknown. `id:<type>` accepts a 1..128 character safe id. */
+export function formatCheck(f: string): ((s: string) => boolean) | null {
+  if (Object.prototype.hasOwnProperty.call(FORMAT_CHECKS, f)) return FORMAT_CHECKS[f]!;
+  return ID_FORMAT.test(f) ? (s) => /^[A-Za-z0-9._:\-]{1,128}$/.test(s) : null;
+}
+const DATETIME_RE = /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,3})?Z$/;
+
+function formatViolation(d: ActionParamDecl, x: string): { code: 'out_of_domain'; reason: string } | null {
+  if (d.format === undefined) return null;
+  const ck = formatCheck(d.format);
+  return ck === null || !ck(x) ? { code: 'out_of_domain', reason: `not a valid ${d.format}` } : null;
+}
+
 /** Value check of one declared parameter: null = in the declared domain, else the violation. */
 export function paramValueViolation(d: ActionParamDecl, x: unknown): { code: 'bad_type' | 'out_of_domain'; reason: string } | null {
   const maxLen = d.max_len ?? DEFAULT_MAX_LEN;
@@ -361,6 +556,21 @@ export function paramValueViolation(d: ActionParamDecl, x: unknown): { code: 'ba
       if (typeof x !== 'string' || hasLoneSurrogate(x)) return { code: 'bad_type', reason: 'expected a string' };
       if (u8len(x) > maxLen) return { code: 'out_of_domain', reason: `longer than ${maxLen} UTF-8 bytes` };
       if (d.values !== undefined && !d.values.includes(x)) return { code: 'out_of_domain', reason: 'not one of the declared values' };
+      return formatViolation(d, x);
+    case 'object_ref':
+      if (typeof x !== 'string' || hasLoneSurrogate(x) || x.length === 0) return { code: 'bad_type', reason: 'expected a non-empty id string' };
+      if (u8len(x) > maxLen) return { code: 'out_of_domain', reason: `longer than ${maxLen} UTF-8 bytes` };
+      return formatViolation(d, x);
+    case 'datetime': {
+      if (typeof x !== 'string') return { code: 'bad_type', reason: 'expected an RFC 3339 UTC string' };
+      const m = DATETIME_RE.exec(x);
+      return m && isCalendarDate(m[1]!) ? null : { code: 'out_of_domain', reason: 'not an RFC 3339 UTC datetime YYYY-MM-DDTHH:MM:SS[.fff]Z' };
+    }
+    case 'duration':
+      if (!isInt(x)) return { code: 'bad_type', reason: 'expected a safe integer (milliseconds)' };
+      if (x < 0) return { code: 'out_of_domain', reason: 'a duration is not negative' };
+      if (d.min !== undefined && x < d.min) return { code: 'out_of_domain', reason: `below min ${d.min}` };
+      if (d.max !== undefined && x > d.max) return { code: 'out_of_domain', reason: `above max ${d.max}` };
       return null;
     case 'integer':
       if (!isInt(x)) return { code: 'bad_type', reason: 'expected a safe integer' };
@@ -523,6 +733,85 @@ export interface JsonSchemaLike {
   ['x-pca-sensitivity']?: Sensitivity;
   ['x-pca-unit']?: string;
   ['x-pca-accumulates-into']?: string[];
+  /** Local references (`#/...`) are resolved by the importers; anything else is flagged in `todo`. */
+  $ref?: string;
+  nullable?: boolean;
+  properties?: Record<string, JsonSchemaLike>;
+  required?: string[];
+  exclusiveMinimum?: number;
+  exclusiveMaximum?: number;
+  anyOf?: JsonSchemaLike[];
+  oneOf?: JsonSchemaLike[];
+  allOf?: JsonSchemaLike[];
+  const?: unknown;
+}
+
+/** Where the importers resolve `#/...` references and where they report what they could not represent. */
+interface ImportCtx {
+  root: unknown;
+  todo: string[];
+  /** Schema nodes this operation may still expand (the reference-bomb bound); reset per operation. */
+  left?: number;
+}
+const MAX_REF_DEPTH = 8;
+const MAX_REF_NODES = 20_000;
+
+/** Follow a local `#/a/b` JSON pointer in `root`; undefined when absent, not local, or not an object. */
+function pointer(root: unknown, ref: string): unknown {
+  if (!ref.startsWith('#/')) return undefined;
+  let cur: unknown = root;
+  for (const raw of ref.slice(2).split('/')) {
+    const seg = raw.replace(/~1/g, '/').replace(/~0/g, '~');
+    if (cur === null || typeof cur !== 'object' || !Object.prototype.hasOwnProperty.call(cur, seg)) return undefined;
+    cur = (cur as Record<string, unknown>)[seg];
+  }
+  return cur !== null && typeof cur === 'object' ? cur : undefined;
+}
+
+/**
+ * Flatten what a parameter declaration cannot carry: follow local `$ref`s, merge `allOf`, and collapse `anyOf` / `oneOf`
+ * to its single non-null variant (or to the union of string constants). Whatever remains unrepresentable (a remote or
+ * cyclic reference, a real union) is flagged in `todo` and left as an empty schema, which the caller declares `string`
+ * (a placeholder that rejects every non-string value: the draft fails closed until the developer refines it).
+ */
+function flattenSchema(s: JsonSchemaLike | undefined, c: ImportCtx, where: string, depth = 0): JsonSchemaLike {
+  if (s === undefined || s === null || typeof s !== 'object') return {};
+  c.left = (c.left ?? MAX_REF_NODES) - 1;
+  if (c.left < 0) {
+    if (c.left === -1) c.todo.push(`${where}: schema expansion stopped after ${MAX_REF_NODES} nodes (declared string; refine or drop)`);
+    return {};
+  }
+  if (depth > MAX_REF_DEPTH) {
+    c.todo.push(`${where}: schema nesting or reference chain deeper than ${MAX_REF_DEPTH} (declared string; refine or drop)`);
+    return {};
+  }
+  let cur: JsonSchemaLike = s;
+  if (typeof s.$ref === 'string') {
+    const target = pointer(c.root, s.$ref);
+    if (target === undefined) {
+      c.todo.push(`${where}: reference '${s.$ref.slice(0, 120)}' is not a local reference that resolves (declared string; refine or drop)`);
+      return {};
+    }
+    const { $ref: _r, ...siblings } = s;
+    cur = { ...flattenSchema(target as JsonSchemaLike, c, where, depth + 1), ...siblings };
+  }
+  if (Array.isArray(cur.allOf)) {
+    const { allOf, ...rest } = cur;
+    cur = allOf.map((m) => flattenSchema(m, c, where, depth + 1)).reduce<JsonSchemaLike>((a, m) => ({ ...a, ...m, properties: { ...a.properties, ...m.properties }, required: [...(a.required ?? []), ...(m.required ?? [])] }), {});
+    cur = { ...cur, ...rest };
+  }
+  const alts = cur.anyOf ?? cur.oneOf;
+  if (Array.isArray(alts)) {
+    const { anyOf: _a, oneOf: _o, ...rest } = cur;
+    const live = alts.map((m) => flattenSchema(m, c, where, depth + 1)).filter((m) => !(m.type === 'null' || (Array.isArray(m.type) && m.type.every((x) => x === 'null'))));
+    if (live.length === 1) return { ...live[0]!, ...rest };
+    const consts = live.map((m) => (typeof m.const === 'string' ? [m.const] : Array.isArray(m.enum) && m.enum.every((x) => typeof x === 'string') ? (m.enum as string[]) : null));
+    if (live.length > 1 && consts.every((x) => x !== null)) return { ...rest, type: 'string', enum: [...new Set(consts.flat() as string[])] };
+    c.todo.push(`${where}: a union of ${live.length} schemas has no schema representation (declared string; refine or drop)`);
+    return rest;
+  }
+  if (cur.const !== undefined && cur.enum === undefined && typeof cur.const === 'string') cur = { ...cur, enum: [cur.const] };
+  return cur;
 }
 
 /**
@@ -530,7 +819,9 @@ export interface JsonSchemaLike {
  * `free`: the developer lowers it explicitly, and the wallet floor still applies). Unrepresentable shapes (objects,
  * numbers with fractions) become `string` placeholders flagged in `todo` so the developer must decide.
  */
-function declOfJsonSchema(name: string, s: JsonSchemaLike, required: boolean, todo: string[]): ActionParamDecl {
+function declOfJsonSchema(name: string, schema: JsonSchemaLike, required: boolean, c: ImportCtx): ActionParamDecl {
+  const todo = c.todo;
+  const s = flattenSchema(schema, c, `action.params.${name}`);
   const t = Array.isArray(s.type) ? s.type.find((x) => x !== 'null') : s.type;
   const base = {
     semantic: s['x-pca-semantic'] ?? 'unknown',
@@ -544,8 +835,8 @@ function declOfJsonSchema(name: string, s: JsonSchemaLike, required: boolean, to
     return {
       type: 'integer',
       ...base,
-      ...(Number.isSafeInteger(s.minimum) ? { min: s.minimum } : {}),
-      ...(Number.isSafeInteger(s.maximum) ? { max: s.maximum } : {}),
+      ...(Number.isSafeInteger(s.minimum) ? { min: s.minimum } : Number.isSafeInteger(s.exclusiveMinimum) ? { min: s.exclusiveMinimum! + 1 } : {}),
+      ...(Number.isSafeInteger(s.maximum) ? { max: s.maximum } : Number.isSafeInteger(s.exclusiveMaximum) ? { max: s.exclusiveMaximum! - 1 } : {}),
       ...(s['x-pca-unit'] ? { unit: s['x-pca-unit'] } : {}),
       ...(s['x-pca-accumulates-into'] ? { accumulates_into: s['x-pca-accumulates-into'] } : {}),
     };
@@ -554,7 +845,7 @@ function declOfJsonSchema(name: string, s: JsonSchemaLike, required: boolean, to
   if (t === 'string' && s.format === 'date') return { type: 'date', ...base };
   if (t === 'string') return { type: 'string', ...base, ...(enumStrings ? { values: enumStrings } : {}), ...(Number.isSafeInteger(s.maxLength) && s.maxLength! > 0 ? { max_len: s.maxLength } : {}) };
   if (t === 'array') {
-    const it = s.items ?? {};
+    const it = flattenSchema(s.items, c, `action.params.${name}[]`);
     const itEnum = Array.isArray(it.enum) && it.enum.every((x) => typeof x === 'string') ? (it.enum as string[]) : undefined;
     if (s.uniqueItems && itEnum) return { type: 'set', ...base, values: itEnum, ...(Number.isSafeInteger(s.minItems) ? { min_items: s.minItems } : {}), ...(Number.isSafeInteger(s.maxItems) ? { max_items: s.maxItems } : {}) };
     const itT = Array.isArray(it.type) ? it.type[0] : it.type;
@@ -578,6 +869,10 @@ export interface DraftSchema {
 }
 
 /**
+ * @deprecated The v1 draft. `@atlasauth/pca-actions` has the importers for the action kit (`importMcp`, `importOpenApi`, ...):
+ * they produce ActionDefs (typed, with roles and bounded nested params) that `toSchemaDoc` turns into a v2 schema. This function
+ * stays for existing v1 callers; it cannot move into that package (which depends on this one).
+ *
  * Draft schema from an MCP `tools/list`. Verb = `${prefix}${tool.name}`; every write verb is drafted `irreversible`
  * (the fail-closed default) unless the developer lowers it; a destructive hint can only keep it at least `rate_limited`.
  */
@@ -585,15 +880,17 @@ export function draftSchemaFromMcpTools(tools: readonly McpToolLike[], site: { s
   const todo: string[] = [];
   const verbs: ActionVerbDecl[] = [];
   for (const t of tools) {
-    const props = t.inputSchema?.properties ?? {};
-    const req = new Set(t.inputSchema?.required ?? []);
+    const c: ImportCtx = { root: t.inputSchema, todo };
+    const input = flattenSchema(t.inputSchema as JsonSchemaLike | undefined, c, `${t.name}: inputSchema`);
+    const props = input.properties ?? {};
+    const req = new Set(input.required ?? []);
     const params: Record<string, ActionParamDecl> = {};
     for (const name of Object.keys(props).sort(compareUtf8)) {
       if (!/^[A-Za-z0-9_]{1,64}$/.test(name)) {
         todo.push(`${t.name}: parameter '${name}' is not a schema name ([A-Za-z0-9_]{1,64}); rename it`);
         continue;
       }
-      params['action.params.' + name] = declOfJsonSchema(name, props[name]!, req.has(name), todo);
+      params['action.params.' + name] = declOfJsonSchema(name, props[name]!, req.has(name), c);
     }
     const h = reversibilityFromMcpHints(t.annotations);
     const verb = (site.verbPrefix ?? '') + t.name;
@@ -605,32 +902,106 @@ export function draftSchemaFromMcpTools(tools: readonly McpToolLike[], site: { s
 }
 
 /** A minimal OpenAPI 3.1 document view (paths -> operations with JSON request bodies). */
+export interface OpenApiParameterLike {
+  $ref?: string;
+  name?: string;
+  in?: string;
+  required?: boolean;
+  description?: string;
+  schema?: JsonSchemaLike;
+}
+export interface OpenApiRequestBodyLike {
+  $ref?: string;
+  content?: Record<string, { schema?: JsonSchemaLike }>;
+}
 export interface OpenApiLike {
-  paths?: Record<string, Record<string, { operationId?: string; description?: string; requestBody?: { content?: Record<string, { schema?: { properties?: Record<string, JsonSchemaLike>; required?: string[] } }> }; 'x-pca-verb'?: string; 'x-pca-reversibility'?: SchemaReversibility; 'x-pca-kind'?: 'read' | 'write' }>>;
+  /** Operations by method; a path item's own `parameters` array applies to every operation under it. */
+  paths?: Record<string, Record<string, unknown>>;
+  /** Targets of local `#/components/...` references. */
+  components?: Record<string, unknown>;
+}
+interface OpenApiOperationLike {
+  operationId?: string;
+  description?: string;
+  parameters?: OpenApiParameterLike[];
+  requestBody?: OpenApiRequestBodyLike;
+  'x-pca-verb'?: string;
+  'x-pca-reversibility'?: SchemaReversibility;
+  'x-pca-kind'?: 'read' | 'write';
+}
+/** The JSON media type of a request body: `application/json` first, else any `application/*+json`. */
+function jsonBodySchema(b: OpenApiRequestBodyLike | undefined): JsonSchemaLike | undefined {
+  const content = b?.content;
+  if (content === undefined || content === null || typeof content !== 'object') return undefined;
+  const key = Object.keys(content).sort(compareUtf8).find((k) => k.toLowerCase() === 'application/json') ?? Object.keys(content).sort(compareUtf8).find((k) => /^application\/[^;]*\+json(;|$)/i.test(k));
+  return key === undefined ? undefined : content[key]?.schema;
 }
 
-/** Draft schema from OpenAPI: one verb per operation with an `operationId` (`x-pca-verb` names it, else the id). */
+/**
+ * @deprecated The v1 draft; see `importOpenApi` in `@atlasauth/pca-actions`, which unifies this importer and adds nested bodies,
+ * Swagger 2, size and reference-expansion bounds and the `unreviewed` default.
+ *
+ * Draft schema from OpenAPI: one verb per operation with an `operationId` (`x-pca-verb` names it, else the id). The
+ * parameters are the operation's path and query parameters (path-item parameters included, the operation's own winning)
+ * plus the properties of its JSON request body; local `$ref`s are followed. Header and cookie parameters are not action
+ * parameters and are flagged in `todo`, as is any name the two sources share (the body declaration is kept).
+ */
 export function draftSchemaFromOpenApi(doc: OpenApiLike, site: { site: string; aud: string; version: string }): DraftSchema {
   const todo: string[] = [];
   const verbs: ActionVerbDecl[] = [];
+  const c: ImportCtx = { root: doc, todo };
+  const deref = <T extends { $ref?: string }>(x: T | undefined): T | undefined => {
+    if (x === undefined || x === null || typeof x !== 'object') return undefined;
+    if (typeof x.$ref !== 'string') return x;
+    const t = pointer(doc, x.$ref) as T | undefined;
+    if (t === undefined) todo.push(`reference '${x.$ref.slice(0, 120)}' is not a local reference that resolves`);
+    return t;
+  };
+  const seen = new Set<string>();
   for (const path of Object.keys(doc.paths ?? {}).sort(compareUtf8)) {
     const ops = doc.paths![path]!;
+    const shared = Array.isArray(ops.parameters) ? (ops.parameters as OpenApiParameterLike[]) : [];
     for (const method of Object.keys(ops).sort(compareUtf8)) {
-      const op = ops[method]!;
-      if (!op || typeof op !== 'object' || !op.operationId) continue;
+      const op = ops[method] as OpenApiOperationLike | undefined;
+      if (!op || typeof op !== 'object' || Array.isArray(op) || !op.operationId) continue;
+      c.left = MAX_REF_NODES;
       const read = op['x-pca-kind'] ? op['x-pca-kind'] === 'read' : method.toLowerCase() === 'get' || method.toLowerCase() === 'head';
-      const sch = op.requestBody?.content?.['application/json']?.schema;
-      const props = sch?.properties ?? {};
-      const req = new Set(sch?.required ?? []);
+      const verb = op['x-pca-verb'] ?? op.operationId;
+      if (seen.has(verb)) todo.push(`${verb}: declared by more than one operation; give each a distinct x-pca-verb`);
+      seen.add(verb);
       const params: Record<string, ActionParamDecl> = {};
-      for (const name of Object.keys(props).sort(compareUtf8)) {
+      const addName = (name: string, sch: JsonSchemaLike, required: boolean, source: string) => {
         if (!/^[A-Za-z0-9_]{1,64}$/.test(name)) {
           todo.push(`${op.operationId}: parameter '${name}' is not a schema name; rename it`);
+          return;
+        }
+        const key = 'action.params.' + name;
+        if (params[key] !== undefined) {
+          todo.push(`${op.operationId}: '${name}' is declared by both the ${source} and another source; kept the first`);
+          return;
+        }
+        params[key] = declOfJsonSchema(name, sch, required, c);
+      };
+      // request body first (it wins a name clash), then the operation's own parameters over the path item's
+      const body = flattenSchema(jsonBodySchema(deref(op.requestBody)), c, `${op.operationId}: request body`);
+      const bprops = body.properties ?? {};
+      const breq = new Set(body.required ?? []);
+      for (const name of Object.keys(bprops).sort(compareUtf8)) addName(name, bprops[name]!, breq.has(name), 'request body');
+      const merged = new Map<string, OpenApiParameterLike>();
+      for (const raw of [...shared, ...(Array.isArray(op.parameters) ? op.parameters : [])]) {
+        const q = deref(raw);
+        if (!q || typeof q.name !== 'string' || typeof q.in !== 'string') continue;
+        merged.set(`${q.in}:${q.name}`, q);
+      }
+      for (const key of [...merged.keys()].sort(compareUtf8)) {
+        const q = merged.get(key)!;
+        if (q.in !== 'path' && q.in !== 'query') {
+          todo.push(`${op.operationId}: ${q.in} parameter '${q.name}' is not an action parameter (the schema sees path, query and body parameters only)`);
           continue;
         }
-        params['action.params.' + name] = declOfJsonSchema(name, props[name]!, req.has(name), todo);
+        const sch = { ...(q.schema ?? {}), ...(q.description && !(q.schema ?? {}).description ? { description: q.description } : {}) };
+        addName(q.name!, sch, q.in === 'path' || q.required === true, `${q.in} parameters`);
       }
-      const verb = op['x-pca-verb'] ?? op.operationId;
       const rev = op['x-pca-reversibility'] ?? (read ? 'reversible' : 'irreversible');
       if (!read && !op['x-pca-reversibility']) todo.push(`${verb}: reversibility (drafted irreversible)`);
       verbs.push({ verb, kind: read ? 'read' : 'write', params, reversibility: rev, openapi: { operationId: op.operationId }, ...(op.description ? { description: op.description.slice(0, 1024) } : {}) });

@@ -13,7 +13,7 @@ import {
 import {
   WELL_KNOWN_OAUTH_PRM,
   accumulateScopes,
-  authorizeRequest,
+  admitRequest,
   clientIdMetadataDocument,
   extractPCActn,
   prmHandler,
@@ -54,7 +54,7 @@ describe('protectedResourceMetadata (RFC 9728)', () => {
     expect(prm.authorization_servers).toEqual(['https://as.acme.com']);
     expect(prm.scopes_supported).toEqual(['tickets:read', 'tickets:write']);
     expect(prm.bearer_methods_supported).toEqual(['header']);
-    // CIMD advertised; DCR is gone in 2026-07-28.
+    // CIMD advertised (DCR is deprecated but retained in 2026-07-28 and draft).
     expect(prm.client_id_metadata_document_supported).toBe(true);
     // one source of truth: the embedded PCA discovery audience IS the OAuth resource
     expect(prm.pca.audience).toBe(AUD);
@@ -180,10 +180,10 @@ describe('accumulateScopes', () => {
 });
 
 // =====================================================================================================
-// 5. authorizeRequest — the RS admission check
+// 5. admitRequest — the RS admission check
 // =====================================================================================================
 
-describe('authorizeRequest', () => {
+describe('admitRequest', () => {
   const resolveGrant = (grant: Capability) => (ref: string) => (ref === grant.id ? grant : null);
 
   it('admits a valid proof-carrying call (body + PCA-Action header forms)', async () => {
@@ -201,7 +201,7 @@ describe('authorizeRequest', () => {
       now: pcactn.iat,
     };
 
-    const viaBody = await authorizeRequest(bodyReq(pcactn), opts);
+    const viaBody = await admitRequest(bodyReq(pcactn), opts);
     expect(viaBody.ok).toBe(true);
     if (viaBody.ok) {
       expect(viaBody.status).toBe(200);
@@ -210,14 +210,14 @@ describe('authorizeRequest', () => {
     }
 
     // header form: PCA-Action: base64url(PCActn JSON)
-    const viaHeader = await authorizeRequest({ headers: { 'PCA-Action': b64u(utf8(encoded)) } }, opts);
+    const viaHeader = await admitRequest({ headers: { 'PCA-Action': b64u(utf8(encoded)) } }, opts);
     expect(viaHeader.ok).toBe(true);
   });
 
   it('RFC 8707: rejects a PCActn whose audience is a different resource server', async () => {
     const a = mkAgent();
     const { pcactn } = a.act('tickets.write', 'ticket:1', {}, { aud: AUD });
-    const res = await authorizeRequest(bodyReq(pcactn), {
+    const res = await admitRequest(bodyReq(pcactn), {
       resource: 'https://other.example',
       authorizationServers: [a.principalPublic],
       resolveGrant: resolveGrant(a.grant),
@@ -235,7 +235,7 @@ describe('authorizeRequest', () => {
   it('RFC 9207: rejects a credential from an unexpected authorization server (mix-up)', async () => {
     const a = mkAgent();
     const { pcactn } = a.act('tickets.write', 'ticket:1', {}, { aud: AUD });
-    const res = await authorizeRequest(bodyReq(pcactn), {
+    const res = await admitRequest(bodyReq(pcactn), {
       resource: AUD,
       authorizationServers: ['https://evil-as.example'], // does NOT include the grant's issuer
       resolveGrant: resolveGrant(a.grant),
@@ -252,7 +252,7 @@ describe('authorizeRequest', () => {
   it('denies an unknown grant_ref and a missing PCActn', async () => {
     const a = mkAgent();
     const { pcactn } = a.act('tickets.write', 'ticket:1', {}, { aud: AUD });
-    const unknown = await authorizeRequest(bodyReq(pcactn), {
+    const unknown = await admitRequest(bodyReq(pcactn), {
       resource: AUD,
       authorizationServers: [a.principalPublic],
       resolveGrant: () => null,
@@ -262,7 +262,7 @@ describe('authorizeRequest', () => {
     expect(unknown.ok).toBe(false);
     if (!unknown.ok) expect(unknown.errorDescription).toMatch(/unknown grant_ref/);
 
-    const missing = await authorizeRequest({ headers: {}, body: {} }, {
+    const missing = await admitRequest({ headers: {}, body: {} }, {
       resource: AUD,
       authorizationServers: [a.principalPublic],
       resolveGrant: resolveGrant(a.grant),
@@ -296,11 +296,11 @@ describe('authorizeRequest', () => {
       };
     };
 
-    const ok = await authorizeRequest(base(sub1).req, base(sub1).opts);
+    const ok = await admitRequest(base(sub1).req, base(sub1).opts);
     expect(ok.ok).toBe(true);
 
     const narrowed = base(sub2);
-    const denied = await authorizeRequest(narrowed.req, narrowed.opts);
+    const denied = await admitRequest(narrowed.req, narrowed.opts);
     expect(denied.ok).toBe(false);
     if (!denied.ok) {
       expect(denied.status).toBe(403);
@@ -313,7 +313,7 @@ describe('authorizeRequest', () => {
     const a = mkAgent();
     const { pcactn } = a.act('tickets.write', 'ticket:1', {}, { aud: AUD });
     const tampered: PCActn = { ...pcactn, counter: pcactn.counter + 1 }; // breaks the leaf signature
-    const res = await authorizeRequest(bodyReq(tampered), {
+    const res = await admitRequest(bodyReq(tampered), {
       resource: AUD,
       authorizationServers: [a.principalPublic],
       resolveGrant: resolveGrant(a.grant),
@@ -353,7 +353,7 @@ describe('authorizeRequest', () => {
 
   it('a step-up-required tool returns the RFC 9470 step-up challenge; a VERIFIED guardian co-sign is admitted', async () => {
     const { guardian, signerSet, pcactn, opts } = stepUpFixture();
-    const challenge = await authorizeRequest(bodyReq(pcactn), opts);
+    const challenge = await admitRequest(bodyReq(pcactn), opts);
     expect(challenge.ok).toBe(false);
     if (!challenge.ok) {
       expect(challenge.status).toBe(401);
@@ -367,24 +367,24 @@ describe('authorizeRequest', () => {
       ...pcactn,
       threshold: { shares: [signShare('guardian', guardian.secretKey, thresholdMessage(pcactn), { signerSet, t: 2 })] },
     };
-    expect((await authorizeRequest(bodyReq(coSigned), opts)).ok).toBe(true);
+    expect((await admitRequest(bodyReq(coSigned), opts)).ok).toBe(true);
   });
 
   it('R2-03: a forged / unsigned share with the right role no longer satisfies step-up', async () => {
     const { pcactn, opts } = stepUpFixture();
     const forged: PCActn = { ...pcactn, threshold: { shares: [{ role: 'guardian', publicKey: 'A'.repeat(43), sig: 'A'.repeat(86) }] } as never };
-    const r = await authorizeRequest(bodyReq(forged), opts);
+    const r = await admitRequest(bodyReq(forged), opts);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBe('insufficient_user_authentication');
     const wrongKey = generateKeyPair();
     const stranger: PCActn = { ...pcactn, threshold: { shares: [signShare('guardian', wrongKey.secretKey, thresholdMessage(pcactn), { signerSet: opts.stepUpSignerSet, t: 2 })] } };
-    expect((await authorizeRequest(bodyReq(stranger), opts)).ok).toBe(false);
+    expect((await admitRequest(bodyReq(stranger), opts)).ok).toBe(false);
   });
 
   it('R2-03: a tier with no verifier configured fails closed (no presence-check default)', async () => {
     const { pcactn, opts } = stepUpFixture();
     const { stepUpSignerSet: _x, ...bare } = opts;
-    const r = await authorizeRequest(bodyReq(pcactn), bare);
+    const r = await admitRequest(bodyReq(pcactn), bare);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errorDescription).toMatch(/no presence-check default/);
   });
@@ -393,7 +393,7 @@ describe('authorizeRequest', () => {
     const { guardian, principal, signerSet, pcactn, opts } = stepUpFixture();
     const o3 = { ...opts, toolStepUp: { 'tickets.delete': 3 as const } };
     const g: PCActn = { ...pcactn, threshold: { shares: [signShare('guardian', guardian.secretKey, thresholdMessage(pcactn), { signerSet, t: 3 })] } };
-    expect((await authorizeRequest(bodyReq(g), o3)).ok).toBe(false);
+    expect((await admitRequest(bodyReq(g), o3)).ok).toBe(false);
     const both: PCActn = {
       ...pcactn,
       threshold: { shares: [
@@ -401,7 +401,7 @@ describe('authorizeRequest', () => {
         signShare('principal', principal.secretKey, thresholdMessage(pcactn), { signerSet, t: 3 }),
       ] },
     };
-    expect((await authorizeRequest(bodyReq(both), o3)).ok).toBe(true);
+    expect((await admitRequest(bodyReq(both), o3)).ok).toBe(true);
   });
 
   it('R3-08: the required tier is the MAX of requiredTier, toolStepUp and riskTiers', async () => {
@@ -409,12 +409,12 @@ describe('authorizeRequest', () => {
     // per-tool tier 2 + server risk tier 3: a guardian-only co-sign must NOT satisfy it
     const o = { ...opts, riskTiers: { theta1: 0.3, theta2: 0.6 }, serverRisk: () => 0.9 };
     const g: PCActn = { ...pcactn, threshold: { shares: [signShare('guardian', guardian.secretKey, thresholdMessage(pcactn), { signerSet, t: 2 })] } };
-    expect((await authorizeRequest(bodyReq(g), o)).ok).toBe(false);
-    const r = await authorizeRequest(bodyReq(pcactn), o);
+    expect((await admitRequest(bodyReq(g), o)).ok).toBe(false);
+    const r = await admitRequest(bodyReq(pcactn), o);
     if (!r.ok) expect(r.stepUp?.tier).toBe(3);
     // an explicit requiredTier of 2 cannot LOWER a tool tier of 3
     const o3 = { ...opts, toolStepUp: { 'tickets.delete': 3 as const }, requiredTier: 2 as const };
-    const r3 = await authorizeRequest(bodyReq(pcactn), o3);
+    const r3 = await admitRequest(bodyReq(pcactn), o3);
     expect(r3.ok).toBe(false);
     if (!r3.ok) expect(r3.stepUp?.tier).toBe(3);
   });
@@ -422,7 +422,7 @@ describe('authorizeRequest', () => {
   it('R3-08: toolStepUp without a `tool` fails closed instead of silently skipping step-up', async () => {
     const { pcactn, opts } = stepUpFixture();
     const { tool: _t, ...noTool } = opts;
-    const r = await authorizeRequest(bodyReq(pcactn), noTool);
+    const r = await admitRequest(bodyReq(pcactn), noTool);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errorDescription).toMatch(/toolStepUp.*tool/);
   });
@@ -439,7 +439,7 @@ describe('authorizeRequest', () => {
       stepUpSatisfied: () => false,
       now: pcactn.iat,
     };
-    const res = await authorizeRequest(bodyReq(pcactn), { ...base, serverRisk: () => 0.8 }); // 0.8 > theta2 -> tier 3
+    const res = await admitRequest(bodyReq(pcactn), { ...base, serverRisk: () => 0.8 }); // 0.8 > theta2 -> tier 3
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.stepUp?.tier).toBe(3);
   });
@@ -447,7 +447,7 @@ describe('authorizeRequest', () => {
   it('R2-03: riskTiers never reads the agent-signed risk_claim.r (needs serverRisk)', async () => {
     const a = mkAgent();
     const { pcactn } = a.act('tickets.delete', 'ticket:1', {}, { aud: AUD });
-    const res = await authorizeRequest(bodyReq(pcactn), {
+    const res = await admitRequest(bodyReq(pcactn), {
       resource: AUD,
       authorizationServers: [a.principalPublic],
       resolveGrant: resolveGrant(a.grant),

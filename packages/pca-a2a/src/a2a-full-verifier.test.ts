@@ -29,7 +29,7 @@ const a = agent({ principal, goal: 'reconcile refunds', permissions: { stripe: [
 /** What a resource server knows about the action: its own copy of the one-node plan (authorized) and a budget. */
 const ctxFor = (p: PCActn, params: Record<string, unknown>) => {
   const plan: PlanNode[] = [{ id: p.plan.node_id, verb: p.action.verb, resource: p.action.resource, params_digest: p.action.params_digest, reversibility_class: p.action.reversibility_class }];
-  return { params, plan, planAuthorized: merkleRoot(plan.map(planNodeLeaf)) === p.plan.root, budget: { B: 1000, tau: NOW, asOf: NOW } };
+  return { params, plan, planAuthorized: merkleRoot(plan.map(planNodeLeaf)) === p.plan.root, budget: { B: 1000, tau: NOW, asOf: NOW }, risk: { semanticDistance: 0, reversibility: 1, blastRadius: 0, taint: 0, confidence: 1 } };
 };
 const base = (p: PCActn, params: Record<string, unknown>) => ({
   aud: AUD,

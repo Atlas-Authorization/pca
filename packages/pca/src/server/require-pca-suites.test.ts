@@ -3,8 +3,11 @@ import { encodeKey, generateKeyPair } from '../keys';
 import { mintRoot } from '../capability';
 import { buildPCActn } from '../pcactn';
 import { encodeMlDsaPublicKey, mlDsa65Keygen } from '../pq';
-import { requirePCA } from './require-pca';
-import { verifyPCActn } from './verify';
+import { requirePCA as requirePCA05 } from './require-pca';
+import { verifyPCActn as verifyPCActn05 } from './verify';
+const requirePCA = (o: Parameters<typeof requirePCA05>[0]): ReturnType<typeof requirePCA05> => requirePCA05({ insecureAllowUnboundOperation: true, multiInstance: false, ...o }); // unbound and single-instance on purpose: these tests are not about operation binding or store scope (see breaking-05.test.ts)
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /**
  * R6-CORE-04 follow-up: requirePCA takes the same suite policy (`allowedSuites`) and server-side PQ pins (`pqPins`) as
@@ -72,10 +75,10 @@ describe('requirePCA: allowedSuites / pqPins', () => {
 
   it('verifyPCActn applies pqPins the same way (and leaves an ed25519 grant unaffected)', async () => {
     const { grant, actn, pin } = pqGrant();
-    const bad = await verifyPCActn(actn, { grant, audience: AUD, now: NOW, pqPins: {} });
+    const bad = await verifyPCActn(actn, { insecureSkipPlanRootCheck: true, grant, audience: AUD, now: NOW, pqPins: {} });
     expect(bad.allow).toBe(false);
     expect(bad.checks['pq_pin']).toBe('fail');
-    const good = await verifyPCActn(actn, { grant, audience: AUD, now: NOW, pqPins: { [grant.issuer]: pin } });
+    const good = await verifyPCActn(actn, { insecureSkipPlanRootCheck: true, grant, audience: AUD, now: NOW, pqPins: { [grant.issuer]: pin } });
     expect(good.checks['pq_pin']).toBe('pass');
   });
 });

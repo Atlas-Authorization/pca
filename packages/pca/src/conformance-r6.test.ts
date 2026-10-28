@@ -85,7 +85,7 @@ describe('round-6 conformance primitives (reference)', () => {
         } catch {
           continue;
         }
-        const r = await verifyPCActnCore(tree as PCActn, { grant: i.grant, nowEpoch: i.now, audience: i.aud });
+        const r = await verifyPCActnCore(tree as PCActn, { insecureSkipPlanRootCheck: true, grant: i.grant, nowEpoch: i.now, audience: i.aud });
         expect([m.name, r.allow]).toEqual([m.name, false]);
       } else throw new Error('unknown api ' + m.api);
     }

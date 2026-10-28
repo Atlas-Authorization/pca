@@ -1,0 +1,20 @@
+{
+  "name": "pca-grant-atlas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "An OAuth authorization server carries a PCA grant as an RFC 9396 pca_grant authorization-details type; the resource server still requires a per-action proof. Runs offline, or against an Atlas instance with RAR enabled.",
+  "scripts": {
+    "start": "tsx src/run.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "^0.5.0",
+    "@atlasauth/pca-oauth": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,4 +1,5 @@
 import { ed25519 } from '@noble/curves/ed25519';
+import { ctAdd, ctMul, ctReduce, ctToBigint } from './ct-scalar';
 import { sha512 } from '@noble/hashes/sha512';
 import { b64u, hashCanonical, unb64u, utf8 } from './hash';
 import {
@@ -187,9 +188,11 @@ function randomScalar(): bigint {
 
 /** Evaluate f(x) = Σ_j coeffs[j]·x^j via Horner (scalars). */
 function evalPoly(coeffs: bigint[], x: bigint): bigint {
-  let acc = 0n;
-  for (let j = coeffs.length - 1; j >= 0; j--) acc = mod(acc * x + coeffs[j]!);
-  return acc;
+  // The coefficients are secret: fixed-width scalar path (ct-scalar.ts), not BigInt `*` and `%`.
+  const xb = scalarToBytes(x);
+  let acc: Uint8Array = new Uint8Array(32);
+  for (let j = coeffs.length - 1; j >= 0; j--) acc = ctAdd(ctMul(acc, xb), scalarToBytes(coeffs[j]!));
+  return ctToBigint(acc);
 }
 
 /**
@@ -324,7 +327,7 @@ function signShareScalar(
   const k = dkgShareNonce(a0, sessionId, from, to, shareBytes, cv);
   const Rs = mulBase(k);
   const e = dkgShareChallenge(sessionId, from, to, shareBytes, cv, Rs);
-  const s = mod(k + mod(a0 * e));
+  const s = ctToBigint(ctAdd(scalarToBytes(k), ctMul(scalarToBytes(a0), scalarToBytes(e))));
   return b64u(concat(Rs.toRawBytes(), scalarToBytes(s)));
 }
 
@@ -614,7 +617,7 @@ export function dkgRound1(
   const k = opts.popNonce ? bytesToScalar(opts.popNonce) : randomScalar();
   const R = mulBase(k);
   const c = dkgPopChallenge(sessionId, identifier, cv, R);
-  const mu = mod(k + mod(a0 * c));
+  const mu = ctToBigint(ctAdd(scalarToBytes(k), ctMul(scalarToBytes(a0), scalarToBytes(c))));
 
   const pkg: DkgRound1Package = {
     identifier,
@@ -1210,9 +1213,9 @@ export function dkgFinalize(
 
   // signingShare s_i = f_i(i) + Σ_{j∈qualified, j≠i} f_j(i).
   const myCoeffs = myState.coefficients.map((c) => bytesToScalar(c));
-  let s = evalPoly(myCoeffs, BigInt(myIdentifier));
-  for (const [, share] of recvBy) s = mod(s + bytesToScalar(share));
-  const signingShare = scalarToBytes(s);
+  let sBytes = scalarToBytes(evalPoly(myCoeffs, BigInt(myIdentifier)));
+  for (const [, share] of recvBy) sBytes = ctAdd(sBytes, ctReduce(share));
+  const signingShare = sBytes;
 
   // Group VSS coefficients Φ_k = Σ_{ℓ∈qualified} C_ℓk (points), index 0 is the group public key.
   const groupCoeffPoints: InstanceType<typeof P>[] = [];
@@ -1239,6 +1242,7 @@ export function dkgFinalize(
     return { identifier: j, publicKey: acc.toRawBytes() };
   });
 
+  const s = ctToBigint(signingShare);
   const verifyingShare = mulBase(s).toRawBytes();
   // Consistency: my signing share must be exactly the share the group polynomial (Φ) predicts for me.
   const mine = verifyingShares.find((v) => v.identifier === myIdentifier);

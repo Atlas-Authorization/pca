@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { SignJWT, generateKeyPair as joseGenerateKeyPair, exportJWK, createLocalJWKSet, type KeyLike } from 'jose';
-import { b64u, generateKeyPair, mintRoot, verifyChain } from '@atlasauth/pca';
+import { b64u, generateKeyPair, mintRoot, spiffeIdError, verifyChain } from '@atlasauth/pca';
 import {
   parseSpiffeId,
   verifyJwtSvid,
@@ -14,6 +14,8 @@ import {
   svidToHolder,
   holderToSpiffeId,
   holderBindingMessage,
+  spiffeIdForHolder,
+  workloadDischargePin,
   verifyX509Svid,
   SpiffeError,
   type SpiffeHolder,
@@ -335,5 +337,24 @@ describe('svidToHolder / holderToSpiffeId (R3-18: only a VERIFIED SVID binds)', 
     expect(root.holder).toBe(holder.holder);
     expect(verifyChain([root], b64u(principal.publicKey)).ok).toBe(true);
     expect(holderToSpiffeId(holder)).toBe(SUB);
+  });
+
+  it.runIf(haveOpenssl)('K1: spiffeIdForHolder returns the ID only for the key the SVID is bound to; workloadDischargePin pins its Ed25519 key', () => {
+    const svid = verified('ed.pem');
+    const h = svidToHolder(svid);
+    expect(spiffeIdForHolder(svid, h.holder)).toBe(SUB);
+    expect(() => spiffeIdForHolder(svid, b64u(generateKeyPair().publicKey))).toThrow(/proof/);
+    expect(() => spiffeIdForHolder(SUB as never, h.holder)).toThrow(SpiffeError);
+    expect(workloadDischargePin('runtime', svid)).toEqual({ label: 'runtime', class: 'workload', pk: h.holder, spiffe_id: SUB });
+    expect(() => workloadDischargePin('runtime', verified('ec.pem'))).toThrow(SpiffeError);
+  });
+});
+
+describe('K1 SPIFFE ID syntax agrees with parseSpiffeId', () => {
+  const ids = ['spiffe://example.org', 'spiffe://example.org/', 'spiffe://example.org/a/b', 'spiffe://Example.org/a', 'spiffe://example.org/a/../b', 'spiffe://example.org/a//b', 'spiffe://example.org/a b', 'spiffe://example.org/a?x', 'spiffe://ex_am-ple.d/x.y', 'spiffe://', 'spiffe:///a', 'http://example.org/a', '', `spiffe://example.org/${'a'.repeat(2030)}`, `spiffe://example.org/${'a'.repeat(2040)}`];
+  it.each(ids.map((i) => [i.length > 50 ? `${i.slice(0, 30)}... (${i.length})` : i, i] as const))('%s', (_n, id) => {
+    let ok = true;
+    try { parseSpiffeId(id); } catch { ok = false; }
+    expect(spiffeIdError(id) === null).toBe(ok);
   });
 });

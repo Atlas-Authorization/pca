@@ -389,6 +389,14 @@ export function grantedAccessOf(chain: CapabilityChain): GnapResourceAccess[] {
 
 /** Resolve the b64u Ed25519 holder key from a request's client key (or an explicit override). */
 export function resolveHolder(req: GnapGrantRequest, holderOverride?: string): string {
+  // Supported subset (contract): the client key proof method is `jwsd`, nothing else. A declared `httpsig`, `mtls`,
+  // `jwsd-vc`, an unknown method, or a missing method is refused even when a holder override is supplied.
+  const declared = typeof req.client === 'object' && req.client !== null ? req.client.key : undefined;
+  if (typeof declared === 'object' && declared !== null) {
+    const proof: unknown = declared.proof;
+    const method = typeof proof === 'string' ? proof : isRecord(proof) ? proof.method : undefined;
+    if (method !== 'jwsd') throw new GnapError(`unsupported client key proof method: ${typeof method === 'string' ? method : 'none'} (only jwsd is supported)`);
+  }
   if (holderOverride !== undefined) {
     const h = asEd25519(holderOverride);
     if (h === null) throw new GnapError('holder override is not a canonical base64url Ed25519 public key');
@@ -713,8 +721,17 @@ function toPlain(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value)) as unknown;
 }
 
-function canonicalPayloadBytes(body: unknown): Uint8Array {
-  return utf8(canonicalizeStrict(toPlain(body)));
+/**
+ * The JWS payload of a jwsd proof (RFC 9635 7.3.3): the SHA-256 digest of the request CONTENT, or nothing when the
+ * request has none (`body === undefined`). A string or Uint8Array is the exact content bytes, hashed with no
+ * normalization (what an HTTP client sent); any other value is hashed as its strict canonical JSON, which is then the
+ * content the sender must transmit byte for byte.
+ */
+export function gnapContentDigest(body: unknown): Uint8Array {
+  if (body === undefined) return new Uint8Array(0);
+  if (typeof body === 'string') return sha256(utf8(body));
+  if (body instanceof Uint8Array) return sha256(body);
+  return sha256(utf8(canonicalizeStrict(toPlain(body))));
 }
 
 export interface SignGnapRequestArgs {
@@ -740,7 +757,7 @@ export interface SignGnapRequestResult {
 
 /**
  * Produce a GNAP `jwsd` detached-JWS proof over `body`, signed by the client key (via `jose`). The JWS
- * payload is the canonical body; the compact detached form (payload omitted) is what travels in the
+ * payload is the SHA-256 digest of the content ({@link gnapContentDigest}, RFC 9635 7.3.3); the compact detached form (payload omitted) is what travels in the
  * `Detached-JWS` header. The signing key's public half IS the PCA holder the grant binds to.
  */
 export async function signGnapRequest(args: SignGnapRequestArgs): Promise<SignGnapRequestResult> {
@@ -755,7 +772,7 @@ export async function signGnapRequest(args: SignGnapRequestArgs): Promise<SignGn
     ...(args.kid !== undefined ? { kid: args.kid } : {}),
     ...(args.accessTokenValue !== undefined ? { ath: athOf(args.accessTokenValue) } : {}),
   };
-  const payload = canonicalPayloadBytes(args.body);
+  const payload = gnapContentDigest(args.body);
   const privateJwk = { kty: 'OKP', crv: 'Ed25519', x: holder, d: b64u(args.key.secretKey) };
   const signingKey = await importJWK(privateJwk, 'EdDSA');
   // JWSHeaderParameters carries an index signature; copy the typed header into an object literal that
@@ -786,7 +803,19 @@ export interface VerifyGnapRequestArgs {
   now?: number;
   /** When set, the proof's `ath` must bind exactly this access-token value. */
   accessTokenValue?: string;
+  /**
+   * Replay store. Called once per otherwise-valid proof with `sha256(detachedJws)` (b64u, safe because the spelling is
+   * canonical) and the proof's expiry in epoch seconds (`created + maxAgeSec`); return true when the proof was already
+   * seen and it is refused. REQUIRED unless `replayCheck: 'unchecked'`; without either, a call throws {@link GnapError}.
+   * Back it with a store shared by every verifier instance.
+   */
+  seenProof?: (proofId: string, expiresSec: number) => boolean | Promise<boolean>;
+  /** Explicit opt-out of the replay check (a proof is then replayable until it goes stale). Ignored when `seenProof` is set. */
+  replayCheck?: 'unchecked';
 }
+
+/** Upper bound on an accepted detached JWS string (adversarial-size guard). */
+export const MAX_DETACHED_JWS_CHARS = 8192;
 
 export type VerifyGnapRequestResult = { ok: true; holder: string; header: GnapJwsdHeader } | { ok: false; reason: string };
 
@@ -797,16 +826,22 @@ export type VerifyGnapRequestResult = { ok: true; holder: string; header: GnapJw
  */
 export async function verifyGnapRequest(args: VerifyGnapRequestArgs): Promise<VerifyGnapRequestResult> {
   const fail = (reason: string): VerifyGnapRequestResult => ({ ok: false, reason });
+  if (typeof args.seenProof !== 'function' && args.replayCheck !== 'unchecked') {
+    throw new GnapError("verifyGnapRequest: supply args.seenProof (a replay store) or set args.replayCheck to 'unchecked'");
+  }
+  if (typeof args.detachedJws === 'string' && args.detachedJws.length > MAX_DETACHED_JWS_CHARS) return fail('detached JWS exceeds the size limit');
   try {
     const parts = args.detachedJws.split('.');
     if (parts.length !== 3) return fail('not a compact JWS (expected three dot-separated parts)');
     const [protectedB64u, mid, signature] = parts;
-    if (protectedB64u === undefined || signature === undefined || mid !== '') return fail('not a DETACHED compact JWS');
+    if (protectedB64u === undefined || signature === undefined) return fail('not a DETACHED compact JWS');
 
     const holder = asEd25519(args.holder);
     if (holder === null) return fail('holder is not a canonical base64url Ed25519 public key');
 
-    const payloadB64u = base64url.encode(canonicalPayloadBytes(args.body));
+    const payloadB64u = base64url.encode(gnapContentDigest(args.body));
+    // Detached (empty middle) or, as RFC 9635 prints its own example, the digest spelled out: it must be OUR digest of the content.
+    if (mid !== '' && mid !== payloadB64u) return fail('not a DETACHED compact JWS');
     const verifyKey = await importJWK({ kty: 'OKP', crv: 'Ed25519', x: holder }, 'EdDSA');
 
     let header: JWSHeaderParameters | undefined;
@@ -841,6 +876,12 @@ export async function verifyGnapRequest(args: VerifyGnapRequestArgs): Promise<Ve
     const ath = header.ath;
     if (args.accessTokenValue !== undefined) {
       if (typeof ath !== 'string' || ath !== athOf(args.accessTokenValue)) return fail('ath does not bind the named access token');
+    }
+
+    if (typeof args.seenProof === 'function') {
+      let replayed: boolean;
+      try { replayed = (await args.seenProof(athOf(args.detachedJws), created + maxAge)) !== false; } catch { replayed = true; }
+      if (replayed) return fail('jwsd proof replayed (or the replay store failed)');
     }
 
     const out: GnapJwsdHeader = {
@@ -1081,3 +1122,4 @@ export const AGENT_GNAP_PROFILE: AgentGnapProfile = {
     'Elevation beyond the agent requires a human/guardian co-signature, not a self-minted grant.',
   ],
 };
+export * from './interaction';

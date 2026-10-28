@@ -13,7 +13,7 @@ describe('verifyPCActnCore: taint gate error path', () => {
         throw new Error('policy read failed');
       },
     };
-    const r = await verifyPCActnCore(p as PCActn, { grant: s.grant, nowEpoch: NOW, audience: AUD, enforce: { taint: { ctx: { registry: new InMemoryTrustedInputRegistry() }, maxTaint } } } as never);
+    const r = await verifyPCActnCore(p as PCActn, { insecureSkipPlanRootCheck: true, grant: s.grant, nowEpoch: NOW, audience: AUD, enforce: { taint: { ctx: { registry: new InMemoryTrustedInputRegistry() }, maxTaint } } } as never);
     expect(r.allow).toBe(false);
     expect(r.checks.taint_gate).toBe('fail');
     expect(r.reason).toBe('taint_gate: taint gate error (fail closed): policy read failed');

@@ -14,6 +14,7 @@ import {
   satisfies,
   setup,
 } from '../index';
+import { firstRepeatedAttribute } from '../fame';
 
 const PT = new TextEncoder().encode('edge');
 
@@ -106,17 +107,15 @@ describe('policy depth: anything encryptable is decryptable (no silent data loss
 });
 
 describe('duplicated attributes and thresholds (LSSS leaf semantics)', () => {
-  it('t-of-n counts LEAVES: one attribute repeated in two leaves satisfies a 2-of-3 gate (documented, same as BSW tree semantics)', () => {
-    const p: Policy = { threshold: 2, of: [{ attr: 'a' }, { attr: 'a' }, { attr: 'b' }] };
-    expect(roundTrips(p, ['a'])).toBe(true);
-    const n = normalizePolicy(p);
-    if (!n.ok) throw new Error('unreachable');
-    expect(satisfies(n.tree, new Set(['a']))).toBe(true);
-  });
-
-  it('AND of the same attribute twice needs that attribute once', () => {
-    expect(roundTrips({ allOf: [{ attr: 'a' }, { attr: 'a' }] }, ['a'])).toBe(true);
-    expect(roundTrips({ allOf: [{ attr: 'a' }, { attr: 'a' }] }, ['b'])).toBe(false);
+  it('FAME needs single-use attributes: an attribute named by two leaves is refused at encrypt time, never approximated', () => {
+    const { mpk } = setup();
+    for (const p of [
+      { threshold: 2, of: [{ attr: 'a' }, { attr: 'a' }, { attr: 'b' }] },
+      { allOf: [{ attr: 'a' }, { attr: 'a' }] },
+      { anyOf: [{ attr: 'a' }, { allOf: [{ attr: 'b' }, { attr: 'a' }] }] },
+    ] as Policy[]) {
+      expect(() => encryptForPolicy(mpk, p, PT)).toThrow(/more than one leaf/);
+    }
   });
 
   it('degenerate gates behave: 1-of-1, n-of-n with n=1, anyOf of one, nested singletons', () => {
@@ -228,6 +227,10 @@ describe('property: cryptographic outcome equals the boolean satisfaction oracle
       fc.property(policyArb, fc.subarray(attrNames), (policy, have) => {
         const n = normalizePolicy(policy);
         if (!n.ok) return true;
+        if (firstRepeatedAttribute(n.tree) !== null) {
+          expect(() => encryptForPolicy(mpk, policy, PT)).toThrow(PcaEncryptionError);
+          return true;
+        }
         const { ciphertext } = encryptForPolicy(mpk, policy, PT);
         const out = decrypt(keygenForAttributes(msk, have), ciphertext);
         const expected = satisfies(n.tree, new Set(have));

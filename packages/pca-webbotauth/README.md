@@ -1,5 +1,7 @@
 # @atlasauth/pca-webbotauth
 
+> Maturity: **production**. Breaking changes to APIs or defaults are never made in a patch release. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Web Bot Auth for Proof-Carrying Authority. It signs outbound agent HTTP requests with RFC 9421 HTTP Message
 Signatures in the `web-bot-auth` profile (Ed25519, `Signature-Agent`, `tag="web-bot-auth"`), so a PCA agent
 can pass automated-traffic bot verification, and can optionally carry its per-action PCActn proof in the
@@ -78,14 +80,36 @@ if (res.valid) {
   `clockSkewSec`, `maxAgeSec`, `requiredTag`, `requireExpires`, `label`, and `expectedPCActn` (with proof). Strict by default (breaking, R2-12): the signature must cover `@authority @method @path` (and `@query` when the URL has a query string; override with `requiredComponents`), `expires - created` may not exceed `maxLifetimeSec` (default 300; `Infinity` disables), and `replayCache` (`memoryReplayCache()` or your own `ReplayCache` over a shared store) makes each signature single-use, keyed on `keyid` plus the `nonce` or the signature bytes. `signRequest` adds `@query` automatically when the URL has one.
 - `buildKeyDirectory`, `resolveFromDirectory`, `jwkThumbprint`, `directoryHandler(keys)` - the key
   directory (JWKS) and a framework-agnostic handler for `WELL_KNOWN_DIRECTORY_PATH`.
+- `fetchKeyDirectory(url, options?)` - fetches a published directory fail-closed: https only, no redirects, status 200, the directory media type, a size cap, a timeout, and every key a well-formed Ed25519 JWK (otherwise it throws; it never returns a partial directory). A directory key's `nbf` / `exp` window is enforced when you verify with `jwks`.
 - `proofHeaders`, `decodeProofHeader` - encode and decode the `PCA-Action` header.
+
+## Signed directory
+
+`signDirectoryResponse({ keys, directory, authority })` signs a directory body as the Web Bot Auth directory draft describes (RFC 9421 over `"@authority";req`, `tag="http-message-signatures-directory"`, `keyid` = the key's RFC 7638 thumbprint, `created` and `expires`, one signature per key) and returns the exact `body` and headers to serve. `verifyDirectoryResponse` checks them and returns only the keys with a valid signature. `fetchKeyDirectory(url, { requireSignature: true })` does the fetch and the check together and throws unless at least one key is validly signed. Without `requireSignature` the directory is trusted as fetched over https.
+
+## Failure modes
+
+| Missing or wrong | Result |
+|---|---|
+| No `Signature-Input` or `Signature`, parse error, unknown key, bad signature | `{ valid: false, reason }`, never throws |
+| Wrong `tag`, `alg` other than ed25519, missing `keyid` or `expires`, expired, created in the future, lifetime over `maxLifetimeSec` | `{ valid: false }` with the reason |
+| `@authority`, `@method` or `@path` (and `@query` with a query string) not covered | `{ valid: false }` |
+| Replayed signature with a `replayCache` | `replayed signature` |
+| Directory fetch: not https, redirect, non-200, wrong media type, too large, malformed key | `fetchKeyDirectory` throws |
+| Directory key outside its `nbf` / `exp` | resolves to nothing; the request is refused |
+| Signed directory (`requireSignature`): unsigned, signed for another host, expired, wrong tag | throws; keys without a valid signature are dropped |
+
+## Limits
+
+- A valid signature proves the holder of the key signed this request in the window; it does not prove the action is authorized (verify the PCActn).
+- Ed25519 only; component parameters other than `key` (and `req` on `@authority` in a directory response) are refused.
+- The IETF drafts (Web Bot Auth architecture draft-05, the directory draft) may change. The drafts define no separate Signature-Agent card document, so none is implemented.
 
 ## Status
 
 A valid signature proves that the holder of the `keyid` key signed this request's method, authority, path
 and covered headers inside the freshness window. It does not by itself prove the action is authorized; that
-is the job of the PCActn verifier in `@atlasauth/pca`. The Web Bot Auth and directory specifications are
-IETF drafts and may change. The cryptography has not been independently audited.
+is the job of the PCActn verifier in `@atlasauth/pca`. Pinned to RFC 9421, RFC 9530 and the Web Bot Auth architecture draft-05 (HTTP message signatures directory draft as published with it). These are IETF drafts and may change.
 
 What is validated:
 
@@ -104,8 +128,7 @@ What is validated:
   `Signature-Agent` member.
 
 Not validated: only Ed25519 is supported (RSA-PSS, ECDSA and HMAC signatures are refused); component parameters other
-than `key` on string members (`sf`, `bs`, `req`, `name`) and the response-side components are refused; the signed
-directory response and `Signature-Agent` card formats of the drafts are not implemented; there are no vectors for the
+than `key` on string members (`sf`, `bs`, `req`, `name`) and the response-side components are refused; there are no vectors for the
 directory handler beyond its own tests.
 
 ## License

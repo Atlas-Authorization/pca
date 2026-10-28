@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { b64u } from '@atlasauth/pca';
 import {
   CborTag,
-  TransparencyService,
+  
   buildReceipt,
   checkStatement,
   decode,
@@ -20,6 +20,7 @@ import {
   type CborKey,
   type CborValue,
 } from './index';
+import { TransparencyService } from './testing';
 import { leafHash, treeHash } from './rfc9162';
 
 const hex = (u: Uint8Array) => Buffer.from(u).toString('hex');

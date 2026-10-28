@@ -57,6 +57,19 @@ foreach (file($inp, FILE_IGNORE_NEW_LINES) as $line) {
             if (is_string($why) && str_contains($why, Pca::UNSUPPORTED_SUITE)) {
                 $r['unsupported_suite'] = $why;
             }
+        } elseif ($c['kind'] === 'policy') {
+            // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+            // the agent-native evaluator (predicates + tool_schema) over policyCaveats(grant, chain), as {allow, failed}: the action
+            // context is {action}, the tool call the signed verb + params (the reference's toolCallOf)
+            $pv = Json::parseLax($c['raw']);
+            $act = $pv->get('context') instanceof \Atlas\Pca\Obj ? $pv->get('context')->get('action') : null;
+            $actObj = $act instanceof \Atlas\Pca\Obj;
+            $params = $actObj ? $act->get('params') : null;
+            $call = ['tool' => $actObj && is_string($act->get('verb')) ? $act->get('verb') : '',
+                'args' => $params instanceof \Atlas\Pca\Obj ? $params : new \Atlas\Pca\Obj()];
+            $res = \Atlas\Pca\Authorize::evaluateAgentCaveats(Pca::policyCaveats($pv->get('grant'), $pv->get('chain')), $pv->get('context'), \Atlas\Pca\Obj::of(['action' => $act]), $call);
+            $r['allow'] = $res['ok'] === true;
+            $r['failed'] = array_values($res['failed']);
         } elseif (str_starts_with((string)$c['kind'], 'intent_')) {
             // Intent Layer v2 primitives: raw = JSON text of the primitive's `input`; result = its conformance `expect` shape
             // (IntentV2::primitive, the entry the native runners use), written as canonical JSON.

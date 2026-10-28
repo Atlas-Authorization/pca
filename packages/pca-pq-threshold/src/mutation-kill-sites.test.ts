@@ -1,6 +1,8 @@
 /** Site kill (index.ts:343): verifyHybridThreshold turns a throwing action / options into its exact refusal verdict. */
 import { describe, expect, it } from 'vitest';
-import { verifyHybridThreshold } from './index';
+import { HYBRID_ARTIFACT_VERSION, verifyHybridThreshold } from './index';
+
+const ART = { v: HYBRID_ARTIFACT_VERSION } as never;
 
 const REFUSAL = {
   ok: false,
@@ -11,9 +13,9 @@ const REFUSAL = {
 
 describe('verifyHybridThreshold fail-closed catch', () => {
   it('null options give the refusal verdict, not undefined', () => {
-    expect(verifyHybridThreshold({} as never, {} as never, null as never)).toEqual(REFUSAL);
+    expect(verifyHybridThreshold({} as never, ART, null as never)).toEqual(REFUSAL);
   });
   it('a malformed action gives the refusal verdict', () => {
-    expect(verifyHybridThreshold(null as never, {} as never, {} as never)).toEqual(REFUSAL);
+    expect(verifyHybridThreshold(null as never, ART, {} as never)).toEqual(REFUSAL);
   });
 });

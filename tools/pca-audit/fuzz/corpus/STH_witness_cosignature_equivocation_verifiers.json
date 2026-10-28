@@ -1,0 +1,76 @@
+{
+ "target": "STH / witness cosignature / equivocation verifiers",
+ "seeds": [
+  {
+   "guardian": "SAH67wiuQKr4Y3LODEQSMdwvJ2fU4eQGA6VWQ1XQ5S4",
+   "h1": {
+    "instance_id": "i",
+    "principal": "g",
+    "size": 1,
+    "root": "W3S8CaLwfw0UqLrGZLZDAWe5B_bG2Dp6VW_uCExmWeA",
+    "prev_root": "",
+    "timestamp": 1791288000000,
+    "guardian": "SAH67wiuQKr4Y3LODEQSMdwvJ2fU4eQGA6VWQ1XQ5S4",
+    "sig": "QksyFS4TTXcxLDX7toxPMIxH2iSl-en9IiqKKN2W96N64_TSLzGSx3eYvGq4fTJ5P68rJwOxGL7WQxVrYuI8Ag",
+    "witnesses": [
+     {
+      "key": "_v1-32WqjqYmb1RR19KsWraQkGw_KWPQhyVVmedz_tU",
+      "sig": "oazDCezbYDOdrLWuFGOhcsY7siA7XJyQ6CVLYl-HhkOA8aCA5JpVNckyjDbJkmvyA7kn-ckcmq7vDzoLF4NUBQ"
+     },
+     {
+      "key": "3fnG5z6nnnHRwytFFNFIrwyYlqqy3KISVdm_uQCyvVU",
+      "sig": "xNtrnBPL5pSrssElgutviZDd2z7KKPoh1gzC0la4S6KUnfu_72GHptud8DOKjmC-yV40a40vLiaPI9GOw1qOBQ"
+     }
+    ]
+   },
+   "h2": {
+    "instance_id": "i",
+    "principal": "g",
+    "size": 2,
+    "root": "AdRvVQeMrasxZYlquWU10ddJEuY3ssadKvs1n2agRCY",
+    "prev_root": "W3S8CaLwfw0UqLrGZLZDAWe5B_bG2Dp6VW_uCExmWeA",
+    "timestamp": 1791288000001,
+    "guardian": "SAH67wiuQKr4Y3LODEQSMdwvJ2fU4eQGA6VWQ1XQ5S4",
+    "sig": "91ddFa53O1R2MmKyqZXteoOXqIzmED5EoAywgCPTb9txAIC9rhxbV9VbBy0ATbDDpHJzjgjQ0I-ES39odhg4Cw",
+    "witnesses": [
+     {
+      "key": "_v1-32WqjqYmb1RR19KsWraQkGw_KWPQhyVVmedz_tU",
+      "sig": "jCbgvKcRYD8mGimQEqBstv2THANHUhNaLokAMwJvb__WgwXMlUBWhPmukHB8619NuYucm3l1jbw18Gx6l6-qDw"
+     },
+     {
+      "key": "3fnG5z6nnnHRwytFFNFIrwyYlqqy3KISVdm_uQCyvVU",
+      "sig": "EYSWl0P_bFlj3eG85PUk_8Nc-azFP5jmT2nxNP3WCRfmr8SwlnJEnxEjvsIeWK0nWFigkx9jr7QlLJ4nKYayAA"
+     }
+    ]
+   },
+   "cons": {
+    "oldSize": 1,
+    "newSize": 2,
+    "path": [
+     "rviIj1zBPDU8YQOku1eJT4EGzmy_FgJ1jNFBUaUYc7c"
+    ]
+   },
+   "policy": {
+    "witnessKeys": [
+     "_v1-32WqjqYmb1RR19KsWraQkGw_KWPQhyVVmedz_tU",
+     "3fnG5z6nnnHRwytFFNFIrwyYlqqy3KISVdm_uQCyvVU"
+    ],
+    "threshold": 2
+   },
+   "wh": {
+    "principal": "g",
+    "size": 2,
+    "root": "AdRvVQeMrasxZYlquWU10ddJEuY3ssadKvs1n2agRCY",
+    "witness": "SAH67wiuQKr4Y3LODEQSMdwvJ2fU4eQGA6VWQ1XQ5S4",
+    "sig": "VqTDMpJKHxcbsgv_6ecEknrbuqt7MfEZv7BCRigqc0kOTXMA7qK_4Qjn8ChpD627KtFayVgMQ7bBuzUKI_KSCw"
+   },
+   "wh2": {
+    "principal": "g",
+    "size": 2,
+    "root": "AdRvVQeMrasxZYlquWU10ddJEuY3ssadKvs1n2agRCY",
+    "witness": "_v1-32WqjqYmb1RR19KsWraQkGw_KWPQhyVVmedz_tU",
+    "sig": "Ew_aVwi_dq1Yfli0x2opPkkE3y3r9jfncL3UWQkA2tr1SLDd7pI3dC7EQ9ieheTn5jenJw-hyEoClcvErv6ADg"
+   }
+  }
+ ]
+}

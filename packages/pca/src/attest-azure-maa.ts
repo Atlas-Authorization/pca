@@ -1,5 +1,7 @@
 import { decodeCanonicalBase64url } from './strict-jws';
+import { setAssuranceLabel } from './assurance';
 import { x509ValidAt } from './x509-validity';
+import { strictChainError } from './x509-strict';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 HARDWARE backend — Microsoft Azure Attestation (MAA) JWT VERIFIER.
@@ -390,6 +392,8 @@ export async function verifyX5cChain(
           return { ok: false, reason: `x5c link ${i} is not signed by the certificate above it` };
         }
       }
+      const profile = strictChainError(certs.slice(0, anchorIdx + 1).map((c) => new Uint8Array(c.raw)));
+      if (profile) return { ok: false, reason: `x5c chain profile: ${profile}` };
       const leaf = certs[0]!;
       return { ok: true, leaf, leafSpkiSha256: spkiSha256(leaf, createHash) };
     }
@@ -404,6 +408,8 @@ export async function verifyX5cChain(
     if (!resolved.rootKeys.some((k) => safeCertVerify(top, k))) {
       return { ok: false, reason: 'x5c chain does not anchor in a configured MAA trust root' };
     }
+    const profile = strictChainError(certs.map((c) => new Uint8Array(c.raw)));
+    if (profile) return { ok: false, reason: `x5c chain profile: ${profile}` };
     const leaf = certs[0]!;
     return { ok: true, leaf, leafSpkiSha256: spkiSha256(leaf, createHash) };
   } catch (e) {
@@ -622,7 +628,12 @@ function transformBinding(binding: Uint8Array, mode: AzureMaaPolicy['reportDataH
  * Wire it in: `createAttestationVerifier({ trustedAttestorKeys: [], hardwareVerifier: createAzureMaaVerifier(opts), resolveDocument })`,
  * or add it as one `AttestationRoot` in a `createMultiRootVerifier` policy.
  */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createAzureMaaVerifier(opts: AzureMaaVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createAzureMaaVerifierUnlabelled(opts), { level: 'hardware', vendor: 'azure-maa' });
+}
+
+function createAzureMaaVerifierUnlabelled(opts: AzureMaaVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts || !Array.isArray(opts.trustedIssuers) || opts.trustedIssuers.length === 0) {
