@@ -157,7 +157,7 @@
     {
       "pkg": "brace-expansion 2.1.2, underscore 1.13.6",
       "status": "accepted",
-      "reason": "Transitive of the optional snarkjs/circom toolchain (zero-knowledge path). The advisories are DoS on attacker-controlled glob / deep-object input; PCA passes neither (no globbing of untrusted text; no untrusted objects into underscore). Fix by upgrading snarkjs when its range allows."
+      "reason": "Transitive of the optional snarkjs/circom toolchain (zero-knowledge path). The advisories are DoS on attacker-controlled glob / deep-object input; PCA passes neither (no globbing of untrusted text; no untrusted objects into underscore). No longer shipped to users: from 0.5.0 snarkjs is an optional peer dependency, so installing @atlasauth/pca does not install this chain; it remains only in the monorepo's dev tree for the zk tests."
     },
     {
       "pkg": "undici 5.29.0, @fastify/busboy 2.1.1",

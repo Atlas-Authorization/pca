@@ -330,7 +330,7 @@ describe('NVIDIA SPDM verifier on forged evidence (full chain: SPDM + RIM + CRL 
       for (const [what, off] of offsets) {
         const ev = { evidence: flipAt(S.spdm.evidence, off), certChainPem: S.device.chainPem };
         const r = await reasonOf({ ev });
-        expect(r, what).toMatch(/^(GPU attestation report signature does not verify under the device identity key|GPU attestation report parse failed: )/);
+        expect(r, what).toMatch(/^(GPU attestation report signature does not verify under the device identity key|GPU attestation report parse failed: |SPDM version 0x\w+\/0x\w+ is not an accepted GET_MEASUREMENTS version)/);
       }
       // the data-only fields (no length semantics) must specifically fail the signature
       for (const off of [10, L.recordsOff + 8, L.responderNonceOff + 3, L.opaqueTlvOff[OPAQUE_TYPE.DRIVER_VERSION]!]) {

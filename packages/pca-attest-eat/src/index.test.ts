@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { KeyObject } from 'node:crypto';
-import type { MeasuredIdentity } from '@atlasauth/pca';
+import type { MeasuredIdentity } from '@atlasauth/pca/ext/attestation';
 import { serializeSevSnpReport } from './test-support/sevsnp-report';
 import {
   EAT_TYP,

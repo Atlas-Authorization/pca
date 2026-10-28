@@ -12,7 +12,7 @@ function mk() {
 const okOpts = (grant: Capability) => ({
   audience: AUD,
   resolveGrant: async () => grant,
-  context: async () => ({ params: { amount: 20, currency: 'usd' }, budget: { B: 500, tau: 0 }, planAuthorized: true }),
+  context: async () => ({ params: { amount: 20, currency: 'usd' }, budget: { B: 500, tau: 0 }, risk: { semanticDistance: 0, reversibility: 0, blastRadius: 0.04, taint: 0, confidence: 1, age: 0 }, planAuthorized: true }),
   insecureAllowUnenforced: true,
 });
 
@@ -60,5 +60,14 @@ describe('pca-fetch (Web Fetch guard)', () => {
     const result = await guard(reqWith(encoded));
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.pcactn.action.verb).toBe('stripe.refund');
+  });
+});
+
+describe('0.5: the guard needs an operation mapping', () => {
+  it('is refused at construction without `operation` (a proof would be accepted for any operation the grant permits)', () => {
+    expect(() => withPCA({ audience: AUD, resolveGrant: async () => null }, async () => new Response("ok"))).toThrow(/`operation` is required/);
+  });
+  it('insecureAllowUnboundOperation is the explicit migration opt-in', () => {
+    expect(() => withPCA({ audience: AUD, resolveGrant: async () => null, insecureAllowUnboundOperation: true }, async () => new Response("ok"))).not.toThrow();
   });
 });

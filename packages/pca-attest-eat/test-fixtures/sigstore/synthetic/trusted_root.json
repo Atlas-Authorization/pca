@@ -1,0 +1,79 @@
+{
+ "mediaType": "application/vnd.dev.sigstore.trustedroot+json;version=0.1",
+ "tlogs": [
+  {
+   "baseUrl": "https://synthetic.log",
+   "hashAlgorithm": "SHA2_256",
+   "publicKey": {
+    "rawBytes": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEsrHh50E4/dae9eI/Frgy1Cm+PkjV1IQGK44r6XtcS3hirdni0ycN3AS8r49QXGNx1PXIBm1XOty4PtJFHcCCvA==",
+    "keyDetails": "PKIX_ECDSA_P256_SHA_256",
+    "validFor": {
+     "start": "2025-01-01T00:00:00.000Z"
+    }
+   },
+   "logId": {
+    "keyId": "RIxQ3SAuyVurHLkd7FslwdPFheCDxQGKae1VQvRFNVY="
+   }
+  }
+ ],
+ "certificateAuthorities": [
+  {
+   "subject": {
+    "organization": "pca-synthetic",
+    "commonName": "pca-synthetic-intermediate"
+   },
+   "uri": "https://synthetic.ca",
+   "certChain": {
+    "certificates": [
+     {
+      "rawBytes": "MIIBxDCCAWqgAwIBAgIBAjAKBggqhkjOPQQDAjA1MRYwFAYDVQQKDA1wY2Etc3ludGhldGljMRswGQYDVQQDDBJwY2Etc3ludGhldGljLXJvb3QwHhcNMjUwMTAxMDAwMDAwWhcNMzUwMTAxMDAwMDAwWjA9MRYwFAYDVQQKDA1wY2Etc3ludGhldGljMSMwIQYDVQQDDBpwY2Etc3ludGhldGljLWludGVybWVkaWF0ZTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABHCaugMAFGqc11GKLhPUrQf9B2sYomSCQUB17rus4VusCCh9WYGDzE7sJq6uBqKgOwJKjhkKBmsB8BCWhhrQSU2jYzBhMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMB0GA1UdDgQWBBRcYx6VBRxVs0HXlh8fOrwmIaWFNzAfBgNVHSMEGDAWgBSkOcLU5JWieezG11pRvFJAbQSeETAKBggqhkjOPQQDAgNIADBFAiEAtRCFKFYWj+pY27e5T59GbcF0Uwr2RMNxcuaTKiXRX9MCICB81LpqqjcPw93isOG4vVQdzvqgpNvK77d9hIIZGVW4"
+     },
+     {
+      "rawBytes": "MIIBuzCCAWKgAwIBAgIBATAKBggqhkjOPQQDAjA1MRYwFAYDVQQKDA1wY2Etc3ludGhldGljMRswGQYDVQQDDBJwY2Etc3ludGhldGljLXJvb3QwHhcNMjUwMTAxMDAwMDAwWhcNMzUwMTAxMDAwMDAwWjA1MRYwFAYDVQQKDA1wY2Etc3ludGhldGljMRswGQYDVQQDDBJwY2Etc3ludGhldGljLXJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASE0E6rVDKjrwD4wwld9wFwnauzMdGb5WCshU018QuQdqDOcoWnXxqWKmeRJWbH9LjXRj6KN/+8XvScNQ1XXAWAo2MwYTAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUpDnC1OSVonnsxtdaUbxSQG0EnhEwHwYDVR0jBBgwFoAUpDnC1OSVonnsxtdaUbxSQG0EnhEwCgYIKoZIzj0EAwIDRwAwRAIgc3Zix6TNu/PumfhTQWcJoWw7wm3/houyWgHOaJp0bMQCIHqxLmDTuSuJa9S8gz7K9EZFjXmhtlIV521TnzwNHFuq"
+     }
+    ]
+   },
+   "validFor": {
+    "start": "2025-01-01T00:00:00.000Z"
+   }
+  }
+ ],
+ "ctlogs": [
+  {
+   "baseUrl": "https://synthetic.ct",
+   "hashAlgorithm": "SHA2_256",
+   "publicKey": {
+    "rawBytes": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEloU3XB2MBz14rLSUrky7LhGFLyZl9uQ/Lj6mLNwNWeCJ/y686kTZI9Pl2kKmtnllwzQK0gsH1ZJE2TB+lqGa2Q==",
+    "keyDetails": "PKIX_ECDSA_P256_SHA_256",
+    "validFor": {
+     "start": "2025-01-01T00:00:00.000Z"
+    }
+   },
+   "logId": {
+    "keyId": "grl23izJiQI3sLbwjO0Jd3X405djr0TLIF1WlvnFe2g="
+   }
+  }
+ ],
+ "timestampAuthorities": [
+  {
+   "subject": {
+    "organization": "pca-synthetic",
+    "commonName": "pca-synthetic-tsa"
+   },
+   "uri": "https://synthetic.tsa",
+   "certChain": {
+    "certificates": [
+     {
+      "rawBytes": "MIIBwTCCAWigAwIBAgIBAzAKBggqhkjOPQQDAjA1MRYwFAYDVQQKDA1wY2Etc3ludGhldGljMRswGQYDVQQDDBJwY2Etc3ludGhldGljLXJvb3QwHhcNMjUwMTAxMDAwMDAwWhcNMzUwMTAxMDAwMDAwWjA0MRYwFAYDVQQKDA1wY2Etc3ludGhldGljMRowGAYDVQQDDBFwY2Etc3ludGhldGljLXRzYTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABDOm/3DIJd61qBtDKM2+q7iA0vSYsxHU67kUxp5oDRfyMplNiYUYsL/UNuWT/hdrAF5X8Yzx2HsWBobAGAXUcF+jajBoMA4GA1UdDwEB/wQEAwIHgDAWBgNVHSUBAf8EDDAKBggrBgEFBQcDCDAdBgNVHQ4EFgQUrYw+mxiTGSYAwwWxIEck7FfW2X0wHwYDVR0jBBgwFoAUpDnC1OSVonnsxtdaUbxSQG0EnhEwCgYIKoZIzj0EAwIDRwAwRAIgRXHlD8wdJ8yAWndCOi/e4g0wWHSSFOZqX/V61ZuSg3ECIGONF1PfJKYPQfcWKPWOEz/hf67sp1sWeLNOz/VMzJqI"
+     },
+     {
+      "rawBytes": "MIIBuzCCAWKgAwIBAgIBATAKBggqhkjOPQQDAjA1MRYwFAYDVQQKDA1wY2Etc3ludGhldGljMRswGQYDVQQDDBJwY2Etc3ludGhldGljLXJvb3QwHhcNMjUwMTAxMDAwMDAwWhcNMzUwMTAxMDAwMDAwWjA1MRYwFAYDVQQKDA1wY2Etc3ludGhldGljMRswGQYDVQQDDBJwY2Etc3ludGhldGljLXJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASE0E6rVDKjrwD4wwld9wFwnauzMdGb5WCshU018QuQdqDOcoWnXxqWKmeRJWbH9LjXRj6KN/+8XvScNQ1XXAWAo2MwYTAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNVHQ4EFgQUpDnC1OSVonnsxtdaUbxSQG0EnhEwHwYDVR0jBBgwFoAUpDnC1OSVonnsxtdaUbxSQG0EnhEwCgYIKoZIzj0EAwIDRwAwRAIgc3Zix6TNu/PumfhTQWcJoWw7wm3/houyWgHOaJp0bMQCIHqxLmDTuSuJa9S8gz7K9EZFjXmhtlIV521TnzwNHFuq"
+     }
+    ]
+   },
+   "validFor": {
+    "start": "2025-01-01T00:00:00.000Z"
+   }
+  }
+ ]
+}

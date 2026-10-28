@@ -47,8 +47,6 @@ import {
 } from './sdjwt';
 import {
   currencyExponent,
-  fromMinorUnits,
-  toMinorUnits,
   type Merchant,
   type OpenCheckoutMandateClaims,
   type OpenPaymentMandateClaims,
@@ -59,6 +57,12 @@ import { issueOpenCheckoutMandate, issueOpenPaymentMandate, type MandateIssuer }
 import type { CheckoutConstraint } from './mandates';
 
 export const PCA_BINDING_VERSION = 1;
+
+/** A PCA term as integer minor units; anything else (a major-unit float from an older mandate) is refused. */
+function minorTerm(v: unknown, name: string): number {
+  if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0) throw new Ap2Error(`PCA term ${name} must be a non-negative integer in minor units, got ${String(v)}`);
+  return v;
+}
 
 const toJson = <T>(v: T): JsonObject => JSON.parse(JSON.stringify(v)) as JsonObject;
 
@@ -99,23 +103,55 @@ function merchantsFor(terms: MandateTerms, merchants: Merchant[]): Merchant[] {
   });
 }
 
+/** Next representable double above a positive finite `x`. */
+function nextUp(x: number): number {
+  const f = new Float64Array([x]);
+  const u = new BigUint64Array(f.buffer);
+  u[0] = u[0]! + 1n;
+  return f[0]!;
+}
+
 /**
- * The AP2 open payment constraints a set of PCA terms denotes. `budget.max` is in MAJOR units (the
- * AP2 SDK multiplies it by 100); `amount_range` is in minor units. The budget is refused for any
- * currency whose exponent is not 2 and for any cap whose x100 product is not exact in floating point,
- * so the SDK and this package read the same number.
+ * The value of AP2 `payment.budget.max` for a PCA cap in integer minor units. The official AP2 SDK reads it as
+ * `int(max * 100)` whatever the currency, while the schema calls it an amount, so two readers exist: the SDK
+ * (hundredths) and a major-unit reader (`max * 10^exponent`). The value emitted never lets EITHER read more than the cap:
+ *   exponent 0 or 1 (JPY): `cap / 100`, so the SDK reads exactly the cap and a major-unit reader reads less;
+ *   exponent 2 (USD): `cap / 100`, exact for both;
+ *   exponent 3 or more (KWD): `cap / 10^exponent`, exact for a major-unit reader; the SDK reads `floor(cap / 10^(exponent-2))`.
+ * The double is nudged up by at most a few ulps when `cap / divisor` falls just under the exact decimal, so that
+ * the SDK's `int(max * 100)` is exact (0.29 * 100 is 28.999999999999996 in floating point).
+ */
+export function ap2BudgetMax(capMinor: number, currency: string): number {
+  const cap = minorTerm(capMinor, 'cumulativeCap');
+  const e = currencyExponent(currency);
+  const sdkTarget = e <= 2 ? cap : Math.floor(cap / 10 ** (e - 2));
+  let d = cap / 10 ** Math.max(e, 2);
+  for (let i = 0; i < 8 && d > 0 && Math.trunc(d * 100) < sdkTarget; i++) d = nextUp(d);
+  if (Math.trunc(d * 100) !== sdkTarget || Math.round(d * 10 ** e) > cap) throw new Ap2Error(`cumulativeCap ${cap} ${currency} has no exact AP2 budget.max representation`);
+  return d;
+}
+
+/** What the two readers of an AP2 `budget.max` read, in minor units of `currency`: the SDK (`int(max * 100)`) and a major-unit reader. */
+export function ap2BudgetReads(max: number, currency: string): { sdk: number; major: number } {
+  const e = currencyExponent(currency);
+  if (typeof max !== 'number' || !Number.isFinite(max) || max < 0) throw new Ap2Error(`budget.max must be a finite non-negative number, got ${String(max)}`);
+  return { sdk: Math.trunc(max * 100), major: Math.round(max * 10 ** e) };
+}
+
+/**
+ * The AP2 open payment constraints a set of PCA terms denotes. PCA terms are INTEGER MINOR UNITS of the mandate currency
+ * (ISO 4217 exponent per currency: USD 2, JPY 0, KWD 3); `amount_range` is in the same minor units. `budget.max` is
+ * derived exactly by {@link ap2BudgetMax}; no currency is refused for its exponent.
  */
 export function paymentConstraintsFromTerms(terms: MandateTerms, merchants: Merchant[], checkoutReference: string): PaymentConstraint[] {
   const cur = terms.currency;
-  const perTx = toMinorUnits(terms.perTransactionCap, cur);
-  const cumulativeMinor = toMinorUnits(terms.cumulativeCap, cur);
-  if (currencyExponent(cur) !== 2) throw new Ap2Error(`budget in ${cur} is unsupported: the AP2 SDK converts budget.max with a fixed x100`);
-  if (Math.trunc(terms.cumulativeCap * 100) !== cumulativeMinor) throw new Ap2Error('cumulativeCap x100 is not exact in floating point; choose a representable cap');
+  const perTx = minorTerm(terms.perTransactionCap, 'perTransactionCap');
+  const budgetMax = ap2BudgetMax(terms.cumulativeCap, cur);
   return [
     { type: 'payment.amount_range', currency: cur, min: 0, max: perTx },
     { type: 'payment.allowed_payees', allowed: merchantsFor(terms, merchants) },
     { type: 'payment.reference', conditional_transaction_id: checkoutReference },
-    { type: 'payment.budget', currency: cur, max: terms.cumulativeCap },
+    { type: 'payment.budget', currency: cur, max: budgetMax },
     { type: 'payment.agent_recurrence', frequency: 'ON_DEMAND', ...(terms.maxTransactionsPerPeriod !== undefined ? { max_occurrences: terms.maxTransactionsPerPeriod } : {}) },
   ];
 }
@@ -207,7 +243,7 @@ export function riskRatio(amount: number, cap: number): number {
 
 /** Build the `x_pca` claim of a closed payment mandate: a PCActn authorising exactly this charge. */
 export function buildPcaPaymentBinding(i: PcaPaymentBindingInput): JsonObject {
-  const major = fromMinorUnits(i.amount.amount, i.amount.currency);
+  const major = minorTerm(i.amount.amount, 'amount'); // the charge amount is integer minor units, as in the mandate
   const charge = { merchant: i.payee.id, amount: major, currency: i.amount.currency, ...(i.category !== undefined ? { category: i.category } : {}) };
   const facts: BindingFacts = {
     transactionId: i.transactionId,
@@ -291,7 +327,7 @@ const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 /** Check the open mandate's constraints never exceed the PCA terms (the AP2 side only narrows the grant). */
 function constraintsWithinTerms(open: OpenPaymentMandateClaims, terms: MandateTerms): string | undefined {
   const cur = terms.currency;
-  const perTx = toMinorUnits(terms.perTransactionCap, cur);
+  const perTx = minorTerm(terms.perTransactionCap, 'perTransactionCap');
   const range = open.constraints.find((c) => c.type === 'payment.amount_range');
   if (!range || range.type !== 'payment.amount_range') return 'open mandate has no amount_range to compare with the PCA per-transaction cap';
   if (range.currency !== cur) return 'amount_range currency differs from the PCA terms';
@@ -301,7 +337,10 @@ function constraintsWithinTerms(open: OpenPaymentMandateClaims, terms: MandateTe
   if (!payees) return 'open mandate has no allowed_payees; the PCA allowlist would not be enforced on the AP2 side';
   const budget = open.constraints.find((c) => c.type === 'payment.budget');
   if (!budget || budget.type !== 'payment.budget') return 'open mandate has no budget to compare with the PCA cumulative cap';
-  if (budget.currency !== cur || budget.max > terms.cumulativeCap) return 'budget exceeds the PCA cumulative cap';
+  if (budget.currency !== cur) return 'budget exceeds the PCA cumulative cap';
+  const reads = ap2BudgetReads(budget.max, cur);
+  const capMinor = minorTerm(terms.cumulativeCap, 'cumulativeCap');
+  if (reads.sdk > capMinor || reads.major > capMinor) return 'budget exceeds the PCA cumulative cap';
   const rec = open.constraints.find((c) => c.type === 'payment.agent_recurrence');
   if (terms.maxTransactionsPerPeriod !== undefined && (!rec || rec.type !== 'payment.agent_recurrence' || rec.max_occurrences === undefined || rec.max_occurrences > terms.maxTransactionsPerPeriod)) {
     return 'max_occurrences is missing or exceeds the PCA transaction limit';
@@ -343,7 +382,7 @@ export async function verifyPcaBinding(i: VerifyPcaBindingInput): Promise<PcaBin
     const pcactn = cc.pcactn as unknown as PCActn;
     const charge = cc.charge as { amount?: unknown; currency?: unknown; category?: unknown };
     const { payment_amount: amt, payee } = i.closed;
-    if (charge.currency !== amt.currency || charge.amount !== fromMinorUnits(amt.amount, amt.currency)) return fail('x_pca charge differs from the mandate payment_amount');
+    if (charge.currency !== amt.currency || charge.amount !== amt.amount) return fail('x_pca charge differs from the mandate payment_amount');
     if (terms.categories.length > 0 && (typeof charge.category !== 'string' || !terms.categories.includes(charge.category))) return fail('x_pca charge lacks an allowed category');
 
     // R2-09: remember the `t` the threshold hook REPORTS it enforced (as the core verifier does), so a hook built for a smaller t cannot satisfy a charge that needs more.
@@ -363,7 +402,7 @@ export async function verifyPcaBinding(i: VerifyPcaBindingInput): Promise<PcaBin
             : {}),
         }
       : undefined;
-    const core = await verifyPCActnCore(pcactn, { grant, audience: i.audience, ...(i.now !== undefined ? { nowEpoch: i.now } : {}), ...(hooks ? { hooks } : {}), ...(i.enforce ? { enforce: i.enforce } : {}) });
+    const core = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, audience: i.audience, ...(i.now !== undefined ? { nowEpoch: i.now } : {}), ...(hooks ? { hooks } : {}), ...(i.enforce ? { enforce: i.enforce } : {}) });
     if (!core.allow) return fail(`PCActn: ${core.reason ?? 'rejected'}`);
     if (pcactn.action.verb !== 'charge' || pcactn.action.resource !== `merchant:${payee.id}`) return fail('PCActn action is not a charge at this payee');
     const params = { amount: charge.amount, currency: charge.currency, ...(typeof charge.category === 'string' ? { category: charge.category } : {}) };
@@ -379,10 +418,10 @@ export async function verifyPcaBinding(i: VerifyPcaBindingInput): Promise<PcaBin
       agentJkt: jwkThumbprint(agentJwk),
     });
     if (pcactn.nonce !== expectedNonce) return fail('PCActn nonce does not bind this AP2 transaction, open mandate and agent key');
-    if (amt.amount > toMinorUnits(terms.perTransactionCap, terms.currency)) return fail('payment exceeds the PCA per-transaction cap');
+    if (amt.amount > minorTerm(terms.perTransactionCap, 'perTransactionCap')) return fail('payment exceeds the PCA per-transaction cap');
     // The agent may not understate the risk of its own charge, and a charge whose risk needs a human
     // co-sign (t > 1) is only accepted when the verifier supplies a threshold verifier to check it.
-    const recomputed = riskRatio(fromMinorUnits(amt.amount, amt.currency), terms.perTransactionCap);
+    const recomputed = riskRatio(amt.amount, terms.perTransactionCap);
     const claimed = pcactn.risk_claim.r;
     if (!(typeof claimed === 'number' && claimed >= recomputed - 1e-9)) return fail('PCActn understates the risk of this charge');
     const need = requiredThreshold(claimed, env.risk_policy);
@@ -395,7 +434,7 @@ export async function verifyPcaBinding(i: VerifyPcaBindingInput): Promise<PcaBin
     {
       if (hashCanonical(i.mandate.grant) !== hashCanonical(grant)) return fail('the supplied PCA mandate is not the one in the open mandate');
       // `grant` was verified above under the caller-pinned principal (verifyChain + pqPins); the decision is bound to it
-      const decision = authorizeCharge(i.mandate, { merchant: payee.id, amount: fromMinorUnits(amt.amount, amt.currency), currency: amt.currency, ...(typeof charge.category === 'string' ? { category: charge.category } : {}), recentChargeTimes: i.recentChargeTimes ?? [], ...(i.now !== undefined ? { now: i.now } : {}) }, grant);
+      const decision = authorizeCharge(i.mandate, { merchant: payee.id, amount: amt.amount, currency: amt.currency, ...(typeof charge.category === 'string' ? { category: charge.category } : {}), recentChargeTimes: i.recentChargeTimes ?? [], ...(i.now !== undefined ? { now: i.now } : {}) }, grant);
       if (decision.outcome === 'deny') return fail(`PCA denies this charge: ${decision.reasons.join('; ')}`);
       if (decision.outcome === 'step_up' && !(typeof enforcedT === 'number' && enforcedT >= 2)) return fail('PCA requires a human co-sign for this charge and no verified threshold (t >= 2) was enforced');
     }

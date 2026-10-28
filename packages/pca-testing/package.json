@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-testing",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Testing kit for Proof-Carrying Authority: factories for grants and PCActns, a fake verifier and state store, and assertion helpers so integrators can unit-test their PCA wiring.",
   "keywords": [
     "testing",
@@ -53,5 +53,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production"
   }
 }

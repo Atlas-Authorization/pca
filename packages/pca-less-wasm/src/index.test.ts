@@ -2,9 +2,8 @@
  * Round-trip tests for the EXPERIMENTAL LESS code-based signature backend, exercised through the
  * WebAssembly binding (keypair -> sign -> open/verify, plus tamper rejection).
  *
- * The `.wasm` artifact is produced by `scripts/build-wasm.sh` (pinned wasi-sdk 25.0, see wasm/BUILD.json). When it is absent, the whole suite is SKIPPED rather than failed — this is a non-default
- * experimental package and CI must not break on a missing artifact. Once `wasm/less_cat1.wasm` is
- * dropped in, the suite runs for real.
+ * The `.wasm` artifact is committed (built by `scripts/build-wasm.sh`, pinned wasi-sdk 25.0, see wasm/BUILD.json).
+ * A missing artifact FAILS the suite: a silent skip would be a false green.
  */
 
 import { existsSync } from 'node:fs';
@@ -13,8 +12,13 @@ import { describe, expect, it } from 'vitest';
 import { keygen, open, seedWith, sign, signDetached, sizes, verify, VARIANT } from './index.js';
 
 const WASM = join(__dirname, '..', 'wasm', 'less_cat1.wasm');
-const haveWasm = existsSync(WASM);
-const d = haveWasm ? describe : describe.skip;
+const d = describe;
+
+describe('wasm artifact', () => {
+  it('is present', () => {
+    expect(existsSync(WASM)).toBe(true);
+  });
+});
 
 describe('pca-less-wasm metadata', () => {
   it('declares the compiled NIST Category 1 variant', () => {

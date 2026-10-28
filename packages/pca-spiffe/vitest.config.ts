@@ -12,5 +12,11 @@ function pcaSource(): string {
   return resolve(__dirname, '../pca/src/index.ts');
 }
 export default defineConfig({
-  resolve: { alias: { '@atlasauth/pca': pcaSource() } },
+  resolve: {
+    alias: [
+      // the extension subpaths (`@atlasauth/pca/ext/<name>`) come from source too
+      { find: /^@atlasauth\/pca\/ext\/(.+)$/, replacement: `${dirname(pcaSource())}/ext/$1.ts` },
+      { find: '@atlasauth/pca', replacement: pcaSource() },
+    ],
+  },
 });

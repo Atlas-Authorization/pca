@@ -1,17 +1,15 @@
 import {
   b64u,
   canonicalBytesStrict,
-  cellCoordsError,
   decodeB64uStrict,
   hashCanonical,
-  intentActionDigest,
   paramsDigest,
   publicKeyOf,
   sign,
   utf8,
   verifyB64u,
-  type Friction,
 } from '@atlasauth/pca';
+import { cellCoordsError, intentActionDigest, type Friction } from '@atlasauth/pca/ext/intent';
 
 /**
  * WIRE FORMATS OF THE TRUSTED QUESTION CHANNEL (Intent Layer v2, docs/specs/pca-intent-layer-v2.md §3.3, §3.4, §4 M5/M6, §8).

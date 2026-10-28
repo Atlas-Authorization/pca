@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { fromMicros, toMicros, BondLedger, InMemoryBondAccount, bondAmount, DEFAULT_BOND_POLICY, DEFAULT_SLASH_SPLIT_POLICY, computeSlashSplit, disputeEvidenceDigest, settlementEvidenceDigest, verifySettlement, revocationEvidenceDigest } from './bond-settlement';
+import { fromMicros, toMicros, bondAmount, DEFAULT_BOND_POLICY, DEFAULT_SLASH_SPLIT_POLICY, computeSlashSplit, disputeEvidenceDigest, settlementEvidenceDigest, verifySettlement, revocationEvidenceDigest } from './bond-settlement';
+import { BondLedger, InMemoryBondAccount } from './bond-ledger-testing';
 import { adjudicateDispute, fileFraudProof, openOptimistic, verifyFraudProof, IRREVERSIBLE_CLASS, type DisputableInput, type ObjectiveOracle, type OracleResolution } from './optimistic';
 import { mintGrant } from './envelope';
 import { buildPCActn, type PCActn } from './pcactn';

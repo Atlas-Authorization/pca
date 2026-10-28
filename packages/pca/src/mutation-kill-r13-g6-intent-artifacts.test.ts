@@ -122,7 +122,7 @@ describe('signArtifact / verifyArtifactSig', () => {
     expect(verifyArtifactSig(DOM, { ...s, a: 10n as never }, PIN)).toBe(false); // a body strict canonical JSON cannot encode: caught, false
   });
   it('hybrid: alg and pq_pk are signed; verifies only under the pinned PQ key', () => {
-    const s = signArtifact(DOM, { a: 1 }, ED.secretKey, { alg: HYB, mlDsa: ML });
+    const s: any = signArtifact(DOM, { a: 1 }, ED.secretKey, { alg: HYB, mlDsa: ML });
     expect(s.alg).toBe(HYB);
     expect(s.pq_pk).toBe(PQPIN);
     expect(typeof s.pq_sig).toBe('string');

@@ -20,6 +20,9 @@ import {
   type ProofCheckContext,
 } from './index';
 
+/** Signature-only on purpose (0.5: an explicit mode): these tests are about routing, adapters and binding; full mode is in full-policy.test.ts. */
+const SIG_ONLY = { insecureSkipPlanRootCheck: true, policy: { mode: 'signature-only' as const }, replayGuard: { claim: async () => true }, requireChecks: [] as string[] };
+
 const AUD = 'ins_mk';
 type Minted = { encoded: string; grant: Capability; ref: string; header: string; sig: string; exp: number };
 function mint(params: unknown = { amount: 20 }, resource = 'charge:ch_1'): Minted {
@@ -33,6 +36,7 @@ const base = (m: Minted, o: Partial<GatewayOptions> = {}): GatewayOptions => ({
   bindRequest: false, // these tests are about routing/adapters; binding is covered in bind.test.ts
   unmatchedRoute: 'require-proof',
   resolveGrant: async (r) => (r === m.ref ? m.grant : null),
+  ...SIG_ONLY,
   ...o,
 });
 const H = (m: Minted) => ({ 'pca-action': m.header });

@@ -1,0 +1,30 @@
+{
+ "trait": "pca.financial_data_read",
+ "card": {
+  "verb": "golden.financial_data_read",
+  "title": "Do the financial data read thing",
+  "text": "Do the financial data read thing. This action reads financial data.",
+  "risk": "elevated",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "resource_scope"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.financial_data_read"
+ ],
+ "floor": {
+  "risk": 1,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "resource_scope"
+  ],
+  "context": [],
+  "prules": []
+ }
+}

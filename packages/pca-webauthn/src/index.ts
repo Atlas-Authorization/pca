@@ -25,6 +25,7 @@ import {
   unb64u,
   decodeB64uStrict,
   thresholdMessage,
+  approvalChallenge,
   verify as verifyEd25519Strict,
 } from '@atlasauth/pca';
 
@@ -321,6 +322,20 @@ export function buildStepUpChallenge(pcActnOrDigest: PCActn | PCActnBody | strin
   return sha256(thresholdMessage(pcActnOrDigest));
 }
 
+/**
+ * K7, what you see is what you sign: the challenge for an approval that commits to the canonical render. It is
+ * `SHA-256(domain || action_digest || H(R))` (`approvalChallenge` in `@atlasauth/pca`), so a signature over it proves the approver
+ * authorised THIS action as displayed by THIS render. Accepts the same inputs as {@link buildStepUpChallenge} for the action.
+ */
+export function buildApprovalChallenge(pcActnOrDigest: PCActn | PCActnBody | string | Uint8Array, renderDigest: string): Uint8Array {
+  return approvalChallenge(buildStepUpChallenge(pcActnOrDigest), renderDigest);
+}
+
+/** The base64url form of {@link buildApprovalChallenge}. */
+export function approvalChallengeForActn(pcActnOrDigest: PCActn | PCActnBody | string | Uint8Array, renderDigest: string): string {
+  return b64u(buildApprovalChallenge(pcActnOrDigest, renderDigest));
+}
+
 /** The base64url step-up challenge (== the FROST `action_digest`) for a PCActn/body/digest. */
 export function stepUpChallengeB64u(pcActnOrDigest: PCActn | PCActnBody | string | Uint8Array): string {
   return b64u(buildStepUpChallenge(pcActnOrDigest));
@@ -329,6 +344,11 @@ export function stepUpChallengeB64u(pcActnOrDigest: PCActn | PCActnBody | string
 // ================================================================================================
 // Assertion verification.
 // ================================================================================================
+
+/** Input size caps (bytes): real values are ~37-200, ~150-400 and 64-72 bytes respectively. */
+export const MAX_AUTHENTICATOR_DATA_BYTES = 4096;
+export const MAX_CLIENT_DATA_BYTES = 8192;
+export const MAX_SIGNATURE_BYTES = 1024;
 
 /** The parts of a WebAuthn assertion the server verifies (bytes already base64url-decoded). */
 export interface Assertion {
@@ -358,6 +378,52 @@ export interface VerifyExpectations {
    * enrolled authenticator is known to sign low-S (or when signature bytes are used as an identifier).
    */
   requireLowS?: boolean;
+  /**
+   * REQUIRED. The signature counter you stored for this credential at its last successful assertion (0 when new). The
+   * W3C clone-detection rule is enforced AFTER the signature verifies: if either the reported or the stored counter is
+   * non-zero, the reported counter must be strictly greater, otherwise the assertion is refused and
+   * {@link VerifyExpectations.onSignCountRegression} is called. Both zero means the authenticator has no counter (most
+   * synced passkeys) and passes. A missing value is refused (`storedSignCount is required`): the verifier keeps no
+   * counter state of its own. After an accepted assertion, store the returned `signCount` yourself.
+   */
+  storedSignCount: number;
+  /** Called (once) when the counter rule above refuses an assertion whose signature DID verify: a possible cloned authenticator. */
+  onSignCountRegression?: (info: { storedSignCount: number; reportedSignCount: number }) => void;
+  /**
+   * Default `true`: refuse an assertion whose clientData says `crossOrigin: true` (the ceremony ran inside a cross-origin
+   * iframe) or carries a non-boolean `crossOrigin`. Pass `false` only to accept cross-origin ceremonies deliberately.
+   */
+  rejectCrossOrigin?: boolean;
+  /**
+   * Secure Payment Confirmation profile (W3C SPC; PSD2 RTS Art. 5 dynamic linking). When set the assertion MUST be a
+   * `payment.get` ceremony whose signed `clientData.payment` equals this expectation, and a plain `webauthn.get` is refused;
+   * when unset a `payment.get` assertion is refused. Derive it from the canonical render (`spcExpectation` in `@atlasauth/pca-actions`).
+   */
+  payment?: SpcPaymentExpectation;
+}
+
+/** What the signed `clientData.payment` must say. The challenge (checked separately) already commits to the same render. */
+export interface SpcPaymentExpectation {
+  /** The origin of the top-level context that asked for the confirmation (must be the verifier's own approval origin). */
+  topOrigin: string;
+  /** Decimal string in the major unit of the currency, exactly as the render derives it (for example "12.50"). */
+  total: { currency: string; value: string };
+  /** At least one of payeeName / payeeOrigin; each given value must equal the signed one, and the signed one must be present. */
+  payeeName?: string;
+  payeeOrigin?: string;
+}
+
+/** Null if the signed payment data equals the expectation. Total over hostile input. */
+export function spcPaymentError(payment: unknown, e: SpcPaymentExpectation, rpId: string): string | null {
+  const p = asRecord(payment);
+  if (!p) return 'clientData.payment is missing';
+  if (e.payeeName === undefined && e.payeeOrigin === undefined) return 'the expectation names no payee (refused: a payment approval must bind the payee)';
+  if (p['rpId'] !== rpId) return 'clientData.payment.rpId is not the verifier rpId';
+  if (p['topOrigin'] !== e.topOrigin) return 'clientData.payment.topOrigin is not the verifier approval origin';
+  const total = asRecord(p['total']);
+  if (!total || total['currency'] !== e.total.currency || total['value'] !== e.total.value) return 'clientData.payment.total does not equal the canonical render';
+  for (const k of ['payeeName', 'payeeOrigin'] as const) if (e[k] !== undefined && p[k] !== e[k]) return `clientData.payment.${k} does not equal the canonical render`;
+  return null;
 }
 
 /** A successful verification, with the facts the caller may want to record. */
@@ -396,8 +462,12 @@ export function verifyAssertion(assertion: Assertion, expect: VerifyExpectations
     if (!(authenticatorData instanceof Uint8Array)) return fail('authenticatorData is not bytes');
     if (!(clientDataJSON instanceof Uint8Array)) return fail('clientDataJSON is not bytes');
     if (!(signature instanceof Uint8Array)) return fail('signature is not bytes');
+    if (authenticatorData.length > MAX_AUTHENTICATOR_DATA_BYTES) return fail('authenticatorData is too large');
+    if (clientDataJSON.length > MAX_CLIENT_DATA_BYTES) return fail('clientDataJSON is too large');
+    if (signature.length > MAX_SIGNATURE_BYTES) return fail('signature is too large');
     if (typeof expect.rpId !== 'string' || expect.rpId.length === 0) return fail('rpId is required');
     if (!Array.isArray(expect.origins) || expect.origins.length === 0) return fail('origins allowlist is empty');
+    if (expect.storedSignCount === undefined) return fail('storedSignCount is required (use 0 for a credential never used)');
 
     // --- clientDataJSON ---
     let clientText: string;
@@ -414,7 +484,12 @@ export function verifyAssertion(assertion: Assertion, expect: VerifyExpectations
     }
     const client = asRecord(clientParsed);
     if (!client) return fail('clientDataJSON is not a JSON object');
-    if (client['type'] !== 'webauthn.get') return fail(`clientData.type is not "webauthn.get" (${String(client['type'])})`);
+    const wantType = expect.payment !== undefined ? 'payment.get' : 'webauthn.get';
+    if (client['type'] !== wantType) return fail(`clientData.type is not "${wantType}" (${String(client['type'])})`);
+    if (expect.payment !== undefined) {
+      const pe = spcPaymentError(client['payment'], expect.payment, expect.rpId);
+      if (pe) return fail(pe);
+    }
 
     const challenge = client['challenge'];
     // R6-ALIAS-02: canonical base64url only (no padding, URL alphabet, canonical trailing bits).
@@ -426,6 +501,11 @@ export function verifyAssertion(assertion: Assertion, expect: VerifyExpectations
     if (!bytesEqual(gotChallenge, expChallenge)) return fail('clientData.challenge does not match the step-up challenge');
 
     const origin = client['origin'];
+    if (expect.rejectCrossOrigin !== false) {
+      const co = client['crossOrigin'];
+      if (co === true) return fail('clientData.crossOrigin is true');
+      if (co !== undefined && co !== false) return fail('clientData.crossOrigin is not a boolean');
+    }
     if (typeof origin !== 'string') return fail('clientData.origin is missing');
     if (!expect.origins.includes(origin)) return fail(`clientData.origin "${origin}" is not in the allowlist`);
 
@@ -458,6 +538,14 @@ export function verifyAssertion(assertion: Assertion, expect: VerifyExpectations
       signatureValid = verifyEd25519Strict(key.raw, signedData, signature);
     }
     if (!signatureValid) return fail('assertion signature did not verify');
+
+    // --- signature counter (clone detection); only after the signature verified, so forged input cannot trigger the hook ---
+    const stored = expect.storedSignCount;
+    if (!Number.isInteger(stored) || stored < 0 || stored > 0xffffffff) return fail('storedSignCount is not a uint32');
+    if ((parsed.signCount !== 0 || stored !== 0) && parsed.signCount <= stored) {
+      expect.onSignCountRegression?.({ storedSignCount: stored, reportedSignCount: parsed.signCount });
+      return fail('signCount did not increase (possible cloned authenticator)');
+    }
 
     return { ok: true, alg: key.alg, signCount: parsed.signCount, flags: parsed.flags };
   } catch (e) {

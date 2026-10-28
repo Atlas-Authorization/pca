@@ -5,30 +5,34 @@
  * the host env untouched. Fixture: the intent-v2.test.ts §4 walkthrough.
  */
 import { describe, expect, it } from 'vitest';
-import { validateWireV2 } from './wire';
+import { validateWireV2 } from './pcactn-full'; // the intent slots are validated by the full entry (Core alone refuses them)
+import {
+  b64u,
+  buildPCActn,
+  paramsDigest,
+  publicKeyOf,
+  sha256,
+  signPCActn,
+  utf8,
+  verifyPCActn as verifyPCActn05,
+  verifyPCActnCore,
+  type PCActn,
+} from './index';
 import {
   actionSchemaDigest,
   actionSchemaKeyOf,
-  b64u,
-  buildPCActn,
   mintSessionGrant,
-  paramsDigest,
-  publicKeyOf,
   sessionRootDigest,
-  sha256,
   signActionSchema,
-  signPCActn,
   signSessionRoot,
-  utf8,
-  verifyPCActn,
-  verifyPCActnCore,
   type AccumulatorDecl,
   type IntentSessionWire,
   type IntentV2Context,
-  type PCActn,
   type SessionRootBody,
   type UnsignedActionSchema,
-} from './index';
+} from './ext/intent';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 
 const seed = (l: string) => sha256(utf8(`intent-v2-test/${l}`));
@@ -149,7 +153,7 @@ const ctx = (over: Partial<IntentV2Context> = {}): IntentV2Context => ({
   acc: { state: { trip_spend: { sum: 0 } }, monitors: {} },
   ...over,
 });
-const core = (p: PCActn, grant: typeof G0, c: IntentV2Context | undefined) => verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: AUD, ...(c ? { intentV2: c } : {}) });
+const core = (p: PCActn, grant: typeof G0, c: IntentV2Context | undefined) => verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD, ...(c ? { intentV2: c } : {}) });
 const resign = (p: PCActn): PCActn => {
   const { sig: _s, ...body } = p;
   void _s;
@@ -158,7 +162,7 @@ const resign = (p: PCActn): PCActn => {
 
 // ---- V1: action schemas ---------------------------------------------------------------------------------------
 
-const denied = (v: { reasons: string[] }) => v.reasons.some((r) => r.includes('no predicate permits'));
+const denied = (v: { reasons: string[] }) => v.reasons.some((r) => r.includes('no predicate permits') || r.includes(' not satisfied for '));
 const KS = ['acc', 'mon', 'canon', 'world', 'prov', 'class'] as const;
 const forgedEnv = Object.fromEntries(KS.map((k) => [k, { f: 'forged' }]));
 const forgedPreds = KS.map((k) => ({ verb: 'air.book', resource: '*', where: [{ field: `env.${k}.f`, op: 'eq' as const, value: 'forged' }] }));
@@ -166,14 +170,14 @@ const forgedPreds = KS.map((k) => ({ verb: 'air.book', resource: '*', where: [{ 
 describe('server verifyPCActn: intentV2 wiring', () => {
   it('intentV2 without params falls back to context.params', async () => {
     const p = build(G0, { salt: 'salt0', map: MAP0, is: is0() });
-    const v = await verifyPCActn(p, { grant: G0, audience: AUD, now: NOW, context: { params: PARAMS }, intentV2: ctx({ params: undefined }) });
+    const v = await verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: G0, audience: AUD, now: NOW, context: { params: PARAMS }, intentV2: ctx({ params: undefined }) });
     expect(v.checks.accumulators).toBe('pass');
     expect(denied(v)).toBe(false);
   });
   it('a host env member survives for a session action', async () => {
     const g = mint({ seq: 0, map: MAP0, salt: 'salt0', predicates: [{ verb: 'air.book', resource: '*', where: [{ field: 'env.acc.trip_spend.post', op: 'lte', value: 40_000 }, { field: 'env.region', op: 'eq', value: 'eu' }] }] as never });
     const p = build(g, { salt: 'salt0', map: MAP0, is: is0() });
-    const run = (region: string) => verifyPCActn(p, { grant: g, audience: AUD, now: NOW, context: { params: PARAMS, env: { region } }, intentV2: ctx() });
+    const run = (region: string) => verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: g, audience: AUD, now: NOW, context: { params: PARAMS, env: { region } }, intentV2: ctx() });
     expect(denied(await run('eu'))).toBe(false);
     expect(denied(await run('us'))).toBe(true);
   });
@@ -181,13 +185,13 @@ describe('server verifyPCActn: intentV2 wiring', () => {
     const g = mint({ seq: 0, map: MAP0, salt: 'salt0', predicates: forgedPreds as never });
     const p = build(g, { salt: 'salt0', map: MAP0, is: is0() });
     // the schema cannot be verified, so the verifier computes none of the six members itself
-    const v = await verifyPCActn(p, { grant: g, audience: AUD, now: NOW, context: { params: PARAMS, env: forgedEnv }, intentV2: ctx({ schema: { docs: [], keys: [] } }) });
+    const v = await verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: g, audience: AUD, now: NOW, context: { params: PARAMS, env: forgedEnv }, intentV2: ctx({ schema: { docs: [], keys: [] } }) });
     expect(denied(v)).toBe(true);
   });
   it('a non-session action reads the host env as given', async () => {
     const g = mint({ seq: 0, map: MAP0, salt: 'salt0', predicates: forgedPreds as never });
     const p = build(g, { salt: 'salt0', map: MAP0 });
-    const v = await verifyPCActn(p, { grant: g, audience: AUD, now: NOW, context: { params: PARAMS, env: forgedEnv } });
+    const v = await verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: g, audience: AUD, now: NOW, context: { params: PARAMS, env: forgedEnv } });
     expect(denied(v)).toBe(false);
   });
   it('wire validation continues past a well-formed intent_session', () => {

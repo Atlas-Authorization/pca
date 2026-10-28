@@ -182,6 +182,44 @@ export interface ClaimVerdict {
   reason?: string;
 }
 
+/** The first check a claim fails, in this order; `ok` when none. The cross-language wire vectors name this. */
+export type ClaimCheck = 'ok' | 'malformed' | 'irreversible' | 'digest' | 'claimed_r' | 'window' | 'signature';
+
+/**
+ * The single source of truth for claim verification: which check a claim fails first, with the human reason.
+ * Verifies against the digest of the PCActn the claim must cover (`expectedPcactnDigest`, or a thunk computing it), so a verifier that holds only
+ * the digest (every non-TypeScript verifier) runs the identical check. Total; never throws.
+ */
+export function claimCheck(
+  claim: BondedClaim,
+  expectedPcactnDigest: string | (() => string),
+  signerPublic: string,
+  opts: { serverNow?: number; windowPolicy?: ChallengeWindowPolicy } = {},
+): { check: ClaimCheck; reason?: string } {
+  try {
+    if (!claim || typeof claim !== 'object') return { check: 'malformed', reason: 'malformed claim' };
+    if (claim.reversibility_class === IRREVERSIBLE_CLASS) {
+      return { check: 'irreversible', reason: 'irreversible action is ineligible for the optimistic path' };
+    }
+    if (claim.pcactn_digest !== (typeof expectedPcactnDigest === 'function' ? expectedPcactnDigest() : expectedPcactnDigest)) {
+      return { check: 'digest', reason: 'claim does not cover this PCActn' };
+    }
+    if (!Number.isFinite(claim.claimed_r)) return { check: 'claimed_r', reason: 'claimed_r is not finite' };
+    // The window is server-authoritative: reject backdating / out-of-skew issued_at and a window below
+    // the minimum (window:0). Pass the OPEN-time `serverNow` when re-verifying a stored claim later.
+    const serverNow = Number.isFinite(opts.serverNow) ? (opts.serverNow as number) : Date.now();
+    const bad = validateWindow(claim.issued_at, claim.challenge_window_ms, serverNow, opts.windowPolicy ?? DEFAULT_WINDOW_POLICY);
+    if (bad) return { check: 'window', reason: bad };
+    const { sig, ...body } = claim;
+    if (typeof sig !== 'string' || !verifyB64u(signerPublic, claimMessage(body), sig)) {
+      return { check: 'signature', reason: 'claim signature does not verify' };
+    }
+    return { check: 'ok' };
+  } catch (e) {
+    return { check: 'malformed', reason: `claim verification error: ${e instanceof Error ? e.message : 'unknown'}` };
+  }
+}
+
 /**
  * Verify a bonded claim: the signature verifies under `signerPublic`, the claim covers THIS pcactn,
  * and the action is not irreversible. Does NOT judge policy compliance — that is a fraud proof's job
@@ -193,28 +231,8 @@ export function verifyClaim(
   signerPublic: string,
   opts: { serverNow?: number; windowPolicy?: ChallengeWindowPolicy } = {},
 ): ClaimVerdict {
-  try {
-    if (!claim || typeof claim !== 'object') return { ok: false, reason: 'malformed claim' };
-    if (claim.reversibility_class === IRREVERSIBLE_CLASS) {
-      return { ok: false, reason: 'irreversible action is ineligible for the optimistic path' };
-    }
-    if (claim.pcactn_digest !== pcactnDigest(pcactn)) {
-      return { ok: false, reason: 'claim does not cover this PCActn' };
-    }
-    if (!Number.isFinite(claim.claimed_r)) return { ok: false, reason: 'claimed_r is not finite' };
-    // The window is server-authoritative: reject backdating / out-of-skew issued_at and a window below
-    // the minimum (window:0). Pass the OPEN-time `serverNow` when re-verifying a stored claim later.
-    const serverNow = Number.isFinite(opts.serverNow) ? (opts.serverNow as number) : Date.now();
-    const bad = validateWindow(claim.issued_at, claim.challenge_window_ms, serverNow, opts.windowPolicy ?? DEFAULT_WINDOW_POLICY);
-    if (bad) return { ok: false, reason: bad };
-    const { sig, ...body } = claim;
-    if (typeof sig !== 'string' || !verifyB64u(signerPublic, claimMessage(body), sig)) {
-      return { ok: false, reason: 'claim signature does not verify' };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, reason: `claim verification error: ${e instanceof Error ? e.message : 'unknown'}` };
-  }
+  const r = claimCheck(claim, () => pcactnDigest(pcactn), signerPublic, opts); // claimCheck never throws
+  return r.check === 'ok' ? { ok: true } : { ok: false, reason: r.reason };
 }
 
 // ---- challenge window --------------------------------------------------------------------
@@ -428,6 +446,48 @@ export function verifyFraudProof(
   }
 }
 
+
+/** The first check a fraud proof fails at the wire level; `ok` when none. */
+export type FraudWireCheck = 'ok' | 'malformed' | 'digest' | 'bond' | 'claimed_r' | 'kind' | 'consistency';
+
+const FRAUD_KINDS: readonly string[] = ['policy-denied', 'risk-understated', 'optimistic-not-allowed', 'irreversible'];
+
+/**
+ * WIRE-LEVEL check of a fraud proof against the claim it names: it targets this PCActn and bond, restates the claim's
+ * `claimed_r`, has a known `kind`, and the decision it carries is the one that kind requires (`policy-denied` needs a
+ * denial, `optimistic-not-allowed` an allowed release with the fast-path refused, `risk-understated` a real `r` above
+ * `claimed_r + r_margin`, `irreversible` an irreversible class on the claim or the snapshot evidence). Pure data, no
+ * Policy VM, so every language can run it from the shared vectors.
+ *
+ * This is NOT {@link verifyFraudProof}. A proof is only convincing because `verifyFraudProof` RE-RUNS the Policy VM on
+ * the server-held open-time snapshot; that recomputation needs the TypeScript Policy VM and is the settlement layer's
+ * authority. A proof that passes this check is well-formed and self-consistent, nothing more. Total; never throws.
+ */
+export function fraudProofWireCheck(claim: BondedClaim, proof: FraudProof): FraudWireCheck {
+  try {
+    if (!proof || typeof proof !== 'object' || !claim || typeof claim !== 'object') return 'malformed';
+    const d = proof.decision;
+    if (!d || typeof d !== 'object' || typeof d.releaseGuardianShare !== 'boolean' || typeof d.optimisticAllowed !== 'boolean' || typeof d.r !== 'number' || !Number.isFinite(d.r)) return 'malformed';
+    if (typeof proof.pcactn_digest !== 'string' || typeof proof.bond_ref !== 'string' || typeof proof.reason !== 'string') return 'malformed';
+    if (proof.pcactn_digest !== claim.pcactn_digest) return 'digest';
+    if (proof.bond_ref !== claim.bond_ref) return 'bond';
+    if (proof.claimed_r !== claim.claimed_r) return 'claimed_r';
+    if (!FRAUD_KINDS.includes(proof.kind)) return 'kind';
+    const margin = Number.isFinite(proof.r_margin) ? Math.max(0, proof.r_margin) : DEFAULT_R_MARGIN;
+    const evidenceClass = (proof.evidence as { action?: { action?: { reversibility_class?: unknown } } } | undefined)?.action?.action?.reversibility_class;
+    const holds =
+      proof.kind === 'irreversible'
+        ? claim.reversibility_class === IRREVERSIBLE_CLASS || evidenceClass === IRREVERSIBLE_CLASS
+        : proof.kind === 'policy-denied'
+          ? !d.releaseGuardianShare
+          : proof.kind === 'optimistic-not-allowed'
+            ? d.releaseGuardianShare && !d.optimisticAllowed
+            : d.releaseGuardianShare && d.optimisticAllowed && d.r > claim.claimed_r + margin;
+    return holds ? 'ok' : 'consistency';
+  } catch {
+    return 'malformed';
+  }
+}
 
 // ---- contestable dispute game (optimistic bisection over a lied-about risk input) --------
 //

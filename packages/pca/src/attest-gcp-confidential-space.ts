@@ -1,5 +1,7 @@
 import { decodeCanonicalBase64url } from './strict-jws';
+import { setAssuranceLabel } from './assurance';
 import { x509ValidAt } from './x509-validity';
+import { strictChainError } from './x509-strict';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 HARDWARE backend — GOOGLE CLOUD CONFIDENTIAL SPACE ATTESTATION-TOKEN VERIFIER.
@@ -379,6 +381,8 @@ export async function verifyJwkX5cChain(
   for (let i = 0; i < certs.length - 1; i++) {
     if (!safeCertVerify(certs[i]!, certs[i + 1]!.publicKey)) return `x5c link ${i} is not signed by the certificate above it`;
   }
+  const profile = strictChainError(certs.map((c) => new Uint8Array(c.raw)));
+  if (profile) return `x5c chain profile: ${profile}`;
   const spkiPins = new Set((anchors.trustedKeySpki ?? []).map((s) => s.toLowerCase()));
   for (const c of certs) {
     if (spkiPins.has(spkiSha256OfKey(c.publicKey, createHash))) return null; // a cert in the chain is a pinned key
@@ -621,7 +625,12 @@ function transformBinding(binding: Uint8Array, mode: GcpCsPolicy['nonceHash']): 
  * Wire it in: `createAttestationVerifier({ trustedAttestorKeys: [], hardwareVerifier: createGcpConfidentialSpaceVerifier(opts), resolveDocument })`,
  * or add it as one `AttestationRoot` in a `createMultiRootVerifier` policy.
  */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createGcpConfidentialSpaceVerifier(opts: GcpConfidentialSpaceVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createGcpConfidentialSpaceVerifierUnlabelled(opts), { level: 'hardware', vendor: 'gcp-confidential-space' });
+}
+
+function createGcpConfidentialSpaceVerifierUnlabelled(opts: GcpConfidentialSpaceVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts || !Array.isArray(opts.trustedIssuers) || opts.trustedIssuers.length === 0) {

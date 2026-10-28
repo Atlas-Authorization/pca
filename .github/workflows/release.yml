@@ -1,0 +1,301 @@
+name: Release
+
+# Publishes the TypeScript packages (every non-private @atlasauth/pca* package + create-pca-app) to npm with provenance,
+# attests every tarball, and creates the GitHub Release for the tag with the tarballs, SHA256SUMS and the changelog section.
+# Release gates before anything is published: a CycloneDX SBOM of the release set as a user installs it (attested and bound
+# to every tarball), `npm audit` of that install (a high, critical or unrated finding fails unless .github/vuln-allowlist.json
+# has a reviewed, unexpired entry for it), and the security evidence report (which CI, cross-language, mutation and formal
+# runs passed for this release, with run ids, plus the SBOM and audit results and every outstanding exception).
+#
+#   tag push v*                  the real release (the tag must match every package version)
+#   tag push v*dry-run*          a dry run (e.g. v0.4.3-dry-run.1): everything except the npm upload; the Release is a draft
+#   workflow_dispatch            tag + dry_run (default true), to (re-)run for an existing tag
+#
+# A dry run builds, checks, packs, scans and attests exactly as a release does, runs `npm publish --dry-run`, and creates
+# the GitHub Release as a DRAFT (delete it afterwards). Re-runs are idempotent: versions already on npm are skipped and an
+# existing Release gets its assets replaced.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release, e.g. v0.4.3'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run: no npm upload; the GitHub Release is a draft'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  CYCLONEDX_NPM: '6.0.1'   # @cyclonedx/cyclonedx-npm, pinned
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build, check, pack, attest
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write       # sign the build-provenance attestation
+      attestations: write  # store it
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      dry_run: ${{ steps.meta.outputs.dry_run }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - name: Release metadata
+        id: meta
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          DISPATCH_DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::tag '$TAG' is not vX.Y.Z[-pre]"; exit 1; }
+          DRY=false
+          if [ "$DISPATCH_DRY" = true ] || [[ "$TAG" == *dry-run* ]]; then DRY=true; fi
+          VERSION="${TAG#v}"
+          PRE=false; [[ "$VERSION" == *-* ]] && PRE=true
+          { echo "tag=$TAG"; echo "version=$VERSION"; echo "dry_run=$DRY"; echo "prerelease=$PRE"; } >> "$GITHUB_OUTPUT"
+          echo "### Release $TAG (dry run: $DRY)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ steps.meta.outputs.tag }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Every package declares its maturity tier (manifest + README header)
+        run: node .github/scripts/maturity-check.mjs
+      - name: Every package is at the tag's version (lockstep) and names this repository (npm provenance needs it)
+        run: >-
+          node .github/scripts/release-npm.mjs check-version "${{ steps.meta.outputs.version }}" --repo "$GITHUB_REPOSITORY"
+          ${{ steps.meta.outputs.dry_run == 'true' && '--warn' || '' }}
+      - name: Install (lockfile pinned)
+        run: pnpm install --frozen-lockfile
+      - name: Build the release set
+        run: |
+          read -ra FILTERS <<< "$(node .github/scripts/release-npm.mjs filters)"
+          pnpm -r "${FILTERS[@]}" run build
+      - name: Release check (tarball audit, dependency ranges, install-and-load of every package together)
+        run: node scripts/pca-release-check.mjs
+      - name: Pack (twice; every tarball must be byte-identical across the two packs)
+        run: node .github/scripts/release-npm.mjs pack "$RUNNER_TEMP/release" --reproducible
+      - name: Leak scan (secrets, private keys, build-machine paths in what the build produced)
+        run: node .github/scripts/release-scan.mjs "$RUNNER_TEMP"/release/*.tgz
+      - name: Install the release set as a user would (the packed tarballs, production dependencies only)
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/installed" "$RUNNER_TEMP/gates"
+          cd "$RUNNER_TEMP/installed"
+          printf '{"name":"pca-npm-release-set","version":"%s","private":true,"description":"every package of this release"}\n' "$VERSION" > package.json
+          # relative paths: the lockfile and the SBOM then name ../release/<file>.tgz, not the runner's directories
+          npm install --omit=dev --ignore-scripts --no-audit --no-fund ../release/*.tgz
+          { echo "node=$(node --version)"; echo "npm=$(npm --version)"; echo "pnpm=$(pnpm --version)"; echo "cyclonedx-npm=$CYCLONEDX_NPM"; } > "$RUNNER_TEMP/gates/toolchain.txt"
+      - name: SBOM (CycloneDX JSON of the installed release set)
+        working-directory: ${{ runner.temp }}/installed
+        run: |
+          set -euo pipefail
+          npx --yes "@cyclonedx/cyclonedx-npm@$CYCLONEDX_NPM" --omit dev --spec-version 1.5 --output-reproducible \
+            --output-format JSON --output-file "$RUNNER_TEMP/release/sbom-npm.cdx.json"
+          node -e 'const b = require(process.argv[1]); const n = (b.components || []).length; console.log("sbom-npm.cdx.json: " + n + " components"); if (!n) process.exit(1)' \
+            "$RUNNER_TEMP/release/sbom-npm.cdx.json"
+      - name: Dependency vulnerability gate (npm audit of the installed release set; high / critical / unrated fail unless allowlisted)
+        working-directory: ${{ runner.temp }}/installed
+        run: |
+          set -uo pipefail
+          npm audit --omit=dev --json > "$RUNNER_TEMP/gates/npm-audit.json"
+          echo "npm audit exited $? (1 = it found something; the gate below decides)"
+          node "$GITHUB_WORKSPACE/.github/scripts/vuln-gate.mjs" --ecosystem npm --report "$RUNNER_TEMP/gates/npm-audit.json" \
+            --allowlist "$GITHUB_WORKSPACE/.github/vuln-allowlist.json" --out "$RUNNER_TEMP/gates/vuln-npm.json"
+      - name: SHA256SUMS
+        working-directory: ${{ runner.temp }}/release
+        run: sha256sum -- *.tgz *.cdx.json > SHA256SUMS && wc -l SHA256SUMS
+      - name: Build-provenance attestation for every tarball and the SBOM
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            ${{ runner.temp }}/release/*.tgz
+            ${{ runner.temp }}/release/*.cdx.json
+      - name: SBOM attestation (binds the SBOM to every tarball)
+        uses: actions/attest-sbom@v2
+        with:
+          subject-path: ${{ runner.temp }}/release/*.tgz
+          sbom-path: ${{ runner.temp }}/release/sbom-npm.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-release
+          path: ${{ runner.temp }}/release/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-gates
+          path: ${{ runner.temp }}/gates/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  evidence:
+    name: security evidence report
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read        # the gate runs and their artifacts
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.build.outputs.tag }}
+          persist-credentials: false
+          sparse-checkout: .github
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release
+          path: ${{ runner.temp }}/release
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-gates
+          path: ${{ runner.temp }}/gates
+      # A real release waits up to 40 min for gate runs still in progress at the release commit (CI and the cross-language
+      # gate also run on the tag); after that it records them as running and uses the release-candidate branch run. A real release
+      # stops here if a required gate has no passing run, an audit failed or the SBOM is missing (--strict).
+      - name: Report (markdown + JSON)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+          DRY: ${{ needs.build.outputs.dry_run }}
+        run: |
+          set -euo pipefail
+          strict=(); [ "$DRY" = true ] || strict=(--strict)   # a real release fails here on a missing / failed gate
+          node -e 'const fs = require("fs"); fs.writeFileSync(process.argv[2], JSON.stringify(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).map(({ name, version, file }) => ({ name, version, file }))))' \
+            "$RUNNER_TEMP/release/publish-order.json" "$RUNNER_TEMP/packages.json"
+          node .github/scripts/release-evidence.mjs --config .github/evidence-gates.json --repo "$GITHUB_REPOSITORY" --tag "$TAG" \
+            --version "$VERSION" --commit "$(git rev-parse HEAD)" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --dry-run "$DRY" \
+            --packages "$RUNNER_TEMP/packages.json" --sums "$RUNNER_TEMP/release/SHA256SUMS" --sbom "$RUNNER_TEMP/release/sbom-npm.cdx.json" \
+            --vuln "$RUNNER_TEMP/gates/vuln-npm.json" --toolchain "$RUNNER_TEMP/gates/toolchain.txt" --wait-minutes "$([ "$DRY" = true ] && echo 0 || echo 40)" \
+            --out-dir "$RUNNER_TEMP/evidence" "${strict[@]}"
+          cd "$RUNNER_TEMP/evidence" && sha256sum -- security-evidence-* > SHA256SUMS.evidence
+      - name: Build-provenance attestation for the report
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ runner.temp }}/evidence/security-evidence-*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: security-evidence
+          path: ${{ runner.temp }}/evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+  publish-npm:
+    name: publish to npm${{ needs.build.outputs.dry_run == 'true' && ' (dry run)' || '' }}
+    needs: [build, evidence]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # The `release` environment holds NPM_TOKEN and requires a reviewer; a dry run uploads nothing and skips it.
+    environment: ${{ needs.build.outputs.dry_run != 'true' && 'release' || '' }}
+    permissions:
+      contents: read
+      id-token: write  # npm trusted publishing (OIDC) and the provenance statement
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.build.outputs.tag }}
+          persist-credentials: false
+          sparse-checkout: .github
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: npm with trusted publishing support (>= 11.5.1)
+        run: npm install -g npm@^11.5.1 && npm --version
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release
+          path: ${{ runner.temp }}/release
+      - name: The tarballs are the ones the build attested
+        working-directory: ${{ runner.temp }}/release
+        run: sha256sum -c SHA256SUMS --quiet
+      - name: Publish in dependency order (core first; stops at the first failure; published versions are skipped)
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: >-
+          node .github/scripts/release-npm.mjs publish "$RUNNER_TEMP/release"
+          ${{ needs.build.outputs.dry_run == 'true' && '--dry-run' || '--provenance' }}
+
+  github-release:
+    name: GitHub Release
+    needs: [build, evidence, publish-npm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write  # create the Release and upload its assets
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.build.outputs.tag }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release
+          path: ${{ runner.temp }}/release
+      - uses: actions/download-artifact@v4
+        with:
+          name: security-evidence
+          path: ${{ runner.temp }}/release
+      - name: The report joins SHA256SUMS
+        working-directory: ${{ runner.temp }}/release
+        run: cat SHA256SUMS.evidence >> SHA256SUMS && rm SHA256SUMS.evidence && sha256sum -c SHA256SUMS --quiet
+      - name: Release notes (changelog section + how to verify)
+        run: >-
+          node .github/scripts/release-notes.mjs --version "${{ needs.build.outputs.version }}" --repo "$GITHUB_REPOSITORY"
+          --changelog docs/CHANGELOG.md --changelog packages/pca/CHANGELOG.md
+          --registry "npm: every \`@atlasauth/pca*\` package and \`create-pca-app\` at ${{ needs.build.outputs.version }}, with provenance (\`npm audit signatures\`)"
+          --sbom sbom-npm.cdx.json --evidence "security-evidence-${GITHUB_REPOSITORY##*/}-${{ needs.build.outputs.version }}.md"
+          > "$RUNNER_TEMP/notes.md"
+      - name: Create or update the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+          DRY: ${{ needs.build.outputs.dry_run }}
+          PRE: ${{ needs.build.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/release"
+          assets=(*.tgz *.cdx.json security-evidence-* SHA256SUMS)
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            if [ "$DRY" = true ]; then
+              echo "dry run: the Release $TAG already exists; left unchanged" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            # a re-run, or a draft left by a dry run of this tag: replace the assets and notes, then publish it
+            gh release upload "$TAG" "${assets[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --draft=false --prerelease="$PRE" --repo "$GITHUB_REPOSITORY"
+            echo "updated the existing Release $TAG" >> "$GITHUB_STEP_SUMMARY"
+          else
+            flags=(--verify-tag --title "PCA $VERSION" --notes-file "$RUNNER_TEMP/notes.md")
+            [ "$DRY" = true ] && flags+=(--draft)
+            [ "$PRE" = true ] && flags+=(--prerelease)
+            gh release create "$TAG" "${assets[@]}" "${flags[@]}" --repo "$GITHUB_REPOSITORY"
+            echo "created the Release $TAG$([ "$DRY" = true ] && echo ' (draft)')" >> "$GITHUB_STEP_SUMMARY"
+          fi

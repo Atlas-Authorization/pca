@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-fndsa",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "FN-DSA / Falcon (FIPS 206 draft) suite for PCA: register the compact PQ signature suite in the crypto-agility seam with a pluggable, vetted verify backend (a constant-time Falcon is not safely hand-rolled in TS) — wire format, suite ids, and KAT-driven integration tests.",
   "keywords": [
     "fn-dsa",
@@ -53,5 +53,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "hardened"
   }
 }

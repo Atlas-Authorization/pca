@@ -41,7 +41,7 @@ describe('PCA binding of the AP2 purchase', () => {
     expect(r.ok, r.ok ? '' : r.reason).toBe(true);
     if (r.ok) {
       expect(r.pcactn.action).toMatchObject({ verb: 'charge', resource: 'merchant:merchant_1' });
-      expect(r.terms.perTransactionCap).toBe(500);
+      expect(r.terms.perTransactionCap).toBe(50_000);
     }
   });
 
@@ -61,7 +61,7 @@ describe('PCA binding of the AP2 purchase', () => {
 
   it('refuses x_pca terms that do not match the grant envelope or risk policy', async () => {
     const i = input(s);
-    asRec(asRec(i.open.x_pca).terms).perTransactionCap = 5000;
+    asRec(asRec(i.open.x_pca).terms).perTransactionCap = 60_000;
     const r = await verifyPcaBinding(i);
     expect(!r.ok && r.reason).toMatch(/do not match the grant/);
     const j = input(s);
@@ -203,7 +203,7 @@ describe('terms to AP2 constraints', () => {
   const mk = (over: Record<string, unknown> = {}) =>
     buildPaymentMandate({
       principalSecret: principal.secretKey, principalPublic: pubOf(principal), agentPublic: pubOf(agent), merchants: ['merchant_1'], currency: 'USD',
-      perTransactionCap: 500, autoApproveThreshold: 50, cumulativeCap: 1000, now: NOW_MS, ...over,
+      perTransactionCap: 50_000, autoApproveThreshold: 5_000, cumulativeCap: 100_000, now: NOW_MS, ...over,
     });
 
   it('produces integer minor-unit ranges and a major-unit budget the official SDK reads identically', () => {
@@ -213,9 +213,9 @@ describe('terms to AP2 constraints', () => {
     expect(c).toContainEqual({ type: 'payment.reference', conditional_transaction_id: 'REF' });
   });
 
-  it('refuses what cannot be expressed: unknown merchant, JPY budget, inexact caps, no expiry', () => {
+  it('refuses what cannot be expressed: unknown merchant, no expiry', () => {
     expect(() => paymentConstraintsFromTerms(mk().terms, [], 'REF')).toThrow(/no merchant descriptor/);
-    expect(() => paymentConstraintsFromTerms(mk({ currency: 'JPY' }).terms, [MERCHANT], 'REF')).toThrow(/unsupported/);
+    expect(() => paymentConstraintsFromTerms(mk({ currency: 'JPY' }).terms, [MERCHANT], 'REF')).not.toThrow();
     const a = generateAp2KeyPair();
     const issuer = generateAp2KeyPair('k');
     expect(() => openPaymentMandateFromPca(mk(), { issuer: { privateKey: issuer.privateKey, kid: 'k' }, agentJwk: a.publicJwk, merchants: [MERCHANT], iat: NOW_S, checkoutReference: 'R' })).toThrow(/exp is required/);

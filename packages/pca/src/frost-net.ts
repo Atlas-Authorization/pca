@@ -2,7 +2,9 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 // `node:http` is imported LAZILY (inside startSignerHttpServer) so this module — re-exported from the
 // package barrel — carries no static Node-builtin import and stays safe to bundle for the browser.
 import { ed25519 } from '@noble/curves/ed25519';
+import { ctAdd, ctMul } from './ct-scalar';
 import { sha512 } from '@noble/hashes/sha512';
+import type { NonceStore } from './frost-nonce-store';
 import { b64u, canonicalBytes, decodeB64uStrict, sha256, utf8 } from './hash';
 import { sign as edSign, verify as edVerify } from './keys';
 import {
@@ -275,7 +277,7 @@ function signerPopChallenge(groupPublicKey: Uint8Array, identifier: ParticipantI
  * The signer (which holds the secret share) produces this; it reveals NOTHING about the secret scalar beyond
  * that the prover knows it.
  */
-export function createSignerPoP(identifier: ParticipantId, share: Uint8Array, opts: { groupPublicKey: Uint8Array }): SignerPoP {
+export function createSignerPoP(identifier: ParticipantId, share: Uint8Array, opts: { groupPublicKey: Uint8Array; /** fixed 32-byte nonce, for reproducible test vectors and fuzz seeds only; random if omitted */ nonce?: Uint8Array }): SignerPoP {
   if (!Number.isSafeInteger(identifier) || identifier <= 0) throw new Error('createSignerPoP: identifier must be a positive integer');
   if (!(share instanceof Uint8Array) || share.length !== 32) throw new Error('createSignerPoP: share must be 32 bytes');
   if (!(opts.groupPublicKey instanceof Uint8Array) || opts.groupPublicKey.length !== 32) {
@@ -283,14 +285,12 @@ export function createSignerPoP(identifier: ParticipantId, share: Uint8Array, op
   }
   const x = bytesToScalar(share);
   const pk = popMulBase(x).toRawBytes();
-  let k = 0n;
-  do {
-    k = bytesToScalar(ed25519.utils.randomPrivateKey());
-  } while (k === 0n);
+  let k = opts.nonce ? bytesToScalar(opts.nonce) : 0n;
+  while (k === 0n) k = bytesToScalar(ed25519.utils.randomPrivateKey());
   const rBytes = popMulBase(k).toRawBytes();
   const e = signerPopChallenge(opts.groupPublicKey, identifier, pk, rBytes);
-  const s = modL(k + modL(e * x));
-  return { identifier, publicKey: b64u(pk), R: b64u(rBytes), s: b64u(scalarToBytes(s)) };
+  const s = ctAdd(scalarToBytes(k), ctMul(scalarToBytes(e), scalarToBytes(x))); // secret x, k: fixed-width path
+  return { identifier, publicKey: b64u(pk), R: b64u(rBytes), s: b64u(s) };
 }
 
 /**
@@ -479,7 +479,15 @@ function encodeCommitment(c: FrostCommitment): WireCommitment {
   return { identifier: c.identifier, hiding: b64u(c.hiding), binding: b64u(c.binding) };
 }
 
-function decodeCommitment(w: WireCommitment): FrostCommitment {
+/** Largest signing set a signer or coordinator will decode: bounds the per-request interpolation work a hostile peer can demand. */
+export const MAX_FROST_SIGNING_SET = 256;
+
+/**
+ * Strict decode of one wire commitment. Total: any non-object, non-integer identifier or non-canonical point
+ * encoding is a typed `Error`, never a runtime `TypeError`.
+ */
+export function decodeCommitment(w: WireCommitment): FrostCommitment {
+  if (!w || typeof w !== 'object') throw new Error('bad commitment');
   const hiding = decodeB64uStrict(w.hiding, 32);
   const binding = decodeB64uStrict(w.binding, 32);
   if (!Number.isSafeInteger(w.identifier) || w.identifier <= 0) throw new Error('bad commitment identifier');
@@ -487,9 +495,19 @@ function decodeCommitment(w: WireCommitment): FrostCommitment {
   return { identifier: w.identifier, hiding, binding };
 }
 
-function decodeVerificationShares(list: WireVerificationShare[]): { identifier: ParticipantId; publicKey: Uint8Array }[] {
+/** Strict decode of a list of wire commitments, bounded by {@link MAX_FROST_SIGNING_SET}. */
+export function decodeCommitments(list: WireCommitment[]): FrostCommitment[] {
+  if (!Array.isArray(list)) throw new Error('commitments must be a list');
+  if (list.length > MAX_FROST_SIGNING_SET) throw new Error('commitments list exceeds the maximum signing set');
+  return list.map(decodeCommitment);
+}
+
+/** Strict decode of the signing set's public verification shares, bounded by {@link MAX_FROST_SIGNING_SET}. */
+export function decodeVerificationShares(list: WireVerificationShare[]): { identifier: ParticipantId; publicKey: Uint8Array }[] {
   if (!Array.isArray(list)) throw new Error('verification_shares must be a list');
+  if (list.length > MAX_FROST_SIGNING_SET) throw new Error('verification_shares list exceeds the maximum signing set');
   return list.map((v) => {
+    if (!v || typeof v !== 'object') throw new Error('bad verification share');
     const pk = decodeB64uStrict(v.publicKey, 32);
     if (!Number.isSafeInteger(v.identifier) || v.identifier <= 0) throw new Error('bad verification-share identifier');
     if (!pk) throw new Error('bad verification-share key encoding');
@@ -519,6 +537,13 @@ export interface GuardianSignerOpts {
   sessionTtlMs?: number;
   /** Clock (default Date.now); injectable for tests. */
   now?: () => number;
+  /**
+   * Durable round-1 nonce store (see frost-nonce-store.ts). With it: a restarted signer resumes live sessions, a
+   * session is marked spent BEFORE its share is computed (a refusal after that point burns the session instead of
+   * keeping the nonces), and any store failure is a refusal. Without it the signer keeps nonces in memory only
+   * (a restart loses every open session; nothing is ever reused).
+   */
+  nonceStore?: NonceStore;
 }
 
 interface SessionState {
@@ -552,6 +577,7 @@ export class GuardianSignerService {
   private readonly policyAuthorityPublicKey: Uint8Array;
   private readonly sessionTtlMs: number | undefined;
   private readonly now: () => number;
+  readonly #store: NonceStore | undefined;
 
   constructor(opts: GuardianSignerOpts) {
     if (!Number.isSafeInteger(opts.identifier) || opts.identifier <= 0) {
@@ -580,6 +606,13 @@ export class GuardianSignerService {
     this.policyAuthorityPublicKey = opts.policyAuthorityPublicKey.slice();
     this.sessionTtlMs = opts.sessionTtlMs;
     this.now = opts.now ?? (() => Date.now());
+    if (opts.nonceStore !== undefined) {
+      const st = opts.nonceStore as Partial<NonceStore>;
+      for (const m of ['create', 'load', 'spend', 'drop', 'isSpent'] as const) {
+        if (typeof st[m] !== 'function') throw new Error(`GuardianSignerService: nonceStore.${m} must be a function`);
+      }
+    }
+    this.#store = opts.nonceStore;
     this.verificationShare = frostVerifyingShare(this.#share);
     // Rogue-key defense: prove possession of the secret scalar behind our verification share once, up front.
     this.#pop = createSignerPoP(this.identifier, this.#share, { groupPublicKey: this.groupPublicKey });
@@ -601,18 +634,27 @@ export class GuardianSignerService {
       if (!req || req.typ !== 'pca.frost.round1.v1' || typeof req.session_id !== 'string' || req.session_id.length === 0) {
         return { ok: false, identifier: this.identifier, reason: 'malformed round-1 request' };
       }
-      if (this.#spent.has(req.session_id)) {
+      if (this.#spent.has(req.session_id) || this.#store?.isSpent(req.session_id)) {
         return { ok: false, identifier: this.identifier, reason: 'session already signed' };
       }
-      if (this.#sessions.has(req.session_id)) {
+      if (this.#sessions.has(req.session_id) || this.#store?.load(req.session_id)) {
         // Never overwrite live nonces for a session (would risk a nonce-reuse foot-gun).
         return { ok: false, identifier: this.identifier, reason: 'duplicate round-1 for session' };
       }
       const c = frostCommit({ identifier: this.identifier, share: this.#share, publicKey: this.verificationShare });
+      const createdAt = this.now();
+      // Durable BEFORE the commitment leaves this process: a crash then can only lose the session, never reuse a nonce.
+      this.#store?.create(req.session_id, {
+        hiding: c.hidingNonce,
+        binding: c.bindingNonce,
+        hidingCommitment: c.commitment.hiding,
+        bindingCommitment: c.commitment.binding,
+        createdAt,
+      });
       this.#sessions.set(req.session_id, {
         nonces: { hiding: c.hidingNonce, binding: c.bindingNonce },
         commitment: c.commitment,
-        createdAt: this.now(),
+        createdAt,
       });
       return { ok: true, identifier: this.identifier, commitment: encodeCommitment(c.commitment), pop: this.#pop };
     } catch (e) {
@@ -627,13 +669,26 @@ export class GuardianSignerService {
       if (!req || req.typ !== 'pca.frost.round2.v1' || typeof req.session_id !== 'string') {
         return refuse('malformed round-2 request');
       }
-      if (this.#spent.has(req.session_id)) return refuse('session already signed (one-shot)');
-      const state = this.#sessions.get(req.session_id);
+      if (this.#spent.has(req.session_id) || this.#store?.isSpent(req.session_id)) return refuse('session already signed (one-shot)');
+      let state = this.#sessions.get(req.session_id);
+      if (!state && this.#store) {
+        // Restart recovery: resume a live session from the durable store.
+        const rec = this.#store.load(req.session_id);
+        if (rec) {
+          state = {
+            nonces: { hiding: rec.hiding, binding: rec.binding },
+            commitment: { identifier: this.identifier, hiding: rec.hidingCommitment, binding: rec.bindingCommitment },
+            createdAt: rec.createdAt,
+          };
+          this.#sessions.set(req.session_id, state);
+        }
+      }
       if (!state) return refuse('no round-1 state for this session');
 
       // Stale-session guard (timeout): a session not completed within its window is dropped, not signed.
       if (this.sessionTtlMs !== undefined && this.now() - state.createdAt > this.sessionTtlMs) {
         this.#sessions.delete(req.session_id);
+        this.#store?.drop(req.session_id);
         return refuse(`session expired (stale-session guard: round-1 older than ${this.sessionTtlMs}ms)`);
       }
 
@@ -652,7 +707,7 @@ export class GuardianSignerService {
       if (!allow.ok) return refuse(`policy authorization failed: ${allow.reason}`);
 
       // Decode the signing set + the public verification shares (frostSign checks they interpolate to G).
-      const commitments = (req.commitments ?? []).map(decodeCommitment);
+      const commitments = decodeCommitments(req.commitments ?? []);
       if (commitments.length < this.threshold) return refuse(`signing set below threshold t=${this.threshold}`);
       const own = commitments.find((c) => c.identifier === this.identifier);
       if (!own) return refuse('our commitment is not in the signing set');
@@ -664,6 +719,8 @@ export class GuardianSignerService {
       }
       const verificationShares = decodeVerificationShares(req.verification_shares);
 
+      // Spent marker first (durable), then sign: a crash or refusal after this line burns the session, never reuses it.
+      this.#store?.spend(req.session_id);
       // Produce the share with every frost.ts safety check on. frostSign consumes the nonces one-shot.
       const sigShare = frostSign(
         this.identifier,

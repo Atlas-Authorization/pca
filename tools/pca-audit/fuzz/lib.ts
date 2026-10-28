@@ -254,7 +254,7 @@ const ACCIDENTAL =
   /Cannot read propert|Cannot set propert|Cannot destructure|is not a function|is not iterable|is not a constructor|is not defined|undefined is not|null is not|Offset is outside the bounds|out of bounds|outside the bounds|Invalid typed array length|Invalid array length|Invalid string length|Maximum call stack|Cannot convert undefined or null|Cannot mix BigInt|Cannot convert a BigInt|Reduce of empty array|Invalid count value|Array buffer allocation failed|Invalid Date|ERR_OUT_OF_RANGE|The "[a-zA-Z]+" argument must be|ERR_INVALID_ARG|ERR_BUFFER|RangeError \[ERR|Unexpected token|Unexpected end of JSON|is not valid JSON|in JSON at position/;
 
 export interface Verdict {
-  kind: 'ok' | 'typed-throw' | 'accidental-throw' | 'property' | 'hang' | 'pollution';
+  kind: 'ok' | 'typed-throw' | 'accidental-throw' | 'property' | 'hang' | 'pollution' | 'alloc';
   detail?: string;
   ms: number;
 }
@@ -296,6 +296,8 @@ export function pollutionCheck(): string | undefined {
 }
 
 export const HANG_MS = 1000;
+/** A single input that grows the resident set by more than this is an over-allocation finding (a decoder trusting an attacker length). */
+export const ALLOC_BYTES = 512 * 1024 * 1024;
 
 export async function exercise(
   fn: () => unknown,
@@ -303,6 +305,7 @@ export async function exercise(
   check?: (result: unknown) => string | undefined,
 ): Promise<Verdict> {
   const t0 = performance.now();
+  const rss0 = process.memoryUsage.rss();
   let result: unknown;
   let thrown: unknown;
   let did = false;
@@ -315,6 +318,8 @@ export async function exercise(
   const ms = performance.now() - t0;
   const pol = pollutionCheck();
   if (pol) return { kind: 'pollution', detail: pol, ms };
+  const grew = process.memoryUsage.rss() - rss0;
+  if (grew > ALLOC_BYTES) return { kind: 'alloc', detail: `rss grew ${(grew / 1048576).toFixed(0)} MiB`, ms };
   if (ms > HANG_MS) return { kind: 'hang', detail: `${ms.toFixed(0)} ms`, ms };
   if (did) {
     const msg = thrown instanceof Error ? `${thrown.name}: ${thrown.message}`.slice(0, 300) : `non-Error throw: ${String(thrown).slice(0, 100)}`;
@@ -351,3 +356,6 @@ export function firstDiff(a: unknown, b: unknown, path = ''): string {
   }
   return `${path}: ${JSON.stringify(a)?.slice(0, 40)} -> ${JSON.stringify(b)?.slice(0, 40)}`;
 }
+
+/** Any deliberate Error (a module's own check, or a library's input validation); runtime-intrinsic failures are NOT allowed. */
+export const anyTyped: ThrowPolicy = (e) => e instanceof Error && !ACCIDENTAL.test(e.message);
