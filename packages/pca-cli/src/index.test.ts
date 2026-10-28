@@ -70,7 +70,7 @@ describe('cmdKeygen', () => {
 });
 
 describe('cmdSimulate', () => {
-  it('shows auto, auto, step_up for three $40 refunds under a $100/day cap', () => {
+  it('steps every $40 refund up under a $100/day cap: the built-in refund is irreversible, so nothing is auto-approved', () => {
     const policy = JSON.stringify({ permissions: { stripe: ['refund'] }, limits: { refund: '$100/day' } });
     const actions = JSON.stringify([
       { verb: 'stripe.refund', resource: 'charge:ch_1', params: { amount: 40 } },
@@ -82,7 +82,7 @@ describe('cmdSimulate', () => {
       .split('\n')
       .filter((l) => /^\s+\d+\s+stripe\.refund/.test(l)) // table data rows only, not the lint lines
       .map((l) => (l.includes('step_up') ? 'step_up' : l.includes('auto') ? 'auto' : l.includes('deny') ? 'deny' : '?'));
-    expect(outcomes).toEqual(['auto', 'auto', 'step_up']);
+    expect(outcomes).toEqual(['step_up', 'step_up', 'step_up']);
     expect(out).toContain('autonomy bound');
   });
 });

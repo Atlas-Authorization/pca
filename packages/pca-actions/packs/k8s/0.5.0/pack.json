@@ -1,0 +1,67 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "k8s",
+  "version": "0.5.0",
+  "ns": [
+    "k8s"
+  ],
+  "count": 673,
+  "root": "6WMxw_xGKhPe5jYXsFcxvn0xO-eXLQ7gA7NC-R5y0jc",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 673,
+    "unreviewed": 0
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "The Kubernetes OpenAPI description is Apache-2.0 licensed. Verbs, parameter names/types/bounds and the operation summaries are carried; the trait review is ours.",
+  "sources": [
+    {
+      "id": "swagger",
+      "kind": "openapi",
+      "uri": "https://github.com/kubernetes/kubernetes/blob/e96327d86b1c1847742e6990b72b5f25aec284f7/api/openapi-spec/swagger.json",
+      "spec_digest": "sha256:cf628212ef590622596362692360c838d3303f8d45ec7f66ff86a75a94148228",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/kubernetes/kubernetes/blob/master/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "ac7d46666d8e7bb43d604c196b3f22c3cbe976b1558dca88c94a0c24caba333c"
+  },
+  "shards": [
+    {
+      "file": "defs/000-k8s_admissionregistration.jsonl",
+      "count": 569,
+      "bytes": 715464,
+      "sha256": "3b100fdd528d24552bab359af8daa720dac3f8ce94bdf5d50f2b9337bf700c7f",
+      "first": "k8s.admissionregistration.api.get",
+      "last": "k8s.resource.devicetaintrules.create"
+    },
+    {
+      "file": "defs/001-k8s_resource.jsonl",
+      "count": 104,
+      "bytes": 131713,
+      "sha256": "32dbffddc475427bf90fdde88a449936fd71a140ab71fcd09d02112af583975c",
+      "first": "k8s.resource.devicetaintrules.delete",
+      "last": "k8s.storagemigration.storageversionmigrations.update_status"
+    }
+  ],
+  "stats": {
+    "total": 673,
+    "authored": 673,
+    "unreviewed": 0,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "read": 231,
+      "create": 63,
+      "delete": 128,
+      "update": 195,
+      "exec": 66,
+      "privilege": 48
+    }
+  }
+}

@@ -1,0 +1,255 @@
+{
+ "about": "Check-removal witnesses: scripts/pca-check-witness.mjs neutralises each check and requires the named tests to fail.",
+ "entries": [
+  {
+   "id": "spiffe-jwt-revoked",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a revoked JWT-SVID is refused",
+   "find": "if (verdict === true) throw new SpiffeError('svid_revoked'",
+   "replace": "if (false) throw new SpiffeError('svid_revoked'",
+   "tests": [
+    "src/revocation.test.ts"
+   ]
+  },
+  {
+   "id": "spiffe-jwt-nonbool",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a non-boolean JWT revocation answer is refused",
+   "find": "if (verdict !== false) throw new SpiffeError('revocation_unavailable'",
+   "replace": "if (false) throw new SpiffeError('revocation_unavailable'",
+   "tests": [
+    "src/revocation.test.ts"
+   ]
+  },
+  {
+   "id": "spiffe-x509-nonbool",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a non-boolean X.509 revocation answer is refused",
+   "find": "if (verdict !== false) throw new SpiffeError('revocation_unavailable'",
+   "replace": "if (false) throw new SpiffeError('revocation_unavailable'",
+   "tests": [
+    "src/revocation.test.ts"
+   ],
+   "nth": 2
+  },
+  {
+   "id": "spiffe-x509-revoked",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a revoked X.509-SVID certificate is refused",
+   "find": "if (verdict === true) {",
+   "replace": "if (false) {",
+   "tests": [
+    "src/revocation.test.ts"
+   ]
+  },
+  {
+   "id": "spiffe-chain-code",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a revoked signing certificate reports chain_revoked",
+   "find": "i === 0 ? 'svid_revoked' : 'chain_revoked',",
+   "replace": "'svid_revoked',",
+   "tests": [
+    "src/revocation.test.ts"
+   ]
+  },
+  {
+   "id": "spiffe-jwt-throw",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a throwing JWT revocation check refuses",
+   "find": "throw new SpiffeError('revocation_unavailable', `revocation check failed: ",
+   "replace": "verdict = false; void (`revocation check failed: ",
+   "tests": [
+    "src/revocation.test.ts"
+   ]
+  },
+  {
+   "id": "spiffe-x509-throw",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a throwing X.509 revocation check refuses",
+   "find": "throw new SpiffeError('revocation_unavailable', `revocation check failed: ",
+   "replace": "verdict = false; void (`revocation check failed: ",
+   "tests": [
+    "src/revocation.test.ts"
+   ],
+   "nth": 2
+  },
+  {
+   "id": "spiffe-jwt-notfn",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a non-function JWT revocation option refuses",
+   "find": "if (opts.revocation !== undefined && typeof opts.revocation !== 'function') {",
+   "replace": "if (false) {",
+   "tests": [
+    "src/revocation.test.ts"
+   ]
+  },
+  {
+   "id": "spiffe-x509-notfn",
+   "package": "pca-spiffe",
+   "file": "src/index.ts",
+   "what": "a non-function X.509 revocation option refuses",
+   "find": "if (opts.revocation !== undefined && typeof opts.revocation !== 'function') {",
+   "replace": "if (false) {",
+   "tests": [
+    "src/revocation.test.ts"
+   ],
+   "nth": 2
+  },
+  {
+   "id": "ciba-kv-version",
+   "package": "pca-ciba",
+   "file": "src/kv-store.ts",
+   "what": "a stored record with version < 1 is corrupt",
+   "find": "|| (r.version as number) < 1",
+   "replace": "|| false",
+   "tests": [
+    "src/store-conformance.test.ts"
+   ]
+  },
+  {
+   "id": "ciba-kv-value",
+   "package": "pca-ciba",
+   "file": "src/kv-store.ts",
+   "what": "a stored record without a value is corrupt",
+   "find": "|| !('value' in r)",
+   "replace": "|| false",
+   "tests": [
+    "src/store-conformance.test.ts"
+   ]
+  },
+  {
+   "id": "ciba-kv-cas-version",
+   "package": "pca-ciba",
+   "file": "src/kv-store.ts",
+   "what": "cas refuses a stale expected version",
+   "find": "if (current !== expectedVersion) return false;",
+   "replace": "if (false) return false;",
+   "tests": [
+    "src/store-conformance.test.ts"
+   ]
+  },
+  {
+   "id": "ciba-kv-cas-swap",
+   "package": "pca-ciba",
+   "file": "src/kv-store.ts",
+   "what": "cas reports the raw swap result",
+   "find": "return (await kv.putIfEquals(key, raw, next)) === true;",
+   "replace": "await kv.putIfEquals(key, raw, next); return true;",
+   "tests": [
+    "src/store-conformance.test.ts"
+   ]
+  },
+  {
+   "id": "ciba-kv-badkey",
+   "package": "pca-ciba",
+   "file": "src/kv-store.ts",
+   "what": "an empty or non-string key is refused",
+   "find": "if (typeof key !== 'string' || key === '') throw",
+   "replace": "if (false) throw",
+   "tests": [
+    "src/store-conformance.test.ts"
+   ]
+  },
+  {
+   "id": "ciba-mem-clone-get",
+   "package": "pca-ciba",
+   "file": "src/testing.ts",
+   "what": "the memory store returns snapshots on read",
+   "find": "value: structuredClone(v.value) }",
+   "replace": "value: v.value }",
+   "tests": [
+    "src/store-conformance.test.ts"
+   ]
+  },
+  {
+   "id": "ciba-mem-clone-put",
+   "package": "pca-ciba",
+   "file": "src/testing.ts",
+   "what": "the memory store snapshots on write",
+   "find": "value: structuredClone(value) });",
+   "replace": "value });",
+   "tests": [
+    "src/store-conformance.test.ts"
+   ]
+  },
+  {
+   "id": "scim-auth-required",
+   "package": "pca-scim",
+   "file": "src/index.ts",
+   "what": "a handler without authenticate is refused at construction",
+   "find": "if (typeof authenticate !== 'function' && options.allowUnauthenticated !== true) {",
+   "replace": "if (false) {",
+   "tests": [
+    "src/index.test.ts",
+    "src/rfc-vectors.test.ts"
+   ]
+  },
+  {
+   "id": "scim-auth-enforced",
+   "package": "pca-scim",
+   "file": "src/index.ts",
+   "what": "a request that authenticate does not approve is 401",
+   "find": "ok = authenticate(req) === true;",
+   "replace": "ok = true;",
+   "tests": [
+    "src/index.test.ts",
+    "src/rfc-vectors.test.ts"
+   ]
+  },
+  {
+   "id": "scim-filter-attr",
+   "package": "pca-scim",
+   "file": "src/index.ts",
+   "what": "an unsupported filter attribute is invalidFilter",
+   "find": "if (!FILTERABLE.has(attr)) throw",
+   "replace": "if (false) throw",
+   "tests": [
+    "src/index.test.ts",
+    "src/rfc-vectors.test.ts"
+   ]
+  },
+  {
+   "id": "scim-filter-syntax",
+   "package": "pca-scim",
+   "file": "src/index.ts",
+   "what": "an unsupported filter form is invalidFilter",
+   "find": "if (!m) throw new ScimValueError('invalidFilter'",
+   "replace": "if (false) throw new ScimValueError('invalidFilter'",
+   "tests": [
+    "src/index.test.ts",
+    "src/rfc-vectors.test.ts"
+   ]
+  },
+  {
+   "id": "scim-filter-type",
+   "package": "pca-scim",
+   "file": "src/index.ts",
+   "what": "a non-string filter is invalidFilter",
+   "find": "if (typeof filter !== 'string') throw",
+   "replace": "if (false) throw",
+   "tests": [
+    "src/index.test.ts",
+    "src/rfc-vectors.test.ts"
+   ]
+  },
+  {
+   "id": "scim-schemas-declared",
+   "package": "pca-scim",
+   "file": "src/index.ts",
+   "what": "a body declaring schemas without the Agent schema is refused",
+   "find": "if (body.schemas !== undefined && !(Array.isArray(body.schemas) && body.schemas.includes(AGENT_SCHEMA_URN))) {",
+   "replace": "if (false) {",
+   "tests": [
+    "src/rfc7643-resources.test.ts"
+   ]
+  }
+ ]
+}

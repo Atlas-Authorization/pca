@@ -14,7 +14,7 @@
  * a delivery in a browser, an edge worker, or Node.
  */
 
-import { hashCanonical } from '@atlasauth/pca';
+import { type ReplayStore, hashCanonical, replayKey } from '@atlasauth/pca';
 import { hmac } from '@noble/hashes/hmac';
 import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
@@ -112,7 +112,7 @@ export function parseEvent(s: string): StepUpEvent {
   const actor = o.actor;
   if (actor !== undefined && typeof actor !== 'string') throw new Error('parseEvent: bad actor');
 
-  return {
+  const event: StepUpEvent = {
     id: o.id,
     type: o.type,
     at: o.at,
@@ -121,6 +121,10 @@ export function parseEvent(s: string): StepUpEvent {
     tier,
     ...(actor !== undefined ? { actor } : {}),
   };
+  // The id is a content address. An event whose id is not the digest of its fields was edited or forged.
+  const { id: _id, ...fields } = event;
+  if (eventId(fields) !== event.id) throw new Error('parseEvent: id does not match the event content');
+  return event;
 }
 
 // ---- signed webhooks --------------------------------------------------------------------------
@@ -135,43 +139,64 @@ function timingSafeEqualBytes(a: Uint8Array, b: Uint8Array): boolean {
   return diff === 0;
 }
 
-function parseSignatureHeader(h: string): { t: number; v1: string } | null {
+/** Smallest secret accepted. A short or empty HMAC key makes every signature guessable. */
+export const MIN_SECRET_BYTES = 16;
+const MAX_HEADER_CHARS = 2048;
+
+function secretBytes(secret: string | Uint8Array): Uint8Array | null {
+  const b = typeof secret === 'string' ? new TextEncoder().encode(secret) : secret;
+  return b instanceof Uint8Array && b.length >= MIN_SECRET_BYTES ? b : null;
+}
+
+/** Parse `t=<digits>,v1=<hex>[,v1=<hex>...]`. Several `v1` are allowed (secret rotation); two different `t` are not. */
+function parseSignatureHeader(h: string): { t: number; v1: string[] } | null {
+  if (typeof h !== 'string' || h.length > MAX_HEADER_CHARS) return null;
   let t: number | undefined;
-  let v1: string | undefined;
+  const v1: string[] = [];
   for (const part of h.split(',')) {
     const eq = part.indexOf('=');
     if (eq < 0) continue;
     const key = part.slice(0, eq).trim();
     const val = part.slice(eq + 1).trim();
     if (key === 't') {
+      if (!/^\d{1,15}$/.test(val)) return null;
       const n = Number(val);
-      if (val.length > 0 && Number.isFinite(n)) t = n;
+      if (t !== undefined && t !== n) return null;
+      t = n;
     } else if (key === 'v1') {
-      v1 = val;
+      v1.push(val);
     }
   }
-  if (t === undefined || v1 === undefined) return null;
+  if (t === undefined || v1.length === 0) return null;
   return { t, v1 };
 }
 
 /**
  * Stripe-style signature for a webhook payload: `t=<unixSeconds>,v1=<hex HMAC-SHA256 of "<t>.<payload>">`.
- * Pass `opts.timestamp` to pin the second count (otherwise `Date.now()` in seconds).
+ * Pass `opts.timestamp` to pin the second count (otherwise `Date.now()` in seconds). Throws on a secret shorter
+ * than {@link MIN_SECRET_BYTES} bytes and on a timestamp that is not a non-negative integer; the error never
+ * contains the secret.
  */
 export function signWebhook(
   secret: string | Uint8Array,
   payload: string,
   opts?: { timestamp?: number },
 ): string {
+  const key = secretBytes(secret);
+  if (key === null) throw new RangeError(`signWebhook: the secret must be at least ${MIN_SECRET_BYTES} bytes`);
   const t = opts?.timestamp ?? Math.floor(Date.now() / 1000);
-  const mac = hmac(sha256, secret, `${t}.${payload}`);
+  if (!Number.isSafeInteger(t) || t < 0) throw new RangeError('signWebhook: timestamp must be a non-negative integer (unix seconds)');
+  const mac = hmac(sha256, key, `${t}.${payload}`);
   return `t=${t},v1=${bytesToHex(mac)}`;
 }
 
 /**
  * Verify a signature header against the payload. Recomputes the HMAC, compares it constant-time, and
  * enforces the timestamp tolerance (default 300s). Returns false — never throws — on a malformed header,
- * a bad signature, or a stale timestamp. Pass `opts.now` (unix seconds) to pin the clock.
+ * a bad signature, a stale timestamp, a secret that is too short, or a tolerance / clock that is not a finite
+ * non-negative number. With several `v1` entries (secret rotation) any one may match. Pass `opts.now` (unix
+ * seconds) to pin the clock. A valid signature is not proof of freshness beyond the tolerance window; use
+ * {@link verifyDelivery} to also refuse a replay.
  */
 export function verifyWebhook(
   secret: string | Uint8Array,
@@ -180,24 +205,67 @@ export function verifyWebhook(
   opts?: { toleranceSec?: number; now?: number },
 ): boolean {
   try {
+    const key = secretBytes(secret);
+    if (key === null) return false;
     const parsed = parseSignatureHeader(signatureHeader);
     if (!parsed) return false;
 
     const toleranceSec = opts?.toleranceSec ?? 300;
     const now = opts?.now ?? Math.floor(Date.now() / 1000);
+    if (!Number.isFinite(toleranceSec) || toleranceSec < 0 || !Number.isFinite(now)) return false;
     if (Math.abs(now - parsed.t) > toleranceSec) return false;
 
-    let provided: Uint8Array;
-    try {
-      provided = hexToBytes(parsed.v1);
-    } catch {
-      return false;
+    const expected = hmac(sha256, key, `${parsed.t}.${payload}`);
+    let match = false;
+    for (const v of parsed.v1) {
+      let provided: Uint8Array;
+      try {
+        provided = hexToBytes(v);
+      } catch {
+        continue;
+      }
+      if (timingSafeEqualBytes(expected, provided)) match = true; // no early exit: every candidate costs the same
     }
-
-    const expected = hmac(sha256, secret, `${parsed.t}.${payload}`);
-    return timingSafeEqualBytes(expected, provided);
+    return match;
   } catch {
     return false;
+  }
+}
+
+export type DeliveryVerdict = { ok: true; event: StepUpEvent } | { ok: false; reason: string };
+
+/**
+ * Accept one webhook delivery: signature and freshness ({@link verifyWebhook}), a well-formed event whose id matches
+ * its content ({@link parseEvent}), and a first sight of that event id (`replay.consumeOnce`). A store that throws
+ * refuses. Never throws, and no reason contains the secret or the payload.
+ */
+export async function verifyDelivery(
+  secret: string | Uint8Array,
+  payload: string,
+  signatureHeader: string,
+  opts: { replay: ReplayStore; toleranceSec?: number; now?: number },
+): Promise<DeliveryVerdict> {
+  try {
+    if (!opts || typeof opts.replay?.consumeOnce !== 'function') return { ok: false, reason: 'a replay store is required' };
+    if (!verifyWebhook(secret, payload, signatureHeader, opts)) return { ok: false, reason: 'bad signature' };
+    let event: StepUpEvent;
+    try {
+      event = parseEvent(payload);
+    } catch (e) {
+      return { ok: false, reason: (e as Error).message };
+    }
+    const sig = parseSignatureHeader(signatureHeader)!;
+    const nowSec = opts.now ?? Math.floor(Date.now() / 1000);
+    const tolerance = opts.toleranceSec ?? 300;
+    try {
+      const first = await opts.replay.consumeOnce(replayKey('pca-stepup-event/v1', event.id), (sig.t + tolerance) * 1000 + 1, nowSec * 1000);
+      if (!first) return { ok: false, reason: 'replayed delivery' };
+    } catch {
+      return { ok: false, reason: 'replay store unavailable' };
+    }
+    return { ok: true, event };
+  } catch {
+    return { ok: false, reason: 'bad signature' };
   }
 }
 

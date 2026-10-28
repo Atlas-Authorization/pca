@@ -38,7 +38,7 @@ const V3: DecisionVector[] = [
   { allow: 1, t: 2, rQuant: 55 },
   { allow: 1, t: 1, rQuant: 30 },
 ];
-const run = (o: Partial<LaunchOptions>) => launchLocal({ n: 3, vectors: V3, mainJs, Q: 64, ...o });
+const run = (o: Partial<LaunchOptions>) => launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 3, vectors: V3, mainJs, Q: 64, ...o });
 const parties = (outs: NodeOutput[]) => outs.filter((o) => o.role === 'party');
 
 /** Every honest party aborts with no output; at least one names `culprit` first-hand; none names anyone else. */
@@ -100,6 +100,7 @@ describe('(6) each party in turn is the cheater and is named', () => {
 
   it('two-party run: the cheater is named too', async () => {
     const r = await launchLocal({
+offline: 'trusted-dealer', insecureTrustedDealer: true,
       n: 2,
       vectors: V3.slice(0, 2),
       mainJs,

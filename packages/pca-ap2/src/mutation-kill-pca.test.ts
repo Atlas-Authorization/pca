@@ -332,7 +332,7 @@ describe('live PCA mandate state', () => {
   });
   it('budget exhausted: step-up needed although the risk is low', async () => {
     const poor: PaymentMandate = { ...s.pca, budget: { ...s.pca.budget, B: 1 } };
-    const direct = authorizeCharge(poor, { merchant: 'merchant_1', amount: 40, currency: 'USD', now: NOW_MS + 60_000, recentChargeTimes: [] }, poor.grant);
+    const direct = authorizeCharge(poor, { merchant: 'merchant_1', amount: 4000, currency: 'USD', now: NOW_MS + 60_000, recentChargeTimes: [] }, poor.grant);
     expect(direct.outcome).toBe('step_up');
     expect(await reason(input(s, { mandate: poor }))).toBe('PCA requires a human co-sign for this charge and no verified threshold (t >= 2) was enforced');
     const hook = (t: number | undefined) => ({ threshold: () => ({ enforced: true, ok: true, ...(t !== undefined ? { t } : {}) }) as never });
@@ -359,7 +359,7 @@ describe('risk claim, understated or exactly at tolerance', () => {
   function rebind(i: In, risk: unknown, amountOverride?: { amount: number; currency: string }, payee = MERCHANT, verb = 'charge') {
     const closed = i.closed as PaymentMandateClaims;
     const amount = amountOverride ?? closed.payment_amount;
-    const major = amount.amount / 100;
+    const major = amount.amount; // minor units
     const charge = { merchant: payee.id, amount: major, currency: amount.currency };
     const facts = {
       transactionId: closed.transaction_id, payeeId: payee.id, amount: amount.amount, currency: amount.currency, instrumentId: closed.payment_instrument.id,
@@ -434,16 +434,16 @@ describe('riskRatio and constraint builders', () => {
   const mk = (over: Record<string, unknown> = {}) =>
     buildPaymentMandate({
       principalSecret: principal.secretKey, principalPublic: pubOf(principal), agentPublic: pubOf(agent), merchants: ['merchant_1'], currency: 'USD',
-      perTransactionCap: 500, autoApproveThreshold: 50, cumulativeCap: 1000, now: NOW_MS, ...over,
+      perTransactionCap: 50_000, autoApproveThreshold: 5_000, cumulativeCap: 100_000, now: NOW_MS, ...over,
     });
   it('constraint list shape incl. optional max_occurrences and inexact cap', () => {
     const c = paymentConstraintsFromTerms(mk({ maxTransactionsPerPeriod: 3 }).terms, [MERCHANT], 'REF');
     expect(c.map((x) => x.type)).toEqual(['payment.amount_range', 'payment.allowed_payees', 'payment.reference', 'payment.budget', 'payment.agent_recurrence']);
     expect(c[4]).toEqual({ type: 'payment.agent_recurrence', frequency: 'ON_DEMAND', max_occurrences: 3 });
     expect(paymentConstraintsFromTerms(mk().terms, [MERCHANT], 'REF')[4]).toStrictEqual({ type: 'payment.agent_recurrence', frequency: 'ON_DEMAND' });
-    expect(() => paymentConstraintsFromTerms(mk({ perTransactionCap: 0.29, autoApproveThreshold: 0.29, cumulativeCap: 0.29 }).terms, [MERCHANT], 'R')).toThrow(
-      'cumulativeCap x100 is not exact in floating point; choose a representable cap',
-    );
+    // 29 / 100 * 100 is 28.999999999999996 in floating point: the cap is converted exactly (nudged), not refused
+    const odd = paymentConstraintsFromTerms(mk({ perTransactionCap: 29, autoApproveThreshold: 29, cumulativeCap: 29 }).terms, [MERCHANT], 'R').find((x) => x.type === 'payment.budget') as { max: number };
+    expect(Math.trunc(odd.max * 100)).toBe(29);
   });
   it('merchant descriptors are matched by id', () => {
     const other = { id: 'merchant_0', name: 'Zero' };
@@ -482,18 +482,18 @@ describe('buildPcaPaymentBinding output', () => {
       transactionId: 'T1', payee: MERCHANT, amount: { amount: 4000, currency: 'USD' }, instrumentId: 'card_4242', now: NOW_MS + 10_000,
     });
     expect(b.v).toBe(1);
-    expect(b.charge).toStrictEqual({ amount: 40, currency: 'USD' });
+    expect(b.charge).toStrictEqual({ amount: 4000, currency: 'USD' });
     const p = b.pcactn as unknown as PCActn;
     expect(p.nonce).toBe(pcaBindingNonce({ transactionId: 'T1', payeeId: 'merchant_1', amount: 4000, currency: 'USD', instrumentId: 'card_4242', openHash: sdHashOf(parseSdJwtHop(s.openPayment)), agentJkt: jwkThumbprint(s.agent.publicJwk) }));
     expect(p.risk_claim.r).toBe(0.08);
     expect(p.risk_claim.inputs).toMatchObject({ blastRadius: 0.08 });
     expect(JSON.stringify(p.plan)).toContain('ap2:T1');
-    expect(p.action.params_digest).toBe(paramsDigest({ amount: 40, currency: 'USD' }));
+    expect(p.action.params_digest).toBe(paramsDigest({ amount: 4000, currency: 'USD' }));
     const withCat = buildPcaPaymentBinding({
       mandate: makeScenario({ mandateOver: { categories: ['food'] } }).pca, open: s.openPayment, agentJwk: s.agent.publicJwk, agentSecret: s.agentEd.secretKey, audience: s.pcaAudience, counter: 3,
       transactionId: 'T1', payee: MERCHANT, amount: { amount: 4000, currency: 'USD' }, instrumentId: 'card_4242', category: 'food', now: NOW_MS + 10_000,
     });
-    expect(withCat.charge).toStrictEqual({ amount: 40, currency: 'USD', category: 'food' });
+    expect(withCat.charge).toStrictEqual({ amount: 4000, currency: 'USD', category: 'food' });
     void hashCanonical;
     void generateAp2KeyPair;
   });

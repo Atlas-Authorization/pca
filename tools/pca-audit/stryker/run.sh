@@ -20,6 +20,8 @@ delete b["$schema"];
 if(process.env.NO_RELATED)b.vitest={related:false};
 if(process.env.VITEST_CONFIG){b.vitest=Object.assign(b.vitest||{},{configFile:process.env.VITEST_CONFIG});}
 if(process.env.COVERAGE_OFF){b.coverageAnalysis="off";b.ignoreStatic=false;} // tests that run the code in child processes: perTest coverage never sees it
+if(process.env.TIMEOUT_MS)b.timeoutMS=Number(process.env.TIMEOUT_MS);
+if(process.env.CONCURRENCY)b.concurrency=Number(process.env.CONCURRENCY);
 if(process.env.INPLACE){b.inPlace=true;b.concurrency=1;}
 if(process.env.EXTRA_IGNORE)b.ignorePatterns=b.ignorePatterns.concat(process.env.EXTRA_IGNORE.split(","));
 if(process.env.ONLY_TESTS){const fs=require("fs"),path=require("path");const keep=new Set(process.env.ONLY_TESTS.split(","));const dir=path.join(process.argv[4],"packages",process.env.PKG||"pca");const walk=(d)=>fs.readdirSync(d,{withFileTypes:true}).flatMap((e)=>e.name==="node_modules"||e.name===".stryker-tmp"||e.name==="dist"?[]:e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);b.ignorePatterns=b.ignorePatterns.concat(walk(path.join(dir,"src")).filter((f)=>/\.test\.ts$/.test(f)).map((f)=>path.relative(dir,f)).filter((f)=>!keep.has(f)));}

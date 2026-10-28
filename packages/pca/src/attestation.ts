@@ -1,3 +1,4 @@
+import { type AssuranceLabel, assuranceLabelOf, multiRootLevel, setAssuranceLabel } from './assurance';
 import { VerifiedMemoryNonceStore, createMultiRootVerifierVerified, matchAgentBindingVerified, requiresAttestationVerified } from '@atlasauth/pca-verified-core';
 import { verifiedCoreOptIn } from './verified-core-mode';
 import { createAttestationVerifierProved, verifyAttestationProved } from './attest-proved';
@@ -15,16 +16,17 @@ import { createAttestationVerifierProved, verifyAttestationProved } from './atte
  *     checkable attestation for dev, CI and the "attested-VM equivalent" the spec sanctions — but the
  *     measurements are SELF-ASSERTED by the signer, not rooted in hardware. It proves "a key the RS
  *     trusts vouched for these measurements", NOT "this silicon is running exactly these weights".
- *   - HARDWARE mode (the `HardwareAttestationVerifier` seam): real SEV-SNP / TDX / SGX report
- *     verification (cert-chain to the CPU vendor root, measurement register checks, report_data/nonce
- *     binding). We deliberately DO NOT implement SEV-SNP/TDX quote parsing here — that is a large,
- *     vendor-specific, security-critical surface. We define the interface and the exact place it
- *     plugs in; `hardwareVerifier.verify()` returns the HARDWARE-measured identity, which then feeds
- *     the same freshness / nonce-binding / agent_binding checks as software mode. A production AMD
- *     SEV-SNP backend for this seam lives in `attest-amd-snp.ts` (`createAmdSnpVerifier`, built on `hardware-sevsnp.ts`): it parses
- *     the ATTESTATION_REPORT, verifies the ECDSA-P384 report signature + the VCEK→ASK→ARK cert chain
- *     to a configured ARK trust anchor, and binds report_data to the nonce. Wire it in via
- *     `createAttestationVerifier({ hardwareVerifier: createAmdSnpVerifier(...) })`.
+ *   - HARDWARE mode (the `HardwareAttestationVerifier` interface): real vendor evidence verification
+ *     (cert-chain to the vendor root, measurement register checks, report_data/nonce binding). This
+ *     file defines the interface and the exact place it plugs in; the vendor-specific quote / report
+ *     parsers live in their own modules and implement it: AMD SEV-SNP (`createAmdSnpVerifier`, built
+ *     on `hardware-sevsnp.ts`: ATTESTATION_REPORT parsing, ECDSA-P384 report signature, VCEK→ASK→ARK
+ *     chain to a configured ARK anchor), Intel TDX / SGX DCAP (`createIntelDcapVerifier`), Azure MAA
+ *     (`createAzureMaaVerifier`), GCP Confidential Space (`createGcpConfidentialSpaceVerifier`) and
+ *     NVIDIA SPDM (`createNvidiaSpdmVerifier`); `createMultiRootVerifier` below requires several
+ *     independent roots to agree. `hardwareVerifier.verify()` returns the HARDWARE-measured identity,
+ *     which then feeds the same freshness / nonce-binding / agent_binding checks as software mode.
+ *     Wire one in via `createAttestationVerifier({ hardwareVerifier: createAmdSnpVerifier(...) })`.
  *
  * STANDARDIZATION GAP (spec §15 "Open problems" — "Standardizing weights-level attestation for hosted
  * models"): there is today NO cross-vendor standard for attesting a model's WEIGHTS digest from inside
@@ -336,12 +338,11 @@ export interface HardwareAttestationResult {
 }
 
 /**
- * SEAM for real TEE attestation. A production implementation parses a SEV-SNP / TDX / SGX report:
- * verifies the vendor cert chain to the CPU root, checks the launch/measurement registers, confirms
- * the report_data binds the expected nonce, and returns the measured identity. Intentionally not
- * implemented in THIS file (vendor-specific, security-critical). The AMD SEV-SNP implementation is in
- * `attest-amd-snp.ts` (`createAmdSnpVerifier`). Plug it in via
- * `createAttestationVerifier({ hardwareVerifier })`.
+ * The interface every TEE attestation verifier implements: parse the vendor report, verify the vendor cert chain to
+ * the pinned root, check the launch/measurement registers, confirm the report_data binds the expected nonce, and
+ * return the measured identity. The vendor implementations live in their own modules (AMD SEV-SNP
+ * `createAmdSnpVerifier`, Intel TDX / DCAP, Azure MAA, Google Confidential Space, NVIDIA SPDM) and each is tested on
+ * real hardware evidence; they are unaudited. Plug one in via `createAttestationVerifier({ hardwareVerifier })`.
  */
 export interface HardwareAttestationVerifier {
   verify(input: {
@@ -572,7 +573,13 @@ export async function verifyAttestation(input: {
 export function createAttestationVerifier(
   opts: AttestationVerifierOpts,
 ): (ctx: VerifyContext) => Promise<AttestationHookResult> {
-  return createAttestationVerifierProved(opts); // PROVED CODE: Attest.dfy NeedsConsume / HookFinal (attest-proved.ts)
+  const hook = createAttestationVerifierProved(opts); // PROVED CODE: Attest.dfy NeedsConsume / HookFinal (attest-proved.ts)
+  // Assurance label (0.5) from the configuration, never from the document: software mode is `software`; hardware mode is
+  // what the hardware verifier declares (an unlabelled one is `unknown`); the self-declared-nonce opt-out is `unknown`.
+  const hw = opts.hardwareVerifier !== undefined ? assuranceLabelOf(opts.hardwareVerifier) : undefined;
+  const label: AssuranceLabel =
+    opts.insecure_selfDeclaredNonce === true ? { level: 'unknown', vendor: 'insecure-self-declared-nonce' } : opts.hardwareVerifier !== undefined ? (hw ?? { level: 'unknown' }) : { level: 'software' };
+  return setAssuranceLabel(hook, label);
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════
@@ -627,7 +634,9 @@ export interface MultiRootAttestationPolicy {
  */
 export function createMultiRootVerifier(policy: MultiRootAttestationPolicy): HardwareAttestationVerifier {
   // The adapter's structural types are the package-local mirror of these (verified-core cannot import @atlasauth/pca).
-  return createMultiRootVerifierVerified(policy as unknown as Parameters<typeof createMultiRootVerifierVerified>[0]) as unknown as HardwareAttestationVerifier; // PROVED CODE: Attest.dfy RunIff (verified-core); same construction errors and reasons
+  const v = createMultiRootVerifierVerified(policy as unknown as Parameters<typeof createMultiRootVerifierVerified>[0]) as unknown as HardwareAttestationVerifier; // PROVED CODE: Attest.dfy RunIff (verified-core); same construction errors and reasons
+  // Assurance label (0.5): the fewest hardware roots any accepted quorum can contain (see `multiRootLevel`).
+  return setAssuranceLabel(v, { level: multiRootLevel(policy.roots, policy.threshold), vendor: `multi-root:${policy.roots.map((r) => r.id).join('+')}` });
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════

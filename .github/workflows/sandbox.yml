@@ -1,0 +1,55 @@
+name: Runtime containment
+
+# Track K10 (optional runtime containment): @atlasauth/pca-sandbox. Typecheck, the capability-handle, WebAssembly host (sync and
+# worker), egress policy and real-socket proxy tests, the policy compiler / profile generator shared vectors (byte-identical to a
+# fresh generation), and on macOS the generated sandbox profile applied to real processes (a granted path readable and others not;
+# a tool under the profile reaches only the egress proxy). On Linux the reference helper (linux/pca-confine.c) applies the generated
+# seccomp and Landlock profiles to a child process and the tests assert allowed vs refused syscalls and paths and egress only to the
+# proxy port; the component host (wasmtime, canonical ABI, fuel) is built and its tests must run on Linux; PCA_REQUIRE_LINUX=1 and
+# PCA_REQUIRE_WASMTIME=1 turn every would-be skip (no gcc, no libseccomp, Landlock ABI < 4, no Rust toolchain) into a failure.
+on:
+  push:
+    branches: [main, 'ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sandbox:
+    name: pca-sandbox (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Linux toolchain for the enforcement tests (gcc, libseccomp)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y gcc libseccomp-dev
+      - name: Build the wasmtime component host (Linux; the tests below FAIL if it cannot be built)
+        if: runner.os == 'Linux'
+        run: cargo build --release --manifest-path packages/pca-sandbox/wasmtime-host/Cargo.toml
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=@atlasauth/pca-sandbox...
+      - name: Build dependencies and the package
+        run: pnpm --filter @atlasauth/pca-sandbox... run build
+      - name: Typecheck (src and tests)
+        run: pnpm --filter @atlasauth/pca-sandbox run typecheck
+      - name: Handles, WebAssembly host, egress policy and proxy, profiles, vectors, demo agent (macOS runs the sandbox-exec tests; Linux applies the generated seccomp and Landlock profiles to a child process and FAILS if it cannot)
+        env:
+          PCA_REQUIRE_LINUX: ${{ runner.os == 'Linux' && '1' || '0' }}
+          PCA_REQUIRE_WASMTIME: ${{ runner.os == 'Linux' && '1' || '0' }}
+        run: pnpm --filter @atlasauth/pca-sandbox run test
+      - name: The committed vectors are byte-identical to a fresh generation
+        run: pnpm --filter @atlasauth/pca-sandbox exec vitest run src/profiles.test.ts -t "fresh generation"

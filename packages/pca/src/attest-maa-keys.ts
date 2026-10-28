@@ -1,4 +1,5 @@
 import { x509ValidityMs } from './x509-validity';
+import { strictChainError } from './x509-strict';
 import { snapshotConfig } from './config-snapshot';
 /**
  * Rotation-safe key trust store for Azure MAA token-signing keys.
@@ -372,6 +373,8 @@ export function evaluateMaaJwks(jwks: MaaJwks, issuer: string, policy: MaaKeyPol
       // Chained key: only under an explicitly pinned root (and, when configured, a pinned intermediate).
       if (roots.size === 0) throw new Error('chained key ignored (no chainRootSpkiSha256 configured)');
       for (let j = 0; j < certs.length - 1; j++) if (!safeVerify(certs[j]!, certs[j + 1]!.publicKey)) throw new Error(`chain link ${j} is not signed by the next cert`);
+      const profile = strictChainError(certs.map((c) => new Uint8Array(c.raw)));
+      if (profile) throw new Error(`chain profile: ${profile}`);
       const top = certs[certs.length - 1]!;
       if (top.issuer !== top.subject || !safeVerify(top, top.publicKey)) throw new Error('chain does not end in a self-signed root');
       const rootSpki = spkiOf(top);

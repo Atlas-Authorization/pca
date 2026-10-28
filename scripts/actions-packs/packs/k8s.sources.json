@@ -1,0 +1,13 @@
+[
+  {
+    "id": "swagger",
+    "repo": "kubernetes/kubernetes",
+    "ref": "e96327d86b1c1847742e6990b72b5f25aec284f7",
+    "path": "api/openapi-spec/swagger.json",
+    "sha256": "cf628212ef590622596362692360c838d3303f8d45ec7f66ff86a75a94148228",
+    "kind": "openapi",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/kubernetes/kubernetes/blob/master/LICENSE",
+    "bytes": 4294088
+  }
+]

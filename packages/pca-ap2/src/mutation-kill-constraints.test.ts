@@ -151,8 +151,10 @@ describe('budget', () => {
   const ctx = (totalAmount: number): { context: MandateContext } => ({ context: { totalAmount, totalUses: 0 } });
   it('currency, exponent, context', () => {
     expect(one(b(100, 'EUR'), closed(), ctx(0))).toEqual(['budget currency mismatch: expected EUR, got USD']);
-    expect(one(b(100, 'JPY'), closed({ payment_amount: { amount: 1, currency: 'JPY' } }), ctx(0))).toEqual(['budget in JPY is unsupported: budget.max is converted with a fixed x100 factor']);
-    expect(one(b(100, 'KWD'), closed({ payment_amount: { amount: 1, currency: 'KWD' } }), ctx(0))).toEqual(['budget in KWD is unsupported: budget.max is converted with a fixed x100 factor']);
+    // every currency is read the way the official SDK reads it: int(max * 100) minor units
+    expect(one(b(100, 'JPY'), closed({ payment_amount: { amount: 1, currency: 'JPY' } }), ctx(0))).toEqual([]);
+    expect(one(b(1, 'JPY'), closed({ payment_amount: { amount: 101, currency: 'JPY' } }), ctx(0))).toEqual(['cumulative spend 101 exceeds budget 100 (past spend 0)']);
+    expect(one(b(100, 'KWD'), closed({ payment_amount: { amount: 10_001, currency: 'KWD' } }), ctx(0))).toEqual(['cumulative spend 10001 exceeds budget 10000 (past spend 0)']);
     expect(one(b(100))).toEqual(['mandate context is required to evaluate a budget']);
   });
   it('cumulative spend boundary (spend == budget is fine)', () => {

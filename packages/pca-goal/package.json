@@ -1,0 +1,61 @@
+{
+  "name": "@atlasauth/pca-goal",
+  "version": "0.5.0",
+  "description": "Goal IR for PCA goal-to-decision: a typed, signed Goal compiled by a deterministic, machine-proved compiler (Dafny, extracted) into a policy with a witness for every Allow; lossless card render/parse.",
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-goal"
+  },
+  "keywords": [
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca-verified-core": "workspace:*",
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-actions": "workspace:*",
+    "@atlasauth/pca-intent": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "tsx": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

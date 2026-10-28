@@ -1,4 +1,5 @@
-import { DEFAULT_CATALOG, hashCanonical, type Catalog, type Reversibility } from '@atlasauth/pca';
+import { hashCanonical } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, type Catalog, type Reversibility } from '@atlasauth/pca/ext/research';
 import { labelOf, numCells, type Dim, type Omega, type VerbSpace } from '@atlasauth/pca-intent';
 import { catLabel, resolveCoords } from './box';
 import { worstProvenance } from './friction';

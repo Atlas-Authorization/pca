@@ -128,9 +128,13 @@ export function signIntentRequired(body: IntentRequiredBody, kid: string, siteSe
   return { ...body, sig: { alg: resolveSigAlg(suite?.alg ?? 'ed25519')!.alg as SigAlg, kid, value: parts.sig, ...(parts.pq_sig !== undefined ? { pq_value: parts.pq_sig } : {}) } };
 }
 
-/** Verify a site-signed body against the site's discovery keys (the same key list as the action schema). */
-export function verifyIntentRequired(b: unknown, keys: readonly ActionSchemaKey[], now?: number): { ok: true } | { ok: false; reason: string } {
+/**
+ * Verify a site-signed body against the site's discovery keys (the same key list as the action schema). The clock is REQUIRED
+ * (0.5, B16): a `now` that is missing or not a safe integer is refused, never coerced, so expiry can never be skipped.
+ */
+export function verifyIntentRequired(b: unknown, keys: readonly ActionSchemaKey[], now: number): { ok: true } | { ok: false; reason: string } {
   try {
+    if (!(typeof now === 'number' && Number.isSafeInteger(now))) return { ok: false, reason: 'the verifier clock is not a safe integer (fail closed)' };
     const e = intentRequiredShapeError(b);
     if (e) return { ok: false, reason: e };
     const s = b as SignedIntentRequired;
@@ -142,11 +146,17 @@ export function verifyIntentRequired(b: unknown, keys: readonly ActionSchemaKey[
     if (resolveSigAlg(key.alg)?.alg !== resolveSigAlg(s.sig.alg)?.alg) return { ok: false, reason: 'sig.alg does not match the pinned key suite' };
     const pin: PqPinPolicy = key.pq_pk !== undefined ? { pqPins: { [key.pk]: key.pq_pk } } : {};
     if (!verifyPinnedSuite(key.alg, key.pk, key.pq_pk, message(s), { sig: s.sig.value, pq_sig: s.sig.pq_value }, pin)) return { ok: false, reason: 'site signature invalid' };
-    if (now !== undefined && !(now <= s.expires_at)) return { ok: false, reason: 'the question has expired' };
+    if (!(now <= s.expires_at)) return { ok: false, reason: 'the question has expired' };
     return { ok: true };
   } catch (err) {
     return { ok: false, reason: `malformed intent_required: ${(err as Error).message}` };
   }
+}
+
+/** {@link verifyIntentRequired} with the clock REQUIRED: a missing or non-integer `now` is a denial, so expiry can never be skipped. */
+export function verifyIntentRequiredAt(b: unknown, keys: readonly ActionSchemaKey[], now: number): { ok: true } | { ok: false; reason: string } {
+  if (!(typeof now === 'number' && Number.isSafeInteger(now))) return { ok: false, reason: 'the verifier clock is not a safe integer (fail closed)' };
+  return verifyIntentRequired(b, keys, now);
 }
 
 /** The RFC 9457 response for an Intent Layer outcome (status 403; `pca` carries the signed body for intent_required). */

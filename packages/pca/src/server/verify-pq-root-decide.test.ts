@@ -12,7 +12,9 @@ import { buildPCActn } from '../pcactn';
 import { decide, deriveDecideInput } from '../policy-vm';
 import { encodeMlDsaPublicKey, mlDsa65Keygen, type SigAlg } from '../pq';
 import { DEFAULT_RISK_POLICY } from '../risk';
-import { verifyPCActn } from './verify';
+import { verifyPCActn as verifyPCActn05 } from './verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 const AUD = 'rs-pqroot';
 const NOW = Date.UTC(2026, 9, 12, 12, 0, 0);
@@ -47,7 +49,7 @@ function pqGrant(alg: SigAlg) {
 describe.each(['ml-dsa-65', 'hybrid-ed25519-ml-dsa-65'] as SigAlg[])('verifyPCActn with a %s root', (alg) => {
   const s = pqGrant(alg);
   const run = (pqPins?: Record<string, string>, grant: Capability = s.grant) =>
-    verifyPCActn(s.actn, { grant, now: NOW, audience: AUD, ...(pqPins ? { pqPins } : {}), context: { plan: s.plan, risk: lowRisk, params: {}, budget: { B: 1, tau: NOW, asOf: NOW } } });
+    verifyPCActn(s.actn, { insecureSkipPlanRootCheck: true, grant, now: NOW, audience: AUD, ...(pqPins ? { pqPins } : {}), context: { plan: s.plan, risk: lowRisk, params: {}, budget: { B: 1, tau: NOW, asOf: NOW } } });
 
   it('the root really is post-quantum', () => {
     expect(s.grant.alg).toBe(alg);

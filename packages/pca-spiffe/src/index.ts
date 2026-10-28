@@ -9,7 +9,7 @@
  * workload can be the holder of a PCA capability chain.
  */
 
-import { X509Certificate, verify as nodeVerify } from 'node:crypto';
+import { X509Certificate, createHash, verify as nodeVerify } from 'node:crypto';
 import { readCertFacts, type CertFacts } from './der';
 import {
   jwtVerify,
@@ -18,8 +18,9 @@ import {
   type JWTVerifyGetKey,
   type KeyLike,
 } from 'jose';
-import { x509ValidAt } from '@atlasauth/pca';
+import { x509ValidAt } from '@atlasauth/pca/ext/attestation';
 import { assertCanonicalCompactJws } from '@atlasauth/pca';
+import type { JwtRevocationCheck, X509RevocationCheck } from './revocation';
 // Integrate with the REAL core identity primitives — the holder is an Ed25519 public key, encoded
 // and validated exactly as the core does it.
 import { b64u, decodeB64uStrict } from '@atlasauth/pca';
@@ -67,7 +68,12 @@ export type SpiffeErrorCode =
   | 'chain_path_len'
   | 'chain_expired'
   | 'chain_untrusted_root'
-  | 'chain_too_long';
+  | 'chain_too_long'
+  | 'trust_bundle_unavailable'
+  | 'trust_bundle_invalid'
+  | 'svid_revoked'
+  | 'chain_revoked'
+  | 'revocation_unavailable';
 
 /** A validation/parse failure with a stable `code`. */
 export class SpiffeError extends Error {
@@ -195,6 +201,13 @@ export interface VerifyJwtSvidOptions {
   algorithms?: string[];
   /** Clock skew tolerance, e.g. `"30s"` or a number of seconds. */
   clockTolerance?: string | number;
+  /**
+   * OPTIONAL revocation check, run LAST (only for an SVID that passed every other check). It must return exactly
+   * `false` to admit; `true` refuses with `svid_revoked`; a throw, a rejection or any other value refuses with
+   * `revocation_unavailable`. Not a function (for example `null`) is `revocation_unavailable` too. Unset means
+   * "not checked" (expiry is then the only bound). See {@link createRevocationSource}.
+   */
+  revocation?: JwtRevocationCheck;
 }
 
 /** A verified JWT-SVID. */
@@ -216,6 +229,9 @@ export interface JwtSvid {
  * (jose error or {@link SpiffeError}) on any failure.
  */
 export async function verifyJwtSvid(token: string, opts: VerifyJwtSvidOptions): Promise<JwtSvid> {
+  if (opts.revocation !== undefined && typeof opts.revocation !== 'function') {
+    throw new SpiffeError('revocation_unavailable', 'revocation must be a function');
+  }
   if (typeof opts.trustDomain !== 'string' || opts.trustDomain.length === 0) {
     throw new SpiffeError('missing_trust_domain', 'verifyJwtSvid requires `trustDomain` (an unpinned JWT-SVID would accept any trust domain the key signs for)');
   }
@@ -279,6 +295,21 @@ export async function verifyJwtSvid(token: string, opts: VerifyJwtSvidOptions): 
   const resolvedAudience = aud === undefined ? [] : typeof aud === 'string' ? [aud] : aud;
 
   const out: JwtSvid = { spiffeId, claims: payload, audience: resolvedAudience, expiresAt: payload.exp };
+  if (opts.revocation !== undefined) {
+    let verdict: unknown;
+    try {
+      verdict = await opts.revocation({
+        spiffeId: spiffeId.id,
+        ...(typeof payload.jti === 'string' ? { jti: payload.jti } : {}),
+        expiresAt: payload.exp,
+        tokenHash: createHash('sha256').update(token).digest('base64url'),
+      });
+    } catch (e) {
+      throw new SpiffeError('revocation_unavailable', `revocation check failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    if (verdict === true) throw new SpiffeError('svid_revoked', `JWT-SVID for ${spiffeId.id} is revoked`);
+    if (verdict !== false) throw new SpiffeError('revocation_unavailable', 'revocation check did not return a boolean');
+  }
   VERIFIED_SVIDS.add(out);
   return out;
 }
@@ -366,6 +397,14 @@ export interface VerifyX509SvidOptions {
   now?: Date;
   /** Maximum number of certificates in the presented chain (default 8). */
   maxChainLength?: number;
+  /**
+   * OPTIONAL revocation check, run LAST for every presented certificate (leaf first) of a chain that passed every
+   * other check. It must return exactly `false` to admit; `true` refuses (`svid_revoked` for the leaf,
+   * `chain_revoked` for a signing certificate); a throw or any other value (including a Promise) refuses with
+   * `revocation_unavailable`. Not a function (for example `null`) is `revocation_unavailable` too. Unset means "not
+   * checked". The bundle authority is not asked: remove a compromised authority from the bundle instead.
+   */
+  revocation?: X509RevocationCheck;
 }
 
 const PEM_CERT_RE = /-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g;
@@ -407,10 +446,13 @@ function withinValidity(cert: X509Certificate, now: Date): boolean {
  * certificate is signed by the next, signing certificates have `cA` true and `keyCertSign`, any
  * `pathLenConstraint` is respected, and the chain ends at (or is signed by) a bundle authority. `chain` is
  * the leaf first, then its signing certificates (PEM text with several certificates, or an array). Node's
- * crypto checks the signatures; revocation is not checked. Throws {@link SpiffeError}; resolves to the
+ * crypto checks the signatures; revocation is checked only through `opts.revocation`. Throws {@link SpiffeError}; resolves to the
  * parsed leaf on success.
  */
 export function verifyX509Svid(chain: string | readonly (string | Uint8Array)[], opts: VerifyX509SvidOptions): X509Svid {
+  if (opts.revocation !== undefined && typeof opts.revocation !== 'function') {
+    throw new SpiffeError('revocation_unavailable', 'revocation must be a function');
+  }
   const now = opts.now ?? new Date();
   const items = typeof chain === 'string' ? certsOf(chain) : chain.flatMap((c) => certsOf(c));
   if (items.length === 0) throw new SpiffeError('chain_empty', 'certificate chain is empty');
@@ -455,6 +497,22 @@ export function verifyX509Svid(chain: string | readonly (string | Uint8Array)[],
     if (!withinValidity(signer, now)) throw new SpiffeError('chain_expired', 'the trust bundle authority is not within its validity period');
     const f = validateSigner(signer, 'trust bundle authority');
     if (f.pathLen !== null && below > f.pathLen) throw new SpiffeError('chain_path_len', 'trust bundle authority pathLenConstraint exceeded');
+  }
+
+  if (opts.revocation !== undefined) {
+    for (let i = 0; i < items.length; i++) {
+      const c = items[i]!;
+      let verdict: unknown;
+      try {
+        verdict = opts.revocation({ spiffeId: spiffeId.id, serialNumber: c.serialNumber, fingerprint256: c.fingerprint256, position: i, isLeaf: i === 0 });
+      } catch (e) {
+        throw new SpiffeError('revocation_unavailable', `revocation check failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      if (verdict === true) {
+        throw new SpiffeError(i === 0 ? 'svid_revoked' : 'chain_revoked', i === 0 ? `X.509-SVID for ${spiffeId.id} is revoked` : `signing certificate #${i} of the chain is revoked`);
+      }
+      if (verdict !== false) throw new SpiffeError('revocation_unavailable', 'revocation check did not return a boolean');
+    }
   }
 
   const publicKeyDer = b64u(leaf.publicKey.export({ type: 'spki', format: 'der' }));
@@ -589,3 +647,38 @@ export function svidToHolder(svid: JwtSvid | X509Svid, holderKey?: string | Uint
 export function holderToSpiffeId(holder: SpiffeHolder): string {
   return parseSpiffeId(holder.spiffeId).id;
 }
+
+export {
+  createRevocationSource,
+  type JwtRevocationCheck,
+  type JwtRevocationSubject,
+  type RevocationList,
+  type RevocationSource,
+  type RevocationSourceOptions,
+  type X509RevocationCheck,
+  type X509RevocationSubject,
+} from './revocation';
+/**
+ * The SPIFFE ID the K1 `spiffe_bound` caveat compares (`K1Input.spiffe_id`): the workload identity a VERIFIED SVID carries, and
+ * only when that SVID is bound to `leafHolder`, the key that signed the PCActn (an SVID that belongs to some other key proves
+ * nothing about who presented the action). Same binding rules as {@link svidToHolder}; throws when the SVID is unverified or not
+ * bound to the holder. A holder that is not the SVID's own key needs `opts.proof`.
+ */
+export function spiffeIdForHolder(svid: JwtSvid | X509Svid, leafHolder: string, opts: SvidToHolderOptions = {}): string {
+  const h = svidToHolder(svid, leafHolder, opts);
+  if (h.holder !== leafHolder) throw new SpiffeError('holder_binding_failed', 'the SVID is not bound to the PCActn leaf holder');
+  return h.spiffeId;
+}
+
+/**
+ * A K1 discharge-issuer pin for a workload ("workload W is the attested runtime"): its own Ed25519 SVID key and SPIFFE ID, class
+ * `workload`. Only an X.509-SVID with an Ed25519 key qualifies (a JWT-SVID has no key of its own; an EC key cannot sign the
+ * Ed25519 artifacts). The caveat names the label and, with `issuer_spiffe`, the ID the pin must carry.
+ */
+export function workloadDischargePin(label: string, svid: X509Svid): { label: string; class: 'workload'; pk: string; spiffe_id: string } {
+  const h = svidToHolder(svid);
+  return { label, class: 'workload', pk: h.holder, spiffe_id: h.spiffeId };
+}
+
+export { createTrustBundleSource, type TrustBundle, type TrustBundleSource, type TrustBundleSourceOptions } from './bundle';
+export * from './admission';

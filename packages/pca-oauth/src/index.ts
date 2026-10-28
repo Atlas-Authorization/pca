@@ -22,8 +22,8 @@
  * Express/Fastify/Hono/Next/Fetch or any router. The PRM document is PUBLIC, non-secret configuration.
  */
 
-import { buildDiscoveryDocument, WELL_KNOWN_PCA_PATH } from '@atlasauth/pca';
-import type { PcaDiscoveryDocument } from '@atlasauth/pca';
+import { buildDiscoveryDocument, encodePcaNeed, WELL_KNOWN_PCA_PATH } from '@atlasauth/pca';
+import type { PcaDiscoveryDocument, PcaNeed } from '@atlasauth/pca';
 
 /**
  * RFC 9728 §3: the Protected Resource Metadata is published at the well-known URI formed by inserting
@@ -74,9 +74,51 @@ export interface ProtectedResourceMetadata extends PcaResourceExtension {
   resource_name?: string;
   /** RFC 9728 §3.1 `resource_signing_alg_values_supported` (OPTIONAL). */
   resource_signing_alg_values_supported?: string[];
+  /** RFC 9728 §3.1 `authorization_details_types_supported` (OPTIONAL, RFC 9396 types this RS understands). */
+  authorization_details_types_supported?: string[];
+}
+
+/**
+ * RFC 9728 §1.2: a resource identifier is an `https` URL with no fragment. Returns the reason it is not
+ * one, or `undefined` when it is valid.
+ */
+export function resourceIdentifierProblem(resource: unknown): string | undefined {
+  if (typeof resource !== 'string' || resource.length === 0) return 'resource identifier must be a non-empty string';
+  let u: URL;
+  try {
+    u = new URL(resource);
+  } catch {
+    return 'resource identifier is not an absolute URL';
+  }
+  if (u.protocol !== 'https:') return 'resource identifier must use the https scheme';
+  if (resource.includes('#')) return 'resource identifier must not contain a fragment';
+  return undefined;
+}
+
+/**
+ * RFC 9728 §3.1: the well-known path for a resource identifier. The suffix is inserted between the host
+ * and the path/query: `https://h/resource1` -> `/.well-known/oauth-protected-resource/resource1`; a bare
+ * host (or host + `/`) -> `/.well-known/oauth-protected-resource`. Throws on an invalid identifier.
+ */
+export function prmPathForResource(resource: string): string {
+  const problem = resourceIdentifierProblem(resource);
+  if (problem !== undefined) throw new Error(`prmPathForResource: ${problem}`);
+  const u = new URL(resource);
+  const path = u.pathname === '/' ? '' : u.pathname;
+  return `${WELL_KNOWN_OAUTH_PRM}${path}${u.search}`;
+}
+
+/** RFC 9728 §3.1: the absolute metadata URL for a resource identifier (use it as the `resource_metadata` value). */
+export function prmUrlForResource(resource: string): string {
+  return `${new URL(resource).origin}${prmPathForResource(resource)}`;
 }
 
 export interface ProtectedResourceMetadataOptions {
+  /**
+   * Validate `resource` as an RFC 9728 resource identifier (https, no fragment) and throw otherwise.
+   * Default true. Pass `false` only for a local test resource.
+   */
+  strict?: boolean;
   /**
    * REQUIRED: the resource identifier — the SAME string as this RS's PCActn audience. We reuse it as the
    * `resource` metadata field and as the discovery document's `audience`, so there is one source of truth.
@@ -94,6 +136,8 @@ export interface ProtectedResourceMetadataOptions {
   resourceName?: string;
   /** RFC 9728 `resource_signing_alg_values_supported`. */
   resourceSigningAlgValuesSupported?: string[];
+  /** RFC 9728 `authorization_details_types_supported`. Advertise `pca_grant` so an authorization server can issue it. */
+  authorizationDetailsTypesSupported?: string[];
   /** Absolute URL of this RS's `.well-known/pca-configuration` (defaults to `<resource>/.well-known/pca-configuration`). */
   pcaConfigurationEndpoint?: string;
 
@@ -127,6 +171,10 @@ export function protectedResourceMetadata(opts: ProtectedResourceMetadataOptions
   if (typeof opts.resource !== 'string' || opts.resource.length === 0) {
     throw new Error('protectedResourceMetadata: `resource` (the RS id = PCActn audience) is required');
   }
+  if (opts.strict !== false) {
+    const problem = resourceIdentifierProblem(opts.resource);
+    if (problem !== undefined) throw new Error(`protectedResourceMetadata: ${problem}`);
+  }
   // One source of truth: the discovery doc's `audience` IS the OAuth `resource`.
   const discovery = buildDiscoveryDocument({
     audience: opts.resource,
@@ -138,8 +186,9 @@ export function protectedResourceMetadata(opts: ProtectedResourceMetadataOptions
     trustedRoots: opts.trustedRoots,
     metadata: opts.metadata,
   });
+  // The sibling discovery document hangs off the resource path; a query component is not part of it.
   const pcaConfigurationEndpoint =
-    opts.pcaConfigurationEndpoint ?? opts.resource.replace(/\/+$/, '') + WELL_KNOWN_PCA_PATH;
+    opts.pcaConfigurationEndpoint ?? opts.resource.split('?')[0]!.replace(/\/+$/, '') + WELL_KNOWN_PCA_PATH;
 
   const doc: ProtectedResourceMetadata = {
     resource: opts.resource,
@@ -157,12 +206,32 @@ export function protectedResourceMetadata(opts: ProtectedResourceMetadataOptions
     ...(opts.resourceSigningAlgValuesSupported
       ? { resource_signing_alg_values_supported: [...opts.resourceSigningAlgValuesSupported] }
       : {}),
+    ...(opts.authorizationDetailsTypesSupported
+      ? { authorization_details_types_supported: [...opts.authorizationDetailsTypesSupported] }
+      : {}),
   };
   return doc;
 }
 
 /** Validate + narrow an untrusted value into a {@link ProtectedResourceMetadata}. Throws on anything malformed. */
-export function parseProtectedResourceMetadata(value: unknown): ProtectedResourceMetadata {
+export interface ParseProtectedResourceMetadataOptions {
+  /**
+   * RFC 9728 §3.3: the resource identifier the document was fetched for (or the URL the client called).
+   * `resource` MUST be identical to it and to the embedded `pca.audience`; otherwise the document MUST NOT be
+   * used (throws). Required unless `strict: false`.
+   */
+  expectedResource?: string;
+  /**
+   * Default true: require `expectedResource`, an https/no-fragment `resource`, and `bearer_methods_supported`
+   * values from RFC 9728 §2. `false` only checks the document's shape (and `expectedResource` when given).
+   */
+  strict?: boolean;
+}
+
+export function parseProtectedResourceMetadata(
+  value: unknown,
+  parseOpts: ParseProtectedResourceMetadataOptions = {},
+): ProtectedResourceMetadata {
   if (value === null || typeof value !== 'object') throw new Error('parseProtectedResourceMetadata: not an object');
   const v = value as Record<string, unknown>;
   if (typeof v.resource !== 'string' || v.resource.length === 0) {
@@ -186,6 +255,24 @@ export function parseProtectedResourceMetadata(value: unknown): ProtectedResourc
   const pca = v.pca as PcaDiscoveryDocument;
   if (typeof pca.audience !== 'string' || pca.audience.length === 0) {
     throw new Error('parseProtectedResourceMetadata: embedded pca.audience is required');
+  }
+  if (parseOpts.expectedResource !== undefined) {
+    if (v.resource !== parseOpts.expectedResource) {
+      throw new Error('parseProtectedResourceMetadata: `resource` does not match the expected resource identifier');
+    }
+    if (pca.audience !== parseOpts.expectedResource) {
+      throw new Error('parseProtectedResourceMetadata: embedded pca.audience does not match the expected resource identifier');
+    }
+  }
+  if (parseOpts.strict !== false) {
+    if (parseOpts.expectedResource === undefined) {
+      throw new Error('parseProtectedResourceMetadata: expectedResource is required (RFC 9728 section 3.3); pass strict: false to skip');
+    }
+    const problem = resourceIdentifierProblem(v.resource);
+    if (problem !== undefined) throw new Error(`parseProtectedResourceMetadata: ${problem}`);
+    if (!(v.bearer_methods_supported as string[]).every((m) => m === 'header' || m === 'body' || m === 'query')) {
+      throw new Error('parseProtectedResourceMetadata: bearer_methods_supported has a value outside header/body/query');
+    }
   }
   const doc: ProtectedResourceMetadata = {
     resource: v.resource,
@@ -215,7 +302,8 @@ export function parseProtectedResourceMetadata(value: unknown): ProtectedResourc
 
 /** A value destined for a quoted `auth-param` (RFC 7235). We reject control / quote chars to prevent header injection. */
 function quotedParam(value: string): string {
-  if (/["\r\n]/.test(value)) {
+  // eslint-disable-next-line no-control-regex
+  if (/["\\\x00-\x1f\x7f]/.test(value)) {
     throw new Error('pca-oauth: WWW-Authenticate parameter value may not contain a quote or newline');
   }
   return value;
@@ -228,6 +316,8 @@ export interface WwwAuthenticateOptions {
   errorDescription?: string;
   /** RFC 6750 §3 `scope` the client would need. */
   scope?: string;
+  /** Additive `pca_need` auth-param (typed requirement for an argument-aware step-up). Stock clients ignore it. */
+  pcaNeed?: PcaNeed;
   /**
    * Include a PCA challenge alongside the Bearer one so a PCA-aware client gets the proof hint too.
    * Default `true`. Set `false` for a pure MCP/OAuth challenge.
@@ -266,10 +356,15 @@ export function wwwAuthenticate(prmUrl: string, opts: WwwAuthenticateOptions = {
   if (opts.error) bearerParams.push(`error="${quotedParam(opts.error)}"`);
   if (opts.errorDescription) bearerParams.push(`error_description="${quotedParam(opts.errorDescription)}"`);
   if (opts.scope) bearerParams.push(`scope="${quotedParam(opts.scope)}"`);
+  if (opts.pcaNeed) bearerParams.push(`pca_need="${quotedParam(encodePcaNeed(opts.pcaNeed))}"`);
   const challenges: string[] = [`Bearer ${bearerParams.join(', ')}`];
 
   const includePca = opts.includePca ?? true;
   if (opts.pcaChallenge) {
+    // eslint-disable-next-line no-control-regex
+    if (/[\x00-\x08\x0a-\x1f\x7f]/.test(opts.pcaChallenge)) {
+      throw new Error('pca-oauth: pcaChallenge may not contain control characters or newlines');
+    }
     challenges.push(opts.pcaChallenge);
   } else if (includePca) {
     const realm = opts.realm ?? 'pca';
@@ -326,6 +421,27 @@ export function checkResourceIndicator(
 }
 
 /**
+ * Token-audience binding (RFC 8707 / RFC 7519 §4.1.3, required by the MCP authorization spec): a token
+ * presented to this resource server is acceptable only if its `aud` is, or contains, exactly this server's
+ * resource identifier. A missing, empty, non-string or different `aud` is refused (fail closed); matching is
+ * exact string equality (no prefix, case-folding or trailing-slash tolerance). `aud` is the claim of an
+ * already signature-verified token; this function does not verify anything cryptographic.
+ */
+export function checkTokenAudience(aud: unknown, expectedResource: string): ResourceIndicatorResult {
+  if (typeof expectedResource !== 'string' || expectedResource.length === 0) {
+    throw new Error('checkTokenAudience: expectedResource is required');
+  }
+  if (aud === undefined || aud === null) return { ok: false, reason: 'token has no audience' };
+  const values = Array.isArray(aud) ? aud : [aud];
+  if (values.length === 0) return { ok: false, reason: 'token has an empty audience' };
+  if (values.some((a) => a === expectedResource)) return { ok: true, matched: expectedResource };
+  return {
+    ok: false,
+    reason: `token audience ${JSON.stringify(aud)} does not include resource ${JSON.stringify(expectedResource)}`,
+  };
+}
+
+/**
  * Framework-agnostic glue — the body + path to serve the RFC 9728 PRM document. Mount it in any runtime:
  *
  *   const { path, body } = oauthDiscoveryHandler({ resource: AUDIENCE });
@@ -333,8 +449,12 @@ export function checkResourceIndicator(
  */
 export function oauthDiscoveryHandler(
   opts: ProtectedResourceMetadataOptions,
-): { path: string; body: ProtectedResourceMetadata } {
-  return { path: WELL_KNOWN_OAUTH_PRM, body: protectedResourceMetadata(opts) };
+): { path: string; body: ProtectedResourceMetadata; rfcPath: string } {
+  const body = protectedResourceMetadata(opts);
+  // `path` is the RFC 9728 §3.1 path (the suffix goes between host and path). Only a non-strict, invalid identifier
+  // falls back to the bare well-known path. `rfcPath` is kept as an alias of `path`.
+  const path = resourceIdentifierProblem(opts.resource) === undefined ? prmPathForResource(opts.resource) : WELL_KNOWN_OAUTH_PRM;
+  return { path, body, rfcPath: path };
 }
 
 export interface McpUnauthorized {
@@ -380,3 +500,5 @@ export function upgradeUnauthorizedChallenge<T extends { wwwAuthenticate?: strin
   });
   return { ...result, wwwAuthenticate: header };
 }
+
+export * from './pca-grant';
