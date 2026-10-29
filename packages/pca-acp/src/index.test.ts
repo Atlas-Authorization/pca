@@ -13,7 +13,7 @@ import {
 import {
   AcpAuthorityError,
   ACP_DELEGATED_TOKEN_TYPE,
-  acpX402Verifier,
+  acpX402Verifier as acpX402VerifierStrictDefault,
   checkPaymentAuthority,
   extractPaymentAuthority,
   humanPresentCaveat,
@@ -22,11 +22,16 @@ import {
   type MintOptions,
   mintDelegatedPaymentToken,
   spendCapCaveat,
-  verifyDelegatedPaymentToken,
+  verifyDelegatedPaymentToken as verifyDelegatedPaymentTokenStrictDefault,
   x402Challenge,
   x402Settle,
   type X402PaymentPayload,
 } from './index';
+
+// 0.5: settlement is strict by default. These suites exercise the individual bindings, so they opt out; strict-by-default
+// itself is covered in strict-default.test.ts.
+const verifyDelegatedPaymentToken = (t: string, o: Parameters<typeof verifyDelegatedPaymentTokenStrictDefault>[1]) => verifyDelegatedPaymentTokenStrictDefault(t, { strict: false, ...o });
+const acpX402Verifier = (o: Parameters<typeof acpX402VerifierStrictDefault>[0]) => acpX402VerifierStrictDefault({ strict: false, ...o });
 
 // ---------------------------------------------------------------------------------------------------
 // Fixtures: real PCActns built via the core, carrying real payment caveats on their capability chain.
@@ -281,6 +286,7 @@ describe('verifyDelegatedPaymentToken', () => {
       pcActn,
       grant,
       audience: AUD,
+      insecureSkipPlanRootCheck: true,
     });
     expect(matched.ok).toBe(true);
     expect(matched.pcaResult?.allow).toBe(true);
@@ -363,7 +369,7 @@ describe('x402Settle (end-to-end with acpX402Verifier)', () => {
 
     const payload: X402PaymentPayload = { token, merchant: 'acme', amount: 100 };
     const bound = await x402Settle(payload, {
-      verify: acpX402Verifier({ verifyKey: SECRET, alg: ALG, now: NOW, pcActn, grant, audience: AUD }),
+      verify: acpX402Verifier({ verifyKey: SECRET, alg: ALG, now: NOW, pcActn, grant, audience: AUD, insecureSkipPlanRootCheck: true }),
     });
     expect(bound.settled).toBe(true);
   });

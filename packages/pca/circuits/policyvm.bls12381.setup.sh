@@ -26,8 +26,9 @@
 #
 # Requirements: circom 2.x with BLS12-381 support (`circom --prime bls12381`; use >= 2.1.x) on PATH
 # (or CIRCOM=/path/to/circom); snarkjs (optional dep of @atlasauth/pca).
-# Usage:  bash circuits/policyvm.bls12381.setup.sh
+# Usage:  PCA_DEV_SETUP=1 bash circuits/policyvm.bls12381.setup.sh   (DEV-ONLY single-party setup; see dev-only-guard.sh)
 set -euo pipefail
+source "$(dirname "$0")/dev-only-guard.sh"
 
 cd "$(dirname "$0")/.."                       # packages/pca
 CIRCOM="${CIRCOM:-circom}"

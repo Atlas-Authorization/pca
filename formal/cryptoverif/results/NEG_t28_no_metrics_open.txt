@@ -1,0 +1,2 @@
+RESULT Could not prove forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm))).
+rc=0 secs=1

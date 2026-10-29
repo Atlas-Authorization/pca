@@ -17,7 +17,7 @@ describe('liveness and quorum', () => {
     expect(quorumStatus(set(2, 2), NOW)).toEqual({ total: 3, live: 2, quorum: 2, available: true, degraded: false });
     expect(quorumStatus(set(1, 2), NOW)).toEqual({ total: 3, live: 1, quorum: 2, available: false, degraded: true });
     expect(quorumStatus(set(0, 2), NOW)).toEqual({ total: 3, live: 0, quorum: 2, available: false, degraded: false });
-    expect(quorumStatus(set(0, 0), NOW)).toEqual({ total: 3, live: 0, quorum: 0, available: true, degraded: false });
+    expect(quorumStatus(set(0, 0), NOW)).toEqual({ total: 3, live: 0, quorum: 0, available: false, degraded: false });
   });
   it('selectSigners needs at least quorum live guardians', () => {
     expect(selectSigners({ guardians: [G('a', NOW), G('b', NOW)], quorum: 2 }, NOW)).toEqual(['a', 'b']);

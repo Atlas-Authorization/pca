@@ -1,14 +1,16 @@
 /** Round 3 for server/verify.ts: the exact check statuses an RS sees when a context element is absent, and the denied fallback. */
 import { describe, expect, it } from 'vitest';
 import { AUD, NOW, setup } from './fixture.test-util';
-import { verifyPCActn } from './verify';
+import { verifyPCActn as verifyPCActn05 } from './verify';
 import { issueLivenessBeacon } from '../beacons';
 import { generateKeyPair } from '../keys';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 describe('verifyPCActn: absent context is reported as not-enforced, not pass', () => {
   it('no params / plan / revocation epoch / beacon / budget', async () => {
     const s = setup();
-    const v = await verifyPCActn(s.mk(s.plan[0]!), { grant: s.grant, now: NOW, audience: AUD, context: {} });
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, grant: s.grant, now: NOW, audience: AUD, context: {} });
     expect(v.checks.params_digest).toBe('not-enforced');
     expect(v.checks.plan_root_authorized).toBe('not-enforced');
     expect(v.checks.freshness).toBe('not-enforced');
@@ -17,7 +19,7 @@ describe('verifyPCActn: absent context is reported as not-enforced, not pass', (
   });
   it('supplied elements flip the statuses to pass', async () => {
     const s = setup();
-    const v = await verifyPCActn(s.mk(s.plan[0]!), {
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true,
       grant: s.grant, now: NOW, audience: AUD,
       context: { plan: s.plan, params: {}, budget: { B: 100, tau: NOW, asOf: NOW } },
     });
@@ -28,14 +30,14 @@ describe('verifyPCActn: absent context is reported as not-enforced, not pass', (
     const s = setup();
     const issuer = generateKeyPair();
     const bc = { beacon: { not: 'a beacon' } as never, issuers: [issuer.publicKey as never], instance: 'i' };
-    const v = await verifyPCActn(s.mk(s.plan[0]!), { grant: s.grant, now: NOW, audience: AUD, context: { beacon: bc as never } });
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, grant: s.grant, now: NOW, audience: AUD, context: { beacon: bc as never } });
     expect(v.checks.beacon).toBe('fail');
     expect(v.reasons.some((r) => r.startsWith('beacon: '))).toBe(true);
     expect(v.allow).toBe(false);
   });
   it('a denial always carries at least one reason', async () => {
     const s = setup();
-    const v = await verifyPCActn(s.mk(s.plan[0]!), { grant: s.grant, now: NOW, audience: 'wrong-aud', context: {} });
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, grant: s.grant, now: NOW, audience: 'wrong-aud', context: {} });
     expect(v.allow).toBe(false);
     expect(v.reasons.length).toBeGreaterThan(0);
     expect(v.reasons.every((r) => r !== '')).toBe(true);

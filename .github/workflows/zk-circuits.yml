@@ -1,0 +1,169 @@
+name: ZK circuits
+
+# The three Groth16 circuits (compliance, Policy-VM v1, risk-bound Policy-VM v2), checked with the real compiler:
+#   - each compiles twice to a byte-identical constraint system (r1cs); the hashes are published as an artifact and are the
+#     provenance a ceremony transcript must name
+#   - witness perturbation on the compiled witness calculators: every private input either makes the witness fail or changes
+#     a public signal; control cases; the v2 risk commitment equals the TypeScript digest. Sharded: the circuits are compiled once
+#     (job `circuits`), the witness calculators are shared as an artifact, and a matrix (circuit x shard) runs the perturbations,
+#     each job a slice of the private inputs (zk-shard.test.ts proves the slices partition every input exactly once)
+#   - the committed circuit versions equal the recomputed ones
+#   - arkworks (independent code) agrees with the package verifier on valid and malformed BN254 and BLS12-381 proofs
+# and, in its own job, real Groth16 setup / prove / verify of the risk-bound circuit with a dev-only throwaway key.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  pull_request:
+    paths:
+      - 'packages/pca/circuits/**'
+      - 'packages/pca/src/zk*.ts'
+      - 'tools/pca-zk-arkworks/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CIRCOM_URL: https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
+  CIRCOM_SHA256: f3d8d1fdbc123779b80e210c909ee941d7a1e130c70365524646b48b8b0fe9d5
+  PCA_REQUIRE_CIRCUITS: '1'
+
+jobs:
+  circuits:
+    name: circuits compile deterministically, versions pinned, arkworks agrees
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Install circom (pinned release, sha256-checked)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/circom" "$CIRCOM_URL"
+          echo "$CIRCOM_SHA256  $RUNNER_TEMP/circom" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/circom"
+          echo "CIRCOM=$RUNNER_TEMP/circom" >> "$GITHUB_ENV"
+      - name: Compile all three circuits twice; the constraint systems must be byte-identical
+        working-directory: packages/pca
+        run: |
+          mkdir -p circuits/build circuits/build2 "$RUNNER_TEMP/prov"
+          for c in policyvm:pca-policyvm-v1 policyvm_bound:pca-policyvm-v2 compliance:pca-compliance-v1; do
+            f=${c%%:*}; id=${c##*:}
+            "$CIRCOM" circuits/$f.circom --r1cs --wasm --sym -o circuits/build -l node_modules/circomlib/circuits
+            "$CIRCOM" circuits/$f.circom --r1cs -o circuits/build2 -l node_modules/circomlib/circuits
+            node circuits/r1cs-provenance.mjs "$id" circuits/build/$f.r1cs circuits/build2/$f.r1cs "$RUNNER_TEMP/prov/$id.json"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: circuit-provenance
+          path: ${{ runner.temp }}/prov
+      - name: Build the arkworks verifier (pinned lockfile)
+        run: bash tools/pca-zk-arkworks/run.sh build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: circuit-witness-calculators
+          path: |
+            packages/pca/circuits/build/*_js/**
+          retention-days: 1
+      - name: Circuit tests (versions, risk binding, shard partition, constraints, arkworks cross-check)
+        working-directory: packages/pca
+        env:
+          PCA_ZK_ARKWORKS_BIN: ${{ github.workspace }}/tools/pca-zk-arkworks/target/release/pca-zk-arkworks
+        run: |
+          pnpm -r --filter=@atlasauth/pca... run build
+          npx vitest run src/zk-shard.test.ts src/zk-circuit-version.test.ts src/zk-bound.test.ts src/zk-arkworks-xcheck.test.ts src/zk-circuit-constraints.test.ts
+
+  perturbation:
+    name: witness perturbation ${{ matrix.circuit }} ${{ matrix.shard }}
+    needs: circuits
+    runs-on: ubuntu-latest
+    # one witness calculation is seconds to a minute; a shard is at most 7 inputs x 2 calculations (+ the controls in policyvm_bound 1/6)
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { circuit: compliance, shard: '1/1' }
+          - { circuit: policyvm, shard: '1/6' }
+          - { circuit: policyvm, shard: '2/6' }
+          - { circuit: policyvm, shard: '3/6' }
+          - { circuit: policyvm, shard: '4/6' }
+          - { circuit: policyvm, shard: '5/6' }
+          - { circuit: policyvm, shard: '6/6' }
+          - { circuit: policyvm_bound, shard: '1/6' }
+          - { circuit: policyvm_bound, shard: '2/6' }
+          - { circuit: policyvm_bound, shard: '3/6' }
+          - { circuit: policyvm_bound, shard: '4/6' }
+          - { circuit: policyvm_bound, shard: '5/6' }
+          - { circuit: policyvm_bound, shard: '6/6' }
+    env:
+      PCA_ZK_CIRCUIT: ${{ matrix.circuit }}
+      PCA_ZK_SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - uses: actions/download-artifact@v4
+        with:
+          name: circuit-witness-calculators
+          path: packages/pca/circuits/build
+      - name: Install circom (the test global setup builds the small compliance fixtures)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/circom" "$CIRCOM_URL"
+          echo "$CIRCOM_SHA256  $RUNNER_TEMP/circom" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/circom"
+          echo "CIRCOM=$RUNNER_TEMP/circom" >> "$GITHUB_ENV"
+      - name: Witness perturbation and control cases for this shard
+        working-directory: packages/pca
+        run: |
+          pnpm -r --filter=@atlasauth/pca... run build
+          npx vitest run src/zk-circuits-ci.test.ts
+
+  all-shards:
+    name: every perturbation shard passed
+    if: always()
+    needs: [circuits, perturbation]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          [ "${{ needs.circuits.result }}" = success ] && [ "${{ needs.perturbation.result }}" = success ] || { echo "a circuit job or a shard failed or was skipped" >&2; exit 1; }
+
+  bound-e2e:
+    name: risk-bound circuit, real Groth16 setup, prove and verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Install circom (pinned release, sha256-checked)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/circom" "$CIRCOM_URL"
+          echo "$CIRCOM_SHA256  $RUNNER_TEMP/circom" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/circom"
+          echo "CIRCOM=$RUNNER_TEMP/circom" >> "$GITHUB_ENV"
+      - name: Dev-only setup of the risk-bound circuit (2^18 powers of tau)
+        working-directory: packages/pca
+        run: PCA_DEV_SETUP=1 bash circuits/policyvm_bound.setup.sh
+      - name: Prove and verify
+        working-directory: packages/pca
+        run: |
+          pnpm -r --filter=@atlasauth/pca... run build
+          npx vitest run src/zk-bound-e2e.test.ts

@@ -1,0 +1,280 @@
+{
+  "about": "Maturity tier of every module of @atlasauth/pca, by feature. The package's own manifest carries the feature tiers (pca.features); this file maps the source modules to them so that a CI check (maturity-check.mjs) can verify that every module is classified and that the PCA Core entry point (src/core.ts) gains no new runtime import of an experimental module. core_experimental_baseline lists the experimental modules Core reaches today: the list is empty since 0.5 (B8): the experimental modules are extension subpaths (@atlasauth/pca/ext/*) and Core loads none of them.",
+  "features": {
+    "core": {
+      "tier": "stable",
+      "title": "Proof format and core verification (@atlasauth/pca/core)",
+      "modules": [
+        "core",
+        "index",
+        "wire",
+        "pcactn",
+        "pcactn-cheap-claims",
+        "capability",
+        "merkle",
+        "hash",
+        "keys",
+        "strict-json",
+        "strict-jws",
+        "verified-decision",
+        "verified-core-mode",
+        "adapters"
+      ]
+    },
+    "pq-signatures": {
+      "tier": "stable",
+      "title": "Post-quantum and hybrid signature suites: ML-DSA and SLH-DSA (FIPS 204, FIPS 205) and their Ed25519 hybrids (the FN-DSA and LESS backends are separate, hardened packages)",
+      "modules": [
+        "pq"
+      ]
+    },
+    "server": {
+      "tier": "production",
+      "title": "Full verifier and requirePCA: Policy VM, predicates, caveats, risk, budgets, replay, revocation, approvals, discovery",
+      "modules": [
+        "server/require-pca",
+        "server/verify",
+        "assurance",
+        "server/authorize",
+        "server/authorize-execution",
+        "server/operations",
+        "server/plan-lifecycle",
+        "catalog-risk",
+        "policy-vm",
+        "fresh-at",
+        "caveat-lang",
+        "chain-compact",
+        "predicates",
+        "agent-native",
+        "envelope",
+        "envelope-rules",
+        "action-pin",
+        "risk",
+        "reversibility",
+        "revocation",
+        "replay",
+        "approvals",
+        "approval-channels",
+        "taint",
+        "regex-budget",
+        "regex-cache",
+        "safe-regex",
+        "config-snapshot",
+        "discovery",
+        "receipt",
+        "policy-templates",
+        "prohibitions",
+        "facade",
+        "pcactn-full",
+        "intent-session-caveat",
+        "server/protect",
+        "refusal-help",
+        "undo",
+        "server/undo"
+      ]
+    },
+    "durable-state": {
+      "tier": "production",
+      "title": "Durable replay and budget state (@atlasauth/pca/durable-state)",
+      "modules": [
+        "durable-state"
+      ]
+    },
+    "threshold-multisig": {
+      "tier": "production",
+      "title": "Default threshold step-up: independent Ed25519 / ML-DSA / hybrid shares bound to the signer set",
+      "modules": [
+        "threshold"
+      ]
+    },
+    "frost": {
+      "tier": "hardened",
+      "title": "FROST threshold signing (RFC 9591), the PedPoP DKG, networked FROST and FROST with a post-quantum co-signature (hardened, formally verified (model), awaiting independent audit)",
+      "modules": [
+        "frost",
+        "ct-scalar",
+        "frost-dkg",
+        "frost-dkg-channel",
+        "frost-dkg-tls",
+        "frost-net",
+        "frost-nonce-store",
+        "frost-net-runner",
+        "frost-pq",
+        "pq-threshold",
+        "ext/frost"
+      ]
+    },
+    "attestation-software": {
+      "tier": "production",
+      "pending_ci": true,
+      "title": "Software attestation path: attestor-signed documents, signed allowlists and their transparency anchoring, post-quantum software roots, the agent passport and the strict X.509 reader",
+      "modules": [
+        "attestation",
+        "attest-allowlist",
+        "attest-allowlist-anchor",
+        "attest-pq-software",
+        "attest-proved",
+        "passport",
+        "x509-strict",
+        "x509-validity"
+      ]
+    },
+    "attestation": {
+      "tier": "hardened",
+      "title": "Hardware attestation verifiers: AMD SEV-SNP, Intel TDX (DCAP), Azure Attestation, Google Confidential Space, NVIDIA SPDM / RIM / OCSP, and PUF (hardened, awaiting independent audit and hardware evaluation on real hosts)",
+      "modules": [
+        "attest-amd-snp",
+        "attest-azure-maa",
+        "attest-gcp-confidential-space",
+        "attest-intel-collateral",
+        "attest-intel-dcap",
+        "attest-intel-tdx",
+        "attest-maa-keys",
+        "attest-maa-pins",
+        "attest-maa-pins.data",
+        "attest-nvidia-ocsp",
+        "attest-nvidia-rim",
+        "attest-nvidia-spdm",
+        "attest-puf",
+        "hardware-sevsnp",
+        "ext/attestation"
+      ]
+    },
+    "zk-compliance": {
+      "tier": "hardened",
+      "title": "Zero-knowledge compliance: the attested-VM mode (trusted signer, not a proof; fail-closed table, replay, freshness and rotation tests done) and the Groth16 / Policy-VM SNARK modes (awaiting the setup ceremony and an independent review, O-2)",
+      "modules": [
+        "zk",
+        "zk-ceremony",
+        "ext/zk"
+      ]
+    },
+    "optimistic": {
+      "tier": "production",
+      "title": "Optimistic execution: claims, challenge window, fraud proofs, bond settlement and its durable store (internal accounting only)",
+      "modules": [
+        "optimistic",
+        "bond-settlement",
+        "bond-store",
+        "ext/optimistic"
+      ],
+      "pending_ci": true
+    },
+    "intent": {
+      "tier": "production",
+      "title": "Intent layer, binding and enforcement: signed intent statements and the envelope intent binding, action schemas, session roots and delta grants, accumulators and monitors, world facts and offer sets, parameter provenance and label receipts, classifier dimensions, committed maps, revocation epochs and intent questions",
+      "modules": [
+        "intent",
+        "intent-acc",
+        "intent-artifacts",
+        "intent-binding",
+        "intent-classifier",
+        "intent-env",
+        "intent-history",
+        "budget-ledger",
+        "intent-layers",
+        "intent-map-commit",
+        "intent-required",
+        "intent-revocation",
+        "intent-session",
+        "intent-strict",
+        "intent-v2",
+        "decision",
+        "escalation",
+        "action-schema",
+        "oracle-facts",
+        "offer-set",
+        "param-provenance",
+        "label-receipts",
+        "ext/intent",
+        "action-scopes",
+        "approval-render",
+        "detector-receipt",
+        "missing-context",
+        "obligations",
+        "pca-grant-details",
+        "pca-need",
+        "policy-classes",
+        "provenance-gate",
+        "read-vault",
+        "readside",
+        "workflow"
+      ],
+      "pending_ci": true
+    },
+    "intent-frontier": {
+      "tier": "production",
+      "title": "Intent layer frontier, tighten-or-escalate only: semantic judge threshold, objective risk functional and its grant binding, proof of progress, and the signal typing that lets none of them grant anything",
+      "modules": [
+        "semantic-threshold",
+        "objective-binding",
+        "objective-risk",
+        "progress",
+        "frontier-signals"
+      ],
+      "pending_ci": true
+    },
+    "ledger": {
+      "tier": "hardened",
+      "title": "Transparency ledger with durable store and checkpoint verification, liveness beacons and the global kill switch (hardened, formally verified (model) for the Merkle inclusion and consistency proofs and the witness quorum, awaiting independent witnesses and independent audit)",
+      "modules": [
+        "ledger",
+        "beacons",
+        "ledger-store",
+        "ext/ledger"
+      ]
+    },
+    "kem": {
+      "tier": "hardened",
+      "title": "Hybrid key encapsulation: X25519 with ML-KEM-768 or ML-KEM-1024 (custom HKDF combiner) and X-Wing, with the FIPS 203 key checks (hardened, formally verified (model), awaiting independent audit)",
+      "modules": [
+        "kem",
+        "ext/kem"
+      ]
+    },
+    "product-layer": {
+      "tier": "production",
+      "pending_ci": true,
+      "title": "Product-layer modules: agent mesh, multi-agent sessions, behavioural immune system, reputation, safety certificates, natural-language policy review, DLP, guardian HA, console, budget forecast, policy simulation and debugging, contracts, connector catalog (advisory features are production because what they enforce is tighten-only or advisory by construction; import path @atlasauth/pca/ext/research)",
+      "modules": [
+        "forbid-certificate",
+        "policy-link",
+        "mesh",
+        "durable-mesh-witness",
+        "session",
+        "immune",
+        "reputation",
+        "safety-certificate",
+        "nl",
+        "dlp",
+        "ha",
+        "console",
+        "budget-forecast",
+        "policy-sim",
+        "policy-debug",
+        "contracts",
+        "contract-enforcer",
+        "reputation-evidence",
+        "catalog",
+        "catalog-builtin.generated",
+        "ext/research"
+      ]
+    },
+    "entropy": {
+      "tier": "hardened",
+      "title": "QRNG entropy: SP 800-90B health tests, fail-closed sources, requireQuantum (hardened, awaiting hardware evaluation on real quantum entropy devices)",
+      "modules": [
+        "entropy"
+      ]
+    }
+  },
+  "test_only": [
+    "pq-test-support",
+    "bond-ledger-testing",
+    "ext/optimistic-testing",
+    "intent-history-testing",
+    "ext/intent-testing",
+    "test-support/*"
+  ],
+  "core_experimental_baseline": []
+}

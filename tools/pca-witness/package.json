@@ -1,0 +1,11 @@
+{
+  "name": "pca-witness",
+  "private": true,
+  "version": "0.5.0",
+  "description": "Reference transparency-log witness for PCA ledgers: cosigns a signed tree head only when it is genuine and consistent with the last head it cosigned.",
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

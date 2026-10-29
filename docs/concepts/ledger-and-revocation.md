@@ -74,19 +74,61 @@ const hook = createRevocationChecker({
 
 **Freshness caveat.** A proof is against a specific root. Verifiers must take the current root from a trusted, fresh source (for example a guardian-signed or witnessed epoch root); a stale root cannot show later revocations.
 
+### How stale may revocation state be?
+
+The guardian signs each revocation epoch with `issued_at` and `not_after`. It re-signs at least every 60 seconds (`REVOCATION_EPOCH_REFRESH_MS`), and a signature is valid for 5 minutes (`REVOCATION_EPOCH_VALIDITY_MS`). Without further settings, the signer's `not_after` is the only limit: a verifier accepts a 4-minute-old epoch, so a revocation may take up to 5 minutes to reach it.
+
+A verifier can set its own, stricter limit, based on how much harm a late revocation can do. Nothing changes unless you set one of these options:
+
+| Option | Default when the policy is on | Effect |
+|---|---|---|
+| `maxRevocationAgeMs` | 5 min | The maximum age (`now - issued_at`) for any action. An older epoch is refused even before its `not_after`. |
+| `staleness.costly` | `maxRevocationAgeMs` | The maximum age for `costly` and `rate_limited` actions. |
+| `staleness.irreversible` | 2 min (`REVOCATION_IRREVERSIBLE_MAX_AGE_MS`, two refresh periods) | The maximum age for irreversible actions. |
+| `allowUnsignedRootForIrreversible` | `false` | An irreversible action needs a guardian-signed epoch. A bare root, which cannot be dated, is refused. |
+
+Per-class limits never exceed `maxRevocationAgeMs`. The class used is the stricter of your own class for the action (from your tool catalog or the authorized plan) and the class the agent signed. A missing or unknown class counts as irreversible.
+
+On the checker:
+
+```ts
+const hook = createRevocationChecker({
+  epoch: () => latestSignedEpoch,              // from GET /v1/pca/revocations/epoch
+  guardianPublic,
+  proofFor: (id) => proofs.get(id),
+  maxRevocationAgeMs: 120_000,
+  staleness: { irreversible: 60_000 },
+  reversibilityClass: (ctx) => catalogClass(ctx.pcactn.action.verb),
+});
+```
+
+With only a bare `root` (no signed epoch), set the policy and supply `rootIssuedAt`: the time your trusted source issued the root. If that time is unknown, the state cannot be verified and every action is denied. Irreversible actions are refused on this path unless `allowUnsignedRootForIrreversible` is set.
+
+On `requirePCA`, pass the same policy as `revocationStaleness`. It caps the age of the epoch from the `revocationEpoch` option. When no signed epoch is available (no `revocationEpoch` option, or the source returned nothing), an irreversible action is denied with `freshness: no verifiable (guardian-signed) revocation state for an irreversible action`. This also applies when `freshness` is left out of `require`. A revocation source that throws makes the guard deny (fail closed).
+
+With these settings, the time a revocation takes to reach a verifier is bounded by the verifier's own limit plus the guardian's refresh period, not only by the signer's `not_after`. A captured pre-revocation epoch replayed to a verifier that already accepted a newer epoch is refused as a rollback. A verifier that never saw the newer epoch, for example after a restart without persisted pins, refuses the old epoch once it is older than the limit.
+
+**Rotating the guardian key.** A verifier checks each epoch against the one guardian key it pins (`guardianPublic`). Once you pin the new key, every epoch signed by the old key is refused, whatever its `not_after`. Until then, an old-key epoch is accepted only within its validity and your age limit. So after a rotation the old key stops working when you update the pin, or at the latest when its newest epoch reaches your age limit.
+
 On the hosted surface, `POST /v1/pca/revocations` adds a capability id under a grant; revoking the grant's own id (the `grant_ref`) revokes the whole grant. The server builds the non-membership proofs itself on each action.
 
 ## Dead-man beacons and the kill switch
 
-`beacons.ts`: the guardian signs short-lived beacons `{ v, scope, epoch, not_after, guardian, sig }` (domain `atlas-pca/beacon/v1\0`). Authority is live only while a valid beacon covers the current epoch. If the principal stops issuing beacons, every agent freezes by the next, short epoch.
+An issuer (the grant's principal, or the operator) signs short-lived **liveness beacons** `{ v: 2, instance, scope, epoch, seq, issued_at, not_after, issuer, sig }` (domain `atlas-pca/beacon/v2\0`). Authority is live only while a valid beacon covers the current moment. If the issuer stops issuing beacons, every agent freezes by the next, short epoch.
 
 | Function | Purpose |
 |---|---|
-| `issueBeacon({ guardianSecret, epoch, scope?, notAfter })` | Sign a beacon; scope `'*'` (`GLOBAL_SCOPE`) covers everything |
-| `verifyBeacon(beacon, guardianPublic, nowEpoch, scope?)` | Signature against the pinned guardian key, freshness window, optional scope coverage |
-| `isFrozen(beacons, nowEpoch, guardianPublic, scope?)` | Frozen when **no** valid beacon covers the epoch. Absence of beacons is a freeze. |
+| `issueLivenessBeacon({ issuerSecret, instance, scope?, seq, issuedAt, validityMs? })` | Sign a beacon; scope `'*'` (`GLOBAL_SCOPE`) covers every grant of the instance. Validity is at most one hour (`BEACON_MAX_VALIDITY_MS`); the epoch is `floor(issued_at / 60 000)` |
+| `verifyLivenessBeacon(beacon, { issuers, now, instance, scope? })` | Checks, in this order: instance, pinned issuer, signature, window shape, hard validity cap, epoch, not yet valid (more than 30 s in the future, `BEACON_CLOCK_SKEW_MS`), expired (`now > not_after`), scope coverage. The first failure names the reason |
+| `isFrozenLiveness(beacons, check)` | Frozen when **no** beacon verifies. Absence of beacons is a freeze |
+| `acceptBeacon(previous, next)` | A beacon replaces the stored one only with a strictly higher `seq`; an equal or lower one is a replay |
+| `createBeaconAcceptor(kv)` | The same rule kept durably per (instance, scope, issuer), so a restart cannot be used to replay an old beacon over a newer one; it refuses when the store cannot decide |
 
-Epochs are integers supplied by the caller. Beacons are a library capability. The hosted surface exposes a simpler kill switch: `POST /v1/pca/freeze` denies every PCActn for the instance until `DELETE /v1/pca/freeze` clears it.
+A PCActn binds a beacon through its signed `freshness.beacon_ref` (`beaconRef(beacon)`), so no wire change is needed. The hosted surface also exposes a simpler kill switch: `POST /v1/pca/freeze` denies every PCActn for the instance until `DELETE /v1/pca/freeze` clears it.
+
+## A durable log and its witnesses
+
+`StoredLedger` (`@atlasauth/pca/ext/ledger`) keeps the log in a store with compare-and-swap appends, signs checkpoints, and on every open verifies the stored entries against each checkpoint (signature, `prev_root` chain, RFC 9162 proof at each boundary). A witness cosigns a checkpoint only if it is consistent with the last one it cosigned; a reader that requires a witness cosignature then refuses a rewritten or forked history. The claim is tamper evidence **given at least one honest witness independent of the operator**; censorship by omission is not detected. See [The transparency ledger and its witnesses](../guides/transparency-ledger.md) and [Operate a ledger witness](../guides/operate-a-witness.md).
 
 ## Putting the controls together
 

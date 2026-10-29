@@ -18,7 +18,7 @@ import {
   SCOPE_CAVEAT,
   WELL_KNOWN_OAUTH_PRM,
   accumulateScopes,
-  authorizeRequest,
+  admitRequest,
   clientIdMetadataDocument,
   extractPCActn,
   isScopeCaveat,
@@ -392,10 +392,10 @@ describe('extractPCActn', () => {
 });
 
 // ---------------------------------------------------------------------------------------------------
-// authorizeRequest
+// admitRequest
 // ---------------------------------------------------------------------------------------------------
 
-describe('authorizeRequest', () => {
+describe('admitRequest', () => {
   const grant = mkGrant([{ type: 'ttl', secs: 3600 }, { type: 'scope', scopes: ['tickets:write', 'tickets:read'] }]);
   const p = mkAct(grant);
   const req = { headers: {}, body: { pcactn: p } };
@@ -403,17 +403,17 @@ describe('authorizeRequest', () => {
     resource: AUD,
     authorizationServers: [grant.issuer],
     resolveGrant: (ref: string) => (ref === grant.id ? grant : null),
-    prmUrl: PRM,
+    prmUrl: PRM, insecureSkipPlanRootCheck: true,
     now: NOW,
   };
   const deny = async (r: unknown, o: Record<string, unknown> = {}) => {
-    const res = await authorizeRequest(r as never, { ...base, ...o } as never);
+    const res = await admitRequest(r as never, { ...base, ...o } as never);
     if (res.ok) throw new Error('expected a deny');
     return res;
   };
 
   it('admits and returns the exact allow shape', async () => {
-    const r = await authorizeRequest(req, { ...base, tool: 'tickets.write', toolScopes: { 'tickets.write': 'tickets:write' } });
+    const r = await admitRequest(req, { ...base, tool: 'tickets.write', toolScopes: { 'tickets.write': 'tickets:write' } });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.status).toBe(200);
@@ -424,7 +424,7 @@ describe('authorizeRequest', () => {
     }
   });
   it('the verifier clock is opts.now (not the wall clock)', async () => {
-    expect((await authorizeRequest(req, base)).ok).toBe(true);
+    expect((await admitRequest(req, base)).ok).toBe(true);
     const wall = await deny(req, { now: undefined });
     expect(wall.status).toBe(401);
   });
@@ -432,11 +432,11 @@ describe('authorizeRequest', () => {
     const pre = 'admission error (fail closed): ';
     for (const resource of ['', 5]) {
       const d = await deny(req, { resource });
-      expect([d.status, d.error, d.errorDescription]).toStrictEqual([403, 'forbidden', `${pre}authorizeRequest: \`resource\` is required`]);
+      expect([d.status, d.error, d.errorDescription]).toStrictEqual([403, 'forbidden', `${pre}admitRequest: \`resource\` is required`]);
     }
     for (const authorizationServers of [[], undefined, 'x']) {
       const d = await deny(req, { authorizationServers });
-      expect([d.status, d.error, d.errorDescription]).toStrictEqual([403, 'forbidden', `${pre}authorizeRequest: \`authorizationServers\` is required (RFC 9207)`]);
+      expect([d.status, d.error, d.errorDescription]).toStrictEqual([403, 'forbidden', `${pre}admitRequest: \`authorizationServers\` is required (RFC 9207)`]);
     }
     const d = await deny(req, { resolveGrant: () => { throw 'boom'; } });
     expect(d.errorDescription).toBe(`${pre}unknown`);
@@ -472,7 +472,7 @@ describe('authorizeRequest', () => {
       const d = await deny(req, { resolveGrant: () => g });
       expect([d.status, d.error, d.errorDescription]).toStrictEqual([401, 'invalid_token', 'unknown grant_ref']);
     }
-    const asyncGrant = await authorizeRequest(req, { ...base, resolveGrant: async () => grant });
+    const asyncGrant = await admitRequest(req, { ...base, resolveGrant: async () => grant });
     expect(asyncGrant.ok).toBe(true);
     const aud = await deny(req, { resource: 'https://other' });
     expect([aud.status, aud.error, aud.errorDescription]).toStrictEqual([401, 'invalid_token', `RFC 8707: PCActn audience (${AUD}) is not this resource server (https://other)`]);
@@ -480,7 +480,7 @@ describe('authorizeRequest', () => {
     expect([iss.status, iss.error, iss.errorDescription]).toStrictEqual([401, 'invalid_token', `RFC 9207: credential issuer (${grant.issuer}) is not an expected authorization server`]);
     const custom = await deny(req, { resolveIssuer: () => 'https://custom' });
     expect(custom.errorDescription).toBe('RFC 9207: credential issuer (https://custom) is not an expected authorization server');
-    expect((await authorizeRequest(req, { ...base, authorizationServers: ['https://custom'], resolveIssuer: () => 'https://custom' })).ok).toBe(true);
+    expect((await admitRequest(req, { ...base, authorizationServers: ['https://custom'], resolveIssuer: () => 'https://custom' })).ok).toBe(true);
   });
   it('core failures: a tampered proof is a 401 carrying the checks and the core reason', async () => {
     const tampered = { ...p, counter: p.counter + 1 };
@@ -498,25 +498,25 @@ describe('authorizeRequest', () => {
     expect(d.wwwAuthenticate).toContain('scope="tickets:write admin root"');
     expect(d.checks?.leaf_signature).toBe('pass');
     // requiredScopes overrides toolScopes (and an empty list needs nothing)
-    expect((await authorizeRequest(req, { ...base, requiredScopes: [], tool: 't', toolScopes: { t: 'zzz' } })).ok).toBe(true);
+    expect((await admitRequest(req, { ...base, requiredScopes: [], tool: 't', toolScopes: { t: 'zzz' } })).ok).toBe(true);
     // an unmapped tool needs nothing; a tool without a map needs nothing
-    expect((await authorizeRequest(req, { ...base, tool: 'unmapped', toolScopes: { other: 'zzz' } })).ok).toBe(true);
-    expect((await authorizeRequest(req, { ...base, tool: 'tickets.write' })).ok).toBe(true);
+    expect((await admitRequest(req, { ...base, tool: 'unmapped', toolScopes: { other: 'zzz' } })).ok).toBe(true);
+    expect((await admitRequest(req, { ...base, tool: 'tickets.write' })).ok).toBe(true);
     // no tool given: nothing is looked up even if a key spelled 'undefined' exists
-    expect((await authorizeRequest(req, { ...base, toolScopes: { undefined: 'zzz' } })).ok).toBe(true);
+    expect((await admitRequest(req, { ...base, toolScopes: { undefined: 'zzz' } })).ok).toBe(true);
     // string and array forms
-    expect((await authorizeRequest(req, { ...base, tool: 't', toolScopes: { t: ['tickets:read', 'tickets:write'] } })).ok).toBe(true);
+    expect((await admitRequest(req, { ...base, tool: 't', toolScopes: { t: ['tickets:read', 'tickets:write'] } })).ok).toBe(true);
     expect((await deny(req, { tool: 't', toolScopes: { t: 'zzz' } })).errorDescription).toBe('missing required scope(s): zzz');
   });
   it('granted scopes: baseScopes intersect, resolveGrantedScopes overrides', async () => {
     const plain = mkGrant();
     const pp = mkAct(plain);
     const o = { ...base, authorizationServers: [plain.issuer], resolveGrant: () => plain };
-    const r = await authorizeRequest({ headers: {}, body: { pcactn: pp } }, { ...o, baseScopes: ['b', 'a'], requiredScopes: ['a'] });
+    const r = await admitRequest({ headers: {}, body: { pcactn: pp } }, { ...o, baseScopes: ['b', 'a'], requiredScopes: ['a'] });
     expect(r.ok && r.grantedScopes).toStrictEqual(['a', 'b']);
-    expect((await authorizeRequest({ headers: {}, body: { pcactn: pp } }, { ...o, requiredScopes: ['a'] })).ok).toBe(false);
+    expect((await admitRequest({ headers: {}, body: { pcactn: pp } }, { ...o, requiredScopes: ['a'] })).ok).toBe(false);
     let seen: unknown[] = [];
-    const rr = await authorizeRequest(req, { ...base, requiredScopes: ['x'], resolveGrantedScopes: (...a: unknown[]) => { seen = a; return ['x']; } });
+    const rr = await admitRequest(req, { ...base, requiredScopes: ['x'], resolveGrantedScopes: (...a: unknown[]) => { seen = a; return ['x']; } });
     expect(rr.ok && rr.grantedScopes).toStrictEqual(['x']);
     expect(seen[0]).toBe(grant);
     expect(seen[1]).toStrictEqual(p.cap_chain);
@@ -566,7 +566,7 @@ describe('authorizeRequest', () => {
       expect(d.wwwAuthenticate).not.toContain('stepup_uri');
     });
     it('a verified co-sign admits; verifyStepUp is cryptographic', async () => {
-      expect((await authorizeRequest({ headers: {}, body: { pcactn: coSign(2, ['guardian']) } }, su as never)).ok).toBe(true);
+      expect((await admitRequest({ headers: {}, body: { pcactn: coSign(2, ['guardian']) } }, su as never)).ok).toBe(true);
       expect(await verifyStepUp(coSign(2, ['guardian']), 2, grant, signerSet)).toBe(true);
       expect(await verifyStepUp(coSign(2, ['guardian']), 2, grant, signerSet, NOW)).toBe(true);
       expect(await verifyStepUp(p, 2, grant, signerSet)).toBe(false);
@@ -576,23 +576,23 @@ describe('authorizeRequest', () => {
     it('stepUpSatisfied must return exactly true, and receives (pcactn, tier); the verifier is not consulted', async () => {
       const calls: unknown[][] = [];
       const mk = (v: unknown) => ({ ...su, stepUpSignerSet: undefined, stepUpSatisfied: (...a: unknown[]) => { calls.push(a); return v; } });
-      expect((await authorizeRequest(req, mk(true) as never)).ok).toBe(true);
+      expect((await admitRequest(req, mk(true) as never)).ok).toBe(true);
       expect(calls[0]![0]).toBe(p);
       expect(calls[0]![1]).toBe(2);
-      expect((await authorizeRequest(req, mk(Promise.resolve(true)) as never)).ok).toBe(true);
-      for (const v of [false, 'yes', 1, undefined]) expect((await authorizeRequest(req, mk(v) as never)).ok).toBe(false);
+      expect((await admitRequest(req, mk(Promise.resolve(true)) as never)).ok).toBe(true);
+      for (const v of [false, 'yes', 1, undefined]) expect((await admitRequest(req, mk(v) as never)).ok).toBe(false);
     });
     it('a tier with no verifier fails closed', async () => {
       const { stepUpSignerSet: _s, ...none } = su;
       const d = await deny(req, none);
-      expect(d.errorDescription).toBe('admission error (fail closed): authorizeRequest: a step-up tier applies but neither `stepUpSignerSet` nor `stepUpSatisfied` is configured (no presence-check default)');
+      expect(d.errorDescription).toBe('admission error (fail closed): admitRequest: a step-up tier applies but neither `stepUpSignerSet` nor `stepUpSatisfied` is configured (no presence-check default)');
     });
     it('tier sources: toolStepUp needs a tool, own-property lookup, requiredTier, max rule', async () => {
       const { tool: _t, ...noTool } = su;
-      expect((await deny(req, noTool)).errorDescription).toBe('admission error (fail closed): authorizeRequest: `toolStepUp` is configured but no `tool` was passed, so the per-tool step-up tier cannot be applied (fail closed)');
+      expect((await deny(req, noTool)).errorDescription).toBe('admission error (fail closed): admitRequest: `toolStepUp` is configured but no `tool` was passed, so the per-tool step-up tier cannot be applied (fail closed)');
       // a prototype-chain name is not a configured tool
-      expect((await authorizeRequest(req, { ...su, tool: 'constructor' } as never)).ok).toBe(true);
-      expect((await authorizeRequest(req, { ...su, tool: 'unmapped' } as never)).ok).toBe(true);
+      expect((await admitRequest(req, { ...su, tool: 'constructor' } as never)).ok).toBe(true);
+      expect((await admitRequest(req, { ...su, tool: 'unmapped' } as never)).ok).toBe(true);
       // requiredTier alone applies, and is not lowered by a missing per-tool entry
       expect((await deny(req, { ...su, toolStepUp: {}, requiredTier: 2 })).stepUp?.tier).toBe(2);
       expect((await deny(req, { ...su, toolStepUp: { other: 3 }, requiredTier: 3 })).stepUp?.tier).toBe(3);
@@ -605,15 +605,15 @@ describe('authorizeRequest', () => {
       const calls: number[] = [];
       const o = (r: unknown) => ({ ...su, toolStepUp: undefined, riskTiers: { theta1: 0.3, theta2: 0.6 }, serverRisk: () => r, stepUpSatisfied: (_p: unknown, t: number) => { calls.push(t); return false; } });
       // low risk: no step-up at all
-      expect((await authorizeRequest(req, o(0.1) as never)).ok).toBe(true);
+      expect((await admitRequest(req, o(0.1) as never)).ok).toBe(true);
       expect(calls).toStrictEqual([]);
-      expect((await authorizeRequest(req, o(0.3) as never)).ok).toBe(true);
+      expect((await admitRequest(req, o(0.3) as never)).ok).toBe(true);
       expect((await deny(req, o(0.5))).stepUp?.tier).toBe(2);
       expect((await deny(req, o(0.9))).stepUp?.tier).toBe(3);
       // an unusable r fails closed to the highest tier
       for (const bad of [NaN, Infinity, '0.1', null, undefined]) expect((await deny(req, o(bad))).stepUp?.tier).toBe(3);
       const { serverRisk: _r, ...noRisk } = o(0.1);
-      expect((await deny(req, noRisk)).errorDescription).toBe('admission error (fail closed): authorizeRequest: `riskTiers` needs a server-computed `serverRisk` (the agent-signed risk_claim.r is never used)');
+      expect((await deny(req, noRisk)).errorDescription).toBe('admission error (fail closed): admitRequest: `riskTiers` needs a server-computed `serverRisk` (the agent-signed risk_claim.r is never used)');
       // async serverRisk
       expect((await deny(req, { ...o(0), serverRisk: async () => 0.9 })).stepUp?.tier).toBe(3);
     });

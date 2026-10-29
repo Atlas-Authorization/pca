@@ -2,20 +2,22 @@ import { describe, expect, it } from 'vitest';
 import {
   RevocationSet,
   b64u,
-  conformAction,
   evaluatePredicates,
-  profileRevocationId,
-  profileRevocationScope,
   publicKeyOf,
   sha256,
   signRevocationEpoch,
   utf8,
   verifyChain,
+} from '@atlasauth/pca';
+import {
+  conformAction,
+  profileRevocationId,
+  profileRevocationScope,
   type AccumulatorDecl,
   type IntentEvent,
   type MonitorDecl,
   type UnsignedActionSchema,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 import {
   accDimPath,
   augmentOmega,

@@ -85,6 +85,7 @@
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { ml_kem768 } from '@noble/post-quantum/ml-kem.js';
 import { secureOtRandom } from './csprng';
 import { type BaseOtFn, type OtChannel, type OtRandom } from './ot';
 
@@ -151,6 +152,24 @@ export const SYM_BYTES = core.SYM_BYTES;
 
 /** Re-export the vetted lattice primitives (used by the hybrid combiner alternatives and the tests). */
 export const kpkeKeygen = core.kpkeKeygen.bind(core);
+/**
+ * K-PKE.KeyGen exactly as FIPS 203 Algorithm 13 derives it, taken from the audited `@noble/post-quantum` ML-KEM
+ * (ML-KEM.KeyGen_internal(d, z) embeds K-PKE.KeyGen(d); the encapsulation key is the K-PKE public key and the first
+ * 1152 bytes of the decapsulation key are the K-PKE secret key). The wasm core's own `kpkeKeygen` is the older
+ * pre-standard Kyber derivation (no `k` domain separation in G(d)); it stays exported for compatibility but the
+ * endemic OT no longer uses it, so every key it forms is a standard FIPS 203 K-PKE key (checked against the official
+ * ACVP keyGen vectors in `fips203-kat.test.ts`). Only the encrypt/decrypt halves (which the FO transform wraps in ML-KEM,
+ * and which the endemic OT needs bare) come from the wasm core, and they are checked against ACVP encapsulation and
+ * decapsulation vectors in the core package.
+ */
+export function kpkeKeygenFips203(d: Uint8Array): { publicKey: Uint8Array; secretKey: Uint8Array } {
+  if (!(d instanceof Uint8Array) || d.length !== SYM_BYTES) throw new Error('kpkeKeygenFips203: seed must be exactly 32 bytes');
+  const kp = ml_kem768.keygen(concat(d, new Uint8Array(SYM_BYTES)));
+  const publicKey = kp.publicKey.slice();
+  const secretKey = kp.secretKey.slice(0, SK_BYTES);
+  if (publicKey.length !== PK_BYTES || secretKey.length !== SK_BYTES) throw new Error('kpkeKeygenFips203: unexpected key sizes (fail closed)');
+  return { publicKey, secretKey };
+}
 export const kpkeEnc = core.kpkeEnc.bind(core);
 export const kpkeDec = core.kpkeDec.bind(core);
 export const ringAdd = core.ringAdd.bind(core);
@@ -304,7 +323,7 @@ export function endemicLweReceive(
   const retained: number[] = [];
   for (let i = 0; i < choices.length; i++) {
     const c = choices[i]! & 1;
-    const { publicKey, secretKey } = core.kpkeKeygen(rng.bytes(SYM_BYTES));
+    const { publicKey, secretKey } = kpkeKeygenFips203(rng.bytes(SYM_BYTES));
     const tReal = publicKey.slice(0, TVEC_BYTES);
     const rho = publicKey.slice(TVEC_BYTES);
     // A uniform ring vector for the non-chosen slot (RO of fresh receiver randomness).

@@ -1,0 +1,25 @@
+{
+  "note": "simulated (clonable) PUF; ed25519; rep 7 x 4 bits",
+  "seedHex": "1111111111111111111111111111111111111111111111111111111111111111",
+  "enrollment": {
+    "providerId": "node-1",
+    "challenge": "yv4B",
+    "alg": "ed25519",
+    "publicKey": "Ssgo72bQxat3fCmRUyYPiMYk3_n19KJRNZOVVJFYVsg",
+    "helper": {
+      "sketch": "IieCAw",
+      "salt": "AQgPFh0kKzI5QEdOVVxjanF4f4aNlJuiqbC3vsXM09o",
+      "rep": 7,
+      "messageBits": 4,
+      "n": 28
+    },
+    "helperCommitment": "Hf4jL5LpVVpmbCPk-mv5C4tjptEe0c4riq98EhxN9_4"
+  },
+  "statement": {
+    "provider_id": "node-1",
+    "measurement": "puf-workload-measurement",
+    "binding": "1f4Is4aTE_NNXPOgSOzH7alSMMVF7a2A8FoWlV6WTTUwiFZPzwizdvJidSlx0CnbGEavtGKphgqmbfJbBySa0w",
+    "alg": "ed25519",
+    "sig": "bxHrXURhM-Tgy-1kpSHky6pnQD06y__681pDczcHaJUCW-Jpk8fi0OYKgOqQUFAbz30Uzk0U0l5ASf5cg9f6Dw"
+  }
+}

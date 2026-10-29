@@ -14,7 +14,7 @@
  * decides. A bypassed wrapper just means the action lacks a valid PCActn and fails server-side.
  */
 
-import { type Agent, type PcaCall, bridgeToolCall, guard, pcaHeaders } from '@atlasauth/pca';
+import { type Agent, type PcaCall, bridgeToolCall, guard, pcaHeaders, recordInput, recordMessages, recordPrincipal } from '@atlasauth/pca';
 
 /** Minimal structural shape of a LangChain structured tool (we don't import `@langchain/core`). */
 export interface LangChainTool<ARGS = Record<string, unknown>, RESULT = unknown> {
@@ -90,4 +90,31 @@ export function withPCA<ARGS extends Record<string, unknown>, RESULT>(
   return out;
 }
 
-export { bridgeToolCall, pcaHeaders, type PcaCall };
+/** Minimal structural shape of a LangChain runnable / agent executor (`invoke`, optional `stream`). */
+export interface LangChainRunnable<IN = unknown, OUT = unknown> {
+  invoke(input: IN, config?: unknown): Promise<OUT> | OUT;
+  stream?(input: IN, config?: unknown): unknown;
+  [k: string]: unknown;
+}
+
+/**
+ * Provenance by default: wrap the agent executor / graph so every `invoke` / `stream` first records the principal's input (a string,
+ * `{input}`, or `{messages}`: human turns are the principal, tool turns are untrusted). With the tools wrapped by {@link withPCA}
+ * (which record every tool result), each PCActn then carries the provenance bundle the server's default gate reads.
+ */
+export function withPCAAgent<R extends LangChainRunnable>(agent: Agent, runnable: R): R {
+  const out = Object.create(Object.getPrototypeOf(runnable) as object, Object.getOwnPropertyDescriptors(runnable)) as LangChainRunnable;
+  out.invoke = (input: unknown, config?: unknown) => {
+    recordInput(agent, input);
+    return runnable.invoke(input, config);
+  };
+  if (typeof runnable.stream === 'function') {
+    out.stream = (input: unknown, config?: unknown) => {
+      recordInput(agent, input);
+      return runnable.stream!(input, config);
+    };
+  }
+  return out as R;
+}
+
+export { bridgeToolCall, pcaHeaders, recordInput, recordMessages, recordPrincipal, type PcaCall };

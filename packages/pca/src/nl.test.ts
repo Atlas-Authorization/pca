@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { agentFromNL, nlPrompt, parseNLPolicy, policyFromNL } from './nl';
+import { agentFromApprovedNL, approveDraft, draftPolicyFromNL, nlPrompt, parseNLPolicy, policyFromNL } from './nl';
 import { generateKeyPair } from './keys';
+import { b64u } from './hash';
 import { verifyChain } from './capability';
 
 const AUD = 'ins_test';
@@ -38,7 +39,7 @@ describe('parseNLPolicy (grounding)', () => {
   });
 });
 
-describe('policyFromNL + agentFromNL', () => {
+describe('policyFromNL + agentFromApprovedNL', () => {
   const fakeModel = (json: object) => async () => JSON.stringify(json);
 
   it('compiles a grounded policy and lints it', async () => {
@@ -51,28 +52,21 @@ describe('policyFromNL + agentFromNL', () => {
     expect(Array.isArray(res.lints)).toBe(true);
   });
 
-  it('mints a verifiable agent end-to-end from NL', async () => {
-    const { agent, result } = await agentFromNL({
+  it('mints a verifiable agent end-to-end from NL, only after a pinned reviewer approves the draft', async () => {
+    const reviewer = generateKeyPair();
+    const draft = await draftPolicyFromNL({
       instruction: 'let the bot refund customers up to $500/day and send email',
       complete: fakeModel({ permissions: { stripe: ['refund'], gmail: ['send'] }, limits: { refund: '$500/day' } }),
-      principal: generateKeyPair(),
-      goal: 'support',
-      aud: AUD,
     });
+    const approval = approveDraft(draft, reviewer.secretKey);
+    const { agent } = agentFromApprovedNL({ draft, approval, reviewers: [b64u(reviewer.publicKey)], principal: generateKeyPair(), goal: draft.instruction, aud: AUD });
     expect(verifyChain(agent.chain, agent.principalPublic).ok).toBe(true);
     expect(agent.policy.actions.map((s) => s.verb).sort()).toEqual(['gmail.send', 'stripe.refund']);
-    expect(result.unknownVerbs).toEqual([]);
+    expect(draft.unknownVerbs).toEqual([]);
   });
 
-  it('throws when the instruction yields nothing grantable', async () => {
-    await expect(
-      agentFromNL({
-        instruction: 'do whatever',
-        complete: fakeModel({ permissions: { magic: ['teleport'] } }), // not in catalog
-        principal: generateKeyPair(),
-        goal: 'g',
-        aud: AUD,
-      }),
-    ).rejects.toThrow(/no grantable permissions/);
+  it('refuses to approve a draft that yields nothing grantable', async () => {
+    const draft = await draftPolicyFromNL({ instruction: 'do whatever', complete: fakeModel({ permissions: { magic: ['teleport'] } }) });
+    expect(() => approveDraft(draft, generateKeyPair().secretKey)).toThrow('approveDraft: the draft did not pass the static analyzer');
   });
 });

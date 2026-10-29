@@ -1,0 +1,34 @@
+{
+ "trait": "pca.persistence",
+ "card": {
+  "verb": "golden.persistence",
+  "title": "Do the persistence thing",
+  "text": "Do the persistence thing. This action creates standing access or infrastructure.",
+  "risk": "high",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "short_expiry"
+  ],
+  "context": [
+   "revocable"
+  ]
+ },
+ "closure": [
+  "pca.persistence"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "short_expiry"
+  ],
+  "context": [
+   "revocable"
+  ],
+  "prules": []
+ }
+}

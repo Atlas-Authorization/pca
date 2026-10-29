@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { evaluatePredicates, type ActionContext } from '@atlasauth/pca';
-import { cedarToPca } from './cedar';
+import { translateCedar } from './cedar';
+const cedarToPca = (text: string) => translateCedar(text, false); // structure tests: bare expressions, no error guards
+
 import { decide } from './types';
 
 const allow = (preds: Parameters<typeof evaluatePredicates>[0], ctx: ActionContext) =>

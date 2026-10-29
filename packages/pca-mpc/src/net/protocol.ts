@@ -148,6 +148,8 @@ function prepLayout(n: number, C: number, keys: number, partners: number, tagged
 // -------------------------------------------------------------------------------- dealer
 
 export interface DealerConfig {
+  /** Required `true`: the dealer sees every share and key. */
+  insecureTrustedDealer?: boolean;
   n: number;
   Q?: number;
   mesh: Mesh;
@@ -171,6 +173,7 @@ const PREP_CHUNK = 30_000;
  */
 export async function runDealer(cfg: DealerConfig): Promise<void> {
   const { n, mesh } = cfg;
+  if (cfg.insecureTrustedDealer !== true) throw new Error('runDealer requires insecureTrustedDealer: true (a dealer sees every share and MAC key; the default offline phase has no dealer)');
   const Q = cfg.Q ?? DEFAULT_Q;
   const rng: FieldRng = cfg.seed !== undefined ? new FieldRng(cfg.seed) : new SecureFieldRng();
   const C = chainCount(Q);
@@ -240,8 +243,10 @@ export interface PartyConfig {
   mesh: Mesh;
   /** Node id of the dealer (default n). */
   dealerId?: number;
-  /** Which offline phase to run (default `trusted-dealer`). */
+  /** Which offline phase to run (default `no-dealer`: the parties generate everything from OT). `trusted-dealer` also needs `insecureTrustedDealer: true`. */
   offline?: 'trusted-dealer' | 'no-dealer';
+  /** Explicit opt-in to the trusted-dealer offline phase: one process then sees every share and MAC key. Refused otherwise. */
+  insecureTrustedDealer?: boolean;
   /** TEST ONLY: refused unless `unsafeTestHooks` is `true`. */
   behavior?: Behavior;
   /** Explicit opt-in for `behavior`. Leave unset in production. */
@@ -279,7 +284,10 @@ export async function runParty(cfg: PartyConfig): Promise<PartyResult> {
   const { id, n, mesh, sessionId } = cfg;
   const Q = cfg.Q ?? DEFAULT_Q;
   const dealerId = cfg.dealerId ?? n;
-  const offlineMode = cfg.offline ?? 'trusted-dealer';
+  const offlineMode = cfg.offline ?? 'no-dealer';
+  if (offlineMode === 'trusted-dealer' && cfg.insecureTrustedDealer !== true) {
+    throw new NetAbort('local', null, id, "offline 'trusted-dealer' requires insecureTrustedDealer: true (the dealer sees every share and key); the default is 'no-dealer'");
+  }
   const C = chainCount(Q);
   const K = MAC_KEYS;
   const P = SACRIFICE_PARTNERS;
