@@ -22,7 +22,7 @@
  * the authority system would admit" cannot drift apart.
  */
 
-import type { ActionContext, CapabilityChain, PCActn, Predicate, PredicateResult } from '@atlasauth/pca';
+import type { ActionContext, CapabilityChain, PCActn, Predicate, PredicateResult, ProvenanceRecorder } from '@atlasauth/pca';
 import { hashCanonical } from '@atlasauth/pca';
 import { decide, openfgaToPca, type TranslationReport } from '@atlasauth/pca-policy-bridge';
 
@@ -43,8 +43,9 @@ export interface Principal {
 /** A principal, or just its id (shorthand for `{ id }`). */
 export type PrincipalInput = Principal | string;
 
-function toPrincipal(p: PrincipalInput): Principal {
-  return typeof p === 'string' ? { id: p } : p;
+function toPrincipal(p: PrincipalInput): Principal | undefined {
+  if (typeof p === 'string') return { id: p };
+  return p !== null && typeof p === 'object' ? p : undefined;
 }
 
 /**
@@ -147,6 +148,8 @@ export interface CompiledPolicy {
   readonly predicates: Predicate[];
   readonly denies: Predicate[];
   readonly incomplete: boolean;
+  /** Why the policy is incomplete when it is not a translation error (an unusable policy value). */
+  readonly incompleteReason?: string;
   readonly report?: TranslationReport;
 }
 
@@ -162,10 +165,17 @@ function isCompiledPolicy(p: PolicyInput | CompiledPolicy): p is CompiledPolicy 
 
 /** Compile any {@link PolicyInput} (or pass through an already-{@link CompiledPolicy}). */
 export function compilePolicy(policy: PolicyInput | CompiledPolicy): CompiledPolicy {
+  // Total: a value that is not a policy is an incomplete policy (nothing is admitted), never a thrown TypeError mid-retrieval.
+  if (policy === null || typeof policy !== 'object') return { predicates: [], denies: [], incomplete: true, incompleteReason: 'no usable policy was supplied (fail closed)' };
   if (isCompiledPolicy(policy)) return policy;
+  if (!Array.isArray(policy) && !('openfga' in policy) && !Array.isArray((policy as { predicates?: unknown }).predicates)) {
+    return { predicates: [], denies: [], incomplete: true, incompleteReason: 'the policy has no predicates and is not an OpenFGA policy (fail closed)' };
+  }
   if (Array.isArray(policy)) return { predicates: policy, denies: [], incomplete: false };
   if ('openfga' in policy) {
-    const br = openfgaToPca(policy.openfga.model, policy.openfga.tuples);
+    const fga = policy.openfga;
+    if (fga === null || typeof fga !== 'object') return { predicates: [], denies: [], incomplete: true, incompleteReason: 'the OpenFGA policy has no model (fail closed)' };
+    const br = openfgaToPca(fga.model, fga.tuples);
     return {
       predicates: br.predicates,
       denies: br.denies,
@@ -203,6 +213,8 @@ export interface FilterDecision {
   considered: number;
   /** IDs admitted (the model may see these), in candidate order. */
   allowedIds: string[];
+  /** Candidate positions of the admitted documents. Bound into `digest`, so the decision names exactly which candidates passed. */
+  allowedIndexes: number[];
   /** IDs dropped (not authorized / unknown — fail closed), in candidate order. */
   droppedIds: string[];
   /** One record per candidate. */
@@ -247,7 +259,10 @@ function decideDocument(
   compiled: CompiledPolicy,
 ): DocDecision {
   if (compiled.incomplete) {
-    return { id, allowed: false, reason: 'policy translation incomplete (fail closed)' };
+    return { id, allowed: false, reason: compiled.incompleteReason ?? 'policy translation incomplete (fail closed)' };
+  }
+  if (typeof principal.id !== 'string' || principal.id.length === 0) {
+    return { id, allowed: false, reason: 'no principal identity (fail closed)' };
   }
   if (acls.length === 0) {
     return { id, allowed: false, reason: 'no decidable ACL metadata (fail closed)' };
@@ -282,7 +297,7 @@ function runFilter<D>(
   policyInput: PolicyInput | CompiledPolicy,
   ex: Extractors<D>,
 ): FilterResult<D> {
-  const principal = toPrincipal(principalInput);
+  const principal = toPrincipal(principalInput) ?? ({ id: '' } as Principal);
   const compiled = compilePolicy(policyInput);
   const list = Array.isArray(candidates) ? candidates : [];
 
@@ -290,6 +305,8 @@ function runFilter<D>(
   const decisions: DocDecision[] = [];
   const allowedIds: string[] = [];
   const droppedIds: string[] = [];
+  const allowedIndexes: number[] = [];
+  const seenIds = new Set<string>();
 
   for (let i = 0; i < list.length; i++) {
     const doc = list[i]!;
@@ -297,7 +314,8 @@ function runFilter<D>(
     let acls: DocAcl[];
     try {
       id = ex.id(doc, i);
-      acls = ex.acls(doc);
+      const raw: unknown = ex.acls(doc);
+      acls = aclArray(raw); // entries that are not {relation, object} strings are not ACLs
     } catch {
       // A document whose metadata cannot even be read is unknown → fail closed.
       const fid = `doc#${i}`;
@@ -306,21 +324,26 @@ function runFilter<D>(
       continue;
     }
     if (typeof id !== 'string' || id.length === 0) id = `doc#${i}`;
+    // Two candidates with one id would make "allowed" and "dropped" ambiguous in the decision. The later one is told apart by position.
+    if (seenIds.has(id)) id = `${id}#dup${i}`;
+    seenIds.add(id);
 
     const decision = decideDocument(id, acls, principal, compiled);
     decisions.push(decision);
     if (decision.allowed) {
       documents.push(doc);
       allowedIds.push(id);
+      allowedIndexes.push(i);
     } else {
       droppedIds.push(id);
     }
   }
 
   const base = {
-    principal: principal.id,
+    principal: typeof principal.id === 'string' ? principal.id : '',
     considered: list.length,
     allowedIds,
+    allowedIndexes,
     droppedIds,
     policyIncomplete: compiled.incomplete,
   };
@@ -337,6 +360,11 @@ export interface FilterOptions<D extends AclDocument> {
   getId?: (doc: D, index: number) => string;
   /** ACL entries for a document (default: `doc.acl` + `relation:object` `doc.tags`). */
   getAcls?: (doc: D) => DocAcl[];
+  /**
+   * The agent session's provenance recorder (provenance by default): every document this retriever hands to the model is recorded
+   * as UNTRUSTED retrieval content, so an instruction planted in a document cannot later choose who, where or how much.
+   */
+  recorder?: ProvenanceRecorder;
 }
 
 /**
@@ -356,6 +384,22 @@ export function filterDocuments<D extends AclDocument>(
     acls: opts?.getAcls ?? ((doc: D) => aclsFromMetadata(doc.acl, doc.tags)),
   };
   return runFilter(principal, candidates, policy, ex);
+}
+
+// ---- provenance --------------------------------------------------------------------------------
+
+/** Record every admitted document as untrusted retrieval content (a document's text can carry an injected instruction). */
+function recordRetrieved<D>(recorder: ProvenanceRecorder | undefined, docs: readonly D[], id: (doc: D, i: number) => string | undefined): void {
+  if (!recorder) return;
+  docs.forEach((doc, i) => {
+    let src: string;
+    try {
+      src = id(doc, i) ?? `doc#${i}`;
+    } catch {
+      src = `doc#${i}`;
+    }
+    recorder.retrieval(src, doc);
+  });
 }
 
 // ---- generic retriever wrapper -------------------------------------------------------------------
@@ -389,6 +433,7 @@ export function withPcaFilter<D extends AclDocument>(
       const docs = await retriever.retrieve(query, k);
       const res = filterDocuments(principal, Array.isArray(docs) ? docs : [], compiled, opts);
       last = res.decision;
+      recordRetrieved(opts?.recorder, res.documents, opts?.getId ?? ((doc: D) => doc.id));
       return res.documents;
     },
     lastDecision(): FilterDecision | undefined {
@@ -421,6 +466,11 @@ export interface LangChainRetrieverLike<D extends LangChainDocumentLike = LangCh
 export interface LangChainAdapterOptions<D extends LangChainDocumentLike = LangChainDocumentLike> {
   getId?: (doc: D, index: number) => string;
   getAcls?: (doc: D) => DocAcl[];
+  /**
+   * The agent session's provenance recorder (provenance by default): every document this retriever hands to the model is recorded
+   * as UNTRUSTED retrieval content, so an instruction planted in a document cannot later choose who, where or how much.
+   */
+  recorder?: ProvenanceRecorder;
 }
 
 /** A LangChain-shaped retriever whose results are PCA-filtered post-retrieval. */
@@ -457,6 +507,7 @@ export function withLangChainPcaFilter<D extends LangChainDocumentLike>(
     const docs = await fetch(input);
     const res = runFilter(principal, Array.isArray(docs) ? docs : [], compiled, ex);
     last = res.decision;
+    recordRetrieved(opts?.recorder, res.documents, ex.id);
     return res.documents;
   };
 
@@ -488,6 +539,11 @@ export interface LlamaIndexRetrieverLike<N extends LlamaIndexNodeLike = LlamaInd
 export interface LlamaIndexAdapterOptions<N extends LlamaIndexNodeLike = LlamaIndexNodeLike> {
   getId?: (item: LlamaIndexNodeWithScoreLike<N>, index: number) => string;
   getAcls?: (item: LlamaIndexNodeWithScoreLike<N>) => DocAcl[];
+  /**
+   * The agent session's provenance recorder (provenance by default): every document this retriever hands to the model is recorded
+   * as UNTRUSTED retrieval content, so an instruction planted in a document cannot later choose who, where or how much.
+   */
+  recorder?: ProvenanceRecorder;
 }
 
 /** A LlamaIndex-shaped retriever whose results are PCA-filtered post-retrieval. */
@@ -525,6 +581,7 @@ export function withLlamaIndexPcaFilter<N extends LlamaIndexNodeLike>(
       const items = await retriever.retrieve(params);
       const res = runFilter(principal, Array.isArray(items) ? items : [], compiled, ex);
       last = res.decision;
+      recordRetrieved(opts?.recorder, res.documents, ex.id);
       return res.documents;
     },
     lastDecision: () => last,

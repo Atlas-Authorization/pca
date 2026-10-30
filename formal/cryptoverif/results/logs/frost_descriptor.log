@@ -1,0 +1,315 @@
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... No change.
+Doing remove assignments of findcond... No change.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s)) failed:
+  Found Accept(xg, treq, n_2, s_2) at 87
+  but could not prove event(Certified(x, t, n, s))
+Applied collision k_2 <-R hashkey; forall x1, y1: sset_t; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game 1))
+Proved query forall s', s: sset_t, k: kappa_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> (s = s') up to probability Phash(time + time(game 1))
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder pkA... Done.
+Doing remove assignments of binder skA... Done.
+Trying equivalence uf_cma(sign) with rkA... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Applied collision k_2 <-R hashkey; forall x1, y1: sset_t; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing expand... Applied collision k_2 <-R hashkey; forall x1, y1: sset_t; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Applied collision k_2 <-R hashkey; forall x1, y1: sset_t; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proved query forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s))
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkA <-R keyseed;
+     pkA: pkey <- pkgen(rkA);
+     skA: skey <- skgen(rkA);
+     return(pkA);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iD <= ND do
+       cA(x: gkey_t, t: t_t, n_1: n_t, s_1: sset_t) :=
+       event Certified(x, t, n_1, s_1);
+       return(sign(mkdesc(x, t, n_1, hash(hk_1, s_1)), skA))
+     ) | (
+       foreach iO <= NO do
+       cO(o: other_t) :=
+       return(sign(mkother(o), skA))
+     ) | (
+       foreach iV <= NV do
+       cV(xg: gkey_t, treq: t_t, n_2: n_t, s_2: sset_t, sg: signature) :=
+       k: kappa_t <- hash(hk_1, s_2);
+       if check(mkdesc(xg, treq, n_2, k), pkA, sg) then
+       event AcceptK(k, s_2);
+       event Accept(xg, treq, n_2, s_2);
+       return()
+     ))
+
+
+Proved forall s', s: sset_t, k: kappa_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> (s = s') up to probability Phash(time_1)
+
+Applying remove assignments of binder pkA
+  - Remove assignments on pkA (definition removed, all usages removed)
+yields
+
+Game 2 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkA <-R keyseed;
+     skA: skey <- skgen(rkA);
+     return(pkgen(rkA));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iD <= ND do
+       cA(x: gkey_t, t: t_t, n_1: n_t, s_1: sset_t) :=
+       event Certified(x, t, n_1, s_1);
+       return(sign(mkdesc(x, t, n_1, hash(hk_1, s_1)), skA))
+     ) | (
+       foreach iO <= NO do
+       cO(o: other_t) :=
+       return(sign(mkother(o), skA))
+     ) | (
+       foreach iV <= NV do
+       cV(xg: gkey_t, treq: t_t, n_2: n_t, s_2: sset_t, sg: signature) :=
+       k: kappa_t <- hash(hk_1, s_2);
+       if check(mkdesc(xg, treq, n_2, k), pkgen(rkA), sg) then
+       event AcceptK(k, s_2);
+       event Accept(xg, treq, n_2, s_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder skA
+  - Remove assignments on skA (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkA <-R keyseed;
+     return(pkgen(rkA));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iD <= ND do
+       cA(x: gkey_t, t: t_t, n_1: n_t, s_1: sset_t) :=
+       event Certified(x, t, n_1, s_1);
+       return(sign(mkdesc(x, t, n_1, hash(hk_1, s_1)), skgen(rkA)))
+     ) | (
+       foreach iO <= NO do
+       cO(o: other_t) :=
+       return(sign(mkother(o), skgen(rkA)))
+     ) | (
+       foreach iV <= NV do
+       cV(xg: gkey_t, treq: t_t, n_2: n_t, s_2: sset_t, sg: signature) :=
+       k: kappa_t <- hash(hk_1, s_2);
+       if check(mkdesc(xg, treq, n_2, k), pkgen(rkA), sg) then
+       event AcceptK(k, s_2);
+       event Accept(xg, treq, n_2, s_2);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rkA [probability Psign(time_2, NO + ND, max(length(mkother, maxlength(game 3: o)), length(mkdesc, maxlength(game 3: x), maxlength(game 3: t), maxlength(game 3: n_1))))]
+  - Equivalence uf_cma(sign) with variables: rkA -> r
+yields
+
+Game 4 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkA <-R keyseed;
+     return(pkgen2(rkA));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iD <= ND do
+       cA(x: gkey_t, t: t_t, n_1: n_t, s_1: sset_t) :=
+       event Certified(x, t, n_1, s_1);
+       return((x_1: message <- mkdesc(x, t, n_1, hash(hk_1, s_1)); sign2(x_1, skgen2(rkA))))
+     ) | (
+       foreach iO <= NO do
+       cO(o: other_t) :=
+       return((x_2: message <- mkother(o); sign2(x_2, skgen2(rkA))))
+     ) | (
+       foreach iV <= NV do
+       cV(xg: gkey_t, treq: t_t, n_2: n_t, s_2: sset_t, sg: signature) :=
+       k: kappa_t <- hash(hk_1, s_2);
+       if (m1: message <- mkdesc(xg, treq, n_2, k); si1: signature <- sg; {81}find u_1 = ri_1 <= ND suchthat defined(x_1[ri_1]) && (m1 = x_1[ri_1]) && check2(m1, pkgen2(rkA), si1) then true orfind u = ri <= NO suchthat defined(x_2[ri]) && {98}((m1 = x_2[ri]) && check2(m1, pkgen2(rkA), si1)) then true else false) then
+       event AcceptK(k, s_2);
+       event Accept(xg, treq, n_2, s_2);
+       return()
+     ))
+
+
+Applying simplify (non-expanded game) [probability Phash(time_3)]
+  - Simplification pass
+    - Replaced ((m1 = x_2[ri]) && check2(m1, pkgen2(rkA), si1)) with false at 98
+    - Remove branch 2 in find at 81
+yields
+
+Game 5 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkA <-R keyseed;
+     return(pkgen2(rkA));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iD <= ND do
+       cA(x: gkey_t, t: t_t, n_1: n_t, s_1: sset_t) :=
+       event Certified(x, t, n_1, s_1);
+       return((x_1: message <- mkdesc(x, t, n_1, hash(hk_1, s_1)); sign2(x_1, skgen2(rkA))))
+     ) | (
+       foreach iO <= NO do
+       cO(o: other_t) :=
+       return((x_2: message <- mkother(o); sign2(x_2, skgen2(rkA))))
+     ) | (
+       foreach iV <= NV do
+       cV(xg: gkey_t, treq: t_t, n_2: n_t, s_2: sset_t, sg: signature) :=
+       k: kappa_t <- hash(hk_1, s_2);
+ {67}  if (m1: message <- mkdesc(xg, treq, n_2, k); si1: signature <- sg; find u_1 = ri_1 <= ND suchthat defined(x_1[ri_1]) && (m1 = x_1[ri_1]) && check2(m1, pkgen2(rkA), si1) then true else false) then
+       event AcceptK(k, s_2);
+       event Accept(xg, treq, n_2, s_2);
+       return()
+     ))
+
+
+Applying expand [probability Phash(time_4)]
+  - Expand if/find/let
+    - Test at 67 always false
+    - Test at 67 always true
+yields
+
+Game 6 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkA <-R keyseed;
+     return(pkgen2(rkA));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iD <= ND do
+       cA(x: gkey_t, t: t_t, n_1: n_t, s_1: sset_t) :=
+       event Certified(x, t, n_1, s_1);
+       x_1: message <- mkdesc(x, t, n_1, hash(hk_1, s_1));
+       return(sign2(x_1, skgen2(rkA)))
+     ) | (
+       foreach iO <= NO do
+       cO(o: other_t) :=
+       x_2: message <- mkother(o);
+       return(sign2(x_2, skgen2(rkA)))
+     ) | (
+       foreach iV <= NV do
+       cV(xg: gkey_t, treq: t_t, n_2: n_t, s_2: sset_t, sg: signature) :=
+       k: kappa_t <- hash(hk_1, s_2);
+       m1: message <- mkdesc(xg, treq, n_2, k);
+       si1: signature <- sg;
+       find u_1 = ri_1 <= ND suchthat defined(x_1[ri_1]) && (m1 = x_1[ri_1]) && check2(m1, pkgen2(rkA), si1) then
+       event Accept(xg, treq, n_2, s_2);
+       return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on si1 (definition removed, all usages removed)
+yields
+
+Game 7 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkA <-R keyseed;
+     return(pkgen2(rkA));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iD <= ND do
+       cA(x: gkey_t, t: t_t, n_1: n_t, s_1: sset_t) :=
+       event Certified(x, t, n_1, s_1);
+       x_1: message <- mkdesc(x, t, n_1, hash(hk_1, s_1));
+       return(sign2(x_1, skgen2(rkA)))
+     ) | (
+       foreach iO <= NO do
+       cO(o: other_t) :=
+       x_2: message <- mkother(o);
+       return(sign2(x_2, skgen2(rkA)))
+     ) | (
+       foreach iV <= NV do
+       cV(xg: gkey_t, treq: t_t, n_2: n_t, s_2: sset_t, sg: signature) :=
+       k: kappa_t <- hash(hk_1, s_2);
+       m1: message <- mkdesc(xg, treq, n_2, k);
+ {79}  find u_1 = ri_1 <= ND suchthat defined(x_1[ri_1]) && {81}((m1 = x_1[ri_1]) && check2(m1, pkgen2(rkA), sg)) then
+       event Accept(xg, treq, n_2, s_2);
+       return()
+     ))
+
+
+Applying simplify [probability Phash(time_5)]
+  - Simplification pass
+    - Replaced ((m1 = x_1[ri_1]) && check2(m1, pkgen2(rkA), sg)) with ((xg = x[ri_1]) && (treq = t[ri_1]) && (n_2 = n_1[ri_1]) && (s_2 = s_1[ri_1]) && check2(m1, pkgen2(rkA), sg)) at 81
+    - Replaced defined condition x_1[ri_1] with s_1[ri_1], n_1[ri_1], t[ri_1], x[ri_1] in find at 79
+yields
+
+Game 8 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkA <-R keyseed;
+     return(pkgen2(rkA));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iD <= ND do
+       cA(x: gkey_t, t: t_t, n_1: n_t, s_1: sset_t) :=
+       event Certified(x, t, n_1, s_1);
+       x_1: message <- mkdesc(x, t, n_1, hash(hk_1, s_1));
+       return(sign2(x_1, skgen2(rkA)))
+     ) | (
+       foreach iO <= NO do
+       cO(o: other_t) :=
+       x_2: message <- mkother(o);
+       return(sign2(x_2, skgen2(rkA)))
+     ) | (
+       foreach iV <= NV do
+       cV(xg: gkey_t, treq: t_t, n_2: n_t, s_2: sset_t, sg: signature) :=
+       k: kappa_t <- hash(hk_1, s_2);
+       m1: message <- mkdesc(xg, treq, n_2, k);
+       find u_1 = ri_1 <= ND suchthat defined(s_1[ri_1], n_1[ri_1], t[ri_1], x[ri_1]) && (xg = x[ri_1]) && (treq = t[ri_1]) && (n_2 = n_1[ri_1]) && (s_2 = s_1[ri_1]) && check2(m1, pkgen2(rkA), sg) then
+       event Accept(xg, treq, n_2, s_2);
+       return()
+     ))
+
+
+Proved forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s)) in game 8
+Adv[Game 1: forall s', s: sset_t, k: kappa_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> (s = s')] <= Adv[Game 1: forall s', s: sset_t, k: kappa_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> (s = s')]
+Adv[Game 1: forall s', s: sset_t, k: kappa_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> (s = s')] <= Phash(time_1)
+RESULT Proved forall s', s: sset_t, k: kappa_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> (s = s') up to probability Phash(time_1)
+Adv[Game 1: forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s))] <= Phash(time_5) + Phash(time_4) + Phash(time_3) + Psign(time_2, NO + ND, max(length(mkother, maxlength(game 3: o)), length(mkdesc, maxlength(game 3: x), maxlength(game 3: t), maxlength(game 3: n_1)))) + Adv[Game 8: forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s))]
+Adv[Game 8: forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s))] <= 0
+RESULT Proved forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s)) up to probability Phash(time_5) + Phash(time_4) + Phash(time_3) + Psign(time_2, NO + ND, max(length(mkother, maxlength(game 3: o)), length(mkdesc, maxlength(game 3: x), maxlength(game 3: t), maxlength(game 3: n_1))))
+RESULT time_1 = time + time(game 1) = time + time(pkgen) + time(skgen) + ND * time(([1,ND])) + ND * time(sign, length(mkdesc, maxlength(game 1: x), maxlength(game 1: t), maxlength(game 1: n_1))) + ND * time(mkdesc, maxlength(game 1: x), maxlength(game 1: t), maxlength(game 1: n_1)) + ND * time(hash, maxlength(game 1: s_1)) + NO * time(sign, length(mkother, maxlength(game 1: o))) + NO * time(mkother, maxlength(game 1: o)) + NV * time(hash, maxlength(game 1: s_2)) + NV * time(check, length(mkdesc, maxlength(game 1: xg), maxlength(game 1: treq), maxlength(game 1: n_2)), maxlength(game 1: sg)) + NV * time(mkdesc, maxlength(game 1: xg), maxlength(game 1: treq), maxlength(game 1: n_2)) + 2 * NV * time(([1,NV]))
+RESULT time_2 = ND * time(([1,ND])) + ND * time(mkdesc, maxlength(game 3: x), maxlength(game 3: t), maxlength(game 3: n_1)) + ND * time(hash, maxlength(game 3: s_1)) + NO * time(mkother, maxlength(game 3: o)) + NV * time(hash, maxlength(game 3: s_2)) + NV * time(mkdesc, maxlength(game 3: xg), maxlength(game 3: treq), maxlength(game 3: n_2)) + 2 * NV * time(([1,NV])) + time + (NV - 1) * time(check, length(mkdesc, maxlength(game 3: xg), maxlength(game 3: treq), maxlength(game 3: n_2)), maxlength(game 3: sg))
+RESULT time_3 = time + time(game 4) = time + (1 + NV * ND + NV * NO) * time(pkgen) + ND * time(([1,ND])) + ND * time(sign, maxlength(game 4: x_1)) + (ND + NO) * time(skgen) + ND * time(mkdesc, maxlength(game 4: x), maxlength(game 4: t), maxlength(game 4: n_1)) + ND * time(hash, maxlength(game 4: s_1)) + NO * time(sign, maxlength(game 4: x_2)) + NO * time(mkother, maxlength(game 4: o)) + NV * time(hash, maxlength(game 4: s_2)) + NV * ND * time(= message, maxlength(game 4: m1), maxlength(game 4: x_1)) + (NV * ND + NV * NO) * time(check, maxlength(game 4: m1), maxlength(game 4: si1)) + NV * NO * time(= message, maxlength(game 4: m1), maxlength(game 4: x_2)) + NV * time(mkdesc, maxlength(game 4: xg), maxlength(game 4: treq), maxlength(game 4: n_2)) + 2 * NV * time(([1,NV]))
+RESULT time_4 = time + time(game 5) = time + (1 + NV * ND) * time(pkgen) + ND * time(([1,ND])) + ND * time(sign, maxlength(game 5: x_1)) + (ND + NO) * time(skgen) + ND * time(mkdesc, maxlength(game 5: x), maxlength(game 5: t), maxlength(game 5: n_1)) + ND * time(hash, maxlength(game 5: s_1)) + NO * time(sign, maxlength(game 5: x_2)) + NO * time(mkother, maxlength(game 5: o)) + NV * time(hash, maxlength(game 5: s_2)) + NV * ND * time(= message, maxlength(game 5: m1), maxlength(game 5: x_1)) + NV * ND * time(check, maxlength(game 5: m1), maxlength(game 5: si1)) + NV * time(mkdesc, maxlength(game 5: xg), maxlength(game 5: treq), maxlength(game 5: n_2)) + 2 * NV * time(([1,NV]))
+RESULT time_5 = time + time(game 7) = time + (1 + NV * ND) * time(pkgen) + ND * time(([1,ND])) + ND * time(mkdesc, maxlength(game 7: x), maxlength(game 7: t), maxlength(game 7: n_1)) + ND * time(hash, maxlength(game 7: s_1)) + ND * time(sign, maxlength(game 7: x_1)) + (ND + NO) * time(skgen) + NO * time(mkother, maxlength(game 7: o)) + NO * time(sign, maxlength(game 7: x_2)) + NV * time(hash, maxlength(game 7: s_2)) + NV * time(mkdesc, maxlength(game 7: xg), maxlength(game 7: treq), maxlength(game 7: n_2)) + NV * ND * time(= message, maxlength(game 7: m1), maxlength(game 7: x_1)) + NV * ND * time(check, maxlength(game 7: m1), maxlength(game 7: sg)) + NV * time(([1,NV]))
+All queries proved.

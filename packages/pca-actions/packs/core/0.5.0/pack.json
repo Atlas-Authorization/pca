@@ -1,0 +1,75 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "core",
+  "version": "0.5.0",
+  "ns": [
+    "agent",
+    "browser",
+    "clipboard",
+    "computer",
+    "docker",
+    "env",
+    "files",
+    "git",
+    "http",
+    "jobs",
+    "mcp",
+    "os",
+    "secrets",
+    "shell",
+    "ssh"
+  ],
+  "count": 133,
+  "root": "6f0yF8DWVQS4yl_-gfUVTdcVT4XZ0fcWK-KKlxUkGGg",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 122,
+    "unreviewed": 11
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Written in-house from public documentation of standard tools (POSIX utilities, git, docker, ssh, HTTP, WebDriver-style browser control); no third-party text or schema is carried.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/core.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "4fb5e4667ec38b2a8e024d7f6b704db820833dcab65c9ca5dbacdf7ffcd55432"
+  },
+  "shards": [
+    {
+      "file": "defs/000-agent_message.jsonl",
+      "count": 133,
+      "bytes": 62330,
+      "sha256": "2991a905e77fe7d79385554bbf834956889c1f154163ee40281e3405fa40cdb0",
+      "first": "agent.message",
+      "last": "ssh.upload"
+    }
+  ],
+  "stats": {
+    "total": 133,
+    "authored": 122,
+    "unreviewed": 11,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "update": 38,
+      "create": 22,
+      "exec": 18,
+      "delete": 21,
+      "read": 38,
+      "privilege": 7,
+      "publish": 7,
+      "provision": 5
+    }
+  }
+}

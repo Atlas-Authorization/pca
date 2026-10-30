@@ -7,6 +7,7 @@
  * fetch. The signed document is what the site serves at `/.well-known/pca-actions.json`; the key entry printed by
  * `cmdSchemaSign` goes into the site's discovery document (`intent.schema_keys`).
  */
+import { unb64u } from '@atlasauth/pca';
 import {
   actionSchemaDigest,
   actionSchemaKeyOf,
@@ -14,14 +15,13 @@ import {
   draftSchemaFromMcpTools,
   draftSchemaFromOpenApi,
   signActionSchema,
-  unb64u,
   verifyActionSchema,
   type ActionSchema,
   type ActionSchemaKey,
   type McpToolLike,
   type OpenApiLike,
   type UnsignedActionSchema,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 
 const parse = (text: string, what: string): unknown => {
   try {

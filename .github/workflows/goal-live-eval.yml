@@ -1,0 +1,63 @@
+name: Goal intent fidelity, live model evaluation
+
+# Scheduled evaluation of the intent-fidelity pipeline against LIVE models. Pull-request CI never runs this: it replays recorded
+# outputs (see intent.yml). API keys are read only from repository secrets and exist only in the environment of the one step
+# that needs them; they are never written to a file or echoed. Models are pinned by exact id in repository variables.
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      cases_per_domain:
+        description: Main-split cases per domain (hostile cases are half as many)
+        default: '60'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goal-live-eval
+  cancel-in-progress: false
+
+jobs:
+  live:
+    name: live model evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    if: github.event_name != 'schedule' || github.repository_owner != ''
+    steps:
+      - uses: actions/checkout@v4
+      - name: Present in this tree?
+        id: present
+        run: |
+          if [ -f packages/pca-goal/package.json ]; then echo "yes=true" >> "$GITHUB_OUTPUT"; else echo "yes=false" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.present.outputs.yes == 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.present.outputs.yes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install and build
+        if: steps.present.outputs.yes == 'true'
+        run: |
+          pnpm install --frozen-lockfile --filter=@atlasauth/pca-goal...
+          pnpm -r --filter=@atlasauth/pca-goal^... run build
+      - name: Live evaluation
+        if: steps.present.outputs.yes == 'true'
+        env:
+          PCA_GOAL_LIVE: '1'
+          PCA_GOAL_LIVE_N: ${{ github.event.inputs.cases_per_domain || '60' }}
+          PCA_GOAL_REPORT_DIR: ${{ runner.temp }}/live-report
+          PCA_GOAL_MODEL_A: ${{ vars.PCA_GOAL_MODEL_A }}
+          PCA_GOAL_MODEL_B: ${{ vars.PCA_GOAL_MODEL_B }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: pnpm --filter @atlasauth/pca-goal exec vitest run src/__tests__/live.test.ts
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.present.outputs.yes == 'true'
+        with:
+          name: intent-fidelity-live-report
+          path: ${{ runner.temp }}/live-report/
+          if-no-files-found: ignore

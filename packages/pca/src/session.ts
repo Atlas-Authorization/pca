@@ -18,6 +18,9 @@ export interface Session {
   goalCommit: string;
 }
 
+/** Deepest delegation chain a session accepts. */
+export const SESSION_MAX_DEPTH = 32;
+
 /** Start a session from a root agent. */
 export function startSession(root: Agent): Session {
   return { root, members: [root], goalCommit: readEnvelope(root.grant)?.goal_commit ?? '' };
@@ -25,6 +28,7 @@ export function startSession(root: Agent): Session {
 
 /** Add a sub-agent (one attenuated delegation hop under the root's current leaf). */
 export function addMember(session: Session, opts: Parameters<Agent['subAgent']>[0] = {}): { session: Session; member: Agent } {
+  if (session.members.length > SESSION_MAX_DEPTH) throw new RangeError(`addMember: a session is limited to ${SESSION_MAX_DEPTH} delegation hops`);
   const parent = session.members[session.members.length - 1]!;
   const member = parent.subAgent(opts);
   return { session: { ...session, members: [...session.members, member] }, member };
@@ -41,9 +45,12 @@ export function sessionConsole(session: Session, events: ActivityEvent[]): Conso
   return buildConsole(events.filter((e) => ids.has(e.agent)));
 }
 
-/** True iff every member shares the root's goal commitment (a well-formed team). */
+/**
+ * True iff every member shares the root's goal commitment (a well-formed team). A root without a readable
+ * envelope has no goal commitment (`''`), and members that all lack one do not "share a goal": false.
+ */
 export function sharesGoal(session: Session): boolean {
-  return session.members.every((m) => (readEnvelope(m.grant)?.goal_commit ?? '') === session.goalCommit);
+  return session.goalCommit !== '' && session.members.every((m) => (readEnvelope(m.grant)?.goal_commit ?? '') === session.goalCommit);
 }
 
 /** Depth of the delegation tree (0 = root only). */

@@ -1,5 +1,5 @@
 import type { TrustedChannel } from './channel';
-import type { SignedIntentRequired } from '@atlasauth/pca';
+import type { SignedIntentRequired } from '@atlasauth/pca/ext/intent';
 import { isObj, type PcaAction } from './wire';
 
 /**

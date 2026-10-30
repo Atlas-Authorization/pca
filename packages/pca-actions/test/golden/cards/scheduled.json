@@ -1,0 +1,32 @@
+{
+ "trait": "pca.scheduled",
+ "card": {
+  "verb": "golden.scheduled",
+  "title": "Do the scheduled thing",
+  "text": "Do the scheduled thing. This action runs later or repeatedly.",
+  "risk": "high",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "count_cap",
+   "short_expiry"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.scheduled"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "count_cap",
+   "short_expiry"
+  ],
+  "context": [],
+  "prules": []
+ }
+}

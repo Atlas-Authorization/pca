@@ -1,0 +1,33 @@
+{
+ "target": "predicates like / matches / re: (ReDoS grammar + mutation)",
+ "seeds": [
+  {
+   "pat": "*.pdf",
+   "subj": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "pat": "a?b*c",
+   "subj": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "pat": "(?:GET|POST) /x",
+   "subj": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "pat": "/acct/[^/]+/items/\\d+",
+   "subj": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "pat": "a?a?a?a?aaaa",
+   "subj": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "pat": "(?:a|aa)(?:a|aa)b",
+   "subj": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "pat": "*a*a*a*b",
+   "subj": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ ]
+}

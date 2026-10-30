@@ -635,3 +635,60 @@ export function verifyHeadConsistency(
     return false;
   }
 }
+
+/** One link of a checkpoint chain: a signed head and the consistency proof from the PREVIOUS checkpoint to it (absent on the first). */
+export interface Checkpoint {
+  sth: SignedTreeHead;
+  proof?: ConsistencyProof;
+}
+
+export type CheckpointChainVerdict = { ok: true; head: SignedTreeHead } | { ok: false; at: number; reason: 'empty' | 'head' | 'proof_missing' | 'inconsistent' };
+
+/**
+ * Verify a sequence of pinned checkpoints end to end: every head is genuine (guardian signature, and the witness
+ * cosignature threshold when `requireWitnessThreshold` is given), the first needs no proof, and every later checkpoint
+ * carries a consistency proof that connects it to the checkpoint before (same log, signed `prev_root` link when adjacent,
+ * RFC 9162 path). A log that rewrote or dropped history between ANY two checkpoints fails at that boundary; `at` is the
+ * index of the first checkpoint that does not verify. An empty chain fails closed. Never throws.
+ */
+export function verifyCheckpointChain(
+  chain: readonly Checkpoint[],
+  guardianPublic: string,
+  requireWitnessThreshold?: WitnessPolicy,
+  pin?: PqPinPolicy,
+): CheckpointChainVerdict {
+  try {
+    if (!Array.isArray(chain) || chain.length === 0) return { ok: false, at: 0, reason: 'empty' };
+    for (let i = 0; i < chain.length; i++) {
+      const cp = chain[i];
+      if (!cp || !verifyTreeHead(cp.sth, guardianPublic, requireWitnessThreshold, pin)) return { ok: false, at: i, reason: 'head' };
+      if (i === 0) continue;
+      if (!cp.proof) return { ok: false, at: i, reason: 'proof_missing' };
+      if (!verifyHeadConsistency(chain[i - 1]!.sth, cp.sth, cp.proof, guardianPublic, requireWitnessThreshold, pin)) return { ok: false, at: i, reason: 'inconsistent' };
+    }
+    return { ok: true, head: chain[chain.length - 1]!.sth };
+  } catch {
+    return { ok: false, at: 0, reason: 'head' };
+  }
+}
+
+/**
+ * Split-view proof for signed tree heads: two heads, both genuinely signed by `guardianPublic`, for the same log and the same
+ * size but with different roots. The guardian signed two histories of one length, which is the one thing an honest log never
+ * does; the pair is self-contained evidence anyone can check (unlike a failed consistency proof, which proves nothing about who
+ * is at fault). Never throws.
+ */
+export function detectTreeHeadEquivocation(a: SignedTreeHead, b: SignedTreeHead, guardianPublic: string, pin?: PqPinPolicy): boolean {
+  try {
+    return (
+      verifyTreeHead(a, guardianPublic, undefined, pin) &&
+      verifyTreeHead(b, guardianPublic, undefined, pin) &&
+      a.instance_id === b.instance_id &&
+      a.principal === b.principal &&
+      a.size === b.size &&
+      a.root !== b.root
+    );
+  } catch {
+    return false;
+  }
+}

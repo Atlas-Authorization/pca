@@ -1,0 +1,3 @@
+RESULT Proved forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') up to probability Phash(time_1)
+RESULT Could not prove forall r: rest_t, k: kid_t, u: aud_t, x: act_t, q: seq_t, a: accid_t, s: sid_t, p: pkey; inj-event(AcceptR(p, s, a, q, x, u, k, r)) ==> (inj-event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p))); forall r: rest_t, k: kid_t, u: aud_t, x: act_t, q: seq_t, a: accid_t, s: sid_t, p: pkey; event(AcceptR(p, s, a, q, x, u, k, r)) ==> (event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p))); forall w: window_t, p: pkey, k: kid_t; event(AcceptEntry(k, p, w)) ==> event(EntrySigned(k, p, w)).
+rc=0 secs=0

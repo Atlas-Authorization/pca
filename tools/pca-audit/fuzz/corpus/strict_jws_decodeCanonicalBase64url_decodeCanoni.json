@@ -1,0 +1,8 @@
+{
+ "target": "strict-jws decodeCanonicalBase64url / decodeCanonicalJsonSegment",
+ "seeds": [
+  {
+   "text": "eyJhIjoxfQ"
+  }
+ ]
+}

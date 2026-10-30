@@ -1,0 +1,23 @@
+{
+  "name": "@atlasauth/pca-erc7715",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ERC-7715 wallet permission requests for PCA grants: map a money grant to a permission request and verify the permission a wallet actually granted against the grant. No chain access, no on-chain redemption.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": { "node": ">=20" }
+}

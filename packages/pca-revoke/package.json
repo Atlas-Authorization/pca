@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-revoke",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Realtime revocation + mid-run kill-switch for PCA: revoke a capability, an agent holder, or a whole delegation subtree, and deny in-flight actions against a pluggable revocation registry (Shared-Signals/CAEP consumable).",
   "keywords": [
     "revocation",
@@ -28,7 +28,15 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./file": {
+      "types": "./dist/file-store.d.ts",
+      "default": "./dist/file-store.js"
+    },
+    "./conformance": {
+      "types": "./dist/conformance.d.ts",
+      "default": "./dist/conformance.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -52,5 +60,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

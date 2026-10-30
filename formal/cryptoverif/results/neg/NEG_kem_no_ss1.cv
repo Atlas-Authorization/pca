@@ -1,0 +1,67 @@
+(* PCA -- KEM-1 (computational), the hybrid KEM combiner of packages/pca/src/kem.ts (X25519 + ML-KEM with a HKDF
+   combiner over BOTH shared secrets and BOTH ciphertexts; X-Wing has the same shape), CryptoVerif.
+
+   Hybrid key  K = H(ss1 || ss2 || c1 || c2)  with H a random oracle (HKDF, NA-ROM).
+   Component 1 is an IND-CCA2 KEM, modelled as IND-CCA2 public-key encryption of a fresh random shared secret ss1
+   (the standard KEM-as-PKE view; ML-KEM is IND-CCA after the Fujisaki-Okamoto transform, NA-MLKEM).
+   Component 2 is TOTALLY BROKEN: the adversary chooses the challenge's ss2 and c2 itself, and in every decapsulation query
+   it supplies the component-2 shared secret it wants. The hybrid decapsulation oracle is open on every ciphertext pair
+   except the challenge pair.
+
+   q_secret : one-session secrecy of the challenge key k0 (CryptoVerif's real-or-random test on k0, which is never output),
+              i.e. the hybrid is IND-CCA if component 1 is.
+   Overall bound: Adv <= Adv_IND-CCA2(component 1) + the ROM term proved here (about qH / |ss1|).
+   The symmetric statement (component 2 secure, component 1 broken) is the same model with the roles exchanged. The
+   negative control drops ss1 from the hash input: then the key is computable from the broken component, and the secret is lost.
+   Not modelled: the concrete X25519 / ML-KEM, the key-derivation salt, ciphertext encodings (checked by the vectors). *)
+
+param NK, NE.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type ss_t [large, fixed].
+type ciphertext.
+type ct2_t [bounded].
+type ss2_t [bounded].
+type key_t [large, fixed].
+type hashkey [fixed].
+const ss0: ss_t.
+type hin.
+
+proba Penc.
+proba Penccoll.
+
+fun mkin(ss_t, ss2_t, ciphertext, ct2_t): hin [data].
+
+expand IND_CCA2_public_key_enc(keyseed, pkey, skey, ss_t, ciphertext, skgen, pkgen, enc, dec, injbot, Z, Penc, Penccoll).
+(* ss_t is fixed-length, so the length-revealing Z of the IND-CCA2 game is one constant: the challenge ciphertext
+   then carries no information on ss1, and ss1 is left only inside the random-oracle input. *)
+const Zss: ss_t.
+equation forall x: ss_t; Z(x) = Zss.
+expand ROM_hash(hashkey, hin, key_t, hash, hash_oracle, qH).
+
+query secret k0 [cv_onesession].
+
+channel c0, cC, cC2, cD, cD2.
+
+process
+  in(c0, ());
+  new hk: hashkey;
+  new rk: keyseed;
+  let pk = pkgen(rk) in
+  let sk = skgen(rk) in
+  out(c0, pk);
+  ( hash_oracle(hk)
+  | in(cC, (c2s: ct2_t, s2s: ss2_t));
+    new ss1: ss_t;
+    let c1s = enc(ss1, pk) in
+    let k0: key_t = hash(hk, mkin(ss0, s2s, c1s, c2s)) in
+    out(cC2, c1s);
+    ! iD <= NK
+    in(cD, (c1: ciphertext, c2: ct2_t, s2: ss2_t));
+    if c1 = c1s then
+      (if c2 = c2s && s2 = s2s then yield else out(cD2, hash(hk, mkin(ss1, s2, c1, c2))))
+    else
+      let injbot(m) = dec(c1, sk) in
+      out(cD2, hash(hk, mkin(m, s2, c1, c2))) )

@@ -17,7 +17,7 @@ describe('reputation', () => {
     expect(reputation({ subject: 's', events: evs({ auto: 3 }) })).toEqual({ subject: 's', actions: 3, autos: 3, stepUps: 0, denies: 0, slashes: 0, disputes: 0, score: 1, factors: ['clean history'] });
   });
   it('only an unslashed dispute is history (clean)', () => {
-    expect(reputation({ subject: 's', disputes: [{ subject: 's', slashed: false, at: 1 }] })).toEqual({
+    expect(reputation({ subject: 's', disputes: [{ id: 'x', subject: 's', slashed: false, at: 1 }] })).toEqual({
       subject: 's', actions: 0, autos: 0, stepUps: 0, denies: 0, slashes: 0, disputes: 1, score: 1, factors: ['clean history'],
     });
   });
@@ -30,7 +30,8 @@ describe('reputation', () => {
     expect(r).toEqual({ subject: 's', actions: 2, autos: 1, stepUps: 1, denies: 0, slashes: 0, disputes: 0, score: 1 - 0.15 * 0.5, factors: ['step-up rate 50%'] });
   });
   it('one slash, then many (saturating, plural)', () => {
-    const d = (slashed: boolean) => ({ subject: 's', slashed, at: 1 });
+    let k = 0;
+    const d = (slashed: boolean) => ({ id: `d${k++}`, subject: 's', slashed, at: 1 });
     expect(reputation({ subject: 's', events: evs({ auto: 1 }), disputes: [d(true), d(false)] })).toEqual({
       subject: 's', actions: 1, autos: 1, stepUps: 0, denies: 0, slashes: 1, disputes: 2, score: 0.7, factors: ['1 slashed dispute'],
     });
@@ -43,8 +44,8 @@ describe('reputation', () => {
     expect(two.score).toBeCloseTo(0.4, 12);
   });
   it('clamps at 0', () => {
-    const d = { subject: 's', slashed: true, at: 1 };
-    const r = reputation({ subject: 's', events: evs({ deny: 1 }), disputes: [d, d, d] });
+    const d = (id: string) => ({ id, subject: 's', slashed: true, at: 1 });
+    const r = reputation({ subject: 's', events: evs({ deny: 1 }), disputes: [d('a'), d('b'), d('c')] });
     expect(r.score).toBe(0);
     expect(r.factors).toEqual(['deny rate 100%', '3 slashed disputes']);
   });

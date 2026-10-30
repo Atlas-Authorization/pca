@@ -200,3 +200,50 @@ export function acceptBeacon(prev: Pick<LivenessBeacon, 'seq'> | null | undefine
 export function isFrozenLiveness(beacons: readonly LivenessBeacon[], o: LivenessCheck): boolean {
   return !beacons.some((b) => verifyLivenessBeacon(b, o).ok);
 }
+
+// ---------------------------------------------------------------------------------------------
+// Durable replay protection. `acceptBeacon` is a pure comparison: it needs the previously accepted
+// beacon, and a verifier that keeps that in memory forgets it on restart, so a captured old beacon
+// could be replayed over a newer one the moment the process comes back. `createBeaconAcceptor`
+// keeps the highest accepted `seq` per (instance, scope, issuer) in a durable key-value store
+// (`@atlasauth/pca/durable-state`, or any `DurableKv`), under one atomic read-modify-write.
+// ---------------------------------------------------------------------------------------------
+
+import type { DurableKv } from './durable-state';
+
+export interface BeaconAcceptor {
+  /**
+   * Verify `b` against `check` ({@link verifyLivenessBeacon}), then record its `seq` iff it is STRICTLY above the highest
+   * already accepted for the same (instance, scope, issuer). Returns `{ ok: true }` for a fresh beacon; `{ ok: false, reason }`
+   * for one that fails verification, or `replayed beacon: seq N <= M` for a replay (nothing is recorded). FAIL CLOSED: when the
+   * store cannot decide (it throws, is unreachable, or holds a malformed value) the beacon is refused with
+   * `beacon state unavailable`. Never throws.
+   */
+  accept(b: LivenessBeacon, check: LivenessCheck): Promise<BeaconVerdict>;
+}
+
+const beaconKey = (b: Pick<LivenessBeacon, 'instance' | 'scope' | 'issuer'>): string => `beacon-seq/v1/${JSON.stringify([b.instance, b.scope, b.issuer])}`;
+
+export function createBeaconAcceptor(kv: DurableKv): BeaconAcceptor {
+  if (!kv || typeof kv.update !== 'function') throw new TypeError('createBeaconAcceptor: a DurableKv is required');
+  return {
+    async accept(b, check) {
+      const v = verifyLivenessBeacon(b, check);
+      if (!v.ok) return v;
+      let replayOf: number | undefined;
+      try {
+        await kv.update(beaconKey(b), (prev) => {
+          if (prev !== undefined && !(Number.isSafeInteger(prev) && (prev as number) >= 0)) throw new TypeError(); // junk on disk: the catch below refuses
+          if (prev !== undefined && !(b.seq > (prev as number))) {
+            replayOf = prev as number;
+            return undefined;
+          }
+          return b.seq;
+        });
+      } catch {
+        return { ok: false, reason: 'beacon state unavailable' };
+      }
+      return replayOf === undefined ? { ok: true } : { ok: false, reason: `replayed beacon: seq ${b.seq} <= ${replayOf}` };
+    },
+  };
+}
