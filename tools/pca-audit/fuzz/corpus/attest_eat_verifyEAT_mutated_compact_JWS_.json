@@ -1,0 +1,8 @@
+{
+ "target": "attest-eat verifyEAT (mutated compact JWS)",
+ "seeds": [
+  {
+   "text": "eyJhbGciOiJFZERTQSIsInR5cCI6ImVhdCtqd3QifQ.eyJpc3MiOiJmdXp6LWlzcyIsImlhdCI6MTcwMDAwMDAwMCwiZWF0X25vbmNlIjoibi0xIiwiY25mIjp7InRsc19leHBvcnRlciI6IklYRkVNV1lsM2FvZkZXVG94MWpKUk5odGVkMGhNS2ZhN3MxWXkzXzNXencifX0.iB1EqejRlfYSAeJZoL7Ge4tuLBRinEa0b31FwVzmPosYDCUQ3xewDicGF3eIC4CQkR4GHcFh3Xx6-b9rrzuFAg"
+  }
+ ]
+}

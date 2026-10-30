@@ -4,23 +4,8 @@
  * session store (duplicate ids, settle, lock hand-off and cleanup). Exact outcomes throughout.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  COUNTED_STATUSES,
-  EVENT_STATUSES,
-  MemoryIntentSessionStore,
-  accContextFor as accContextFor_,
-  accKeyOf as accKeyOf_,
-  accPost as accPost_,
-  accPreState as accPreState_,
-  admitIntentAction,
-  inWindow as inWindow_,
-  isCounted as isCounted_,
-  monitorState as monitorState_,
-  monitorStep as monitorStep_,
-  settleIntentEvent,
-  type EventStatus,
-  type IntentEvent,
-} from './intent-history';
+import { COUNTED_STATUSES, EVENT_STATUSES, accContextFor as accContextFor_, accKeyOf as accKeyOf_, accPost as accPost_, accPreState as accPreState_, admitIntentAction, inWindow as inWindow_, isCounted as isCounted_, monitorState as monitorState_, monitorStep as monitorStep_, settleIntentEvent, type EventStatus, type IntentEvent } from './intent-history';
+import { MemoryIntentSessionStore } from './intent-history-testing';
 import type { AccumulatorDecl, MonitorDecl } from './intent-acc';
 
 // ---- exact outcomes: every call of the module under test is settled, so a thrown error is an outcome compared with
@@ -318,7 +303,7 @@ describe('MemoryIntentSessionStore', () => {
     const seen: unknown[] = [];
     const run = (id: string, allow: boolean) =>
       settleA(() =>
-        admitIntentAction(store, {
+        admitIntentAction(store, { requireDurable: false,
           session: 's',
           root,
           event: { id, verb: 'pay', resource: 'r', params: { total: 3 }, t: T },

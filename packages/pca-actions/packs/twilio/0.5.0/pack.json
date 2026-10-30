@@ -1,0 +1,294 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "twilio",
+  "version": "0.5.0",
+  "ns": [
+    "twilio"
+  ],
+  "count": 1133,
+  "root": "94GQy_Qmmr03kejHvdTp1euTB3adPIOO7kcaiILdsDI",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 988,
+    "unreviewed": 145
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "Twilio publishes its OpenAPI descriptions (twilio/twilio-oai) under the MIT licence. Operation ids, parameter names/types/bounds and short summaries are carried; the trait review is ours.",
+  "sources": [
+    {
+      "id": "api_v2010",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_api_v2010.json",
+      "spec_digest": "sha256:bfdf249a129819af274d6bdc7672156ea3416ad48670a6f0544def6ef386ba87",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "verify_v2",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_verify_v2.json",
+      "spec_digest": "sha256:bee888a5f4c53e422604cafbd610ffe23b46db5789dab9ef516980a188e480bb",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "messaging_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_messaging_v1.json",
+      "spec_digest": "sha256:28993c66048625cb9421c8534609d9b3573365d0e25a5170b5026806634b3f9a",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "conversations_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_conversations_v1.json",
+      "spec_digest": "sha256:6a37056c7727c1c1ce4d892de95963ccbdc479b5d2c44e867c44fe42d8e0355b",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "lookups_v2",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_lookups_v2.json",
+      "spec_digest": "sha256:94eecebb7c302115f35ce5842c9a82762495943071051f605c8482ab8c735e6b",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "studio_v2",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_studio_v2.json",
+      "spec_digest": "sha256:c384dd0ef33198d3b592beaf9c1d095c338063969ab4ce92ddc5c2242c4677a3",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "voice_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_voice_v1.json",
+      "spec_digest": "sha256:e218199d8d6d116e23697a6f78dfddc5f7d5d1a21b8b16c3a1b4d0855f162afe",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "video_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_video_v1.json",
+      "spec_digest": "sha256:162f62d432a227cb5aab8da45af7bbfceca5569feff4e26529504583946d1383",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "sync_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_sync_v1.json",
+      "spec_digest": "sha256:0360fe39df8da59ebecefefbeb312aaae2d6e23faf783020486e3a743f499e92",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "taskrouter_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_taskrouter_v1.json",
+      "spec_digest": "sha256:f431d2bc66ba14373a452e0e6d3795cb1576cf6c2e15352b5330b22a4d34d0bf",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "trunking_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_trunking_v1.json",
+      "spec_digest": "sha256:d34f2c6352fa8060a0b816240b6baa2a6237629e06b60878da06b4429b758c2d",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "proxy_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_proxy_v1.json",
+      "spec_digest": "sha256:a2e6d27b3ecd5278f562f53c391245cc4e7a18a1625060fffe885cc9fdacce41",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "notify_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_notify_v1.json",
+      "spec_digest": "sha256:2d30a1df61483a5f5f1b8e7ae547a135a1db29188bfc149e830242d236c01495",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "numbers_v2",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_numbers_v2.json",
+      "spec_digest": "sha256:8f3b9c65f002506a3653a659e1f64d7abd8438faa5e65cf56537324afc53c69d",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "trusthub_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_trusthub_v1.json",
+      "spec_digest": "sha256:efbeb2fac001fa7492544096405d18cdd0954ce36777b5403a7f94e7b1958b21",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "serverless_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_serverless_v1.json",
+      "spec_digest": "sha256:74f59534eb423d280a5fa93570b92ff1bb71cbb04441cd2c9036f5a8c248e455",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "flex_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_flex_v1.json",
+      "spec_digest": "sha256:185d7522d33c512cf0743144f606c2b24ab1df16e1cbe495aacc9aa395397233",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "wireless_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_wireless_v1.json",
+      "spec_digest": "sha256:f3b4aa48e839212b10113b1cfb6acdff7df834ab43acf314ca999ed28f38cbeb",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "supersim_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_supersim_v1.json",
+      "spec_digest": "sha256:c0baa6eaf932fc01731c8b3f4bb6d72f932a341b198877ac3635b49df678cd89",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "content_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_content_v1.json",
+      "spec_digest": "sha256:efc7aa27ad2d5861487c4ed133c37f841bc53c8024e921d8b5b6b06076136532",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "events_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_events_v1.json",
+      "spec_digest": "sha256:90720e9c2c9abc99236531dce8c854023a3d100bc01b489d7541f2c55b622a40",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "chat_v2",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_chat_v2.json",
+      "spec_digest": "sha256:ae8020ff991f603dcb305ca268d02eddb687a888394784926c5817ed8ad9114b",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "iam_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_iam_v1.json",
+      "spec_digest": "sha256:1c3777630eee7e9da2f1e2d7a9f6f479ca8c52d1c55e9f7897534af748e0828b",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "intelligence_v2",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_intelligence_v2.json",
+      "spec_digest": "sha256:84898765c5f1b674f1badd3f11498a088e56be843e21a43f880e256c731c180f",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "routes_v2",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_routes_v2.json",
+      "spec_digest": "sha256:0ec156ca53c7e7255e3062449da4dd47f9c7ab89a7f6d36caa21f0ba138a1290",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "accounts_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_accounts_v1.json",
+      "spec_digest": "sha256:a21ff11add2e8ce407423bd6841744de9ae0bc21ca28054150c61ae4e8f0f684",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "marketplace_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_marketplace_v1.json",
+      "spec_digest": "sha256:390602042b6e380cba00a5926c4c75e639d9bc9ee828505c7c5751529dbb2cbc",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "pricing_v2",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_pricing_v2.json",
+      "spec_digest": "sha256:5f6cd2972bd77516708b86cbe3b4bfb6ffe381fb7b918d5815bb5d25d939b83b",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    },
+    {
+      "id": "monitor_v1",
+      "kind": "openapi",
+      "uri": "https://github.com/twilio/twilio-oai/blob/d9775142962ea67d5f3d50c5021a23ae6d330c5b/spec/json/twilio_monitor_v1.json",
+      "spec_digest": "sha256:01cbdbcf97463fd1c471fd49108c2ea89762bd5205f3d186637a743ff0b1304f",
+      "licence": "MIT",
+      "licence_url": "https://github.com/twilio/twilio-oai/blob/main/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "246117ae69493be59272e1eafce2962c74a825d56da680c3efdb9938c9ac500d"
+  },
+  "shards": [
+    {
+      "file": "defs/000-twilio_accounts_v1.jsonl",
+      "count": 716,
+      "bytes": 716484,
+      "sha256": "90be84c813954b07ab8f87cd1d02317a251a5bed0dc420003aff5c6bba35a7ca",
+      "first": "twilio.accounts_v1.create_bulk_consents",
+      "last": "twilio.serverless_v1.delete_environment"
+    },
+    {
+      "file": "defs/001-twilio_serverless_v1.jsonl",
+      "count": 417,
+      "bytes": 391750,
+      "sha256": "a8550a65d70930ee279357388c4f51e76339984412c1a66b4a7df0f435817f14",
+      "first": "twilio.serverless_v1.delete_function",
+      "last": "twilio.wireless_v1.update_sim"
+    }
+  ],
+  "stats": {
+    "total": 1133,
+    "authored": 988,
+    "unreviewed": 145,
+    "skipped": {},
+    "dropped_params": 282,
+    "by_effect": {
+      "create": 212,
+      "privilege": 109,
+      "delete": 169,
+      "read": 568,
+      "update": 170,
+      "send": 4,
+      "provision": 4,
+      "publish": 4,
+      "exec": 4
+    }
+  }
+}

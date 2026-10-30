@@ -149,6 +149,18 @@ func one(_ c: JSONValue, rawHasLoneSurrogate: Bool) -> JObject {
         var out: JObject = ["allow": .bool(why == nil), "checks": .object(["chain": .bool(why == nil)])]
         if let w = why, w.contains(PCASuites.unsupportedSuiteReason) { out["unsupported_suite"] = .string(w) }
         return out
+    case "policy":
+        // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+        // PCA.evaluateAgentCaveats(policyCaveats(grant, chain), context, {action}, toolCall) as {allow, failed}: the agent-native
+        // evaluator (predicates + tool_schema); the tool call is the signed verb + params (the reference's toolCallOf)
+        guard let o = try? StrictJSON.parseLenient(raw), o.isObject else { return ["error": .string("exception:policy")] }
+        let pctx = o.get("context") ?? .null
+        let pact = pctx.get("action") ?? .null
+        let pparams = pact.get("params")
+        let pcall = PCA.ToolCall(tool: pact.get("verb")?.asString ?? "", args: (pparams?.isObject ?? false) ? pparams! : .object([:]))
+        let pr = PCA.evaluateAgentCaveats(PCA.policyCaveats(grant: o.get("grant") ?? .null, chain: o.get("chain")), context: pctx,
+                                          actionContext: .object(["action": pact]), toolCall: pcall)
+        return ["allow": .bool(pr.ok), "failed": strArray(pr.failed)]
     case _ where kind.hasPrefix("intent_"):
         // a lone surrogate in the input reaches the primitive as the sentinel scalar, which every v2 rule treats as one
         guard let input = try? StrictJSON.parseLenient(raw),

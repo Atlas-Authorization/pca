@@ -4,6 +4,10 @@
  * matcher + the maximum taint that may flow to them autonomously) and evaluate an action's provenance
  * against them. Pure + offline; composes the taint level carried in a PCActn's provenance.
  *
+ * ADVISORY HEURISTIC. Taint levels are labels that something upstream attached; this module checks them against
+ * ceilings. It does not track data through the program, so it must never be the only control over an exfiltration
+ * path. For a capability-based guarantee use `@atlasauth/pca-dataflow`.
+ *
  * Taint convention (matches provenance.taint_level): 0 = clean / fully trusted; higher = more
  * untrusted-or-sensitive. A high-taint action reaching a sensitive sink is the classic exfiltration /
  * prompt-injection path; the policy stops it or forces a human, offline, before dispatch.
@@ -54,13 +58,28 @@ function matches(pattern: string, resource: string): boolean {
   return pattern === resource;
 }
 
-/** Find the most specific matching data class (longest non-wildcard prefix wins; exact beats prefix). */
+/**
+ * Find the most specific matching data class (longest non-wildcard prefix wins; exact beats prefix). Of several
+ * equally specific classes the STRICTEST wins (lowest ceiling), never whichever was listed first.
+ */
 function classFor(policy: DlpPolicy, ctx: DlpContext): DataClass | undefined {
   const applicable = policy.classes.filter(
     (c) => matches(c.resource, ctx.resource) && (!c.verbs || c.verbs.includes(ctx.verb)),
   );
   if (applicable.length === 0) return undefined;
-  return applicable.sort((a, b) => specificity(b.resource) - specificity(a.resource))[0];
+  return applicable.sort((a, b) => specificity(b.resource) - specificity(a.resource) || strictness(a) - strictness(b))[0];
+}
+
+// a malformed ceiling sorts first, so the policy then denies instead of picking a lenient sibling
+const strictness = (c: DataClass): number => (typeof c.maxTaintForAuto === 'number' && !Number.isNaN(c.maxTaintForAuto) ? c.maxTaintForAuto : Number.NEGATIVE_INFINITY);
+
+const isNum = (x: unknown): x is number => typeof x === 'number' && !Number.isNaN(x);
+
+/** A ceiling that is present but not a number (or NaN) would make every `>` false and allow everything. */
+function malformed(policy: DlpPolicy, cls: DataClass | undefined): boolean {
+  // An absent ceiling is the documented "unconstrained"; a ceiling that is present but not a number is a mistake.
+  if (cls !== undefined) return (cls.maxTaintForAuto !== undefined && !isNum(cls.maxTaintForAuto)) || (cls.hardDenyAbove !== undefined && !isNum(cls.hardDenyAbove));
+  return policy.defaultMaxTaintForAuto !== undefined && !isNum(policy.defaultMaxTaintForAuto);
 }
 
 function specificity(pattern: string): number {
@@ -71,7 +90,9 @@ function specificity(pattern: string): number {
 
 /** Evaluate an action's data flow against the DLP policy. */
 export function evaluateDlp(policy: DlpPolicy, ctx: DlpContext): DlpResult {
+  if (policy === null || typeof policy !== 'object' || !Array.isArray(policy.classes)) return { outcome: 'deny', reason: 'malformed DLP policy' };
   const cls = classFor(policy, ctx);
+  if (malformed(policy, cls)) return { outcome: 'deny', ...(cls ? { class: cls.name } : {}), reason: 'malformed DLP policy: ceilings must be numbers' };
   const max = cls ? cls.maxTaintForAuto : policy.defaultMaxTaintForAuto;
   // Fail CLOSED on a malformed taint. A non-finite taint (NaN / ±Infinity, or a non-number smuggled
   // in through untyped JSON) would make every `>` comparison below false and silently auto-allow a

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-signals",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Shared Signals Framework (CAEP/SSF) for PCA: build + verify Security Event Tokens (RFC 8417) for grant revocation and mid-run kill-switch propagation to in-flight agents.",
   "keywords": [
     "shared signals",
@@ -55,5 +55,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

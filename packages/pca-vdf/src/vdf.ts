@@ -225,7 +225,7 @@ export function modpow(base: bigint, exp: bigint, mod: bigint): bigint {
 }
 
 // ---------------------------------------------------------------------------
-// primality (deterministic Miller-Rabin with a fixed base set)
+// primality (deterministic Miller-Rabin over a fixed base set, plus a strong Lucas test)
 // ---------------------------------------------------------------------------
 
 const SMALL_PRIMES: readonly bigint[] = [
@@ -242,7 +242,79 @@ const SMALL_PRIMES: readonly bigint[] = [
  */
 const MR_BASES: readonly bigint[] = SMALL_PRIMES;
 
-/** Probabilistic primality test (deterministic given {@link MR_BASES}). */
+/** Jacobi symbol (a / n) for odd n > 0. */
+function jacobi(a: bigint, n: bigint): number {
+  let r = 1;
+  a = ((a % n) + n) % n;
+  while (a !== 0n) {
+    while ((a & 1n) === 0n) {
+      a >>= 1n;
+      const m = n & 7n;
+      if (m === 3n || m === 5n) r = -r;
+    }
+    [a, n] = [n, a];
+    if ((a & 3n) === 3n && (n & 3n) === 3n) r = -r;
+    a %= n;
+  }
+  return n === 1n ? r : 0;
+}
+
+/**
+ * Strong Lucas probable-prime test with Selfridge's method A parameters (P = 1, Q = (1 - D) / 4, D the first of
+ * 5, -7, 9, -11, ... with Jacobi(D / n) = -1), as in the Baillie-PSW test (Baillie and Wagstaff 1980; FIPS 186-5
+ * Appendix B lists it as an accepted test). Together with Miller-Rabin base 2 it has no known counterexample.
+ * Expects odd n > 2; false for a perfect square or when a factor is found while choosing D.
+ */
+export function isStrongLucasProbablePrime(n: bigint): boolean {
+  if (n < 3n || (n & 1n) === 0n || isPerfectSquare(n)) return false;
+  let D = 5n;
+  for (;;) {
+    const j = jacobi(D, n);
+    if (j === -1) break;
+    if (j === 0 && (D < 0n ? -D : D) !== n) return false;
+    D = D > 0n ? -(D + 2n) : -D + 2n;
+  }
+  const P = 1n;
+  const Q = (1n - D) / 4n;
+  const mod = (x: bigint): bigint => ((x % n) + n) % n;
+  const half = (x: bigint): bigint => ((x & 1n) === 1n ? x + n : x) >> 1n;
+  let d = n + 1n;
+  let s = 0;
+  while ((d & 1n) === 0n) {
+    d >>= 1n;
+    s += 1;
+  }
+  // U_k, V_k, Q^k for k built up from the bits of d (left to right).
+  let U = 1n;
+  let V = P;
+  let Qk = mod(Q);
+  const bits = d.toString(2);
+  for (let i = 1; i < bits.length; i++) {
+    U = mod(U * V);
+    V = mod(V * V - 2n * Qk);
+    Qk = mod(Qk * Qk);
+    if (bits[i] === '1') {
+      const U1 = half(mod(P * U + V));
+      const V1 = half(mod(D * U + P * V));
+      U = U1;
+      V = V1;
+      Qk = mod(Qk * Q);
+    }
+  }
+  if (U === 0n || V === 0n) return true;
+  for (let r = 1; r < s; r++) {
+    V = mod(V * V - 2n * Qk);
+    if (V === 0n) return true;
+    Qk = mod(Qk * Qk);
+  }
+  return false;
+}
+
+/**
+ * Primality test: trial division by the small primes, Miller-Rabin over {@link MR_BASES}, then the strong Lucas
+ * test (Baillie-PSW structure: Miller-Rabin base 2 plus strong Lucas has no known counterexample). Deterministic,
+ * so prover and verifier derive the same challenge prime.
+ */
 export function isProbablePrime(n: bigint): boolean {
   if (n < 2n) return false;
   for (const p of SMALL_PRIMES) {
@@ -267,7 +339,7 @@ export function isProbablePrime(n: bigint): boolean {
     }
     return false;
   }
-  return true;
+  return isStrongLucasProbablePrime(n);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,2 @@
+Cryptoverif 2.13. Cryptographic protocol verifier, by Bruno Blanchet, Pierre Boutry, David Cadé, Christian Doczkal, Aymeric Fromherz, Charlie Jacomme, Benjamin Lipp, and Pierre-Yves Strub
+lib: <opam>/default.cvl (70789e037bcecdfd)

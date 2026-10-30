@@ -116,6 +116,8 @@ jobs:
             ls "$home/lib" | grep -E "^$j.*\.jar$" >/dev/null || { echo "::error::no $j*.jar in $home/lib"; exit 1; }
           done
           echo "PCA_KOTLIN_LIB=$home/lib" >> "$GITHUB_ENV"
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install (reference implementation + corpus generator)
         run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca... --filter=@atlasauth/pca-conformance...
       - name: Build (the reference loads its built workspace dependencies)
@@ -125,6 +127,24 @@ jobs:
         run: |
           curl -fsSL -o "$RUNNER_TEMP/bcprov.jar" "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar"
           echo "PCA_BC_JAR=$RUNNER_TEMP/bcprov.jar" >> "$GITHUB_ENV"
+      # ML-DSA session-root vectors (adv1563-1569): PHP (ATLAS_PCA_LIBCRYPTO) and Ruby (LD_LIBRARY_PATH) reach ML-DSA only through an
+      # OpenSSL >= 3.5 libcrypto. scripts/pca-conformance-all.mjs points both drivers at /opt/openssl35 when it exists; build it once, cached.
+      - name: OpenSSL 3.5 (cached)
+        if: runner.os == 'Linux'
+        id: ossl
+        uses: actions/cache@v4
+        with:
+          path: /opt/openssl35
+          key: openssl-3.5.9-${{ matrix.os }}
+      - name: Build OpenSSL 3.5
+        if: runner.os == 'Linux' && steps.ossl.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz | tar xz
+          cd openssl-3.5.9 && ./Configure --prefix=/opt/openssl35 --libdir=lib shared no-tests > /dev/null
+          make -j4 > /dev/null && sudo make install_sw > /dev/null
+      - name: OpenSSL 3.5 present
+        if: runner.os == 'Linux'
+        run: LD_LIBRARY_PATH=/opt/openssl35/lib /opt/openssl35/bin/openssl version | grep -E '^OpenSSL 3\.[5-9]'
       - name: Python verifier backends
         run: python -m pip install cryptography dilithium-py
       - name: Corpus regenerates byte-identically
@@ -132,10 +152,19 @@ jobs:
       # the full adversarial set (.gz: fixed header, decompressed content compared, so Linux and macOS check the same bytes)
       - name: Adversarial vector set regenerates identically
         run: node --stack-size=4000 packages/pca/scripts/gen-conformance-adv.mjs --check
+      # Results are reported per layer (packages/pca/conformance/LAYERS.md). The policy layer's policy_decision vectors are
+      # REPORT-ONLY for the native SDKs (per-language pass / fail / unsupported, never failing this job) until they implement
+      # the policy decision; name a language in --policy-required to make it gating. The TypeScript reference must pass them.
       - name: Every language over the corpus (libatlas_less is built from sdks/pca-less-c for the FFI backends)
         run: >
           scripts/pca-conformance-all.sh --no-native --langs ${{ matrix.langs }} --require ${{ matrix.langs }}
           --fuzz ${{ inputs.fuzz || '3000' }} --out "$RUNNER_TEMP/pca-conformance-all"
+      - name: Per-layer results
+        if: always()
+        shell: bash
+        run: |
+          m="$RUNNER_TEMP/pca-conformance-all/MATRIX.md"
+          [ -f "$m" ] && sed -n '/^## Per-layer results/,/^## Per-category/p' "$m" | sed '$d' >> "$GITHUB_STEP_SUMMARY" || true
       - name: Upload matrix + report
         if: always()
         uses: actions/upload-artifact@v4

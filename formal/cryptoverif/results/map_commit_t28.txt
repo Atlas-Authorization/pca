@@ -1,0 +1,3 @@
+RESULT Proved forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm))) up to probability Phash(time_9) + Phash(time_8) + Phash(time_7) + Psign(time_6, NP, length(mkgrant, maxlength(game 13: sid))) + Phash(time_5) + Phash(time_4) + Pzk(time_3, NG, length(mkjournal, maxlength(game 6: s_1), maxlength(game 6: e_1))) + Phash(time_2) + Phash(time_1) + Phash(time_10)
+All queries proved.
+rc=0 secs=0

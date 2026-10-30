@@ -61,6 +61,16 @@ jobs:
           cp -R formal/proverif/cv/results "$RUNNER_TEMP/cv-recorded"
           (cd formal/proverif/cv && bash run_cv.sh)
           python3 .github/scripts/formal-check.py exact "$RUNNER_TEMP/cv-recorded" formal/proverif/cv/results versions.txt
+      - name: CryptoVerif reductions (formal/cryptoverif, models + negative controls, includes the FAME KEM-DEM wrapper)
+        if: ${{ hashFiles('formal/cryptoverif/run_all.sh') != '' }}
+        run: |
+          eval "$(opam env --switch=pv)"
+          (cd formal/cryptoverif && CV_TIMEOUT=3000 bash run_all.sh)
+          cat formal/cryptoverif/results/SUMMARY.txt
+      - name: Extra ProVerif models (self-judging, VOPRF verifiability and negative control)
+        run: |
+          eval "$(opam env --switch=pv)"
+          bash formal/proverif/run_extra.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -68,6 +78,7 @@ jobs:
           path: |
             formal/proverif/results
             formal/proverif/cv/results
+            formal/cryptoverif/results
 
   tamarin-v1:
     name: Tamarin (v1 theories)

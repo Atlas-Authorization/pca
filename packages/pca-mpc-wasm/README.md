@@ -1,5 +1,7 @@
 # @atlasauth/pca-mpc-wasm
 
+> Maturity: **hardened** (hardened, formally verified (model), awaiting independent audit). The engineering is done and evidenced by tests, differential checks and a mutation gate; it awaits the independent review of the Ed25519 base-OT core it wraps. It is never production until that review is done, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A **constant-time** Ed25519 base-OT curve core for `@atlasauth/pca-mpc`, compiled to WebAssembly.
 
 `@atlasauth/pca-mpc` ships a correct, malicious-hardened pure-JS prime-order group, but its BigInt modular arithmetic is **not** constant-time and cannot be in pure JS (a language/runtime boundary); the pure-JS path remains the fallback. The base OT multiplies **secret**
@@ -45,9 +47,25 @@ pnpm --filter @atlasauth/pca-mpc-wasm build:wasm   # rebuild wasm/pca_mpc_wasm.w
 pnpm --filter @atlasauth/pca-mpc-wasm test         # WASM-vs-@noble parity
 ```
 
+## Fail-closed table
+
+Each row is pinned by a test that asserts the exact outcome.
+
+| Missing or wrong | Result |
+|---|---|
+| Operand not exactly 32 bytes | `PointValidationError` "expected a 32-byte compressed point, got N", naming the operand |
+| Operand not a `Uint8Array` | `PointValidationError` "expected a Uint8Array" |
+| Off-curve operand to `mul`, `add`, `sub`, `neg`, `encodePoint`, `decodePoint` | `PointValidationError` "... not on curve" |
+| Identity or small-order point to `assertInSubgroup` | `PointValidationError` naming identity or subgroup |
+| Wrong length, wrong type or off-curve to a predicate (`isOnCurve`, `isIdentity`, `isInSubgroup`, `equal`) | false, never throws |
+| Non-bigint scalar | the call throws; no coercion |
+| `.wasm` file missing or corrupt | importing the package throws; the pure-JS path is the caller's explicit choice |
+
+A refused call leaves no state behind: the next valid call returns the same result as before it.
+
 ## Status
 
-Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Experimental and unaudited.** The constant-time claim covers the secret-scalar operations inside the wasm module, is inherited from `curve25519-dalek`, and has not been independently measured or audited.
+Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Hardened, awaiting independent audit.** The constant-time claim covers the secret-scalar operations inside the wasm module, is inherited from `curve25519-dalek`, and has not been independently measured or audited.
 
 What is validated:
 
@@ -75,6 +93,15 @@ The shipped `wasm/pca_mpc_wasm.wasm` is built from the Rust source in `crate/` (
 | locked crates | curve25519-dalek 4.1.3 (and its locked transitive crates) |
 
 Verify: `cd crate && cargo build --release --locked --target wasm32-unknown-unknown && shasum -a 256 target/wasm32-unknown-unknown/release/pca_mpc_wasm.wasm` (needs `rustup target add wasm32-unknown-unknown`).
+
+## Formal evidence
+
+Context. What a machine checked, and what it did not.
+
+- The MPC protocol's checks are machine-checked as listed in `@atlasauth/pca-mpc` (SPDZ MAC check and sacrifice, EasyCrypt; MPC-3 and MPC-4, Lean). This package is the Ed25519 base-OT core those protocols call; the base OT itself is not proved here and awaits the independent review.
+- Assumed (named): NA-ROM, NA-DL.
+
+Reproduce: `formal/computational/check.sh lean` (core Lean 4, no Mathlib; it also prints the axioms each theorem uses, only `propext`, `Classical.choice` and `Quot.sound`). The models are hand-written from the code and are NOT statements about the shipped implementation: the independent audit of the implementation is still required, and this package stays hardened until then.
 
 ## License
 

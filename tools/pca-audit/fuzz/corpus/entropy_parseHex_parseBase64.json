@@ -1,0 +1,11 @@
+{
+ "target": "entropy parseHex / parseBase64",
+ "seeds": [
+  {
+   "text": "00ff10"
+  },
+  {
+   "text": "AAEC"
+  }
+ ]
+}

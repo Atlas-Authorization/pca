@@ -1,19 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  BondLedger,
-  InMemoryBondAccount,
-  InsuranceCapitalPool,
-  SETTLEMENT_LEAF_DOMAIN,
-  type BondCurve,
-  type SettlementRecord,
-  appendSettlement,
-  bondAmount,
-  DEFAULT_BOND_POLICY,
-  settlementCommit,
-  settlementRecordDigest,
-  verifySettlement,
-  verifySettlementCommit,
-} from './bond-settlement';
+import { InsuranceCapitalPool, SETTLEMENT_LEAF_DOMAIN, type BondCurve, type SettlementRecord, appendSettlement, bondAmount, DEFAULT_BOND_POLICY, settlementCommit, settlementRecordDigest, verifySettlement, verifySettlementCommit } from './bond-settlement';
+import { BondLedger, InMemoryBondAccount } from './bond-ledger-testing';
 import {
   TransparencyLedger,
   signTreeHead,
