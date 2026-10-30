@@ -1,0 +1,67 @@
+(* PCA -- signed session revocation epochs AFTER the dedicated-authority fix (finding 2 of the 2026-10-12 CryptoVerif
+   pass; commit 5e718f47), computational proof (CryptoVerif).
+
+   Code modelled (packages/pca/src/intent-revocation.ts checkSessionRevocation, rule 13 step 7; revocation.ts
+   checkRevocationEpoch): the session root names a REQUIRED revocation authority `S.revocation.key` that is never a
+   principal; the epoch's signer (`guardian`) must be exactly that key (PQ: under S.revocation.pq_pk). The epoch is
+   signed (domain atlas-pca/revepoch/v1) over (instance_id, grant_ref = scope, epoch, set_size, root, issued_at,
+   not_after) (+ suite fields); the evidence carries the FULL revoked list whose sorted-set root must equal `root`
+   (binding of the list: Dafny Merkle.dfy RootInj; a different list with the same root is a SHA-256 collision), and, when
+   the verifier tracks the last accepted epoch, the step is append-only (Lean PcaComp.RevChain: the accepted lists only
+   grow, a revoked id is never admitted again, one epoch number has one root).
+   The same keys also sign other artifacts (`OtherSign`: domain separation). Principals P (honest) and Q (dishonest:
+   its secret key is public) are listed in S; the authority R is honest.
+
+   q_auth : an accepted epoch was published by the authority with exactly (instance, scope, root, times). A dishonest
+            co-principal cannot produce an accepted epoch, so it cannot suppress a revocation.
+   Negative control (the OLD behaviour, any session principal or the revocation key may sign): q_auth not provable.
+   Assumptions: UF-CMA (deterministic signer), NA-CANON. *)
+
+param NP, NO, NV.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type inst_t. type scope_t. type root_t. type times_t. type now_t. type other_t.
+
+proba Psign.
+proba Psigncoll.
+
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+
+fun fresh(times_t, now_t): bool.
+fun mkepoch(inst_t, scope_t, root_t, times_t): message [data].
+fun mkother(other_t): message [data].
+equation forall i: inst_t, s: scope_t, r: root_t, t: times_t, o: other_t; mkepoch(i, s, r, t) <> mkother(o).
+
+event PublishedR(inst_t, scope_t, root_t, times_t).
+event Accept(inst_t, scope_t, root_t, times_t).
+
+query i: inst_t, s: scope_t, r: root_t, t: times_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t)).
+
+channel c0, cR, cR2, cO, cO2, cO3, cO4, cV, cV2.
+
+let Publisher(skP: skey, skR: skey) =
+  (! iP <= NP in(cR, (i: inst_t, s: scope_t, r: root_t, t: times_t)); event PublishedR(i, s, r, t); out(cR2, sign(mkepoch(i, s, r, t), skR)))
+  | (! iO <= NO in(cO, o: other_t); out(cO2, sign(mkother(o), skP)))
+  | (! iO <= NO in(cO3, o: other_t); out(cO4, sign(mkother(o), skR))).
+
+(* the verifier, as fixed: the epoch's signer must be the session's revocation authority *)
+let Verifier(pkP: pkey, pkQ: pkey, pkR: pkey) =
+  ! iV <= NV
+  in(cV, (g: pkey, i: inst_t, s: scope_t, r: root_t, t: times_t, now: now_t, sg: signature));
+  if fresh(t, now) then
+  if g = pkR || g = pkP || g = pkQ then
+  if check(mkepoch(i, s, r, t), g, sg) then
+  event Accept(i, s, r, t);
+  out(cV2, ()).
+
+process
+  in(c0, ());
+  new rkP: keyseed; let pkP = pkgen(rkP) in let skP = skgen(rkP) in
+  new rkQ: keyseed; let pkQ = pkgen(rkQ) in let skQ = skgen(rkQ) in
+  new rkR: keyseed; let pkR = pkgen(rkR) in let skR = skgen(rkR) in
+  out(c0, (pkP, pkQ, skQ, pkR));               (* Q is a dishonest co-principal *)
+  ( Publisher(skP, skR) | Verifier(pkP, pkQ, pkR) )

@@ -26,7 +26,7 @@ function recorder<T>(value: T): { value: T; arm: () => void; reads: string[] } {
 
 describe('createGateway configuration snapshot', () => {
   it('never reads the caller configuration after construction (emptying routes later changes nothing)', async () => {
-    const rec = recorder({ audience: 'aud', routes: [{ method: 'GET', path: '/x', verb: 'read', resource: 'r' }], resolveGrant: async () => null, unmatchedRoute: 'deny' });
+    const rec = recorder({ audience: 'aud', routes: [{ method: 'GET', path: '/x', verb: 'read', resource: 'r' }], resolveGrant: async () => null, unmatchedRoute: 'deny', insecureSkipPlanRootCheck: true, policy: { mode: 'signature-only' }, replayGuard: { claim: async () => true }, requireChecks: [] });
     const gw = createGateway(rec.value as never);
     rec.arm();
     try { await gw({ method: 'GET', path: '/x', headers: {} } as never); } catch { /* only the reads matter */ }

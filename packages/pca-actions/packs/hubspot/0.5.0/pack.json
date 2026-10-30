@@ -1,0 +1,63 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "hubspot",
+  "version": "0.5.0",
+  "ns": [
+    "hubspot"
+  ],
+  "count": 139,
+  "root": "QCPR9akd-x2raAfGMgdpMxlwGJqcsMe7hwXoYiJ9hfs",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 123,
+    "unreviewed": 16
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Hand written from HubSpot public developer documentation (operation names only). The HubSpot public API specification collection has no licence file, so nothing from it is copied or redistributed.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/hubspot.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "0e6a81e8ad9db9c826e063a6d9557977aac39017603a04825f15866ec3625120"
+  },
+  "shards": [
+    {
+      "file": "defs/000-hubspot_association.jsonl",
+      "count": 139,
+      "bytes": 72106,
+      "sha256": "f914f7c7205b39d8b9f0a3a579595ea71546f71692623ce7f290f4376a9b5b11",
+      "first": "hubspot.association.create",
+      "last": "hubspot.workflow.list"
+    }
+  ],
+  "stats": {
+    "total": 139,
+    "authored": 123,
+    "unreviewed": 16,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "update": 26,
+      "delete": 25,
+      "read": 58,
+      "create": 21,
+      "publish": 2,
+      "send": 5,
+      "export": 1,
+      "privilege": 5,
+      "provision": 1,
+      "exec": 1
+    }
+  }
+}

@@ -1,0 +1,4 @@
+File "map_commit_hiding.cv", line 32, characters 7-15:
+RESULT Proved secrecy of b up to probability (2 * NL^2 + 4 * qH * NL) / |salt|
+All queries proved.
+rc=0 secs=0

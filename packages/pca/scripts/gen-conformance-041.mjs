@@ -27,7 +27,7 @@ const g = mk('r041/guardian');
 const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 const KEYMAP = { chain: 'cap_chain' };
 /** suites every native implements (when its runtime has the backend); a wire negative under anything else is `requires: <alg>`. */
 const CROSS = new Set(['ed25519', 'ml-dsa-65', 'hybrid-ed25519-ml-dsa-65']);
@@ -52,7 +52,7 @@ const fill = (n, b = 3) => pca.b64u(new Uint8Array(n).fill(b));
 const vectors = [];
 async function add(name, description, shares, must) {
   const pcactn = { ...clone(base), threshold: { shares } };
-  const r = await pca.verifyPCActnCore(pcactn, { grant: root, nowEpoch: NOW, audience: AUD });
+  const r = await pca.verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD });
   const c = r.checks;
   const checks = {};
   if (c.wire === 'fail') checks.wire = false;

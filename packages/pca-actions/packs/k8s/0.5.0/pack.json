@@ -1,0 +1,67 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "k8s",
+  "version": "0.5.0",
+  "ns": [
+    "k8s"
+  ],
+  "count": 673,
+  "root": "PUq7Zg1Y0DXPkX4pG1AYdm0g8YP0J8xMJagkozjtGXQ",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 673,
+    "unreviewed": 0
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "The Kubernetes OpenAPI description is Apache-2.0 licensed. Verbs, parameter names/types/bounds and the operation summaries are carried; the trait review is ours.",
+  "sources": [
+    {
+      "id": "swagger",
+      "kind": "openapi",
+      "uri": "https://github.com/kubernetes/kubernetes/blob/e96327d86b1c1847742e6990b72b5f25aec284f7/api/openapi-spec/swagger.json",
+      "spec_digest": "sha256:cf628212ef590622596362692360c838d3303f8d45ec7f66ff86a75a94148228",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/kubernetes/kubernetes/blob/master/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "0a025abefe912aa2d110e24aee33c4504d633f7f1e8ef96f10a22e426ffc6033"
+  },
+  "shards": [
+    {
+      "file": "defs/000-k8s_admissionregistration.jsonl",
+      "count": 570,
+      "bytes": 715956,
+      "sha256": "ffe85a85a1e0a916a08019e1caefd12ae0f5cd7bb3eeef19a4ec49f20ea79355",
+      "first": "k8s.admissionregistration.api.get",
+      "last": "k8s.resource.devicetaintrules.delete"
+    },
+    {
+      "file": "defs/001-k8s_resource.jsonl",
+      "count": 103,
+      "bytes": 130151,
+      "sha256": "aa5e78711ba6d161aef2a3020f7cba1c10c3c1bde776e52208bd9f69829c4330",
+      "first": "k8s.resource.devicetaintrules.delete_collection",
+      "last": "k8s.storagemigration.storageversionmigrations.update_status"
+    }
+  ],
+  "stats": {
+    "total": 673,
+    "authored": 673,
+    "unreviewed": 0,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "read": 231,
+      "create": 63,
+      "delete": 128,
+      "update": 195,
+      "exec": 66,
+      "privilege": 48
+    }
+  }
+}

@@ -1,0 +1,4 @@
+RESULT Proved forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') up to probability Phash2(time_1)
+RESULT Proved forall e: eps_t, c: commit_t, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists r: salt_t, m: map_t; (event(Committed(s, m, r, c)) && event(GuestRan(m, r, x, s, e))) up to probability Phash(time_7) + Phash(time_6) + Psign(time_5, NP, length(mkgrant, maxlength(game 9: s_1))) + Phash2(time_4) + Phash2(time_3) + Pzk(time_2, NG, length(mkjournal, maxlength(game 3: s_2), maxlength(game 3: e_1)))
+All queries proved.
+rc=0 secs=0

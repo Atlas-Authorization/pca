@@ -6,7 +6,7 @@ import { createPrivateKey, createPublicKey, generateKeyPairSync, type KeyObject 
 import { writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { TransparencyService } from '../dist/index.js';
+import { TransparencyService } from '../dist/testing.js';
 
 const ed = (seedHex: string): KeyObject =>
   createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(seedHex, 'hex')]), format: 'der', type: 'pkcs8' });

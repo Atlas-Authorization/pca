@@ -1,0 +1,31 @@
+{
+  "description": "Hosted approval render (human-approval spec section 5). The approval page and the API must both derive exactly this render from the held action: one field per parameter, sorted by id, class 'param', value verbatim, unreviewed, def_digest = hashCanonical({d: def_domain, verb, resource}). Checked by the API and the dashboard test suites.",
+  "def_domain": "atlas-pca/hosted-render-def/v1",
+  "wrap_info": "atlas-pca/approval-wrap/v1",
+  "enrol_pop_domain": "atlas-pca/approver-enrol/v1",
+  "cases": [
+    {
+      "verb": "revoke_session",
+      "resource": "session:s2",
+      "params": { "session_id": "s2", "reason": "lost phone", "Zone": "eu", "count": 3 },
+      "render": {
+        "v": 1,
+        "kind": "pca-approval-render",
+        "verb": "revoke_session",
+        "unreviewed": true,
+        "fields": [
+          { "id": "Zone", "class": "param", "value": "eu" },
+          { "id": "count", "class": "param", "value": 3 },
+          { "id": "reason", "class": "param", "value": "lost phone" },
+          { "id": "session_id", "class": "param", "value": "s2" }
+        ]
+      }
+    },
+    {
+      "verb": "list_sessions",
+      "resource": "session:*",
+      "params": {},
+      "render": { "v": 1, "kind": "pca-approval-render", "verb": "list_sessions", "unreviewed": true, "fields": [] }
+    }
+  ]
+}

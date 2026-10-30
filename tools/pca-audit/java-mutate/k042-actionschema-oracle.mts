@@ -50,7 +50,7 @@ addShape('not object array', []);
 addShape('not object null', null);
 addShape('unknown member', withDoc((d) => { d.zz = 'x'; }));
 addShape('unknown member first', R('{"zz":1,' + JSON.stringify(BASE).slice(1)));
-addShape('v 2', withDoc((d) => { d.v = 2; }));
+addShape('v 3', withDoc((d) => { d.v = 3; }));
 addShape('v 1.0', R(JSON.stringify(BASE).replace('"v":1', '"v":1.0')));
 addShape('v string', withDoc((d) => { d.v = '1'; }));
 addShape('v missing', withDoc((d) => { delete d.v; }));

@@ -1,0 +1,230 @@
+(* PCA Intent Layer v2 -- T15 (delta authenticity), the EUF premise of T14, session-root binding, and the
+   attribution part of evidence-bundle replay (spec section 3.11), as computational proofs (CryptoVerif).
+
+   Code modelled (packages/pca/src/intent-session.ts, intent-v2.ts sessionStep = conformance rule 13):
+   - The session root S = (sid, principals, rest) is signed by ONE key listed in its own `principals`
+     (verifySessionRoot: signer in principals, signature under that signer). S is self-certifying only; its
+     authenticity comes from the principal-signed grants that carry digest(S) (query q_root).
+   - G_0 / D_k is a ROOT capability signed by a principal key. Its signed caveats carry
+     (session sid, seq k, prev = id(D_{k-1}), root = digest(S)); the rest of the signed body (envelope goal,
+     predicates, holder) is `holder` + `body`.
+   - The verifier holds S, the admitting root D_k (issuer = its trust anchor pkP, also listed in S) and the earlier
+     grants. It checks S's self-signature, digest(S) = root, each grant's signature under a principal of S, the same
+     (sid, root) in every grant, seq_i = i and prev_i = id(D_{i-1}).
+   The chain check is a conjunction of PER-LINK checks (D_{i-1}, D_i). The verifier below checks one link plus the
+   admitting root and is replicated NV times, so each correspondence holds for every link of every accepted chain,
+   of any length (the bound counts verifier executions, not chain length).
+   digest(S) = H(S || sig), id(D) = H(D || sig) (hashCanonical of the signed object).
+   Every principal key also signs other domain-separated artifacts (`OtherSign`: any x, as mkother(x)) and
+   answers (mkobs). Constructors are injective and pairwise distinct: domain prefixes + strict canonical JSON
+   (named assumption NA-CANON, Dafny Wire.dfy round-trip lemmas).
+
+   Honest principals: P (the verifier's trust anchor) and Q (a co-principal of the same sessions). The adversary may
+   list its own keys in S and sign S and grants with them; those grants are attributed to the adversary's key.
+   Each honest wallet mints grants only for session roots it signed itself.
+   Honest agent key A (only for the bundle query: the action is attributed to the agent key that signed it).
+
+   Assumptions: UF-CMA of the signature scheme with a deterministic signer (Ed25519; for ML-DSA / SLH-DSA / hybrid
+   under trusted-side pins see pq_pinned_delta.cv), collision resistance of the hash. No key corruption here
+   (corruption: see acc_receipt.cv; the C-1 EasyCrypt proof covers corrupted delegates). *)
+
+param NS, NK, NV, NO, NA, NB.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type hashkey [fixed].
+type digest [fixed].
+type wire.
+type sid_t. type seq_t. type pset. type body_t. type other_t. type act_t. type obs_t.
+
+proba Psign.
+proba Psigncoll.
+proba Phash.
+
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+expand CollisionResistant_hash_1(hashkey, wire, digest, hash, hash_oracle, Phash).
+
+fun mem(pkey, pset): bool.                       (* "pk is listed in S.principals" *)
+fun succ(seq_t): seq_t [data].
+
+fun mkroot(sid_t, pset, body_t): message [data].                              (* atlas-pca/intent-session/v1 *)
+fun mkcap(pkey, pkey, sid_t, seq_t, digest, digest, body_t): message [data].   (* issuer, holder, sid, k, prev, root, body *)
+fun mkact(pkey, sid_t, digest, act_t): message [data].                         (* PCActn: holder, sid, grant id, rest *)
+fun mkobs(sid_t, obs_t): message [data].                                       (* signed answer (observation) *)
+fun mkother(other_t): message [data].                                          (* any other artifact a key signs *)
+fun wr(message, signature): wire [data].
+
+equation forall a: sid_t, b: pset, c: body_t, i: pkey, h: pkey, s: sid_t, k: seq_t, p: digest, r: digest, e: body_t;
+  mkroot(a, b, c) <> mkcap(i, h, s, k, p, r, e).
+equation forall a: sid_t, b: pset, c: body_t, h: pkey, s: sid_t, g: digest, x: act_t; mkroot(a, b, c) <> mkact(h, s, g, x).
+equation forall a: sid_t, b: pset, c: body_t, s: sid_t, o: obs_t; mkroot(a, b, c) <> mkobs(s, o).
+equation forall a: sid_t, b: pset, c: body_t, o: other_t; mkroot(a, b, c) <> mkother(o).
+equation forall i: pkey, h: pkey, s: sid_t, k: seq_t, p: digest, r: digest, e: body_t, h2: pkey, s2: sid_t, g: digest, x: act_t;
+  mkcap(i, h, s, k, p, r, e) <> mkact(h2, s2, g, x).
+equation forall i: pkey, h: pkey, s: sid_t, k: seq_t, p: digest, r: digest, e: body_t, s2: sid_t, o: obs_t;
+  mkcap(i, h, s, k, p, r, e) <> mkobs(s2, o).
+equation forall i: pkey, h: pkey, s: sid_t, k: seq_t, p: digest, r: digest, e: body_t, o: other_t;
+  mkcap(i, h, s, k, p, r, e) <> mkother(o).
+equation forall h: pkey, s: sid_t, g: digest, x: act_t, s2: sid_t, o: obs_t; mkact(h, s, g, x) <> mkobs(s2, o).
+equation forall h: pkey, s: sid_t, g: digest, x: act_t, o: other_t; mkact(h, s, g, x) <> mkother(o).
+equation forall s: sid_t, o: obs_t, o2: other_t; mkobs(s, o) <> mkother(o2).
+
+event RootSignedP(sid_t, pset, body_t).
+event RootSignedQ(sid_t, pset, body_t).
+event MintedP(sid_t, digest, seq_t, digest, pkey, body_t).      (* sid, root, k, prev, holder, body *)
+event MintedQ(sid_t, digest, seq_t, digest, pkey, body_t).
+event AnsweredP(sid_t, obs_t).
+event AgentSigned(sid_t, digest, act_t).
+
+event AcceptK(sid_t, digest, seq_t, digest, pkey, body_t).      (* the admitting root D_k (issuer pkP) *)
+event AcceptPrevP(sid_t, digest, seq_t, digest, pkey, body_t).  (* the earlier grant D_{k-1}, issuer P *)
+event AcceptPrevQ(sid_t, digest, seq_t, digest, pkey, body_t).  (* the earlier grant D_{k-1}, issuer Q *)
+event AcceptRoot(sid_t, pset, body_t).
+event AcceptPrevId(digest, pkey, sid_t, digest, seq_t, digest, pkey, body_t).
+event AcceptBundle(sid_t, digest, seq_t, digest, body_t, obs_t, digest, act_t).
+
+(* q_T15: an accepted admitting root was minted by P with exactly this session, root digest, seq, prev, holder, body.
+   So it never verifies under another session id, root or seq, and its prev link is the one P signed. *)
+query s: sid_t, r: digest, k: seq_t, p: digest, h: pkey, e: body_t;
+  event(AcceptK(s, r, k, p, h, e)) ==> event(MintedP(s, r, k, p, h, e)).
+(* q_link_P / q_link_Q: every earlier grant of an accepted chain signed by an honest principal was minted by it *)
+query s: sid_t, r: digest, k: seq_t, p: digest, h: pkey, e: body_t;
+  event(AcceptPrevP(s, r, k, p, h, e)) ==> event(MintedP(s, r, k, p, h, e)).
+query s: sid_t, r: digest, k: seq_t, p: digest, h: pkey, e: body_t;
+  event(AcceptPrevQ(s, r, k, p, h, e)) ==> event(MintedQ(s, r, k, p, h, e)).
+(* q_root: the accepted session root is one P signed, although the verifier only checked S's self-signature
+   under a key S itself lists (which may be the adversary's) *)
+query s: sid_t, ps: pset, b: body_t;
+  event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b)).
+(* q_prev_unique: `prev` names one grant (no two different accepted predecessors with the same id) *)
+query g: digest, i: pkey, s: sid_t, r: digest, k: seq_t, p: digest, h: pkey, e: body_t,
+      i': pkey, s': sid_t, r': digest, k': seq_t, p': digest, h': pkey, e': body_t;
+  event(AcceptPrevId(g, i, s, r, k, p, h, e)) && event(AcceptPrevId(g, i', s', r', k', p', h', e')) ==>
+    i = i' && s = s' && r = r' && k = k' && p = p' && h = h' && e = e'.
+(* q_bundle: a bundle reader that re-verifies (S, D_k, the signed answer, the agent-signed action) attributes each
+   element to its honest signer *)
+query s: sid_t, r: digest, k: seq_t, p: digest, e: body_t, o: obs_t, g: digest, x: act_t, h: pkey;
+  event(AcceptBundle(s, r, k, p, e, o, g, x)) ==> event(AnsweredP(s, o)) && event(AgentSigned(s, g, x)).
+query s: sid_t, r: digest, k: seq_t, p: digest, e: body_t, o: obs_t, g: digest, x: act_t, h: pkey;
+  event(AcceptBundle(s, r, k, p, e, o, g, x)) ==> event(MintedP(s, r, k, p, h, e)).
+
+channel c0, cPR, cPR2, cPD, cPD2, cPO, cPO2, cPA, cPA2, cQR, cQR2, cQD, cQD2, cQO, cQO2, cAg, cAg2, cV, cV2, cB, cB2.
+
+let WalletP(hk: hashkey, pkP: pkey, skP: skey) =
+  ! iS <= NS
+  in(cPR, (sid: sid_t, ps: pset, b: body_t));
+  let mR = mkroot(sid, ps, b) in
+  let sR = sign(mR, skP) in
+  event RootSignedP(sid, ps, b);
+  out(cPR2, sR);
+  ! iK <= NK
+  in(cPD, (k: seq_t, prev: digest, hol: pkey, e: body_t));
+  let rd = hash(hk, wr(mR, sR)) in
+  event MintedP(sid, rd, k, prev, hol, e);
+  out(cPD2, sign(mkcap(pkP, hol, sid, k, prev, rd, e), skP)).
+
+let OtherP(skP: skey) =
+  (! iO <= NO in(cPO, x: other_t); out(cPO2, sign(mkother(x), skP)))
+  |
+  (! iA <= NA in(cPA, (s: sid_t, o: obs_t)); event AnsweredP(s, o); out(cPA2, sign(mkobs(s, o), skP))).
+
+let WalletQ(hk: hashkey, pkQ: pkey, skQ: skey) =
+  ! iS <= NS
+  in(cQR, (sid: sid_t, ps: pset, b: body_t));
+  let mR = mkroot(sid, ps, b) in
+  let sR = sign(mR, skQ) in
+  event RootSignedQ(sid, ps, b);
+  out(cQR2, sR);
+  ! iK <= NK
+  in(cQD, (k: seq_t, prev: digest, hol: pkey, e: body_t));
+  let rd = hash(hk, wr(mR, sR)) in
+  event MintedQ(sid, rd, k, prev, hol, e);
+  out(cQD2, sign(mkcap(pkQ, hol, sid, k, prev, rd, e), skQ)).
+
+let OtherQ(skQ: skey) =
+  ! iO <= NO in(cQO, x: other_t); out(cQO2, sign(mkother(x), skQ)).
+
+let Agent(pkA: pkey, skA: skey) =
+  ! iG <= NA
+  in(cAg, (s: sid_t, g: digest, x: act_t));
+  event AgentSigned(s, g, x);
+  out(cAg2, sign(mkact(pkA, s, g, x), skA)).
+
+let Verifier(hk: hashkey, pkP: pkey, pkQ: pkey) =
+  ! iV <= NV
+  in(cV, (sid: sid_t, ps: pset, b: body_t, spk: pkey, sS: signature,
+          hol: pkey, k: seq_t, prev: digest, e: body_t, sg: signature,
+          ipk: pkey, hol0: pkey, k0: seq_t, prev0: digest, e0: body_t, sg0: signature));
+  let mS = mkroot(sid, ps, b) in
+  if mem(spk, ps) then
+  if check(mS, spk, sS) then
+  let rd = hash(hk, wr(mS, sS)) in
+  if mem(pkP, ps) then
+  if check(mkcap(pkP, hol, sid, k, prev, rd, e), pkP, sg) then
+  if mem(ipk, ps) then
+  if k = succ(k0) then
+  let mD0 = mkcap(ipk, hol0, sid, k0, prev0, rd, e0) in
+  if prev = hash(hk, wr(mD0, sg0)) then
+  if ipk = pkP then
+  (
+    if check(mD0, pkP, sg0) then
+    event AcceptRoot(sid, ps, b);
+    event AcceptK(sid, rd, k, prev, hol, e);
+    event AcceptPrevP(sid, rd, k0, prev0, hol0, e0);
+    event AcceptPrevId(prev, ipk, sid, rd, k0, prev0, hol0, e0);
+    out(cV2, ())
+  )
+  else if ipk = pkQ then
+  (
+    if check(mD0, pkQ, sg0) then
+    event AcceptRoot(sid, ps, b);
+    event AcceptK(sid, rd, k, prev, hol, e);
+    event AcceptPrevQ(sid, rd, k0, prev0, hol0, e0);
+    event AcceptPrevId(prev, ipk, sid, rd, k0, prev0, hol0, e0);
+    out(cV2, ())
+  )
+  else
+  (
+    if check(mD0, ipk, sg0) then
+    event AcceptRoot(sid, ps, b);
+    event AcceptK(sid, rd, k, prev, hol, e);
+    event AcceptPrevId(prev, ipk, sid, rd, k0, prev0, hol0, e0);
+    out(cV2, ())
+  ).
+
+(* evidence-bundle reader, as packages/pca-evidence/src/verify.ts verifyEvidenceBundle: the session root's
+   self-signature, each grant `verifyChain([d], d.issuer)` with the issuer one of the reader's PRINCIPAL KEYS, the
+   intent_session caveat bound to (session, digest(S), seq, prev), the answers `verifyIntentAnswer(a, principals)`, and
+   the subject PCActn signed by the grant's holder. The reader's principal keys are `trust.principals` when supplied
+   (pinned out of band: here pkP), otherwise `session_root.principals` -- the keys the bundle's OWN, self-signed S lists.
+   The negative control NEG_bundle_principals_from_S runs the default: then nothing ties the bundle to P. *)
+let Bundle(hk: hashkey, pkP: pkey, pkA: pkey) =
+  ! iB <= NB
+  in(cB, (sid: sid_t, ps: pset, b: body_t, spk: pkey, sS: signature,
+          ip: pkey, k: seq_t, prev: digest, e: body_t, sg: signature,
+          o: obs_t, so: signature, x: act_t, sx: signature));
+  let mS = mkroot(sid, ps, b) in
+  if mem(spk, ps) then
+  if check(mS, spk, sS) then
+  let rd = hash(hk, wr(mS, sS)) in
+  if mem(ip, ps) then
+  let mD = mkcap(ip, pkA, sid, k, prev, rd, e) in
+  if check(mD, ip, sg) then
+  if check(mkobs(sid, o), ip, so) then
+  let gid = hash(hk, wr(mD, sg)) in
+  if check(mkact(pkA, sid, gid, x), pkA, sx) then
+  event AcceptBundle(sid, rd, k, prev, e, o, gid, x);
+  out(cB2, ()).
+
+process
+  in(c0, ());
+  new hk: hashkey;
+  new rkP: keyseed; let pkP = pkgen(rkP) in let skP = skgen(rkP) in
+  new rkQ: keyseed; let pkQ = pkgen(rkQ) in let skQ = skgen(rkQ) in
+  new rkA: keyseed; let pkA = pkgen(rkA) in let skA = skgen(rkA) in
+  out(c0, (pkP, pkQ, pkA));
+  ( hash_oracle(hk) | WalletP(hk, pkP, skP) | OtherP(skP) | WalletQ(hk, pkQ, skQ) | OtherQ(skQ) | Agent(pkA, skA)
+  | Verifier(hk, pkP, pkQ) | Bundle(hk, pkP, pkA) )

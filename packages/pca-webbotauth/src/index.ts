@@ -50,6 +50,8 @@ import {
 export { PCA_HEADER } from '@atlasauth/pca';
 // RFC 9530 Content-Digest: cover `content-digest` in the signature to protect the request body.
 export * from './content-digest';
+export * from './directory-fetch';
+export * from './signed-directory';
 export type { KeyPair, PCActn } from '@atlasauth/pca';
 
 // --------------------------------------------------------------------------------------------------
@@ -694,11 +696,15 @@ function xFromResolved(k: Uint8Array | Ed25519PublicJwk | null | undefined): str
   return null;
 }
 
-async function resolvePublicKeyX(keyid: string, opts: VerifyOptions): Promise<string | null> {
+async function resolvePublicKeyX(keyid: string, opts: VerifyOptions, now: number, skew: number): Promise<string | null> {
   if (opts.resolveKey) return xFromResolved(await opts.resolveKey(keyid));
   if (opts.jwks) {
     const match = opts.jwks.keys.find((j) => j.kid === keyid);
-    return match ? match.x : null;
+    if (!match) return null;
+    // A published validity window is enforced: a not-yet-valid or expired directory key resolves to nothing.
+    if (typeof match.nbf === 'number' && now + skew < match.nbf) return null;
+    if (typeof match.exp === 'number' && now - skew > match.exp) return null;
+    return xFromResolved(match);
   }
   return null;
 }
@@ -773,7 +779,7 @@ export async function verifySignedRequest(req: VerifyRequestInput, opts: VerifyO
 
     const keyid = typeof chosen.params.keyid === 'string' ? chosen.params.keyid : undefined;
     if (keyid === undefined) return { valid: false, reason: 'missing keyid parameter' };
-    const x = await resolvePublicKeyX(keyid, opts);
+    const x = await resolvePublicKeyX(keyid, opts, now, skew);
     if (x === null) return { valid: false, reason: `could not resolve key "${keyid}"` };
 
     const ctx = buildContext(req.method, req.url, headers);

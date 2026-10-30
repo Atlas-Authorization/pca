@@ -1,0 +1,50 @@
+(* PCA Intent Layer v2 -- HIDING of the committed Intent Map under Z0 disclosure, against the CODE
+   (packages/pca/src/intent-map-commit.ts mapLeafHash, conformance rule 19; wallet: packages/pca-intent/src/map-commit.ts),
+   computational proof (CryptoVerif), for maps of ANY size.
+
+   leaf = SHA-256(TAG_kind || r || strictCanonical(leaf)) with a 32-byte salt r PER LEAF; SHA-256 is a random oracle
+   (NA-ROM) over uniquely parseable inputs; salts are uniform (the wallet's SHA-256(TAG_SALT || secret || u64be(i)) from a
+   256-bit session secret).
+   Reduction to one leaf at a time: everything a Z0 verifier receives (map_commit, the disclosed header / cell / metrics
+   leaves with their salts, their audit paths) is a deterministic function of the DISCLOSED leaves and salts and of the
+   leaf hashes of the UNDISCLOSED leaves (every audit-path node and the root are hashes of those). So an adversary that is
+   handed the undisclosed leaf hashes themselves, and the disclosed salts, is at least as strong. Below: NL undisclosed
+   leaves, for each of which the adversary picks two candidate values (a low-entropy cell: in_grant true or false, a
+   p_ppm bucket); it sees the leaf hash of the candidate chosen by the secret bit b, plus NL disclosed salts.
+   q_hide: secrecy of b, for any number of leaves.
+   Negative control (the earlier design, ONE salt per session, which a Z0 disclosure reveals): b is not secret.
+   Assumptions: NA-ROM (SHA-256), uniform salts. *)
+
+param NL, ND.
+
+type hkey [fixed].
+type hout [large, fixed].
+type salt [large, fixed].
+type hin.
+type tag_t. type lval.
+
+const tC: tag_t.
+
+fun leafin(tag_t, salt, lval): hin [data].
+
+expand ROM_hash(hkey, hin, hout, H, hashoracle, qH).
+
+query secret b.
+
+channel c0, c1, c2, c3, c4, c5, c6.
+
+process
+  in(c0, ());
+  new hk: hkey;
+  new b: bool;
+  new rs: salt;                                    (* the session salt of the old design (unused when salts are per leaf) *)
+  out(c0, ());
+  ( hashoracle(hk)
+  | (! iD <= ND in(c3, ()); new rd: salt; out(c4, rd))          (* disclosed leaves: their salts are revealed *)
+  | (! iL <= NL
+     in(c1, (w0: lval, w1: lval));
+     let r = rs in
+     let v = if b then w0 else w1 in
+     out(c2, H(hk, leafin(tC, r, v))) )
+  | (in(c5, ()); out(c6, rs))
+  )

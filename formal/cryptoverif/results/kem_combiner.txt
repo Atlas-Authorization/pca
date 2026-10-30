@@ -1,0 +1,3 @@
+RESULT Proved one-session secrecy of k0 up to probability 2 * Penc(time_1, NK) + 8 * qH / |ss_t|
+All queries proved.
+rc=0 secs=0

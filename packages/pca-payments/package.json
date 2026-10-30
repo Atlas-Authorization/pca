@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-payments",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Payment-mandate reference for Proof-Carrying Authority: merchant/category allowlists, per-transaction and cumulative caps, auto-approve threshold, hard ceiling and bonded refunds expressed as PCA capabilities. Experimental prototype.",
   "keywords": [
     "payments",
@@ -29,7 +29,15 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./stripe-issuing": {
+      "types": "./dist/rails-stripe.d.ts",
+      "default": "./dist/rails-stripe.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -53,5 +61,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

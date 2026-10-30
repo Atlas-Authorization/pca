@@ -20,11 +20,10 @@ import {
   compilePolicy,
   decodePCActn,
   generateKeyPair,
-  lintPolicy,
-  simulate,
   unb64u,
   verifyPCActnCore,
 } from '@atlasauth/pca';
+import { lintPolicy, simulate } from '@atlasauth/pca/ext/research';
 
 // ---- small helpers --------------------------------------------------------------------------------
 
@@ -149,7 +148,7 @@ export async function cmdExplain(
   const grant = Array.isArray(p.cap_chain) ? p.cap_chain[0] : undefined;
   if (!grant) throw new Error('cannot explain: the PCActn has an empty capability chain (no root grant)');
 
-  const result = await verifyPCActnCore(p, {
+  const result = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true,
     grant,
     // The root is lifted from the artifact itself: a PQ/hybrid root must be authorised by a verifier-side pin (R4-01).
     grantFromArtifact: true,
@@ -332,3 +331,6 @@ export function cmdSimulate(policyJson: string, actionsJson: string): string {
 
 // Intent Layer v2: `pca schema` (draft from OpenAPI / MCP, sign, verify, conform, publish).
 export * from './schema';
+
+// Action kit authoring: `pca actions`.
+export * from './actions';

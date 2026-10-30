@@ -10,7 +10,11 @@ import { p256 } from '@noble/curves/p256';
 import { ed25519 } from '@noble/curves/ed25519';
 import { sha256 } from '@noble/hashes/sha256';
 import { b64u } from '@atlasauth/pca';
-import { verifyAssertion } from './index';
+import { type Assertion, type VerifyExpectations, verifyAssertion as verifyAssertionRaw } from './index';
+
+// 0.5: storedSignCount is required (0 = never used). These suites exercise other checks, so they default it to 0 here.
+const verifyAssertion = (a: Assertion, e: Omit<VerifyExpectations, 'storedSignCount'> & { storedSignCount?: number }) =>
+  verifyAssertionRaw(a, { storedSignCount: 0, ...e } as VerifyExpectations);
 
 const RP = 'example.com';
 const ORIGIN = 'https://example.com';

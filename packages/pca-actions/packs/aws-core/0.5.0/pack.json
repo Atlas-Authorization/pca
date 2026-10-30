@@ -1,0 +1,209 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "aws-core",
+  "version": "0.5.0",
+  "ns": [
+    "aws"
+  ],
+  "count": 2066,
+  "root": "34yjaNu85U2xP5QnfoCZ3jeVMGcShOOtdf6gkeyRoaU",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 1910,
+    "unreviewed": 156
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "AWS service models are taken from botocore (Apache-2.0). Operation names, member names/types/bounds are carried; titles are generated from the operation name; the trait review is ours.",
+  "sources": [
+    {
+      "id": "s3",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/s3/2006-03-01/service-2.json",
+      "spec_digest": "sha256:84c3a4e6ac1c80ed49cb1ddf1f548ea7f51d8a41acbfa0f198b9ba0028d784e8",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "ec2",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/ec2/2016-11-15/service-2.json",
+      "spec_digest": "sha256:d2fd8704aaf672c9683462d5cd9d60ce6d1266ec6b37215ffe8e6aacf9d41cb5",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "iam",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/iam/2010-05-08/service-2.json",
+      "spec_digest": "sha256:15c70eaeb15bda321fbf0e9a0db35036d67c6ccd34d38acbcad3a086b89251c5",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "sts",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/sts/2011-06-15/service-2.json",
+      "spec_digest": "sha256:d97a08aa49223dee070009624c1d70f5b6af6ccc43220cc30ff566d5f02f3c0b",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "lambda",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/lambda/2015-03-31/service-2.json",
+      "spec_digest": "sha256:7edc869a62c7db51defdfe380122736c3a2912d37113f299c6f9e67eb855c971",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "rds",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/rds/2014-10-31/service-2.json",
+      "spec_digest": "sha256:807954c94f557701e1142b4e8bad1fc631b0ca191428dfe618abaf85f936918d",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "kms",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/kms/2014-11-01/service-2.json",
+      "spec_digest": "sha256:a565bf9811ffd4b5b67fbb3464090bc131f71766e0b291eb6922983a2180f1d8",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "secretsmanager",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/secretsmanager/2017-10-17/service-2.json",
+      "spec_digest": "sha256:d568532fb0db48e0ce9c3c30b6f48aae734e1657105043990ef699ec48656671",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "sesv2",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/sesv2/2019-09-27/service-2.json",
+      "spec_digest": "sha256:c24239d9a7eff955322d9c4121270d284d80183bb750d21d06a4209ca62b2bbe",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "sns",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/sns/2010-03-31/service-2.json",
+      "spec_digest": "sha256:ffae4c31269cebee8af4027927b31f9fbc9df574fb971ad3764cd71199f93988",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "sqs",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/sqs/2012-11-05/service-2.json",
+      "spec_digest": "sha256:282d08c85a2003ab91ed400a81339fe81952e446ae40a599877705903e870c0f",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "dynamodb",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/dynamodb/2012-08-10/service-2.json",
+      "spec_digest": "sha256:eec0aae0f5038fe5e1ce035230c64951edbebb24f7453a2992d968b0498ca621",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "cloudformation",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/cloudformation/2010-05-15/service-2.json",
+      "spec_digest": "sha256:142ac136f30bf2ba93723536c67e66443b00d86cc2128448916d6d7ab145eec3",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "route53",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/route53/2013-04-01/service-2.json",
+      "spec_digest": "sha256:29dae1683f6128df6cad788a27af0e1aa1ce0e71a99e99b1c4e4d6f24e2b159b",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "ecr",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/ecr/2015-09-21/service-2.json",
+      "spec_digest": "sha256:81d9fb94eea1893ab7225736f5b3052b1cb9aeaac3d4c967dee3e07f2908754a",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "ecs",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/ecs/2014-11-13/service-2.json",
+      "spec_digest": "sha256:ba3b36de72d9f2ee08f4e05835a9d5f5ba83e02ab5742504427ae82aae81fa9e",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    },
+    {
+      "id": "eks",
+      "kind": "botocore",
+      "uri": "https://github.com/boto/botocore/blob/2cd57933cf3d0135d7bbfdebcbb8e575af35d1db/botocore/data/eks/2017-11-01/service-2.json",
+      "spec_digest": "sha256:d3d65dfdbea2994c54968950a7e15562e4a6a5dc1842f9e533cf02ebbb84a94e",
+      "licence": "Apache-2.0",
+      "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "c88cb4556da8da73a6e6386ac8e7105ef211415ff84caa512231bc215467e81a"
+  },
+  "shards": [
+    {
+      "file": "defs/000-aws_cloudformation.jsonl",
+      "count": 835,
+      "bytes": 716363,
+      "sha256": "9afcc365ca9e4067071318b85e4f5c6cdceff3b5e427152e0ec4a3f639fd4296",
+      "first": "aws.cloudformation.activate_organizations_access",
+      "last": "aws.ec2.modify_metadata_defaults"
+    },
+    {
+      "file": "defs/001-aws_ec2.jsonl",
+      "count": 822,
+      "bytes": 715905,
+      "sha256": "a5d8efb072a0f3e590a67adbceb222713d235245452618e4d1f041b3dc4a9613",
+      "first": "aws.ec2.modify_mirror_filter_rule",
+      "last": "aws.rds.start_activity_stream"
+    },
+    {
+      "file": "defs/002-aws_rds.jsonl",
+      "count": 409,
+      "bytes": 337628,
+      "sha256": "4a57e6b9c4c52d5326e87b89a899c7fcb1111003122e760c18f8233ed1ce4067",
+      "first": "aws.rds.start_backups_replication",
+      "last": "aws.sts.get_web_identity_token"
+    }
+  ],
+  "stats": {
+    "total": 2066,
+    "authored": 1910,
+    "unreviewed": 156,
+    "skipped": {},
+    "dropped_params": 6,
+    "by_effect": {
+      "privilege": 283,
+      "update": 601,
+      "delete": 311,
+      "create": 264,
+      "provision": 28,
+      "read": 809,
+      "exec": 22,
+      "publish": 9,
+      "export": 11,
+      "pay": 6,
+      "sign": 1,
+      "send": 7
+    }
+  }
+}

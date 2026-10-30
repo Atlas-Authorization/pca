@@ -6,13 +6,11 @@
  * probe. Includes a regression for the upstream missing-length-check defect (see README "Findings").
  */
 import { randomBytes } from 'node:crypto';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { keygen, LessError, MAX_PUBLISHED_SEEDS, open, seedWith, sign, signDetached, sizes, verify } from './index.js';
 
-const WASM = join(__dirname, '..', 'wasm', 'less_cat1.wasm');
-const d = existsSync(WASM) ? describe : describe.skip;
+// a missing artifact fails (import of ./index.js throws), it is never skipped
+const d = describe;
 const enc = new TextEncoder();
 
 function fixture() {

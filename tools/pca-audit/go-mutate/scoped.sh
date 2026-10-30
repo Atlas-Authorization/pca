@@ -4,7 +4,7 @@
 set -eu
 T=tools/pca-audit/go-mutate; D=$(pwd)/sdks/go-pca
 (cd $T && go build -o /tmp/gomutate .)
-/tmp/gomutate -dir "$D" -files pca.go,strictjson.go,threshold.go,intent.go,intent_v2.go,intent_session.go,intent_acc.go,intent_revocation.go,intent_wb.go,intent_artifacts.go,action_schema.go,predicates.go,saferegex.go,jsval.go -list > /tmp/gomut-list.txt
+/tmp/gomutate -dir "$D" -files pca.go,strictjson.go,threshold.go,intent.go,intent_v2.go,intent_session.go,intent_acc.go,intent_revocation.go,intent_wb.go,intent_artifacts.go,action_schema.go,predicates.go,saferegex.go,jsval.go,revocation_staleness.go,revocation_nonmembership.go,operations.go,executor.go,plan_lifecycle.go,assurance.go,stepup.go,storeconformance.go,atomic_kv.go,sqlstore.go,middleware.go,authorize.go -list > /tmp/gomut-list.txt
 IDS=$(python3 - "$T/scope-lines.txt" <<'PY'
 import sys,re
 scope=set(l.strip() for l in open(sys.argv[1]) if l.strip())
@@ -17,4 +17,4 @@ print(','.join(ids))
 PY
 )
 echo "scoped mutants: $(echo $IDS | tr ',' '\n' | wc -l)"
-/tmp/gomutate -dir "$D" -files pca.go,strictjson.go,threshold.go,intent.go,intent_v2.go,intent_session.go,intent_acc.go,intent_revocation.go,intent_wb.go,intent_artifacts.go,action_schema.go,predicates.go,saferegex.go,jsval.go -ids "$IDS" -j "${J:-2}" -out /tmp/gomut-scoped.json | tail -60
+/tmp/gomutate -dir "$D" -files pca.go,strictjson.go,threshold.go,intent.go,intent_v2.go,intent_session.go,intent_acc.go,intent_revocation.go,intent_wb.go,intent_artifacts.go,action_schema.go,predicates.go,saferegex.go,jsval.go,revocation_staleness.go,revocation_nonmembership.go,operations.go,executor.go,plan_lifecycle.go,assurance.go,stepup.go,storeconformance.go,atomic_kv.go,sqlstore.go,middleware.go,authorize.go -ids "$IDS" -j "${J:-2}" -out /tmp/gomut-scoped.json | tail -60

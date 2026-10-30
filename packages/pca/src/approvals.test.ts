@@ -34,13 +34,13 @@ describe('reviewAction', () => {
   it('auto-admits a small action, denies an ungranted/over-cap one, steps up a risky one', () => {
     const a = mkAgent();
     // within cap + low risk → auto
-    expect(reviewAction(a, 'stripe.payout', 'acct:1', { amount: 10 }, { now: 1 }).kind).toBe('auto');
+    expect(reviewAction(a, 'stripe.payout', 'acct:1', { amount: 10 }, { insecureUnboundApproval: true, now: 1 }).kind).toBe('auto');
     // over the $100 per-call ceiling → hard deny (predicate)
-    expect(reviewAction(a, 'stripe.payout', 'acct:1', { amount: 500 }, { now: 1 }).kind).toBe('deny');
+    expect(reviewAction(a, 'stripe.payout', 'acct:1', { amount: 500 }, { insecureUnboundApproval: true, now: 1 }).kind).toBe('deny');
     // ungranted verb → deny
-    expect(reviewAction(a, 'stripe.refund', 'charge:1', { amount: 1 }, { now: 1 }).kind).toBe('deny');
+    expect(reviewAction(a, 'stripe.refund', 'charge:1', { amount: 1 }, { insecureUnboundApproval: true, now: 1 }).kind).toBe('deny');
     // mid-size payout (r between theta1 and theta2) → step_up tier 2+
-    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1, goal: 'process October payouts' });
+    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { insecureUnboundApproval: true, now: 1, goal: 'process October payouts' });
     expect(r.kind).toBe('step_up');
     if (r.kind === 'step_up') {
       expect(r.request.tier).toBeGreaterThanOrEqual(2);
@@ -56,10 +56,10 @@ describe('reviewAction', () => {
 
   it('a standing class approval downgrades a matching step-up to auto', () => {
     const a = mkAgent();
-    const before = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1 });
+    const before = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { insecureUnboundApproval: true, now: 1 });
     expect(before.kind).toBe('step_up');
     const standing = [approveClass(['stripe.payout'], { ttlMs: 4 * 3_600_000, by: 'owner@acme', now: 1 })];
-    const after = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { now: 2, standing });
+    const after = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { insecureUnboundApproval: true, now: 2, standing });
     expect(after.kind).toBe('auto');
   });
 });
@@ -74,7 +74,7 @@ describe('batchReview + pendingRequests', () => {
         { verb: 'stripe.payout', resource: 'acct:2', params: { amount: 80 } }, // step_up
         { verb: 'stripe.payout', resource: 'acct:3', params: { amount: 999 } }, // deny
       ],
-      { now: 1 },
+      { now: 1, insecureUnboundApproval: true },
     );
     expect(reviews.map((r) => r.kind)).toEqual(['auto', 'step_up', 'deny']);
     expect(pendingRequests(reviews)).toHaveLength(1);
@@ -96,7 +96,7 @@ describe('class approvals', () => {
 describe('decisions + budget', () => {
   it('records a decision and a human co-sign recharges the budget', () => {
     const a = mkAgent();
-    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1 });
+    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { insecureUnboundApproval: true, now: 1 });
     if (r.kind !== 'step_up') throw new Error('expected step_up');
     const d = recordDecision(r.request, 'approve', 'owner@acme', 5);
     expect(d).toEqual({ requestId: r.request.id, decision: 'approve', by: 'owner@acme', at: 5 });
@@ -154,5 +154,34 @@ describe('timeBox', () => {
     // the boxed capability is a child of the grant → chain [grant, boxed] verifies to the same root
     const chain = [a.grant, boxed];
     expect(verifyChain(chain, a.principalPublic).ok).toBe(true);
+  });
+});
+
+describe('K7: reviewAction with a renderer', () => {
+  const render = { v: 1 as const, kind: 'pca-approval-render' as const, verb: 'stripe.payout', def_digest: 'A'.repeat(43), unreviewed: false, fields: [{ id: 'amount', class: 'money.amount', value: 80 }] };
+  it('every step-up carries the render and its digest; a renderer that cannot show the action makes the review a deny', () => {
+    const a = mkAgent();
+    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1, renderer: () => render });
+    expect(r.kind).toBe('step_up');
+    if (r.kind === 'step_up') {
+      expect(r.request.render).toEqual(render);
+      expect(r.request.renderDigest).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    }
+    const d = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1, renderer: () => { throw new Error('undeclared param'); } });
+    expect(d).toMatchObject({ kind: 'deny' });
+    expect(d.kind === 'deny' && d.reason).toContain('fail closed');
+    // no step-up needed: the renderer is not consulted
+    expect(reviewAction(a, 'stripe.payout', 'acct:1', { amount: 10 }, { now: 1, renderer: () => { throw new Error('x'); } }).kind).toBe('auto');
+  });
+});
+
+describe('K7: a step-up request is bound to its render by default', () => {
+  it('without a renderer the review is a deny; insecureUnboundApproval opts out; a risky action that needs no step-up is unaffected', () => {
+    const a = mkAgent();
+    const d = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1 });
+    expect(d.kind).toBe('deny');
+    expect(d.kind === 'deny' && d.reason).toContain('approval render required');
+    expect(reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1, insecureUnboundApproval: true }).kind).toBe('step_up');
+    expect(reviewAction(a, 'stripe.payout', 'acct:1', { amount: 10 }, { now: 1 }).kind).toBe('auto');
   });
 });

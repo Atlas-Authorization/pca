@@ -1,3 +1,4 @@
+import { ctAdd, ctFromBigint, ctMul, ctReduce, ctToBigint } from './ct-scalar';
 import { ed25519 } from '@noble/curves/ed25519';
 import { sha512 } from '@noble/hashes/sha512';
 import { utf8 } from './hash';
@@ -42,16 +43,14 @@ import { utf8 } from './hash';
  *
  * SCOPE / SECURITY NOTE
  * ---------------------
- * This is a correct, vector-validated REFERENCE implementation of the protocol math. It is NOT
- * hardened against side channels (noble's constant-time scalar mult is used for secret base-point
- * multiplications, but the surrounding BigInt scalar arithmetic is not constant-time), and it
- * implements the trusted-dealer key split here, but a NO-DEALER interactive DKG is now available in
- * `frost-dkg.ts` (`frostDkgSimulate` / `dkgRound1`…`dkgFinalize`): its `signingShare`/`groupPublicKey`
- * output has the SAME shapes as the trusted-dealer keygen, so it is a drop-in for the group key whose
- * shares are held by the PCA agent / guardian / principal — the plug-in can split the group key by DKG
- * instead of trusting a dealer. That DKG is likewise a reference implementation needing an audit. For
- * production threshold custody, use an audited FROST library and a real DKG. PCA's DEFAULT remains the
- * multi-signature.
+ * Tier: "hardened, awaiting independent audit". This is a vector-validated implementation of the protocol math (RFC 9591
+ * vectors byte-exact; signing and DKG output also reproduced by frost-ed25519 and curve25519-dalek, see
+ * tools/pca-frost-xcheck). Secret scalar arithmetic (nonce derivation, signature shares, polynomial evaluation, DKG sums)
+ * runs on the fixed-width branch-free path in ct-scalar.ts, with a timing test; point multiplication is noble's. What this
+ * does NOT give: a constant-time proof (the runtime is a JIT), a hardware-isolated share (use an HSM or enclave), an
+ * authenticated network (the DKG assumes an authenticated broadcast channel and private point-to-point channels that the
+ * caller provides), or an independent review. No-dealer DKG is in `frost-dkg.ts`; it is a custom PedPoP variant, not a
+ * standard. PCA's DEFAULT remains the multi-signature.
  */
 
 const P = ed25519.ExtendedPoint;
@@ -65,26 +64,21 @@ const CTX = utf8(CONTEXT_STRING);
 // ---- low-level scalar / point helpers (all math delegated to noble) -----------------------------
 
 function mod(a: bigint): bigint {
+  if (a >= 0n && a < L) return a;
   const r = a % L;
   return r >= 0n ? r : r + L;
 }
 
 /** Serialize a scalar as 32 bytes little-endian (RFC 8032 / RFC 9591 SerializeScalar for Ed25519). */
 export function scalarToBytes(s: bigint): Uint8Array {
-  let v = mod(s);
-  const out = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) {
-    out[i] = Number(v & 0xffn);
-    v >>= 8n;
-  }
-  return out;
+  return ctFromBigint(mod(s));
 }
 
 /** Parse 32-byte little-endian bytes as a scalar (reduced mod L). */
 export function bytesToScalar(b: Uint8Array): bigint {
-  let x = 0n;
-  for (let i = b.length - 1; i >= 0; i--) x = (x << 8n) | BigInt(b[i]!);
-  return mod(x);
+  if (b.length === 0) return 0n;
+  // Secret-bearing input (shares, nonces, hash output): reduced with the fixed-width path, never BigInt `%`.
+  return ctToBigint(ctReduce(b));
 }
 
 /** True iff `b` is exactly 32 bytes encoding a scalar < L (one encoding per scalar; `bytesToScalar` reduces mod L). */
@@ -109,7 +103,7 @@ function concat(...parts: Uint8Array[]): Uint8Array {
 
 /** HashToScalar for Ed25519: OS2IP_LE(SHA-512(msg)) mod L (RFC 9591 §6.1). */
 function hashToScalar(msg: Uint8Array): bigint {
-  return mod(bytesToScalar(sha512(msg)));
+  return bytesToScalar(sha512(msg));
 }
 
 /** s·B (base-point mult). 0 maps to the identity (noble's multiply rejects 0). */
@@ -296,11 +290,13 @@ export function frostTrustedDealerKeygen(t: number, n: number, opts: FrostKeygen
     coeffs.push(c ? bytesToScalar(c) : bytesToScalar(ed25519.utils.randomPrivateKey()));
   }
 
-  // f(x) = sum_j a_j x^j  (Horner).
+  // f(x) = sum_j a_j x^j  (Horner), on the fixed-width scalar path (the coefficients are secret).
+  const coeffBytes = coeffs.map((a) => scalarToBytes(a));
   const evalPoly = (x: bigint): bigint => {
-    let acc = 0n;
-    for (let j = coeffs.length - 1; j >= 0; j--) acc = mod(acc * x + coeffs[j]!);
-    return acc;
+    const xb = scalarToBytes(x);
+    let acc: Uint8Array = new Uint8Array(32);
+    for (let j = coeffBytes.length - 1; j >= 0; j--) acc = ctAdd(ctMul(acc, xb), coeffBytes[j]!);
+    return ctToBigint(acc);
   };
 
   const participantShares: FrostParticipantShare[] = ids.map((id) => {
@@ -553,7 +549,12 @@ export function frostSign(
   const R = computeGroupCommitment(list, bindingFactors);
   const lambda = deriveInterpolatingValue(participants, identifier);
   const c = computeChallenge(R.toRawBytes(), groupPublicKey, message);
-  const z = mod(hiding + mod(binding * bf) + mod(mod(lambda * sk) * c));
+  // z = hiding + binding*bf + (lambda*share)*c on the fixed-width path: nonces and share are secret.
+  const zBytes = ctAdd(
+    ctAdd(scalarToBytes(hiding), ctMul(scalarToBytes(binding), scalarToBytes(bf))),
+    ctMul(ctMul(scalarToBytes(lambda), scalarToBytes(sk)), scalarToBytes(c)),
+  );
+  const z = ctToBigint(zBytes);
 
   // One-shot: mark spent and zeroize in place so the secret nonces cannot be reused.
   SPENT_NONCES.add(nonces.hiding);

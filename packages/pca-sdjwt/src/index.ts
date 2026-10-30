@@ -67,7 +67,8 @@ import {
   type KeyLike,
 } from 'jose';
 import type { PCActn } from '@atlasauth/pca';
-import { assertCanonicalCompactJws, decodeCanonicalJsonSegment } from '@atlasauth/pca';
+import { assertCanonicalCompactJws, decodeCanonicalJsonSegment, verifyPCActnCore } from '@atlasauth/pca';
+import type { VerifyResult as CoreVerifyResult } from '@atlasauth/pca';
 
 // ===================================================================================================
 // Constants
@@ -267,7 +268,8 @@ export async function issuePcaSdJwt(pcActn: PCActn, options: IssueOptions): Prom
 
   const disclosableSet: ReadonlySet<string> = new Set(options.disclosable ?? PCA_CAPABILITY_CLAIMS);
 
-  const payload: JWTPayload = { iss, sub, aud: pcActn.aud, iat, exp, [CLEAR_DISCRIMINATOR]: pcActn.ver, _sd_alg: SD_ALG };
+  // iat_ms / exp_ms carry the exact signed epoch-ms values so verifyRecovered can rebuild the byte-identical PCActn.
+  const payload: JWTPayload = { iss, sub, aud: pcActn.aud, iat, exp, [CLEAR_DISCRIMINATOR]: pcActn.ver, iat_ms: pcActn.iat, exp_ms: pcActn.exp, _sd_alg: SD_ALG };
   const disclosures: Disclosure[] = [];
   const sd: string[] = [];
 
@@ -716,5 +718,39 @@ export async function verifyPcaSdJwt(sdjwt: string, options: VerifyOptions): Pro
     return { ok: true, payload, processed: processedPayload, protectedHeader, disclosed, claims, keyBinding };
   } catch (e) {
     return { ok: false, reason: (e as Error).message };
+  }
+}
+
+/**
+ * Re-verify a verified SD-JWT with PCA Core. `verifyPcaSdJwt` only proves the JWT layer; the embedded chain, plan and
+ * `sig` are checked here by rebuilding the PCActn from the recovered claims and running `verifyPCActnCore`.
+ * FAIL-CLOSED: a withheld required claim (`cap_chain`, `sig`, `action`, ...), missing or inconsistent `iat_ms`/`exp_ms`,
+ * or an `iss`/`sub` that disagrees with the chain returns `allow: false`. Pass the verifier's OWN stored `grant`,
+ * and its `audience` (omitted audience fails closed in Core).
+ */
+export async function verifyRecovered(
+  res: Extract<VerifyResult, { ok: true }>,
+  coreOpts: Parameters<typeof verifyPCActnCore>[1],
+): Promise<CoreVerifyResult> {
+  const deny = (reason: string): CoreVerifyResult => ({ allow: false, checks: {}, reason });
+  const c = res.claims;
+  const p = res.processed;
+  const { iat_ms, exp_ms, ...rest } = c;
+  if (typeof iat_ms !== 'number' || typeof exp_ms !== 'number') return deny('pca-sdjwt: iat_ms/exp_ms missing; cannot rebuild the PCActn');
+  if (Math.floor(iat_ms / 1000) !== p.iat) return deny('pca-sdjwt: iat_ms disagrees with iat');
+  if (Math.max(Math.ceil(exp_ms / 1000), Math.floor(iat_ms / 1000) + 1) !== p.exp) return deny('pca-sdjwt: exp_ms disagrees with exp');
+  for (const k of ['action', 'cap_chain', 'plan', 'sig', 'grant_ref', 'counter'] as const) {
+    if (rest[k] === undefined) return deny(`pca-sdjwt: required claim '${k}' was not disclosed`);
+  }
+  if (typeof p.aud !== 'string') return deny('pca-sdjwt: aud must be a string');
+  const chain = rest.cap_chain;
+  if (!Array.isArray(chain) || chain.length === 0) return deny('pca-sdjwt: cap_chain is empty');
+  if (p.iss !== (chain[0] as { issuer?: unknown }).issuer) return deny('pca-sdjwt: iss does not match the chain root issuer');
+  if (p.sub !== (chain[chain.length - 1] as { holder?: unknown }).holder) return deny('pca-sdjwt: sub does not match the chain leaf holder');
+  const pcActn = { ...rest, ver: p.ver, aud: p.aud, iat: iat_ms, exp: exp_ms } as unknown as PCActn;
+  try {
+    return await verifyPCActnCore(pcActn, coreOpts);
+  } catch (e) {
+    return deny(`pca-sdjwt: core verification threw: ${(e as Error).message}`);
   }
 }

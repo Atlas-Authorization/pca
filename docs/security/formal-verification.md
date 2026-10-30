@@ -105,7 +105,7 @@ collision, `N*` = numbers of keys / verifier runs; each bound is CryptoVerif's v
 | Z0 hiding against rule 19 | `map_commit_hiding.cv` | undisclosed leaves stay secret given their leaf hashes and the disclosed salts, any number of leaves | `(2 NL^2 + 4 qH NL)/2^256` |
 | PQ suites only under trusted-side pins | `pq_pinned_delta.cv` | T15, root binding and epoch authenticity with Ed25519 fully broken | `Ppq(ML-DSA-65) + 3 Phash` (no Ed25519 term) |
 | FR-5 FROST descriptor binding | `frost_descriptor.cv` | accepted descriptor => certified by the pinned authority with exactly (X_g, t, n, signer set) | `Psign_auth + 3 Phash` |
-| ABE-3 KEM-DEM | `abe_kemdem.cv` | secrecy of the challenge bit | `4 NE Penc + (NE^2 + 2 qH NE)/|G_T|` after the Lean ABE-1 hop |
+| ABE-3 KEM-DEM | `fame_kemdem.cv` | secrecy of the challenge bit | `4 NE Penc + (NE^2 + 2 qH NE)/|G_T|` after the FAME theorem (assumed; correctness is Lean `Fame.decrypt_exponent`) |
 
 Negative controls (each must fail, and does): delta signed by any key S lists; delta without digest(S); no key-set
 check; no seq store; no domain separation between epochs and other artifacts; report_data without the nonce; without

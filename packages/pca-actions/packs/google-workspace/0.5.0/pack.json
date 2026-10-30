@@ -1,0 +1,235 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "google-workspace",
+  "version": "0.5.0",
+  "ns": [
+    "adminreports",
+    "calendar",
+    "chat",
+    "classroom",
+    "cloudidentity",
+    "directory",
+    "docs",
+    "drive",
+    "driveactivity",
+    "forms",
+    "gmail",
+    "groupssettings",
+    "keep",
+    "licensing",
+    "meet",
+    "people",
+    "sheets",
+    "slides",
+    "tasks",
+    "vault"
+  ],
+  "count": 693,
+  "root": "VXzQ83DHkWRoOmPJ2azHaw0w0cVLyvdZTBL-2mpgj8Y",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 593,
+    "unreviewed": 100
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "Built from Google API discovery documents as published in googleapis/google-api-go-client (BSD-3-Clause). Method ids, parameter names/types/bounds and the first sentence of a method description are carried; the trait review is ours.",
+  "sources": [
+    {
+      "id": "gmail-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/gmail/v1/gmail-api.json",
+      "spec_digest": "sha256:f651441dcc942f428d92768e8b20c94a28ff82bf485b79872d9eef267a894225",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "drive-v3",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/drive/v3/drive-api.json",
+      "spec_digest": "sha256:5f3972e38acc412206944388e5528a47aeb8779e76303bb6c8a31327c7ba49f9",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "docs-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/docs/v1/docs-api.json",
+      "spec_digest": "sha256:1f1a507a4b6314ce3a613ecc92475a313ed88156f05526f0218452fa2de7db16",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "sheets-v4",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/sheets/v4/sheets-api.json",
+      "spec_digest": "sha256:6ceb5292c8c01e02006ceca2d708cc70d050cec6a6398c2eef7f5150d3684baa",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "slides-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/slides/v1/slides-api.json",
+      "spec_digest": "sha256:bd90d71780ec5c30e9679d381d22dd99de24be6f67aff169f85d93350c7265a8",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "calendar-v3",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/calendar/v3/calendar-api.json",
+      "spec_digest": "sha256:e0a0bdacc2879f7777e6adb0f400f01b19f949160946b36113624c3eae1c17b9",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "admin-directory-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/admin/directory/v1/admin-api.json",
+      "spec_digest": "sha256:315493e8f593891727853d60e41eeafac5820fa8f2f35edb6d18209b2d4d0898",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "admin-reports-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/admin/reports/v1/admin-api.json",
+      "spec_digest": "sha256:5327126645490a304f876d556568deddd5e7c1c0009c8f9c43e37b9ef56e46b9",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "chat-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/chat/v1/chat-api.json",
+      "spec_digest": "sha256:982b95eb999454ed8f7d500df593745a242b723e2e110e47b0b4c31035fe9b63",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "meet-v2",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/meet/v2/meet-api.json",
+      "spec_digest": "sha256:16594cc9e431d62aea45d1d28f70fc477d370db1fbe099e5610d72cba47b098e",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "people-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/people/v1/people-api.json",
+      "spec_digest": "sha256:72684479a50b4f4f80ea003c2bfadd9b991a23da25f49d19bd68634232e5b0df",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "tasks-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/tasks/v1/tasks-api.json",
+      "spec_digest": "sha256:db90162f55c7e3612d426233a49d5022f142e5d65e7a1f0876ce48ca969e3b5f",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "forms-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/forms/v1/forms-api.json",
+      "spec_digest": "sha256:2f73a95383908d32d38746eb38bc2628e5b72b935cc4ba041f99f174660fe5ba",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "classroom-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/classroom/v1/classroom-api.json",
+      "spec_digest": "sha256:511f7e08dcf82988092c9c0be2853d4c0343d078a12a3659c36569c35f39f028",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "keep-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/keep/v1/keep-api.json",
+      "spec_digest": "sha256:bc882deaf4a48bf8ffde4f3a768a57ef3beb5995097870f0faf167f52f8203cc",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "vault-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/vault/v1/vault-api.json",
+      "spec_digest": "sha256:3bcf7c52cb89366365f5de3863476eca5f81193881aed5152470772455c017a6",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "groupssettings-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/groupssettings/v1/groupssettings-api.json",
+      "spec_digest": "sha256:b56f7def9e9f173a4d0bf68d6cba1775b69d0c1438e04289488a4792f96fee52",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "licensing-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/licensing/v1/licensing-api.json",
+      "spec_digest": "sha256:6abd19e3a14e20d614ad0b561be6d4cf38ab2964cb693f5ff0549138e72cae1a",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "driveactivity-v2",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/driveactivity/v2/driveactivity-api.json",
+      "spec_digest": "sha256:c3496f4d4ff68ff676e3d3a9fa865e2e8a149c529752a7b155172fb955a8e690",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    },
+    {
+      "id": "cloudidentity-v1",
+      "kind": "discovery",
+      "uri": "https://github.com/googleapis/google-api-go-client/blob/14f4a27808526c57da812491708a8311f9604bdd/cloudidentity/v1/cloudidentity-api.json",
+      "spec_digest": "sha256:36d7cfbd9372a8137146851ebcb83844efec5d4b8ebaa2008c94d61e178df29e",
+      "licence": "BSD-3-Clause (repository); Google API discovery document",
+      "licence_url": "https://github.com/googleapis/google-api-go-client/blob/main/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "a5eb412f851ac3be58075227fa930322bad4a01668042d8c911c3f99b7d76d8c"
+  },
+  "shards": [
+    {
+      "file": "defs/000-adminreports_activities.jsonl",
+      "count": 693,
+      "bytes": 715267,
+      "sha256": "4d0e3893d740d577451d3d361374011a8f9788a92a975a5c98b4791dd95be12f",
+      "first": "adminreports.activities.list",
+      "last": "vault.operations.list"
+    }
+  ],
+  "stats": {
+    "total": 693,
+    "authored": 593,
+    "unreviewed": 100,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "read": 292,
+      "provision": 10,
+      "delete": 122,
+      "privilege": 67,
+      "create": 105,
+      "update": 153,
+      "send": 6,
+      "publish": 2,
+      "exec": 1,
+      "sign": 1,
+      "export": 2
+    }
+  }
+}

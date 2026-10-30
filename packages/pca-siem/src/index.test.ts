@@ -139,7 +139,7 @@ async function allowFixture(): Promise<Fixture> {
   const grant = mintEnvelopeGrant(k);
   const chain = buildChain(k, grant);
   const actn = buildActn(k, grant, chain, 'n-refund');
-  const verify = await verifyPCActnCore(actn, { grant, nowEpoch: NOW, audience: AUD });
+  const verify = await verifyPCActnCore(actn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD });
   const decision = decide({
     grant,
     chain,
@@ -160,7 +160,7 @@ async function denyFixture(): Promise<Fixture> {
   const chain = buildChain(k, grant);
   const actn = buildActn(k, grant, chain, 'n-refund', { counter: 2 });
   const tampered: PCActn = { ...actn, action: { ...actn.action, resource: 'charge/ch_ATTACKER' } };
-  const verify = await verifyPCActnCore(tampered, { grant, nowEpoch: NOW, audience: AUD });
+  const verify = await verifyPCActnCore(tampered, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD });
   return { record: { pcactn: tampered, verify, now: NOW }, verify, k };
 }
 
@@ -172,7 +172,7 @@ async function stepUpFixture(): Promise<Fixture> {
   const base = buildActn(k, grant, chain, 'n-delete', { counter: 3 });
   const threshold = coSign(k, base);
   const actn = buildActn(k, grant, chain, 'n-delete', { threshold, counter: 3 });
-  const verify = await verifyPCActnCore(actn, {
+  const verify = await verifyPCActnCore(actn, { insecureSkipPlanRootCheck: true,
     grant,
     nowEpoch: NOW,
     audience: AUD,
@@ -529,7 +529,7 @@ describe('R2-13: human override only from verified shares', () => {
     expect(ho?.approvers ?? []).toEqual([]);
     expect(toCef({ pcactn: actn, verify, now: NOW })).toContain('flexString1Label=pcaHumanApproved flexString1=false');
     // a real verifier that rejects the forged share
-    const rejected = await verifyPCActnCore(actn, {
+    const rejected = await verifyPCActnCore(actn, { insecureSkipPlanRootCheck: true,
       grant,
       nowEpoch: NOW,
       audience: AUD,

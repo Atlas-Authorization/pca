@@ -1,0 +1,747 @@
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... No change.
+Doing remove assignments of findcond... No change.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall e: eps_t, c: commit_t, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists r: salt_t, m: map_t; (event(Committed(s, m, r, c)) && event(GuestRan(m, r, x, s, e))) failed:
+  Found Accept(x_2, s_3, c_1, e_2) at 158
+  but could not prove event(Committed(s, m, r, c))
+Applied collision k_2 <-R hashkey2; forall x1, y1: act_t; return((hd(k_2, x1) = hd(k_2, y1))) <=(Phash2(time))=> return((x1 = y1)) with k_2 -> hk2_1 Probability: Phash2(time + time(game 1))
+Proved query forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') up to probability Phash2(time + time(game 1))
+Trying equivalence uf_cma(zkprove)... Failed.
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder img... Done.
+Doing remove assignments of binder zsk... Done.
+Trying equivalence uf_cma(zkprove) with zs... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Applied collision k_2 <-R hashkey2; forall x1, y1: act_t; return((hd(k_2, x1) = hd(k_2, y1))) <=(Phash2(time))=> return((x1 = y1)) with k_2 -> hk2_1 Probability: Phash2(time + time(game [not shown yet]))
+No change.
+Doing expand... Applied collision k_2 <-R hashkey2; forall x1, y1: act_t; return((hd(k_2, x1) = hd(k_2, y1))) <=(Phash2(time))=> return((x1 = y1)) with k_2 -> hk2_1 Probability: Phash2(time + time(game [not shown yet]))
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on zs inside simplify... At 14, returned message pkgen2_1(zs) depends on zs.
+No change
+Applied collision k_2 <-R hashkey2; forall x1, y1: act_t; return((hd(k_2, x1) = hd(k_2, y1))) <=(Phash2(time))=> return((x1 = y1)) with k_2 -> hk2_1 Probability: Phash2(time + time(game [not shown yet]))
+Doing global dependency analysis on zs inside simplify... At 14, returned message pkgen2_1(zs) depends on zs.
+No change
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall e: eps_t, c: commit_t, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists r: salt_t, m: map_t; (event(Committed(s, m, r, c)) && event(GuestRan(m, r, x, s, e))) failed:
+  Found Accept(x_2, s_3, c_1, e_2) at 194
+  but could not prove event(Committed(s, m, r, c))
+Trying equivalence uf_cma(zkprove)... Failed:
+At 14, term pkgen2_1(zs) could not be discharged
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder pkP... Done.
+Doing remove assignments of binder skP... Done.
+Trying equivalence uf_cma(sign) with rkP... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Applied collision k_1 <-R hashkey; forall x1, y1: mapsalt; return((hc(k_1, x1) = hc(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on r_1 inside simplify... At 53, returned message c depends on r_1.
+No change
+Doing global dependency analysis on zs inside simplify... At 9, returned message pkgen2_1(zs) depends on zs.
+No change
+Applied collision k_1 <-R hashkey; forall x1, y1: mapsalt; return((hc(k_1, x1) = hc(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Doing global dependency analysis on r_1 inside simplify... At 53, returned message c depends on r_1.
+No change
+Doing global dependency analysis on zs inside simplify... At 9, returned message pkgen2_1(zs) depends on zs.
+No change
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall e: eps_t, c: commit_t, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists r: salt_t, m: map_t; (event(Committed(s, m, r, c)) && event(GuestRan(m, r, x, s, e))) failed:
+  Found Accept(x_2, s_3, c_1, e_2) at 246
+  but could not prove event(GuestRan(m, r, x, s, e))
+Trying equivalence uf_cma(zkprove)... Failed:
+At 9, term pkgen2_1(zs) could not be discharged
+Trying equivalence uf_cma(sign)... Failed:
+At 7, term pkgen2(rkP) could not be discharged
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     img: zkimg <- zkimgof(zs);
+     zsk: zkkey <- zkskgen(zs);
+     return(pkP, img);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skP))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       return(zkprove(mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1), zsk))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkP, gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       if zkverify(mkjournal(d, s_3, c_1, e_2), img2, pf) then
+       event AcceptD(d, x_2);
+       event Accept(x_2, s_3, c_1, e_2);
+       return()
+     ))
+
+
+Proved forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') up to probability Phash2(time_1)
+
+Applying remove assignments of binder img
+  - Remove assignments on img (definition removed, all usages removed)
+yields
+
+Game 2 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     zsk: zkkey <- zkskgen(zs);
+     return(pkP, zkimgof(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skP))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       return(zkprove(mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1), zsk))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkP, gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       if zkverify(mkjournal(d, s_3, c_1, e_2), img2, pf) then
+       event AcceptD(d, x_2);
+       event Accept(x_2, s_3, c_1, e_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder zsk
+  - Remove assignments on zsk (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, zkimgof(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skP))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       return(zkprove(mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1), zkskgen(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkP, gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       if zkverify(mkjournal(d, s_3, c_1, e_2), img2, pf) then
+       event AcceptD(d, x_2);
+       event Accept(x_2, s_3, c_1, e_2);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(zkprove) with zs [probability Pzk(time_2, NG, length(mkjournal, maxlength(game 3: s_2), maxlength(game 3: e_1)))]
+  - Equivalence uf_cma(zkprove) with variables: zs -> r_1
+yields
+
+Game 4 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skP))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       return((x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1); sign2_1(x_3, skgen2_1(zs))))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkP, gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+{133}  if (m_3: journal <- mkjournal(d, s_3, c_1, e_2); y: zkimg <- img2; si: zkproof <- pf; find u = ri <= NG suchthat defined(x_3[ri]) && (y = pkgen2_1(zs)) && (m_3 = x_3[ri]) && check2_1(m_3, y, si) then true else {172}if y = pkgen2_1(zs) then false else zkverify(m_3, y, si)) then
+       event AcceptD(d, x_2);
+       event Accept(x_2, s_3, c_1, e_2);
+       return()
+     ))
+
+
+Applying expand [probability Phash2(time_3)]
+  - Expand if/find/let
+    - Transformed find at 172 into a test
+    - Test at 133 always false
+    - Test at 133 always true
+yields
+
+Game 5 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skP))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkP, gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+       y: zkimg <- img2;
+       si: zkproof <- pf;
+       find u = ri <= NG suchthat defined(x_3[ri]) && (y = pkgen2_1(zs)) && (m_3 = x_3[ri]) && check2_1(m_3, y, si) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if y = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, y, si) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on y (definition removed, all usages removed)
+  - Remove assignments on si (definition removed, all usages removed)
+yields
+
+Game 6 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skP))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkP, gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+{144}  find u = ri <= NG suchthat defined(x_3[ri]) && {146}((img2 = pkgen2_1(zs)) && (m_3 = x_3[ri]) && check2_1(m_3, img2, pf)) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if img2 = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, img2, pf) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+
+Applying simplify [probability Phash2(time_4)]
+  - Simplification pass
+    - Replaced ((img2 = pkgen2_1(zs)) && (m_3 = x_3[ri]) && check2_1(m_3, img2, pf)) with ((img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (c_1 = hc(hk_1, ms(m_2[ri], r_2[ri]))) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf)) at 146
+    - Replaced defined condition x_3[ri] with x_3[ri], e_1[ri], r_2[ri], m_2[ri], s_2[ri], x_1[ri] in find at 144
+yields
+
+Game 7 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skP))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkP, gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], r_2[ri], m_2[ri], s_2[ri], x_1[ri]) && (img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (c_1 = hc(hk_1, ms(m_2[ri], r_2[ri]))) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if img2 = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, img2, pf) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+
+Applying remove assignments of binder pkP
+  - Remove assignments on pkP (definition removed, all usages removed)
+yields
+
+Game 8 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkgen(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skP))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkgen(rkP), gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], r_2[ri], m_2[ri], s_2[ri], x_1[ri]) && (img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (c_1 = hc(hk_1, ms(m_2[ri], r_2[ri]))) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if img2 = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, img2, pf) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+
+Applying remove assignments of binder skP
+  - Remove assignments on skP (definition removed, all usages removed)
+yields
+
+Game 9 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, sign(mkgrant(s_1, c), skgen(rkP)))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       if check(mkgrant(s_3, c_1), pkgen(rkP), gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], r_2[ri], m_2[ri], s_2[ri], x_1[ri]) && (img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (c_1 = hc(hk_1, ms(m_2[ri], r_2[ri]))) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if img2 = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, img2, pf) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rkP [probability Psign(time_5, NP, length(mkgrant, maxlength(game 9: s_1)))]
+  - Equivalence uf_cma(sign) with variables: rkP -> r_1
+yields
+
+Game 10 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       return(c, (x_4: message <- mkgrant(s_1, c); sign2(x_4, skgen2(rkP))))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+{114}  if (m1: message <- mkgrant(s_3, c_1); si1: signature <- gsig; find u_1 = ri_1 <= NP suchthat defined(x_4[ri_1]) && (m1 = x_4[ri_1]) && check2(m1, pkgen2(rkP), si1) then true else false) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], r_2[ri], m_2[ri], s_2[ri], x_1[ri]) && (img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (c_1 = hc(hk_1, ms(m_2[ri], r_2[ri]))) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if img2 = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, img2, pf) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+
+Applying expand [probability Phash(time_6)]
+  - Expand if/find/let
+    - Test at 114 always false
+    - Test at 114 always true
+yields
+
+Game 11 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       x_4: message <- mkgrant(s_1, c);
+       return(c, sign2(x_4, skgen2(rkP)))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       m1: message <- mkgrant(s_3, c_1);
+       si1: signature <- gsig;
+       find u_1 = ri_1 <= NP suchthat defined(x_4[ri_1]) && (m1 = x_4[ri_1]) && check2(m1, pkgen2(rkP), si1) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], r_2[ri], m_2[ri], s_2[ri], x_1[ri]) && (img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (c_1 = hc(hk_1, ms(m_2[ri], r_2[ri]))) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if img2 = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, img2, pf) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on si1 (definition removed, all usages removed)
+yields
+
+Game 12 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       x_4: message <- mkgrant(s_1, c);
+       return(c, sign2(x_4, skgen2(rkP)))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       m1: message <- mkgrant(s_3, c_1);
+{121}  find u_1 = ri_1 <= NP suchthat defined(x_4[ri_1]) && {123}((m1 = x_4[ri_1]) && check2(m1, pkgen2(rkP), gsig)) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], r_2[ri], m_2[ri], s_2[ri], x_1[ri]) && {162}((img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (c_1 = hc(hk_1, ms(m_2[ri], r_2[ri]))) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf)) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if img2 = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, img2, pf) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+
+Applying simplify [probability Phash(time_7)]
+  - Simplification pass
+    - Replaced ((m1 = x_4[ri_1]) && check2(m1, pkgen2(rkP), gsig)) with ((s_3 = s_1[ri_1]) && (c_1 = c[ri_1]) && check2(m1, pkgen2(rkP), gsig)) at 123
+    - Replaced ((img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (c_1 = hc(hk_1, ms(m_2[ri], r_2[ri]))) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf)) with ((img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (m_1[u_1] = m_2[ri]) && (r_1[u_1] = r_2[ri]) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf)) at 162
+    - Replaced defined condition x_4[ri_1] with r_1[ri_1], m_1[ri_1], c[ri_1], s_1[ri_1] in find at 121
+yields
+
+Game 13 is
+     c0() :=
+     hk_1 <-R hashkey;
+     hk2_1 <-R hashkey2;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       ch1_1() :=
+       return(hk2_1)
+     ) | (
+       foreach iP <= NP do
+       cP(s_1: sid_t, m_1: map_t) :=
+       r_1 <-R salt_t;
+       c: commit_t <- hc(hk_1, ms(m_1, r_1));
+       event Committed(s_1, m_1, r_1, c);
+       x_4: message <- mkgrant(s_1, c);
+       return(c, sign2(x_4, skgen2(rkP)))
+     ) | (
+       foreach iG <= NG do
+       cG(m_2: map_t, r_2: salt_t, x_1: act_t, s_2: sid_t, e_1: eps_t) :=
+       if admits(m_2, x_1, e_1) then
+       event GuestRan(m_2, r_2, x_1, s_2, e_1);
+       x_3: journal <- mkjournal(hd(hk2_1, x_1), s_2, hc(hk_1, ms(m_2, r_2)), e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_3: sid_t, c_1: commit_t, e_2: eps_t, gsig: signature, pf: zkproof, img2: zkimg) :=
+       m1: message <- mkgrant(s_3, c_1);
+       find u_1 = ri_1 <= NP suchthat defined(r_1[ri_1], m_1[ri_1], c[ri_1], s_1[ri_1]) && (s_3 = s_1[ri_1]) && (c_1 = c[ri_1]) && check2(m1, pkgen2(rkP), gsig) then
+       if policy_ok(e_2) then
+       d: digest <- hd(hk2_1, x_2);
+       m_3: journal <- mkjournal(d, s_3, c_1, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], r_2[ri], m_2[ri], s_2[ri], x_1[ri]) && (img2 = pkgen2_1(zs)) && (x_2 = x_1[ri]) && (s_3 = s_2[ri]) && (m_1[u_1] = m_2[ri]) && (r_1[u_1] = r_2[ri]) && (e_2 = e_1[ri]) && check2_1(m_3, img2, pf) then
+         event Accept(x_2, s_3, c_1, e_2);
+         return()
+       else
+         if img2 = pkgen2_1(zs) then
+           yield
+         else
+           if zkverify(m_3, img2, pf) then
+           event Accept(x_2, s_3, c_1, e_2);
+           return()
+     ))
+
+Adv[Game 1: forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x')] <= Adv[Game 1: forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x')]
+Adv[Game 1: forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x')] <= Phash2(time_1)
+RESULT Proved forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') up to probability Phash2(time_1)
+RESULT time_1 = time + time(game 1) = time + time(pkgen) + time(skgen) + time(zkimgof) + time(zkskgen) + NP * time(hc, length(ms, maxlength(game 1: m_1))) + NP * time(ms, maxlength(game 1: m_1)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 1: s_1))) + NP * time(mkgrant, maxlength(game 1: s_1)) + NG * time(admits, maxlength(game 1: m_2), maxlength(game 1: x_1), maxlength(game 1: e_1)) + NG * time(([1,NG])) + NG * time(zkprove, length(mkjournal, maxlength(game 1: s_2), maxlength(game 1: e_1))) + NG * time(mkjournal, maxlength(game 1: s_2), maxlength(game 1: e_1)) + NG * time(hc, length(ms, maxlength(game 1: m_2))) + NG * time(ms, maxlength(game 1: m_2)) + NG * time(hd, maxlength(game 1: x_1)) + NV * time(check, length(mkgrant, maxlength(game 1: s_3)), maxlength(game 1: gsig)) + NV * time(mkgrant, maxlength(game 1: s_3)) + NV * time(policy_ok, maxlength(game 1: e_2)) + NV * time(hd, maxlength(game 1: x_2)) + NV * time(zkverify, length(mkjournal, maxlength(game 1: s_3), maxlength(game 1: e_2)), maxlength(game 1: pf)) + NV * time(mkjournal, maxlength(game 1: s_3), maxlength(game 1: e_2)) + 2 * NV * time(([1,NV]))
+RESULT time_2 = time(pkgen) + time(skgen) + NP * time(hc, length(ms, maxlength(game 3: m_1))) + NP * time(ms, maxlength(game 3: m_1)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 3: s_1))) + NP * time(mkgrant, maxlength(game 3: s_1)) + NG * time(admits, maxlength(game 3: m_2), maxlength(game 3: x_1), maxlength(game 3: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 3: s_2), maxlength(game 3: e_1)) + NG * time(hc, length(ms, maxlength(game 3: m_2))) + NG * time(ms, maxlength(game 3: m_2)) + NG * time(hd, maxlength(game 3: x_1)) + NV * time(check, length(mkgrant, maxlength(game 3: s_3)), maxlength(game 3: gsig)) + NV * time(mkgrant, maxlength(game 3: s_3)) + NV * time(policy_ok, maxlength(game 3: e_2)) + NV * time(hd, maxlength(game 3: x_2)) + NV * time(mkjournal, maxlength(game 3: s_3), maxlength(game 3: e_2)) + 2 * NV * time(([1,NV])) + time + (NV - 1) * time(zkverify, length(mkjournal, maxlength(game 3: s_3), maxlength(game 3: e_2)), maxlength(game 3: pf))
+RESULT time_3 = time + time(game 4) = time + time(pkgen) + time(skgen) + (1 + NV * NG + NV) * time(zkimgof) + NP * time(hc, length(ms, maxlength(game 4: m_1))) + NP * time(ms, maxlength(game 4: m_1)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 4: s_1))) + NP * time(mkgrant, maxlength(game 4: s_1)) + NG * time(admits, maxlength(game 4: m_2), maxlength(game 4: x_1), maxlength(game 4: e_1)) + NG * time(([1,NG])) + NG * time(zkprove, maxlength(game 4: x_3)) + NG * time(zkskgen) + NG * time(mkjournal, maxlength(game 4: s_2), maxlength(game 4: e_1)) + NG * time(hc, length(ms, maxlength(game 4: m_2))) + NG * time(ms, maxlength(game 4: m_2)) + NG * time(hd, maxlength(game 4: x_1)) + NV * time(check, length(mkgrant, maxlength(game 4: s_3)), maxlength(game 4: gsig)) + NV * time(mkgrant, maxlength(game 4: s_3)) + NV * time(policy_ok, maxlength(game 4: e_2)) + NV * time(hd, maxlength(game 4: x_2)) + NV * NG * time(= journal, maxlength(game 4: m_3), maxlength(game 4: x_3)) + (NV * NG + NV) * time(zkverify, maxlength(game 4: m_3), maxlength(game 4: si)) + NV * time(mkjournal, maxlength(game 4: s_3), maxlength(game 4: e_2)) + 2 * NV * time(([1,NV]))
+RESULT time_4 = time + time(game 6) = time + time(pkgen) + time(skgen) + (1 + NV * NG + NV) * time(zkimgof) + NP * time(hc, length(ms, maxlength(game 6: m_1))) + NP * time(ms, maxlength(game 6: m_1)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 6: s_1))) + NP * time(mkgrant, maxlength(game 6: s_1)) + NG * time(admits, maxlength(game 6: m_2), maxlength(game 6: x_1), maxlength(game 6: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 6: s_2), maxlength(game 6: e_1)) + NG * time(hc, length(ms, maxlength(game 6: m_2))) + NG * time(ms, maxlength(game 6: m_2)) + NG * time(hd, maxlength(game 6: x_1)) + NG * time(zkprove, maxlength(game 6: x_3)) + NG * time(zkskgen) + NV * time(check, length(mkgrant, maxlength(game 6: s_3)), maxlength(game 6: gsig)) + NV * time(mkgrant, maxlength(game 6: s_3)) + NV * time(policy_ok, maxlength(game 6: e_2)) + NV * time(hd, maxlength(game 6: x_2)) + NV * time(mkjournal, maxlength(game 6: s_3), maxlength(game 6: e_2)) + NV * NG * time(= journal, maxlength(game 6: m_3), maxlength(game 6: x_3)) + (NV * NG + NV) * time(zkverify, maxlength(game 6: m_3), maxlength(game 6: pf)) + NV * time(([1,NV]))
+RESULT time_5 = (1 + NV * NG + NV) * time(zkimgof) + NP * time(hc, length(ms, maxlength(game 9: m_1))) + NP * time(ms, maxlength(game 9: m_1)) + NP * time(([1,NP])) + NP * time(mkgrant, maxlength(game 9: s_1)) + NG * time(admits, maxlength(game 9: m_2), maxlength(game 9: x_1), maxlength(game 9: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 9: s_2), maxlength(game 9: e_1)) + (NG + NV * NG) * time(hc, length(ms, maxlength(game 9: m_2))) + (NG + NV * NG) * time(ms, maxlength(game 9: m_2)) + NG * time(hd, maxlength(game 9: x_1)) + NG * time(zkprove, maxlength(game 9: x_3)) + NG * time(zkskgen) + NV * time(mkgrant, maxlength(game 9: s_3)) + NV * time(policy_ok, maxlength(game 9: e_2)) + NV * time(hd, maxlength(game 9: x_2)) + NV * time(mkjournal, maxlength(game 9: s_3), maxlength(game 9: e_2)) + NV * NG * time(= act_t, maxlength(game 9: x_2), maxlength(game 9: x_1)) + NV * NG * time(= sid_t, maxlength(game 9: s_3), maxlength(game 9: s_2)) + NV * NG * time(= eps_t, maxlength(game 9: e_2), maxlength(game 9: e_1)) + (NV * NG + NV) * time(zkverify, maxlength(game 9: m_3), maxlength(game 9: pf)) + NV * time(([1,NV])) + time + (NV - 1) * time(check, length(mkgrant, maxlength(game 9: s_3)), maxlength(game 9: gsig))
+RESULT time_6 = time + time(game 10) = time + (1 + NV * NG + NV) * time(zkimgof) + (1 + NV * NP) * time(pkgen) + NP * time(hc, length(ms, maxlength(game 10: m_1))) + NP * time(ms, maxlength(game 10: m_1)) + NP * time(([1,NP])) + NP * time(sign, maxlength(game 10: x_4)) + NP * time(skgen) + NP * time(mkgrant, maxlength(game 10: s_1)) + NG * time(admits, maxlength(game 10: m_2), maxlength(game 10: x_1), maxlength(game 10: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 10: s_2), maxlength(game 10: e_1)) + (NG + NV * NG) * time(hc, length(ms, maxlength(game 10: m_2))) + (NG + NV * NG) * time(ms, maxlength(game 10: m_2)) + NG * time(hd, maxlength(game 10: x_1)) + NG * time(zkprove, maxlength(game 10: x_3)) + NG * time(zkskgen) + NV * NP * time(= message, maxlength(game 10: m1), maxlength(game 10: x_4)) + NV * NP * time(check, maxlength(game 10: m1), maxlength(game 10: si1)) + NV * time(mkgrant, maxlength(game 10: s_3)) + NV * time(policy_ok, maxlength(game 10: e_2)) + NV * time(hd, maxlength(game 10: x_2)) + NV * time(mkjournal, maxlength(game 10: s_3), maxlength(game 10: e_2)) + NV * NG * time(= act_t, maxlength(game 10: x_2), maxlength(game 10: x_1)) + NV * NG * time(= sid_t, maxlength(game 10: s_3), maxlength(game 10: s_2)) + NV * NG * time(= eps_t, maxlength(game 10: e_2), maxlength(game 10: e_1)) + (NV * NG + NV) * time(zkverify, maxlength(game 10: m_3), maxlength(game 10: pf)) + NV * time(([1,NV]))
+RESULT time_7 = time + time(game 12) = time + (1 + NV * NG + NV) * time(zkimgof) + (1 + NV * NP) * time(pkgen) + NP * time(hc, length(ms, maxlength(game 12: m_1))) + NP * time(ms, maxlength(game 12: m_1)) + NP * time(([1,NP])) + NP * time(mkgrant, maxlength(game 12: s_1)) + NP * time(sign, maxlength(game 12: x_4)) + NP * time(skgen) + NG * time(admits, maxlength(game 12: m_2), maxlength(game 12: x_1), maxlength(game 12: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 12: s_2), maxlength(game 12: e_1)) + (NG + NV * NG) * time(hc, length(ms, maxlength(game 12: m_2))) + (NG + NV * NG) * time(ms, maxlength(game 12: m_2)) + NG * time(hd, maxlength(game 12: x_1)) + NG * time(zkprove, maxlength(game 12: x_3)) + NG * time(zkskgen) + NV * time(mkgrant, maxlength(game 12: s_3)) + NV * NP * time(= message, maxlength(game 12: m1), maxlength(game 12: x_4)) + NV * NP * time(check, maxlength(game 12: m1), maxlength(game 12: gsig)) + NV * time(policy_ok, maxlength(game 12: e_2)) + NV * time(hd, maxlength(game 12: x_2)) + NV * time(mkjournal, maxlength(game 12: s_3), maxlength(game 12: e_2)) + NV * NG * time(= act_t, maxlength(game 12: x_2), maxlength(game 12: x_1)) + NV * NG * time(= sid_t, maxlength(game 12: s_3), maxlength(game 12: s_2)) + NV * NG * time(= eps_t, maxlength(game 12: e_2), maxlength(game 12: e_1)) + (NV * NG + NV) * time(zkverify, maxlength(game 12: m_3), maxlength(game 12: pf)) + NV * time(([1,NV]))
+RESULT Could not prove forall e: eps_t, c: commit_t, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists r: salt_t, m: map_t; (event(Committed(s, m, r, c)) && event(GuestRan(m, r, x, s, e))).
