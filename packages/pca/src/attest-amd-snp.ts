@@ -1,3 +1,4 @@
+import { setAssuranceLabel } from './assurance';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 HARDWARE backend — AMD SEV-SNP, REAL report → `HardwareAttestationVerifier` with per-family ARK pins.
@@ -71,7 +72,12 @@ export function pemToDer(pem: string): Uint8Array {
 }
 
 /** Build a `HardwareAttestationVerifier` for genuine AMD SEV-SNP reports. Fails closed. */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createAmdSnpVerifier(opts: AmdSnpVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createAmdSnpVerifierUnlabelled(opts), { level: 'hardware', vendor: 'amd-sev-snp' });
+}
+
+function createAmdSnpVerifierUnlabelled(opts: AmdSnpVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   const pin = opts?.family ? AMD_ARK_SPKI_SHA384[opts.family] : undefined;

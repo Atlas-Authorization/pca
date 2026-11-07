@@ -14,6 +14,13 @@ const xml = fs.readFileSync(xmlPath, 'utf8');
 const tag = (blk, t) => { const m = new RegExp(`<${t}>([\\s\\S]*?)</${t}>`).exec(blk); return m ? m[1] : ''; };
 const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 const srcRoot = crate === 'kotlin-pca' ? 'src/main/kotlin' : 'src';
+// Kotlin also ships framework modules and guard-common (a flat directory compiled into both of them)
+const dirOf = (pkg) => {
+  if (crate !== 'kotlin-pca') return `${srcRoot}/${pkg}`;
+  if (pkg === 'net/atlasauth/pca/guard') return 'guard-common';
+  for (const m of ['ktor', 'spring']) if (pkg === `net/atlasauth/pca/${m}`) return `pca-${m}/${srcRoot}/${pkg}`;
+  return `${srcRoot}/${pkg}`;
+};
 const lines = new Map();
 const srcLine = (rel, n) => {
   if (!lines.has(rel)) lines.set(rel, fs.readFileSync(path.join(root, 'sdks', crate, rel), 'utf8').split('\n'));
@@ -29,7 +36,7 @@ for (const m of xml.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)) {
   if (st !== 'SURVIVED' && st !== 'NO_COVERAGE') continue;
   const outer = cls.replace(/\$.*$/, '');
   const pkg = outer.split('.').slice(0, -1).join('/');
-  let rel = `${srcRoot}/${pkg}/${file}`;
+  let rel = `${dirOf(pkg)}/${file}`;
   // Kotlin copies an object literal of an inline stdlib function (sortedBy -> compareBy's Comparator) into a synthetic class
   // <Outer>$<fn>$$inlined$<inlineFn>$<n> whose SourceFile is the STDLIB file (Comparisons.kt) and whose lines are that file's:
   // key such a mutant by the call site of <inlineFn> in <fn> of the outer class's own source file.
@@ -37,7 +44,7 @@ for (const m of xml.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)) {
   let inlinedAt = 0;
   if (!fs.existsSync(path.join(root, 'sdks', crate, rel))) {
     const base = outer.split('.').pop().replace(/Kt$/, '');
-    const own = `${srcRoot}/${pkg}/${base}.${crate === 'kotlin-pca' ? 'kt' : 'java'}`;
+    const own = `${dirOf(pkg)}/${base}.${crate === 'kotlin-pca' ? 'kt' : 'java'}`;
     if (!fs.existsSync(path.join(root, 'sdks', crate, own))) throw new Error(`${cls}: source ${file} is not in the tree and neither is ${own}`);
     rel = own;
     srcLine(rel, 1);
@@ -55,6 +62,18 @@ for (const m of xml.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)) {
     const name = method.replace(/\$.*$/, '');
     const all = lines.get(rel);
     at = all.findIndex((l) => new RegExp(`\\bfun ${name}\\(`).test(l)) + 1;
+    // line 0 = compiler-synthesised code with no line table entry: a constructor (<init>: key by the declaration of the mutated
+    // class) or a property accessor (getX / isX / setX: key by the declaration of property x)
+    const esc = (s) => s.replace(/[$.*+?^()[\]{}|\\]/g, '\\$&');
+    if (!at && name === '<init>') {
+      const simple = cls.split('.').pop().split('$').filter((s) => s && !/^\d+$/.test(s)).pop();
+      at = all.findIndex((l) => new RegExp(`\\b(class|object)\\s+${esc(simple)}\\b`).test(l)) + 1;
+    }
+    const acc = /^(?:get|set|is)([A-Z].*)$/.exec(name);
+    if (!at && acc) {
+      const prop = acc[1][0].toLowerCase() + acc[1].slice(1);
+      at = all.findIndex((l) => new RegExp(`\\b(val|var)\\s+(${esc(prop)}|${esc(name)})\\b`).test(l)) + 1;
+    }
     text = at ? all[at - 1].trim() : '';
   }
   const occurrence = lines.get(rel).slice(0, at).filter((l) => l.trim() === text).length;

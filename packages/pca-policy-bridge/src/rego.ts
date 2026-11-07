@@ -28,8 +28,8 @@ import type { BridgeResult, TranslationReport } from './types';
  *   - `not <stmt>`                     — negation (→ a `not` grouping); the inner must itself be a
  *                                        modeled CONDITION (not a verb/resource selector)
  *   - `startswith(input.<p>, "pre")`   — prefix condition (exact: startswith is anchored-at-start)
- *   - `glob.match("pat", [], input.<p>)` / `glob.match("pat", null, input.<p>)` — like condition
- *     (glob.match is whole-string/anchored; with empty/null delimiters `*` spans everything)
+ *   - `glob.match("pat", null, input.<p>)` — like condition (whole-string/anchored; with `null` delimiters `*`
+ *     spans everything). `glob.match("pat", [], ...)` uses the default "." delimiter, so a pattern with a wildcard is not modeled
  * Literals: "string", number, true/false.
  *
  * NOT MODELED (reported; the ENTIRE containing rule is dropped — a conjunct we cannot model could
@@ -83,8 +83,21 @@ function translateRule(body: string, predicates: Predicate[], report: Translatio
       return; // drop the whole rule
     }
     if (parsed.kind === 'verb') {
-      verb = parsed.verb;
+      // Every statement in a rule must hold, so a second action selector NARROWS the first (intersection).
+      // Overwriting it would let the rule match an action Rego rejects.
+      if (verb === '*') {
+        verb = parsed.verb;
+      } else {
+        const have: string[] = Array.isArray(verb) ? verb : [verb];
+        const next: string[] = Array.isArray(parsed.verb) ? parsed.verb : [parsed.verb];
+        const both: string[] = have.filter((v: string) => next.includes(v));
+        if (both.length === 0) return void report.translated.push('rule can never match (contradictory action selectors), nothing emitted');
+        verb = both.length === 1 ? (both[0] as string) : both;
+      }
     } else if (parsed.kind === 'resource') {
+      if (resource !== undefined && resource !== parsed.resource) {
+        return void report.translated.push('rule can never match (contradictory resource selectors), nothing emitted');
+      }
       resource = parsed.resource;
     } else {
       where.push(parsed.condition);
@@ -113,6 +126,16 @@ function parseStatement(stmt: string): Parsed {
   if (nm) {
     const inner = parseStatement((nm[1] ?? '').trim());
     if (inner.kind !== 'condition') return { kind: 'unmodeled' };
+    // `not input.p == lit` is unification, kept inside the negation: an absent path makes it undefined, so the
+    // `not` holds. Every other comparison and builtin has its arguments resolved BEFORE the negation, so an absent
+    // path leaves the whole statement undefined and the rule fails. The core evaluator already treats an absent
+    // field as "cannot decide", which never satisfies a `not`: that is the second case, and the first needs the
+    // existence made explicit.
+    const c = inner.condition as { field?: string; ref?: string; op?: string };
+    if (c.op === 'eq' && typeof c.field === 'string') {
+      const needs: Condition[] = [c.field, ...(typeof c.ref === 'string' ? [c.ref] : [])].map((f) => ({ field: f, op: 'exists' as const }));
+      return { kind: 'condition', condition: { not: { all_of: [...needs, inner.condition] } } };
+    }
     return { kind: 'condition', condition: { not: inner.condition } };
   }
 
@@ -178,13 +201,16 @@ function parseBuiltin(s: string): Parsed | 'skip' {
     const sub = (sw[1] ?? '').slice('input.'.length);
     return { kind: 'condition', condition: { field: `env.${sub}`, op: 'prefix', value: sw[2] ?? '' } };
   }
-  // glob.match("pat", [] | null, input.<p>) — whole-string match; empty/null delimiters => `*` spans all.
+  // glob.match("pat", null, input.<p>) — whole-string match; `null` delimiters => `*` spans all (`[]` means ".").
   const gm = /^glob\.match\(\s*"([^"]*)"\s*,\s*(\[\s*\]|null)\s*,\s*(input\.[\w.]+)\s*\)$/.exec(s);
   if (gm) {
     const pattern = gm[1] ?? '';
     // Only the `*` / `?` / `\`-escape / literal subset maps to the `like` glob; character classes and
     // brace alternation (`[...]`, `{...}`) do not — fail closed rather than mis-translate.
     if (/[[\]{}]/.test(pattern)) return { kind: 'unmodeled' };
+    // An EMPTY delimiter list is not "no delimiters": OPA then splits on ".", so `*` is cut by a dot and `?` never
+    // matches one. Only `null` makes `*` span everything. Translate `[]` only for a pattern with no wildcard.
+    if (/^\[/.test(gm[2] ?? '') && /[*?\\]/.test(pattern)) return { kind: 'unmodeled' };
     const sub = (gm[3] ?? '').slice('input.'.length);
     return { kind: 'condition', condition: { field: `env.${sub}`, op: 'like', value: pattern } };
   }

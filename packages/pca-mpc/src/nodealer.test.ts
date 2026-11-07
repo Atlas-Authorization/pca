@@ -156,7 +156,7 @@ describe('(C) the online SPDZ phase consumes NO-DEALER triples', () => {
       { allow: 1, t: 3, rQuant: 1 },
     ];
     const noDealer = composeSecureMalicious(vectors, { Q, seed: 1n, offline: shared(2) });
-    const dealer = composeSecureMalicious(vectors, { Q, seed: 1n });
+    const dealer = composeSecureMalicious(vectors, { insecureTrustedDealer: true, Q, seed: 1n });
     expect(noDealer.composed).toEqual(composeClear(vectors));
     expect(noDealer.composed).toEqual(dealer.composed);
   }, T);

@@ -1,4 +1,5 @@
 import { x509ValidityMs } from './x509-validity';
+import { strictChainError } from './x509-strict';
 import { snapshotConfig } from './config-snapshot';
 /**
  * Rotation-safe key trust store for Azure MAA token-signing keys.
@@ -372,6 +373,8 @@ export function evaluateMaaJwks(jwks: MaaJwks, issuer: string, policy: MaaKeyPol
       // Chained key: only under an explicitly pinned root (and, when configured, a pinned intermediate).
       if (roots.size === 0) throw new Error('chained key ignored (no chainRootSpkiSha256 configured)');
       for (let j = 0; j < certs.length - 1; j++) if (!safeVerify(certs[j]!, certs[j + 1]!.publicKey)) throw new Error(`chain link ${j} is not signed by the next cert`);
+      const profile = strictChainError(certs.map((c) => new Uint8Array(c.raw)));
+      if (profile) throw new Error(`chain profile: ${profile}`);
       const top = certs[certs.length - 1]!;
       if (top.issuer !== top.subject || !safeVerify(top, top.publicKey)) throw new Error('chain does not end in a self-signed root');
       const rootSpki = spkiOf(top);
@@ -428,14 +431,14 @@ export interface MaaKeyTrust {
 function parseState(x: unknown, issuer: string): MaaKeyState | null {
   if (typeof x !== 'object' || x === null) return null;
   const s = x as Record<string, unknown>;
-  if (s['v'] !== 1 || s['issuer'] !== issuer || !Number.isSafeInteger(s['fetchedAtMs']) || !Array.isArray(s['anchors'])) return null;
+  if (s['v'] !== 1 || s['issuer'] !== issuer || !Number.isSafeInteger(s['fetchedAtMs']) || Object.is(s['fetchedAtMs'], -0) || !Array.isArray(s['anchors'])) return null;
   const anchors: MaaAnchorRecord[] = [];
   for (const a of s['anchors'] as unknown[]) {
     if (typeof a !== 'object' || a === null) return null;
     const r = a as Record<string, unknown>;
     if (typeof r['spki'] !== 'string' || !HEX64.test(r['spki'])) return null;
     if (r['kind'] !== 'self-signed' && r['kind'] !== 'chained-root' && r['kind'] !== 'chained-intermediate') return null;
-    if (![r['notBeforeMs'], r['notAfterMs'], r['firstSeenMs']].every((n) => Number.isSafeInteger(n))) return null;
+    if (![r['notBeforeMs'], r['notAfterMs'], r['firstSeenMs']].every((n) => Number.isSafeInteger(n) && !Object.is(n, -0))) return null;
     anchors.push({ spki: r['spki'], kind: r['kind'], notBeforeMs: r['notBeforeMs'] as number, notAfterMs: r['notAfterMs'] as number, firstSeenMs: r['firstSeenMs'] as number });
   }
   return { v: 1, issuer, fetchedAtMs: s['fetchedAtMs'] as number, anchors };

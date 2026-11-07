@@ -686,9 +686,10 @@ export function objectiveRisk(submitted: ObjAction, ctx: ObjectiveRiskContext): 
     semanticDistance: (dist as { ok: true; value: number }).value,
     reversibility: rev.value,
     blastRadius: Math.max(blast.normalized, ctx.denominations.length && Object.keys(blast.harm).length ? harm.normalized : 0),
-    taint: ctx.taint,
+    // a verifier that forgot (or corrupted) taint / age gets the worst value, never a throw or a NaN risk
+    taint: Number.isFinite(ctx.taint) ? ctx.taint : 1,
     confidence: 1 - uncertainty,
-    age: ctx.age,
+    age: Number.isFinite(ctx.age) ? ctx.age : 1,
   };
   const raw = riskScore(inputs, ctx.weights);
   const r = ctx.calibration ? calibrate(raw, ctx.calibration) : raw;

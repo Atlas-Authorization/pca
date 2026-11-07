@@ -1,5 +1,7 @@
 # @atlasauth/pca-bbs
 
+> Maturity: **hardened** (hardened, formally verified (model), awaiting independent audit and final standard). The engineering is done and evidenced by the official draft fixtures, an independent implementation, abuse tests and a mutation gate; it awaits an independent review (O-1) and the final, published CFRG BBS standard (O-6), since the draft may still change. It is never production until both are done, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 BBS signatures (BLS12-381-SHA-256, following the IRTF CFRG BBS draft) for Proof-Carrying Authority (PCA). A PCA capability is issued as a multi-message BBS credential, then presented with selective disclosure and an unlinkable zero-knowledge proof of possession. An agent can reveal only the attributes a tool needs (for example the scope caveat) while hiding the rest (holder, budget, expiry), and two presentations of the same credential cannot be correlated.
 
 There are two layers:
@@ -49,9 +51,28 @@ verifyPresentation(pres, { pk, presentationHeader: bytes('action:search?q=atlas'
 
 `presentCredential` throws if a requested attribute name does not exist. Pass a pinned `pk` and your own `presentationHeader` to `verifyPresentation` so the verifier asserts its own expectations rather than trusting the values carried in the presentation.
 
+## Fail-closed behavior
+
+Every row is pinned by a test that asserts the exact outcome or rejection reason.
+
+| Missing or malformed input | Result |
+|---|---|
+| Signature not 80 octets, point A the identity or off the subgroup, scalar e zero or not below the group order | `verifyDetailed` returns `malformed-signature` |
+| Public key the identity, off the subgroup, wrong length or flag-corrupted | `malformed-public-key` |
+| Proof wrong length, an identity or off-subgroup point, or a scalar out of range | `malformed-proof` |
+| Disclosed messages and indexes differ in count | `disclosed-length-mismatch` |
+| Disclosed index duplicated, negative, fractional, NaN or out of range | `invalid-disclosed-indexes` (and `proofGen` throws) |
+| Wrong header, presentation header, issuer key, disclosed value or disclosed index | `challenge-mismatch` or `pairing-mismatch`; never accepted |
+| More than the maximum number of messages | signing and generator creation throw; verification rejects cheaply |
+| Secret key zero, equal to or above the group order, or not 32 octets | `skFromBytes` throws; key material under 32 octets makes `keyGen` throw |
+| Zero blinding scalar r1 or r2 supplied to `proofGen` | throws; no degenerate proof is produced |
+| Entropy source returns all zeros | key generation throws |
+| Attribute name containing the separator byte, or an unknown attribute at presentation | encoding or presentation throws |
+| Malformed credential or presentation object | `verifyCredential` / `verifyPresentation` return false, never throw |
+
 ## Status
 
-Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Experimental and unaudited.** The CFRG draft is not a final standard, and BBS on BLS12-381 is not post-quantum.
+Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Hardened, awaiting independent audit and final standard (the CFRG BBS draft).** The CFRG draft is not a final standard, and BBS on BLS12-381 is not post-quantum.
 
 What is validated (ciphersuite BLS12-381-SHA-256 only):
 
@@ -66,6 +87,16 @@ What is not validated:
 - Secret-scalar point multiplications (signing key, `1/(SK+e)`, signed messages, the prover's blinding scalars) use the library's fixed-window multiply with a fake point (`Point.multiply`), and secret inversions use Fermat exponentiation; `multiplyUnsafe` remains only for public verifier scalars. A dudect-style test (`ct.test.ts`: Welch t on interleaved weight-1 versus weight-253 scalars, fail at `|t| >= 10` with a median shift over 5%) passes, and a positive control with the variable-time multiply is detected. This is **not** a constant-time guarantee: JavaScript BigInt arithmetic and the JIT/GC have data-dependent timing, and the library's window method indexes a precomputed table by secret digits (a cache-timing channel). Use a native or WebAssembly constant-time implementation, or an HSM, for long-lived issuer keys facing a co-resident attacker. No independent audit.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
+
+## Formal evidence
+
+Presentation transcript, `PcaComp/Wrap.lean`. What a machine checked, and what it did not.
+
+- Proved: the challenge input is a fixed-width prefix followed by the length-prefixed presentation header, and that encoding is injective, so a presentation made for one action cannot be replayed under another header (`transcript_inj`).
+- Assumed (named): NA-BBS (BBS unforgeability and the zero-knowledge of the proof of knowledge, q-SDH on BLS12-381; the IRTF draft may still change), NA-ROM.
+- Not modelled: BBS itself, pairing arithmetic, selective-disclosure zero knowledge. Only the wrapper binding is machine-checked.
+
+Reproduce: `formal/computational/check.sh lean` (core Lean 4, no Mathlib; it also prints the axioms each theorem uses, only `propext`, `Classical.choice` and `Quot.sound`). The models are hand-written from the code and are NOT statements about the shipped implementation: the independent audit of the implementation is still required, and this package stays hardened until then.
 
 ## License
 

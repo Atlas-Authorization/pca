@@ -180,11 +180,11 @@ describe('ML-DSA-87 suites via the seam (Category-5 lattice)', () => {
     expect(p.alg).toBe(ML87);
     expect('pq_sig' in p).toBe(false);
     expect(validateWireV2(p)).toBeNull();
-    const r = await verifyPCActnCore(p, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(true);
     expect(r.checks.leaf_signature).toBe('pass');
     const bad: PCActn = { ...p, sig: flip(p.sig) };
-    expect((await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
     // verifyLeafSuite dispatches purely on alg + pq_pk
     const msg = thresholdMessage(p);
     expect(verifyLeafSuite({ alg: p.alg, holder: 'anything', pqPublicKey: p.pq_pk, message: msg, sig: p.sig })).toBe(true);
@@ -193,11 +193,11 @@ describe('ML-DSA-87 suites via the seam (Category-5 lattice)', () => {
     const { body, agent, mlDsa87, root } = fixture();
     const p = signPCActnLevel5(body, { alg: ML87_HYBRID, keys: { edSecret: agent.secretKey, mlDsa87 }, pqPk: encodeMlDsa87PublicKey(mlDsa87.publicKey) });
     expect(validateWireV2(p)).toBeNull();
-    expect((await verifyPCActnCore(p, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('pass');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('pass');
     const badEd: PCActn = { ...p, sig: flip(p.sig) };
     const badPq: PCActn = { ...p, pq_sig: flip(pqSigOf(p.pq_sig)) };
-    expect((await verifyPCActnCore(badEd, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
-    expect((await verifyPCActnCore(badPq, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(badEd, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(badPq, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
   });
 });
 
@@ -271,21 +271,21 @@ describe('SLH-DSA-SHA2-256s suite (FIPS-205, Category 5, hash-based anchor)', ()
     expect(purePc.alg).toBe(SLH256);
     expect('pq_sig' in purePc).toBe(false);
     expect(validateWireV2(purePc)).toBeNull();
-    const r = await verifyPCActnCore(purePc, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(purePc, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(true);
     expect(r.checks.leaf_signature).toBe('pass');
     const bad: PCActn = { ...purePc, sig: flip(purePc.sig) };
-    expect((await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
   });
 
   it('end-to-end: a hybrid slh-dsa-256s PCActn verifies and requires BOTH halves', async () => {
     expect(hybridPc.alg).toBe(SLH256_HYBRID);
     expect(validateWireV2(hybridPc)).toBeNull();
-    expect((await verifyPCActnCore(hybridPc, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('pass');
+    expect((await verifyPCActnCore(hybridPc, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('pass');
     const badEd: PCActn = { ...hybridPc, sig: flip(hybridPc.sig) };
     const badPq: PCActn = { ...hybridPc, pq_sig: flip(pqSigOf(hybridPc.pq_sig)) };
-    expect((await verifyPCActnCore(badEd, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
-    expect((await verifyPCActnCore(badPq, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(badEd, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(badPq, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
   });
 });
 

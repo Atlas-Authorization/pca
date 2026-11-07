@@ -1,0 +1,16 @@
+{
+ "target": "frost-net verifyAllowToken",
+ "seeds": [
+  {
+   "body": {
+    "typ": "pca.frost.allow.v1",
+    "action_digest": "-TAxA5rLrrt8sPkddxS1wK0pTAAw53IdKbcT1yrtQN0",
+    "group_pk": "TJ97_gk9-Z3fRKhlcdBnEVasmmdkbBorU80Iio93jOI",
+    "nonce": "fuzz",
+    "expires_at": 1700000060000
+   },
+   "authority": "eXxGr-U2nZbGAK45O1pS4f7gDiUOgIdnGBjEvQ8CuJQ",
+   "sig": "lsH7pbtkd_oqIt_JQ-_V0rvYI4MeCfiEND90w_gbYCA7u4DT_ilMO1NbDWuUEiS60-iuO_iwcNrgKxjU-QMdAw"
+  }
+ ]
+}

@@ -24,8 +24,10 @@ const pred = (verb: string | string[], resource: string | undefined, where?: Con
 describe('normalizePolicy / toModel', () => {
   it('shapes', () => {
     expect(DEFAULT_MAX_COMBINATIONS).toBe(200_000);
-    expect(normalizePolicy({ predicates: 'x' as never })).toEqual({ predicates: [], caveats: [] });
-    expect(normalizePolicy({ predicates: [], caveats: 'x' as never })).toEqual({ predicates: [], caveats: [] });
+    expect(normalizePolicy({ predicates: 'x' as never })).toEqual({ predicates: [], caveats: [], vetoes: [], tighten: [] });
+    expect(normalizePolicy({ predicates: [], caveats: 'x' as never })).toEqual({ predicates: [], caveats: [], vetoes: [], tighten: [] });
+    expect(normalizePolicy(null as never)).toEqual({ predicates: [], caveats: [], vetoes: [], tighten: [] });
+    expect(normalizePolicy({ predicates: [], vetoes: 'x' as never, tighten: 'y' as never })).toEqual({ predicates: [], caveats: [], vetoes: [], tighten: [] });
     const p = [pred('a', '*')];
     const cv = [{ type: 'expires', at: 1 }] as never;
     const n = normalizePolicy({ predicates: p, caveats: cv });

@@ -104,7 +104,9 @@ Default policy (`DEFAULT_RISK_POLICY`):
 
 ### Taint
 
-Agent inputs are labeled trusted (principal utterance, first-party data) or untrusted (tool output, retrieved content, other agents). The causal lineage is carried in the PCActn (`provenance`) and its taint level feeds `r`, so untrusted content cannot be laundered into a high-authority action without raising the required threshold. In this release the taint level is an input to `r` (the agent's claimed value is used only as a default; a resource-server-supplied `risk.taint` wins). The separate `taint_gate` check reports `not-enforced`.
+Agent inputs are labeled trusted (principal utterance, first-party data) or untrusted (tool output, retrieved content, other agents). The causal lineage is carried in the PCActn (`provenance`) and its taint level feeds `r`, so untrusted content cannot be laundered into a high-authority action without raising the required threshold. Taint enters `r` only from the resource server. `verifyPCActn` reads `context.risk.taint` and never the agent's own `provenance.taint_level`; if the resource server supplies no taint, it is priced at the worst case, 1. The hosted surface uses `max(server-observed taint, agent claim)`, so a claim can only raise it.
+
+Taint can also be a standalone gate. `verifyPCActnCore(pcactn, { enforce: { taint: { ctx, maxTaint } } })` re-classifies every provenance ref from facts the server holds (its trusted-input registry and resource graph, never the agent's label) and fails the `taint_gate` check closed when the lineage is empty, malformed or not server-verifiable, or its taint exceeds `maxTaint`, so a forged "trusted" label does not pass. Without `enforce.taint`, `taint_gate` reports `not-enforced`. `verifyPCActn` and `requirePCA` do not yet forward `enforce`, so on that path taint acts through `r` only.
 
 ## Threshold map
 
@@ -147,16 +149,21 @@ You can therefore choose `bMax/κ` to bound blast radius per human checkpoint a 
 
 ## How the hosted surface derives risk
 
-The agent's own `risk_claim` is untrusted. The hosted `/v1/pca/actions` starts from a server-side baseline and lets the claim only raise risk:
+The agent's own `risk_claim` is untrusted. The hosted `/v1/pca/actions` derives every input on the server, and the claim can only make an input worse:
 
-| Input | Baseline | Claim may |
+| Input | Server value | Agent claim |
 |---|---|---|
-| `semanticDistance` | 0 (the action is in the committed plan) | raise |
-| `reversibility` | from the node class: `irreversible` 0, `costly` 0.4, otherwise 1 | lower |
-| `blastRadius` | 0.5 | raise |
-| `confidence` | 1 | lower |
-| `age` | 0 | raise |
+| `semanticDistance` | Plan geodesic from the action's node to the goal (last) node of the authorized plan; 0 for a one-node plan | ignored |
+| `reversibility` | From the server-trusted class (the principal-authorized plan node, or the server's verb catalog for `agent_commit` plans): `irreversible` 0, `costly` 0.4, `reversible` 1 | may only lower |
+| `blastRadius` | Per class: `reversible` 0.5, `costly` 0.5, `irreversible` 0.75 | may only raise |
+| `taint` | 1, unless the instance configures a resource graph; then the join over the action's provenance refs, each re-classified by the server | may only raise |
+| `confidence` | 1 | may only lower |
+| `age` | Time since the last human touch on the trust budget | ignored |
 
-With default weights, an ordinary reversible in-plan action scores `r = 0.1` (`t = 1`); an irreversible one scores `0.3` (`t = 2`). A deployment tunes this through the grant's `risk_policy`.
+A signed `caution` on the PCActn is a floor on the final score (`r = max(r, caution)`), so it can only raise `r`.
+
+When the grant's signed envelope commits objective-risk facts and the instance reproduces them from its own configuration, `reversibility`, `blastRadius` and `semanticDistance` come from those facts instead of the class table (semantic distance is the larger of the objective value and the plan geodesic). A mismatch denies by default.
+
+With default weights and no resource graph (taint 1), a one-node reversible plan scores about `r = 0.3` (`t = 2`, which the hosted guardian co-signs) and an irreversible one about `0.55` (`t = 2`), plus `ζ·age`. A deployment tunes this through the grant's `risk_policy`.
 
 Next: [Threshold and step-up](./threshold-and-step-up.md).

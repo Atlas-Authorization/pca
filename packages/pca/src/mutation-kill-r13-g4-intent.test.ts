@@ -151,9 +151,9 @@ describe('intentMapShapeError', () => {
   it('metrics', () => {
     expect(val(() => intentMapShapeError({ ...MAP(), metrics: null }))).toBe('metrics must be an object');
     const m = (metrics: Record<string, unknown>) => intentMapShapeError({ ...MAP(), metrics: { ...MAP().metrics, ...metrics } });
-    for (const f of [-1, 1_000_001, 1.5, '5']) expect(m({ fidelity_est_ppm: f })).toBe('metrics.fidelity_est_ppm must be an integer in [0, 1e6]');
+    for (const f of [-1, -0, 1_000_001, 1.5, '5']) expect(m({ fidelity_est_ppm: f })).toBe('metrics.fidelity_est_ppm must be an integer in [0, 1e6]');
     for (const f of [0, 1_000_000]) expect(m({ fidelity_est_ppm: f })).toBeNull();
-    for (const r of [-1, 1.5, '5']) expect(m({ residual_risk_ppm: r })).toBe('metrics.residual_risk_ppm must be a non-negative integer');
+    for (const r of [-1, -0, 1.5, '5']) expect(m({ residual_risk_ppm: r })).toBe('metrics.residual_risk_ppm must be a non-negative integer');
     for (const r of [0, 5_000_000]) expect(m({ residual_risk_ppm: r })).toBeNull();
   });
 });
@@ -171,7 +171,8 @@ describe('Intent Map attestation', () => {
     expect(val(() => signIntentMapAttestation(m, P(), 0).signed_at)).toBe(0);
     const a = signIntentMapAttestation(m, P(), 0);
     expect(a.intent_ref).toBe(D32('ref'));
-    expect(verifyIntentMapAttestation(a, m)).toEqual({ ok: true });
+    expect(verifyIntentMapAttestation(a, m)).toEqual({ ok: true });    // strict profile: signed_at -0 is malformed (a signature over 0 does not admit it)
+    expect(verifyIntentMapAttestation({ ...a, signed_at: -0 }, m)).toEqual({ ok: false, reason: 'signed_at must be a non-negative safe integer' });
   });
   it('signing refuses a malformed map and a bad signedAt', () => {
     expect(() => signIntentMapAttestation({ ...MAP(), v: 2 } as never, P(), 1)).toThrow(new Error('signIntentMapAttestation: not an intent map v1'));

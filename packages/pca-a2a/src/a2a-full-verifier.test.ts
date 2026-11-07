@@ -29,7 +29,7 @@ const a = agent({ principal, goal: 'reconcile refunds', permissions: { stripe: [
 /** What a resource server knows about the action: its own copy of the one-node plan (authorized) and a budget. */
 const ctxFor = (p: PCActn, params: Record<string, unknown>) => {
   const plan: PlanNode[] = [{ id: p.plan.node_id, verb: p.action.verb, resource: p.action.resource, params_digest: p.action.params_digest, reversibility_class: p.action.reversibility_class }];
-  return { params, plan, planAuthorized: merkleRoot(plan.map(planNodeLeaf)) === p.plan.root, budget: { B: 1000, tau: NOW, asOf: NOW } };
+  return { params, plan, planAuthorized: merkleRoot(plan.map(planNodeLeaf)) === p.plan.root, budget: { B: 1000, tau: NOW, asOf: NOW }, risk: { semanticDistance: 0, reversibility: 1, blastRadius: 0, taint: 0, confidence: 1 } };
 };
 const base = (p: PCActn, params: Record<string, unknown>) => ({
   aud: AUD,
@@ -94,8 +94,10 @@ describe('A2A: the full verifier decides', () => {
   it('no budget supplied: fail-closed deny-metered budget forces a step-up (budget / threshold enforced)', async () => {
     const params = { amount: 90, currency: 'usd' };
     const p = act('stripe.refund', 'charge:ch_1', params);
-    const { budget: _b, ...ctxNoBudget } = ctxFor(p, params);
+    const { budget: _b, risk, ...rest } = ctxFor(p, params);
     void _b;
+    // a priced action (90 of the 500 limit): a zero-risk action costs nothing, so it would pass even on the empty default budget
+    const ctxNoBudget = { ...rest, risk: { ...risk, blastRadius: 90 / 500 } };
     const r = await a2a.verifyA2ATask(task(p), { aud: AUD, now: NOW, hooks: { revocation: () => ({ enforced: true as const, ok: true }) }, context: ctxNoBudget, grant: a.grant });
     expect(r.ok).toBe(false);
   });

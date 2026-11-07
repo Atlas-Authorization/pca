@@ -23,6 +23,10 @@ describe('cell coordinates against the wallet Ω', () => {
     expect(viaAlias.ok && viaAlias.box).toEqual([[0], [2, 3], [0]]);
     const twice = resolveCoords(SKY, 'air.book', { 'action.params.add_ons': ['none'], 'action.params.total': [2, 3], 'prov:action.params.add_ons': ['trusted|first_party'], 'env.prov.action.params.add_ons': ['trusted|first_party'] });
     expect(twice).toEqual({ ok: false, reason: 'dimension env.prov.action.params.add_ons is named twice' });
+    const neg0 = (r: [number, number]) => resolveCoords(SKY, 'air.book', { 'action.params.add_ons': ['none'], 'action.params.total': r, 'prov:action.params.add_ons': ['trusted|first_party'] }).ok;
+    expect(neg0([0, 3])).toBe(true);
+    expect(neg0([-0, 3])).toBe(false);
+    expect(neg0([0, -0])).toBe(false);
   });
   it('a box round-trips and contains exactly its cells (property)', () => {
     const r = rng(3);

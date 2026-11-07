@@ -1,5 +1,7 @@
 # @atlasauth/pca-notary
 
+> Maturity: **production**. Breaking changes to APIs or defaults are never made in a patch release. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 External-fact attestation for Proof-Carrying Authority (PCA), in the direction of zkTLS / TLSNotary. A notary witnesses one HTTP request/response and signs a canonical record of it (method, URL, request-header digest, status, and a salted Merkle commitment to the response body). The agent can then disclose a single response field with an inclusion proof while every other field stays hidden, and bind that fact to a specific PCActn. A policy can then gate an action on what an external API actually returned, not on what the agent claims it returned.
 
 ## Install
@@ -52,9 +54,30 @@ To tie a fact to one action, call `bindFactToPcActn(attestation, pcactn)` and ha
 
 `notarizeResponse`, `discloseField`, `verifyNotaryAttestation`, `verifyDisclosedField`, `factRef`, `bindFactToPcActn`, `factMatchesPcActn`, `requireAttestedFact`, `evaluateAttestedFactCaveat`, `isAttestedFactCaveat`, and the `ATTESTED_FACT_CAVEAT` constant. All verification functions fail closed (return `false` / `{ ok: false, reason }`).
 
+## Failure modes
+
+| Missing or wrong | Result |
+|---|---|
+| Attestation signature does not verify under the caveat's notary key | `{ ok: false, reason: 'notary attestation does not verify (fail closed)' }` |
+| Notary key not in the keyring, revoked, or outside its window | `ok: false`, key not trusted for this observation time |
+| Attestation older than `maxAgeMs`, or from the future | `ok: false`, stale or from the future |
+| Session URL differs from the caveat's `url` | `ok: false` |
+| Disclosure does not verify under the attested root (wrong value, salt, path or proof, or a proof size other than the committed leaf count) | `ok: false` |
+| Disclosed path or value differs from the caveat | `ok: false` |
+| `bindToPcActn` set and no PCActn, or the fact is not bound both ways | `ok: false` |
+| Any exception | `ok: false`, fail closed |
+
+## Limits
+
+- The notary is the trust boundary. This is attestation of what the notary saw, not zkTLS; a colluding or compromised notary can attest anything.
+- A disclosure reveals one field; its position and the total leaf count are visible.
+- The package does no network I/O and does not keep notary keys safe for you.
+
 ## Status
 
 The trust boundary is the notary. The relying party trusts that the notary reported the response faithfully and is not colluding with the agent. This is not trustless zkTLS: the notary does not take part in an MPC-TLS handshake, so it attests to what it observed rather than to a transcript it could not have forged. Selective redaction and the binding into a PCActn are real cryptographic checks, but the notary remains the trust assumption. PCA cryptography has not been independently audited.
+
+An admitted fact is returned as `{ ok: true, trust: 'notary-trusted' }`: treat it as a fact the notary vouches for, not a proven one. `evaluateAttestedFactCaveat` takes an optional policy: `maxAgeMs` (with `now`) refuses a stale or future-dated attestation, and `keyring` (a list of `{ key, notBefore?, notAfter?, revoked? }`) refuses an unlisted notary key, one outside its window (use overlapping windows to rotate), or a revoked one for every observation time, since a compromised notary can backdate. Both are off unless given, and keeping the keyring current is the relying party's job.
 
 ## License
 

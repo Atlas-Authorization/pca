@@ -1,0 +1,62 @@
+{
+  "warnDays": 14,
+  "cases": [
+    {
+      "id": "recorded-azure-genoa-sev-snp",
+      "vendor": "sev-snp",
+      "now": 1791505800000,
+      "family": "genoa",
+      "binding": "azure-runtime-data",
+      "reportFile": "../real-azure-maa/sevsnp-hcl-report.bin",
+      "reportOffset": 32,
+      "certsJsonFile": "../real-azure-maa/sevsnp-amd-certs.json",
+      "runtimeDataFile": "../real-azure-maa/sevsnp-runtime-data.json",
+      "measurements": ["aa7c9da55c1386e5b1653b125978beda7b3f95a85aeb0f9ddbbdb783ce056a28c9d021da239c34a58c3a657654270eef"],
+      "expected": { "holderPub": "pca-realsilicon-azure-tdx-holder", "grantRef": "grant_pca_azure_maa_realsilicon", "epoch": 1, "nonce": "srv-nonce-maa-5d3b8e1f9a27c604" }
+    },
+    {
+      "id": "recorded-azure-intel-tdx-dcap",
+      "vendor": "tdx",
+      "now": 1791506476000,
+      "binding": "azure-runtime-data",
+      "quoteFile": "../real-azure-maa/pcabound-tdx-dcap-quote.bin",
+      "runtimeDataFile": "../real-azure-maa/pcabound-runtime-data.json",
+      "collateral": {
+        "tcbInfo": "../real-tdx-collateral/tdx-tcbinfo.json",
+        "tcbInfoChain": "../real-tdx-collateral/tdx-tcbinfo-issuer-chain.pem",
+        "qeIdentity": "../real-tdx-collateral/tdx-qeidentity.json",
+        "qeIdentityChain": "../real-tdx-collateral/tdx-qeidentity-issuer-chain.pem",
+        "pckCrl": "../real-tdx-collateral/pckcrl-platform.der",
+        "rootCrl": "../real-tdx-collateral/IntelSGXRootCA.crl.der"
+      },
+      "mrtds": ["a2e61f1316e9e367e9c1f7a0adc98c48eb13875c399c85d286cee5ea2b05e57f2df9f61d903b0ae7ac5607d843dfffc1"],
+      "expected": { "holderPub": "pca-realsilicon-azure-tdx-holder", "grantRef": "grant_pca_azure_maa_realsilicon", "epoch": 1, "nonce": "srv-nonce-maa-5d3b8e1f9a27c604" }
+    },
+    {
+      "id": "recorded-azure-maa-tdx",
+      "vendor": "azure-maa",
+      "now": 1791506476000,
+      "tokenFile": "../real-azure-maa/pcabound-tdxvm-token.jwt",
+      "jwksFile": "../real-azure-maa/maa-signing-certs.json",
+      "issuer": "https://sharedwus.wus.attest.azure.net",
+      "signerSpkiSha256": ["fe4fa28d5b2e89f088d484f260363a12bcab53d9a9e0d6725507336fc8b6a71e"],
+      "tdxMrtds": ["a2e61f1316e9e367e9c1f7a0adc98c48eb13875c399c85d286cee5ea2b05e57f2df9f61d903b0ae7ac5607d843dfffc1"],
+      "expected": { "holderPub": "pca-realsilicon-azure-tdx-holder", "grantRef": "grant_pca_azure_maa_realsilicon", "epoch": 1, "nonce": "srv-nonce-maa-5d3b8e1f9a27c604" }
+    },
+    {
+      "id": "recorded-azure-h100-nvl-gpu-cc",
+      "vendor": "nvidia-h100",
+      "now": 1791504000000,
+      "reportFile": "../real-nvidia-cc/own-h100/h100-gpu-attestation-report.bin",
+      "certChainFile": "../real-nvidia-cc/own-h100/h100-device-cert-chain.pem",
+      "driverRimFile": "../real-nvidia-cc/own-h100/driver-rim.xml",
+      "vbiosRimFile": "../real-nvidia-cc/own-h100/vbios-rim.xml",
+      "crlFiles": ["../real-nvidia-cc/collateral/l2-gh100.crl", "../real-nvidia-cc/collateral/l1-root.crl"],
+      "rootSpkiSha256": ["a90c4eb5acfd3e3d03a25db6a26b84f720ad0503196c627c21ddd48dd85b06a4"],
+      "rimRootSpkiSha256": ["dec1dc316477aa851eebdf51327ae9f864bc8d89254657ed1e7eb9168af1e1a3"],
+      "leafSubjectIncludes": "GH100",
+      "requireCrlIssuers": ["NVIDIA GH100 Identity", "NVIDIA Device Identity CA"],
+      "expected": { "holderPub": "pca-realsilicon-nvidia-h100-holder", "grantRef": "grant_pca_nvidia_gpucc_realsilicon", "epoch": 1, "nonce": "srv-nonce-nv-7c1e9f2a4b8d0536" }
+    }
+  ]
+}

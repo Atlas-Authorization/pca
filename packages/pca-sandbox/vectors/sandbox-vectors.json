@@ -1,0 +1,1047 @@
+{
+ "about": "Policy compiler and profile generator vectors for @atlasauth/pca-sandbox: needs in, policy and the seccomp, Landlock and macOS profiles out.",
+ "cases": [
+  {
+   "name": "empty",
+   "needs": [],
+   "proxy_port": null,
+   "policy": {
+    "v": 1,
+    "fs": {
+     "read": [],
+     "write": [],
+     "exec": []
+    },
+    "net": {
+     "proxy": null,
+     "hosts": []
+    }
+   },
+   "seccomp": {
+    "defaultAction": "SCMP_ACT_ERRNO",
+    "defaultErrnoRet": 1,
+    "archMap": [
+     {
+      "architecture": "SCMP_ARCH_X86_64",
+      "subArchitectures": []
+     },
+     {
+      "architecture": "SCMP_ARCH_AARCH64",
+      "subArchitectures": []
+     }
+    ],
+    "syscalls": [
+     {
+      "names": [
+       "arch_prctl",
+       "brk",
+       "clock_gettime",
+       "clock_nanosleep",
+       "close",
+       "dup",
+       "dup3",
+       "epoll_create1",
+       "epoll_ctl",
+       "epoll_pwait",
+       "eventfd2",
+       "exit",
+       "exit_group",
+       "fcntl",
+       "fstat",
+       "futex",
+       "getcwd",
+       "getdents64",
+       "getegid",
+       "geteuid",
+       "getgid",
+       "getpid",
+       "getrandom",
+       "gettid",
+       "gettimeofday",
+       "getuid",
+       "lseek",
+       "madvise",
+       "mmap",
+       "mprotect",
+       "mremap",
+       "munmap",
+       "nanosleep",
+       "newfstatat",
+       "openat",
+       "pipe2",
+       "poll",
+       "ppoll",
+       "pread64",
+       "prlimit64",
+       "pwrite64",
+       "read",
+       "readlink",
+       "readlinkat",
+       "readv",
+       "rseq",
+       "rt_sigaction",
+       "rt_sigprocmask",
+       "rt_sigreturn",
+       "sched_yield",
+       "set_robust_list",
+       "set_tid_address",
+       "sigaltstack",
+       "statx",
+       "tgkill",
+       "uname",
+       "write",
+       "writev"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     }
+    ]
+   },
+   "landlock": {
+    "v": 1,
+    "abi_min": 4,
+    "handled_access_fs": [
+     "LANDLOCK_ACCESS_FS_EXECUTE",
+     "LANDLOCK_ACCESS_FS_WRITE_FILE",
+     "LANDLOCK_ACCESS_FS_READ_FILE",
+     "LANDLOCK_ACCESS_FS_READ_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_FILE",
+     "LANDLOCK_ACCESS_FS_MAKE_CHAR",
+     "LANDLOCK_ACCESS_FS_MAKE_DIR",
+     "LANDLOCK_ACCESS_FS_MAKE_REG",
+     "LANDLOCK_ACCESS_FS_MAKE_SOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_FIFO",
+     "LANDLOCK_ACCESS_FS_MAKE_BLOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_SYM",
+     "LANDLOCK_ACCESS_FS_REFER",
+     "LANDLOCK_ACCESS_FS_TRUNCATE"
+    ],
+    "handled_access_net": [
+     "LANDLOCK_ACCESS_NET_BIND_TCP",
+     "LANDLOCK_ACCESS_NET_CONNECT_TCP"
+    ],
+    "rules": {
+     "fs": [],
+     "net": []
+    }
+   },
+   "macos": "(version 1)\n(deny default)\n(allow sysctl-read)\n(allow process-fork)\n(allow mach-lookup)\n(allow file-read-metadata)\n(allow file-read* (literal \"/\") (literal \"/dev/null\") (literal \"/dev/urandom\") (subpath \"/usr/lib\") (subpath \"/System/Library\") (subpath \"/private/var/db/dyld\") (subpath \"/System/Volumes/Preboot/Cryptexes\"))\n"
+  },
+  {
+   "name": "read_one_file",
+   "needs": [
+    {
+     "fs": [
+      {
+       "path": "/srv/data/notes.txt",
+       "mode": "r"
+      }
+     ]
+    }
+   ],
+   "proxy_port": null,
+   "policy": {
+    "v": 1,
+    "fs": {
+     "read": [
+      "/srv/data/notes.txt"
+     ],
+     "write": [],
+     "exec": []
+    },
+    "net": {
+     "proxy": null,
+     "hosts": []
+    }
+   },
+   "seccomp": {
+    "defaultAction": "SCMP_ACT_ERRNO",
+    "defaultErrnoRet": 1,
+    "archMap": [
+     {
+      "architecture": "SCMP_ARCH_X86_64",
+      "subArchitectures": []
+     },
+     {
+      "architecture": "SCMP_ARCH_AARCH64",
+      "subArchitectures": []
+     }
+    ],
+    "syscalls": [
+     {
+      "names": [
+       "arch_prctl",
+       "brk",
+       "clock_gettime",
+       "clock_nanosleep",
+       "close",
+       "dup",
+       "dup3",
+       "epoll_create1",
+       "epoll_ctl",
+       "epoll_pwait",
+       "eventfd2",
+       "exit",
+       "exit_group",
+       "fcntl",
+       "fstat",
+       "futex",
+       "getcwd",
+       "getdents64",
+       "getegid",
+       "geteuid",
+       "getgid",
+       "getpid",
+       "getrandom",
+       "gettid",
+       "gettimeofday",
+       "getuid",
+       "lseek",
+       "madvise",
+       "mmap",
+       "mprotect",
+       "mremap",
+       "munmap",
+       "nanosleep",
+       "newfstatat",
+       "openat",
+       "pipe2",
+       "poll",
+       "ppoll",
+       "pread64",
+       "prlimit64",
+       "pwrite64",
+       "read",
+       "readlink",
+       "readlinkat",
+       "readv",
+       "rseq",
+       "rt_sigaction",
+       "rt_sigprocmask",
+       "rt_sigreturn",
+       "sched_yield",
+       "set_robust_list",
+       "set_tid_address",
+       "sigaltstack",
+       "statx",
+       "tgkill",
+       "uname",
+       "write",
+       "writev"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     }
+    ]
+   },
+   "landlock": {
+    "v": 1,
+    "abi_min": 4,
+    "handled_access_fs": [
+     "LANDLOCK_ACCESS_FS_EXECUTE",
+     "LANDLOCK_ACCESS_FS_WRITE_FILE",
+     "LANDLOCK_ACCESS_FS_READ_FILE",
+     "LANDLOCK_ACCESS_FS_READ_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_FILE",
+     "LANDLOCK_ACCESS_FS_MAKE_CHAR",
+     "LANDLOCK_ACCESS_FS_MAKE_DIR",
+     "LANDLOCK_ACCESS_FS_MAKE_REG",
+     "LANDLOCK_ACCESS_FS_MAKE_SOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_FIFO",
+     "LANDLOCK_ACCESS_FS_MAKE_BLOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_SYM",
+     "LANDLOCK_ACCESS_FS_REFER",
+     "LANDLOCK_ACCESS_FS_TRUNCATE"
+    ],
+    "handled_access_net": [
+     "LANDLOCK_ACCESS_NET_BIND_TCP",
+     "LANDLOCK_ACCESS_NET_CONNECT_TCP"
+    ],
+    "rules": {
+     "fs": [
+      {
+       "path": "/srv/data/notes.txt",
+       "access": [
+        "LANDLOCK_ACCESS_FS_READ_FILE",
+        "LANDLOCK_ACCESS_FS_READ_DIR"
+       ]
+      }
+     ],
+     "net": []
+    }
+   },
+   "macos": "(version 1)\n(deny default)\n(allow sysctl-read)\n(allow process-fork)\n(allow mach-lookup)\n(allow file-read-metadata)\n(allow file-read* (literal \"/\") (literal \"/dev/null\") (literal \"/dev/urandom\") (subpath \"/usr/lib\") (subpath \"/System/Library\") (subpath \"/private/var/db/dyld\") (subpath \"/System/Volumes/Preboot/Cryptexes\"))\n(allow file-read* (subpath \"/srv/data/notes.txt\"))\n"
+  },
+  {
+   "name": "write_implies_read_and_merges_duplicates",
+   "needs": [
+    {
+     "fs": [
+      {
+       "path": "/srv/out",
+       "mode": "rw"
+      },
+      {
+       "path": "/srv/out",
+       "mode": "r"
+      }
+     ]
+    },
+    {
+     "fs": [
+      {
+       "path": "/srv/data",
+       "mode": "r"
+      }
+     ]
+    }
+   ],
+   "proxy_port": null,
+   "policy": {
+    "v": 1,
+    "fs": {
+     "read": [
+      "/srv/data",
+      "/srv/out"
+     ],
+     "write": [
+      "/srv/out"
+     ],
+     "exec": []
+    },
+    "net": {
+     "proxy": null,
+     "hosts": []
+    }
+   },
+   "seccomp": {
+    "defaultAction": "SCMP_ACT_ERRNO",
+    "defaultErrnoRet": 1,
+    "archMap": [
+     {
+      "architecture": "SCMP_ARCH_X86_64",
+      "subArchitectures": []
+     },
+     {
+      "architecture": "SCMP_ARCH_AARCH64",
+      "subArchitectures": []
+     }
+    ],
+    "syscalls": [
+     {
+      "names": [
+       "arch_prctl",
+       "brk",
+       "clock_gettime",
+       "clock_nanosleep",
+       "close",
+       "dup",
+       "dup3",
+       "epoll_create1",
+       "epoll_ctl",
+       "epoll_pwait",
+       "eventfd2",
+       "exit",
+       "exit_group",
+       "fcntl",
+       "fstat",
+       "futex",
+       "getcwd",
+       "getdents64",
+       "getegid",
+       "geteuid",
+       "getgid",
+       "getpid",
+       "getrandom",
+       "gettid",
+       "gettimeofday",
+       "getuid",
+       "lseek",
+       "madvise",
+       "mmap",
+       "mprotect",
+       "mremap",
+       "munmap",
+       "nanosleep",
+       "newfstatat",
+       "openat",
+       "pipe2",
+       "poll",
+       "ppoll",
+       "pread64",
+       "prlimit64",
+       "pwrite64",
+       "read",
+       "readlink",
+       "readlinkat",
+       "readv",
+       "rseq",
+       "rt_sigaction",
+       "rt_sigprocmask",
+       "rt_sigreturn",
+       "sched_yield",
+       "set_robust_list",
+       "set_tid_address",
+       "sigaltstack",
+       "statx",
+       "tgkill",
+       "uname",
+       "write",
+       "writev"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     }
+    ]
+   },
+   "landlock": {
+    "v": 1,
+    "abi_min": 4,
+    "handled_access_fs": [
+     "LANDLOCK_ACCESS_FS_EXECUTE",
+     "LANDLOCK_ACCESS_FS_WRITE_FILE",
+     "LANDLOCK_ACCESS_FS_READ_FILE",
+     "LANDLOCK_ACCESS_FS_READ_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_FILE",
+     "LANDLOCK_ACCESS_FS_MAKE_CHAR",
+     "LANDLOCK_ACCESS_FS_MAKE_DIR",
+     "LANDLOCK_ACCESS_FS_MAKE_REG",
+     "LANDLOCK_ACCESS_FS_MAKE_SOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_FIFO",
+     "LANDLOCK_ACCESS_FS_MAKE_BLOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_SYM",
+     "LANDLOCK_ACCESS_FS_REFER",
+     "LANDLOCK_ACCESS_FS_TRUNCATE"
+    ],
+    "handled_access_net": [
+     "LANDLOCK_ACCESS_NET_BIND_TCP",
+     "LANDLOCK_ACCESS_NET_CONNECT_TCP"
+    ],
+    "rules": {
+     "fs": [
+      {
+       "path": "/srv/data",
+       "access": [
+        "LANDLOCK_ACCESS_FS_READ_FILE",
+        "LANDLOCK_ACCESS_FS_READ_DIR"
+       ]
+      },
+      {
+       "path": "/srv/out",
+       "access": [
+        "LANDLOCK_ACCESS_FS_READ_FILE",
+        "LANDLOCK_ACCESS_FS_READ_DIR",
+        "LANDLOCK_ACCESS_FS_WRITE_FILE",
+        "LANDLOCK_ACCESS_FS_TRUNCATE",
+        "LANDLOCK_ACCESS_FS_MAKE_REG",
+        "LANDLOCK_ACCESS_FS_MAKE_DIR",
+        "LANDLOCK_ACCESS_FS_REMOVE_FILE",
+        "LANDLOCK_ACCESS_FS_REMOVE_DIR"
+       ]
+      }
+     ],
+     "net": []
+    }
+   },
+   "macos": "(version 1)\n(deny default)\n(allow sysctl-read)\n(allow process-fork)\n(allow mach-lookup)\n(allow file-read-metadata)\n(allow file-read* (literal \"/\") (literal \"/dev/null\") (literal \"/dev/urandom\") (subpath \"/usr/lib\") (subpath \"/System/Library\") (subpath \"/private/var/db/dyld\") (subpath \"/System/Volumes/Preboot/Cryptexes\"))\n(allow file-read* (subpath \"/srv/data\"))\n(allow file-read* (subpath \"/srv/out\"))\n(allow file-write* (subpath \"/srv/out\"))\n"
+  },
+  {
+   "name": "exec_binary",
+   "needs": [
+    {
+     "fs": [
+      {
+       "path": "/usr/local/bin/convert",
+       "mode": "x"
+      },
+      {
+       "path": "/srv/in",
+       "mode": "r"
+      }
+     ]
+    }
+   ],
+   "proxy_port": null,
+   "policy": {
+    "v": 1,
+    "fs": {
+     "read": [
+      "/srv/in"
+     ],
+     "write": [],
+     "exec": [
+      "/usr/local/bin/convert"
+     ]
+    },
+    "net": {
+     "proxy": null,
+     "hosts": []
+    }
+   },
+   "seccomp": {
+    "defaultAction": "SCMP_ACT_ERRNO",
+    "defaultErrnoRet": 1,
+    "archMap": [
+     {
+      "architecture": "SCMP_ARCH_X86_64",
+      "subArchitectures": []
+     },
+     {
+      "architecture": "SCMP_ARCH_AARCH64",
+      "subArchitectures": []
+     }
+    ],
+    "syscalls": [
+     {
+      "names": [
+       "arch_prctl",
+       "brk",
+       "clock_gettime",
+       "clock_nanosleep",
+       "close",
+       "dup",
+       "dup3",
+       "epoll_create1",
+       "epoll_ctl",
+       "epoll_pwait",
+       "eventfd2",
+       "exit",
+       "exit_group",
+       "fcntl",
+       "fstat",
+       "futex",
+       "getcwd",
+       "getdents64",
+       "getegid",
+       "geteuid",
+       "getgid",
+       "getpid",
+       "getrandom",
+       "gettid",
+       "gettimeofday",
+       "getuid",
+       "lseek",
+       "madvise",
+       "mmap",
+       "mprotect",
+       "mremap",
+       "munmap",
+       "nanosleep",
+       "newfstatat",
+       "openat",
+       "pipe2",
+       "poll",
+       "ppoll",
+       "pread64",
+       "prlimit64",
+       "pwrite64",
+       "read",
+       "readlink",
+       "readlinkat",
+       "readv",
+       "rseq",
+       "rt_sigaction",
+       "rt_sigprocmask",
+       "rt_sigreturn",
+       "sched_yield",
+       "set_robust_list",
+       "set_tid_address",
+       "sigaltstack",
+       "statx",
+       "tgkill",
+       "uname",
+       "write",
+       "writev"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     },
+     {
+      "names": [
+       "execve",
+       "execveat"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     }
+    ]
+   },
+   "landlock": {
+    "v": 1,
+    "abi_min": 4,
+    "handled_access_fs": [
+     "LANDLOCK_ACCESS_FS_EXECUTE",
+     "LANDLOCK_ACCESS_FS_WRITE_FILE",
+     "LANDLOCK_ACCESS_FS_READ_FILE",
+     "LANDLOCK_ACCESS_FS_READ_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_FILE",
+     "LANDLOCK_ACCESS_FS_MAKE_CHAR",
+     "LANDLOCK_ACCESS_FS_MAKE_DIR",
+     "LANDLOCK_ACCESS_FS_MAKE_REG",
+     "LANDLOCK_ACCESS_FS_MAKE_SOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_FIFO",
+     "LANDLOCK_ACCESS_FS_MAKE_BLOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_SYM",
+     "LANDLOCK_ACCESS_FS_REFER",
+     "LANDLOCK_ACCESS_FS_TRUNCATE"
+    ],
+    "handled_access_net": [
+     "LANDLOCK_ACCESS_NET_BIND_TCP",
+     "LANDLOCK_ACCESS_NET_CONNECT_TCP"
+    ],
+    "rules": {
+     "fs": [
+      {
+       "path": "/srv/in",
+       "access": [
+        "LANDLOCK_ACCESS_FS_READ_FILE",
+        "LANDLOCK_ACCESS_FS_READ_DIR"
+       ]
+      },
+      {
+       "path": "/usr/local/bin/convert",
+       "access": [
+        "LANDLOCK_ACCESS_FS_EXECUTE",
+        "LANDLOCK_ACCESS_FS_READ_FILE"
+       ]
+      }
+     ],
+     "net": []
+    }
+   },
+   "macos": "(version 1)\n(deny default)\n(allow sysctl-read)\n(allow process-fork)\n(allow mach-lookup)\n(allow file-read-metadata)\n(allow file-read* (literal \"/\") (literal \"/dev/null\") (literal \"/dev/urandom\") (subpath \"/usr/lib\") (subpath \"/System/Library\") (subpath \"/private/var/db/dyld\") (subpath \"/System/Volumes/Preboot/Cryptexes\"))\n(allow process-exec (literal \"/usr/local/bin/convert\"))\n(allow file-read* (literal \"/usr/local/bin/convert\"))\n(allow file-read* (subpath \"/srv/in\"))\n"
+  },
+  {
+   "name": "net_via_proxy",
+   "needs": [
+    {
+     "net": [
+      {
+       "host": "api.example.com",
+       "port": 443
+      },
+      {
+       "host": "api.example.com",
+       "port": 443
+      }
+     ]
+    },
+    {
+     "net": [
+      {
+       "host": "cdn.example.com",
+       "port": 80
+      }
+     ]
+    }
+   ],
+   "proxy_port": 3128,
+   "policy": {
+    "v": 1,
+    "fs": {
+     "read": [],
+     "write": [],
+     "exec": []
+    },
+    "net": {
+     "proxy": {
+      "host": "127.0.0.1",
+      "port": 3128
+     },
+     "hosts": [
+      "api.example.com:443",
+      "cdn.example.com:80"
+     ]
+    }
+   },
+   "seccomp": {
+    "defaultAction": "SCMP_ACT_ERRNO",
+    "defaultErrnoRet": 1,
+    "archMap": [
+     {
+      "architecture": "SCMP_ARCH_X86_64",
+      "subArchitectures": []
+     },
+     {
+      "architecture": "SCMP_ARCH_AARCH64",
+      "subArchitectures": []
+     }
+    ],
+    "syscalls": [
+     {
+      "names": [
+       "arch_prctl",
+       "brk",
+       "clock_gettime",
+       "clock_nanosleep",
+       "close",
+       "dup",
+       "dup3",
+       "epoll_create1",
+       "epoll_ctl",
+       "epoll_pwait",
+       "eventfd2",
+       "exit",
+       "exit_group",
+       "fcntl",
+       "fstat",
+       "futex",
+       "getcwd",
+       "getdents64",
+       "getegid",
+       "geteuid",
+       "getgid",
+       "getpid",
+       "getrandom",
+       "gettid",
+       "gettimeofday",
+       "getuid",
+       "lseek",
+       "madvise",
+       "mmap",
+       "mprotect",
+       "mremap",
+       "munmap",
+       "nanosleep",
+       "newfstatat",
+       "openat",
+       "pipe2",
+       "poll",
+       "ppoll",
+       "pread64",
+       "prlimit64",
+       "pwrite64",
+       "read",
+       "readlink",
+       "readlinkat",
+       "readv",
+       "rseq",
+       "rt_sigaction",
+       "rt_sigprocmask",
+       "rt_sigreturn",
+       "sched_yield",
+       "set_robust_list",
+       "set_tid_address",
+       "sigaltstack",
+       "statx",
+       "tgkill",
+       "uname",
+       "write",
+       "writev"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     },
+     {
+      "names": [
+       "connect",
+       "getpeername",
+       "getsockname",
+       "getsockopt",
+       "recvfrom",
+       "recvmsg",
+       "sendmsg",
+       "sendto",
+       "setsockopt",
+       "shutdown"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     },
+     {
+      "names": [
+       "socket"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+       {
+        "index": 0,
+        "value": 2,
+        "op": "SCMP_CMP_EQ"
+       }
+      ]
+     },
+     {
+      "names": [
+       "socket"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+       {
+        "index": 0,
+        "value": 10,
+        "op": "SCMP_CMP_EQ"
+       }
+      ]
+     }
+    ]
+   },
+   "landlock": {
+    "v": 1,
+    "abi_min": 4,
+    "handled_access_fs": [
+     "LANDLOCK_ACCESS_FS_EXECUTE",
+     "LANDLOCK_ACCESS_FS_WRITE_FILE",
+     "LANDLOCK_ACCESS_FS_READ_FILE",
+     "LANDLOCK_ACCESS_FS_READ_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_FILE",
+     "LANDLOCK_ACCESS_FS_MAKE_CHAR",
+     "LANDLOCK_ACCESS_FS_MAKE_DIR",
+     "LANDLOCK_ACCESS_FS_MAKE_REG",
+     "LANDLOCK_ACCESS_FS_MAKE_SOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_FIFO",
+     "LANDLOCK_ACCESS_FS_MAKE_BLOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_SYM",
+     "LANDLOCK_ACCESS_FS_REFER",
+     "LANDLOCK_ACCESS_FS_TRUNCATE"
+    ],
+    "handled_access_net": [
+     "LANDLOCK_ACCESS_NET_BIND_TCP",
+     "LANDLOCK_ACCESS_NET_CONNECT_TCP"
+    ],
+    "rules": {
+     "fs": [],
+     "net": [
+      {
+       "port": 3128,
+       "access": [
+        "LANDLOCK_ACCESS_NET_CONNECT_TCP"
+       ]
+      }
+     ]
+    }
+   },
+   "macos": "(version 1)\n(deny default)\n(allow sysctl-read)\n(allow process-fork)\n(allow mach-lookup)\n(allow file-read-metadata)\n(allow file-read* (literal \"/\") (literal \"/dev/null\") (literal \"/dev/urandom\") (subpath \"/usr/lib\") (subpath \"/System/Library\") (subpath \"/private/var/db/dyld\") (subpath \"/System/Volumes/Preboot/Cryptexes\"))\n(allow network-outbound (remote tcp \"localhost:3128\"))\n"
+  },
+  {
+   "name": "everything",
+   "needs": [
+    {
+     "fs": [
+      {
+       "path": "/srv/work dir",
+       "mode": "rw"
+      },
+      {
+       "path": "/opt/tool/bin/run",
+       "mode": "x"
+      }
+     ],
+     "net": [
+      {
+       "host": "api.example.com",
+       "port": 443
+      }
+     ]
+    }
+   ],
+   "proxy_port": 8080,
+   "policy": {
+    "v": 1,
+    "fs": {
+     "read": [
+      "/srv/work dir"
+     ],
+     "write": [
+      "/srv/work dir"
+     ],
+     "exec": [
+      "/opt/tool/bin/run"
+     ]
+    },
+    "net": {
+     "proxy": {
+      "host": "127.0.0.1",
+      "port": 8080
+     },
+     "hosts": [
+      "api.example.com:443"
+     ]
+    }
+   },
+   "seccomp": {
+    "defaultAction": "SCMP_ACT_ERRNO",
+    "defaultErrnoRet": 1,
+    "archMap": [
+     {
+      "architecture": "SCMP_ARCH_X86_64",
+      "subArchitectures": []
+     },
+     {
+      "architecture": "SCMP_ARCH_AARCH64",
+      "subArchitectures": []
+     }
+    ],
+    "syscalls": [
+     {
+      "names": [
+       "arch_prctl",
+       "brk",
+       "clock_gettime",
+       "clock_nanosleep",
+       "close",
+       "dup",
+       "dup3",
+       "epoll_create1",
+       "epoll_ctl",
+       "epoll_pwait",
+       "eventfd2",
+       "exit",
+       "exit_group",
+       "fcntl",
+       "fstat",
+       "futex",
+       "getcwd",
+       "getdents64",
+       "getegid",
+       "geteuid",
+       "getgid",
+       "getpid",
+       "getrandom",
+       "gettid",
+       "gettimeofday",
+       "getuid",
+       "lseek",
+       "madvise",
+       "mmap",
+       "mprotect",
+       "mremap",
+       "munmap",
+       "nanosleep",
+       "newfstatat",
+       "openat",
+       "pipe2",
+       "poll",
+       "ppoll",
+       "pread64",
+       "prlimit64",
+       "pwrite64",
+       "read",
+       "readlink",
+       "readlinkat",
+       "readv",
+       "rseq",
+       "rt_sigaction",
+       "rt_sigprocmask",
+       "rt_sigreturn",
+       "sched_yield",
+       "set_robust_list",
+       "set_tid_address",
+       "sigaltstack",
+       "statx",
+       "tgkill",
+       "uname",
+       "write",
+       "writev"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     },
+     {
+      "names": [
+       "connect",
+       "getpeername",
+       "getsockname",
+       "getsockopt",
+       "recvfrom",
+       "recvmsg",
+       "sendmsg",
+       "sendto",
+       "setsockopt",
+       "shutdown"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     },
+     {
+      "names": [
+       "socket"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+       {
+        "index": 0,
+        "value": 2,
+        "op": "SCMP_CMP_EQ"
+       }
+      ]
+     },
+     {
+      "names": [
+       "socket"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [
+       {
+        "index": 0,
+        "value": 10,
+        "op": "SCMP_CMP_EQ"
+       }
+      ]
+     },
+     {
+      "names": [
+       "execve",
+       "execveat"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+     }
+    ]
+   },
+   "landlock": {
+    "v": 1,
+    "abi_min": 4,
+    "handled_access_fs": [
+     "LANDLOCK_ACCESS_FS_EXECUTE",
+     "LANDLOCK_ACCESS_FS_WRITE_FILE",
+     "LANDLOCK_ACCESS_FS_READ_FILE",
+     "LANDLOCK_ACCESS_FS_READ_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_DIR",
+     "LANDLOCK_ACCESS_FS_REMOVE_FILE",
+     "LANDLOCK_ACCESS_FS_MAKE_CHAR",
+     "LANDLOCK_ACCESS_FS_MAKE_DIR",
+     "LANDLOCK_ACCESS_FS_MAKE_REG",
+     "LANDLOCK_ACCESS_FS_MAKE_SOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_FIFO",
+     "LANDLOCK_ACCESS_FS_MAKE_BLOCK",
+     "LANDLOCK_ACCESS_FS_MAKE_SYM",
+     "LANDLOCK_ACCESS_FS_REFER",
+     "LANDLOCK_ACCESS_FS_TRUNCATE"
+    ],
+    "handled_access_net": [
+     "LANDLOCK_ACCESS_NET_BIND_TCP",
+     "LANDLOCK_ACCESS_NET_CONNECT_TCP"
+    ],
+    "rules": {
+     "fs": [
+      {
+       "path": "/opt/tool/bin/run",
+       "access": [
+        "LANDLOCK_ACCESS_FS_EXECUTE",
+        "LANDLOCK_ACCESS_FS_READ_FILE"
+       ]
+      },
+      {
+       "path": "/srv/work dir",
+       "access": [
+        "LANDLOCK_ACCESS_FS_READ_FILE",
+        "LANDLOCK_ACCESS_FS_READ_DIR",
+        "LANDLOCK_ACCESS_FS_WRITE_FILE",
+        "LANDLOCK_ACCESS_FS_TRUNCATE",
+        "LANDLOCK_ACCESS_FS_MAKE_REG",
+        "LANDLOCK_ACCESS_FS_MAKE_DIR",
+        "LANDLOCK_ACCESS_FS_REMOVE_FILE",
+        "LANDLOCK_ACCESS_FS_REMOVE_DIR"
+       ]
+      }
+     ],
+     "net": [
+      {
+       "port": 8080,
+       "access": [
+        "LANDLOCK_ACCESS_NET_CONNECT_TCP"
+       ]
+      }
+     ]
+    }
+   },
+   "macos": "(version 1)\n(deny default)\n(allow sysctl-read)\n(allow process-fork)\n(allow mach-lookup)\n(allow file-read-metadata)\n(allow file-read* (literal \"/\") (literal \"/dev/null\") (literal \"/dev/urandom\") (subpath \"/usr/lib\") (subpath \"/System/Library\") (subpath \"/private/var/db/dyld\") (subpath \"/System/Volumes/Preboot/Cryptexes\"))\n(allow process-exec (literal \"/opt/tool/bin/run\"))\n(allow file-read* (literal \"/opt/tool/bin/run\"))\n(allow file-read* (subpath \"/srv/work dir\"))\n(allow file-write* (subpath \"/srv/work dir\"))\n(allow network-outbound (remote tcp \"localhost:8080\"))\n"
+  }
+ ]
+}

@@ -71,7 +71,7 @@ async function leafSignatureChecks(chain: CapabilityChain, signerSecret: Uint8Ar
   const grant = cap(chain[0]);
   const plan = [{ id: 'n1', verb: 'read', resource: '/acct' }];
   const actn = buildPCActn({ grant, chain, plan, nodeId: 'n1', counter: 0, signerSecret, aud: AUD });
-  const res = await verifyPCActnCore(actn, { grant, audience: AUD });
+  const res = await verifyPCActnCore(actn, { insecureSkipPlanRootCheck: true, grant, audience: AUD });
   return res.checks;
 }
 

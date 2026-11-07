@@ -1,0 +1,13 @@
+[
+  {
+    "id": "schema",
+    "repo": "linear/linear",
+    "ref": "618a737a4e6aa279b7853c650f79f209a5142bbc",
+    "path": "packages/sdk/src/schema.graphql",
+    "sha256": "20061a8427b66237c3e850775ddf0450b6d2de73a6250735d5e6b17070d4f7c8",
+    "kind": "graphql",
+    "licence": "MIT",
+    "licence_url": "https://github.com/linear/linear/blob/master/LICENSE",
+    "bytes": 1364413
+  }
+]

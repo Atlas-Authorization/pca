@@ -1,0 +1,19 @@
+{
+  "name": "pca-delegation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Delegate to a sub-agent that can only be narrower than its parent, and guard the server with protect().",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

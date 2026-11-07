@@ -6,6 +6,8 @@ $LOAD_PATH.unshift(File.expand_path('../../../sdks/ruby-pca/lib', __dir__))
 require 'atlas_pca'
 require 'atlas_pca/rack_middleware'
 require_relative '../../../sdks/ruby-pca/test/support/corpus'
+require 'tmpdir'
+require 'fileutils'
 
 module Oracle
   # This runtime's capability manifest, read ONCE from the unmutated library (the same rule as conformance.rb's
@@ -15,14 +17,21 @@ module Oracle
 
   module_function
 
-  # A mutant that edits the file header (the `require`s) is also loaded in a FRESH ruby (--disable-gems): inside this process
-  # digest/base64/openssl are already loaded, so deleting a require is invisible here. The fresh process must hash and verify
-  # a known Ed25519 signature exactly like the original.
+  # A mutant that edits the file header (the `require`s) is also loaded in a FRESH ruby (--disable-gems: RubyGems itself loads stdlib such as openssl, which hid a deleted require;
+  # the activated gems' lib dirs go on -I instead, as base64 is a bundled gem from Ruby 3.4): inside this process
+  # digest/base64/openssl are already loaded, so deleting a require is invisible here. The fresh ruby loads the library from a
+  # copy of lib/ with the mutated file in place (plus the opt-in features when the target is one of theirs) and must hash and
+  # verify a known Ed25519 signature exactly like the original. (It used to evaluate the mutated file ALONE: for every file but
+  # atlas_pca.rb that probe could never pass, so each mutant of an extension's first 12 lines, constants included, counted as
+  # killed with no test failing. The probe is now checked on the unmutated source before any mutant: fresh_baseline_ok?.)
   HEADER = 12
+  GEM_DIRS = (defined?(Gem) ? Gem.loaded_specs.values.flat_map(&:full_require_paths) : []).freeze
   PROBE = <<~'RUBY'
-    eval($stdin.read, TOPLEVEL_BINDING) # rubocop:disable Security/Eval
-    ok = AtlasPca.hash_canonical({ 'a' => 1 }) == ARGV[2] &&
-         AtlasPca::Ed25519Strict.verify([ARGV[0]].pack('H*'), 'probe', [ARGV[1]].pack('H*')) == true
+    $LOAD_PATH.unshift(ARGV[0])
+    require 'atlas_pca'
+    ARGV[4..].each { |f| require f }
+    ok = AtlasPca.hash_canonical({ 'a' => 1 }) == ARGV[3] &&
+         AtlasPca::Ed25519Strict.verify([ARGV[1]].pack('H*'), 'probe', [ARGV[2]].pack('H*')) == true
     exit(ok ? 0 : 1)
   RUBY
 
@@ -38,17 +47,29 @@ module Oracle
     exit(ok ? 0 : 1)
   RUBY
 
-  def fresh_load_ok?
-    if @target == File.expand_path(MW) && @text != @orig
+  def fresh_load_ok?(force: false, err: File::NULL)
+    if @target == File.expand_path(MW) && (force || @text != @orig)
       return %w[plain rack].all? do |mode|
-        IO.popen([RbConfig.ruby, '-e', MW_PROBE, mode, MW], 'w', err: File::NULL, out: File::NULL) { |io| io.write(@text) }
+        IO.popen([RbConfig.ruby, '-e', MW_PROBE, mode, MW], 'w', err: err, out: File::NULL) { |io| io.write(@text) }
         $?.success?
       end
     end
-    return true if @text.lines.first(HEADER) == @orig.lines.first(HEADER)
+    return true if !force && @text.lines.first(HEADER) == @orig.lines.first(HEADER)
 
-    IO.popen([RbConfig.ruby, '--disable-gems', '-e', PROBE, *@probe_args], 'w', err: File::NULL, out: File::NULL) { |io| io.write(@text) }
-    $?.success?
+    lib = File.join(ROOT, 'lib')
+    Dir.mktmpdir('mutprobe') do |d|
+      FileUtils.cp_r(lib, d)
+      File.write(File.join(d, 'lib', @target.delete_prefix("#{lib}/")), @text)
+      feats = @opt_in.include?(@target) ? @opt_in.map { |f| f.delete_prefix("#{lib}/").delete_suffix('.rb') } : []
+      system(RbConfig.ruby, '--disable-gems', *GEM_DIRS.flat_map { |g| ['-I', g] }, '-e', PROBE, File.join(d, 'lib'), *@probe_args, *feats, out: File::NULL, err: err)
+    end
+  end
+
+  # The probes on the UNMUTATED source (mutate.rb runs this before any mutant): a probe that fails anyway would count every
+  # mutant it judges as killed.
+  def fresh_baseline_ok?(err: File::NULL)
+    @text = @orig
+    fresh_load_ok?(force: true, err: err)
   end
 
   # The PQ / LESS kill tests and the differential oracles only run their PQ cases on a host that has the suites; on one that
@@ -68,6 +89,7 @@ module Oracle
   def prepare(_file)
     check_backends
     @orig = File.read(_file)
+    @target = File.expand_path(_file)
     k = OpenSSL::PKey.new_raw_private_key('ED25519', "\x05".b * 32)
     @probe_args = [k.raw_public_key.unpack1('H*'), k.sign(nil, 'probe').unpack1('H*'), AtlasPca.hash_canonical({ 'a' => 1 })]
     Corpus.core
@@ -82,6 +104,13 @@ module Oracle
     if (pre = ENV['MUT_FIRST']) && !pre.empty?
       @tests = @tests.partition { |n, _| n.start_with?(pre) }.flatten(1)
     end
+    # The opt-in lib files a kill test required on its own (`require 'atlas_pca/attest'`: not in atlas_pca.rb's require list),
+    # in load order (dependencies first). apply drops AtlasPca, so it must re-evaluate these too or AtlasPca::Attest vanishes
+    # and every attest kill test fails on the unmutated source (run 41501090925). The UNMUTATED library's own extensions are
+    # excluded: a mutant that deletes one of their require_relative lines must still lose it.
+    lib_real = "#{File.realpath(File.join(ROOT, 'lib'))}/"
+    own = [LIB, MW, *File.read(LIB).scan(REQUIRE_RE).flatten.map { |rel| File.join(ROOT, 'lib', "#{rel}.rb") }]
+    @opt_in = $LOADED_FEATURES.filter_map { |f| File.join(ROOT, 'lib', f.delete_prefix(lib_real)) if f.start_with?(lib_real) && f.end_with?('.rb') } - own
     @prepared_core = Corpus.compute(Corpus.core, 'core', 0, 1)
     @adv_vectors = Corpus.adv['vectors']
   end
@@ -108,7 +137,7 @@ module Oracle
     # exactly that reason in run 39866841074).
     lib_text = src.call(LIB)
     exts = lib_text.scan(REQUIRE_RE).flatten.map { |rel| File.join(ROOT, 'lib', "#{rel}.rb") }
-    [[LIB, lib_text], *exts.map { |path| [path, src.call(path)] }, [MW, src.call(MW)]].each do |path, text|
+    [[LIB, lib_text], *exts.map { |path| [path, src.call(path)] }, [MW, src.call(MW)], *@opt_in.map { |path| [path, src.call(path)] }].each do |path, text|
       eval(text, TOPLEVEL_BINDING, path) # rubocop:disable Security/Eval
     end
   end
@@ -167,8 +196,10 @@ module Oracle
       return false unless "#{got.allow}|#{got.checks.map { |ck, cv| "#{ck}=#{cv}" }.join(',')}|#{Corpus.esc(got.reason)}" == want
     end
     true
-  rescue StandardError, SystemStackError
+  rescue StandardError
     false
+  rescue SystemStackError
+    stack_error!
   end
 
   def check_snapshot_prims(doc, tag)
@@ -178,8 +209,10 @@ module Oracle
       return false if want && want != v
     end
     true
-  rescue StandardError, SystemStackError
+  rescue StandardError
     false
+  rescue SystemStackError
+    stack_error!
   end
 
   def check_inputs
@@ -189,8 +222,10 @@ module Oracle
       return false if want && want != v
     end
     true
-  rescue StandardError, SystemStackError
+  rescue StandardError
     false
+  rescue SystemStackError
+    stack_error!
   end
 
   # Per-stage verdicts (debugging a surprising survivor): ruby mutate.rb FILE --only ID --debug
@@ -207,6 +242,14 @@ module Oracle
   class << self
     attr_accessor :hint
     attr_reader :killer
+    # set when the stage that decided a mutant was a stack overflow, not an assertion: a RUN ERROR (BRIEF, gate honesty), which
+    # mutate.rb reports as RUN_ERROR(SystemStackError) and the merge requires a per-mutant reason for
+    attr_accessor :run_error
+  end
+
+  def stack_error!
+    Oracle.run_error = 'SystemStackError'
+    false
   end
 
   def run
@@ -221,8 +264,10 @@ module Oracle
       tests.select { |n, _| pre.any? { |x| n.start_with?(x) } }.each do |name, fn|
         begin
           next if fn.call
-        rescue StandardError, SystemStackError
+        rescue StandardError
           nil
+        rescue SystemStackError
+          stack_error!
         end
         Oracle.instance_variable_set(:@killer, name)
         return false
@@ -236,8 +281,10 @@ module Oracle
     tests.each do |name, fn|
       begin
         next if fn.call
-      rescue StandardError, SystemStackError
+      rescue StandardError
         nil
+      rescue SystemStackError
+        stack_error!
       end
       Oracle.instance_variable_set(:@killer, name)
       return false
