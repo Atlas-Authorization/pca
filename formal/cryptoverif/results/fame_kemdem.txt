@@ -1,0 +1,4 @@
+File "fame_kemdem.cv", line 31, characters 7-15:
+RESULT Proved secrecy of b up to probability 2 * NE * Penc(time_2, 1, maxlength(game 15: m0)) + 2 * NE * Penc(time_1, 1, maxlength(game 12: m1)) + (NE^2 + 2 * qH * NE) / |gt|
+All queries proved.
+rc=0 secs=0

@@ -8,6 +8,7 @@
 // intent_*: an Intent Layer v2 primitive (raw = its `input` as JSON text); `result` in the `expect` shape, `reason` when
 //          refused.
 import net.atlasauth.pca.verifier.ActionSchema
+import net.atlasauth.pca.verifier.Caveats
 import net.atlasauth.pca.verifier.IntentClassifier
 import net.atlasauth.pca.verifier.IntentJs
 import net.atlasauth.pca.verifier.IntentMap
@@ -131,6 +132,17 @@ private fun one(c: Map<String, Any?>): String {
                 )
                 val ok = why.isEmpty()
                 "{\"id\":$id,\"allow\":$ok,\"checks\":{\"chain\":$ok}${suiteTag(why)}}"
+            }
+            kind == "policy" -> {
+                // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+                // Authorize.evaluateAgentCaveats(policyCaveats(grant, chain), context, {action}, toolCall) as {allow, failed}: the
+                // agent-native evaluator (predicates + tool_schema); the tool call is the signed verb + params (the reference's toolCallOf)
+                val pv = Json.parseLenient(raw) as Map<String, Any?>
+                val pctx = pv["context"] as Map<String, Any?>
+                val pact = pctx["action"] as? Map<String, Any?>
+                val pcall = linkedMapOf<String, Any?>("tool" to (pact?.get("verb") as? String ?: ""), "args" to (pact?.get("params") as? Map<*, *> ?: emptyMap<String, Any?>()))
+                val pr = net.atlasauth.pca.verifier.Authorize.evaluateAgentCaveats(Caveats.policyCaveats(pv["grant"], pv["chain"]), pctx, mapOf("action" to pctx["action"]), pcall)
+                "{\"id\":$id,\"allow\":${pr.ok},\"failed\":" + pr.failed.joinToString(",", "[", "]") { esc(it) } + "}"
             }
             kind.startsWith("intent_") -> {
                 val r = intentPrimitive(kind, Json.parseLenient(raw)) ?: return "{\"id\":$id,\"error\":${esc("exception:$kind")}}"

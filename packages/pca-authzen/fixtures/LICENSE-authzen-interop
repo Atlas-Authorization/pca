@@ -1,0 +1,4 @@
+The decision vectors in interop-todo-decisions-*.json come from the AuthZEN interoperability Todo scenario
+(https://github.com/openid/authzen, directory interop/authzen-todo-backend, test/decisions-authorization-api-1_0-0N.json),
+whose Todo backend is published under the MIT License, Copyright (c) 2024 Aserto. They are the published requests and
+expected decisions, unchanged.

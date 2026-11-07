@@ -1,3 +1,4 @@
+import { setAssuranceLabel } from './assurance';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 HARDWARE backend — Intel TDX, REAL DCAP quote → `HardwareAttestationVerifier`.
@@ -104,7 +105,12 @@ export function checkAzureRuntimeDataBinding(reportData: Uint8Array, runtimeData
 }
 
 /** Build a `HardwareAttestationVerifier` for genuine Intel TDX DCAP quotes. Fails closed. */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createIntelDcapVerifier(opts: IntelDcapVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createIntelDcapVerifierUnlabelled(opts), { level: 'hardware', vendor: 'intel-dcap' });
+}
+
+function createIntelDcapVerifierUnlabelled(opts: IntelDcapVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (opts?.binding !== 'report-data' && opts?.binding !== 'azure-runtime-data') throw new TypeError("createIntelDcapVerifier: binding must be 'report-data' or 'azure-runtime-data'");

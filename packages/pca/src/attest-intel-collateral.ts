@@ -242,8 +242,11 @@ function verifySignedJson(text: string, name: string, key: KeyObject): SignedDoc
   const raw = rawJsonObject(text, name);
   if (raw === null) return { error: `${name} not found / malformed` };
   let doc: unknown;
+  let body: unknown;
   try {
     doc = JSON.parse(text);
+    // the body comes from the signed bytes: JSON.parse keeps the LAST duplicate member, and only the first is signed
+    body = JSON.parse(raw);
   } catch {
     return { error: `${name} document is not valid JSON` };
   }
@@ -251,7 +254,6 @@ function verifySignedJson(text: string, name: string, key: KeyObject): SignedDoc
   if (typeof sig !== 'string' || !/^[0-9a-fA-F]{128}$/.test(sig)) return { error: `${name} signature missing or malformed` };
   const ok = verify('sha256', Buffer.from(raw, 'utf8'), { key, dsaEncoding: 'ieee-p1363' }, Buffer.from(sig, 'hex'));
   if (!ok) return { error: `${name} signature does not verify under the TCB Signing certificate` };
-  const body = (doc as Record<string, unknown>)[name];
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return { error: `${name} is not an object` };
   return { body: body as Record<string, unknown> };
 }

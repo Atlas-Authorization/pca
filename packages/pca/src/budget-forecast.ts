@@ -5,6 +5,7 @@
  * level of autonomy. Composes the simulator + the budget algebra. Pure.
  */
 
+import type { Catalog } from './catalog';
 import type { CompiledPolicy } from './facade';
 import { type SimAction, simulate } from './policy-sim';
 import { type RiskPolicy, safetyBound } from './risk';
@@ -23,8 +24,8 @@ export interface Forecast {
 }
 
 /** Forecast a plan against a policy. */
-export function forecast(policy: CompiledPolicy, plan: SimAction[], opts: { start?: number } = {}): Forecast {
-  const rep = simulate(policy, plan, { start: opts.start ?? 0 });
+export function forecast(policy: CompiledPolicy, plan: SimAction[], opts: { start?: number; catalog?: Catalog } = {}): Forecast {
+  const rep = simulate(policy, plan, { start: opts.start ?? 0, ...(opts.catalog ? { catalog: opts.catalog } : {}) });
   const steps = rep.results.map((r) => ({ verb: r.action.verb, resource: r.action.resource, outcome: r.outcome, r: r.r, budgetAfter: r.budgetAfter }));
   const firstStepUp = steps.findIndex((s) => s.outcome === 'step_up');
   return {
@@ -52,6 +53,8 @@ export interface Recommendation {
  */
 export function recommendPolicy(targetActions: number, perActionRisk: number, opts: { kappa?: number } = {}): Recommendation {
   const kappa = opts.kappa ?? 1;
+  if (!Number.isFinite(kappa) || kappa <= 0) throw new RangeError('recommendPolicy: kappa must be a positive finite number');
+  if (!Number.isFinite(targetActions) || !Number.isFinite(perActionRisk)) throw new RangeError('recommendPolicy: targetActions and perActionRisk must be finite numbers');
   const r = Math.max(1e-6, Math.min(1, perActionRisk));
   const n = Math.max(0, targetActions);
   const bMax = n * r * kappa;

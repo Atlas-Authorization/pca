@@ -1,0 +1,65 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "identity",
+  "version": "0.5.0",
+  "ns": [
+    "auth0",
+    "entra",
+    "oidc",
+    "okta",
+    "scim"
+  ],
+  "count": 176,
+  "root": "vSdcd9_WPamFC_YAy7eTKk0rCa8c1LRTxck2158gmlk",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 172,
+    "unreviewed": 4
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Hand written from public Okta, Microsoft Entra ID, Auth0, SCIM (RFC 7644) and OpenID Connect documentation, describing classes of administrative operation; no vendor text or schema is carried.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/identity.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "63c6a79b7ab6ca8530dc934fc654c2472880bdae6d07cfe842995261116571d5"
+  },
+  "shards": [
+    {
+      "file": "defs/000-auth0_application.jsonl",
+      "count": 176,
+      "bytes": 99966,
+      "sha256": "1af0ab2e16c740eb3fc861c1acd06aadcd4e1d66f05dd1061a1e4547bd905b78",
+      "first": "auth0.application.create",
+      "last": "scim.user.update"
+    }
+  ],
+  "stats": {
+    "total": 176,
+    "authored": 172,
+    "unreviewed": 4,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "create": 26,
+      "privilege": 131,
+      "delete": 17,
+      "read": 33,
+      "update": 27,
+      "exec": 5,
+      "export": 4,
+      "send": 1
+    }
+  }
+}

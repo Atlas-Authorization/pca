@@ -1,5 +1,7 @@
 # @atlasauth/pca-ap2
 
+> Maturity: **production**. Breaking changes to APIs or defaults are never made in a patch release. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 AP2 (Agent Payments Protocol) mandates as real SD-JWT credentials, bound to a Proof-Carrying Authority (PCA) grant.
 
 AP2 models agentic payments as a chain of mandates: an open mandate signed by the user's trusted surface that delegates to an agent key and carries constraints, then a closed mandate signed by the agent that settles one concrete purchase. This package issues and verifies the checkout and payment mandates (`mandate.checkout.1`, `mandate.checkout.open.1`, `mandate.payment.1`, `mandate.payment.open.1`) in the SD-JWT format defined by the official AP2 JSON Schemas: integer minor-unit amounts, selective disclosure, ES256 (P-256) keys, and a key-binding JWT at each hop.
@@ -40,7 +42,9 @@ The PCActn's signed nonce commits to the transaction id, payee, amount, instrume
 
 ## Status
 
-Experimental. Mandates are checked against the official AP2 JSON Schemas and documentation at github.com/google-agentic-commerce/AP2, commit `e1ea56db72a6385bce3e5c1112b3a56ce60acb43` (2026-04-29; still the head of `main` when this package was last updated). The schemas and example payloads are committed with source URLs and sha256.
+Production. Single use and cumulative spend: `redeemPurchase(checkout, payment, options, ledger)` verifies a purchase and redeems it once, taking the usage context from a durable `PurchaseLedger` (an atomic `reserve` / `release`; a missing or failing ledger denies) instead of a caller-supplied one. A usage context with a NaN, negative or fractional counter is refused by the budget and recurrence constraints. `@atlasauth/pca-ap2/testing` has a single-process reference ledger for tests.
+
+ Mandates are checked against the official AP2 JSON Schemas and documentation at github.com/google-agentic-commerce/AP2, commit `e1ea56db72a6385bce3e5c1112b3a56ce60acb43` (2026-04-29; still the head of `main` when this package was last updated). The schemas and example payloads are committed with source URLs and sha256.
 
 What is verified, and how:
 
@@ -50,9 +54,24 @@ What is verified, and how:
 - The documentation's decoded JSON blocks differ from its encoded tokens; the encoded tokens are treated as the source of truth.
 - Adversarial tests: an exhaustive single-character mutation of a valid purchase is never accepted, structure fuzzing never throws or accepts, and withheld disclosures cannot widen an open mandate. Where this package is stricter than the reference SDK (for example acceptable-items, quantities and budgets) the tests say so.
 
-Limits: only the P-256/ES256 and SHA-2 `_sd_alg` paths are implemented. Payment budgets are converted from major units the way the AP2 SDK does (a fixed x100), so they are refused for currencies whose exponent is not 2. Issuer key trust (`kid` / `x5c` resolution) is the caller's job. The cryptography is unaudited.
+Limits: only the P-256/ES256 and SHA-2 `_sd_alg` paths are implemented. PCA mandate terms (caps, thresholds) are integer minor units of the mandate currency, with the ISO 4217 exponent per currency (USD 2, JPY 0, KWD 3); a fractional or major-unit term is refused. The AP2 SDK reads `payment.budget.max` as `int(max * 100)` for every currency, while a major-unit reader would read `max * 10^exponent`; the binding converts the PCA cap exactly and never lets either reader read above it: for exponent 0 to 2 (JPY, USD) `max = cap / 100` (the SDK reads exactly the cap), for exponent 3 and above (KWD) `max = cap / 10^exponent` (exact for a major-unit reader, the SDK reads a tenth or less). `ap2BudgetMax` and `ap2BudgetReads` expose the conversion; a cap whose `/100` falls just under the exact decimal in floating point (29) is nudged by a few ulps so the SDK's `int(max * 100)` is exact. Issuer key trust (`kid` / `x5c` resolution) is the caller's job.
 
 The settlement backends are structural only: they turn a payment mandate into an x402 HTTP-402 challenge or a Stripe Shared-Payment-Token charge shape and perform no network I/O. The x402 output is checked against the x402 v1 specification (field set, atomic-unit `maxAmountRequired`, `maxTimeoutSeconds`, standard-base64 `X-PAYMENT`); the `X-PAYMENT` payload is a placeholder envelope, not a signed authorization, and `asset` should be supplied as the token contract address. The Stripe shape has no official vector behind it. Settlement backends assume the mandate has already been verified.
+
+## Failure modes of the PCA binding
+
+| Missing or wrong | Result |
+|---|---|
+| No `mandate` (the verifier's live state), or a charge-count limit without `recentChargeTimes` | `verifyPcaBinding` throws `PcaBindingError` |
+| Grant not signed by `expectedPrincipal`, a pure post-quantum root with no pin, wrong PCA audience | `{ ok: false, reason }` |
+| `x_pca` terms differing from the grant envelope or risk policy; AP2 constraints wider than the PCA terms; missing `allowed_payees`, `budget` or `amount_range` | `{ ok: false }` |
+| PCActn not committing to this transaction, payee, amount, instrument, open mandate or agent key | `{ ok: false }` |
+| PCActn that understates the risk, a needed human co-sign with no verified threshold of the right size | `{ ok: false }` |
+| The live PCA decision denies (cumulative cap, rate, caveats) or needs a co-sign that was not enforced | `{ ok: false }` |
+| PCA term that is fractional, negative or not a safe integer | `paymentConstraintsFromTerms` / issue throws `Ap2Error` |
+| Open mandate whose `budget.max` either reader would read above the PCA cap | `{ ok: false, reason: 'budget exceeds the PCA cumulative cap' }` |
+
+PCA terms and the charge amount are integer minor units of the mandate currency (USD 50000 means 500.00).
 
 ## License
 

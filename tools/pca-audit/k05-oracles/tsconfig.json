@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "esnext", "moduleResolution": "bundler", "target": "es2022", "allowImportingTsExtensions": true, "noEmit": true,
+    "baseUrl": "../../..",
+    "paths": {
+      "@atlasauth/pca": ["packages/pca/src/index.ts"],
+      "@atlasauth/pca/ext/*": ["packages/pca/src/ext/*.ts"],
+      "@atlasauth/pca/*": ["packages/pca/src/*.ts"],
+      "@atlasauth/pca-actions": ["packages/pca-actions/src/index.ts"],
+      "@atlasauth/pca-verified-core": ["packages/pca-verified-core/src/index.ts"],
+      "@atlasauth/pca-scitt": ["packages/pca-scitt/src/index.ts"],
+      "@atlasauth/pca-scitt/testing": ["packages/pca-scitt/src/testing.ts"],
+      "@atlasauth/pca-intent": ["packages/pca-intent/src/index.ts"]
+    }
+  }
+}

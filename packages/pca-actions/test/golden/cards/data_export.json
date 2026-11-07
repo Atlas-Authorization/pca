@@ -1,0 +1,34 @@
+{
+ "trait": "pca.data_export",
+ "card": {
+  "verb": "golden.data_export",
+  "title": "Do the data export thing",
+  "text": "Do the data export thing. This action exports data.",
+  "risk": "high",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "count_cap",
+   "resource_scope"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.data_export"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "count_cap",
+   "resource_scope"
+  ],
+  "context": [],
+  "prules": [
+   "export_bounded"
+  ]
+ }
+}

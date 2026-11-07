@@ -160,7 +160,7 @@ describe('tamper / replay / key matrix: every case must be refused', () => {
   });
 
   it('enforces the open payment constraints: per-transaction cap, cumulative budget, occurrence limit', () => {
-    const big = makeScenario({ quantity: 1, unitPrice: 60_000, perTransactionCap: 800 });
+    const big = makeScenario({ quantity: 1, unitPrice: 60_000, perTransactionCap: 80_000 });
     expect(verifyScenario(big).ok).toBe(true); // 600 USD: within the 800 USD cap and the 1000 USD budget
     const spent = verifyScenario(big, { context: { totalAmount: 50_000, totalUses: 1 } });
     expect(!spent.ok && spent.reason).toMatch(/cumulative spend 110000 exceeds budget 100000/);

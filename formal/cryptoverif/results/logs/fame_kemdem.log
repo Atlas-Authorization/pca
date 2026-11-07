@@ -1,0 +1,700 @@
+File "fame_kemdem.cv", line 31, characters 7-15:
+Warning: For booleans defined under no replication, the option cv_bit may be more appropriate than real_or_random (the default)
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... Done.
+Doing merge branches... No change.
+Proof of (one-session) secrecy of b failed:
+  at 35, bad usage(s) of b.
+Trying equivalence ind_cpa(enc)... Failed.
+Trying equivalence rom(hkdf)... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Eliminated collisions between k and k Probability: 0.5 / |gt| * NE * NE
+Done.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on k inside simplify... Done. Restarting simplify
+Eliminated collisions between hkdfin(k[ri_2], ?) and x1 Probability: qH * NE / |gt|
+(hkdfin(k[ri_2], ?) collides with a value independent of k[ri_2] with probability at most 1 / |gt|;
+ x1 does not depend on k[ri_2])
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... Done.
+Doing merge branches... No change.
+Proof of (one-session) secrecy of b failed:
+  at 36, bad usage(s) of b.
+Trying equivalence ind_cpa(enc)... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of (one-session) secrecy of b failed:
+  at 36, bad usage(s) of b.
+Trying equivalence ind_cpa(enc)... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... Done.
+Proved one-session secrecy of b
+Proved secrecy of b
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(hkdf(hk, x1))
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       cek0: cek <- hkdf(hk, hkdfin(k, salt));
+       m: cleartext <- (if b then m0 else m1);
+       return(salt, (m_1: cleartext <- m; k_2: cek <- cek0; r <-R enc_seed; enc_r(m_1, k_2, r)))
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 2 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(hkdf(hk, x1))
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       cek0: cek <- hkdf(hk, hkdfin(k, salt));
+       if b then
+         m: cleartext <- m0;
+         m_1: cleartext <- m;
+         k_2: cek <- cek0;
+         r <-R enc_seed;
+         return(salt, enc_r(m_1, k_2, r))
+       else
+         m: cleartext <- m1;
+         m_1: cleartext <- m;
+         k_2: cek <- cek0;
+         r <-R enc_seed;
+         return(salt, enc_r(m_1, k_2, r))
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on m (definition removed, all usages removed)
+  - Remove assignments on m_1 (definition removed, all usages removed)
+  - Remove assignments on k_2 (definition removed, all usages removed)
+  - Remove assignments on m (definition removed, all usages removed)
+  - Remove assignments on m_1 (definition removed, all usages removed)
+  - Remove assignments on k_2 (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(hkdf(hk, x1))
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       cek0: cek <- hkdf(hk, hkdfin(k, salt));
+       if b then
+         r <-R enc_seed;
+         return(salt, enc_r(m0, cek0, r))
+       else
+         r <-R enc_seed;
+         return(salt, enc_r(m1, cek0, r))
+     ))
+
+
+Applying SA rename new without array accesses and remove assignments of findcond
+  - Rename variable r into r_2, r_1
+yields
+
+Game 4 is
+     c0() :=
+     hk <-R hkey;
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(hkdf(hk, x1))
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       cek0: cek <- hkdf(hk, hkdfin(k, salt));
+       if b then
+         r_2 <-R enc_seed;
+         return(salt, enc_r(m0, cek0, r_2))
+       else
+         r_1 <-R enc_seed;
+         return(salt, enc_r(m1, cek0, r_1))
+     ))
+
+
+Applying equivalence rom(hkdf)
+  - Equivalence rom(hkdf) with variables: hk -> hk_1
+yields
+
+Game 5 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return((x_O: hin <- x1; find [unique] u_3 = ri_3 <= qH suchthat defined(x_O[ri_3], r_3[ri_3]) && (x_O = x_O[ri_3]) then r_3[u_3] orfind u_2 = ri_2 <= NE suchthat defined(x_O_1[ri_2], r_4[ri_2]) && (x_O = x_O_1[ri_2]) then r_4[u_2] else r_3 <-R cek; r_3))
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       cek0: cek <- (x_O_1: hin <- hkdfin(k, salt); {55}find [unique] u_1 = ri_1 <= qH suchthat defined(x_O[ri_1], r_3[ri_1]) && (x_O_1 = x_O[ri_1]) then r_3[u_1] orfind u = ri <= NE suchthat defined(x_O_1[ri], r_4[ri]) && {68}(x_O_1 = x_O_1[ri]) then r_4[u] else r_4 <-R cek; r_4);
+       if b then
+         r_2 <-R enc_seed;
+         return(salt, enc_r(m0, cek0, r_2))
+       else
+         r_1 <-R enc_seed;
+         return(salt, enc_r(m1, cek0, r_1))
+     ))
+
+
+Applying simplify (non-expanded game) [probability 0.5 * NE^2 / |gt|]
+  - Simplification pass
+    - Replaced (x_O_1 = x_O_1[ri]) with false at 68
+    - Remove branch 2 in find at 55
+yields
+
+Game 6 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return((x_O: hin <- x1; find [unique] u_3 = ri_3 <= qH suchthat defined(x_O[ri_3], r_3[ri_3]) && (x_O = x_O[ri_3]) then r_3[u_3] orfind u_2 = ri_2 <= NE suchthat defined(x_O_1[ri_2], r_4[ri_2]) && (x_O = x_O_1[ri_2]) then r_4[u_2] else r_3 <-R cek; r_3))
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       cek0: cek <- (x_O_1: hin <- hkdfin(k, salt); find [unique] u_1 = ri_1 <= qH suchthat defined(x_O[ri_1], r_3[ri_1]) && (x_O_1 = x_O[ri_1]) then r_3[u_1] else r_4 <-R cek; r_4);
+       if b then
+         r_2 <-R enc_seed;
+         return(salt, enc_r(m0, cek0, r_2))
+       else
+         r_1 <-R enc_seed;
+         return(salt, enc_r(m1, cek0, r_1))
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 7 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- x1;
+       find [unique] u_3 = ri_3 <= qH suchthat defined(x_O[ri_3], r_3[ri_3]) && (x_O = x_O[ri_3]) then
+         return(r_3[u_3])
+       orfind u_2 = ri_2 <= NE suchthat defined(x_O_1[ri_2], r_4[ri_2]) && (x_O = x_O_1[ri_2]) then
+         return(r_4[u_2])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       x_O_1: hin <- hkdfin(k, salt);
+       find [unique] u_1 = ri_1 <= qH suchthat defined(x_O[ri_1], r_3[ri_1]) && (x_O_1 = x_O[ri_1]) then
+         cek0: cek <- r_3[u_1];
+         if b then
+           r_2 <-R enc_seed;
+           return(salt, enc_r(m0, cek0, r_2))
+         else
+           r_1 <-R enc_seed;
+           return(salt, enc_r(m1, cek0, r_1))
+       else
+         r_4 <-R cek;
+         cek0: cek <- r_4;
+         if b then
+           r_2 <-R enc_seed;
+           return(salt, enc_r(m0, cek0, r_2))
+         else
+           r_1 <-R enc_seed;
+           return(salt, enc_r(m1, cek0, r_1))
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on cek0 (definition removed, all usages removed)
+  - Remove assignments on cek0 (definition removed, all usages removed)
+  - Remove assignments on x_O (definition point kept, all usages removed)
+yields
+
+Game 8 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+       find [unique] u_3 = ri_3 <= qH suchthat defined(x1[ri_3], x_O[ri_3], r_3[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       orfind u_2 = ri_2 <= NE suchthat defined(x_O_1[ri_2], r_4[ri_2]) && (x1 = x_O_1[ri_2]) then
+         return(r_4[u_2])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       x_O_1: hin <- hkdfin(k, salt);
+       find [unique] u_1 = ri_1 <= qH suchthat defined(x1[ri_1], x_O[ri_1], r_3[ri_1]) && (x_O_1 = x1[ri_1]) then
+         if b then
+           r_2 <-R enc_seed;
+           return(salt, enc_r(m0, r_3[u_1], r_2))
+         else
+           r_1 <-R enc_seed;
+           return(salt, enc_r(m1, r_3[u_1], r_1))
+       else
+         r_4 <-R cek;
+         if b then
+           r_2 <-R enc_seed;
+           return(salt, enc_r(m0, r_4, r_2))
+         else
+           r_1 <-R enc_seed;
+           return(salt, enc_r(m1, r_4, r_1))
+     ))
+
+
+Applying simplify [probability qH * NE / |gt|]
+  - Global dependency analysis on k
+yields
+
+Game 9 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+  {9}  find [unique] u_3 = ri_3 <= qH suchthat defined(x1[ri_3], x_O[ri_3], r_3[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       x_O_1: hin <- hkdfin(k, salt);
+ {47}  find [unique] 
+       else
+         r_4 <-R cek;
+         if b then
+           r_2 <-R enc_seed;
+           return(salt, enc_r(m0, r_4, r_2))
+         else
+           r_1 <-R enc_seed;
+           return(salt, enc_r(m1, r_4, r_1))
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Find at 47 removed (else branch kept if any)
+    - Replaced defined condition x1[ri_3], x_O[ri_3], r_3[ri_3] with r_3[ri_3], x1[ri_3] in find at 9
+yields
+
+Game 10 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       k <-R gt;
+       salt <-R salt_t;
+       x_O_1: hin <- hkdfin(k, salt);
+       r_4 <-R cek;
+       if b then
+         r_2 <-R enc_seed;
+         return(salt, enc_r(m0, r_4, r_2))
+       else
+         r_1 <-R enc_seed;
+         return(salt, enc_r(m1, r_4, r_1))
+     ))
+
+
+Applying move all binders
+  - Move random number generation r_4
+  - Move assignment to x_O_1
+  - Move random number generation salt
+  - Move random number generation k
+  - Move assignment to x_O
+yields
+
+Game 11 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       if b then
+         r_2 <-R enc_seed;
+         r_4 <-R cek;
+         salt <-R salt_t;
+         return(salt, enc_r(m0, r_4, r_2))
+       else
+         r_1 <-R enc_seed;
+         r_4 <-R cek;
+         salt <-R salt_t;
+         return(salt, enc_r(m1, r_4, r_1))
+     ))
+
+
+Applying SA rename new without array accesses and remove assignments of findcond
+  - Rename variable r_4 into r_6, r_5
+  - Rename variable salt into salt_2, salt_1
+yields
+
+Game 12 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       if b then
+         r_2 <-R enc_seed;
+         r_6 <-R cek;
+         salt_2 <-R salt_t;
+         return(salt_2, enc_r(m0, r_6, r_2))
+       else
+         r_1 <-R enc_seed;
+         r_5 <-R cek;
+         salt_1 <-R salt_t;
+         return(salt_1, enc_r(m1, r_5, r_1))
+     ))
+
+
+Applying equivalence ind_cpa(enc) [probability NE * Penc(time_1, 1, maxlength(game 12: m1))]
+  - Equivalence ind_cpa(enc) with variables: r_5 -> k_3, r_1 -> r_1
+yields
+
+Game 13 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       if b then
+         r_2 <-R enc_seed;
+         r_6 <-R cek;
+         salt_2 <-R salt_t;
+         return(salt_2, enc_r(m0, r_6, r_2))
+       else
+         r_7 <-R enc_seed;
+         r_8 <-R cek;
+         salt_1 <-R salt_t;
+         return(salt_1, (x: cleartext <- m1; enc_r'(Z(x), r_8, r_7)))
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 14 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       if b then
+         r_2 <-R enc_seed;
+         r_6 <-R cek;
+         salt_2 <-R salt_t;
+         return(salt_2, enc_r(m0, r_6, r_2))
+       else
+         r_7 <-R enc_seed;
+         r_8 <-R cek;
+         salt_1 <-R salt_t;
+         x: cleartext <- m1;
+         return(salt_1, enc_r'(Z(x), r_8, r_7))
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on x (definition removed, all usages removed)
+yields
+
+Game 15 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       if b then
+         r_2 <-R enc_seed;
+         r_6 <-R cek;
+         salt_2 <-R salt_t;
+         return(salt_2, enc_r(m0, r_6, r_2))
+       else
+         r_7 <-R enc_seed;
+         r_8 <-R cek;
+         salt_1 <-R salt_t;
+         return(salt_1, enc_r'(Z(m1), r_8, r_7))
+     ))
+
+
+Applying equivalence ind_cpa(enc) [probability NE * Penc(time_2, 1, maxlength(game 15: m0))]
+  - Equivalence ind_cpa(enc) with variables: r_6 -> k_3, r_2 -> r_1
+yields
+
+Game 16 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       if b then
+         r_9 <-R enc_seed;
+         r_10 <-R cek;
+         salt_2 <-R salt_t;
+         return(salt_2, (x_1: cleartext <- m0; enc_r'(Z(x_1), r_10, r_9)))
+       else
+         r_7 <-R enc_seed;
+         r_8 <-R cek;
+         salt_1 <-R salt_t;
+         return(salt_1, enc_r'(Z(m1), r_8, r_7))
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 17 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       if b then
+         r_9 <-R enc_seed;
+         r_10 <-R cek;
+         salt_2 <-R salt_t;
+         x_1: cleartext <- m0;
+         return(salt_2, enc_r'(Z(x_1), r_10, r_9))
+       else
+         r_7 <-R enc_seed;
+         r_8 <-R cek;
+         salt_1 <-R salt_t;
+         return(salt_1, enc_r'(Z(m1), r_8, r_7))
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on x_1 (definition removed, all usages removed)
+yields
+
+Game 18 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+ {35}  if b then
+         r_9 <-R enc_seed;
+         r_10 <-R cek;
+         salt_2 <-R salt_t;
+         return(salt_2, enc_r'(Z(m0), r_10, r_9))
+       else
+         r_7 <-R enc_seed;
+         r_8 <-R cek;
+         salt_1 <-R salt_t;
+         return(salt_1, enc_r'(Z(m1), r_8, r_7))
+     ))
+
+
+Applying merge branches
+  - Merge branches of test at 35
+yields
+
+Game 19 is
+     c0() :=
+     b <-R bool;
+     return();
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_3 = ri_3 <= qH suchthat defined(r_3[ri_3], x1[ri_3]) && (x1 = x1[ri_3]) then
+         return(r_3[u_3])
+       else
+         r_3 <-R cek;
+         return(r_3)
+     ) | (
+       foreach iE <= NE do
+       cE(m0: cleartext, m1: cleartext) :=
+       if Z(m0) = Z(m1) then
+       r_7 <-R enc_seed;
+       r_8 <-R cek;
+       salt_1 <-R salt_t;
+       return(salt_1, enc_r'(Z(m1), r_8, r_7))
+     ))
+
+
+Proved secrecy of b in game 19
+Adv[Game 1: secrecy of b] <= 2 * NE * Penc(time_2, 1, maxlength(game 15: m0)) + 2 * NE * Penc(time_1, 1, maxlength(game 12: m1)) + (2 * qH * NE + NE^2) / |gt| + Adv[Game 19: secrecy of b]
+Adv[Game 19: secrecy of b] <= 0
+RESULT Proved secrecy of b up to probability 2 * NE * Penc(time_2, 1, maxlength(game 15: m0)) + 2 * NE * Penc(time_1, 1, maxlength(game 12: m1)) + (NE^2 + 2 * qH * NE) / |gt|
+RESULT time_1 = qH^2 * time(= hin, maxlength(game 12: x1), maxlength(game 12: x1)) + NE * time(= cleartext, length(Z, maxlength(game 12: m0)), length(Z, maxlength(game 12: m1))) + NE * time(Z, maxlength(game 12: m1)) + NE * time(Z, maxlength(game 12: m0)) + NE * time(enc_r, maxlength(game 12: m0)) + time + (NE - 1) * max(time(enc_r, maxlength(game 12: m1)), time(Z, maxlength(game 13: x)) + time(enc_r, length(Z, maxlength(game 13: x))))
+RESULT time_2 = qH^2 * time(= hin, maxlength(game 15: x1), maxlength(game 15: x1)) + NE * time(= cleartext, length(Z, maxlength(game 15: m0)), length(Z, maxlength(game 15: m1))) + NE * time(Z, maxlength(game 15: m0)) + NE * time(enc_r, length(Z, maxlength(game 15: m1))) + 2 * NE * time(Z, maxlength(game 15: m1)) + time + (NE - 1) * max(time(enc_r, maxlength(game 15: m0)), time(Z, maxlength(game 16: x_1)) + time(enc_r, length(Z, maxlength(game 16: x_1))))
+All queries proved.

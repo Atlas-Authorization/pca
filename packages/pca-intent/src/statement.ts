@@ -1,12 +1,12 @@
+import { type SignerSuiteOpts } from '@atlasauth/pca';
 import {
   type IntentStatement as CoreIntentStatement,
   type IntentVerdict,
   type IntentVerifyOptions,
   type SignedIntentStatement as CoreSignedIntentStatement,
-  type SignerSuiteOpts,
   signIntentStatement,
   verifyIntentStatement,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 import type { IntentSlots } from './slots';
 
 /**
@@ -31,7 +31,7 @@ export {
   intentRef,
   parseIntentGoal,
   type IntentSource,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 
 export type IntentStatement = CoreIntentStatement<IntentSlots>;
 export type SignedIntentStatement = CoreSignedIntentStatement<IntentSlots>;

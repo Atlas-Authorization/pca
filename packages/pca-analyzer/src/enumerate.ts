@@ -1,9 +1,9 @@
-import { evaluatePredicates, isGroupCondition, isLeafCondition } from '@atlasauth/pca';
+import { evaluateCondition, evaluateConditionTri, evaluatePredicates, isGroupCondition, isLeafCondition, prohibitions, resolvePath } from '@atlasauth/pca';
 import type { ActionContext, Caveat, Condition, LeafCondition, Predicate } from '@atlasauth/pca';
 import { analyzeCaveats } from './caveats';
 import { fieldProbes } from './field';
 import { REVERSIBILITY_ORDER } from './types';
-import type { AnalyzerAction, PolicyInput } from './types';
+import type { AnalyzerAction, AnalyzerDecision, PolicyInput, TightenLike, Veto } from './types';
 
 /**
  * The bounded decision engine. It builds a finite set of representative actions ("the grid") from the
@@ -31,6 +31,10 @@ export const DEFAULT_MAX_COMBINATIONS = 200_000;
 export interface PolicyModel {
   predicates: Predicate[];
   caveats: Caveat[];
+  vetoes: Veto[];
+  tighten: TightenLike[];
+  /** Policies that must also admit (see `PolicyInput.meet`); their static gates are already folded into `caveatSat` / `revCap`. */
+  meets: PolicyModel[];
   caveatSat: boolean;
   caveatReason?: string;
   /** Strictest `reversibility_max` cap (index into REVERSIBILITY_ORDER), if any. */
@@ -39,10 +43,27 @@ export interface PolicyModel {
   undecidable: string[];
 }
 
-export function normalizePolicy(p: PolicyInput): { predicates: Predicate[]; caveats: Caveat[] } {
+export function normalizePolicy(p: PolicyInput): { predicates: Predicate[]; caveats: Caveat[]; vetoes: Veto[]; tighten: TightenLike[] } {
+  // A value that is not a policy is an empty policy: the verifier admits nothing under it, and the analysis must not throw.
+  if (p === null || typeof p !== 'object') return { predicates: [], caveats: [], vetoes: [], tighten: [] };
   const predicates = Array.isArray(p.predicates) ? p.predicates : [];
   const caveats = 'caveats' in p && Array.isArray(p.caveats) ? p.caveats : [];
-  return { predicates, caveats };
+  const vetoes = 'vetoes' in p && Array.isArray(p.vetoes) ? p.vetoes : [];
+  const tighten = 'tighten' in p && Array.isArray(p.tighten) ? p.tighten : [];
+  return { predicates, caveats, vetoes, tighten };
+}
+
+/** The predicates whose literals shape the representative grid: the permits plus every veto and tighten trigger. */
+export function probeSet(m: PolicyModel): Predicate[] {
+  const out: Predicate[] = [...m.predicates];
+  for (const v of m.vetoes) {
+    out.push(v.when);
+    if (v.unless?.length) out.push({ verb: '*', where: v.unless });
+    if (v.over) out.push({ verb: '*', where: [{ field: v.over.path, op: 'gt', value: v.over.threshold }] });
+  }
+  for (const t of m.tighten) out.push({ verb: '*', where: [t.when] });
+  for (const x of m.meets) out.push(...probeSet(x));
+  return out;
 }
 
 /**
@@ -68,6 +89,10 @@ function conditionUndecidable(c: Condition, reasons: Set<string>): void {
   if (c.field === 'action.params') {
     reasons.add('condition on the whole `action.params` object is not enumerated precisely');
   }
+  if ((c.op === 'lt' || c.op === 'lte' || c.op === 'gt' || c.op === 'gte') && !(typeof c.value === 'number' && Number.isFinite(c.value))) {
+    // The evaluator orders strings too (and refuses other types). Only finite numeric thresholds partition the line into cells.
+    reasons.add(`\`${c.op}\` against a non-numeric operand — string ordering is not enumerated exactly`);
+  }
   if (c.op === 'like' || c.op === 'matches' || c.op === 'is_a' || c.op === 'member_of') {
     reasons.add(`\`${c.op}\` condition — matched by over-approximation, not enumerated exactly`);
   }
@@ -87,16 +112,22 @@ function detectUndecidable(predicates: readonly Predicate[]): string[] {
 }
 
 export function toModel(p: PolicyInput): PolicyModel {
-  const { predicates, caveats } = normalizePolicy(p);
+  const { predicates, caveats, vetoes, tighten } = normalizePolicy(p);
   const ca = analyzeCaveats(caveats);
-  return {
+  const meets = p !== null && typeof p === 'object' && 'meet' in p && Array.isArray(p.meet) ? p.meet.map(toModel) : [];
+  const m: PolicyModel = {
     predicates,
     caveats,
-    caveatSat: ca.sat,
-    caveatReason: ca.reason,
-    revCap: ca.revCap,
-    undecidable: detectUndecidable(predicates),
+    vetoes,
+    tighten,
+    meets,
+    caveatSat: ca.sat && meets.every((x) => x.caveatSat),
+    caveatReason: ca.sat ? meets.find((x) => !x.caveatSat)?.caveatReason : ca.reason,
+    revCap: [ca.revCap, ...meets.map((x) => x.revCap)].reduce<number | undefined>((a, b) => (a === undefined ? b : b === undefined ? a : Math.min(a, b)), undefined),
+    undecidable: [],
   };
+  m.undecidable = [...new Set([...detectUndecidable(probeSet(m)), ...meets.flatMap((x) => x.undecidable)])];
+  return m;
 }
 
 // ---- probe collection -----------------------------------------------------------------------------
@@ -351,26 +382,70 @@ function reversibilityOk(model: PolicyModel, revClass: string | undefined): bool
   return idx >= 0 && idx <= model.revCap;
 }
 
-/** Does the policy admit this representative action? (predicate match AND static caveat gate.) */
+/** Does a veto apply to this action? Veto polarity: whatever cannot be decided counts as applying. */
+export function vetoApplies(v: Veto, ctx: ActionContext): boolean {
+  if (!prohibitions.whenMatches(v.when, ctx)) return false;
+  if (v.over) {
+    const r = resolvePath(ctx, v.over.path);
+    const over = !r.found || typeof r.value !== 'number' || !Number.isFinite(r.value) || r.value < 0 || r.value > v.over.threshold;
+    if (!over) return false;
+  }
+  // for an approval veto `unless` is the evidence a human approved; an approved action is the escalated path, not an autonomous one
+  if (v.kind !== 'approval' && v.unless && v.unless.every((c) => evaluateCondition(c, ctx))) return false;
+  return true;
+}
+
+/** The ternary decision of the permission layer at a concrete context. */
+export function decisionAtContext(model: PolicyModel, ctx: ActionContext): AnalyzerDecision {
+  if (!evaluatePredicates(model.predicates, ctx).allowed) return 'deny';
+  let escalate = false;
+  for (const v of model.vetoes) {
+    if (!vetoApplies(v, ctx)) continue;
+    if (v.kind === 'deny') return 'deny';
+    escalate = true;
+  }
+  for (const t of model.tighten) {
+    if (evaluateConditionTri(t.when, ctx) === 'false') continue;
+    if (t.signal === 'deny') return 'deny';
+    escalate = true;
+  }
+  let own: AnalyzerDecision = escalate ? 'escalate' : 'allow';
+  for (const x of model.meets) {
+    const d = decisionAtContext(x, ctx);
+    if (d === 'deny') return 'deny';
+    if (d === 'escalate') own = 'escalate';
+  }
+  return own;
+}
+
+/** Ternary decision of a representative (static caveat gate first). */
+export function decide(model: PolicyModel, rep: Rep): AnalyzerDecision {
+  if (!model.caveatSat) return 'deny';
+  if (!reversibilityOk(model, rep.revClass)) return 'deny';
+  return decisionAtContext(model, contextFromRoots(buildRoots(rep)));
+}
+
+/** Does the policy admit this representative action (allow OR escalate: permitted, possibly with a human)? */
 export function admits(model: PolicyModel, rep: Rep): boolean {
-  if (!model.caveatSat) return false;
-  if (!reversibilityOk(model, rep.revClass)) return false;
-  const ctx = contextFromRoots(buildRoots(rep));
-  return evaluatePredicates(model.predicates, ctx).allowed;
+  return decide(model, rep) !== 'deny';
+}
+
+export function contextOfAction(action: AnalyzerAction): ActionContext {
+  const act: MutableAction = { verb: action.verb, resource: action.resource, params: { ...(action.params ?? {}) } };
+  if (action.reversibilityClass !== undefined) act.reversibility_class = action.reversibilityClass;
+  return { action: act, subject: { ...(action.subject ?? {}) }, env: { ...(action.env ?? {}) } };
+}
+
+/** Ternary decision of a fully-specified action. */
+export function decideAction(model: PolicyModel, action: AnalyzerAction): AnalyzerDecision {
+  if (!model.caveatSat) return 'deny';
+  if (!reversibilityOk(model, action.reversibilityClass)) return 'deny';
+  return decisionAtContext(model, contextOfAction(action));
 }
 
 /** Concrete admission of a fully-specified action (used by reachable's fast path; exact). */
 export function admitsAction(model: PolicyModel, action: AnalyzerAction): boolean {
-  if (!model.caveatSat) return false;
-  if (!reversibilityOk(model, action.reversibilityClass)) return false;
-  const act: MutableAction = { verb: action.verb, resource: action.resource, params: { ...(action.params ?? {}) } };
-  if (action.reversibilityClass !== undefined) act.reversibility_class = action.reversibilityClass;
-  const ctx: ActionContext = {
-    action: act,
-    subject: { ...(action.subject ?? {}) },
-    env: { ...(action.env ?? {}) },
-  };
-  return evaluatePredicates(model.predicates, ctx).allowed;
+  return decideAction(model, action) !== 'deny';
 }
 
 export function repToAction(rep: Rep): AnalyzerAction {
@@ -401,4 +476,17 @@ export function search(pr: Probes, predicate: (rep: Rep) => boolean, max: number
     if (predicate(rep)) return { hit: rep, overflow: false };
   }
   return { overflow: false };
+}
+
+/** Like `search`, but collects up to `limit` representatives for which `predicate` is true. */
+export function collect(pr: Probes, predicate: (rep: Rep) => boolean, max: number, limit: number): { hits: Rep[]; overflow: boolean } {
+  if (productSize(pr) > max) return { hits: [], overflow: true };
+  const hits: Rep[] = [];
+  for (const rep of representatives(pr)) {
+    if (predicate(rep)) {
+      hits.push(rep);
+      if (hits.length >= limit) break;
+    }
+  }
+  return { hits, overflow: false };
 }

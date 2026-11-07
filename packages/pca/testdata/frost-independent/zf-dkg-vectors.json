@@ -1,0 +1,135 @@
+{
+  "source": "frost-ed25519 3.0.0 (Zcash Foundation), keys::dkg + round1/round2 with recorded nonces",
+  "vectors": [
+    {
+      "groupPublicKey": "c06a85269248f8a8a859f57fa4bc7e236d53e0a87e2e081f8f462e8ae29a1503",
+      "keys": [
+        {
+          "id": 1,
+          "signingShare": "f73264f3b26e1c43db73fd220af1b037941ba91ec0c0c968a266ec9c0fb64602",
+          "verifyingShare": "8f37ab42d39960c2e4179128b0c2c6c0f29dd64ecf67869b565de5ae3f4be402"
+        },
+        {
+          "id": 2,
+          "signingShare": "a2a125e50e4cd778df4fb4dab159bda2ed28103fbe5dad5f400bb5d3e322e402",
+          "verifyingShare": "92e0218beb288669d216d65b8b9e1b54cdcb8d21bd689349c370f164116ed2f1"
+        },
+        {
+          "id": 3,
+          "signingShare": "4d10e7d66a2992aee32b6b9259c2c90d4736775fbcfa9056deaf7d0ab88f8103",
+          "verifyingShare": "437ca482519a81d25a8b531ba3f44e85e882a8f0c84b4e932a92fc006b0f529f"
+        }
+      ],
+      "message": "7063612066726f737420696e646570656e64656e7420766563746f723a206d657373616765",
+      "n": 3,
+      "nonces": [
+        {
+          "binding": "b8151383e9eb573b823f363b264377effc8b44ac542f1dcd1c60d29b358ffe05",
+          "bindingCommitment": "70f28f12c0771d62059528edc212ee90f36e47ede350a73eb7ba825eddcfc904",
+          "hiding": "b051500d84835e83fcf10acfb06c8de39d880dc3c8c438bbaa40af98e76eb806",
+          "hidingCommitment": "08a26ade9057e32293d1d777a02f66bf05eab9f060109644810b59df0946b801",
+          "id": 1
+        },
+        {
+          "binding": "404e4f6111a0b3d43a830cea93a9e4b00d9b3635544d64186f6e55a0c4e3b706",
+          "bindingCommitment": "da408e521e3b47531b67da25652a1ba7b50a957c4518c0613b9aeeaa45c2b7a3",
+          "hiding": "67140d78961f4d9496511a3424414c5f2a181ac18737609af4644d5c058d2c04",
+          "hidingCommitment": "a2d375269b18ffdd57e48ab789cb460e19ad472839e13214c920037ee2349f98",
+          "id": 2
+        }
+      ],
+      "sigShares": [
+        {
+          "id": 1,
+          "share": "568aa695a7f4ed50ad49e5c5cbad194fb6b70099ede0f6c86e3c8e2eeeabb40c"
+        },
+        {
+          "id": 2,
+          "share": "921934a94a18cb76d704be8a18539201547e36f360ea7370bd408a46186bff0c"
+        }
+      ],
+      "signature": "49accbc7b03419d479a189d3b248f5ae1e430c87d42fcd35757320a8184af861fbcfe4e1d7a9a66faeb1abad0507cd3b0a36378c4ecb6a392c7d18750617b409",
+      "signers": [
+        1,
+        2
+      ],
+      "t": 2
+    },
+    {
+      "groupPublicKey": "fb033c081f6aa62a987de123e8355cdd5d1b3812b892ae690eb4e98625fa4b38",
+      "keys": [
+        {
+          "id": 1,
+          "signingShare": "0897724430a8f6f3ead5c02c5788dcf14c3d447c003a5b78bf1c177b2232a705",
+          "verifyingShare": "040245556d6861f70241c27cb0aad5a46a17452093229d17435389cbb81cdeb0"
+        },
+        {
+          "id": 2,
+          "signingShare": "67f5005183d81f07c5fdd67c077017d69029412246ee685d50b9e88388b37603",
+          "verifyingShare": "5b571eb041cf674c918331f191dcc136bf46ae62f8334ebe7e4ffb697186393c"
+        },
+        {
+          "id": 3,
+          "signingShare": "0493e08dd31e216f610039ad7b367b2a875996e1793b9e0094e22723ac71820a",
+          "verifyingShare": "93e8e2acf595c32943529285e60442c0762efcce4614f810a9c45cc41ece13be"
+        },
+        {
+          "id": 4,
+          "signingShare": "f29b1b9e0618e8d3e940ef1ad5e128da2fcd43ba9b21fb618a98d4588d6cca0a",
+          "verifyingShare": "c88c58ec35c9001ed304d790fecf69d58b91bd7584831e484100285a1b793dc7"
+        },
+        {
+          "id": 5,
+          "signingShare": "3110b2811cc474355ebff9c5137220e58a8449acaba07f8133dbee242ca44e04",
+          "verifyingShare": "c66ca4d2ea02d23219c0fb8775cfc47bf82875b41160310a128a48313bf77421"
+        }
+      ],
+      "message": "7063612066726f737420696e646570656e64656e7420766563746f723a206d657373616765",
+      "n": 5,
+      "nonces": [
+        {
+          "binding": "8c777da53c3b9b676c643492d852fe70a4066a50577ce941d3c6727f8e48f80b",
+          "bindingCommitment": "94f12fd86c623c505559b2c41d19c7950c7e6535a99bc17bfae1c9156b265996",
+          "hiding": "bba0ef7ea887bf6a213e3f0c097f9ba3b7dbb8ad5da6787201a9272a1574fd0f",
+          "hidingCommitment": "fcce40f5ef064ee79e0a8b27ceebe4b170f97548dc43199c54c860128103eec3",
+          "id": 1
+        },
+        {
+          "binding": "406f4c917a5142695bdc3482dac0ab8eee06b57b565fca43c67a8aaa26620000",
+          "bindingCommitment": "6e93e4984a0ffeeb257ae9d79426c7982e1709132902d51abe55c56834c0b90f",
+          "hiding": "4f76d164a1d0aff5d82a16019831944378565f32e4069a9a4d2543384c4b520b",
+          "hidingCommitment": "77ba26c00592f8b1046d5ed5afba37f0a0abce2febe8f9c1e91d5f0300b05077",
+          "id": 2
+        },
+        {
+          "binding": "502e93a90062343359880b504fa46e39166bf8d28ca64d42730baf0d8bf57b0b",
+          "bindingCommitment": "a9b8d66af00cdbf0184a626309ca15371b34a5ba527b80aebbca33d099a2e386",
+          "hiding": "6aecc071d6a9f6136d9e4abef3b64ee9bf40f1f0cd0950acd1c7e7842e330b0d",
+          "hidingCommitment": "99619b1227e8657c96461f0a190d76530ede2dbd9341e93a89d2159e3995bfb9",
+          "id": 3
+        }
+      ],
+      "sigShares": [
+        {
+          "id": 1,
+          "share": "c1268045d9d8180ddbe3e317845f4d34116d515546ddcc9974dc06bc830a9609"
+        },
+        {
+          "id": 2,
+          "share": "439e14c3a8f8096c082b2689191cf77c4c7a3c5615e34ac0121542c6d6d5e701"
+        },
+        {
+          "id": 3,
+          "share": "893345011542eb168c1a0500feff9c0e204a66e3f1ebe799914ca2a5ca06e30a"
+        }
+      ],
+      "signature": "5060340c47f20feb3a356f86792aab8b3487dc12fba65663a2dc56fb5b691f49a024e4ac7cb0fb37998c17febc8102ab7d31f48e4dacfff3183eeb2725e76006",
+      "signers": [
+        1,
+        2,
+        3
+      ],
+      "t": 3
+    }
+  ]
+}

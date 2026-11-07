@@ -15,6 +15,12 @@ export {
   tightenInterval,
   intervalEmpty,
   FULL_INTERVAL,
+  validatePolicyAgainstSchema,
+  diffPolicies,
+  diffGate,
+  coverage,
+  coverageGate,
+  runPolicyTests,
 } from '@atlasauth/pca-analyzer';
 
 export type {
@@ -26,7 +32,13 @@ export type {
   AlwaysAllowsResult,
   AlwaysDeniesResult,
   SubsumesResult,
+  PolicyTestDoc,
+  ValidateOptions,
+  VerbShape,
 } from '@atlasauth/pca-analyzer';
 
 export { ENVELOPE_CAVEAT, isLeafCondition } from '@atlasauth/pca';
 export type { Capability, Caveat, Condition, Envelope, LeafCondition, Predicate, RiskPolicy } from '@atlasauth/pca';
+
+export { lintRulesDigest } from '@atlasauth/pca-actions';
+export type { ActionDef } from '@atlasauth/pca-actions';

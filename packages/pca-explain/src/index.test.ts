@@ -75,18 +75,28 @@ describe('explainVerification', () => {
   it('ALLOW: names the passing checks with concrete detail', async () => {
     const f = fixture();
     const p = buildActn(f, { amount: 100 }, 0.1);
-    const vr = await verifyPCActnCore(p, { grant: f.grant, nowEpoch: NOW, audience: AUD });
+    const vr = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: f.grant, nowEpoch: NOW, audience: AUD });
     expect(vr.allow).toBe(true);
 
     const ex = explainVerification(p, vr, { now: NOW });
     expect(ex.verdict).toBe('allow');
-    expect(ex.passed).toEqual(expect.arrayContaining(['wire', 'version', 'audience', 'validity', 'cap_chain', 'plan_inclusion', 'leaf_signature', 'counter']));
+    expect(ex.passed).toEqual(expect.arrayContaining(['wire', 'version', 'audience', 'validity', 'cap_chain', 'plan_inclusion', 'leaf_signature', 'counter_format']));
     expect(ex.decisive).toBeUndefined();
 
     const text = ex.toText();
     expect(text).toContain('ALLOW');
     expect(text).toContain(`aud "${AUD}" matches`);
     expect(text).toMatch(/leaf signature|leaf holder/);
+  });
+
+  it('an unsupported check is presented as unsupported, never as passed (0.5)', async () => {
+    const f = fixture();
+    const p = buildActn(f, { amount: 100 }, 0.1);
+    const vr = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: f.grant, nowEpoch: NOW, audience: AUD });
+    const ex = explainVerification(p, { ...vr, checks: { ...vr.checks, bond: 'unsupported' } }, { now: NOW });
+    expect(ex.checks.find((c) => c.name === 'bond')).toMatchObject({ status: 'unsupported', detail: 'the PCActn carries a feature this verifier does not implement (never a pass)' });
+    expect(ex.passed).not.toContain('bond');
+    expect(ex.toText()).toMatch(/\? bond\s+the PCActn carries a feature this verifier does not implement/);
   });
 
   it('DENY (broken signature): pinpoints the leaf hop with a remedy', async () => {
@@ -99,7 +109,7 @@ describe('explainVerification', () => {
     // Tamper the leaf signature.
     const tampered: PCActn = { ...p, sig: b64u(new Uint8Array(64)) };
 
-    const vr = await verifyPCActnCore(tampered, { grant: f.grant, nowEpoch: NOW, audience: AUD });
+    const vr = await verifyPCActnCore(tampered, { insecureSkipPlanRootCheck: true, grant: f.grant, nowEpoch: NOW, audience: AUD });
     expect(vr.allow).toBe(false);
 
     const ex = explainVerification(tampered, vr, { now: NOW });
@@ -113,7 +123,7 @@ describe('explainVerification', () => {
   it('DENY (audience mismatch): pinpoints aud + gives a remedy', async () => {
     const f = fixture();
     const p = buildActn(f, { amount: 100 }, 0.1);
-    const vr = await verifyPCActnCore(p, { grant: f.grant, nowEpoch: NOW, audience: 'ins_other' });
+    const vr = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: f.grant, nowEpoch: NOW, audience: 'ins_other' });
     expect(vr.allow).toBe(false);
 
     const ex = explainVerification(p, vr, { now: NOW });
@@ -126,7 +136,7 @@ describe('explainVerification', () => {
     const f = fixture();
     const p = buildActn(f, { amount: 100 }, 0.1); // iat=NOW, exp=NOW+20min
     const later = NOW + 60 * 60_000; // an hour later -> expired
-    const vr = await verifyPCActnCore(p, { grant: f.grant, nowEpoch: later, audience: AUD });
+    const vr = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: f.grant, nowEpoch: later, audience: AUD });
     expect(vr.allow).toBe(false);
 
     const ex = explainVerification(p, vr, { now: later });

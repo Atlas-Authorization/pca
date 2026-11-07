@@ -7,6 +7,7 @@
 import { loadAdapter } from './load';
 import type { StoreAdapter } from './types';
 import { ALL_TESTS, formatReport, reportJson, runConformance, type ConformanceOptions, type TestName } from './runner';
+import { ALL_PCA_STATE_TESTS, formatPcaStateReport, loadPcaStateAdapter, runPcaStateConformance, type PcaStateTestName } from './pca-state';
 
 export const USAGE = `pca-store-conformance --adapter <module|builtin:name> [options]
 
@@ -24,11 +25,18 @@ export const USAGE = `pca-store-conformance --adapter <module|builtin:name> [opt
   --values N              advance tests: counter values are drawn from [0, N) (default 20)
   --seed N                workload PRNG seed, to reproduce a run (default random)
   --json                  print the report as JSON
+  --profile pca-state     test the store behind requirePCA instead (a module exporting createPcaStateAdapter(options),
+                          or builtin:in-memory | builtin:durable-file | builtin:bad-*); --tests then takes a subset of:
+                          ${ALL_PCA_STATE_TESTS.join(', ')}
+                          (--rounds = race rounds, default 10; --clients = copies per round, default 16; --processes)
 
 Exit: 0 pass, 1 violation found, 3 unresolved, 2 usage or adapter error.`;
 
 export interface CliArgs {
   adapter?: string;
+  profile?: 'pca-state';
+  /** --tests under `--profile pca-state`. */
+  pcaStateTests?: PcaStateTestName[];
   options: Record<string, string>;
   json: boolean;
   help: boolean;
@@ -45,6 +53,7 @@ const num = (flag: string, v: string | undefined): number => {
 
 export function parseCli(argv: readonly string[]): CliArgs {
   const a: CliArgs = { options: {}, json: false, help: false, conf: {} };
+  let rawTests: string[] | undefined;
   for (let i = 0; i < argv.length; i++) {
     const f = argv[i]!;
     const next = (): string | undefined => argv[++i];
@@ -59,11 +68,13 @@ export function parseCli(argv: readonly string[]): CliArgs {
         a.options[kv.slice(0, eq)] = kv.slice(eq + 1);
         break;
       }
-      case '--tests': {
-        const t = (next() ?? '').split(',').filter(Boolean) as TestName[];
-        const bad = t.filter((x) => !ALL_TESTS.includes(x));
-        if (bad.length || t.length === 0) throw new Error(`--tests: unknown test(s) ${bad.join(', ') || '(none given)'}`);
-        a.conf.tests = t;
+      case '--tests':
+        rawTests = (next() ?? '').split(',').filter(Boolean);
+        break;
+      case '--profile': {
+        const p = next();
+        if (p !== 'pca-state') throw new Error(`--profile: unknown profile ${String(p)} (known: pca-state)`);
+        a.profile = p;
         break;
       }
       case '--clients':
@@ -110,7 +121,42 @@ export function parseCli(argv: readonly string[]): CliArgs {
         throw new Error(`unknown argument ${f}`);
     }
   }
+  if (rawTests) {
+    const known: readonly string[] = a.profile === 'pca-state' ? ALL_PCA_STATE_TESTS : ALL_TESTS;
+    const bad = rawTests.filter((x) => !known.includes(x));
+    if (bad.length || rawTests.length === 0) throw new Error(`--tests: unknown test(s) ${bad.join(', ') || '(none given)'}`);
+    if (a.profile === 'pca-state') a.pcaStateTests = rawTests as PcaStateTestName[];
+    else a.conf.tests = rawTests as TestName[];
+  }
   return a;
+}
+
+async function mainPcaState(args: CliArgs, print: (s: string) => void, printErr: (s: string) => void): Promise<number> {
+  let adapter;
+  try {
+    adapter = await loadPcaStateAdapter(args.adapter!, args.options);
+  } catch (e) {
+    printErr(`cannot load adapter: ${(e as Error).message}`);
+    return 2;
+  }
+  try {
+    const r = await runPcaStateConformance(adapter, {
+      ...(args.pcaStateTests ? { tests: args.pcaStateTests } : {}),
+      ...(args.conf.rounds !== undefined ? { rounds: args.conf.rounds } : {}),
+      ...(args.conf.clients !== undefined ? { copies: args.conf.clients } : {}),
+      ...(args.processes !== undefined ? { processes: args.processes } : {}),
+      claim: args.conf,
+      module: args.adapter!,
+      moduleOptions: args.options,
+    });
+    print(args.json ? JSON.stringify(r, null, 2) : formatPcaStateReport(r));
+    return r.status === 'pass' ? 0 : r.status === 'fail' ? 1 : 3;
+  } catch (e) {
+    printErr(`conformance run failed: ${(e as Error).message}`);
+    return 2;
+  } finally {
+    await adapter.teardown?.();
+  }
 }
 
 /** Runs the CLI; returns the exit code. `print` / `printErr` are injectable for tests. */
@@ -130,6 +176,7 @@ export async function main(argv: readonly string[], print: (s: string) => void =
     printErr(`--adapter is required\n\n${USAGE}`);
     return 2;
   }
+  if (args.profile === 'pca-state') return mainPcaState(args, print, printErr);
   let adapter: StoreAdapter;
   try {
     adapter = await loadAdapter(args.adapter, args.options);

@@ -1,0 +1,8 @@
+{
+ "target": "regoToPca (untrusted module text)",
+ "seeds": [
+  {
+   "text": "package x\n\nallow if { input.action == \"read\" }\n"
+  }
+ ]
+}

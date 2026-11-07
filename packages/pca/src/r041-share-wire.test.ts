@@ -29,7 +29,7 @@ describe('0.4.1 per-suite threshold share wire', () => {
     expect(pure.sig.length).toBe(4412);
     expect(validateWireV2(withShares([pure]))).toBeNull();
     const p = withShares([pure]);
-    const core = await verifyPCActnCore(p, { grant: s.grant, nowEpoch: NOW, audience: AUD, hooks: { threshold: createThresholdVerifier({ signerSet: set, t: 2 }) } });
+    const core = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: s.grant, nowEpoch: NOW, audience: AUD, hooks: { threshold: createThresholdVerifier({ signerSet: set, t: 2 }) } });
     expect(core.checks.wire).toBe('pass');
     expect(core.checks.threshold).toBe('pass');
   });

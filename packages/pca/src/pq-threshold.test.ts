@@ -139,7 +139,10 @@ describe('pq-threshold: set commitment and distinctness', () => {
   it('duplicate signature / duplicate index rejected, no double count', () => {
     const s = shares(mixed, [0, 1]);
     const dup = [...s, s[0]!];
-    expect(verifyQuorum({ set: mixed.set, proof: assembleQuorumProof(mixed.set, dup), epoch: 0, actionDigest: ACTION })).toMatchObject({ ok: false, reason: 'duplicate-signer' });
+    expect(verifyQuorum({ set: mixed.set, proof: assembleQuorumProof(mixed.set, dup), epoch: 0, actionDigest: ACTION })).toMatchObject({ ok: false, reason: 'duplicate-signer' });    const pr = assembleQuorumProof(mixed.set, shares(mixed, [0, 1, 2]));
+    expect(verifyQuorum({ set: mixed.set, proof: pr, epoch: 0, actionDigest: ACTION }).ok).toBe(true);
+    const negZero = { ...pr, sigs: pr.sigs.map((x) => (x.i === 0 ? { ...x, i: -0 } : x)) };
+    expect(verifyQuorum({ set: mixed.set, proof: negZero, epoch: 0, actionDigest: ACTION })).toMatchObject({ ok: false, reason: 'unknown-signer' });
   });
   it('loadQuorumSet rejects forged id, tampered t, reordered signers', () => {
     expect(loadQuorumSet(JSON.parse(JSON.stringify(mixed.set))).ok).toBe(true);
@@ -230,7 +233,8 @@ describe('pq-threshold: rotation', () => {
     const c = rot(w0, w1, 0);
     expect(verifyRotationChain(w0.set, 0, [{ ...c, to_epoch: 5 }])).toMatchObject({ ok: false, reason: 'non-monotone-epoch' });
     expect(verifyRotationChain(w0.set, 1, [c])).toMatchObject({ ok: false, reason: 'non-monotone-epoch' });
-    expect(verifyRotationChain(w0.set, 0, [{ ...c, from_epoch: 3 }])).toMatchObject({ ok: false });
+    expect(verifyRotationChain(w0.set, 0, [{ ...c, from_epoch: 3 }])).toMatchObject({ ok: false });    // strict profile: -0 is never a wire integer
+    expect(verifyRotationChain(w0.set, 0, [{ ...c, from_epoch: -0 }])).toMatchObject({ ok: false, reason: 'malformed', at: 0 });
   });
   it('rotation signature cannot be redirected to another successor', () => {
     const c = rot(w0, w1, 0);
