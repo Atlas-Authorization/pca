@@ -56,6 +56,8 @@ export interface ObjectiveRiskInstanceConfig {
   };
   graph?: { nodes?: ResourceNode[]; edges?: ResourceEdge[] };
   calibration?: number[];
+  /** Verifier opt-in (0.5, B16): honour a grant's `on_mismatch: 'heuristic'`. Absent/false: a mismatch is always denied. */
+  allow_heuristic_fallback?: boolean;
 }
 
 export type ObjectiveRiskResolution =
@@ -132,7 +134,9 @@ export function resolveObjectiveRisk(args: {
   const { commitment, malformed } = readObjectiveCommitment(args.grant);
   if (malformed) return { mode: 'mismatch', reasons: [malformed], onMismatch: 'deny' };
   if (!commitment) return { mode: 'none' };
-  const onMismatch = commitment.on_mismatch ?? 'deny';
+  const requested = commitment.on_mismatch ?? 'deny';
+  // a GRANT cannot downgrade the verifier's objective risk to the heuristic on its own say-so
+  const onMismatch = requested === 'heuristic' && args.instance?.allow_heuristic_fallback === true ? 'heuristic' : 'deny';
   const miss = (...reasons: string[]): ObjectiveRiskResolution => ({ mode: 'mismatch', reasons, onMismatch });
   try {
     const env = readEnvelope(args.grant);

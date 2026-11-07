@@ -1,0 +1,13 @@
+[
+  {
+    "id": "spec3-sdk",
+    "repo": "stripe/openapi",
+    "ref": "52c7bc387eed75e31d86359708cb49748ef803cd",
+    "path": "openapi/spec3.sdk.json",
+    "sha256": "622e04fb9ae98eb28b5a67c7c885af52a71ffa60e9230b2197f5b3e136651b1d",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/stripe/openapi/blob/master/LICENSE",
+    "bytes": 10896307
+  }
+]

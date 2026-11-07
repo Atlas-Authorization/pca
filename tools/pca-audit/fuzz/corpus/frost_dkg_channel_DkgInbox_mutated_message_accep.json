@@ -1,0 +1,8 @@
+{
+ "target": "frost-dkg-channel DkgInbox (mutated message: accepted, or a sticky typed peer error)",
+ "seeds": [
+  {
+   "b64": "eyJ2IjoxLCJzaWQiOiJablY2ZWkxa2EyY3RjMlZ6YzJsdmJpMHdNVEl6TkRVMk56ZzVZV0pqWkdWbSIsImtpbmQiOiJyb3VuZDEiLCJib2R5Ijp7ImlkZW50aWZpZXIiOjEsInNlc3Npb25JZCI6IlpuVjZlaTFrYTJjdGMyVnpjMmx2Ymkwd01USXpORFUyTnpnNVlXSmpaR1ZtIiwiY29lZmZpY2llbnRDb21taXRtZW50cyI6WyItd21BSWIwYUFYZm92QnNOa1BGQm9YNHFhTUhhTU1sUFZ6QUc2STA5RHJFIiwibnV4bWdURWlBU1VxU2oyZTY0YVprRWlteFREa3IzZUIzNGtGaXlzUF94WSJdLCJwcm9vZk9mS25vd2xlZGdlIjp7IlIiOiJGVzZwVTVWbjRKeXJ1eTRQX0c0Y01NeHJ6dzVXZGw4aFItdHUydWhfci00IiwibXUiOiJKVEtySGlObnZqNW9POVI3NVluaEU1RXgxX3BPbG9xVVotaHpzb3JZUUFJIn19fQ=="
+  }
+ ]
+}

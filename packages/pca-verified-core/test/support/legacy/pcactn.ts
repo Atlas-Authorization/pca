@@ -4,7 +4,10 @@ import { type Capability, type CapabilityChain, capHash, holderPqKey } from '../
 import { pqBindingError, verifyChain } from './capability';
 import { b64u, canonicalBytesStrict, __canonicalizeLenientServerOnly, hashCanonical, sha256, utf8 } from '../../../../pca/src/hash';
 import { strictParse } from '../../../../pca/src/strict-json';
-import { PCACTN_WIRE_VERSION, validateWireV2 } from '../../../../pca/src/wire';
+import { PCACTN_WIRE_VERSION } from '../../../../pca/src/wire';
+// The base wire validator no longer knows `intent`/`intent_session` (0.5 moved them into an extension); this oracle's intent decision
+// already comes from production, so load the same intent wire extension (not frozen behaviour: a post-freeze addition like the intent check).
+import { validateWireV2 } from '../../../../pca/src/pcactn-full';
 import { sign } from '../../../../pca/src/keys';
 import {
   type FnDsaSuiteKey,

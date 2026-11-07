@@ -69,7 +69,9 @@ for (const e of ledger.equivalents) {
   // light sanity check of fn: its last plain identifier segment must appear in the file (synthetic names such as <init> or
   // lambda$x$1 are not checked; a JVM property accessor getX / setX / isX also passes on the property name x)
   const fnId = e.fn?.split(/::|\./).pop();
-  if (fnId && /^[A-Za-z_][A-Za-z0-9_]*$/.test(fnId)) {
+  // `compare` of the Comparator Kotlin generates for an inlined sortedBy / compareBy / maxBy ... is synthetic too
+  const synthCompare = fnId === 'compare' && /\b(sorted(By|With|ByDescending)|compareBy|thenBy|maxBy|minBy)\b/.test(e.line);
+  if (fnId && !synthCompare && /^[A-Za-z_][A-Za-z0-9_]*$/.test(fnId)) {
     const acc = /^(?:get|set|is)([A-Z].*)$/.exec(fnId)?.[1];
     const names = [fnId, ...(acc ? [acc[0].toLowerCase() + acc.slice(1)] : [])];
     const text = lines.join('\n');

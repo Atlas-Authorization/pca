@@ -20,6 +20,10 @@ on:
         description: 'Also run the probe-tier harnesses (non-gating)'
         type: boolean
         default: false
+      only:
+        description: 'Run only the harnesses whose fully qualified name matches this regex (diagnosis; empty = all)'
+        required: false
+        default: ''
       kani_long:
         description: 'Run the long-tier harnesses (non-gating, up to 355 min each; manual dispatch only, never on push, so they do not hold free runner slots during an RC run)'
         type: boolean
@@ -59,9 +63,12 @@ jobs:
         run: bash .github/scripts/formal-natives.sh "$NATIVE_REF"
       - name: List harnesses
         id: plan
+        env:
+          ONLY: ${{ inputs.only }}
         run: |
           rc=0; lf="$RUNNER_TEMP/kani-long.json"; echo '{"include":[]}' > "$lf"
           m="$(bash .github/scripts/formal-kani-plan.sh "${{ inputs.kani_probe || false }}" "$lf")" || rc=$?
+          if [ -n "$ONLY" ]; then m="$(echo "$m" | python3 -c 'import json,re,sys; d=json.load(sys.stdin); r=re.compile(sys.argv[1]); d["include"]=[j for j in d["include"] if r.search(j["harness"])]; print(json.dumps(d))' "$ONLY")"; fi
           echo "matrix=$m" >> "$GITHUB_OUTPUT"
           echo "$m" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["include"]), "harness job(s)")'
           if [ "${{ github.event_name == 'workflow_dispatch' && inputs.kani_long }}" != true ]; then echo '{"include":[]}' > "$lf"; fi
@@ -104,8 +111,10 @@ jobs:
           s=$(date +%s)
           ulimit -v 15000000   # fail cleanly (out of memory) instead of the runner being killed
           rc=0; cargo kani -Z stubbing -Z function-contracts -Z loop-contracts ${F:+--features "$F"} --harness "$H" --exact \
-            --output-format terse > "$log" 2>&1 || rc=$?
+            --output-format regular > "$log" 2>&1 || rc=$?
           echo "rc=$rc wall=$(( $(date +%s) - s ))s"; grep -a -E 'VERIFICATION:|Complete - |Runtime (Symex|Solver)|error' "$log" | tail -8 || true
+          # a failure names its failed checks here (unwinding assertion = bound too small; anything else = counterexample)
+          grep -aq 'VERIFICATION:- SUCCESSFUL' "$log" || { echo "failed checks:"; grep -a -B1 -A2 'Status: FAILURE' "$log" | head -60; }
           grep -aq 'VERIFICATION:- SUCCESSFUL' "$log" && [ "$rc" = 0 ]
       - uses: actions/upload-artifact@v4
         if: always()

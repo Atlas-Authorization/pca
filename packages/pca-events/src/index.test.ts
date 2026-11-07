@@ -90,7 +90,7 @@ describe('serializeEvent / parseEvent', () => {
 });
 
 describe('signWebhook / verifyWebhook', () => {
-  const secret = 'whsec_test_123';
+  const secret = 'whsec_test_123_0123456789abcdef';
   const payload = serializeEvent(buildStepUpEvent('step_up.approved', sampleData()));
   const T = 1_700_000_100; // unix seconds
 
@@ -113,7 +113,7 @@ describe('signWebhook / verifyWebhook', () => {
 
   it('rejects a wrong secret', () => {
     const sig = signWebhook(secret, payload, { timestamp: T });
-    expect(verifyWebhook('whsec_wrong', payload, sig, { now: T })).toBe(false);
+    expect(verifyWebhook('whsec_wrong_0123456789abcdefghij', payload, sig, { now: T })).toBe(false);
   });
 
   it('rejects a stale timestamp (older than tolerance)', () => {
@@ -142,7 +142,7 @@ describe('signWebhook / verifyWebhook', () => {
 
 describe('webhookHeaders', () => {
   it('returns a verifiable PCA-Signature plus content-type', () => {
-    const secret = 'whsec_hdr';
+    const secret = 'whsec_hdr_0123456789abcdefghijkl';
     const payload = '{"hello":"world"}';
     const T = 1_700_000_200;
     const headers = webhookHeaders(secret, payload, { timestamp: T });

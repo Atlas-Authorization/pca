@@ -27,7 +27,7 @@ export interface SitePolicy {
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
-const isNat = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+const isNat = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 && !Object.is(v, -0);
 
 function section(v: unknown, name: string, keys: readonly string[]): Record<string, unknown> {
   if (v === undefined) return {};

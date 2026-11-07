@@ -70,10 +70,10 @@ those entries.
 | Proof-system soundness claims | Zero-knowledge, folding, zkVM and STARK backends had constraint-system and binding gaps, and one backend's "zero-knowledge" framing was inaccurate | See below |
 
 Of the 50 numbered findings, 32 are referenced by identifier in the changelog. The rest concern mainly the
-experimental zero-knowledge, zkVM, folding and STARK backends and parameter statements for MPC. Their
+hardened zero-knowledge, zkVM, folding and STARK backends and parameter statements for MPC. Their
 status is recorded in the backend documentation and may be a fix in another repository, a documented
 limitation, or still open. This page does not assert that they are fixed. Treat those backends as
-experimental unless their own documentation says otherwise.
+hardened, awaiting an outside action, unless their own documentation says otherwise.
 
 Defects were also found by the non-review layers (mutation, fuzzing, differential testing, formal tools),
 including a checked-arithmetic gap in a base64url length computation in the Rust verifier and

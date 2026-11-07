@@ -55,6 +55,21 @@ foreach (var line in lines)
             r["checks"] = new Dictionary<string, bool> { ["chain"] = cqOk };
             if (cqWhy != null && cqWhy.Contains(Pq.UnsupportedSuite)) r["unsupported_suite"] = cqWhy;
         }
+        else if (kind == "policy")
+        {
+            // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+            // Pca.EvaluateAgentCaveats(PolicyCaveats(grant, chain), context, {action}, toolCall) as {allow, failed}: the agent-native
+            // evaluator (predicates + tool_schema); the tool call is the signed verb + params (the reference's toolCallOf)
+            var pv = (Dictionary<string, object?>)Pca.ParseJson(raw)!;
+            var pctx = pv.GetValueOrDefault("context") as Dictionary<string, object?>;
+            var pact = pctx?.GetValueOrDefault("action");
+            var pam = pact as Dictionary<string, object?>;
+            var pr = Pca.EvaluateAgentCaveats(Caveats.PolicyCaveats(pv.GetValueOrDefault("grant"), pv.GetValueOrDefault("chain")), pctx,
+                new Dictionary<string, object?> { ["action"] = pact },
+                new ToolCall(pam?.GetValueOrDefault("verb") as string ?? "", pam?.GetValueOrDefault("params") as Dictionary<string, object?> ?? new Dictionary<string, object?>()));
+            r["allow"] = pr.Ok;
+            r["failed"] = pr.Failed.ToList();
+        }
         else if (kind.StartsWith("intent_", StringComparison.Ordinal))
         {
             // Intent Layer v2 primitives: raw = JSON text of the primitive's `input`; result = its `expect` shape.

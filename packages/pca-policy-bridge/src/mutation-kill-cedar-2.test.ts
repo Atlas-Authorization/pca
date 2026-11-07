@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { cedarToPca } from './cedar';
+import { translateCedar } from './cedar';
+const cedarToPca = (text: string) => translateCedar(text, false); // structure tests: bare expressions, no error guards
+
 
 const P = (s: string) => cedarToPca(s);
 const wherePermit = (expr: string) => cedarToPca(`permit(principal, action, resource) when { ${expr} };`);

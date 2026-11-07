@@ -1,0 +1,34 @@
+# GitHub Actions run 40896585392 (Formal - symbolic protocol models, ubuntu-latest), CryptoVerif 2.13, 2026-10-29
+intent_delta                       expect=all-proved   got=proved
+acc_receipt                        expect=all-proved   got=proved
+revocation_epoch                   expect=all-proved   got=proved
+attest_hw                          expect=all-proved   got=proved
+zk_intent                          expect=all-proved   got=proved
+pq_pinned_delta                    expect=all-proved   got=proved
+frost_descriptor                   expect=all-proved   got=proved
+fame_kemdem                        expect=all-proved   got=proved
+acc_receipt_retire                 expect=all-proved   got=proved
+map_commit_hiding                  expect=all-proved   got=proved
+map_commit_t28                     expect=all-proved   got=proved
+kem_combiner                       expect=all-proved   got=proved
+NEG_delta_any_signer               expect=not-proved   got=not-proved   (query ~ AcceptK\(s, r, k, p, h, e\)\) ==> \(?event\(MintedP)
+NEG_delta_no_root                  expect=not-proved   got=not-proved   (query ~ AcceptRoot)
+NEG_rcpt_no_keyset                 expect=not-proved   got=not-proved   (query ~ event\(AcceptR\(p, s, a, q, x, u, k, r\)\) ==> \(?event\(Issued)
+NEG_rcpt_no_store                  expect=not-proved   got=not-proved   (query ~ inj-event\(AcceptR)
+NEG_epoch_no_domsep                expect=not-proved   got=not-proved   (query ~ event\(Accept\(i, s, r, t\)\))
+NEG_att_no_nonce                   expect=not-proved   got=not-proved   (query ~ inj-event\(Accept)
+NEG_att_no_holder                  expect=not-proved   got=not-proved   (query ~ [^-]event\(Accept\(c, h, g, e, n, m\)\) ==> \(?event\(GuestQuoted)
+NEG_att_no_allowlist               expect=not-proved   got=not-proved   (query ~ [^-]event\(Accept\(c, h, g, e, n, m\)\) ==> \(?event\(GuestQuoted)
+NEG_att_hw_broken                  expect=not-proved   got=not-proved   (query ~ [^-]event\(Accept\(c, h, g, e, n, m\)\) ==> \(?event\(GuestQuoted)
+NEG_zk_no_image_pin                expect=not-proved   got=not-proved   (query ~ event\(Accept\(x, s, c, e\)\))
+NEG_zk_no_commit                   expect=not-proved   got=not-proved   (query ~ event\(Accept\(x, s, c, e\)\))
+NEG_pq_artifact_key                expect=not-proved   got=not-proved   (query ~ AcceptK)
+NEG_desc_unpinned                  expect=not-proved   got=not-proved   (query ~ event\(Accept\(x, t, n, s\)\))
+NEG_fame_known_k                   expect=not-proved   got=not-proved   (query ~ secre(t|cy of) b)
+NEG_rcpt_ignores_retirement        expect=not-proved   got=not-proved   (query ~ event\(AcceptR\(p, s, a, q, x, u, k, r\)\) ==> \(?event\(Issued)
+NEG_map_one_salt                   expect=not-proved   got=not-proved   (query ~ secre(t|cy of) b)
+NEG_t28_no_metrics_open            expect=not-proved   got=not-proved   (query ~ event\(Accept\(x, s, c, e\)\))
+NEG_epoch_any_principal            expect=not-proved   got=not-proved   (query ~ event\(Accept\(i, s, r, t\)\))
+NEG_bundle_principals_from_S       expect=not-proved   got=not-proved   (query ~ AcceptBundle\(s, r, k, p, e, o, g, x\)\) ==> \(?(exists h: pkey; )?event\(MintedP)
+NEG_kem_no_ss1                     expect=not-proved   got=not-proved   (query ~ secre(t|cy of) k0)
+mismatches: 0

@@ -206,7 +206,7 @@ describe('validateInvariant', () => {
     expect(rate({ max: 0 })).toEqual([]);
     expect(rate({ max: MAX_LEDGER })).toEqual([]);
     expect(MAX_LEDGER).toBe(10_000);
-    for (const m of [-1, MAX_LEDGER + 1, 1.5, NaN, Infinity, '5', undefined, null]) expect(rate({ max: m })).toEqual(['i: max must be an integer in [0,10000]']);
+    for (const m of [-1, -0, MAX_LEDGER + 1, 1.5, NaN, Infinity, '5', undefined, null]) expect(rate({ max: m })).toEqual(['i: max must be an integer in [0,10000]']);
     expect(rate({ window_secs: 0.5 })).toEqual([]);
     for (const w of [0, -1, NaN, Infinity, '5', undefined, null]) expect(rate({ window_secs: w })).toEqual(['i: window_secs must be > 0']);
     expect(rate({ when: 5 })).toEqual(['i: when: not an object']);
@@ -316,7 +316,7 @@ describe('stateProblem', () => {
     for (const l of [undefined, null, [], 'x']) expect(stateProblem({ ...good(), latched: l })).toBe('malformed monitor state');
   });
   it('seq / parent / chain link', () => {
-    for (const seq of [-1, 1.5, NaN, '0', undefined, null, Infinity]) expect(stateProblem({ ...good(), seq })).toBe('malformed monitor state: seq');
+    for (const seq of [-1, -0, 1.5, NaN, '0', undefined, null, Infinity]) expect(stateProblem({ ...good(), seq })).toBe('malformed monitor state: seq');
     for (const parent of [5, undefined, {}, ['x']]) expect(stateProblem({ ...good(), parent })).toBe('malformed monitor state: parent');
     expect(stateProblem({ ...good(), seq: 0, parent: 'x' })).toBe('malformed monitor state: genesis has a parent');
     expect(stateProblem({ ...good(), seq: 1, parent: null })).toBe('malformed monitor state: missing chain link');

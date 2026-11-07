@@ -25,6 +25,7 @@ import {
   mockKeypair,
   registerTestBackend,
   resetFalconBackend,
+  resolveFnDsaAlg,
   setFalconBackend,
   signPcaWithFndsa,
   verifyPcaFndsa,
@@ -240,5 +241,104 @@ describe('hybrid ed25519 + fn-dsa requires BOTH (MOCK backend plumbing)', () => 
     const leaf = buildLeafBody();
     const kp = mockKeypair('fn-dsa-512');
     expect(() => signPcaWithFndsa({ alg: 'hybrid-ed25519-fn-dsa-512', leaf, fnDsa: kp })).toThrow(/requires edSecret/);
+  });
+});
+
+// ---- audit-readiness: the fail-closed table of the README, one exact outcome per row -----------------
+describe('fail-closed table: malformed wire input is rejected before the backend and never throws', () => {
+  const tripwire: FalconBackend = { verify: () => { throw new Error('backend must not be reached'); } };
+  const pkOk = b64u(new Uint8Array(FN_DSA_512_PUBLIC_KEY_BYTES));
+  const sigOk = b64u(new Uint8Array(FN_DSA_512_SIGNATURE_BYTES));
+
+  it('non-canonical base64url (padding, standard alphabet, whitespace, trailing junk) in pq_pk or sig -> false', () => {
+    setFalconBackend(tripwire);
+    const leaf = buildLeafBody();
+    const bad = (x: string) => [x + '=', x.replace(/./, '+'), ' ' + x, x + '!'];
+    for (const pk of bad(pkOk)) expect(verifyPcaFndsa({ alg: 'fn-dsa-512', leaf, pq_pk: pk, sig: sigOk })).toBe(false);
+    for (const sig of bad(sigOk)) expect(verifyPcaFndsa({ alg: 'fn-dsa-512', leaf, pq_pk: pkOk, sig })).toBe(false);
+  });
+
+  it('wrong type for alg, pq_pk, sig, pq_sig or holder -> false', () => {
+    setFalconBackend(tripwire);
+    const leaf = buildLeafBody();
+    for (const v of [undefined, null, 5, {}, []]) {
+      expect(verifyPcaFndsa({ alg: v, leaf, pq_pk: pkOk, sig: sigOk })).toBe(false);
+      expect(verifyPcaFndsa({ alg: 'fn-dsa-512', leaf, pq_pk: v, sig: sigOk })).toBe(false);
+      expect(verifyPcaFndsa({ alg: 'fn-dsa-512', leaf, pq_pk: pkOk, sig: v })).toBe(false);
+      expect(verifyPcaFndsa({ alg: 'hybrid-ed25519-fn-dsa-512', leaf, holder: v, pq_pk: pkOk, sig: b64u(new Uint8Array(64)), pq_sig: sigOk })).toBe(false);
+      expect(verifyPcaFndsa({ alg: 'hybrid-ed25519-fn-dsa-512', leaf, holder: encodeKey(generateKeyPair().publicKey), pq_pk: pkOk, sig: b64u(new Uint8Array(64)), pq_sig: v })).toBe(false);
+    }
+  });
+
+  it('hybrid with a short Ed25519 half or a short FN-DSA half -> false, backend not reached', () => {
+    setFalconBackend(tripwire);
+    const leaf = buildLeafBody();
+    const holder = encodeKey(generateKeyPair().publicKey);
+    expect(verifyPcaFndsa({ alg: 'hybrid-ed25519-fn-dsa-512', leaf, holder, pq_pk: pkOk, sig: b64u(new Uint8Array(63)), pq_sig: sigOk })).toBe(false);
+    expect(verifyPcaFndsa({ alg: 'hybrid-ed25519-fn-dsa-512', leaf, holder, pq_pk: pkOk, sig: b64u(new Uint8Array(64)), pq_sig: b64u(new Uint8Array(665)) })).toBe(false);
+  });
+
+  it('a 512 signature or key under a 1024 suite (and the reverse) -> false', () => {
+    setFalconBackend(tripwire);
+    const leaf = buildLeafBody();
+    expect(verifyPcaFndsa({ alg: 'fn-dsa-1024', leaf, pq_pk: pkOk, sig: sigOk })).toBe(false);
+    expect(verifyPcaFndsa({ alg: 'fn-dsa-512', leaf, pq_pk: b64u(new Uint8Array(FN_DSA_1024_PUBLIC_KEY_BYTES)), sig: b64u(new Uint8Array(FN_DSA_1024_SIGNATURE_BYTES)) })).toBe(false);
+  });
+
+  it('suite names that are inherited object keys do not resolve', () => {
+    for (const k of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'FN-DSA-512', ' fn-dsa-512']) {
+      expect(resolveFnDsaAlg(k)).toBeNull();
+    }
+  });
+
+  it('raw primitive: unknown variant or non-bytes -> false (verify) or a typed throw (sign), never a backend call', () => {
+    setFalconBackend(tripwire);
+    const pk = new Uint8Array(FN_DSA_512_PUBLIC_KEY_BYTES);
+    const sig = new Uint8Array(FN_DSA_512_SIGNATURE_BYTES);
+    expect(fndsaVerify('fn-dsa-256' as never, pk, u('m'), sig)).toBe(false);
+    expect(fndsaVerify('fn-dsa-512', Array.from(pk) as never, u('m'), sig)).toBe(false);
+    expect(fndsaVerify('fn-dsa-512', pk, 'm' as never, sig)).toBe(false);
+    expect(() => fndsaSign('fn-dsa-256' as never, new Uint8Array(4), u('m'))).toThrow(RangeError);
+    expect(() => fndsaSign('fn-dsa-512', new Uint8Array(0), u('m'))).toThrow(TypeError);
+    expect(() => fndsaSign('fn-dsa-512', new Uint8Array(4), 'm' as never)).toThrow(TypeError);
+  });
+});
+
+describe('fail-closed table: backend faults', () => {
+  it('no backend registered -> verification and signing throw the "no FN-DSA backend" error (loud, never true)', () => {
+    const leaf = buildLeafBody();
+    const pq_pk = b64u(new Uint8Array(FN_DSA_512_PUBLIC_KEY_BYTES));
+    const sig = b64u(new Uint8Array(FN_DSA_512_SIGNATURE_BYTES));
+    expect(() => verifyPcaFndsa({ alg: 'fn-dsa-512', leaf, pq_pk, sig })).toThrow(NO_FN_DSA_BACKEND_MESSAGE);
+    expect(() => signPcaWithFndsa({ alg: 'fn-dsa-512', leaf, fnDsa: mockKeypair('fn-dsa-512') })).toThrow(NO_FN_DSA_BACKEND_MESSAGE);
+  });
+
+  it('verify-only backend -> signing throws; a backend returning a short or non-byte signature -> signing throws', () => {
+    const leaf = buildLeafBody();
+    const kp = mockKeypair('fn-dsa-512');
+    setFalconBackend({ verify: () => true });
+    expect(() => signPcaWithFndsa({ alg: 'fn-dsa-512', leaf, fnDsa: kp })).toThrow(/verify-only/);
+    setFalconBackend({ verify: () => true, sign: () => new Uint8Array(665) });
+    expect(() => signPcaWithFndsa({ alg: 'fn-dsa-512', leaf, fnDsa: kp })).toThrow(/expected padded 666 bytes/);
+    setFalconBackend({ verify: () => true, sign: () => 'sig' as never });
+    expect(() => signPcaWithFndsa({ alg: 'fn-dsa-512', leaf, fnDsa: kp })).toThrow(/non-byte signature/);
+  });
+
+  it('signing with a key of the wrong length for the suite, or an empty secret -> typed throw', () => {
+    registerTestBackend();
+    const leaf = buildLeafBody();
+    expect(() => signPcaWithFndsa({ alg: 'fn-dsa-1024', leaf, fnDsa: mockKeypair('fn-dsa-512') })).toThrow(/1793-byte FN-DSA public key/);
+    expect(() => signPcaWithFndsa({ alg: 'fn-dsa-512', leaf, fnDsa: { pk: mockKeypair('fn-dsa-512').pk, sk: new Uint8Array(0) } })).toThrow(/secret-key material/);
+    expect(() => signPcaWithFndsa({ alg: 'nope' as never, leaf, fnDsa: mockKeypair('fn-dsa-512') })).toThrow(RangeError);
+  });
+
+  it('a backend that returns false is a rejection', () => {
+    registerTestBackend();
+    const leaf = buildLeafBody();
+    const kp = mockKeypair('fn-dsa-512');
+    const f = signPcaWithFndsa({ alg: 'fn-dsa-512', leaf, fnDsa: kp });
+    expect(verifyPcaFndsa({ alg: 'fn-dsa-512', leaf, pq_pk: f.pq_pk, sig: f.sig })).toBe(true);
+    setFalconBackend({ verify: () => false });
+    expect(verifyPcaFndsa({ alg: 'fn-dsa-512', leaf, pq_pk: f.pq_pk, sig: f.sig })).toBe(false);
   });
 });

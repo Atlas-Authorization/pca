@@ -19,6 +19,7 @@
 
 import type { StepUpRequest } from './approvals';
 import { describeGoalLineage } from './approvals';
+import { bindingWords } from './approval-render';
 
 // ---- shared channel port --------------------------------------------------------------------------
 
@@ -85,7 +86,24 @@ export function actionSummary(request: StepUpRequest): string {
  * followed by the goal → authority → action chain. Derived purely from the request's own lineage.
  */
 export function lineageLines(request: StepUpRequest): string[] {
-  return [request.lineage.because, ...describeGoalLineage(request.lineage)];
+  return [request.lineage.because, ...describeGoalLineage(request.lineage), ...renderLines(request)];
+}
+
+/**
+ * K7: the canonical render, one line per field (nothing omitted), the banner for an unreviewed action, and the speakable
+ * binding words of H(R). Empty when the request carries no render. Every channel shows the same lines.
+ */
+export function renderLines(request: StepUpRequest): string[] {
+  const r = request.render;
+  if (r === undefined || request.renderDigest === undefined) return [];
+  const out: string[] = [];
+  if (r.unreviewed) out.push('UNREVIEWED ACTION: its definition has not been confirmed, so every value is shown raw and one-tap approval is disabled.');
+  for (const f of r.fields) {
+    const u = f.unit?.kind === 'money' ? ` ${f.unit.ccy} (minor units, exponent ${f.unit.exp})` : '';
+    out.push(`${f.id} [${f.class}]: ${JSON.stringify(f.value).replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, (ch) => `\\u{${ch.codePointAt(0)!.toString(16)}}`)}${u}`);
+  }
+  out.push(`Match code: ${bindingWords(request.renderDigest)}`);
+  return out;
 }
 
 // ---- Slack channel (Block Kit over an incoming webhook) -------------------------------------------
@@ -157,11 +175,15 @@ export function buildSlackMessage(request: StepUpRequest, ctx: ApprovalNotifyCon
   return { text: `Approval needed: ${actionSummary(request)}`, blocks };
 }
 
+/** Add query parameters before any `#fragment` (an approval link may carry its token in the fragment, which must stay last). */
 function appendQuery(url: string, params: Record<string, string>): string {
   const query = Object.entries(params)
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');
-  return url.includes('?') ? `${url}&${query}` : `${url}?${query}`;
+  const hash = url.indexOf('#');
+  const base = hash === -1 ? url : url.slice(0, hash);
+  const fragment = hash === -1 ? '' : url.slice(hash);
+  return `${base}${base.includes('?') ? '&' : '?'}${query}${fragment}`;
 }
 
 /** Slack approval channel. Disabled (and a no-op) unless a webhook URL is configured. */

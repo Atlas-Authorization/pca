@@ -1,4 +1,5 @@
-import { DEFAULT_CATALOG, hashCanonical, type Catalog, type Reversibility } from '@atlasauth/pca';
+import { hashCanonical } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, type Catalog, type Reversibility } from '@atlasauth/pca/ext/research';
 import { labelOf, numCells, type Dim, type Omega, type VerbSpace } from '@atlasauth/pca-intent';
 import { catLabel, resolveCoords } from './box';
 import { worstProvenance } from './friction';
@@ -307,7 +308,7 @@ export function partialError(card: TrustedCard, p: PartialSpec): string | null {
   const slot = card.partial.find((s) => s.path === p.path);
   if (!slot) return `the card has no field ${p.path}`;
   if (slot.kind === 'num') {
-    const inRange = (x: number) => Number.isInteger(x) && x >= slot.lo && x <= slot.hi;
+    const inRange = (x: number) => Number.isInteger(x) && !Object.is(x, -0) && x >= slot.lo && x <= slot.hi;
     if ('upTo' in p) return inRange(p.upTo) && p.upTo < slot.hi ? null : `upTo must be an integer in [${slot.lo}, ${slot.hi - 1}]`;
     if ('from' in p) return inRange(p.from) && p.from > slot.lo ? null : `from must be an integer in [${slot.lo + 1}, ${slot.hi}]`;
     if ('except' in p) return p.except.length > 0 && p.except.every(inRange) ? null : `except values must be integers in [${slot.lo}, ${slot.hi}]`;
@@ -341,5 +342,5 @@ export function expectedTyped(card: TrustedCard, action: ActionValues): string |
   if (!card.typed) return null;
   const v = action.values[card.typed.path];
   if (card.typed.mode === 'last4') return typeof v === 'string' && last4(v).length === 4 ? last4(v) : null;
-  return typeof v === 'number' && Number.isSafeInteger(v) ? String(v) : null;
+  return typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0) ? String(v) : null;
 }

@@ -267,20 +267,20 @@ describe('secureSeed', () => {
   it('draws max(32, length) local and quantum bytes by default', async () => {
     const c = counter();
     const s = src((n) => new Uint8Array(n).fill(1));
-    const r = await secureSeed({ length: 64, randomBytesImpl: c.impl, source: s });
+    const r = await secureSeed({ length: 64, randomBytesImpl: c.impl, source: s, healthTest: false });
     expect(c.asked).toEqual([64]);
     expect(s.asked).toEqual([64]);
     expect(r).toMatchObject({ usedQuantum: true, quantumByteCount: 64, source: 'q' });
     const c2 = counter();
     const s2 = src((n) => new Uint8Array(n).fill(1));
-    await secureSeed({ length: 8, randomBytesImpl: c2.impl, source: s2 });
+    await secureSeed({ length: 8, randomBytesImpl: c2.impl, source: s2, healthTest: false });
     expect(c2.asked).toEqual([32]);
     expect(s2.asked).toEqual([32]);
   });
   it('mixes with the requested length and context, and zeroises the local draw', async () => {
     const c = counter();
     const q = new Uint8Array(32).fill(5);
-    const r = await secureSeed({ length: 20, context: 'kgen', randomBytesImpl: c.impl, source: src(() => q) });
+    const r = await secureSeed({ length: 20, context: 'kgen', randomBytesImpl: c.impl, source: src(() => q), healthTest: false });
     const expected = refMix(Uint8Array.from({ length: 32 }, (_, i) => (i * 7 + 3) & 0xff), q, 20, 'kgen');
     expect(settle(() => Array.from(r.seed))).toEqual({ ok: true, value: Array.from(expected) });
     expect(settle(() => c.bufs[0]!.every((b) => b === 0))).toEqual({ ok: true, value: true });

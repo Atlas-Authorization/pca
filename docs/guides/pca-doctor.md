@@ -142,7 +142,7 @@ deployment unprotected:
   50 USD one, and an unknown root caveat type must deny. An allowed over-limit payment is a **FAIL**; a denied control
   payment makes the probe inconclusive (**WARN**);
 - `insecureAllowUnenforced: true` on `requirePCA` is a **FAIL**; a `require` list that drops any default required check
-  (`counter`, `revocation`, `plan_root_authorized`, `audience`, `validity`, `grant_ref_bound`) is a **WARN**.
+  (`counter_format`, `replay`, `revocation`, `plan_root_authorized`, `audience`, `validity`, `grant_ref_bound`) is a **WARN**.
 
 ## What pca-doctor does not do
 

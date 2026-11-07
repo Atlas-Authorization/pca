@@ -164,6 +164,8 @@ export async function realVerify(s: Spec, nowMs = nowOf(s), gOverride?: Capabili
   const v = await verifyPCActn(pp, {
     grant: G,
     now: nowMs,
+    require: [], // 0.5 default-denies on not-enforced checks; the model compares the per-check report, not that policy
+    insecureSkipPlanRootCheck: true, // K5: no authorized plan configured fails plan_root_authorized; the model has no plan-root check
     audience: s.audMode === 'string' ? AUD : s.audMode === 'null' ? null : undefined,
     context: { plan: PLAN, risk: LOW_RISK, params: {}, budget: { B: 1, tau: nowMs, asOf: nowMs } },
   });

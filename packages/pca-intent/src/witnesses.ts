@@ -1,4 +1,4 @@
-import { DEFAULT_CATALOG, type Catalog } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, type Catalog } from '@atlasauth/pca/ext/research';
 import { cellRep, cellStats, decodeCell, encodeCell, numCells, verbCellCount, type Omega, type Outcome, type VerbSpace } from './omega';
 import { admitter, type PolicyInput } from './policy';
 import { renderQuestion } from './render';

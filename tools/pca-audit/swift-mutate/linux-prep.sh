@@ -5,10 +5,11 @@
 # 2. Builds liboqs (pinned tag OQS_TAG, ML-DSA-65 and ML-DSA-87 only, static, no OpenSSL) once per box into
 #    $HOME/.cache/liboqs-$OQS_TAG-mldsa (flock-guarded: concurrent jobs on one box wait for the first build).
 # 3. Patches the COPY of sdks/swift-pca so it builds on Linux:
-#    - CryptoKit -> swift-crypto (`import Crypto`, Sources AND Tests; the test target gets the Crypto product), the iOS-only
-#      AtlasPCAStepUp target removed;
-#    - a C target COQS (shim over liboqs' OQS_SIG_ml_dsa_65_verify / OQS_SIG_ml_dsa_87_verify) and MLDSA.swift's Linux branch
-#      calls it for both levels. liboqs >= 0.12 implements FIPS 204 final; its plain verify is pure ML-DSA with the EMPTY context
+#    - CryptoKit -> swift-crypto (`import Crypto`, Sources AND Tests; the test targets get the Crypto product). AtlasPCAStepUp
+#      stays: its only CryptoKit use is Curve25519 (swift-crypto has it), the Keychain store is `#if canImport(Security)` and
+#      URLSession comes from FoundationNetworking, so it builds and its tests run on Linux (it is mutated like the verifier);
+#    - a C target COQS (shim over liboqs' OQS_SIG_ml_dsa_65_verify / OQS_SIG_ml_dsa_87_verify); MLDSA.swift's `#if canImport(COQS)`
+#      branch calls it for both levels. liboqs >= 0.12 implements FIPS 204 final; its plain verify is pure ML-DSA with the EMPTY context
 #      string, the same semantics as the macOS CryptoKit path (MLDSA65/MLDSA87.PublicKey.isValidSignature(_:for:)) and the TS
 #      reference (@noble/post-quantum ml_dsa65 / ml_dsa87 verify without ctx). Raw FIPS 204 encodings (no ASN.1): ML-DSA-65
 #      pk 1952 / sig 3309 bytes, ML-DSA-87 pk 2592 / sig 4627 bytes, as on macOS.
@@ -47,7 +48,6 @@ fi
 test -f "$OQS/lib/liboqs.a" && test -f "$OQS/include/oqs/oqs.h"
 
 P="${1:-sdks/swift-pca}"; cd "$ORIG/$P"
-rm -rf Sources/AtlasPCAStepUp Tests/AtlasPCAStepUpTests
 grep -rl "import CryptoKit" Sources Tests | xargs -r sed -i 's/^import CryptoKit$/import Crypto/'
 mkdir -p Sources/COQS/include
 cat > Sources/COQS/include/coqs_shim.h <<'H'
@@ -79,7 +79,11 @@ import os
 oqs = os.environ['OQS']
 s = open('Package.swift').read()
 if 'swift-crypto' not in s:
-    s = ''.join(l for l in s.splitlines(True) if 'AtlasPCAStepUp' not in l)
+    for t_old in ['.target(name: "AtlasPCAStepUp", path:', '.testTarget(name: "AtlasPCAStepUpTests", dependencies: ["AtlasPCAStepUp"]']:
+        assert s.count(t_old) == 1, 'Package.swift: %s not found' % t_old
+    s = s.replace('.target(name: "AtlasPCAStepUp", path:', '.target(name: "AtlasPCAStepUp", dependencies: [.product(name: "Crypto", package: "swift-crypto")], path:', 1)
+    s = s.replace('.testTarget(name: "AtlasPCAStepUpTests", dependencies: ["AtlasPCAStepUp"]',
+                  '.testTarget(name: "AtlasPCAStepUpTests", dependencies: ["AtlasPCAStepUp", .product(name: "Crypto", package: "swift-crypto")]', 1)
     s = s.replace('    targets: [', '    dependencies: [.package(url: "https://github.com/apple/swift-crypto.git", from: "3.0.0")],\n    targets: [', 1)
     s = s.replace('.target(name: "AtlasPCAVerify", path: "Sources/AtlasPCAVerify")',
                   '.target(name: "COQS", path: "Sources/COQS", cSettings: [.unsafeFlags(["-I%s/include"])], linkerSettings: [.unsafeFlags(["-L%s/lib", "-loqs"])]),\n'
@@ -90,22 +94,6 @@ if 'swift-crypto' not in s:
     assert s.count(t_old) == 1, 'Package.swift: AtlasPCAVerifyTests target not found'
     s = s.replace(t_old, '.testTarget(name: "AtlasPCAVerifyTests", dependencies: ["AtlasPCAVerify", .product(name: "Crypto", package: "swift-crypto")]', 1)
     open('Package.swift', 'w').write(s)
-p = 'Sources/AtlasPCAVerify/MLDSA.swift'
-m = open(p).read()
-if 'COQS' not in m:
-    m = m.replace('import Foundation\n', 'import Foundation\nimport COQS\n', 1)
-    # the level-dispatching verify(_:publicKey:message:signature:): its length guard, then the CryptoKit branch
-    old = '        guard pk.count == pkLen, sig.count == sigLen else { return false }\n'
-    assert m.count(old) == 1, 'MLDSA.swift: length guard of verify(_ level:) not found'
-    m = m.replace(old, old +
-        '        #if os(Linux)\n'
-        '        let lv: Int32 = level == .mlDsa65 ? 65 : 87\n'
-        '        return msg.withUnsafeBufferPointer { mb in sig.withUnsafeBufferPointer { sb in pk.withUnsafeBufferPointer { pb in\n'
-        '            atlas_mldsa_verify(lv, mb.baseAddress, mb.count, sb.baseAddress, sb.count, pb.baseAddress, pb.count) == 1 } } }\n'
-        '        #else\n', 1)
-    old2 = '        return false\n    }\n\n    static func verify(publicKey'
-    assert m.count(old2) == 1, 'MLDSA.swift: tail of verify(_ level:) not found'
-    m = m.replace(old2, '        return false\n        #endif\n    }\n\n    static func verify(publicKey', 1)
-    open(p, 'w').write(m)
+# MLDSA.swift verifies through COQS itself under `#if canImport(COQS)` (the target added above), so it needs no patch
 PY
 swift build --build-tests -c debug 2>&1 | tail -15

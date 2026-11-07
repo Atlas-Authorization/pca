@@ -1,0 +1,30 @@
+{
+ "trait": "pca.cost_incurring",
+ "card": {
+  "verb": "golden.cost_incurring",
+  "title": "Do the cost incurring thing",
+  "text": "Do the cost incurring thing. This action incurs cost.",
+  "risk": "elevated",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "amount_cap"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.cost_incurring"
+ ],
+ "floor": {
+  "risk": 1,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "amount_cap"
+  ],
+  "context": [],
+  "prules": []
+ }
+}

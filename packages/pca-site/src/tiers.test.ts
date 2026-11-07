@@ -104,6 +104,7 @@ describe('tier rules (§5 tiers)', () => {
     expect(parseTierRule({ tier: 1, rate: { max: 30, per_secs: 60, key: 'agent' } }).rate).toEqual({ max: 30, per_secs: 60, key: 'agent' });
     expect(parseTierRule({ tier: 3, jit: { irreversible: 'typed', reversible: 'none' }, max_total_cents: 500000 }).max_total_cents).toBe(500000);
     expect(parseTierRule({ tier: 4, bond_min_cents: 10000 }).bond_min_cents).toBe(10000);
+    expect(() => parseTierRule({ tier: 4, bond_min_cents: -0 })).toThrow(TypeError); // strict profile: never -0
   });
   it('unknown members and misplaced members are configuration errors', () => {
     expect(() => parseTierRule({ tier: 2, tierr: 3 })).toThrow(/unknown member/);
