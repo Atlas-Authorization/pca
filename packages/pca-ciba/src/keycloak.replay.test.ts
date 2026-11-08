@@ -19,7 +19,7 @@ const T = JSON.parse(raw.toString('utf8')) as { provider: string; version: strin
 
 function stepUp() {
   const a = agent({ principal: generateKeyPair(), goal: 'g', permissions: { stripe: ['payout'] }, limits: { payout: '$100' }, aud: 'x', riskPolicy: { theta1: 0.3, theta2: 0.6 }, now: 0 });
-  const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { now: 1, goal: 'g' });
+  const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1, goal: 'g' });
   if (r.kind !== 'step_up') throw new Error('expected step_up');
   return r.request;
 }

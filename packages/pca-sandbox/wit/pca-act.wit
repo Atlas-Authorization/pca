@@ -1,0 +1,23 @@
+package pca:act@0.1.0;
+
+/// The only authority a sandboxed tool holds. A handle is an index into a per-sandbox table; each one stands for one
+/// operation that a verified PCActn authorized, with the signed params. The tool cannot change the params, name another
+/// resource, or reach anything the table does not hold.
+///
+/// Errors are the host's signed 32-bit codes: -1 unknown handle, -2 spent, -3 result too large, -5 executor error, -6 no
+/// executor.
+interface invoke {
+  /// Number of handles in the table; valid handles are 1..count.
+  handle-count: func() -> u32;
+  /// The verb a handle carries.
+  handle-verb: func(handle: u32) -> result<string, s32>;
+  /// Run the operation behind a handle. The use is consumed before the host runs it and stays consumed on failure.
+  invoke: func(handle: u32) -> result<list<u8>, s32>;
+}
+
+/// A tool built for this world has no wasi:filesystem, wasi:sockets, wasi:http, wasi:clocks, wasi:random or
+/// wasi:cli import, so it has no ambient authority: pure compute plus the handles above.
+world tool {
+  import invoke;
+  export run: func() -> s32;
+}

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-spiffe",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Bridge PCA agent identity with SPIFFE/SPIRE workload identity: parse/verify JWT-SVIDs and X.509-SVID SPIFFE IDs, map a SPIFFE ID to/from a PCA agent holder.",
   "keywords": [
     "spiffe",
@@ -41,6 +41,7 @@
     "jose": "^5.9.6"
   },
   "devDependencies": {
+    "@atlasauth/pca-grants": "workspace:*",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
@@ -54,5 +55,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

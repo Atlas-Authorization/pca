@@ -181,7 +181,7 @@ function pcactnFixture() {
   void _s;
   return { root, agent: A, body };
 }
-const ctx = (root: Capability) => ({ grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+const ctx = (root: Capability) => ({ grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true, insecureSkipPlanRootCheck: true });
 
 describe('a real PCActn signed with the LESS suites, end to end through verifyPCActnCore', () => {
   it('pure less-cat1: allowed; corrupted sig fails; stripped alg is a wire failure', async () => {

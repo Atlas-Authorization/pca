@@ -1,5 +1,7 @@
 # @atlasauth/pca-a2a
 
+> Maturity: **production**. Breaking changes to APIs or defaults are never made in a patch release. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A2A (Agent2Agent) adapter for Proof-Carrying Authority (PCA). A2A defines how agents discover each other and exchange tasks; it does not prove that a relayed request is authorized by the principal behind it. This package binds PCA proofs onto three A2A surfaces, failing closed throughout:
 
 1. **Proof-carrying tasks** - attach a PCActn (a signed single-action proof with its capability chain) to a Task or Message under a namespaced `metadata` key, and verify it on receipt.
@@ -79,9 +81,35 @@ server-derived threshold. `result` is the `PcaVerdict` (plus `reason`).
 - Payments: `a2aPaymentMandateFromPca`, `pcaBindingFromA2APaymentMandate`, `verifyA2APaymentMandate`, `A2A_AP2_CONTEXT`.
 - `human_present` is `false` unless you pass `humanSignerSet` (the builder then verifies the principal co-signature at t=3) or assert `humanPresent: true` yourself. A `threshold` field alone is never trusted (breaking change).
 
+## Failure modes
+
+| Missing or wrong | Result |
+|---|---|
+| Card with no signatures, body mutated after signing, wrong key, unresolvable key, no key or JWKS supplied | `verifyAgentCard` `{ ok: false, reason }` |
+| Card with no JSON form (NaN, lone surrogate, cycle) | `{ ok: false, reason: 'agent card has no canonical form: ...' }`; issuing throws |
+| `schema: 'a2a-1.0'` and the card is missing a required A2A 1.0 field or has a wrongly typed one | `{ ok: false }` listing each path; issuing throws |
+| `profile: 'a2a-1.0'` without a `kid` | issuing throws |
+| Non-canonical JWS spelling | rejected before the signature is checked |
+| Task has no proof (with `require: true`) | `ok: false` |
+| Proof present but invalid, or the decision is not allow | `ok: false`, the verdict in `result` |
+| No `grant` and no `expectedRootIssuer` | throws `A2AAuthorityError` (`authority_required`) |
+| Mandate amount, currency, merchant, payment method or `x_pca` field differs from the PCActn's; params plaintext missing | `ok: false` |
+| Float, negative or unsafe amount | refused when building and when verifying |
+| `human_present: true` without a verified t=3 principal co-signature | refused |
+
+## Limits
+
+- The signed bytes are RFC 8785 canonical JSON. A card signed by an earlier 0.5 build over PCA canonical JSON differs only for keys that mix characters above U+FFFF with U+E000 to U+FFFF, and for floats; re-sign such a card.
+- `validateAgentCard1` checks the A2A 1.0 `AgentCard` message (names in ProtoJSON camelCase), not the contents of security schemes. It is opt-in (`schema: 'a2a-1.0'`).
+- A card proves who signed it; to trust the agent's authority, resolve the passport and verify a PCActn.
+
 ## Status
 
-Experimental. The A2A object model here is structural and permissive, not a full A2A SDK. The Payment Mandate shape follows the AP2 vocabulary but its JSON-LD context is a placeholder and PCA-specific fields live in a non-standard `x_pca` extension; validate against the official AP2 schemas before production use. The cryptography is unaudited.
+Production. Pinned to A2A 1.0.0 (Agent Card signing, section 8.4).
+
+- Agent Card signatures: by default a detached JWS with an unencoded payload (`b64:false`). Pass `profile: 'a2a-1.0'` (and a `kid`) to `issueSignedAgentCard` to produce the A2A 1.0 form (`BASE64URL(header).BASE64URL(payload)`, `typ: "JOSE"`), which any A2A 1.0 verifier can check. `verifyAgentCard` accepts both forms. The signed bytes are the RFC 8785 canonical JSON of the card, checked against the RFC's examples and an independent reference.
+- The A2A object model is structural and permissive, not a full A2A SDK.
+- The payment mandate is a PCA-defined envelope, not an AP2 credential: AP2 mandates are SD-JWTs (use `@atlasauth/pca-ap2`) and AP2 defines no JSON-LD context, so `A2A_AP2_CONTEXT` is an identifier chosen here. Amounts are integers in minor units; a float, negative or unsafe amount is refused when building and when verifying. PCA fields live in the non-standard `x_pca` extension.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 

@@ -31,6 +31,9 @@ import {
   type RouteRule,
 } from './index';
 
+/** Signature-only on purpose (0.5: an explicit mode): these tests are about routing, adapters and binding; full mode is in full-policy.test.ts. */
+const SIG_ONLY = { insecureSkipPlanRootCheck: true, policy: { mode: 'signature-only' as const }, replayGuard: { claim: async () => true }, requireChecks: [] as string[] };
+
 const PKG = join(__dirname, '..');
 const AUD = 'ins_acme';
 
@@ -66,6 +69,7 @@ function gwOpts(m: Minted, routes: RouteRule[], extra?: Partial<GatewayOptions>)
     routes,
     bindRequest: false, // these tests are about routing/adapters; binding is covered in bind.test.ts
     resolveGrant: async (ref): Promise<Capability | null> => (ref === m.grantRef ? m.grant : null),
+    ...SIG_ONLY,
     ...extra,
   };
 }

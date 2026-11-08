@@ -1,0 +1,26 @@
+{
+ "trait": "pca.public_exposure",
+ "card": {
+  "verb": "golden.public_exposure",
+  "title": "Do the public exposure thing",
+  "text": "Do the public exposure thing. This action makes content public.",
+  "risk": "high",
+  "escalation": "confirm",
+  "reversibility": "irreversible",
+  "blast_ppm": 50000,
+  "needs": [],
+  "context": []
+ },
+ "closure": [
+  "pca.public_exposure"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "irreversible",
+  "blast_ppm": 0,
+  "esc": 1,
+  "caveats": [],
+  "context": [],
+  "prules": []
+ }
+}

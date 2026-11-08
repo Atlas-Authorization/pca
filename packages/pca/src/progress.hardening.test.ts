@@ -7,21 +7,8 @@ import {
   verifyHeadConsistency,
   verifyTreeHead,
 } from './ledger';
-import {
-  AttestedStateSource,
-  InMemoryStateSource,
-  ProgressTracker,
-  type Goal,
-  type StateAttestation,
-  anchorTrajectoryHead,
-  attestedStateVerifier,
-  commitGoal,
-  trajectoryAnchorCommit,
-  trajectoryHead,
-  verifyProgressStep,
-  verifyStateAttestation,
-  verifyTrajectoryAnchor,
-} from './progress';
+import { AttestedStateSource, InMemoryStateSource, ProgressTracker, type Goal, type StateAttestation, anchorTrajectoryHead, attestedStateVerifier, commitGoal, trajectoryAnchorCommit, trajectoryHead, verifyStateAttestation, verifyTrajectoryAnchor } from './progress';
+import { verifyProgressStep } from './test-support/progress-selfreported';
 
 const G = generateKeyPair();
 const Gpub = encodeKey(G.publicKey);

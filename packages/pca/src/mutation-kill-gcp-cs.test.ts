@@ -51,9 +51,11 @@ const oidOf = (d: string) => {
   return tlv(0x06, Uint8Array.from(body));
 };
 const nm = (cn: string) => seq(set(seq(oidOf('2.5.4.3'), utf8(cn))));
-function mkCert(o: { spki: Uint8Array; cn: string; issuerCn: string; issuerPriv: crypto.KeyObject; notBefore?: string; notAfter?: string; ec?: boolean }): Uint8Array {
+function mkCert(o: { spki: Uint8Array; cn: string; issuerCn: string; issuerPriv: crypto.KeyObject; notBefore?: string; notAfter?: string; ec?: boolean; ca?: boolean }): Uint8Array {
+  // BasicConstraints CA:TRUE (critical) + KeyUsage keyCertSign|cRLSign: the B15 strict chain profile requires every issuer to be a CA.
+  const caExt = Uint8Array.from(Buffer.from('a3233021300f0603551d130101ff040530030101ff300e0603551d0f0101ff040403020106', 'hex'));
   const alg = o.ec ? seq(oidOf('1.2.840.10045.4.3.2')) : seq(oidOf('1.2.840.113549.1.1.11'), Uint8Array.from([5, 0]));
-  const tbs = seq(tlv(0xa0, int(2)), int(0x2a), alg, nm(o.issuerCn), seq(utc(o.notBefore ?? '230101000000Z'), utc(o.notAfter ?? '350101000000Z')), nm(o.cn), o.spki);
+  const tbs = seq(tlv(0xa0, int(2)), int(0x2a), alg, nm(o.issuerCn), seq(utc(o.notBefore ?? '230101000000Z'), utc(o.notAfter ?? '350101000000Z')), nm(o.cn), o.spki, ...(o.ca ? [caExt] : []));
   const sig = crypto.sign('sha256', Buffer.from(tbs), o.issuerPriv);
   return seq(tbs, alg, tlv(0x03, cat(Uint8Array.from([0]), new Uint8Array(sig))));
 }
@@ -350,7 +352,7 @@ describe('verify: x5c anchoring', () => {
   const CA = rsa();
   const LEAF = rsa();
   const mkChain = (o: { leafNotAfter?: string; leafNotBefore?: string; caNotAfter?: string; caNotBefore?: string; signer?: crypto.KeyObject } = {}) => {
-    const root = mkCert({ spki: CA.spki, cn: 'root', issuerCn: 'root', issuerPriv: CA.priv, notBefore: o.caNotBefore, notAfter: o.caNotAfter });
+    const root = mkCert({ spki: CA.spki, cn: 'root', issuerCn: 'root', issuerPriv: CA.priv, ca: true, notBefore: o.caNotBefore, notAfter: o.caNotAfter });
     const leaf = mkCert({ spki: LEAF.spki, cn: 'leaf', issuerCn: 'root', issuerPriv: o.signer ?? CA.priv, notBefore: o.leafNotBefore, notAfter: o.leafNotAfter });
     return { root, leaf, rootPem: new crypto.X509Certificate(Buffer.from(root)).toString() };
   };
@@ -374,7 +376,7 @@ describe('verify: x5c anchoring', () => {
     // a well-formed root that did NOT sign the chain is not an anchor
     const strangerRoot = mkChain();
     const strangerCa = rsa();
-    const strangerPem = new crypto.X509Certificate(Buffer.from(mkCert({ spki: strangerCa.spki, cn: 'stranger', issuerCn: 'stranger', issuerPriv: strangerCa.priv }))).toString();
+    const strangerPem = new crypto.X509Certificate(Buffer.from(mkCert({ spki: strangerCa.spki, cn: 'stranger', issuerCn: 'stranger', issuerPriv: strangerCa.priv, ca: true }))).toString();
     expect(await anchor({ rootCertsPem: [strangerPem] }, ev(x5c(GOOD.leaf)))()).toBe(`${PREFIX}x5c chain does not anchor in a configured GCP trust root`);
     expect(await anchor({ rootCertsPem: [strangerPem, strangerRoot.rootPem] }, ev(x5c(GOOD.leaf)))()).toBe('OK');
     expect(await anchor({ rootCertsPem: [strangerCa.pub.export({ type: 'spki', format: 'pem' }) as string] }, ev(x5c(GOOD.leaf)))()).toBe(`${PREFIX}x5c chain does not anchor in a configured GCP trust root`);
@@ -428,12 +430,12 @@ describe('verify: x5c anchoring', () => {
     expect(await anchor(a, ev(x5c(wrongLink.leaf, wrongLink.root)))()).toBe(`${PREFIX}x5c link 0 is not signed by the certificate above it`);
     // three certificates: both links are checked
     const mid = rsa();
-    const midCert = mkCert({ spki: mid.spki, cn: 'mid', issuerCn: 'root', issuerPriv: CA.priv });
+    const midCert = mkCert({ spki: mid.spki, cn: 'mid', issuerCn: 'root', issuerPriv: CA.priv, ca: true });
     const leaf3 = mkCert({ spki: LEAF.spki, cn: 'leaf', issuerCn: 'mid', issuerPriv: mid.priv });
     expect(await anchor(a, ev(x5c(leaf3, midCert, GOOD.root)))()).toBe('OK');
     const leaf3bad = mkCert({ spki: LEAF.spki, cn: 'leaf', issuerCn: 'mid', issuerPriv: other.priv });
     expect(await anchor(a, ev(x5c(leaf3bad, midCert, GOOD.root)))()).toBe(`${PREFIX}x5c link 0 is not signed by the certificate above it`);
-    const midBad = mkCert({ spki: mid.spki, cn: 'mid', issuerCn: 'root', issuerPriv: other.priv });
+    const midBad = mkCert({ spki: mid.spki, cn: 'mid', issuerCn: 'root', issuerPriv: other.priv, ca: true });
     expect(await anchor(a, ev(x5c(leaf3, midBad, GOOD.root)))()).toBe(`${PREFIX}x5c link 1 is not signed by the certificate above it`);
   });
 });

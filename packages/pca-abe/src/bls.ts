@@ -24,7 +24,7 @@ const Fp = bls12_381.fields.Fp;
 const Fp12 = bls12_381.fields.Fp12;
 
 /** Domain-separation tag for hashing an attribute string to a point in G1 (RFC 9380 SSWU_RO). */
-const ATTR_DST = 'ATLAS-PCA-ABE:BSW07:H-G1:SHA256-SSWU-RO:v2';
+const ATTR_DST = 'ATLAS-PCA-ABE:FAME:H-G1:SHA256-SSWU-RO:v1';
 
 /** The fixed G1 generator the whole system is parameterised over. */
 export const G1_BASE = bls12_381.G1.ProjectivePoint.BASE;
@@ -92,15 +92,28 @@ export function isIllFormedUtf16(s: string): boolean {
  */
 export function hashAttrToG1(attr: string): G1Point {
   if (isIllFormedUtf16(attr)) throw new RangeError('attribute is not well-formed UTF-16');
-  const msg = new TextEncoder().encode(attr);
+  return hashToG1(new TextEncoder().encode(attr));
+}
+
+/** RFC 9380 hash-to-curve of arbitrary bytes into G1 under the package's domain-separation tag (a random oracle). */
+export function hashToG1(msg: Uint8Array): G1Point {
   const h = bls12_381.G1.hashToCurve(msg, { DST: ATTR_DST });
   // Normalise the hash-to-curve result into a ProjectivePoint so the full (de)serialisation API is available.
   return bls12_381.G1.ProjectivePoint.fromAffine(h.toAffine());
 }
 
+/** The G1 identity (sums of terms whose coefficient is 0 need it; `multiply` refuses a zero scalar). */
+export const G1_ZERO = bls12_381.G1.ProjectivePoint.ZERO;
+
 /** Scalar-multiply a G1 point. */
 export function g1Mul(p: G1Point, k: bigint): G1Point {
   return p.multiply(Fr.create(k));
+}
+
+/** Like {@link g1Mul} but a scalar that is 0 mod r gives the identity instead of throwing. */
+export function g1MulZ(p: G1Point, k: bigint): G1Point {
+  const c = Fr.create(k);
+  return c === 0n ? G1_ZERO : p.multiply(c);
 }
 
 /** Scalar-multiply a G2 point. */

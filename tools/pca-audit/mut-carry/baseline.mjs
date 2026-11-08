@@ -22,6 +22,7 @@ if (!ids.length) {
 }
 const mine = JSON.parse(fs.readFileSync(path.join(snap, 'meta.json'), 'utf8'));
 const entries = {}, used = [], skipped = [];
+const LEDGER = /(^|\/)sdk\/(.*\/)?(mutation-run-errors|mutation-equivalents|[^/]*mutants-ledger)[^/]*\.json$/;
 fs.mkdirSync(out, { recursive: true });
 for (const id of ids) {
   const d = path.join(out, `run-${id}`);
@@ -32,6 +33,9 @@ for (const id of ids) {
   if (!fs.existsSync(path.join(sdir, 'meta.json'))) { skipped.push(`${id}: no snapshot`); continue; }
   const meta = JSON.parse(fs.readFileSync(path.join(sdir, 'meta.json'), 'utf8'));
   if (meta.tool_hash !== mine.tool_hash) { skipped.push(`${id}: other mutator/config (tool hash differs)`); continue; }
+  // Ledgers (equivalents, run-error proofs) are merge-side bookkeeping no test reads, so editing one must not void the baseline.
+  // Older snapshots still hold them; drop them from the downloaded copy only (new ones in mine count as additions).
+  for (const rel of walk(sdir).filter((f) => LEDGER.test(f))) fs.rmSync(path.join(sdir, rel));
   const cmp = compareSnapshots(sdir, snap);
   if (!cmp.ok) { skipped.push(`${id}: tests/corpus changed beyond additions (${cmp.reasons.length}: ${cmp.reasons.slice(0, 3).join('; ')})`); continue; }
   let n = 0;

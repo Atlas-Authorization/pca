@@ -1,0 +1,13 @@
+[
+  {
+    "id": "api-github-com",
+    "repo": "github/rest-api-description",
+    "ref": "755ee33b4a81d51f6f07a902cce26cbec3b822f2",
+    "path": "descriptions/api.github.com/api.github.com.json",
+    "sha256": "3177ad6a86ca04c57a9bef3fc24e28a339efb8eb040c6f950af3d3ed2fee7fa3",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/github/rest-api-description/blob/main/LICENSE.md",
+    "bytes": 13502446
+  }
+]

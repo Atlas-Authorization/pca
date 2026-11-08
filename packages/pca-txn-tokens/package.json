@@ -1,7 +1,7 @@
 {
   "name": "@atlasauth/pca-txn-tokens",
-  "version": "0.4.3",
-  "description": "Express a PCA capability chain as OAuth Token Exchange (RFC 8693) nested sub/act claims + a Transaction-Tokens-for-agents profile — standards-native chain-of-custody.",
+  "version": "0.5.0",
+  "description": "Express a PCA capability chain as OAuth Token Exchange (RFC 8693) nested sub/act claims + a Transaction-Tokens-for-agents profile \u2014 standards-native chain-of-custody.",
   "keywords": [
     "token exchange",
     "rfc 8693",
@@ -54,5 +54,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

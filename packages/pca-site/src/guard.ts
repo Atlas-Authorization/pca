@@ -1,21 +1,28 @@
 import {
-  PROBLEM_BASE,
   defaultExtract,
+  pcactnDigest,
+  missingAuthorizeComponents,
+  requireAuthorized,
+  requirePCA,
+  type AuthorizeOptions,
+  type AuthorizedOperation,
+  type PCActn,
+  type PcaOperation,
+  type PcaRequestLike,
+  type PcaVerdict,
+  type RequirePcaOptions,
+  type SignerSuiteOpts,
+} from '@atlasauth/pca';
+import {
+  PROBLEM_BASE,
   intentActionDigest,
   intentProblem,
-  pcactnDigest,
-  requirePCA,
   signIntentRequired,
   type Friction,
   type IntentProblemKind,
   type IntentRequiredBody,
-  type PCActn,
-  type PcaRequestLike,
-  type PcaVerdict,
-  type RequirePcaOptions,
   type SignedIntentRequired,
-  type SignerSuiteOpts,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 import { frictionRank } from '@atlasauth/pca-wallet';
 import { PCA_PROOF_COMPONENT, decodeProofHeader, verifySignedRequest, type KeyDirectory, type KeyResolver, type ReplayCache, type VerifyResult } from '@atlasauth/pca-webbotauth';
 import { parseSitePolicy, type SitePolicy } from './policy';
@@ -31,7 +38,9 @@ import { NO_FACTS, classifyPresentedTier, type AccessTier, type PresentedFacts, 
  *   2. Tier 1 `web_bot_auth`: RFC 9421 signature in the web-bot-auth profile (`@atlasauth/pca-webbotauth`). When a
  *      signature is present it must verify, whatever the tier; when it covers `PCA-Action`, the covered proof is the one
  *      the PCA step verifies (no swapping the proof under a valid signature);
- *   3. Tier 2 `requirePCA` (chain, aud, counter, revocation, default-deny), and the PCActn's verb must be the route's;
+ *   3. Tier 2 `requirePCA` (chain, aud, counter, revocation, default-deny), and the PCActn's verb must be the route's.
+ *      With the `operation` option it is `authorize` instead: every component required and the proof bound to the
+ *      route's operation (verb, resource, params);
  *   4. Tier 3 the INTENT PORT: schema, session, layers, accumulators, facts, provenance (the V3/V5–V9 verifier
  *      modules implement it). It may admit, deny with a sibling problem type, or ask: `intent_required` is signed with
  *      the site key and answered as an RFC 9457 problem (403); it is delivered to the wallet when the port's
@@ -70,6 +79,8 @@ export interface SiteDecision {
   agentKeyId?: string;
   pcactn?: PCActn;
   verdict?: PcaVerdict;
+  /** With the `operation` option: the operation the Tier 2+ decision is bound to (`id` is the operation id). */
+  operation?: AuthorizedOperation;
   /** Tier 3: the signed question when the decision is `intent_required`. */
   intentRequired?: SignedIntentRequired;
 }
@@ -151,8 +162,16 @@ export interface SiteGuardOptions {
   /** Map a request to its verb (from the route, the MCP tool, the OpenAPI operation). null = an unmapped route: denied. */
   verbOf: (req: SiteRequest) => string | null;
   webBotAuth?: WebBotAuthOptions;
-  /** requirePCA options (the audience is taken from `audience`). */
-  pca?: Omit<RequirePcaOptions, 'audience' | 'extract'>;
+  /** requirePCA options (the audience is taken from `audience`). With `operation`, `plan: 'single-step'` is also accepted. */
+  pca?: Omit<RequirePcaOptions, 'audience' | 'extract' | 'operation'> & { plan?: 'single-step' };
+  /**
+   * The operation a Tier 2+ route executes, from the site's own routing (the route's verb and resource, the parsed body
+   * as params), never from the PCActn. REQUIRED with `pca` since 0.5, unless `pca.insecureAllowUnboundOperation` is set
+   * (migration only). The PCA step runs `authorize`: `pca` must then name a `budgetStore`, `hooks.revocation` and
+   * `resolveGrant` (construction throws otherwise), the proof must be for exactly this operation, and its params are what
+   * the grant's limits evaluate. null denies.
+   */
+  operation?: (req: SiteRequest, verb: string) => PcaOperation | null | undefined | Promise<PcaOperation | null | undefined>;
   intent?: IntentPort;
   jit?: JitPort;
   bond?: BondPort;
@@ -163,7 +182,7 @@ export interface SiteGuardOptions {
   now?: () => number;
 }
 
-const OPTION_KEYS = ['audience', 'policy', 'verbOf', 'webBotAuth', 'pca', 'intent', 'jit', 'bond', 'evidence', 'rateLimiter', 'siteKey', 'now'];
+const OPTION_KEYS = ['audience', 'policy', 'verbOf', 'webBotAuth', 'pca', 'intent', 'jit', 'bond', 'evidence', 'rateLimiter', 'siteKey', 'now', 'operation'];
 
 function problem(status: number, type: string, title: string, detail: string, extra: Record<string, string> = {}): Pick<SiteDecision, 'status' | 'headers' | 'body'> {
   return { status, headers: { 'Content-Type': 'application/problem+json', ...extra }, body: { type, title, status, detail } };
@@ -174,6 +193,9 @@ function lowerHeaders(h: SiteRequest['headers']): Record<string, string | string
   for (const [k, v] of Object.entries(h)) if (v !== undefined) out[k.toLowerCase()] = v;
   return out;
 }
+
+/** The PCA step's request: the covered proof (if any) and, for the `operation` mapping, the site request and its verb. */
+type SitePcaRequest = PcaRequestLike & { __proof?: PCActn; __site?: SiteRequest; __verb?: string };
 
 export const PROBLEM_INSUFFICIENT_TIER = `${PROBLEM_BASE}insufficient-tier`;
 
@@ -191,7 +213,30 @@ export function siteGuard(options: SiteGuardOptions): (req: SiteRequest) => Prom
     if (rule.tier >= 2 && !options.pca) throw new TypeError(`siteGuard: ${verb} is Tier ${rule.tier} but no pca (requirePCA) options are given`);
     if (rule.rate && !options.rateLimiter) throw new TypeError(`siteGuard: ${verb} has a rate rule but no rateLimiter`);
   }
-  const guard = options.pca ? requirePCA({ ...options.pca, audience: options.audience, extract: (r) => (r as PcaRequestLike & { __proof?: PCActn }).__proof ?? defaultExtract(r) }) : null;
+  if (options.pca && options.operation === undefined && !options.pca.insecureAllowUnboundOperation) {
+    throw new TypeError('siteGuard: `pca` needs `operation` (0.5): map each Tier 2+ request to the operation it will execute so the proof is bound to it');
+  }
+  if (options.operation !== undefined) {
+    if (typeof options.operation !== 'function') throw new TypeError('siteGuard: operation must be a function');
+    if (!options.pca) throw new TypeError('siteGuard: operation needs pca options (authorize)');
+    const missing = missingAuthorizeComponents({ ...(options.pca as Omit<AuthorizeOptions, 'audience'>), audience: options.audience });
+    if (missing.length) throw new TypeError(`siteGuard: operation (authorize) is missing ${missing.join(', ')}`);
+  }
+  const extract = (r: PcaRequestLike) => (r as SitePcaRequest).__proof ?? defaultExtract(r);
+  const mapOperation = options.operation;
+  const guard = !options.pca
+    ? null
+    : mapOperation
+      ? requireAuthorized({
+          ...(options.pca as Omit<AuthorizeOptions, 'audience'>),
+          audience: options.audience,
+          extract,
+          operation: (r) => {
+            const sr = r as SitePcaRequest;
+            return sr.__site && sr.__verb !== undefined ? mapOperation(sr.__site, sr.__verb) : null;
+          },
+        })
+      : requirePCA({ ...(options.pca as Omit<RequirePcaOptions, 'audience' | 'extract'>), audience: options.audience, extract });
   const clock = options.now ?? (() => Date.now());
 
   return async (req) => {
@@ -272,7 +317,12 @@ export function siteGuard(options: SiteGuardOptions): (req: SiteRequest) => Prom
       }
 
       // 3. Tier 2: requirePCA
-      const pcaReq: PcaRequestLike & { __proof?: PCActn } = { headers: req.headers, body: req.body, ...(proof ? { __proof: proof } : {}) };
+      const pcaReq: SitePcaRequest = {
+        headers: req.headers,
+        body: req.body,
+        ...(proof ? { __proof: proof } : {}),
+        ...(mapOperation ? { method: req.method, url: req.url, __site: req, __verb: verb } : {}),
+      };
       let presented: unknown = proof ?? null;
       if (!proof) {
         try {
@@ -299,7 +349,7 @@ export function siteGuard(options: SiteGuardOptions): (req: SiteRequest) => Prom
       }
       checks.pca = 'pass';
       facts.pca = true;
-      const base = { pcactn: g.pcactn, verdict: g.verdict, ...(agentKeyId !== undefined ? { agentKeyId } : {}) };
+      const base = { pcactn: g.pcactn, verdict: g.verdict, ...(g.operation ? { operation: g.operation } : {}), ...(agentKeyId !== undefined ? { agentKeyId } : {}) };
 
       if (rule.rate) {
         const leaf = g.pcactn.cap_chain[g.pcactn.cap_chain.length - 1];

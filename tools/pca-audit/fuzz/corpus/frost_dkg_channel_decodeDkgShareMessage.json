@@ -1,0 +1,12 @@
+{
+ "target": "frost-dkg-channel decodeDkgShareMessage",
+ "seeds": [
+  {
+   "from": 2,
+   "to": 1,
+   "sessionId": "ZnV6ei1ka2ctc2Vzc2lvbi0wMTIzNDU2Nzg5YWJjZGVm",
+   "share": "JncHcoRihM128ZQ0whaP3SDleRsmiAVNSI28H_FzyQg",
+   "sig": "bIb-jXHq3WjoONc8q2aFv5a7O0vpOGcEcdlpSQf5L-FitezfFTqyQp8Skerqx7LvDBw4mcYEpdzgS7VzGNMbDw"
+  }
+ ]
+}

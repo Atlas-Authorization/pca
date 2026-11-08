@@ -42,7 +42,7 @@ if (args.includes('--merge')) {
       const p = path.join(root, 'sdks', crate, sub, 'mutation-equivalents.part.json');
       if (!fs.existsSync(p)) continue;
       for (const e of JSON.parse(fs.readFileSync(p, 'utf8'))) {
-        const n = { crate: e.crate ?? crate, file: e.file, mutant: e.mutant ?? e.description, line: (e.line ?? '').trim(), ...(e.occurrence ? { occurrence: e.occurrence } : {}), ...(e.fn ? { fn: e.fn } : {}), ...(e.lineno ? { lineno: e.lineno } : {}), ...(e.multiplicity ? { multiplicity: e.multiplicity } : {}), reason: e.reason };
+        const n = { crate: e.crate ?? crate, file: e.file, mutant: e.mutant ?? e.description, line: (e.line ?? '').trim(), ...(e.occurrence ? { occurrence: e.occurrence } : {}), ...(e.fn ? { fn: e.fn } : {}), ...(e.lineno !== undefined ? { lineno: e.lineno } : {}), ...(e.multiplicity ? { multiplicity: e.multiplicity } : {}), reason: e.reason };
         const k = siteKey(n.crate, n.file, n.mutant, n.line, n.occurrence ?? 1);
         if (!have.has(k)) { ledger.equivalents.push(n); have.add(k); }
       }
@@ -57,7 +57,7 @@ const seen = new Set();
 let drift = 0;
 for (const e of ledger.equivalents) {
   let bad = false;
-  for (const f of ['crate', 'file', 'mutant', 'line', 'reason']) if (typeof e[f] !== 'string' || !e[f] || (f === 'reason' && e[f].length < 12)) { errors.push(`missing/short '${f}': ${JSON.stringify(e).slice(0, 120)}`); bad = true; }
+  for (const f of ['crate', 'file', 'mutant', 'line', 'reason']) if (typeof e[f] !== 'string' || (!e[f] && !(f === 'line' && e.lineno === 0 && e.fn)) || (f === 'reason' && e[f].length < 12)) { errors.push(`missing/short '${f}': ${JSON.stringify(e).slice(0, 120)}`); bad = true; }
   if (e.fn !== undefined && (typeof e.fn !== 'string' || !e.fn)) { errors.push(`bad fn: ${JSON.stringify(e).slice(0, 120)}`); bad = true; }
   if (bad) continue;
   const lines = srcLines(e.crate, e.file);
@@ -69,7 +69,9 @@ for (const e of ledger.equivalents) {
   // light sanity check of fn: its last plain identifier segment must appear in the file (synthetic names such as <init> or
   // lambda$x$1 are not checked; a JVM property accessor getX / setX / isX also passes on the property name x)
   const fnId = e.fn?.split(/::|\./).pop();
-  if (fnId && /^[A-Za-z_][A-Za-z0-9_]*$/.test(fnId)) {
+  // `compare` of the Comparator Kotlin generates for an inlined sortedBy / compareBy / maxBy ... is synthetic too
+  const synthCompare = fnId === 'invokeSuspend' /* the coroutine state machine of a suspend function or lambda */ || fnId === 'compare' && /\b(sorted(By|With|ByDescending)|compareBy|thenBy|maxBy|minBy)\b/.test(e.line);
+  if (fnId && !synthCompare && /^[A-Za-z_][A-Za-z0-9_]*$/.test(fnId)) {
     const acc = /^(?:get|set|is)([A-Z].*)$/.exec(fnId)?.[1];
     const names = [fnId, ...(acc ? [acc[0].toLowerCase() + acc.slice(1)] : [])];
     const text = lines.join('\n');

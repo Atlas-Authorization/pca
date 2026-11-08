@@ -1,0 +1,154 @@
+{
+  "source": "PCA frost.ts + frost-dkg.ts, fixed seeds (test-support only)",
+  "vectors": [
+    {
+      "t": 2,
+      "n": 3,
+      "groupPublicKey": "433586d5f7d01931426341a06c918ccab02c98bc76ac9d5f3aa1003b8d1888b3",
+      "groupCommitment": [
+        "433586d5f7d01931426341a06c918ccab02c98bc76ac9d5f3aa1003b8d1888b3",
+        "70e948193a4c36eeb023701d48c2a9a92a812aa5d9576e706c89421bccdf2deb"
+      ],
+      "keys": [
+        {
+          "id": 1,
+          "signingShare": "8669077481a6fd878343ff00f57825d2c88e594bc972e6b40d75b5f9ca0ccd03",
+          "verifyingShare": "57672631e04cbe113d62f2d2572d4b2a5da5fced31ef59f374136826ce700072"
+        },
+        {
+          "id": 2,
+          "signingShare": "471dfacc466cccefa058a9e9bee43a79107de42e03ec1195d8c1cb3ef6a1480f",
+          "verifyingShare": "cc0f4da5ce6c778d48872ea3cc7cb295114f7d3c9a6232618f128b1453ff6ff4"
+        },
+        {
+          "id": 3,
+          "signingShare": "1bfdf6c8f1ce88ffe7d05b2faa56710b586b6f123d653d75a30ee2832137c40a",
+          "verifyingShare": "153ebee3986d071758a939cc76838456f43e82bf26d980b3d110f371e04894eb"
+        }
+      ],
+      "message": "7063612066726f737420696e646570656e64656e7420766563746f723a206d657373616765",
+      "signers": [
+        1,
+        2
+      ],
+      "nonces": [
+        {
+          "id": 1,
+          "hidingRandomness": "4f2d72fe555d4d5ae1e339c3a30dc81b75bcdafb77d1df025546dbffff232b2a",
+          "bindingRandomness": "ed6e72e1f1b2c1b387273ac47d89c44e01761d3108dc4c2866d7a28a8c78aac6",
+          "hiding": "fc8112601f6df571319ed6eda1a2d4ddc061d46e43307add441e48aacc0fc004",
+          "binding": "e6641d204fc0c05c1f8fad9e20e5300793fc5792c190f36751a5f15d04180c04",
+          "hidingCommitment": "d0b090adc1813d0ddf49b624e7ad428f2068163848ea17564c1f49273e79e7a3",
+          "bindingCommitment": "d9e7ccaa7a6c0503d4783c7987a19ad5915e8c33e2f1b411ed741cb76f6b9912"
+        },
+        {
+          "id": 2,
+          "hidingRandomness": "aaf2d52c25a85c0630f978725b2d2bb8c10abbe26f18ca362c44de6f52cd5568",
+          "bindingRandomness": "369ad2cb4d41d608f1265d4be58d4e27b48a6f7bfcab52dd07d3b69e1c9dab12",
+          "hiding": "0053fd8fd3671991af851066b6f7444988b34f2614a8dfc4f810f4a8c557020d",
+          "binding": "773cf136f573ea5a93d5c26715f9aa1f7344d0e9033b0f720b1e2f36d3700705",
+          "hidingCommitment": "2f06e9c4ce83407aaaa458c8f1dcde6bf7cebdc398c96521cbc03625cf43df48",
+          "bindingCommitment": "83cb445ec8557a8a1aac08d02b8ab207f230f94895e93574d37dcf2020b955b4"
+        }
+      ],
+      "sigShares": [
+        {
+          "id": 1,
+          "share": "47c21b587366f1ea11539240bbeb5a294c460ed14c4ae41997e577a061243006"
+        },
+        {
+          "id": 2,
+          "share": "d420bc3fb0079dc34709f00eef274bf0263a6d79847f27abbbd3756d4ae3ae08"
+        }
+      ],
+      "signature": "80cea25857135a6fd45eea2614ae7a7f1c0550a977bb1dba4ce84d96868cc65a1be3d797236e8eae595c824faa13a61973807b4ad1c90bc552b9ed0dac07df0e"
+    },
+    {
+      "t": 3,
+      "n": 5,
+      "groupPublicKey": "74e1fa77b5c27e214ebbb105f9b3a7fa80aa9b50c2724de96758ace1f46fadcb",
+      "groupCommitment": [
+        "74e1fa77b5c27e214ebbb105f9b3a7fa80aa9b50c2724de96758ace1f46fadcb",
+        "0c18dab0e234b2fcecf4d6e6bb5d8bd25a0e293d56aad330382bc9e0bb15ccb4",
+        "834fe6f54fa84136e754a0b1836c848bdd03f93222cc9a8a705419c87482ba4e"
+      ],
+      "keys": [
+        {
+          "id": 1,
+          "signingShare": "5459f3a1c57c30f599d003761ace3d24e3565d679975e70480c8f27c8eacab02",
+          "verifyingShare": "ecd8014f1c9a2f1935775ab0bd89d353287b27372741d03da1252ada3254f60e"
+        },
+        {
+          "id": 2,
+          "signingShare": "8fca65cd045b6f29dd8eeeb7aa81f81990dab162fa4cd5c79757b12714f0560f",
+          "verifyingShare": "3e66c5cb0984bc936daee3951fd4f26a584a7d14d1c9d520f291e0f7051f2209"
+        },
+        {
+          "id": 3,
+          "signingShare": "5ea895bb27c07dfe1acd429f542380bd2810ce41563a8124fc11e6335a55cf09",
+          "verifyingShare": "78d2fab9ec099092a1f36033dcca157206042770926b37696fd1a7dc72c5d961"
+        },
+        {
+          "id": 4,
+          "signingShare": "aec678c9480f6ecc2928f8cef6acb323adf7b104ad3deb1aadf790a160dc1402",
+          "verifyingShare": "a4b8c16ebf11b41702b0beace7b9690a0b9398957c981aa735de88e4b26261c1"
+        },
+        {
+          "id": 5,
+          "signingShare": "6cf9045482ab52ebdf3c06ea6f1872611d915dabfe5613abaa08b27027852708",
+          "verifyingShare": "679fcae5bcffc6ca0ae427535e607937ee3390001f5bc0224479066952f51b16"
+        }
+      ],
+      "message": "7063612066726f737420696e646570656e64656e7420766563746f723a206d657373616765",
+      "signers": [
+        1,
+        2,
+        3
+      ],
+      "nonces": [
+        {
+          "id": 1,
+          "hidingRandomness": "696a4b7db564ab77be0572601528c150d1622acd17c4fe70885127031fdd462f",
+          "bindingRandomness": "09b2cae9ec24c27e3350b5838e1a8a1e9d41f77990936cfd2e2d35c39e57f02c",
+          "hiding": "509f25bd6046d52c7818b1fd11ad544c597177e84e1107137f9e0f5f6f9f9e09",
+          "binding": "83fa172e74fae1e7bca24069cecb05a142b15e94e6140d2a1a8975403247d608",
+          "hidingCommitment": "67d6750a15366bf938fd15793c3462cdeb9ed8f7de6850993b1fb859c90b98e8",
+          "bindingCommitment": "74a6b79dabc39651941e10d5cdccc5e84de8eede399d88fefe860b7068a41f22"
+        },
+        {
+          "id": 2,
+          "hidingRandomness": "50f98f410ae52fd6668d0c73cd75520d66585db21a27b70ce3ec6b5935644e3c",
+          "bindingRandomness": "bf298e165f4c348858c8e6f93df12712fdaf06096cd3032cfa114c30435d1d81",
+          "hiding": "949d07e99900ef114d2835e64bf4c558939993e7559c611ab895e5712c286907",
+          "binding": "15b2aa732b7891aff991dac53a8329b1c2cf635d377863eb53c22d06805d4408",
+          "hidingCommitment": "8802fcc0ea738a107ef8a852e0828cef10cab61164fcd61271b882862753c014",
+          "bindingCommitment": "c9d82cb822d9c916fcb0695dab715b0fe4ce56052ba7bf1c11ffa1291be813f7"
+        },
+        {
+          "id": 3,
+          "hidingRandomness": "a3e6671b91f319252fae959d3392dd64850e17b54d3750170fe1270b6a57a502",
+          "bindingRandomness": "6af95f5f9fc0dec21a9f02dbc6b46916a0b39b58bf14a8a35bc4a07495e80f3b",
+          "hiding": "b63f57e884fb4042046cd8656b0ac34a0f5e7c341c6830c569bcebdf76bef80a",
+          "binding": "f0c72554a35b76fe1103b9cbf9862640cc576b6b7ae88715cd0b716939bb9f0c",
+          "hidingCommitment": "19fefa60937f68c88a59f74c51b0878ff8dcd0fc2cf7d3fb23758531970bc998",
+          "bindingCommitment": "49a703b4dde7ea008a34f5785e4e0cba2e54125a0745e13e14b12cd543e75256"
+        }
+      ],
+      "sigShares": [
+        {
+          "id": 1,
+          "share": "3cc724c561755e349fd8fe1d5fcb82d88f71cdf66d675a769f8caba37985b901"
+        },
+        {
+          "id": 2,
+          "share": "001999ca1c4eea3935394eda1221b9e0ad0971a65e740981a9cf34c3de625803"
+        },
+        {
+          "id": 3,
+          "share": "09cb1ed0af893e9983eedfff6d4c67d5045aa950f82035c614c1025df72d5302"
+        }
+      ],
+      "signature": "4f43fe75f46e852a4d22883974f724bec156c7b8ccc70ecff5e1600311ca969345abdc5f2e4d870758002df8df38a38e42d5e7edc4fc98bd5d1de3c34f166507"
+    }
+  ]
+}

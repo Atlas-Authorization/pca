@@ -3,8 +3,10 @@
 import { describe, expect, it } from 'vitest';
 import { PcaHeaderError, decodePcaHeader, pcaHeaders, PCA_HEADER } from './adapters';
 import { encodePCActn } from './pcactn';
-import { defaultExtract, memoryPcaStore, requirePCA } from './server/require-pca';
+import { defaultExtract, memoryPcaStore, requirePCA as requirePCA05 } from './server/require-pca';
 import { AUD, NOW, setup } from './server/fixture.test-util';
+const requirePCA = (o: Parameters<typeof requirePCA05>[0]): ReturnType<typeof requirePCA05> => requirePCA05({ insecureAllowUnboundOperation: true, multiInstance: false, ...o }); // unbound and single-instance on purpose: these tests are not about operation binding or store scope (see breaking-05.test.ts)
+
 
 const s = setup();
 const a = s.mk(s.plan[0]!);
