@@ -1,0 +1,26 @@
+{
+ "target": "decodeB64uStrict",
+ "seeds": [
+  {
+   "text": "AAAA"
+  },
+  {
+   "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+   "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+   "text": "-_-_"
+  },
+  {
+   "text": "AA=="
+  },
+  {
+   "text": "AA"
+  },
+  {
+   "text": ""
+  }
+ ]
+}

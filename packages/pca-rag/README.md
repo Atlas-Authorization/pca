@@ -1,5 +1,7 @@
 # @atlasauth/pca-rag
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Fine-grained authorization for RAG, built on Proof-Carrying Authority (PCA). At retrieval time it filters candidate documents down to the ones a given principal may see, deciding each one with the PCA policy engine. Every filtering decision is recorded with a content-addressed digest, so you can show the model was handed only authorized data.
 
 - Documents carry ACL metadata: a `{ relation, object }` entry, or `relation:object` tag strings.
@@ -46,9 +48,33 @@ Compile once with `compilePolicy(policy)` and reuse the result to avoid recompil
 - `withLangChainPcaFilter(...)`, `withLlamaIndexPcaFilter(...)` structural adapters for LangChain and LlamaIndex retrievers (no dependency on either library)
 - `compilePolicy`, `aclsFromMetadata`, `principalFromPCActn`
 
+## Fail-closed behaviour
+
+Every row below ends with nothing reaching the model, and never with an exception during retrieval.
+
+| Missing or invalid | Result |
+|---|---|
+| principal (undefined, empty id, not a string) | every candidate dropped: `no principal identity (fail closed)` |
+| policy (null, not an object, no predicates and not OpenFGA, OpenFGA without a model) | policy incomplete: every candidate dropped, with the reason |
+| policy translation with errors | every candidate dropped: `policy translation incomplete (fail closed)` |
+| ACL on a document, or entries that are not `{ relation, object }` strings | that document dropped: `no decidable ACL metadata (fail closed)` |
+| `getId` / `getAcls` that throws | that document dropped; a non-string id falls back to its position |
+| a predicate or deny that throws while being evaluated | that ACL entry does not grant |
+| candidate list that is not an array, or a retriever that returns one | no candidates |
+| retriever that throws | `retrieve` rejects; `lastDecision()` keeps the previous decision |
+
+`decision.allowedIndexes` lists the candidate positions that passed and is bound into `digest`; candidates that share an id are told apart by position (`x`, `x#dup1`), so the digest always names exactly which candidates the model was handed.
+
+## Limits
+
+- It filters what a retriever returns. It does not control what a model does with documents it is allowed to see, and it does not stop a model memorising or leaking authorized content.
+- It decides from the ACL metadata on each document and the policy you give it; if the metadata is wrong or stale, the decision is wrong. Compile once and refresh the policy yourself when tuples change.
+- Only the OpenFGA subset that `@atlasauth/pca-policy-bridge` translates, or raw predicates, is understood. Userset-valued tuples are not expanded.
+- The digest commits to the decision set; it is evidence, not an access log by itself.
+
 ## Status
 
-Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). This filters retrieval results; it does not control what a model does with documents it is allowed to see. PCA's cryptography has not been independently audited.
+Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). This filters retrieval results; it does not control what a model does with documents it is allowed to see.
 
 ## License
 

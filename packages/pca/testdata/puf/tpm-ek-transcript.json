@@ -1,0 +1,106 @@
+[
+  {
+    "name": "ok-ek-a",
+    "command": "tpm2_readpublic",
+    "args": [
+      "-c",
+      "0x81010001",
+      "-f",
+      "der",
+      "-o",
+      "/dev/stdout",
+      "-Q"
+    ],
+    "result": {
+      "status": 0,
+      "stdoutB64": "BRIfLDlGU2BteoeUoa67yNXi7/wJFiMwPUpXZHF+i5ilsr/M2ebzAA0aJzRBTltodYKPnKm2w9Dd6vcEER4rOEVSX2x5hpOgrbrH1OHu+wgVIi88SVZjcH2Kl6SxvsvY"
+    }
+  },
+  {
+    "name": "ok-ek-b",
+    "command": "tpm2_readpublic",
+    "args": [
+      "-c",
+      "0x81010001",
+      "-f",
+      "der",
+      "-o",
+      "/dev/stdout",
+      "-Q"
+    ],
+    "result": {
+      "status": 0,
+      "stdoutB64": "CRorPE1eb4CRorPE1eb3CBkqO0xdbn+QobLD1OX2BxgpOktcbX6PoLHC0+T1BhcoOUpbbH2On7DB0uP0BRYnOElaa3yNnq/A0eLzBBUmN0hZanuMna6/0OHyAxQlNkdY"
+    }
+  },
+  {
+    "name": "tool-missing",
+    "command": "tpm2_readpublic",
+    "args": [
+      "-c",
+      "0x81010001",
+      "-f",
+      "der",
+      "-o",
+      "/dev/stdout",
+      "-Q"
+    ],
+    "result": {
+      "status": null,
+      "stdoutB64": "",
+      "error": "tpm2_readpublic: ENOENT"
+    }
+  },
+  {
+    "name": "nonzero-exit",
+    "command": "tpm2_readpublic",
+    "args": [
+      "-c",
+      "0x81010001",
+      "-f",
+      "der",
+      "-o",
+      "/dev/stdout",
+      "-Q"
+    ],
+    "result": {
+      "status": 1,
+      "stdoutB64": "",
+      "stderr": "ERROR: handle not found\n"
+    }
+  },
+  {
+    "name": "short-output",
+    "command": "tpm2_readpublic",
+    "args": [
+      "-c",
+      "0x81010001",
+      "-f",
+      "der",
+      "-o",
+      "/dev/stdout",
+      "-Q"
+    ],
+    "result": {
+      "status": 0,
+      "stdoutB64": "BRIfLDlGU2Bteg=="
+    }
+  },
+  {
+    "name": "empty-output",
+    "command": "tpm2_readpublic",
+    "args": [
+      "-c",
+      "0x81010001",
+      "-f",
+      "der",
+      "-o",
+      "/dev/stdout",
+      "-Q"
+    ],
+    "result": {
+      "status": 0,
+      "stdoutB64": ""
+    }
+  }
+]

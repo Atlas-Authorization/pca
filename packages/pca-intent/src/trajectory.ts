@@ -1,7 +1,7 @@
+import { compareUtf8 } from '@atlasauth/pca';
 import {
   accPost,
   accumulationParams,
-  compareUtf8,
   monitorState,
   monitorStates,
   type AccumulatorDecl,
@@ -9,7 +9,7 @@ import {
   type IntentEvent,
   type MonitorDecl,
   type UnsignedActionSchema,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 import { canonValue } from './schema';
 import { cellOf, numCells, type Dim, type NumDim, type Omega, type Outcome, type VerbSpace } from './omega';
 

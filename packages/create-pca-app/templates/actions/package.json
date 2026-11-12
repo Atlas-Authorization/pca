@@ -1,0 +1,23 @@
+{
+  "name": "__PCA_APP_NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Define your actions once in YAML; lint them, test their examples, and build a signed schema and pack from them.",
+  "scripts": {
+    "lint": "pca actions lint --strict",
+    "test": "pca actions test",
+    "explain": "pca actions explain acme.invoice.send",
+    "build": "pca actions build",
+    "digest": "tsx builder.ts"
+  },
+  "dependencies": {
+    "@atlasauth/pca-actions": "^0.5.0",
+    "@atlasauth/pca-cli": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

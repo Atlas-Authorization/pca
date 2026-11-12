@@ -244,15 +244,15 @@ async function runMeasure(file) {
       const { grant, pcactn, full } = per[depth];
       const bytes = Buffer.byteLength(JSON.stringify(pcactn));
       // pca-core-verify: allow benchmark that times the core verifier; it never authorizes an action
-      const core = await pca.verifyPCActnCore(pcactn, { grant, nowEpoch: NOW, audience: AUD });
+      const core = await pca.verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD });
       if (!core.allow) throw new Error(`${alg} depth ${depth}: core verdict deny (${core.reason})`);
       // pca-core-verify: allow benchmark that times the core verifier; it never authorizes an action
-      record({ bench: 'verifyPCActnCore', alg, root_alg: alg, depth, signature_checks: depth + 1, bytes, ...(await measure(() => pca.verifyPCActnCore(pcactn, { grant, nowEpoch: NOW, audience: AUD }), adaptive)) });
+      record({ bench: 'verifyPCActnCore', alg, root_alg: alg, depth, signature_checks: depth + 1, bytes, ...(await measure(() => pca.verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD }), adaptive)) });
       if (FULL_SUITES.has(alg)) {
         // Prefer the same chain as the core rows (root signed under `alg`). Releases whose full verifier refuses a
         // non-Ed25519 root (0.4.1) fall back to the Ed25519-root variant; `root_alg` records which one was measured.
         const pqPins = alg === 'ed25519' ? undefined : { [grant.issuer]: grant.pq_pk };
-        const same = (p, g) => pca.verifyPCActn(p, { grant: g, audience: AUD, now: NOW, context: fullContext, ...(pqPins && g === grant ? { pqPins } : {}) });
+        const same = (p, g) => pca.verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: g, audience: AUD, now: NOW, context: fullContext, ...(pqPins && g === grant ? { pqPins } : {}) });
         let f = { grant, pcactn, rootAlg: alg };
         if (!(await same(pcactn, grant)).allow && full) f = { ...full, rootAlg: 'ed25519' };
         const call = () => same(f.pcactn, f.grant);
@@ -266,10 +266,10 @@ async function runMeasure(file) {
     for (const { depth, t, signerSet, grant, pcactn } of fx.threshold) {
       const hooks = { threshold: pca.createThresholdVerifier({ signerSet, t }) };
       // pca-core-verify: allow benchmark that times the core verifier; it never authorizes an action
-      const r = await pca.verifyPCActnCore(pcactn, { grant, nowEpoch: NOW, audience: AUD, hooks });
+      const r = await pca.verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD, hooks });
       if (!r.allow || r.checks.threshold !== 'pass') throw new Error(`threshold t=${t}: ${r.reason}`);
       // pca-core-verify: allow benchmark that times the core verifier; it never authorizes an action
-      record({ bench: 'verifyPCActnCore+threshold', alg: 'ed25519', depth, t, signature_checks: depth + 1 + (t - 1), bytes: Buffer.byteLength(JSON.stringify(pcactn)), ...(await measure(() => pca.verifyPCActnCore(pcactn, { grant, nowEpoch: NOW, audience: AUD, hooks }), false)) });
+      record({ bench: 'verifyPCActnCore+threshold', alg: 'ed25519', depth, t, signature_checks: depth + 1 + (t - 1), bytes: Buffer.byteLength(JSON.stringify(pcactn)), ...(await measure(() => pca.verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD, hooks }), false)) });
     }
   }
   const host = {

@@ -4,15 +4,19 @@ import { describe, expect, it } from 'vitest';
 import { type PCActn, buildPCActn, encodeKey, generateKeyPair as pcaGenerateKeyPair, mintRoot } from '@atlasauth/pca';
 import {
   DpopVerificationError,
-  assertPcaDpop,
+  assertPcaDpop as assertPcaDpopRaw,
   athFor,
   bindPcaToDpop,
   createDpopProof,
   jwkThumbprint,
   leafHolderJwk,
   mtlsCnf,
-  verifyDpopProof,
+  verifyDpopProof as verifyDpopProofRaw,
 } from './index';
+
+// 0.5: a replay store is required by default; these suites mostly exercise other checks, so they opt out explicitly.
+const verifyDpopProof: typeof verifyDpopProofRaw = (p, o) => verifyDpopProofRaw(p, { requireReplayStore: false, ...o });
+const assertPcaDpop: typeof assertPcaDpopRaw = (p, d, o) => assertPcaDpopRaw(p, d, { requireReplayStore: false, ...o });
 
 const URL1 = 'https://api.atlasauth.net/v1/pca/exec?token=abc#frag';
 const METHOD = 'POST';

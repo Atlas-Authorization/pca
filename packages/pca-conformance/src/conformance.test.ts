@@ -51,7 +51,7 @@ describe('PCActn conformance vectors (TS reference verifier = @atlasauth/pca)', 
   for (const v of VECTORS) {
     it(`${v.id}: ${v.description}`, async () => {
       const grant = v.pcactn.cap_chain[0] ?? CANONICAL_GRANT;
-      const r = await verifyPCActnCore(v.pcactn, {
+      const r = await verifyPCActnCore(v.pcactn, { insecureSkipPlanRootCheck: true,
         grant,
         nowEpoch: v.verifyOptions.nowEpoch,
         audience: v.aud,

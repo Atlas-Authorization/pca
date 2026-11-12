@@ -1,0 +1,22 @@
+{
+  "name": "__PCA_APP_NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end Proof-Carrying Authority quickstart: an agent built with the @atlasauth/pca facade proves each action, and an Express resource server guards a route with requirePCA().",
+  "scripts": {
+    "start": "tsx src/run.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "^0.5.0",
+    "@atlasauth/pca-express": "^0.5.0",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

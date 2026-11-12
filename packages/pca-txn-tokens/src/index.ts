@@ -131,9 +131,70 @@ export interface TransactionTokenClaims extends JWTPayload {
   tctx?: TxnAction;
   /** RFC 8693 §4.1 nested actor chain of custody (descendants of `sub`). */
   act?: ActClaim;
+  /** draft-11 transaction identifier. */
+  txn?: string;
+  /** draft-11 scope. */
+  scope?: string;
+  /** draft-11 requesting workload. */
+  req_wl?: string;
 }
 
+export interface FromTransactionTokenOptions {
+  /** `draft-11` (default; strict: header typ `txntoken+jwt`; `iat`, `aud`, `exp`, `txn`, `sub`, `scope`, `req_wl` required, and `audience` REQUIRED) or `legacy` (this package's original shape; explicit opt-in). */
+  profile?: TxnProfile;
+  /** The trust domain / audience this verifier serves; `aud` MUST contain it. REQUIRED for `draft-11`. */
+  audience?: string;
+  /** Clock tolerance in seconds (default 0). */
+  clockToleranceSec?: number;
+  /** Clock override (verification time). */
+  now?: Date;
+  /**
+   * Replay hook: called with the token's `txn` (draft-11) or `jti` (legacy) and its `exp`; return true when the
+   * value was already seen. A seen value is refused. REQUIRED unless `replayCheck: 'unchecked'` is set: a call
+   * with neither throws {@link TxnTokenError} (`replay_store_required`). Back it with a shared durable store.
+   */
+  seenTxn?: (id: string, exp: number) => boolean | Promise<boolean>;
+  /**
+   * Explicit opt-out of the replay check, for a deployment that relies on a short lifetime alone (the draft
+   * itself says a Txn-Token is not replay resistant). Has no effect when `seenTxn` is supplied.
+   */
+  replayCheck?: 'unchecked';
+}
+
+/** Stable classification of a configuration failure of this package. */
+export type TxnTokenErrorCode = 'replay_store_required';
+
+/** Thrown when a verifier is configured without a required security component. */
+export class TxnTokenError extends Error {
+  override readonly name = 'TxnTokenError';
+  readonly code: TxnTokenErrorCode;
+  constructor(code: TxnTokenErrorCode, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+/**
+ * Which token profile to emit / require.
+ *  - `legacy` (explicit opt-in): header `typ` `txn_token+jwt`, a `jti`, the PCA `tctx`.
+ *  - `draft-11` (default): draft-ietf-oauth-transaction-tokens-11 — header `typ` `txntoken+jwt`, REQUIRED `iat`, `aud`
+ *    (the trust domain), `exp`, `txn`, `sub`, `scope`, `req_wl`; `tctx` carries the PCA action. The `act`
+ *    chain is this package's extension (the draft defines no `act` claim; it is ignored by readers that do
+ *    not know it).
+ */
+export type TxnProfile = 'legacy' | 'draft-11';
+
 export interface ToTransactionTokenArgs {
+  /** Token profile (default `draft-11`). */
+  profile?: TxnProfile;
+  /** draft-11: REQUIRED `scope` (the narrowest purpose of the transaction). */
+  scope?: string;
+  /** draft-11: REQUIRED `req_wl`, the workload that requested the token. */
+  reqWl?: string;
+  /** draft-11: the `txn` transaction identifier (default a random UUID). */
+  txn?: string;
+  /** draft-11: the trust domain placed in `aud` (default `action.aud`). */
+  trustDomain?: string;
   /** The PCA capability chain to project (root grant first). */
   chain: CapabilityChain;
   /** The action to bind as the transaction context. */
@@ -148,7 +209,11 @@ export interface ToTransactionTokenArgs {
 
 /** draft-ietf-oauth-transaction-tokens: the Transaction Token JWT media type. */
 const TXN_TOKEN_TYP = 'txn_token+jwt';
+/** draft-ietf-oauth-transaction-tokens-11 header `typ`. */
+export const TXN_TOKEN_TYP_DRAFT_11 = 'txntoken+jwt';
 const DEFAULT_TTL_SEC = 120;
+/** Upper bound on an accepted token string (adversarial-size guard, checked before any parsing). */
+export const MAX_TOKEN_CHARS = 16384;
 const EDDSA = 'EdDSA';
 
 /** Build the `jose` signing key: import a raw 32-byte Ed25519 seed as an OKP key, else pass through. */
@@ -203,6 +268,31 @@ export async function toTransactionToken(args: ToTransactionTokenArgs): Promise<
   if (!Number.isFinite(ttl) || ttl <= 0) throw new RangeError('toTransactionToken: ttlSec must be > 0');
   const nowSec = Math.floor(Date.now() / 1000);
   const key = await toSigningKey(args.issuerKey);
+  const draft = (args.profile ?? 'draft-11') === 'draft-11';
+  if (args.profile !== undefined && args.profile !== 'legacy' && !draft) {
+    throw new TypeError('toTransactionToken: profile must be legacy or draft-11');
+  }
+  if (draft) {
+    if (typeof args.scope !== 'string' || args.scope.length === 0) throw new TypeError('toTransactionToken: draft-11 requires `scope`');
+    if (typeof args.reqWl !== 'string' || args.reqWl.length === 0) throw new TypeError('toTransactionToken: draft-11 requires `reqWl`');
+    const td = args.trustDomain ?? action.aud;
+    if (typeof td !== 'string' || td.length === 0) throw new TypeError('toTransactionToken: draft-11 requires a non-empty trust domain (aud)');
+    const claims: TransactionTokenClaims = {
+      tctx: { verb: action.verb, resource: action.resource, aud: action.aud },
+      ...(custody.act ? { act: custody.act } : {}),
+      txn: args.txn ?? randomUUID(),
+      scope: args.scope,
+      req_wl: args.reqWl,
+    };
+    return new SignJWT(claims)
+      .setProtectedHeader({ alg: EDDSA, typ: TXN_TOKEN_TYP_DRAFT_11 })
+      .setIssuedAt(nowSec)
+      .setIssuer(issuer)
+      .setSubject(custody.sub)
+      .setAudience(td)
+      .setExpirationTime(nowSec + ttl)
+      .sign(key);
+  }
 
   const tctx: TxnAction = { verb: action.verb, resource: action.resource, aud: action.aud };
   const payload: TransactionTokenClaims = custody.act ? { tctx, act: custody.act } : { tctx };
@@ -243,27 +333,88 @@ function normalizeAct(node: unknown): ActClaim | undefined {
 export async function fromTransactionToken(
   jwt: string,
   verifyKey: VerifyKey,
-): Promise<{ chain: SubActChain; action: TxnAction; claims: TransactionTokenClaims }> {
+  opts: FromTransactionTokenOptions = {},
+): Promise<{ chain: SubActChain; action: TxnAction | undefined; tctx: Record<string, unknown>; claims: TransactionTokenClaims }> {
+  const draft = (opts.profile ?? 'draft-11') === 'draft-11';
+  if (opts.profile !== undefined && opts.profile !== 'legacy' && !draft) {
+    throw new TypeError('fromTransactionToken: profile must be legacy or draft-11');
+  }
+  if (draft && (typeof opts.audience !== 'string' || opts.audience.length === 0)) {
+    throw new TypeError('fromTransactionToken: draft-11 requires opts.audience (the trust domain this verifier serves)');
+  }
+  if (typeof opts.seenTxn !== 'function' && opts.replayCheck !== 'unchecked') {
+    throw new TxnTokenError('replay_store_required', "fromTransactionToken: supply opts.seenTxn (a replay store) or set opts.replayCheck to 'unchecked'");
+  }
+  if (typeof jwt === 'string' && jwt.length > MAX_TOKEN_CHARS) {
+    throw new Error('transaction token: token exceeds the size limit');
+  }
   assertCanonicalCompactJws(jwt); // canonical-spelling gate BEFORE jose (one accepted string form)
   const key = await toVerificationKey(verifyKey);
-  const { payload } = await jwtVerify<TransactionTokenClaims>(jwt, key, { typ: TXN_TOKEN_TYP });
-
+  const { payload } = await jwtVerify<TransactionTokenClaims>(jwt, key, {
+    typ: draft ? TXN_TOKEN_TYP_DRAFT_11 : TXN_TOKEN_TYP,
+    algorithms: [EDDSA],
+    requiredClaims: draft ? ['iat', 'exp', 'aud', 'sub', 'txn', 'scope', 'req_wl'] : ['exp'],
+    ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+    ...(opts.clockToleranceSec !== undefined ? { clockTolerance: opts.clockToleranceSec } : {}),
+    ...(opts.now !== undefined ? { currentDate: opts.now } : {}),
+  });
+  if (draft) {
+    for (const k of ['txn', 'scope', 'req_wl'] as const) {
+      if (typeof payload[k] !== 'string' || payload[k].length === 0) {
+        throw new Error(`transaction token: \`${k}\` must be a non-empty string`);
+      }
+    }
+  }
   if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
     throw new Error('transaction token: missing `sub` (root principal)');
   }
-  const tctx = payload.tctx;
-  if (
-    tctx === undefined ||
-    tctx === null ||
-    typeof tctx !== 'object' ||
-    typeof tctx.verb !== 'string' ||
-    typeof tctx.resource !== 'string' ||
-    typeof tctx.aud !== 'string'
-  ) {
-    throw new Error('transaction token: missing or malformed `tctx`');
+  const { tctx, action } = readTctx(payload.tctx, draft);
+  if (draft && payload.rctx !== undefined && !isPlainObject(payload.rctx)) {
+    throw new Error('transaction token: malformed `rctx`');
   }
   const act = normalizeAct(payload.act);
+  // Consume the identifier last: a token refused for any other reason never burns its transaction id.
+  if (opts.seenTxn !== undefined) {
+    const id = draft ? payload.txn : payload.jti;
+    if (typeof id !== 'string' || id.length === 0) throw new Error('transaction token: no transaction identifier to check for replay');
+    if (await opts.seenTxn(id, payload.exp as number)) throw new Error('transaction token: replayed (transaction identifier already seen)');
+  }
   const chain: SubActChain = act ? { sub: payload.sub, act } : { sub: payload.sub };
-  const action: TxnAction = { verb: tctx.verb, resource: tctx.resource, aud: tctx.aud };
-  return { chain, action, claims: payload };
+  return { chain, action, tctx, claims: payload };
+}
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+const PCA_ACTION_KEYS = ['verb', 'resource', 'aud'] as const;
+
+/**
+ * Parse the transaction context. The draft's `tctx` is a free-form JSON object, so the draft profile accepts
+ * any object; when it uses any of the PCA action keys (`verb`, `resource`, `aud`) it must use all three as
+ * strings (they are reserved for the PCA action, never half-present). The legacy profile requires the PCA
+ * action. `action` is undefined only for a free-form draft `tctx`.
+ */
+function readTctx(raw: unknown, draft: boolean): { tctx: Record<string, unknown>; action: TxnAction | undefined } {
+  if (!isPlainObject(raw)) throw new Error('transaction token: missing or malformed `tctx`');
+  const usesPca = PCA_ACTION_KEYS.some((k) => Object.prototype.hasOwnProperty.call(raw, k));
+  if (!draft || usesPca) {
+    const { verb, resource, aud } = raw;
+    if (typeof verb !== 'string' || typeof resource !== 'string' || typeof aud !== 'string') {
+      throw new Error('transaction token: missing or malformed `tctx`');
+    }
+    return { tctx: raw, action: { verb, resource, aud } };
+  }
+  return { tctx: raw, action: undefined };
+}
+
+/**
+ * RFC 8693 §4.1 ordering of an `act` chain: the MOST RECENT actor outermost. This package's own projection
+ * (`subActChain`) descends in delegation order (root holder outermost); use this to emit the RFC order to a
+ * consumer that expects it. Pure; the `sub` is unchanged.
+ */
+export function toRfc8693Act(claim: SubActClaim): SubActClaim {
+  const actors: string[] = [];
+  for (let c: ActClaim | undefined = claim.act; c; c = c.act) actors.push(c.sub);
+  let act: ActClaim | undefined;
+  for (const sub of actors) act = act ? { sub, act } : { sub };
+  return act ? { sub: claim.sub, act } : { sub: claim.sub };
 }

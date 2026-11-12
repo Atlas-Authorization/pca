@@ -88,7 +88,11 @@ describe('ledger', () => {
     expect(l.verifyConsistency(l.rootAt(4), l.rootAt(12), p)).toBe(false);
     expect(l.verifyConsistency(l.rootAt(5), l.rootAt(12), { ...p, path: [...p.path.slice(1)] })).toBe(false);
     const bad = { ...p, path: p.path.map((h, i) => (i === 0 ? l.rootAt(1) : h)) };
-    expect(l.verifyConsistency(l.rootAt(5), l.rootAt(12), bad)).toBe(false);
+    expect(l.verifyConsistency(l.rootAt(5), l.rootAt(12), bad)).toBe(false);    // strict profile: a -0 size is never a wire integer
+    const z = l.consistencyProof(0, 7);
+    expect(l.verifyConsistency(l.rootAt(0), l.rootAt(7), { ...z, oldSize: -0 })).toBe(false);
+    const zz = l.consistencyProof(0, 0);
+    expect(l.verifyConsistency(l.rootAt(0), l.rootAt(0), { ...zz, oldSize: -0, newSize: -0 })).toBe(false);
   });
   it('a rewritten history is not consistent with the old head', () => {
     const honest = fill(8);

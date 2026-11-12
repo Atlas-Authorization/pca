@@ -180,7 +180,7 @@ function hasControlChar(s: string): boolean {
   return false;
 }
 function isEpoch(x: unknown): x is number {
-  return typeof x === 'number' && Number.isSafeInteger(x) && x >= 0;
+  return typeof x === 'number' && Number.isSafeInteger(x) && x >= 0 && !Object.is(x, -0);
 }
 
 /** Validate a value for its kind. Returns an error string or null. */

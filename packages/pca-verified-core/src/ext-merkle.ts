@@ -137,7 +137,7 @@ export function verifyInclusionVerified(root: unknown, proof: unknown, leafBytes
     const rawSuite: unknown = pr.hash_suite;
     if (rawSuite !== undefined && rawSuite !== 'sha256' && rawSuite !== 'sha384') return false;
     const suite: MerkleSuite = rawSuite === undefined ? 'sha256' : (rawSuite as MerkleSuite);
-    if (!Number.isSafeInteger(pr.index) || !Number.isSafeInteger(pr.size)) return false;
+    if (!Number.isSafeInteger(pr.index) || !Number.isSafeInteger(pr.size) || Object.is(pr.index, -0)) return false;
     const rootB = b64uDecodeStrict(root);
     if (!rootB) return false;
     const steps: any[] = [];
@@ -170,7 +170,7 @@ export function verifyConsistencyVerified(
 ): boolean {
   try {
     if (!proof || !Array.isArray(proof.path)) return false;
-    if (!Number.isSafeInteger(proof.oldSize) || !Number.isSafeInteger(proof.newSize)) return false;
+    if (!Number.isSafeInteger(proof.oldSize) || !Number.isSafeInteger(proof.newSize) || Object.is(proof.oldSize, -0) || Object.is(proof.newSize, -0)) return false;
     // same DoS bound as ledger.ts (2*53+2); Merkle.PathCapRedundant proves it never rejects an acceptable proof below 2^53
     if (proof.path.length > MAX_CONSISTENCY_PATH) return false;
     const o = b64uDecodeStrict(oldRoot);
@@ -200,7 +200,7 @@ export function inclusionRootVerified(proof: unknown, leafBytes: Uint8Array): Ui
     const rawSuite: unknown = pr.hash_suite;
     if (rawSuite !== undefined && rawSuite !== 'sha256' && rawSuite !== 'sha384') return null;
     const suite: MerkleSuite = rawSuite === undefined ? 'sha256' : (rawSuite as MerkleSuite);
-    if (!Number.isSafeInteger(pr.index) || !Number.isSafeInteger(pr.size)) return null;
+    if (!Number.isSafeInteger(pr.index) || !Number.isSafeInteger(pr.size) || Object.is(pr.index, -0)) return null;
     const path = D.Seq.of();
     for (let i = 0; i < pr.path.length; i++) {
       const st = pr.path[i];

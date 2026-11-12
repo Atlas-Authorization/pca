@@ -36,6 +36,8 @@ export interface Target<C = unknown> {
   seeds(): C[];
   mutate(r: Rng, c: C, seeds: C[]): C;
   run(c: C): unknown;
+  /** One-off warm-up before timing starts (e.g. wasm / curve initialisation), so it is not reported as a hang. */
+  setup?(): Promise<void>;
   /** Post-condition on the returned value (may need the seed the case was derived from). */
   check?(c: C, result: unknown): string | undefined;
 }

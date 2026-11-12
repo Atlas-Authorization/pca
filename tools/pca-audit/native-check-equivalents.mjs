@@ -35,29 +35,33 @@ const srcLines = (crate, file) => {
 const siteKey = (crate, file, mutant, line, occ) => [crate, file, mutant, line.trim(), occ].join('\u0000');
 const label = (e, ln) => `${e.crate}/${e.file}:${ln ?? e.lineno ?? '?'}${e.occurrence ? ` (#${e.occurrence})` : ''}${e.fn ? ` in ${e.fn}` : ''}: ${e.mutant.slice(0, 90)} | ${e.line.slice(0, 70)}`;
 
+const mergeConflicts = [];
 if (args.includes('--merge')) {
-  const have = new Set(ledger.equivalents.map((e) => siteKey(e.crate, e.file, e.mutant, e.line, e.occurrence ?? 1)));
+  const have = new Map(ledger.equivalents.map((e) => [siteKey(e.crate, e.file, e.mutant, e.line, e.occurrence ?? 1), e]));
   for (const crate of fs.readdirSync(path.join(root, 'sdks'))) {
     for (const sub of ['', 'core/', 'verify/']) {
       const p = path.join(root, 'sdks', crate, sub, 'mutation-equivalents.part.json');
       if (!fs.existsSync(p)) continue;
       for (const e of JSON.parse(fs.readFileSync(p, 'utf8'))) {
-        const n = { crate: e.crate ?? crate, file: e.file, mutant: e.mutant ?? e.description, line: (e.line ?? '').trim(), ...(e.occurrence ? { occurrence: e.occurrence } : {}), ...(e.fn ? { fn: e.fn } : {}), ...(e.lineno ? { lineno: e.lineno } : {}), ...(e.multiplicity ? { multiplicity: e.multiplicity } : {}), reason: e.reason };
+        const n = { crate: e.crate ?? crate, file: e.file, mutant: e.mutant ?? e.description, line: (e.line ?? '').trim(), ...(e.occurrence ? { occurrence: e.occurrence } : {}), ...(e.fn ? { fn: e.fn } : {}), ...(e.lineno !== undefined ? { lineno: e.lineno } : {}), ...(e.multiplicity ? { multiplicity: e.multiplicity } : {}), reason: e.reason };
         const k = siteKey(n.crate, n.file, n.mutant, n.line, n.occurrence ?? 1);
-        if (!have.has(k)) { ledger.equivalents.push(n); have.add(k); }
+        const prev = have.get(k);
+        // a second entry for the same site used to be dropped silently, so it was never checked and could hide a survivor count
+        if (prev && ((prev.multiplicity ?? 1) !== (n.multiplicity ?? 1) || (prev.fn && n.fn && prev.fn !== n.fn))) mergeConflicts.push(`${p}: conflicting duplicate of a ledgered site (fn ${prev.fn ?? '-'} vs ${n.fn ?? '-'}, multiplicity ${prev.multiplicity ?? 1} vs ${n.multiplicity ?? 1}): ${n.file}: ${n.mutant.slice(0, 80)}`);
+        if (!prev) { ledger.equivalents.push(n); have.set(k, n); }
       }
     }
   }
   fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 1) + '\n');
 }
 
-const errors = [];
+const errors = [...mergeConflicts];
 const entries = [];
 const seen = new Set();
 let drift = 0;
 for (const e of ledger.equivalents) {
   let bad = false;
-  for (const f of ['crate', 'file', 'mutant', 'line', 'reason']) if (typeof e[f] !== 'string' || !e[f] || (f === 'reason' && e[f].length < 12)) { errors.push(`missing/short '${f}': ${JSON.stringify(e).slice(0, 120)}`); bad = true; }
+  for (const f of ['crate', 'file', 'mutant', 'line', 'reason']) if (typeof e[f] !== 'string' || (!e[f] && !(f === 'line' && e.lineno === 0 && e.fn)) || (f === 'reason' && e[f].length < 12)) { errors.push(`missing/short '${f}': ${JSON.stringify(e).slice(0, 120)}`); bad = true; }
   if (e.fn !== undefined && (typeof e.fn !== 'string' || !e.fn)) { errors.push(`bad fn: ${JSON.stringify(e).slice(0, 120)}`); bad = true; }
   if (bad) continue;
   const lines = srcLines(e.crate, e.file);
@@ -69,7 +73,9 @@ for (const e of ledger.equivalents) {
   // light sanity check of fn: its last plain identifier segment must appear in the file (synthetic names such as <init> or
   // lambda$x$1 are not checked; a JVM property accessor getX / setX / isX also passes on the property name x)
   const fnId = e.fn?.split(/::|\./).pop();
-  if (fnId && /^[A-Za-z_][A-Za-z0-9_]*$/.test(fnId)) {
+  // `compare` of the Comparator Kotlin generates for an inlined sortedBy / compareBy / maxBy ... is synthetic too
+  const synthCompare = fnId === 'invokeSuspend' /* the coroutine state machine of a suspend function or lambda */ || fnId === 'compare' && /\b(sorted(By|With|ByDescending)|compareBy|thenBy|maxBy|minBy)\b/.test(e.line);
+  if (fnId && !synthCompare && /^[A-Za-z_][A-Za-z0-9_]*$/.test(fnId)) {
     const acc = /^(?:get|set|is)([A-Z].*)$/.exec(fnId)?.[1];
     const names = [fnId, ...(acc ? [acc[0].toLowerCase() + acc.slice(1)] : [])];
     const text = lines.join('\n');

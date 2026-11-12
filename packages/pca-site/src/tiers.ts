@@ -1,4 +1,5 @@
-import { FRICTIONS, type Friction, type Reversibility } from '@atlasauth/pca';
+import { FRICTIONS, type Friction } from '@atlasauth/pca/ext/intent';
+import { type Reversibility } from '@atlasauth/pca/ext/research';
 
 const isFriction = (x: unknown): x is Friction => typeof x === 'string' && (FRICTIONS as readonly string[]).includes(x);
 
@@ -118,7 +119,7 @@ export interface TierRule {
 
 const RULE_KEYS = ['tier', 'rate', 'jit', 'max_total_cents', 'bond_min_cents'];
 const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
-const isNat = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+const isNat = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 && !Object.is(v, -0);
 
 /** Validate one per-verb rule. Unknown members are a configuration error (§5): throws. */
 export function parseTierRule(v: unknown, where = 'tier rule'): TierRule {

@@ -1,3 +1,4 @@
+import { setAssuranceLabel } from './assurance';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 SOFTWARE/HSM backend — the POST-QUANTUM attestation root.
@@ -238,7 +239,12 @@ export interface PqSoftwareVerifierOptions {
  *      software root is not silicon-rooted; see the module header).
  * Fails CLOSED with a specific reason on any mismatch or error.
  */
+/** Assurance label (0.5): `software` (signed software statements, not a hardware root). See `assurance.ts`. */
 export function createPqSoftwareVerifier(opts: PqSoftwareVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createPqSoftwareVerifierUnlabelled(opts), { level: 'software', vendor: 'pq-software' });
+}
+
+function createPqSoftwareVerifierUnlabelled(opts: PqSoftwareVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts?.policy || !Array.isArray(opts.policy.measurements) || opts.policy.measurements.length === 0) {
