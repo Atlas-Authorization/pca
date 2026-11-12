@@ -1,0 +1,3 @@
+RESULT Proved forall x: epoch_t, s: sid_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x)) up to probability Phash(time_4) + Phash(time_3) + Phash(time_2) + Ppq(time_1, #cE + #cD + NS, max(maxlength(game 4: mE), maxlength(game 4: mD), maxlength(game 4: mR)))
+RESULT Could not prove forall b: body_t, ps: pset, s: sid_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b)); forall e: body_t, p, r: digest, k: seq_t, s: sid_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e)).
+rc=0 secs=0

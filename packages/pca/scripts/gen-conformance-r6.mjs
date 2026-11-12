@@ -295,7 +295,7 @@ for (const m of malformed.filter((x) => x.api === 'pcactn_json')) {
   let tree;
   try { tree = pca.strictParse(m.input.text); } catch { continue; } // parse failure == deny
   let r;
-  try { r = await pca.verifyPCActnCore(tree, { grant: root, nowEpoch: m.input.now, audience: m.input.aud }); } catch (e) { throw new Error(`malformed pcactn ${m.name}: reference THREW ${e}`); }
+  try { r = await pca.verifyPCActnCore(tree, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: m.input.now, audience: m.input.aud }); } catch (e) { throw new Error(`malformed pcactn ${m.name}: reference THREW ${e}`); }
   if (r.allow) throw new Error(`malformed pcactn ${m.name}: reference ALLOWED`);
 }
 

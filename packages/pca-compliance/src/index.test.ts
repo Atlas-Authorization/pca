@@ -140,7 +140,7 @@ async function allowFixture(): Promise<Fixture> {
   const grant = mintEnvelopeGrant(k);
   const chain = buildChain(k, grant);
   const actn = buildActn(k, grant, chain, 'n-refund');
-  const verify = await verifyPCActnCore(actn, { grant, nowEpoch: NOW, audience: AUD });
+  const verify = await verifyPCActnCore(actn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD });
   const decision = decide({
     grant,
     chain,
@@ -163,7 +163,7 @@ async function denyFixture(): Promise<Fixture> {
   const actn = buildActn(k, grant, chain, 'n-refund', { counter: 2 });
   // Tamper with the signed action AFTER signing: plan-inclusion + leaf-signature must now fail.
   const tampered: PCActn = { ...actn, action: { ...actn.action, resource: 'charge/ch_ATTACKER' } };
-  const verify = await verifyPCActnCore(tampered, { grant, nowEpoch: NOW, audience: AUD });
+  const verify = await verifyPCActnCore(tampered, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD });
   const event = toAuditEvent({ pcactn: tampered, verify, now: NOW });
   return { event, verify };
 }
@@ -176,7 +176,7 @@ async function stepUpFixture(): Promise<Fixture> {
   const base = buildActn(k, grant, chain, 'n-delete', { counter: 3 });
   const threshold = coSign(k, base);
   const actn = buildActn(k, grant, chain, 'n-delete', { threshold, counter: 3 });
-  const verify = await verifyPCActnCore(actn, {
+  const verify = await verifyPCActnCore(actn, { insecureSkipPlanRootCheck: true,
     grant,
     nowEpoch: NOW,
     audience: AUD,
@@ -438,7 +438,7 @@ describe('R2-13: human override only from verified shares', () => {
     expect(ev.humanOverride?.approvers).toEqual([]);
     expect(ev.humanOverride?.narrative).toMatch(/NOT verified/);
     // a real verifier that rejects the forged share
-    const rejected = await verifyPCActnCore(actn, { grant, nowEpoch: NOW, audience: AUD, hooks: { threshold: createThresholdVerifier({ signerSet: signerSetOf(k), t: 3 }) } });
+    const rejected = await verifyPCActnCore(actn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD, hooks: { threshold: createThresholdVerifier({ signerSet: signerSetOf(k), t: 3 }) } });
     expect(toAuditEvent({ pcactn: actn, verify: rejected, now: NOW }).humanOverride?.humanApproved).toBe(false);
   });
 });

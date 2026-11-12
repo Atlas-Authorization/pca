@@ -11,8 +11,10 @@ import { hashCanonical } from './hash';
 import { paramsDigest, commitPlan, type PlanNode } from './merkle';
 import { strictParse } from './strict-json';
 import { encodePCActn } from './pcactn';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
 import { AUD, NOW, setup } from './server/fixture.test-util';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /** A base identifier plus every kind of "looks the same" variant. All of them are byte-different from the base. */
 const BASE = 'caf\u00e9-payments'; // NFC: precomposed e-acute
@@ -192,7 +194,7 @@ describe('T-045: audience binding is byte-exact (full verifier)', () => {
   const verdictFor = async (signedAud: string, verifierAud: string) => {
     const s = setup();
     const a = s.mk(s.plan[0]!, { extra: { aud: signedAud } });
-    return verifyPCActn(a, { grant: s.grant, now: NOW, audience: verifierAud, context: { plan: s.plan, risk: s.lowRisk, params: {} } });
+    return verifyPCActn(a, { insecureSkipPlanRootCheck: true, grant: s.grant, now: NOW, audience: verifierAud, context: { plan: s.plan, risk: s.lowRisk, params: {} } });
   };
   it('the identical audience passes the audience check', async () => {
     const v = await verdictFor(AUD_NFC, AUD_NFC);
@@ -249,7 +251,7 @@ describe('T-045: digests and commitments bind the exact bytes', () => {
   it('a PCActn whose signed resource is NFD does not verify against a plan committing the NFC resource (inclusion fails)', async () => {
     const s = setup();
     const a = s.mk(s.plan[0]!, { tweak: (x) => { x.resource = 'session:caf\u00e9'.normalize('NFD'); } });
-    const v = await verifyPCActn(a, { grant: s.grant, now: NOW, audience: AUD, context: { plan: s.plan, risk: s.lowRisk, params: {} } });
+    const v = await verifyPCActn(a, { insecureSkipPlanRootCheck: true, grant: s.grant, now: NOW, audience: AUD, context: { plan: s.plan, risk: s.lowRisk, params: {} } });
     expect(v.allow).toBe(false);
     expect(v.checks.plan_inclusion).toBe('fail');
   });

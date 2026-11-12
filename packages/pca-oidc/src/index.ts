@@ -16,7 +16,7 @@
  *   });
  *   // verifyChain([grant, ...], principal.principalPublic)  anchors the chain in the OIDC human.
  */
-export { discoverOidc, discoveryUrl, OidcDiscoveryError } from './discovery';
+export { discoverOidc, discoveryUrl, OidcDiscoveryError, DEFAULT_MAX_DISCOVERY_BYTES } from './discovery';
 export type { DiscoverOidcOptions, OidcProviderMetadata } from './discovery';
 
 export { verifyIdToken, OidcVerificationError, DEFAULT_ID_TOKEN_ALGS } from './verify';
@@ -30,3 +30,6 @@ export type {
 
 export { oidcPrincipal, isOidcSubjectCaveat, OIDC_SUBJECT_CAVEAT } from './principal';
 export type { OidcPrincipal, OidcPrincipalOptions, OidcSubjectCaveat } from './principal';
+
+export { createOidcJwks, createOidcJwksFromIssuer, DEFAULT_JWKS_TIMEOUT_MS } from './jwks';
+export type { OidcJwksOptions } from './jwks';

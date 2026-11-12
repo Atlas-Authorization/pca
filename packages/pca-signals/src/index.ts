@@ -38,6 +38,7 @@
 
 import { SignJWT, jwtVerify, type KeyLike, type JWTPayload } from 'jose';
 import { assertCanonicalCompactJws } from '@atlasauth/pca';
+import type { Capability, Hook, PCActn, VerifyContext } from '@atlasauth/pca';
 import { randomUUID } from 'node:crypto';
 
 /** RFC 8417 §2.3: a SET SHOULD carry `typ: "secevent+jwt"` so it cannot be confused with an access/ID token. */
@@ -67,6 +68,12 @@ export const EVENT_TYPES = {
    * best effort: the signed-epoch pull bound (T22) is the guarantee.
    */
   intentRevoked: 'https://atlasauth.net/caep/intent-revoked',
+  /** SSF 1.0 §8.1.4.1 — stream verification (`state` echoed back). */
+  verification: 'https://schemas.openid.net/secevent/ssf/event-type/verification',
+  /** CAEP 1.0 — the risk level of a principal changed (emitted from the immune system). */
+  riskLevelChange: 'https://schemas.openid.net/secevent/caep/event-type/risk-level-change',
+  /** CAEP 1.0 — the assurance level of a principal changed (emitted on discharge changes). */
+  assuranceLevelChange: 'https://schemas.openid.net/secevent/caep/event-type/assurance-level-change',
 } as const;
 
 /** A CAEP/SSF Subject Identifier (RFC 9493). Opaque to this package; carried verbatim. */
@@ -142,8 +149,37 @@ export interface CaepCredentialChangeEvent {
   reason_admin?: string;
 }
 
+/** SSF 1.0 §8.1.4.1 verification event payload: the receiver's opaque `state`, echoed. */
+export interface SsfVerificationEvent {
+  state?: string;
+  /** Not defined for verification events; typed so payload readers can treat the union uniformly. */
+  event_timestamp?: number;
+}
+/** CAEP 1.0 `risk-level-change`. */
+export interface CaepRiskLevelChangeEvent {
+  /** `USER`, `DEVICE`, `SESSION`, `TENANT`, `ORG_UNIT`, `GROUP` (or another SSF entity). */
+  principal: string;
+  current_level: 'LOW' | 'MEDIUM' | 'HIGH';
+  previous_level?: 'LOW' | 'MEDIUM' | 'HIGH';
+  risk_reason?: string;
+  event_timestamp: number;
+  subject?: SubjectIdentifier;
+}
+/** CAEP 1.0 `assurance-level-change`. */
+export interface CaepAssuranceLevelChangeEvent {
+  namespace: string;
+  current_level: string;
+  previous_level?: string;
+  change_direction?: 'increase' | 'decrease';
+  event_timestamp: number;
+  subject?: SubjectIdentifier;
+}
+
 /** The union of every event payload this package understands. */
 export type SetEventPayload =
+  | SsfVerificationEvent
+  | CaepRiskLevelChangeEvent
+  | CaepAssuranceLevelChangeEvent
   | GrantRevokedEvent
   | KillSwitchEvent
   | IntentRevokedEvent
@@ -406,3 +442,360 @@ export function streamProcessor(
   }
   return state;
 }
+
+// ================================================================================================
+// Receiver: verify + replay-guard + fold, fail-closed (additive; `verifySET` / `applySET` are unchanged).
+// ================================================================================================
+
+/**
+ * A durable `jti` replay store for received SETs. `addIfAbsent` MUST be atomic: of N concurrent calls with the
+ * same `jti` exactly one returns `true`. An entry may be dropped once `nowSec >= expiresAtSec`. Back it with a
+ * shared store (SQL unique key, Redis `SET NX EX`) when more than one process receives SETs; check yours with
+ * {@link runSetReplayStoreConformance}.
+ */
+export interface SetReplayStore {
+  addIfAbsent(jti: string, expiresAtSec: number, nowSec: number): boolean | Promise<boolean>;
+}
+
+/** Default capacity of {@link createInMemorySetReplayStore}. */
+export const SET_INMEMORY_MAX_ENTRIES = 100_000;
+
+/** A misconfiguration or malformed input to the revocation adapters. `code` names the check. */
+export class SignalsError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'SignalsError';
+    this.code = code;
+  }
+}
+
+/**
+ * Single-process store, explicitly bounded: state is lost on restart and not shared across processes. When `maxEntries`
+ * live (unexpired) entries are held, a further new `jti` makes `addIfAbsent` THROW (`receiveSET` then refuses with
+ * `replay_store_error`) instead of evicting a live entry, so a flood can never reopen a replay window.
+ */
+export function createInMemorySetReplayStore(opts: { maxEntries?: number } = {}): SetReplayStore {
+  const max = opts.maxEntries ?? SET_INMEMORY_MAX_ENTRIES;
+  if (!Number.isInteger(max) || max < 1) throw new SignalsError('misconfigured', 'maxEntries must be a positive integer');
+  const seen = new Map<string, number>();
+  return {
+    addIfAbsent(jti, expiresAtSec, nowSec) {
+      const held = seen.get(jti);
+      if (held !== undefined && nowSec < held) return false;
+      if (held === undefined && seen.size >= max) {
+        for (const [k, exp] of seen) if (nowSec >= exp) seen.delete(k);
+        if (seen.size >= max) throw new Error('replay store is full');
+      }
+      seen.set(jti, expiresAtSec);
+      return true;
+    },
+  };
+}
+
+/**
+ * Conformance suite for a {@link SetReplayStore}. Returns the list of failed checks (empty = conformant). Pass a
+ * factory that returns a FRESH, empty store on each call.
+ */
+export async function runSetReplayStoreConformance(make: () => SetReplayStore): Promise<string[]> {
+  const failures: string[] = [];
+  const check = (ok: boolean, name: string): void => {
+    if (!ok) failures.push(name);
+  };
+  const s = make();
+  check((await s.addIfAbsent('a', 200, 100)) === true, 'first sight of a jti returns true');
+  check((await s.addIfAbsent('a', 200, 101)) === false, 'second sight of the same jti returns false');
+  check((await s.addIfAbsent('b', 200, 101)) === true, 'a different jti is independent');
+  check((await s.addIfAbsent('a', 200, 199)) === false, 'still seen one second before expiry');
+  const t = make();
+  await t.addIfAbsent('c', 200, 100);
+  check((await t.addIfAbsent('c', 400, 200)) === true, 'an expired entry may be added again (nowSec >= expiresAtSec)');
+  const u = make();
+  const wins = (await Promise.all(Array.from({ length: 16 }, () => u.addIfAbsent('race', 200, 100)))).filter(Boolean).length;
+  check(wins === 1, `16 concurrent adds of one jti: exactly one wins (got ${wins})`);
+  return failures;
+}
+
+/** Why {@link receiveSET} refused a token. Every refusal is a value, never a throw. */
+export type ReceiveSetCode =
+  | 'misconfigured'
+  | 'oversize'
+  | 'malformed'
+  | 'verify_failed'
+  | 'iat_missing'
+  | 'iat_future'
+  | 'iat_stale'
+  | 'unmapped_subject'
+  | 'replay'
+  | 'replay_store_error';
+
+export type ReceiveSetResult = { ok: true; parsed: ParsedSet } | { ok: false; code: ReceiveSetCode; reason: string };
+
+/** Options for {@link receiveSET}. Every field except the clock ones is REQUIRED; a missing one is `misconfigured`. */
+export interface ReceiveSetOptions {
+  issuer: string | string[];
+  audience: string | string[];
+  /** Required replay store; there is no default. */
+  replayStore: SetReplayStore;
+  /** Revocation state to fold the verified events into. */
+  state: RevocationState;
+  /** Oldest acceptable `iat` age in seconds. Required: it also bounds how long the replay store must remember a `jti`. */
+  maxAgeSec: number;
+  /** Seconds a SET's `iat` may be ahead of the receiver (default 60). */
+  clockSkewSec?: number;
+  /** Pin "now" (epoch seconds), for tests. */
+  nowSec?: number;
+  /** Reject a SET string longer than this (default 16384). */
+  maxBytes?: number;
+  /**
+   * Also turn the standard CAEP / RISC revocation events in the SET into `killedAgents` entries (see
+   * {@link applyStandardRevocations}). Absent: only the PCA event types are applied. Planned BEFORE the `jti` is recorded,
+   * so an event whose subject cannot be mapped under `failOnUnmapped` is refused without burning the id.
+   */
+  standardRevocations?: StandardRevocationOptions;
+}
+
+const fails = (code: ReceiveSetCode, reason: string): ReceiveSetResult => ({ ok: false, code, reason });
+
+/**
+ * The recommended receive path: size cap, canonical spelling, EdDSA signature, `typ`, required `iss` and `aud`,
+ * `iat` freshness window, atomic `jti` replay guard, then fold into `state`. Order matters: the `jti` is recorded
+ * only after every other check passed, so a forged token cannot burn a real SET's id. Fails closed on every error,
+ * including a replay store that throws (the SET is NOT applied).
+ */
+export async function receiveSET(set: string, verifyKey: VerifyKey, opts: ReceiveSetOptions): Promise<ReceiveSetResult> {
+  if (
+    !opts ||
+    opts.issuer === undefined ||
+    opts.audience === undefined ||
+    typeof opts.replayStore?.addIfAbsent !== 'function' ||
+    !opts.state ||
+    !Number.isFinite(opts.maxAgeSec) ||
+    opts.maxAgeSec <= 0
+  ) {
+    return fails('misconfigured', 'issuer, audience, replayStore, state and a positive maxAgeSec are all required');
+  }
+  if (typeof set !== 'string' || set.length > (opts.maxBytes ?? 16384)) return fails('oversize', 'SET is not a string or exceeds maxBytes');
+  try {
+    assertCanonicalCompactJws(set);
+  } catch (e) {
+    return fails('malformed', e instanceof Error ? e.message : 'not a canonical compact JWS');
+  }
+  const nowSec = opts.nowSec ?? Math.floor(Date.now() / 1000);
+  let parsed: ParsedSet;
+  try {
+    parsed = await verifySET(set, verifyKey, { issuer: opts.issuer, audience: opts.audience, currentDate: new Date(nowSec * 1000) });
+  } catch (e) {
+    return fails('verify_failed', e instanceof Error ? e.message : 'verification failed');
+  }
+  const iat = parsed.payload.iat;
+  if (typeof iat !== 'number' || !Number.isFinite(iat)) return fails('iat_missing', 'SET has no numeric iat');
+  const skew = opts.clockSkewSec ?? 60;
+  if (iat > nowSec + skew) return fails('iat_future', 'SET iat is in the future');
+  if (nowSec - iat > opts.maxAgeSec) return fails('iat_stale', `SET is older than ${opts.maxAgeSec}s`);
+  let plan: StandardRevocationPlan | undefined;
+  if (opts.standardRevocations !== undefined) {
+    try {
+      plan = planStandardRevocations(parsed, opts.standardRevocations);
+    } catch (e) {
+      return fails('unmapped_subject', e instanceof Error ? e.message : 'a revocation event could not be mapped to an agent');
+    }
+  }
+  let fresh: boolean;
+  try {
+    fresh = await opts.replayStore.addIfAbsent(parsed.jti, iat + opts.maxAgeSec + skew, nowSec);
+  } catch (e) {
+    return fails('replay_store_error', e instanceof Error ? e.message : 'replay store failed');
+  }
+  if (fresh !== true) return fails('replay', `jti '${parsed.jti}' has already been received`);
+  applySET(opts.state, parsed);
+  if (plan !== undefined) applyStandardPlan(opts.state, plan);
+  return { ok: true, parsed };
+}
+
+// ================================================================================================
+// Standard (CAEP / RISC) revocation events -> revocation entries, and the adapters for authorize().
+// ================================================================================================
+
+/** RISC event types (OpenID RISC 1.0) that end an account's standing: treated as revoking every grant of the mapped agent. */
+export const RISC_EVENT_TYPES = {
+  sessionsRevoked: 'https://schemas.openid.net/secevent/risc/event-type/sessions-revoked',
+  accountDisabled: 'https://schemas.openid.net/secevent/risc/event-type/account-disabled',
+  accountPurged: 'https://schemas.openid.net/secevent/risc/event-type/account-purged',
+  credentialCompromise: 'https://schemas.openid.net/secevent/risc/event-type/credential-compromise',
+} as const;
+
+/** How standard events become revocation entries. */
+export interface StandardRevocationOptions {
+  /**
+   * Map an event's RFC 9493 subject to the agent id a PCActn's `agentOf` yields. Default: an `opaque` subject's `id`.
+   * Return `undefined` when the subject names no agent you know.
+   */
+  subjectToAgent?: (subject: SubjectIdentifier) => string | undefined;
+  /** Throw (`unmapped_subject`) instead of reporting when a revoking event's subject cannot be mapped. Default false. */
+  failOnUnmapped?: boolean;
+}
+
+/** What {@link planStandardRevocations} decided; applying it is a separate, infallible step. */
+export interface StandardRevocationPlan {
+  /** `[agent, event_timestamp]` pairs to add to `killedAgents`. */
+  agents: Array<[string, number]>;
+  /** Event types that revoke but whose subject named no known agent (nothing was revoked for them). */
+  unmapped: string[];
+}
+
+function defaultSubjectToAgent(subject: SubjectIdentifier): string | undefined {
+  const id = subject['id'];
+  return subject.format === 'opaque' && typeof id === 'string' && id.length > 0 ? id : undefined;
+}
+
+function isRevokingStandardEvent(type: string, ev: SetEventPayload): boolean {
+  if (type === EVENT_TYPES.sessionRevoked) return true;
+  if (type === EVENT_TYPES.credentialChange) return (ev as CaepCredentialChangeEvent).change_type !== 'create'; // unknown/absent => revoke (fail closed)
+  return (Object.values(RISC_EVENT_TYPES) as string[]).includes(type);
+}
+
+/**
+ * Decide, without touching any state, which agents a verified SET's standard events revoke: CAEP `session-revoked`,
+ * CAEP `credential-change` (every `change_type` except `create`; an absent or unknown one counts as a change) and the RISC
+ * types in {@link RISC_EVENT_TYPES}. The subject is the event's own `subject`, else the SET-level `sub_id`. A revoking
+ * event with no subject, or one `subjectToAgent` cannot map, is listed in `unmapped` (or throws under `failOnUnmapped`).
+ */
+export function planStandardRevocations(parsed: ParsedSet, opts: StandardRevocationOptions = {}): StandardRevocationPlan {
+  const toAgent = opts.subjectToAgent ?? defaultSubjectToAgent;
+  const plan: StandardRevocationPlan = { agents: [], unmapped: [] };
+  const setSubject = isRecord(parsed.payload['sub_id']) ? parsed.payload['sub_id'] : undefined;
+  for (const [type, ev] of Object.entries(parsed.events)) {
+    if (ev === undefined || !isRevokingStandardEvent(type, ev)) continue;
+    const evSubject = (ev as { subject?: unknown }).subject;
+    const own = isRecord(evSubject) ? evSubject : setSubject;
+    let agent: string | undefined;
+    if (own !== undefined && typeof own['format'] === 'string') {
+      try {
+        agent = toAgent(own as SubjectIdentifier);
+      } catch {
+        agent = undefined;
+      }
+    }
+    if (typeof agent !== 'string' || agent.length === 0) {
+      if (opts.failOnUnmapped === true) throw new SignalsError('unmapped_subject', `event '${type}' names no mappable agent`);
+      plan.unmapped.push(type);
+      continue;
+    }
+    plan.agents.push([agent, typeof ev.event_timestamp === 'number' ? ev.event_timestamp : 0]);
+  }
+  return plan;
+}
+
+function applyStandardPlan(state: RevocationState, plan: StandardRevocationPlan): void {
+  for (const [agent, ts] of plan.agents) recordMax(state.killedAgents, agent, ts);
+}
+
+/** {@link planStandardRevocations} then apply: monotone, max-timestamp, like {@link applySET}. Returns the plan that was applied. */
+export function applyStandardRevocations(state: RevocationState, parsed: ParsedSet, opts: StandardRevocationOptions = {}): StandardRevocationPlan {
+  assertRevocationState(state);
+  const plan = planStandardRevocations(parsed, opts);
+  applyStandardPlan(state, plan);
+  return plan;
+}
+
+function assertRevocationState(state: unknown): asserts state is RevocationState {
+  if (!isRecord(state) || !(state['revokedGrants'] instanceof Map) || !(state['killedAgents'] instanceof Map)) {
+    throw new SignalsError('misconfigured', 'state must come from createRevocationState()');
+  }
+}
+
+/** Options shared by the authorize() adapters. */
+export interface RevocationAdapterOptions {
+  /** The agent id a kill-switch names, for a verification context. Default: the PCActn's leaf holder key (b64u). */
+  agentOf?: (ctx: VerifyContext) => string | undefined;
+}
+
+function leafHolderAgent(ctx: VerifyContext): string | undefined {
+  const chain = ctx.pcactn.cap_chain;
+  return chain[chain.length - 1]?.holder;
+}
+
+/** The reason a PCActn under `grant` is revoked by `state`, or `undefined` when it is not. Anything undecidable is a reason. */
+function revocationReason(state: RevocationState, pcactn: PCActn, grant: Capability, agentOf: (ctx: VerifyContext) => string | undefined): string | undefined {
+  try {
+    const ref = pcactn.grant_ref;
+    if (typeof ref !== 'string' || ref.length === 0) return 'grant_ref is missing';
+    if (state.revokedGrants.has(ref)) return 'grant revoked by signal';
+    if (typeof grant?.id === 'string' && state.revokedGrants.has(grant.id)) return 'grant revoked by signal';
+    const agent = agentOf({ pcactn, grant });
+    if (typeof agent !== 'string' || agent.length === 0) return 'agent could not be determined';
+    if (state.killedAgents.has(agent)) return 'agent killed by signal';
+    return undefined;
+  } catch {
+    return 'revocation check error (fail closed)';
+  }
+}
+
+/**
+ * A revocation hook for `@atlasauth/pca`: pass it as `hooks.revocation` to `authorize()` / `requirePCA()` / `verifyPCActn`.
+ * It reads `state` LIVE on every call, so SETs folded in by {@link receiveSET} take effect on the next request. It always
+ * reports `enforced: true`; a revoked grant, a revoked or undeterminable agent, or any error denies.
+ */
+export function createRevocationHook(state: RevocationState, opts: RevocationAdapterOptions = {}): Hook {
+  assertRevocationState(state);
+  const agentOf = opts.agentOf ?? leafHolderAgent;
+  return (ctx) => {
+    const reason = revocationReason(state, ctx.pcactn, ctx.grant, agentOf);
+    return reason === undefined ? { enforced: true, ok: true } : { enforced: true, ok: false, reason };
+  };
+}
+
+/**
+ * The same decision in the shape `authorizeExecution` takes as `isRevoked(grant, pcactn)`: true when revoked or when the
+ * answer cannot be determined (fail closed).
+ */
+export function createIsRevoked(state: RevocationState, opts: RevocationAdapterOptions = {}): (grant: Capability, pcactn: PCActn) => boolean {
+  assertRevocationState(state);
+  const agentOf = opts.agentOf ?? leafHolderAgent;
+  return (grant, pcactn) => revocationReason(state, pcactn, grant, agentOf) !== undefined;
+}
+
+/** A serialisable copy of a revocation state, for you to persist across restarts. */
+export interface RevocationSnapshot {
+  v: 1;
+  grants: Array<[string, number]>;
+  agents: Array<[string, number]>;
+  intents: Array<[string, number]>;
+}
+
+/** Copy `state` into a plain JSON-safe snapshot. Persist it after every accepted SET: an empty state after a restart revokes nothing. */
+export function snapshotRevocationState(state: RevocationState): RevocationSnapshot {
+  assertRevocationState(state);
+  return { v: 1, grants: [...state.revokedGrants], agents: [...state.killedAgents], intents: [...(state.revokedIntentIds ?? [])] };
+}
+
+function pairs(v: unknown, what: string): Array<[string, number]> {
+  if (!Array.isArray(v)) throw new SignalsError('bad_snapshot', `${what} is not an array`);
+  return v.map((p: unknown) => {
+    if (!Array.isArray(p) || p.length !== 2 || typeof p[0] !== 'string' || p[0].length === 0 || typeof p[1] !== 'number' || !Number.isFinite(p[1])) {
+      throw new SignalsError('bad_snapshot', `${what} holds an entry that is not [string, number]`);
+    }
+    return [p[0] as string, p[1] as number] as [string, number];
+  });
+}
+
+/**
+ * Merge a snapshot into `into` (a fresh state by default). Strict: any shape error throws `bad_snapshot` and `into` is not
+ * touched. Merging is monotone (max timestamp), so restoring never un-revokes anything already in `into`.
+ */
+export function restoreRevocationState(snapshot: unknown, into: RevocationState = createRevocationState()): RevocationState {
+  assertRevocationState(into);
+  if (!isRecord(snapshot) || snapshot['v'] !== 1) throw new SignalsError('bad_snapshot', 'snapshot is not a version 1 object');
+  const extra = Object.keys(snapshot).filter((k) => !['v', 'grants', 'agents', 'intents'].includes(k));
+  if (extra.length > 0) throw new SignalsError('bad_snapshot', `snapshot has unknown member '${extra[0]}'`);
+  const grants = pairs(snapshot['grants'], 'grants');
+  const agents = pairs(snapshot['agents'], 'agents');
+  const intents = pairs(snapshot['intents'], 'intents');
+  for (const [k, t] of grants) recordMax(into.revokedGrants, k, t);
+  for (const [k, t] of agents) recordMax(into.killedAgents, k, t);
+  for (const [k, t] of intents) recordMax((into.revokedIntentIds ??= new Map()), k, t);
+  return into;
+}
+export * from './ssf-stream';
+export * from './ssf-manage';

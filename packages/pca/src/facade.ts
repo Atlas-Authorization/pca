@@ -27,6 +27,7 @@ import { type Catalog, DEFAULT_CATALOG, type ActionSpec } from './catalog';
 import { mintGrant, type AgentBinding } from './envelope';
 import { type KeyPair, generateKeyPair } from './keys';
 import { b64u } from './hash';
+import { createProvenanceRecorder, type ProvenanceBundle, type ProvenanceRecorder, type ProvenanceRecorderOptions } from './arg-provenance';
 import { buildPCActn, encodePCActn, type PCActn } from './pcactn';
 import { type PlanNode, paramsDigest } from './merkle';
 import {
@@ -83,6 +84,12 @@ export interface AgentOptions {
   aud?: string;
   /** Clock (ms) for grant minting + period windows. Default `Date.now()`. */
   now?: number;
+  /**
+   * The agent's provenance mediator (provenance by default). A recorder is always created: its key is named in the grant's signed
+   * envelope (`provenance.mediators`), so a verifier trusts its labels without extra configuration. Override the mediator name, kid,
+   * key or session here. The recorder must run in the harness, out of the model's reach (never expose `agent.provenance` as a tool).
+   */
+  provenance?: Partial<ProvenanceRecorderOptions>;
 }
 
 // ---- limit parsing --------------------------------------------------------------------------------
@@ -142,12 +149,22 @@ export interface CompiledPolicy {
   limits: Record<string, ParsedLimit>;
   /** The RAW limit input as given (keys may be bare action names or FQ verbs); lets the linter flag unmatched keys. */
   inputLimits: Limits;
+  /**
+   * W5: limits this offline compiler can only APPROXIMATE. A `$N/period` limit becomes a per-call ceiling of N plus a grant
+   * lifetime of one period; it is NOT a renewing per-window cap. Use `@atlasauth/pca-goal` (`liftLegacy` + the proved
+   * compiler) for an exact `period` bound. Empty when every limit is exact.
+   */
+  approximations: string[];
 }
 
 /** Conservative fallback for a verb not in the catalog: treat as irreversible, high blast radius. */
 function specFor(catalog: Catalog, verb: string): ActionSpec {
   const s = catalog.get(verb);
   if (s) return s;
+  // an alias of exactly one action of the connector (`stripe.issue_refund` is `stripe.refund`); never a guess
+  const dot = verb.indexOf('.');
+  const viaAlias = dot > 0 ? catalog.resolve?.(verb.slice(0, dot), verb.slice(dot + 1)) : undefined;
+  if (viaAlias) return viaAlias;
   const [connector, ...rest] = verb.split('.');
   return {
     connector: connector ?? verb,
@@ -191,7 +208,8 @@ export function compilePolicy(opts: {
     Object.prototype.hasOwnProperty.call(rawLimits, key) ? rawLimits[key] : undefined;
   const limits: Record<string, ParsedLimit> = {};
   const limitFor = (s: ActionSpec): ParsedLimit | undefined => {
-    const raw = ownLimit(s.verb) ?? ownLimit(s.action);
+    let raw = ownLimit(s.verb) ?? ownLimit(s.action);
+    for (const a of s.aliases ?? []) raw ??= ownLimit(a);
     if (raw === undefined) return undefined;
     const parsed = parseLimit(raw);
     limits[s.verb] = parsed;
@@ -202,6 +220,10 @@ export function compilePolicy(opts: {
   const predicates: Predicate[] = actions.map((s) => {
     const where: NonNullable<Predicate['where']> = [];
     const lim = limitFor(s);
+    // W6: a money limit on a verb with no amount field would compile to NO ceiling, silently unbounded: refuse instead.
+    if (lim && lim.unit === 'usd' && !s.amountField) {
+      throw new Error(`compilePolicy: '$' limit on '${s.verb}' but the catalog gives that verb no amount field, so the limit could not be enforced`);
+    }
     if (lim && lim.unit === 'usd' && s.amountField) {
       where.push({ field: `action.params.${s.amountField}`, op: 'lte', value: lim.amount });
       where.push({ field: `action.params.${s.amountField}`, op: 'gte', value: 0 });
@@ -221,10 +243,8 @@ export function compilePolicy(opts: {
   if (periods.length) caveats.push({ type: 'expires', at: now + Math.min(...periods) });
 
   const countLimits = Object.values(limits).filter((l) => l.unit === 'count' && l.periodMs);
-  if (countLimits.length === 1) {
-    const cl = countLimits[0]!;
-    caveats.push({ type: 'rate', max: cl.amount, per_secs: Math.max(1, Math.round(cl.periodMs! / 1000)) });
-  }
+  // W7a: one rate caveat per count limit (caveats are ANDed), so adding a second limit can only narrow, never drop the first.
+  for (const cl of countLimits) caveats.push({ type: 'rate', max: cl.amount, per_secs: Math.max(1, Math.round(cl.periodMs! / 1000)) });
 
   // Budget model.
   const dollarLimits = Object.values(limits).filter((l) => l.unit === 'usd');
@@ -233,6 +253,7 @@ export function compilePolicy(opts: {
     : opts.budgetModel === 'risk' ? 'risk'
     : dollarLimits.length > 0 ? 'dollars' : 'risk';
 
+  const hasIrreversible = actions.some((s) => s.reversibility === 'irreversible');
   let riskPolicy: RiskPolicy;
   if (model === 'dollars' && dollarLimits.length > 0) {
     // "spend = risk" exact (mirrors mandateRiskPolicy): γ=1, κ = largest per-call cap, bMax = Σ caps.
@@ -240,8 +261,10 @@ export function compilePolicy(opts: {
     const bMax = dollarLimits.reduce((a, l) => a + l.amount, 0);
     riskPolicy = {
       weights: { alpha: 0, beta: 0, gamma: 1, delta: 0, epsilon: 0, zeta: 0 },
-      theta1: 1, // within-cap actions auto-approve (over-cap is denied by the ceiling predicate)
-      theta2: 1,
+      // W7b: within-cap actions auto-approve ONLY when nothing granted is irreversible; otherwise the default human
+      // co-sign tiers stay, so adding a `$` limit can never remove a step-up the risk model required.
+      theta1: hasIrreversible ? DEFAULT_RISK_POLICY.theta1 : 1,
+      theta2: hasIrreversible ? DEFAULT_RISK_POLICY.theta2 : 1,
       kappa: kappa > 0 ? kappa : 1,
       lambda: 0,
       rho: DEFAULT_RISK_POLICY.rho,
@@ -256,7 +279,9 @@ export function compilePolicy(opts: {
   const bad = validateRiskPolicy(riskPolicy);
   if (bad) throw new Error(`compilePolicy: derived risk policy invalid: ${bad}`);
 
-  return { predicates, caveats, riskPolicy, actions, budgetModel: model, limits, inputLimits: { ...rawLimits } };
+  const approximations = Object.entries(limits).filter(([, l]) => l.unit === 'usd' && l.periodMs !== undefined)
+    .map(([v, l]) => `${v}: $${l.amount}/period is a per-call ceiling plus a one-period grant lifetime, not a renewing window cap`);
+  return { predicates, caveats, riskPolicy, actions, budgetModel: model, limits, inputLimits: { ...rawLimits }, approximations };
 }
 
 // ---- the agent handle -----------------------------------------------------------------------------
@@ -290,6 +315,8 @@ export interface ActResult {
   encoded: string;
   /** The local, non-authoritative dry-run for this action. */
   dryRun: DryRun;
+  /** The provenance bundle for this action (send it with the PCActn: header `PCA-Provenance` or body `pca_provenance`). */
+  provenance?: ProvenanceBundle;
 }
 
 export interface Agent {
@@ -317,6 +344,11 @@ export interface Agent {
   subAgent(opts?: { holder?: KeyPair; addedCaveats?: Caveat[] }): Agent;
   /** Wire-encode the grant (for transport / inspection). */
   encodeGrant(): string;
+  /**
+   * The session's provenance recorder: record the principal's message (`principal`) and every tool / retrieval / web result that
+   * enters the model's context (the framework adapters do this automatically). `act` appends the action receipt.
+   */
+  provenance?: ProvenanceRecorder;
 }
 
 function riskFor(policy: CompiledPolicy, spec: ActionSpec, params: Record<string, unknown> | undefined, override?: number): number {
@@ -339,6 +371,7 @@ function makeAgent(args: {
   catalog: Catalog;
   defaultAud?: string;
   startNow: number;
+  provenance?: ProvenanceRecorder;
 }): Agent {
   const { policy, catalog } = args;
   let counter = 0;
@@ -401,7 +434,8 @@ function makeAgent(args: {
         ...(opts?.nonce !== undefined ? { nonce: opts.nonce } : {}),
         ...(opts?.caution !== undefined ? { caution: opts.caution } : {}),
       });
-      return { pcactn, encoded: encodePCActn(pcactn), dryRun: dryRun(verb, resource, params, { now: opts?.now }) };
+      const provenance = args.provenance?.forAction({ verb, resource, params: params ?? {} });
+      return { pcactn, encoded: encodePCActn(pcactn), dryRun: dryRun(verb, resource, params, { now: opts?.now }), ...(provenance ? { provenance } : {}) };
     },
     subAgent(o) {
       const sub = o?.holder ?? generateKeyPair();
@@ -417,11 +451,13 @@ function makeAgent(args: {
         catalog,
         defaultAud: args.defaultAud,
         startNow: args.startNow,
+        ...(args.provenance ? { provenance: args.provenance } : {}),
       });
     },
     encodeGrant() {
       return JSON.stringify(args.grant);
     },
+    ...(args.provenance ? { provenance: args.provenance } : {}),
   };
 }
 
@@ -442,6 +478,7 @@ export function agent(opts: AgentOptions): Agent {
     now,
   });
   const principalPublic = b64u(opts.principal.publicKey);
+  const recorder = createProvenanceRecorder({ mediator: 'agent-harness', kid: 'k1', ...opts.provenance });
   const { grant, goalSalt } = mintGrant({
     principalSecret: opts.principal.secretKey,
     principalPublic,
@@ -452,6 +489,8 @@ export function agent(opts: AgentOptions): Agent {
       caveats: policy.caveats,
       agent_binding: opts.agentBinding ?? {},
       risk_policy: policy.riskPolicy,
+      // the principal designates the harness's mediator key: a verifier trusts its labels with no extra configuration
+      provenance: { mediators: [recorder.pin] },
     },
   });
   return makeAgent({
@@ -464,5 +503,6 @@ export function agent(opts: AgentOptions): Agent {
     catalog,
     defaultAud: opts.aud,
     startNow: now,
+    provenance: recorder,
   });
 }

@@ -25,7 +25,7 @@ import { x509ValidAt } from './x509-validity';
  */
 import { p256 } from '@noble/curves/p256';
 import { sha256 } from './hash';
-import { checkChainRoles, ecPointFromKey, unrecognisedCriticalExtension } from './x509-strict';
+import { certVerifiedUnder, checkChainRoles, ecPointFromKey, unrecognisedCriticalExtension } from './x509-strict';
 import { attestationBinding } from './attestation';
 import type { ExpectedAttestationBinding, MeasuredIdentity } from './attestation';
 
@@ -479,10 +479,10 @@ export async function verifyIntelPckChainX509(opts: {
       const child = ordered[i]!;
       const parent = ordered[i + 1]!;
       if (child.issuer !== parent.subject) return { ok: false, reason: `certificate at depth ${i} issuer does not match its parent subject` };
-      if (!child.verify(parent.publicKey)) return { ok: false, reason: `certificate at depth ${i} is not signed by its issuer` };
+      if (!certVerifiedUnder(child, parent.publicKey)) return { ok: false, reason: `certificate at depth ${i} is not signed by its issuer` };
     }
     // Root self-signed AND pinned.
-    if (!root.verify(root.publicKey)) return { ok: false, reason: 'root certificate is not self-signed' };
+    if (!certVerifiedUnder(root, root.publicKey)) return { ok: false, reason: 'root certificate is not self-signed' };
     const pin = (opts.trustAnchorRootCaSpkiSha256 ?? INTEL_SGX_ROOT_CA_SPKI_SHA256).toLowerCase();
     const rootSpki = new Uint8Array(root.publicKey.export({ type: 'spki', format: 'der' }));
     const rootFp = createHash('sha256').update(Buffer.from(rootSpki)).digest('hex');

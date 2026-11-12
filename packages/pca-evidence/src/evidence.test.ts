@@ -1,25 +1,34 @@
 import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
-  INTENT_ANCHOR_LOG,
   RevocationSet,
-  actionSchemaDigest,
-  actionSchemaKeyOf,
   buildPCActn,
   delegate,
-  deltaRevocationId,
   encodeKey,
   encodeMlDsaPublicKey,
   hashCanonical,
-  intentActionDigest,
-  intentRef,
   merkleProof,
   merkleRoot,
-  mintSessionGrant,
   mlDsa65Keygen,
   paramsDigest,
   pcactnDigest,
   publicKeyOf,
+  signRevocationEpoch,
+  type Capability,
+  type CapSuiteOpts,
+  type KeyPair,
+  type PCActn,
+  type PlanNode,
+  type Predicate,
+} from '@atlasauth/pca';
+import {
+  INTENT_ANCHOR_LOG,
+  actionSchemaDigest,
+  actionSchemaKeyOf,
+  deltaRevocationId,
+  intentActionDigest,
+  intentRef,
+  mintSessionGrant,
   sessionRevocationScope,
   sessionRootDigest,
   pcactnReservationDigest,
@@ -31,17 +40,10 @@ import {
   signIntentStatement,
   signLabels,
   signOfferSet,
-  signRevocationEpoch,
   signSessionRoot,
-  signTreeHead,
-  type Capability,
-  type CapSuiteOpts,
-  type KeyPair,
-  type PCActn,
-  type PlanNode,
-  type Predicate,
   type SessionRoot,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
+import { signTreeHead } from '@atlasauth/pca/ext/ledger';
 import { createLearner, deriveOmega, emitIntentMap, intentMapDigest, rng } from '@atlasauth/pca-intent';
 import { verifyStatement, statementPayload } from '@atlasauth/pca-scitt';
 import { signIntentAnswer, typedDigest, type SignedIntentAnswer } from '@atlasauth/pca-wallet';
@@ -363,6 +365,7 @@ describe('tampering: every artifact kind has a specific failing finding', () => 
       (b: Record<string, unknown>) => void ((b.subject as Record<string, unknown>).note = 'x'),
       (b: Record<string, unknown>) => void ((b.canaries as Record<string, unknown>).trusted = true),
       (b: Record<string, unknown>) => void (((b.accumulator as { events: Record<string, unknown>[] }).events[0]!).claim = 1),
+      (b: Record<string, unknown>) => void ((b.canaries as Record<string, unknown>).false_yes = -0), // strict profile: never -0
     ]) {
       const b = clone(w.bundle) as unknown as Record<string, unknown>;
       mutate(b);

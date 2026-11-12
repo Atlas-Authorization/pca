@@ -38,7 +38,7 @@ describe('buildPCActn', () => {
   it('output verifies; inclusion links to the node', async () => {
     const G = mk();
     const p = buildPCActn({ aud: 'test-aud', grant: G, chain: [G], plan, nodeId: 'n1', params: { d: 'a' }, counter: 1, signerSecret: A.secretKey });
-    const v = await verifyPCActnCore(p, { grant: G, audience: 'test-aud' });
+    const v = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: G, audience: 'test-aud' });
     expect(v.allow).toBe(true);
     expect(v.checks.plan_inclusion).toBe('pass');
     expect(v.checks.leaf_signature).toBe('pass');
@@ -50,7 +50,7 @@ describe('buildPCActn', () => {
     const p = buildPCActn({ aud: 'test-aud', grant: G, chain: [G], plan, nodeId: 'n2', counter: 1, signerSecret: A.secretKey });
     expect(p.action.params_digest).toBe(EMPTY_PARAMS_DIGEST);
     expect(planNodeLeaf(plan[1]!).params_digest).toBe(paramsDigest());
-    expect((await verifyPCActnCore(p, { grant: G })).checks.plan_inclusion).toBe('pass');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: G })).checks.plan_inclusion).toBe('pass');
   });
   it('param mismatch throws; unknown node throws; swapped nodeId breaks inclusion', async () => {
     const G = mk();
@@ -59,9 +59,9 @@ describe('buildPCActn', () => {
     expect(() => buildPCActn({ aud: 'test-aud', ...base, nodeId: 'zz' })).toThrow(/unknown plan node/);
     const p = buildPCActn({ aud: 'test-aud', ...base, nodeId: 'n1', params: { d: 'a' } });
     const q = { ...p, plan: { ...p.plan, node_id: 'n2' } };
-    expect((await verifyPCActnCore(q, { grant: G })).checks.plan_inclusion).toBe('fail');
+    expect((await verifyPCActnCore(q, { insecureSkipPlanRootCheck: true, grant: G })).checks.plan_inclusion).toBe('fail');
     const r = { ...p, action: { ...p.action, params_digest: paramsDigest({ d: 'x' }) } };
-    expect((await verifyPCActnCore(r, { grant: G })).checks.plan_inclusion).toBe('fail');
+    expect((await verifyPCActnCore(r, { insecureSkipPlanRootCheck: true, grant: G })).checks.plan_inclusion).toBe('fail');
   });
 });
 

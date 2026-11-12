@@ -27,7 +27,7 @@ const mkAgent = () =>
 
 /** A real pending step-up (tier >= 2) carrying goal-lineage, as the channels consume it. */
 function pendingStepUp(): StepUpRequest {
-  const r = reviewAction(mkAgent(), 'stripe.payout', 'acct:1', { amount: 80 }, { now: 1, goal: 'process October payouts' });
+  const r = reviewAction(mkAgent(), 'stripe.payout', 'acct:1', { amount: 80 }, { insecureUnboundApproval: true, now: 1, goal: 'process October payouts' });
   if (r.kind !== 'step_up') throw new Error('expected a step_up');
   return r.request;
 }
@@ -154,5 +154,31 @@ describe('dispatcher', () => {
     const out = await dispatcher.notifyAll(req, { inboxUrl: 'https://dash.atlas/inbox' });
     expect(out.map((d) => d.kind)).toEqual(['slack']); // only the enabled channel ran
     expect(out[0]?.delivered).toBe(true);
+  });
+});
+
+describe('approval links that carry their token in the URL fragment', () => {
+  const req = {
+    id: 'su_frag',
+    verb: 'send_payment',
+    resource: 'acct:1',
+    tier: 3 as const,
+    reason: 'needs approval',
+    goalCommit: 'gc',
+    lineage: { goalCommit: 'gc', goalVerified: false, chain: [], because: 'because' },
+    r: 0.75,
+    requestedAt: 0,
+  };
+  it('puts the query before the fragment so the token stays in the fragment (never sent to a server)', () => {
+    const inboxUrl = 'https://atlas.example/dashboard/#pca_link=abc.def';
+    const msg = buildSlackMessage(req, { inboxUrl });
+    const actions = msg.blocks.find((b) => b.type === 'actions') as { elements: { url: string }[] };
+    expect(actions.elements[0]!.url).toBe('https://atlas.example/dashboard/?stepup=su_frag&decision=approve#pca_link=abc.def');
+    expect(buildTextBody(req, { inboxUrl }).text).toContain('https://atlas.example/dashboard/?stepup=su_frag#pca_link=abc.def');
+  });
+  it('appends with & when the URL already has a query', () => {
+    const msg = buildSlackMessage(req, { inboxUrl: 'https://a.example/p?x=1#t=2' });
+    const actions = msg.blocks.find((b) => b.type === 'actions') as { elements: { url: string }[] };
+    expect(actions.elements[1]!.url).toBe('https://a.example/p?x=1&stepup=su_frag&decision=deny#t=2');
   });
 });

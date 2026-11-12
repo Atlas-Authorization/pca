@@ -43,6 +43,8 @@ export function openfgaToPca(model: unknown, tuples: unknown): BridgeResult {
   // Index direct tuples: `${object}\u0000${relation}` -> Set<user>. Userset-valued users are noted.
   const direct = new Map<string, Set<string>>();
   const usersSeen = new Set<string>();
+  /** Types with a public (`type:*`) tuple: every subject of that type holds those relations. */
+  const wildcardTypes = new Set<string>();
   const objectsSeen = new Set<string>();
   let usersetTuples = 0;
   for (const t of tupleList) {
@@ -55,6 +57,7 @@ export function openfgaToPca(model: unknown, tuples: unknown): BridgeResult {
     }
     set.add(t.user);
     if (t.user.includes('#')) usersetTuples++;
+    else if (isWildcard(t.user)) wildcardTypes.add(t.user.slice(0, -2));
     else usersSeen.add(t.user);
   }
   if (usersetTuples > 0) {
@@ -109,8 +112,10 @@ export function openfgaToPca(model: unknown, tuples: unknown): BridgeResult {
     visited: Set<string>,
   ): boolean => {
     switch (plan.kind) {
-      case 'direct':
-        return direct.get(`${object}\u0000${relation}`)?.has(user) ?? false;
+      case 'direct': {
+        const set = direct.get(`${object}\u0000${relation}`);
+        return set !== undefined && (set.has(user) || set.has(`${typeOf(user)}:*`));
+      }
       case 'computed':
         return holdsRel(user, object, plan.relation, depth + 1, visited);
       case 'union':
@@ -150,11 +155,26 @@ export function openfgaToPca(model: unknown, tuples: unknown): BridgeResult {
           predicates.push({ verb: relation, resource: object, where: [{ field: 'subject.id', op: 'eq', value: user }] });
         }
       }
+      // A public tuple (`type:*`) grants every subject of that type, including ones no tuple names. Decide for a
+      // subject that no tuple names; it stands for all of them. The ones that are named were decided above
+      // (they may be excluded by a difference or an intersection), so they are excluded here.
+      for (const wtype of [...wildcardTypes].sort()) {
+        if (!holdsRel(`${wtype}:\u0000anyone`, object, relation, 0, new Set())) continue;
+        const named = sortedUsers.filter((u) => typeOf(u) === wtype);
+        predicates.push({
+          verb: relation,
+          resource: object,
+          where: [{ field: 'subject.id', op: 'like', value: `${escapeGlob(wtype)}:*` }, ...(named.length > 0 ? [{ not: { field: 'subject.id', op: 'in' as const, value: named } }] : [])],
+        });
+      }
     }
   }
 
   return { predicates, denies: [], caveats: [], report };
 }
+
+const isWildcard = (user: string): boolean => user.endsWith(':*') && user.length > 2 && !user.includes('#');
+const escapeGlob = (t: string): string => t.replace(/[*?\\]/g, (c) => `\\${c}`);
 
 // --- resolution plan ---------------------------------------------------------------------------
 

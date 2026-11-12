@@ -245,7 +245,7 @@ describe('createThresholdVerifier + PCActn', () => {
   it('t=1: the agent-leaf baseline (sig only, no threshold field) passes', async () => {
     const { grant, pcactn, signerSet } = buildLoop();
     const verifier = createThresholdVerifier({ signerSet, t: 1 });
-    const res = await verifyPCActnCore(pcactn, { grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } });
+    const res = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } });
     expect(res.allow).toBe(true);
     expect(res.checks.threshold).toBe('pass');
   });
@@ -254,7 +254,7 @@ describe('createThresholdVerifier + PCActn', () => {
     const { grant, pcactn, signerSet, guardian } = buildLoop();
     const verifier = createThresholdVerifier({ signerSet, t: 2 });
 
-    const fail = await verifyPCActnCore(pcactn, { grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } });
+    const fail = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } });
     expect(fail.allow).toBe(false);
     expect(fail.checks.threshold).toBe('fail');
     expect(fail.reason).toMatch(/threshold|need 2/);
@@ -262,7 +262,7 @@ describe('createThresholdVerifier + PCActn', () => {
     // Guardian co-signs the SAME canonical message via thresholdMessage().
     const guardianShare = signShare('guardian', guardian.secretKey, thresholdMessage(pcactn), { signerSet, t: 2 });
     const withGuardian = { ...pcactn, threshold: assembleThreshold([guardianShare]) };
-    const ok = await verifyPCActnCore(withGuardian, { grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } });
+    const ok = await verifyPCActnCore(withGuardian, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } });
     expect(ok.allow).toBe(true);
     expect(ok.checks.threshold).toBe('pass');
   });
@@ -274,7 +274,7 @@ describe('createThresholdVerifier + PCActn', () => {
     const msg = thresholdMessage(pcactn);
     const bind = { signerSet, t: 3 };
     const twoShares = { ...pcactn, threshold: assembleThreshold([signShare('guardian', guardian.secretKey, msg, bind)]) };
-    expect((await verifyPCActnCore(twoShares, { grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } })).checks.threshold).toBe('fail');
+    expect((await verifyPCActnCore(twoShares, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } })).checks.threshold).toBe('fail');
 
     const threeShares = {
       ...pcactn,
@@ -283,14 +283,14 @@ describe('createThresholdVerifier + PCActn', () => {
         signShare('principal', P.secretKey, msg, bind),
       ]),
     };
-    const res = await verifyPCActnCore(threeShares, { grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } });
+    const res = await verifyPCActnCore(threeShares, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } });
     expect(res.allow).toBe(true);
     expect(res.checks.threshold).toBe('pass');
   });
 
   it('threshold is not-enforced when no verifier hook is supplied (unchanged M0 behavior)', async () => {
     const { grant, pcactn } = buildLoop();
-    const res = await verifyPCActnCore(pcactn, { grant, audience: 'test-aud', nowEpoch: NOW });
+    const res = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW });
     expect(res.allow).toBe(true);
     expect(res.checks.threshold).toBe('not-enforced');
   });
@@ -307,18 +307,18 @@ describe('createThresholdVerifier + PCActn', () => {
     serverR.set(pcactn.sig, 0.1);
 
     // r = 0.1 <= theta1 (0.25) => t=1 => agent leaf alone suffices.
-    expect((await verifyPCActnCore(pcactn, { grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } })).checks.threshold).toBe('pass');
+    expect((await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } })).checks.threshold).toBe('pass');
 
     // A properly-signed high-r action: r = 0.5 > theta1 so t climbs to 2; agent leaf alone fails.
     const highR = mkActn(0.5);
     serverR.set(highR.sig, 0.5);
-    expect((await verifyPCActnCore(highR, { grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } })).checks.threshold).toBe('fail');
+    expect((await verifyPCActnCore(highR, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } })).checks.threshold).toBe('fail');
 
     // Adding a guardian share over highR's canonical message satisfies t=2.
     const withGuardian = {
       ...highR,
       threshold: assembleThreshold([signShare('guardian', guardian.secretKey, thresholdMessage(highR), { signerSet, t: 2 })]),
     };
-    expect((await verifyPCActnCore(withGuardian, { grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } })).checks.threshold).toBe('pass');
+    expect((await verifyPCActnCore(withGuardian, { insecureSkipPlanRootCheck: true, grant, audience: 'test-aud', nowEpoch: NOW, hooks: { threshold: verifier } })).checks.threshold).toBe('pass');
   });
 });

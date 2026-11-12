@@ -102,7 +102,7 @@ async function reference(api, input) {
     case 'pcactn_json': {
       let tree;
       try { tree = pca.strictParse(input.text); } catch (err) { return { valid: false, reason: 'strict parse: ' + err.message }; }
-      const r = await pca.verifyPCActnCore(tree, { grant: input.grant, nowEpoch: input.now, audience: input.aud });
+      const r = await pca.verifyPCActnCore(tree, { insecureSkipPlanRootCheck: true, grant: input.grant, nowEpoch: input.now, audience: input.aud });
       return { valid: r.allow, reason: r.allow ? null : (r.reason ?? JSON.stringify(r.checks ?? null)) };
     }
     case 'json_parse':

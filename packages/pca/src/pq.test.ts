@@ -123,7 +123,7 @@ describe('B4 hybrid verify (both signatures REQUIRED, fail-closed)', () => {
     const p = signPCActnSuite(body, { alg: 'hybrid-ed25519-ml-dsa-65', edLeafSecret: agent.secretKey, mlDsa });
     expect(p.alg).toBe('hybrid-ed25519-ml-dsa-65');
     expect(validateWireV2(p)).toBeNull();
-    const r = await verifyPCActnCore(p, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(true);
     expect(r.checks.leaf_signature).toBe('pass');
   });
@@ -132,7 +132,7 @@ describe('B4 hybrid verify (both signatures REQUIRED, fail-closed)', () => {
     const p = signPCActnSuite(body, { alg: 'hybrid-ed25519-ml-dsa-65', edLeafSecret: agent.secretKey, mlDsa });
     const bad: PCActn = { ...p, pq_sig: flip(p.pq_sig!) };
     expect(validateWireV2(bad)).toBeNull(); // still well-formed; the failure is cryptographic
-    const r = await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.leaf_signature).toBe('fail');
   });
@@ -140,7 +140,7 @@ describe('B4 hybrid verify (both signatures REQUIRED, fail-closed)', () => {
     const { body, agent, mlDsa, root } = fixture();
     const p = signPCActnSuite(body, { alg: 'hybrid-ed25519-ml-dsa-65', edLeafSecret: agent.secretKey, mlDsa });
     const bad: PCActn = { ...p, sig: flip(p.sig) };
-    const r = await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.leaf_signature).toBe('fail');
   });
@@ -150,7 +150,7 @@ describe('B4 hybrid verify (both signatures REQUIRED, fail-closed)', () => {
     const dropped: Record<string, unknown> = { ...p };
     delete dropped.pq_sig;
     expect(validateWireV2(dropped)).not.toBeNull();
-    const r = await verifyPCActnCore(dropped as unknown as PCActn, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(dropped as unknown as PCActn, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.wire).toBe('fail');
     expect(Object.keys(r.checks)).toEqual(['wire']); // wire failure is terminal
@@ -175,12 +175,12 @@ describe('B4 pure ml-dsa-65 verify', () => {
     expect(p.alg).toBe('ml-dsa-65');
     expect('pq_sig' in p).toBe(false);
     expect(validateWireV2(p)).toBeNull();
-    const r = await verifyPCActnCore(p, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(true);
     expect(r.checks.leaf_signature).toBe('pass');
 
     const bad: PCActn = { ...p, sig: flip(p.sig) };
-    const r2 = await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r2 = await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r2.checks.leaf_signature).toBe('fail');
   });
 });
@@ -191,7 +191,7 @@ describe('B4 unknown alg + stray fields fail closed on the wire', () => {
     const p = signPCActnSuite(body, { alg: 'hybrid-ed25519-ml-dsa-65', edLeafSecret: agent.secretKey, mlDsa });
     const bad = { ...p, alg: 'rsa-3072' } as unknown as PCActn;
     expect(validateWireV2(bad)).not.toBeNull();
-    const r = await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(Object.keys(r.checks)).toEqual(['wire']);
     expect(verifyLeafSuite({ alg: 'rsa-3072', holder: root.holder, message: thresholdMessage(bad), sig: p.sig })).toBe(false);
