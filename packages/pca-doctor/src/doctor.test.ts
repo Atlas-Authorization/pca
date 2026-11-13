@@ -63,6 +63,7 @@ describe('proxy', () => {
     expect(checkProxyConfig({}).status).toBe('skip');
     expect(checkProxyConfig({ proxy: { trustedProxyCount: -1 } }).status).toBe('fail');
     expect(checkProxyConfig({ proxy: { trustedProxyCount: 17 } }).status).toBe('fail');
+    expect(checkProxyConfig({ proxy: { trustedProxyCount: -0 } }).status).toBe('fail');
     expect(checkProxyConfig({ proxy: { trustedProxyCount: 1.5 } }).status).toBe('fail');
     expect(checkProxyConfig({ proxy: { trustedProxyCount: 0, header: 'x-real-ip' } }).status).toBe('fail');
     expect(checkProxyConfig({ proxy: { trustedProxyCount: 0 } }).status).toBe('pass');

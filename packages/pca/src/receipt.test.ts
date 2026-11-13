@@ -11,7 +11,7 @@ async function build() {
   let log = [] as ReturnType<typeof appendReceipt>;
   for (let i = 1; i <= 3; i++) {
     const { pcactn } = a.act('gmail.send', `msg:${i}`, {}, { counter: i });
-    const v = await verifyPCActnCore(pcactn, { grant: a.grant, audience: AUD, nowEpoch: pcactn.iat });
+    const v = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant: a.grant, audience: AUD, nowEpoch: pcactn.iat });
     log = appendReceipt(log, pcactn, v);
   }
   return log;

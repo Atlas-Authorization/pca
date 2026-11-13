@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../../../../sdks/php-pca/src/Pca.php';
+require_once __DIR__ . '/../../../../sdks/php-pca/tests/ProducerOps.php';
 use Atlas\Pca\Json;
 use Atlas\Pca\Pca;
 ini_set('memory_limit', '2G');
@@ -56,6 +57,33 @@ foreach (file($inp, FILE_IGNORE_NEW_LINES) as $line) {
             $r['checks'] = ['chain' => $ok === true];
             if (is_string($why) && str_contains($why, Pca::UNSUPPORTED_SUITE)) {
                 $r['unsupported_suite'] = $why;
+            }
+        } elseif ($c['kind'] === 'policy') {
+            // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+            // the agent-native evaluator (predicates + tool_schema) over policyCaveats(grant, chain), as {allow, failed}: the action
+            // context is {action}, the tool call the signed verb + params (the reference's toolCallOf)
+            $pv = Json::parseLax($c['raw']);
+            $act = $pv->get('context') instanceof \Atlas\Pca\Obj ? $pv->get('context')->get('action') : null;
+            $actObj = $act instanceof \Atlas\Pca\Obj;
+            $params = $actObj ? $act->get('params') : null;
+            $call = ['tool' => $actObj && is_string($act->get('verb')) ? $act->get('verb') : '',
+                'args' => $params instanceof \Atlas\Pca\Obj ? $params : new \Atlas\Pca\Obj()];
+            $res = \Atlas\Pca\Authorize::evaluateAgentCaveats(Pca::policyCaveats($pv->get('grant'), $pv->get('chain')), $pv->get('context'), \Atlas\Pca\Obj::of(['action' => $act]), $call);
+            $r['allow'] = $res['ok'] === true;
+            $r['failed'] = array_values($res['failed']);
+        } elseif ($c['kind'] === 'produce') {
+            // Producer layer: raw = {op, args, keys, pq_keys?}, one producer vector case; answer {out} (the artifact, canonical JSON)
+            // or {error} (the producer's refusal; "unsupported_op: <op>" for an op this SDK does not produce).
+            $pc = Json::parseLax($c['raw']);
+            $op = (string)$pc->get('op');
+            try {
+                $out = (new \Atlas\Pca\Tests\ProducerOps($pc->get('keys'), $pc->has('pq_keys') ? $pc->get('pq_keys') : null))->run($op, $pc->get('args'));
+                fwrite($o, '{"id":' . json_encode($c['id']) . ',"out":' . Json::canonicalizeLenient($out) . "}\n");
+                continue;
+            } catch (\Atlas\Pca\Tests\NotProduced) {
+                $r['error'] = "unsupported_op: $op";
+            } catch (\Throwable $e) {
+                $r['error'] = $e->getMessage() === '' ? 'exception:' . get_class($e) : $e->getMessage();
             }
         } elseif (str_starts_with((string)$c['kind'], 'intent_')) {
             // Intent Layer v2 primitives: raw = JSON text of the primitive's `input`; result = its conformance `expect` shape

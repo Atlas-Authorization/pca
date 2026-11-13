@@ -1,6 +1,7 @@
 /** Mutation-kill suite for pqcosign.ts: exact canonical bytes, every refusal reason, gate boundaries. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { generateKeyPair, mlDsa65Keygen, mlDsa87Keygen, slhDsa128fKeygen, slhDsa256sKeygen, type MeasuredIdentity, type SuiteSecretKeys } from '@atlasauth/pca';
+import { generateKeyPair, mlDsa65Keygen, mlDsa87Keygen, slhDsa128fKeygen, slhDsa256sKeygen, type SuiteSecretKeys } from '@atlasauth/pca';
+import { type MeasuredIdentity } from '@atlasauth/pca/ext/attestation';
 import {
   PQCOSIGN_DOMAIN,
   PQ_COSIGN_SUITES,

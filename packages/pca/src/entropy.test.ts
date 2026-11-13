@@ -315,7 +315,7 @@ describe('secureSeed — fail-safe fallback', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 64; i++) {
       const res = await secureSeed({ length: 32, source: adv });
-      expect(res.usedQuantum).toBe(true); // the bytes were "valid" length, just worthless
+      expect(res.usedQuantum).toBe(false); // constant bytes fail the SP 800-90B health tests: rejected, CSPRNG-only
       expect(res.seed.length).toBe(32);
       expect(eq(res.seed, constBytes(32, 0x00))).toBe(false);
       seen.add(hex(res.seed));

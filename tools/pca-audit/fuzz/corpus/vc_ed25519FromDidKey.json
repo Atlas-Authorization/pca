@@ -1,0 +1,8 @@
+{
+ "target": "vc ed25519FromDidKey",
+ "seeds": [
+  {
+   "text": "did:key:z6Mkef1w29eU7SP9XmbDzTwbiisHZ3uTS5JpNEuu1R6pADkW"
+  }
+ ]
+}

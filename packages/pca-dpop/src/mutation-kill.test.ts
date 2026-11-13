@@ -5,15 +5,21 @@ import { describe, expect, it } from 'vitest';
 import { buildPCActn, encodeKey, generateKeyPair as pcaGen, mintRoot, type PCActn } from '@atlasauth/pca';
 import {
   DpopVerificationError,
-  assertPcaDpop,
+  assertPcaDpop as assertPcaDpopRaw,
   athFor,
   createDpopProof,
   dpopAlgForJwk,
   leafHolderJwk,
+  createDpopNonceIssuer,
+  createInMemoryDpopReplayStore,
   mtlsCnf,
   normalizeHtu,
-  verifyDpopProof,
+  verifyDpopProof as verifyDpopProofRaw,
 } from './index';
+
+// 0.5: a replay store is required by default; these suites mostly exercise other checks, so they opt out explicitly.
+const verifyDpopProof: typeof verifyDpopProofRaw = (p, o) => verifyDpopProofRaw(p, { requireReplayStore: false, ...o });
+const assertPcaDpop: typeof assertPcaDpopRaw = (p, d, o) => assertPcaDpopRaw(p, d, { requireReplayStore: false, ...o });
 
 const URL1 = 'https://api.example/v1/x';
 const NOW = 1_800_000_000;
@@ -251,5 +257,43 @@ describe('assertPcaDpop forwards every option', () => {
     expect((await fail(assertPcaDpop(pcActn, proof, { ...args, seenJti: new Set(), accessToken: 'zzz' }))).code).toBe('ath');
     expect((await fail(assertPcaDpop(pcActn, proof, { method: 'POST', url: URL1, nowSec: NOW + 100_000 }))).code).toBe('iat_stale');
     expect(leafHolderJwk(pcActn)).toStrictEqual(pub);
+  });
+});
+
+describe('assertPcaDpop forwards the replay-store and nonce-issuer options', () => {
+  it('replayStore, requireReplayStore and nonceIssuer reach the verifier', async () => {
+    const { pcActn, priv, pub } = await pcActnWithHolder();
+    const issuer = createDpopNonceIssuer({ secret: new Uint8Array(32).fill(3) });
+    const mk = (extra: Record<string, unknown> = {}) => createDpopProof({ method: 'POST', url: URL1, privateKey: priv, publicJwk: pub, iat: NOW, jti: 'jy', ...extra });
+    const proof = await mk({ nonce: issuer.issue(NOW) });
+    const args = { method: 'POST', url: URL1, nowSec: NOW, replayStore: createInMemoryDpopReplayStore(), nonceIssuer: issuer };
+    await assertPcaDpop(pcActn, proof, args);
+    expect((await fail(assertPcaDpop(pcActn, proof, args))).code).toBe('jti_replay');
+    expect((await fail(assertPcaDpop(pcActn, await mk(), { ...args, replayStore: createInMemoryDpopReplayStore() }))).code).toBe('nonce');
+    expect((await fail(assertPcaDpop(pcActn, proof, { method: 'POST', url: URL1, nowSec: NOW, requireReplayStore: true }))).code).toBe('replay_store_required');
+  });
+});
+
+describe('mtlsCnf against an independent implementation', () => {
+  // Self-signed P-256 certificate generated with OpenSSL; the thumbprint is `openssl x509 -fingerprint -sha256`, base64url-encoded.
+  const PEM = `-----BEGIN CERTIFICATE-----
+MIIBhzCCAS2gAwIBAgIUJNnxKGIZtm6X50ZPUimg4pELamAwCgYIKoZIzj0EAwIw
+GDEWMBQGA1UEAwwNcGNhLWRwb3AtdGVzdDAgFw0yNjEwMjYwNjI4MjBaGA8yMTI2
+MTAwMjA2MjgyMFowGDEWMBQGA1UEAwwNcGNhLWRwb3AtdGVzdDBZMBMGByqGSM49
+AgEGCCqGSM49AwEHA0IABEUMOC7lpXyDyP7zRuzlIFZE2N55fI6t9YeL6hSgmOq2
+gAa7VsKCebHufEqQIxGgiLR8UH2a/sBD5P79bqzLUMKjUzBRMB0GA1UdDgQWBBTX
+JKwVRMF9HCh+g6yCG8Vapw+EwDAfBgNVHSMEGDAWgBTXJKwVRMF9HCh+g6yCG8Va
+pw+EwDAPBgNVHRMBAf8EBTADAQH/MAoGCCqGSM49BAMCA0gAMEUCIQCQ+cwkz3O7
+yzv9nWZgdmrTP5wHxp/GZuNWM1CKH52DjwIgC0l6KtM7TWCWzeroer6ShI8cMkuN
+FD8Bv16yLKjV0Rg=
+-----END CERTIFICATE-----`;
+  const OPENSSL_SHA256_HEX = 'aaae4075fed92a7f630ecebf54924c0c036a76f5684bff486164a495908348bf';
+  it('matches the OpenSSL SHA-256 fingerprint and Node X509Certificate, for PEM and DER input', async () => {
+    const { X509Certificate } = await import('node:crypto');
+    const want = Buffer.from(OPENSSL_SHA256_HEX, 'hex').toString('base64url');
+    expect(want).toBe('qq5Adf7ZKn9jDs6_VJJMDANqdvVoS_9IYWSklZCDSL8');
+    expect(mtlsCnf(PEM)).toEqual({ 'x5t#S256': want });
+    expect(mtlsCnf(new Uint8Array(new X509Certificate(PEM).raw))).toEqual({ 'x5t#S256': want });
+    expect(new X509Certificate(PEM).fingerprint256.replace(/:/g, '').toLowerCase()).toBe(OPENSSL_SHA256_HEX);
   });
 });

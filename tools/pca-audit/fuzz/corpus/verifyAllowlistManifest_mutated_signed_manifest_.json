@@ -1,0 +1,28 @@
+{
+ "target": "verifyAllowlistManifest (mutated signed manifest)",
+ "seeds": [
+  {
+   "body": {
+    "version": 3,
+    "issuedAt": 1791504000000,
+    "notBefore": 1791417600000,
+    "expiresAt": 1794096000000,
+    "entries": [
+     {
+      "kind": "tdx-mrtd",
+      "value": "abababababababababababababababababababababababababababababababababababababababababababababababab",
+      "label": "boot"
+     },
+     {
+      "kind": "sev-snp-measurement",
+      "value": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "label": "snp"
+     }
+    ]
+   },
+   "issuer": "ops",
+   "alg": "ed25519",
+   "sig": "3v_dYJwtgNLpzKjbsk9-87bCQ6Fb2pmFZi5Lsz-JtPrYF1TziRWI0m4TNpYojOq1HUKPulmnB4TLORTMNrHPDw"
+  }
+ ]
+}

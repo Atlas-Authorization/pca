@@ -32,3 +32,15 @@ action_schema.go:*
 predicates.go:*
 saferegex.go:*
 jsval.go:*
+revocation_staleness.go:*
+revocation_nonmembership.go:*
+operations.go:*
+executor.go:*
+plan_lifecycle.go:*
+assurance.go:*
+stepup.go:*
+storeconformance.go:*
+atomic_kv.go:*
+sqlstore.go:*
+middleware.go:*
+authorize.go:*

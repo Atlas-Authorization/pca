@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RISK_POLICY,
-  type FrostParticipantShare,
   type MlDsaKeyPair,
   type PCActn,
   type PlanNode,
@@ -9,14 +8,13 @@ import {
   b64u,
   buildPCActn,
   encodeKey,
-  frostCosign,
-  frostTrustedDealerKeygen,
   generateKeyPair,
   mintGrant,
   mlDsa65Keygen,
   mlDsa65Sign,
   thresholdMessage,
 } from '@atlasauth/pca';
+import { type FrostParticipantShare, frostCosign, frostTrustedDealerKeygen, pqQuorumRepresentative } from '@atlasauth/pca/ext/frost';
 import {
   HYBRID_CLASSICAL_ALG,
   HYBRID_PQ_ALG,
@@ -175,7 +173,7 @@ describe('hybrid PQ-threshold (real): classical FROST + ML-DSA co-signature quor
     const msg = thresholdMessage(pcactn);
     const wrong = thresholdMessage(other);
     const artifact: HybridThresholdArtifact = {
-      v: 1,
+      v: 2,
       digest: '',
       frost: {
         alg: HYBRID_CLASSICAL_ALG,
@@ -185,12 +183,13 @@ describe('hybrid PQ-threshold (real): classical FROST + ML-DSA co-signature quor
         quorum: 2,
       },
       pq: {
+        v: 2,
         alg: HYBRID_PQ_ALG,
         pqT: 3,
         signers: [
-          { pk: b64u(pk[0]!.publicKey), sig: b64u(mlDsa65Sign(pk[0]!.secretKey, msg)) },
-          { pk: b64u(pk[1]!.publicKey), sig: b64u(mlDsa65Sign(pk[1]!.secretKey, msg)) },
-          { pk: b64u(pk[2]!.publicKey), sig: b64u(mlDsa65Sign(pk[2]!.secretKey, wrong)) }, // wrong action
+          { pk: b64u(pk[0]!.publicKey), sig: b64u(mlDsa65Sign(pk[0]!.secretKey, pqQuorumRepresentative(msg))) },
+          { pk: b64u(pk[1]!.publicKey), sig: b64u(mlDsa65Sign(pk[1]!.secretKey, pqQuorumRepresentative(msg))) },
+          { pk: b64u(pk[2]!.publicKey), sig: b64u(mlDsa65Sign(pk[2]!.secretKey, pqQuorumRepresentative(wrong))) }, // wrong action
         ],
       },
     };

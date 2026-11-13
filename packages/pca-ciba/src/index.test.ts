@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { agent, generateKeyPair, reviewAction, type Review } from '@atlasauth/pca';
 import {
   cibaDecisionToCosign,
-  createCibaBroker,
   requiresCiba,
   toCibaAuthRequest,
 } from './index';
+import { createCibaBroker } from './testing';
 
 const AUD = 'ins_test';
 
@@ -25,7 +25,7 @@ const mkAgent = () =>
 /** Review that is guaranteed to be a tier-3 step-up, or fail the test loudly. */
 function tier3StepUp(): Extract<Review, { kind: 'step_up' }> {
   const a = mkAgent();
-  const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { now: 1, goal: 'reconcile October refunds' });
+  const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1, goal: 'reconcile October refunds' });
   if (r.kind !== 'step_up' || r.request.tier !== 3) {
     throw new Error(`expected a tier-3 step_up, got ${r.kind}/${r.kind === 'step_up' ? r.request.tier : '-'}`);
   }
@@ -60,7 +60,7 @@ describe('toCibaAuthRequest', () => {
 
   it('falls back to the goal commitment when no plaintext goal is carried', () => {
     const a = mkAgent();
-    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { now: 1 }); // no goal opt
+    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1 }); // no goal opt
     expect(r.kind).toBe('step_up');
     if (r.kind !== 'step_up') return;
     const ciba = toCibaAuthRequest(r.request);
@@ -126,14 +126,14 @@ describe('requiresCiba — risk-adaptive gating', () => {
 
   it('is false for an auto review', () => {
     const a = mkAgent();
-    const auto = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 10, currency: 'USD', payee: 'bob' }, { now: 1 });
+    const auto = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 10, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1 });
     expect(auto.kind).toBe('auto');
     expect(requiresCiba(auto)).toBe(false);
   });
 
   it('is false for a tier-2 step-up (guardian auto-cosign, no human interrupt)', () => {
     const a = mkAgent();
-    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 40, currency: 'USD', payee: 'bob' }, { now: 1 });
+    const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 40, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1 });
     expect(r.kind).toBe('step_up');
     if (r.kind === 'step_up') expect(r.request.tier).toBe(2);
     expect(requiresCiba(r)).toBe(false);
@@ -141,7 +141,7 @@ describe('requiresCiba — risk-adaptive gating', () => {
 
   it('is false for a deny', () => {
     const a = mkAgent();
-    const deny = reviewAction(a, 'stripe.refund', 'charge:1', { amount: 1, currency: 'USD', payee: 'bob' }, { now: 1 });
+    const deny = reviewAction(a, 'stripe.refund', 'charge:1', { amount: 1, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1 });
     expect(deny.kind).toBe('deny');
     expect(requiresCiba(deny)).toBe(false);
   });

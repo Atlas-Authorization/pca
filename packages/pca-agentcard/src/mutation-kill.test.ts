@@ -1,6 +1,7 @@
 /** Mutation-kill tests for pca-agentcard: exact shapes, reason strings, key forms, header contents, path normalisation. */
 import { describe, expect, it, vi } from 'vitest';
-import { type AgentPassport, canonicalBytes, issuePassport } from '@atlasauth/pca';
+import { canonicalBytes } from '@atlasauth/pca';
+import { type AgentPassport, issuePassport } from '@atlasauth/pca/ext/attestation';
 import { FlattenedSign, exportJWK, flattenedVerify, generateKeyPair } from 'jose';
 import {
   type AgentCard,

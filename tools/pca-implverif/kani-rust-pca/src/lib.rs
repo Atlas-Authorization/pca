@@ -1,5 +1,5 @@
 //! Reference verifier for the CORE PCActn checks (wire format v2): wire, version, audience, validity,
-//! capability chain, grant_ref binding, Merkle plan inclusion, strict Ed25519 leaf signature, counter. Byte-matches
+//! capability chain, grant_ref binding, Merkle plan inclusion, strict Ed25519 leaf signature, counter format. Byte-matches
 //! `@atlasauth/pca` (the shared conformance corpus defines the normative rules).
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -20,7 +20,10 @@ pub mod middleware;
 
 // Intent Layer v2 (rules 13-18 and the V5 `layers` check).
 mod action_schema;
+mod decision;
+mod escalation;
 mod intent_acc;
+mod intent_history;
 mod intent_map;
 mod intent_strict;
 mod intent_revocation;
@@ -28,9 +31,40 @@ mod intent_session;
 mod intent_suite;
 mod intent_v2;
 mod intent_wb;
+mod mesh;
 mod predicates;
 mod safe_regex;
+// 0.5: wire-level verification of transparency-anchored allowlist evidence.
+mod allowlist_anchor;
+pub mod attest;
+mod passport;
+pub use passport::{verify_passport, AttestFn, PassportAttestation, PassportBinding, PassportOptions};
+pub use allowlist_anchor::{verify_allowlist_anchored, AnchorEntry, AnchorOptions, AnchorResult};
+// 0.5: extension-member verifiers (transparency ledger, optimistic path); see the module docs.
+pub mod ledger;
+pub mod optimistic;
+// 0.5: the full authorization pipeline (`authorize`) and its replay stores.
+mod authorize;
+#[cfg(feature = "sqlite")]
+mod sqlite_store;
+#[cfg(test)]
+mod k042_support;
 
+pub use authorize::{
+    authorize, authorize_json, evaluate_agent_caveats, evaluate_tool_schema, is_authorized_for, missing_authorize_components, read_envelope,
+    root_caveats, state_key, validate_arg_schema, AuthorizeInput, AuthorizeOptions, AuthorizeResult, AuthorizedOperation, CheckStatus,
+    ClaimResult, ContextProvider, GrantResolver, IntentV2Provider, MemoryStateStore, Operation, RevocationCheck, StateStore, StoreError,
+    DEFAULT_REQUIRED_CHECKS, SINGLE_STEP,
+};
+#[cfg(feature = "sqlite")]
+pub use sqlite_store::SqliteStateStore;
+pub use mesh::{verify_mesh_proof, MeshVerdict};
+pub use authorize::CORE_HOOK;
+pub use escalation::{
+    build_escalation_request, escalation_action_digest, escalation_answer_shape_error, escalation_history_head, escalation_policy_digest,
+    verify_escalation_answer, escalation_reasons_wire, restore_lone_surrogates, EscalationBinding, EscalationVerdict, PinnedSigner, DEFAULT_ESCALATION_REQUEST_TTL_MS, ESCALATION_ANSWER_DOMAIN, ESCALATION_MAX_LIFETIME_MS,
+};
+pub use decision::{decide_tighten, decide_units, decision_of, fold_v2_reasons, meet, meet_all, model_paths_read, pep_decision, signal_ceiling, tighten, TightenResult, V2CheckResult};
 pub use action_schema::{action_schema_digest, action_schema_shape_error, conform_action, verify_action_schema, ConformResult};
 pub use intent_acc::{
     acc_receipt_digest, pcactn_reservation_digest, sequencer_key_set_digest, DEFAULT_MAX_KEYSET_AGE_MS, DEFAULT_MAX_RECEIPT_AGE_MS, MAX_RECEIPT_LIFETIME_MS, RECEIPT_SKEW_MS,
@@ -41,7 +75,7 @@ pub use intent_revocation::{
     session_revocation_id, session_revocation_scope,
 };
 pub use intent_session::{
-    intent_session_caveat_error, session_root_digest, session_root_shape_error, validate_intent_session_wire, verify_session_root, MAP_FORM_COMMIT,
+    intent_session_caveat_error, session_root_digest, session_root_shape_error, validate_intent_session_wire, verify_session_root, verify_session_root_pinned, MAP_FORM_COMMIT,
     MAX_SESSION_SEQ,
 };
 pub use intent_v2::{decide_intent_v2, intent_v2_active, intent_v2_context_error, IntentV2Check, IntentV2Context, IntentV2Decision};
@@ -130,18 +164,25 @@ pub fn decode_b64u_strict(s: &str, len: Option<usize>) -> Option<Vec<u8>> {
 
 /// Verdict for the core checks. `checks[name]` is true when it passed. A wire failure is terminal and is
 /// the ONLY entry (`{wire: false}`); otherwise all of wire, version, audience, validity, chain,
-/// plan_inclusion, leaf_signature, counter are present.
+/// plan_inclusion, leaf_signature, counter_format are present.
 #[derive(Debug, Clone)]
 pub struct Verdict {
     pub allow: bool,
     pub checks: BTreeMap<String, bool>,
     pub reason: String,
+    /// Every reason, in order: the first failure (`reason`), then one for EACH further failing intent-v2 check (the
+    /// escalate-class ones). `decision_of` reads the whole list, so a multi-check escalation stays an escalation. Empty when
+    /// `allow`, and on a wire failure (`reason` only).
+    pub reasons: Vec<String>,
+    /// Rule 21's compatibility mode is in effect (`model_polarity` `"legacy"` and a grant reads a model-derived path in `where`):
+    /// `authorize` reports it as `degraded["tighten"]`.
+    pub legacy_model_polarity: bool,
 }
 
 fn wire_fail(why: impl Into<String>) -> Verdict {
     let mut checks = BTreeMap::new();
     checks.insert("wire".to_string(), false);
-    Verdict { allow: false, checks, reason: format!("wire: {}", why.into()) }
+    Verdict { allow: false, checks, reason: format!("wire: {}", why.into()), reasons: Vec::new(), legacy_model_polarity: false }
 }
 
 // ---- numbers ---------------------------------------------------------------------------
@@ -150,13 +191,13 @@ fn wire_fail(why: impl Into<String>) -> Verdict {
 fn number_error(n: &Number) -> Option<String> {
     if let Some(i) = n.as_i64() {
         return if i.unsigned_abs() > MAX_SAFE as u64 {
-            Some("integer outside the safe range".into())
+            Some("integer outside the safe range (|n| > 2^53-1)".into())
         } else {
             None
         };
     }
     if let Some(u) = n.as_u64() {
-        return if u > MAX_SAFE as u64 { Some("integer outside the safe range".into()) } else { None };
+        return if u > MAX_SAFE as u64 { Some("integer outside the safe range (|n| > 2^53-1)".into()) } else { None };
     }
     let f = match n.as_f64() {
         Some(f) if f.is_finite() => f,
@@ -166,16 +207,16 @@ fn number_error(n: &Number) -> Option<String> {
         return Some("negative zero".into());
     }
     if f.fract() == 0.0 {
-        return if f.abs() > MAX_SAFE as f64 { Some("integer outside the safe range".into()) } else { None };
+        return if f.abs() > MAX_SAFE as f64 { Some("integer outside the safe range (|n| > 2^53-1)".into()) } else { None };
     }
     if f.abs() < 1e-6 {
-        return Some("non-integer magnitude below 1e-6".into());
+        return Some("non-integer magnitude below 1e-6 (needs an exponent form; not representable in the canonical decimal form)".into());
     }
     // Rust's Display for f64 is the shortest round-trip decimal and never uses an exponent.
     let s = format!("{}", f.abs());
     let digits: String = s.chars().filter(|c| *c != '.').collect();
     if digits.trim_start_matches('0').len() > MAX_DECIMAL_DIGITS {
-        return Some("more than 15 significant digits".into());
+        return Some("non-integer number has more than 15 significant digits".into());
     }
     None
 }
@@ -1397,6 +1438,11 @@ pub fn verify_chain(chain: &[Value], expected_root_issuer: Option<&str>) -> Resu
     verify_chain_policy(chain, expected_root_issuer, None, None, None)
 }
 
+/// Reason a stored-grant root is refused because a supplied pin for its issuer disagrees (0.4.2, fail closed).
+fn root_pq_pin_mismatch_reason(alg: &str) -> String {
+    format!("hop 0: root suite '{alg}': the server-side PQ pin for the root issuer (policy.pqPins) does not match the stored grant's pq_pk (fail closed)")
+}
+
 /// Reason a non-ed25519 root is refused without verifier-side PQ authority (R4-01); exact text is conformance-checked.
 fn root_pq_pin_reason(alg: &str) -> String {
     format!("hop 0: root suite '{alg}' needs a PQ key pinned for the root issuer (policy.pqPins) or the verifier's stored grant (policy.trustedRoot); the root's own pq_pk proves nothing about who issued it (R3-01)")
@@ -1423,6 +1469,14 @@ fn resolve_root_pq(
         (Some(t), Some(Value::String(s))) if same_strict_hash(t, root_val) => Some(s.as_str()),
         _ => None,
     };
+    // 0.4.2 fail closed: with the stored grant AND a pin for the issuer, both must agree (the grant never overrides a pin).
+    if let (Some(t), Some(pins), Some(iss)) = (trusted, pq_pins, root.get("issuer").and_then(Value::as_str)) {
+        if let Some(pin) = pins.get(iss) {
+            if pin != t {
+                return Err(root_pq_pin_mismatch_reason(suite.alg));
+            }
+        }
+    }
     match pinned::resolve_pq_key(root.get("issuer").and_then(Value::as_str), pk, None, pq_pins, trusted) {
         Some(k) => Ok(Some(k)),
         None => Err(root_pq_pin_reason(suite.alg)),
@@ -1994,7 +2048,7 @@ pub fn verify_pcactn_json_with(text: &str, grant: &Value, now: i64, audience: &s
 }
 
 /// Checks, in the normative order: wire (terminal), version, audience, validity, chain, plan_inclusion,
-/// leaf_signature, counter (then `intent` when the PCActn carries it). `now` is epoch milliseconds; `audience` is this verifier's own audience id.
+/// leaf_signature, counter_format (then `intent` when the PCActn carries it). `now` is epoch milliseconds; `audience` is this verifier's own audience id.
 /// Later-milestone checks (attestation, threshold, revocation, ...) are out of scope.
 pub fn verify_pcactn_core(pcactn: &Value, grant: &Value, now: i64, audience: &str) -> Verdict {
     verify_pcactn_core_policy(pcactn, grant, now, audience, None)
@@ -2018,7 +2072,7 @@ pub struct VerifyOptions<'a> {
     pub intent_v2: Option<&'a IntentV2Context>,
 }
 
-/// [`verify_pcactn_core`] with explicit [`VerifyOptions`]. The `intent` check runs after `counter` and is reported
+/// [`verify_pcactn_core`] with explicit [`VerifyOptions`]. The `intent` check runs after `counter_format` and is reported
 /// iff the PCActn carries `intent` or `opts.intent` is active; otherwise the verdict is the pre-M2 one.
 pub fn verify_pcactn_core_with(pcactn: &Value, grant: &Value, now: i64, audience: &str, opts: &VerifyOptions<'_>) -> Verdict {
     let allowed = opts.allowed;
@@ -2151,9 +2205,9 @@ pub fn verify_pcactn_core_with(pcactn: &Value, grant: &Value, now: i64, audience
     });
     record("leaf_signature", if sig_ok { Ok(()) } else { Err(leaf_msg.into()) });
 
-    // counter: safe integer >= 0 (monotonicity vs. stored state is the resource server's job)
+    // counter_format: safe integer >= 0 (monotonicity vs. stored state is `replay`, the resource server's job)
     record(
-        "counter",
+        "counter_format",
         match p.get("counter").and_then(safe_int) {
             Some(i) if i >= 0 => Ok(()),
             _ => Err("missing or not a non-negative safe integer".into()),
@@ -2172,12 +2226,22 @@ pub fn verify_pcactn_core_with(pcactn: &Value, grant: &Value, now: i64, audience
     }
     // Intent Layer v2: schema, intent_session, layers, accumulators, facts, provenance, classes (each reported only
     // when the PCActn carries `intent_session` or a v2 policy is active; see [`decide_intent_v2`]).
-    for c in decide_intent_v2(pcactn, grant, opts.intent_v2, now).checks {
+    let mut v2: Vec<decision::V2CheckResult> = Vec::new();
+    let v2d = decide_intent_v2(pcactn, grant, opts.intent_v2, now);
+    let legacy_model_polarity = v2d.legacy_model_polarity;
+    for c in v2d.checks {
+        v2.push(decision::V2CheckResult { name: c.name.to_string(), ok: c.ok, reason: if c.ok { None } else { Some(c.reason.clone()) } });
         record(c.name, if c.ok { Ok(()) } else { Err(c.reason) });
     }
 
     let allow = checks.values().all(|v| *v);
-    Verdict { allow, checks, reason }
+    let reasons = if allow {
+        Vec::new()
+    } else {
+        let base: Vec<String> = if reason.is_empty() { Vec::new() } else { vec![reason.clone()] };
+        decision::fold_v2_reasons(&base, &v2)
+    };
+    Verdict { allow, checks, reason, reasons, legacy_model_polarity }
 }
 
 // ---- Intent Layer M2: envelope.intent -----------------------------------------------------
@@ -2535,6 +2599,10 @@ fn caveat_satisfied(cv: &Value, ctx: &Value) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+#[path = "k042_lib_test.rs"]
+mod k042_test;
 
 #[cfg(kani)]
 mod proofs;

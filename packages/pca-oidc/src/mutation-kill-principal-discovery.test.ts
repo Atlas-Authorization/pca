@@ -130,17 +130,17 @@ describe('discoverOidc', () => {
     expect((await err(discoverOidc(ISS, { fetch: 'x' as never }))).message).toContain('no fetch implementation');
   });
   it('uses the global fetch by default and the injected one when given', async () => {
-    const g = vi.fn(async () => new Response(JSON.stringify({ issuer: ISS, jwks_uri: 'j' })));
+    const g = vi.fn(async () => new Response(JSON.stringify({ issuer: ISS, jwks_uri: 'https://j' })));
     vi.stubGlobal('fetch', g);
     await discoverOidc(ISS);
     expect(g).toHaveBeenCalledTimes(1);
-    const f = vi.fn(async () => new Response(JSON.stringify({ issuer: ISS, jwks_uri: 'j' })));
+    const f = vi.fn(async () => new Response(JSON.stringify({ issuer: ISS, jwks_uri: 'https://j' })));
     await discoverOidc(ISS, { fetch: f as never });
     expect(f).toHaveBeenCalledTimes(1);
     expect(g).toHaveBeenCalledTimes(1);
   });
   it('request shape', async () => {
-    const f = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ issuer: ISS + '/', jwks_uri: 'j' })));
+    const f = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ issuer: ISS + '/', jwks_uri: 'https://j' })));
     await discoverOidc(ISS + '/', { fetch: f as never });
     expect(f.mock.calls[0]).toStrictEqual([`${ISS}/.well-known/openid-configuration`, { headers: { accept: 'application/json' } }]);
     const ac = new AbortController();
@@ -156,7 +156,7 @@ describe('discoverOidc', () => {
   it('non-2xx', async () => {
     const e = await err(run({}, { status: 503 }));
     expect(e.message).toBe(`discoverOidc: ${ISS}/.well-known/openid-configuration returned HTTP 503`);
-    await expect(run({ issuer: ISS, jwks_uri: 'j' }, { status: 299 })).resolves.toBeDefined();
+    await expect(run({ issuer: ISS, jwks_uri: 'https://j' }, { status: 299 })).resolves.toBeDefined();
   });
   it('invalid JSON', async () => {
     const e = await err(run('{nope'));
@@ -166,7 +166,7 @@ describe('discoverOidc', () => {
   it('metadata shape checks', async () => {
     for (const b of ['null', '[]', '"s"', '5']) expect((await err(run(b))).message).toBe('discoverOidc: metadata is not a JSON object');
     for (const i of [undefined, '', 5]) {
-      expect((await err(run({ issuer: i, jwks_uri: 'j' }))).message).toBe('discoverOidc: metadata is missing a string "issuer"');
+      expect((await err(run({ issuer: i, jwks_uri: 'https://j' }))).message).toBe('discoverOidc: metadata is missing a string "issuer"');
     }
     for (const j of [undefined, '', 5]) {
       expect((await err(run({ issuer: ISS, jwks_uri: j }))).message).toBe('discoverOidc: metadata is missing a string "jwks_uri"');
@@ -175,9 +175,9 @@ describe('discoverOidc', () => {
     expect((await err(run({}))).message).toContain('"issuer"');
   });
   it('issuer mismatch (checked after shape)', async () => {
-    const e = await err(run({ issuer: 'https://evil', jwks_uri: 'j' }));
+    const e = await err(run({ issuer: 'https://evil', jwks_uri: 'https://j' }));
     expect(e.message).toBe(`discoverOidc: metadata issuer 'https://evil' does not match requested '${ISS}'`);
-    expect((await err(run({ issuer: ISS + '/', jwks_uri: 'j' }))).message).toContain('does not match');
+    expect((await err(run({ issuer: ISS + '/', jwks_uri: 'https://j' }))).message).toContain('does not match');
   });
   it('returns the required members plus every extra member, unchanged', async () => {
     const body = { issuer: ISS, jwks_uri: 'https://j', token_endpoint: 't', id_token_signing_alg_values_supported: ['ES256'], custom: { a: 1 } };

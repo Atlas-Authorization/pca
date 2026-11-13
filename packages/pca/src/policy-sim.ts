@@ -80,15 +80,17 @@ export function simulate(
 ): SimReport {
   const catalog = opts.catalog ?? DEFAULT_CATALOG;
   const start = opts.start ?? 0;
-  const ordered = actions
-    .map((a, i) => ({ a, at: a.at ?? start + i }))
-    .sort((x, y) => x.at - y.at);
+  // An action with no usable time cannot be replayed in order: it is reported as denied, not skipped or guessed.
+  const timed = actions.map((a, i) => ({ a, at: a.at ?? start + i }));
+  const untimed = timed.filter((x) => !Number.isFinite(x.at));
+  const ordered = timed.filter((x) => Number.isFinite(x.at)).sort((x, y) => x.at - y.at);
 
   let budget: TrustBudget = { B: policy.riskPolicy.bMax, tau: start, asOf: start };
   const recent: number[] = [];
   const results: SimResult[] = [];
   let peakRisk = 0;
   let autonomousRisk = 0;
+  for (const { a } of untimed) results.push({ action: a, outcome: 'deny', r: 1, reason: 'action has no finite time', budgetAfter: budget.B });
 
   for (const { a, at } of ordered) {
     const spec = catalog.get(a.verb);
@@ -155,7 +157,7 @@ export function lintPolicy(policy: CompiledPolicy, opts: { catalog?: Catalog } =
   const catalog = opts.catalog ?? DEFAULT_CATALOG;
   const lints: Lint[] = [];
   // A configured limit (raw key: bare action name or FQ verb) that matches no granted action — a typo.
-  const grantedNames = new Set(policy.actions.flatMap((s) => [s.verb, s.action]));
+  const grantedNames = new Set(policy.actions.flatMap((s) => [s.verb, s.action, ...(s.aliases ?? [])]));
   for (const key of Object.keys(policy.inputLimits)) {
     if (!grantedNames.has(key)) {
       lints.push({ level: 'error', code: 'limit-unmatched', message: `limit for '${key}' matches no granted action` });

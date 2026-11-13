@@ -1,4 +1,5 @@
-import { DEFAULT_CATALOG, hashCanonical, type Catalog } from '@atlasauth/pca';
+import { hashCanonical } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, type Catalog } from '@atlasauth/pca/ext/research';
 import type { Question } from './learner';
 import { numCells, repValue, type Dim, type Omega } from './omega';
 import type { AdaptiveAnswer, PartialAnswer } from './refine';
@@ -90,7 +91,7 @@ export function parseCardAnswer(card: QuestionCard, input: CardInput): ParsedCar
   const slot = card.partial.find((s) => s.path === input.path);
   if (!slot) return { ok: false, error: `the card has no field ${input.path}` };
   if (slot.kind === 'num') {
-    const inRange = (x: number) => Number.isInteger(x) && x >= slot.lo && x <= slot.hi;
+    const inRange = (x: number) => Number.isInteger(x) && !Object.is(x, -0) && x >= slot.lo && x <= slot.hi;
     if ('upTo' in input) {
       if (!inRange(input.upTo) || input.upTo === slot.hi) return { ok: false, error: `upTo must be an integer in [${slot.lo}, ${slot.hi - 1}]` };
       return { ok: true, answer: { kind: 'partial', path: slot.path, cuts: [input.upTo], parts: [{ lo: slot.lo, hi: input.upTo, y: 1 }, { lo: input.upTo + 1, hi: slot.hi, y: 0 }] } };

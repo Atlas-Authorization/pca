@@ -1,4 +1,4 @@
-import { verifyIntentObservation, type IntentVerifyOptions, type SignedIntentObservation } from '@atlasauth/pca';
+import { verifyIntentObservation, type IntentVerifyOptions, type SignedIntentObservation } from '@atlasauth/pca/ext/intent';
 import type { IntentLearner } from './learner';
 import type { MapLearnerOptions } from './map';
 import type { Omega, Outcome } from './omega';

@@ -34,14 +34,12 @@
  *
  * REUSE: every primitive here is imported from `@atlasauth/pca` — the FROST threshold
  * (`frostTrustedDealerKeygen` / `frostCosign`, verified as an Ed25519 signature under the trusted group key) and the
- * ML-DSA-65 sign/verify (`mlDsa65Sign` / `mlDsa65VerifyB64u`). Nothing cryptographic is
- * reimplemented here; this module only COMPOSES the two quorums and binds them to a PCActn step-up.
+ * ML-DSA-65 quorum (`signPqQuorum` / `verifyPqQuorum`, in the core frost-pq module). Nothing cryptographic is
+ * implemented here; this module only COMPOSES the two quorums and binds them to a PCActn step-up.
  */
 
 import {
   type Capability,
-  type FrostParticipantShare,
-  ML_DSA_65_PUBLIC_KEY_BYTES,
   type MlDsaKeyPair,
   type PCActn,
   type PCActnBody,
@@ -52,15 +50,24 @@ import {
   assembleThreshold,
   b64u,
   decodeB64uStrict,
-  frostCosign,
-  mlDsa65Sign,
-  mlDsa65VerifyB64u,
   sha256,
   thresholdMessage,
   verifyPCActnCore,
-  verifyB64u,
   snapshotConfig,
 } from '@atlasauth/pca';
+import {
+  type FrostParticipantShare,
+  MAX_PQ_QUORUM_ENTRIES,
+  PQ_QUORUM_ALG,
+  type PqQuorumBlock,
+  type PqQuorumSignature,
+  type PqQuorumVerdict,
+  frostCosign,
+  normalizePqQuorumPool,
+  signPqQuorum,
+  verifyHybridFrostCosign,
+  verifyPqQuorum,
+} from '@atlasauth/pca/ext/frost';
 
 export * as experimental from './experimental/lattice-threshold';
 
@@ -71,13 +78,14 @@ export * from './group';
 // Artifact wire types
 // ---------------------------------------------------------------------------------------------
 
-export const HYBRID_ARTIFACT_VERSION = 1 as const;
+/** Artifact format version. 2 (0.5): explicit version checked strictly; the co-signatures cover a domain-separated representative. Version 1 is refused. */
+export const HYBRID_ARTIFACT_VERSION = 2 as const;
 /** The classical threshold part is a FROST(Ed25519) aggregate — a standard 64-byte Ed25519 signature. */
 export const HYBRID_CLASSICAL_ALG = 'frost-ed25519' as const;
 /** The post-quantum co-signatures are ML-DSA-65 (FIPS-204, NIST security category 3). */
-export const HYBRID_PQ_ALG = 'ml-dsa-65' as const;
+export const HYBRID_PQ_ALG = PQ_QUORUM_ALG;
 /** At most this many co-signature entries of a presented block are examined (the rest are ignored). */
-export const MAX_PQ_SIGNER_ENTRIES = 256;
+export const MAX_PQ_SIGNER_ENTRIES = MAX_PQ_QUORUM_ENTRIES;
 
 /** 32-byte Ed25519 point / 64-byte Ed25519 signature or 1952/3309-byte ML-DSA material — as bytes OR b64u. */
 export type BytesOrB64u = Uint8Array | string;
@@ -95,21 +103,11 @@ export interface FrostThresholdPart {
   readonly quorum: number;
 }
 
-/** One post-quantum co-signer's ML-DSA-65 signature over the action digest. */
-export interface PqCoSignature {
-  /** b64u(1952) ML-DSA-65 public key of the co-signer. */
-  readonly pk: string;
-  /** b64u(3309) ML-DSA-65 signature over `thresholdMessage(action)`. */
-  readonly sig: string;
-}
+/** One post-quantum co-signer's ML-DSA-65 signature (core quorum type). */
+export type PqCoSignature = PqQuorumSignature;
 
-/** The post-quantum pqT-of-m part of a hybrid artifact. */
-export interface PqCoSignBlock {
-  readonly alg: typeof HYBRID_PQ_ALG;
-  /** PQ quorum size recorded at signing (informational; the verifier enforces its OWN pqT). */
-  readonly pqT: number;
-  readonly signers: readonly PqCoSignature[];
-}
+/** The post-quantum pqT-of-m part of a hybrid artifact (core quorum block, version 2). */
+export type PqCoSignBlock = PqQuorumBlock;
 
 /**
  * A combined hybrid threshold artifact: the classical FROST t-of-n threshold signature PLUS the
@@ -192,14 +190,8 @@ export function hybridThresholdSign(action: PCActn | PCActnBody, input: HybridSi
     quorum: input.frost.quorum.length,
   };
 
-  // Post-quantum co-signature quorum: each signer's ML-DSA-65 signature over the same message.
-  const signers: PqCoSignature[] = input.pqSigners.map((s) => ({
-    pk: b64u(s.keyPair.publicKey),
-    sig: b64u(mlDsa65Sign(s.keyPair.secretKey, message)),
-  }));
-
-  const pqT = input.pqT ?? signers.length;
-  const pq: PqCoSignBlock = { alg: HYBRID_PQ_ALG, pqT, signers };
+  // One implementation of the quorum: core signs each co-signature over the domain-separated representative.
+  const pq = signPqQuorum(message, input.pqSigners.map((x) => x.keyPair), input.pqT);
 
   return { v: HYBRID_ARTIFACT_VERSION, digest: b64u(sha256(message)), frost, pq };
 }
@@ -246,14 +238,7 @@ function checkDescriptor(o: {
   return r.ok ? null : r.reason;
 }
 
-export interface PqVerdict {
-  readonly ok: boolean;
-  /** Number of DISTINCT trusted ML-DSA keys whose co-signature verified over this action. */
-  readonly count: number;
-  /** Required pqT. */
-  readonly need: number;
-  readonly reason?: string;
-}
+export type PqVerdict = PqQuorumVerdict;
 
 export interface HybridVerdict {
   readonly ok: boolean;
@@ -268,16 +253,6 @@ function normalizeGroupKeyB64u(k: BytesOrB64u): string | null {
   return decodeB64uStrict(s, 32) === null ? null : s;
 }
 
-function normalizePqPool(pks: readonly BytesOrB64u[]): Set<string> {
-  const pool = new Set<string>();
-  for (const p of pks) {
-    const s = p instanceof Uint8Array ? b64u(p) : p;
-    // Only well-formed ML-DSA-65 public keys join the trusted pool; malformed entries are ignored.
-    if (typeof s === 'string' && decodeB64uStrict(s, ML_DSA_65_PUBLIC_KEY_BYTES) !== null) pool.add(s);
-  }
-  return pool;
-}
-
 /**
  * Verify the classical FROST t-of-n aggregate as a plain Ed25519 verification: the FROST
  * aggregate is a standard Ed25519 signature under the group key, and the group key signs
@@ -290,42 +265,8 @@ function normalizePqPool(pks: readonly BytesOrB64u[]): Set<string> {
  */
 function verifyFrostAggregate(sigB64u: unknown, message: Uint8Array, trustedGroupKeyB64u: string): boolean {
   if (typeof sigB64u !== 'string') return false;
-  // The FROST aggregate is a plain Ed25519 signature by the group key over `thresholdMessage`, so it is
-  // checked directly under the TRUSTED group key (strict canonical encodings; never throws).
-  try {
-    return verifyB64u(trustedGroupKeyB64u, message, sigB64u);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Verify the post-quantum pqT-of-m quorum. Counts DISTINCT trusted ML-DSA keys whose signature
- * verifies over `message`. A co-signature from a key not in the trusted pool, a duplicate key, or a
- * signature over a DIFFERENT action (its bytes differ, so `mlDsa65VerifyB64u` fails) does not count —
- * so "the PQ quorum is short" and "a PQ co-sig is over a different action" both fail here, independently.
- */
-function verifyPqQuorum(pq: unknown, message: Uint8Array, trustedPool: Set<string>, pqT: number): PqVerdict {
-  if (!Number.isInteger(pqT) || pqT < 1) return { ok: false, count: 0, need: pqT, reason: 'pqT must be a positive integer' };
-  if (typeof pq !== 'object' || pq === null) return { ok: false, count: 0, need: pqT, reason: 'malformed pq block' };
-  const block = pq as { alg?: unknown; signers?: unknown };
-  if (block.alg !== HYBRID_PQ_ALG || !Array.isArray(block.signers)) return { ok: false, count: 0, need: pqT, reason: 'malformed pq block' };
-  const entries: unknown[] = block.signers;
-
-  const counted = new Set<string>();
-  // Bound the work an attacker-supplied block can cause: every entry costs an ML-DSA verification.
-  for (const entry of entries.slice(0, MAX_PQ_SIGNER_ENTRIES)) {
-    if (typeof entry !== 'object' || entry === null) continue;
-    const s = entry as { pk?: unknown; sig?: unknown };
-    if (typeof s.pk !== 'string' || typeof s.sig !== 'string') continue;
-    if (!trustedPool.has(s.pk)) continue; // not a registered co-signer
-    if (counted.has(s.pk)) continue; // a key counts at most once
-    if (!mlDsa65VerifyB64u(s.pk, message, s.sig)) continue; // must verify over THIS action's bytes
-    counted.add(s.pk);
-  }
-  const count = counted.size;
-  if (count >= pqT) return { ok: true, count, need: pqT };
-  return { ok: false, count, need: pqT, reason: `post-quantum quorum short: ${count} of ${pqT} required ML-DSA co-signatures` };
+  // One classical-half implementation: core's hybrid-FROST verifier on its `ed25519` suite (strict canonical encodings, never throws).
+  return verifyHybridFrostCosign({ sig: sigB64u }, message, trustedGroupKeyB64u, [], { expectGroupAlg: 'ed25519' }).ok;
 }
 
 /**
@@ -352,9 +293,15 @@ function verifyHybridThresholdInner(
   artifact: HybridThresholdArtifact,
   opts: HybridVerifyOpts,
 ): HybridVerdict {
+  const version = (artifact as { v?: unknown } | null | undefined)?.v;
+  if (version !== HYBRID_ARTIFACT_VERSION) {
+    const reason =
+      version === undefined ? 'artifact version missing (pre-0.5 format is refused)' : version === 1 ? 'artifact version 1 is no longer accepted (pre-0.5 format)' : 'unsupported artifact version';
+    return { ok: false, frost: false, pq: { ok: false, count: 0, need: opts.pqT, reason }, reason };
+  }
   const message = thresholdMessage(action);
   const trustedGroupKey = normalizeGroupKeyB64u(opts.groupKey);
-  const pool = normalizePqPool(opts.pqPublicKeys);
+  const pool = normalizePqQuorumPool(opts.pqPublicKeys);
 
   let frostOk = false;
   let frostReason: string | undefined;
@@ -436,7 +383,7 @@ export function createHybridThresholdVerifier(opts: {
 }): ThresholdVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
   const trustedGroupKey = normalizeGroupKeyB64u(opts.groupKey);
-  const pool = normalizePqPool(opts.pqPublicKeys);
+  const pool = normalizePqQuorumPool(opts.pqPublicKeys);
   return (ctx: VerifyContext) => {
     const descriptorReason = checkDescriptor(opts);
     if (descriptorReason !== null) return { enforced: true, ok: false, reason: descriptorReason };
@@ -485,7 +432,7 @@ export interface HybridStepUpResult {
  * standalone for the audit surface.
  */
 export async function verifyHybridStepUp(stepUp: HybridStepUp, opts: HybridStepUpVerifyOpts): Promise<HybridStepUpResult> {
-  const pool = normalizePqPool(opts.pqPublicKeys);
+  const pool = normalizePqQuorumPool(opts.pqPublicKeys);
   const pqVerdict = verifyPqQuorum(stepUp.pq, thresholdMessage(stepUp.pcactn), pool, opts.pqT);
   const hook = createHybridThresholdVerifier({
     groupKey: opts.groupKey,
@@ -497,7 +444,7 @@ export async function verifyHybridStepUp(stepUp: HybridStepUp, opts: HybridStepU
     trustedAuthorities: opts.trustedAuthorities,
     ...(opts.signerSetCommitment !== undefined ? { signerSetCommitment: opts.signerSetCommitment } : {}),
   });
-  const core = await verifyPCActnCore(stepUp.pcactn, {
+  const core = await verifyPCActnCore(stepUp.pcactn, { insecureSkipPlanRootCheck: true,
     grant: opts.grant,
     audience: opts.audience,
     nowEpoch: opts.nowEpoch,

@@ -1,4 +1,5 @@
-import { hashCanonical, intentMapDigest as coreIntentMapDigest, type Caveat, type Predicate } from '@atlasauth/pca';
+import { hashCanonical, type Caveat, type Predicate } from '@atlasauth/pca';
+import { intentMapDigest as coreIntentMapDigest } from '@atlasauth/pca/ext/intent';
 import { IntentLearner, hypothesisClassName, type HypothesisClassName, type HypothesisClassSpec, type LearnerOptions, type Observation, type Strategy } from './learner';
 import type { CatValue, Dim, Omega, Outcome } from './omega';
 import type { PolicyInput } from './policy';
@@ -18,7 +19,7 @@ import type { Region } from './region';
  * All probabilities and metrics are integers in parts-per-million (ppm) so the digest is language-portable.
  */
 
-export { INTENT_MAP_DOMAIN } from '@atlasauth/pca';
+export { INTENT_MAP_DOMAIN } from '@atlasauth/pca/ext/intent';
 const PPM = 1_000_000;
 const ppm = (x: number) => Math.round(x * PPM);
 
