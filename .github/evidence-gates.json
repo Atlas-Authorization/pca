@@ -1,0 +1,93 @@
+{
+  "about": "Gates the release evidence report looks up for a release of this repository (release-evidence.mjs). A gate is decided by the newest completed run at the release commit, else on the release-candidate branches.",
+  "release": "PCA TypeScript packages (npm)",
+  "rc_branches": [
+    "ci/{version}-rc",
+    "ci/{version}-rc-fix"
+  ],
+  "gates": [
+    {
+      "id": "ci",
+      "label": "CI: corpus generators, package tests, model-to-code smoke",
+      "workflow": "ci.yml",
+      "required": true,
+      "jobs": true
+    },
+    {
+      "id": "cross-language",
+      "label": "Cross-language gate (9 languages over the conformance corpus)",
+      "workflow": "cross-language.yml",
+      "required": true,
+      "jobs": true,
+      "artifacts": [
+        {
+          "name": "cross-language-matrix-Linux",
+          "file": "report.json",
+          "kind": "cross-language"
+        },
+        {
+          "name": "cross-language-matrix-macOS",
+          "file": "report.json",
+          "kind": "cross-language"
+        }
+      ]
+    },
+    {
+      "id": "verified-core",
+      "label": "Verified core: Dafny proofs, generated-JS reproducibility, differentials, diverse compilation",
+      "workflow": "verified-core.yml",
+      "required": true,
+      "jobs": true
+    },
+    {
+      "id": "intent",
+      "label": "Intent layer tests and benchmark",
+      "workflow": "intent.yml",
+      "required": true
+    },
+    {
+      "id": "mutation",
+      "label": "Mutation testing (Stryker) merge",
+      "workflow": "stryker.yml",
+      "required": true,
+      "job": "merge",
+      "artifacts": [
+        {
+          "name": "mutation-summary",
+          "file": "mutation-summary.json",
+          "kind": "mutation"
+        }
+      ]
+    },
+    {
+      "id": "formal-proofs",
+      "label": "Formal proofs (Dafny, TLA+, Lean, Verus, EasyCrypt, trusted base)",
+      "workflow": "formal-proofs.yml",
+      "required": true,
+      "jobs": true
+    },
+    {
+      "id": "formal-kani",
+      "label": "Kani bounded model checking",
+      "workflow": "formal-kani.yml",
+      "required": true
+    },
+    {
+      "id": "formal-symbolic",
+      "label": "Symbolic protocol models (ProVerif, CryptoVerif, Tamarin)",
+      "workflow": "formal-symbolic.yml",
+      "required": true,
+      "jobs": true
+    },
+    {
+      "id": "formal-conformance",
+      "label": "Model-to-code conformance (full)",
+      "workflow": "formal-conformance.yml",
+      "required": true
+    }
+  ],
+  "known_exceptions": [
+    "Packages and features in the experimental maturity tier are published for evaluation; the commitments of the stable and production tiers do not apply to them (https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).",
+    "PCA Core (@atlasauth/pca/core) still loads 24 experimental modules at run time through the core action verifier (intent layer, attestation, liveness beacons, transparency ledger); the list may only shrink (https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md)."
+  ]
+}

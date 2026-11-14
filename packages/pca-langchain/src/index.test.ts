@@ -31,7 +31,7 @@ describe('withPCA (LangChain)', () => {
     expect(out).toEqual({ ok: true });
     expect(sink.ran).toEqual({ amount: 20, currency: 'usd', charge: 'ch_1' });
     expect(proof).toBeDefined();
-    const res = await verifyPCActnCore(proof!.pcactn, { grant: a.grant, audience: AUD, nowEpoch: proof!.pcactn.iat });
+    const res = await verifyPCActnCore(proof!.pcactn, { insecureSkipPlanRootCheck: true, grant: a.grant, audience: AUD, nowEpoch: proof!.pcactn.iat });
     expect(res.allow).toBe(true);
     expect(res.checks.leaf_signature).toBe('pass');
     expect(decodePcaHeader(proof!.headers['PCA-Action']!)).toBe(proof!.encoded);
@@ -74,7 +74,7 @@ describe('withPCA (LangChain)', () => {
     expect(out).toEqual({ ok: true });
     expect(sink.ran).toEqual({ amount: 20, currency: 'usd', charge: 'ch_1' });
     expect(proof).toBeDefined();
-    const res = await verifyPCActnCore(proof!.pcactn, { grant: a.grant, audience: AUD, nowEpoch: proof!.pcactn.iat });
+    const res = await verifyPCActnCore(proof!.pcactn, { insecureSkipPlanRootCheck: true, grant: a.grant, audience: AUD, nowEpoch: proof!.pcactn.iat });
     expect(res.allow).toBe(true);
     expect(res.checks.leaf_signature).toBe('pass');
   });

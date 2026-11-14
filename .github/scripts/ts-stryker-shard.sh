@@ -91,6 +91,12 @@ while read -r pkg files; do
       for (const f of ins) { if(!fs.existsSync("/tmp/pca-audit-stryker/"+f+".json")) continue; const j=JSON.parse(fs.readFileSync("/tmp/pca-audit-stryker/"+f+".json","utf8")); if(!base) base=j; else Object.assign(base.files,j.files); }
       if (base) fs.writeFileSync("/tmp/pca-audit-stryker/"+out+".json", JSON.stringify(base));' "$name" "${parts[@]}"
     for g in "${parts[@]}"; do [ -f "/tmp/pca-audit-stryker/$g.json" ] || { echo "::error::no Stryker report for $g (dry run failed?)"; rc=1; }; done
+  elif [ "$pkg" = "pca-invariants" ]; then
+    # The property suite runs thousands of generated cases per property, and every mutant re-runs the covering properties:
+    # this package has a shard of its own (ts-stryker-plan.mjs ISOLATED), a reduced run count per property (the tests honour
+    # PCA_INVARIANTS_RUNS; the seeds are fixed, so a mutant the properties can see is still killed) and a longer mutant timeout.
+    # shellcheck disable=SC2086
+    PKG="$pkg" PCA_INVARIANTS_RUNS=120 TIMEOUT_MS=120000 CONCURRENCY=2 bash tools/pca-audit/stryker/run.sh "$name" $files
   else
     # shellcheck disable=SC2086
     PKG="$pkg" bash tools/pca-audit/stryker/run.sh "$name" $files

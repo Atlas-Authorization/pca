@@ -6,6 +6,7 @@ import {
   advanceState,
   advanceStateStrict,
   canonicalState,
+  constitutionId,
   checkAndAdvance,
   checkProhibitions,
   evidenceDigest,
@@ -486,6 +487,21 @@ describe('signed + bound safety evidence', () => {
     const real = proveSafety(a, c, s);
     const dropped = signSafetyEvidence({ ...real, evaluated: real.evaluated.slice(1) }, SIGNER.secretKey, SIGNER_PUB);
     expect(verifySignedSafetyEvidence(dropped, { signer: SIGNER_PUB, actionDigest: real.action_digest, constitution: c, stateDigest: real.state_digest }).ok).toBe(false);
+  });
+
+  it('a malformed expected constitution never verifies: an id-less row does not cover an id-less invariant', () => {
+    const real = proveSafety(a, c, s);
+    const dig = { signer: SIGNER_PUB, actionDigest: real.action_digest, stateDigest: real.state_digest };
+    for (const bad of [[5], [null], ['q'], [{ kind: 'never', when: { verb: 'x' } }], [{ id: '', kind: 'never', when: { verb: 'x' } }]]) {
+      const con = { ...c, invariants: bad } as unknown as Constitution;
+      const se = signSafetyEvidence({ ...real, constitution: constitutionId(con), evaluated: [{ result: 'pass' }] } as never, SIGNER.secretKey, SIGNER_PUB);
+      const r = verifySignedSafetyEvidence(se, { ...dig, constitution: con });
+      expect(r.ok).toBe(false);
+      expect(r.reason).toMatch(/^constitution malformed: /);
+    }
+    // a non-string row id is malformed evidence, not a mismatch
+    const odd = signSafetyEvidence({ ...real, evaluated: [{ id: 5, result: 'pass' }] } as never, SIGNER.secretKey, SIGNER_PUB);
+    expect(verifySignedSafetyEvidence(odd, { ...dig, constitution: c })).toEqual({ ok: false, reason: 'malformed evidence' });
   });
 
   it('principal pin demands an authentic signed constitution', () => {

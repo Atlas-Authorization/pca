@@ -1,0 +1,140 @@
+(* PCA -- post-quantum suites under trusted-side pins: T15 (delta authenticity), session-root binding and
+   revocation-epoch authenticity when Ed25519 is BROKEN (the adversary holds every Ed25519 secret key from the
+   start), security resting on the PQ scheme alone (CryptoVerif).
+
+   Rule modelled (packages/pca/src/pq.ts verifyPinnedSuite / resolvePqVerifyKey, PinnedPqKey choke point; Lean
+   Misc2.lean `pinned_never_artifact`): a PQ or hybrid signature verifies ONLY under a PQ public key the verifier
+   holds from its own trusted side, never under a key carried by the artifact being verified:
+   - the admitting root D_k: the verifier's trust anchor (Ed25519 identity pkE_P) with its PINNED ML-DSA key pqP
+     (R3-01 root pinning);
+   - revocation epochs: the PQ key pinned for the signer by the session root S (principals[].pq_pk); S is itself
+     authenticated through digest(S) inside the pinned-verified D_k (so the S-carried pin is trusted-side).
+   Suite `hybrid` = AND of Ed25519 and ML-DSA over the same message (suite and pq_pk bound into the signed body:
+   bindSuiteFields). Suite `ml-dsa-65` alone is the same with the Ed25519 component dropped; the proof below never
+   uses the Ed25519 component, so it covers both.
+
+   The negative control (run_all.sh) verifies the admitting root under the pq key the ARTIFACT names (`pqx`): the
+   T15 query is then not provable (an attacker who broke Ed25519 signs with its own ML-DSA key).
+
+   Assumptions: UF-CMA of ML-DSA-65 (randomised / hedged signer: UF_CMA_proba), collision resistance of the hash.
+   Nothing is assumed about Ed25519. *)
+
+param NS, NK, NE, NV, NW.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type pqkeyseed [large, fixed].
+type pqpkey [bounded].
+type pqskey [bounded].
+type pqsignature.
+type message.
+type hashkey [fixed].
+type digest [fixed].
+type wire.
+type sid_t. type seq_t. type body_t. type other_t. type epoch_t.
+type pset.
+
+proba Psign.
+proba Psigncoll.
+proba Ppq.
+proba Ppqcoll.
+proba Phash.
+
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+expand UF_CMA_proba_signature(pqkeyseed, pqpkey, pqskey, message, pqsignature, pqskgen, pqpkgen, pqsign, pqcheck, Ppq, Ppqcoll).
+expand CollisionResistant_hash_1(hashkey, wire, digest, hash, hash_oracle, Phash).
+
+fun mkps(pkey, pqpkey, other_t): pset [data].        (* S.principals: the listed key with ITS pinned pq_pk, + others *)
+fun mkroot(sid_t, pset, body_t): message [data].
+fun mkcap(pkey, pqpkey, sid_t, seq_t, digest, digest, body_t): message [data].   (* issuer, bound pq_pk, sid, k, prev, root, body *)
+fun mkepoch(sid_t, epoch_t): message [data].
+fun wr(message, signature, pqsignature): wire [data].
+equation forall a: sid_t, b: pset, c: body_t, i: pkey, q: pqpkey, s: sid_t, k: seq_t, p: digest, r: digest, e: body_t;
+  mkroot(a, b, c) <> mkcap(i, q, s, k, p, r, e).
+equation forall a: sid_t, b: pset, c: body_t, s: sid_t, x: epoch_t; mkroot(a, b, c) <> mkepoch(s, x).
+equation forall i: pkey, q: pqpkey, s: sid_t, k: seq_t, p: digest, r: digest, e: body_t, s2: sid_t, x: epoch_t;
+  mkcap(i, q, s, k, p, r, e) <> mkepoch(s2, x).
+
+event RootSignedP(sid_t, pset, body_t).
+event MintedP(sid_t, digest, seq_t, digest, body_t).
+event PublishedP(sid_t, epoch_t).
+event AcceptK(sid_t, digest, seq_t, digest, body_t).
+event AcceptRoot(sid_t, pset, body_t).
+event AcceptEpoch(sid_t, epoch_t).
+
+query s: sid_t, r: digest, k: seq_t, p: digest, e: body_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e)).
+query s: sid_t, ps: pset, b: body_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b)).
+query s: sid_t, x: epoch_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x)).
+
+channel c0, cR, cR2, cD, cD2, cE, cE2, cV, cV2, cW, cW2.
+
+let WalletP(hk: hashkey, pkE: pkey, skE: skey, pqP: pqpkey, pqsP: pqskey) =
+  ! iS <= NS
+  in(cR, (sid: sid_t, others: other_t, b: body_t));
+  let ps = mkps(pkE, pqP, others) in
+  let mR = mkroot(sid, ps, b) in
+  let s1 = sign(mR, skE) in
+  let s2 = pqsign(mR, pqsP) in
+  event RootSignedP(sid, ps, b);
+  out(cR2, (s1, s2));
+  (
+    (! iK <= NK
+     in(cD, (k: seq_t, prev: digest, e: body_t));
+     let rd = hash(hk, wr(mR, s1, s2)) in
+     let mD = mkcap(pkE, pqP, sid, k, prev, rd, e) in
+     event MintedP(sid, rd, k, prev, e);
+     out(cD2, (sign(mD, skE), pqsign(mD, pqsP))))
+  | (! iE <= NE
+     in(cE, x: epoch_t);
+     event PublishedP(sid, x);
+     let mE = mkepoch(sid, x) in
+     out(cE2, (sign(mE, skE), pqsign(mE, pqsP))))
+  ).
+
+(* admitting root + session root (rule 13) *)
+let Verifier(hk: hashkey, pkE: pkey, pqPin: pqpkey) =
+  ! iV <= NV
+  in(cV, (sid: sid_t, ps: pset, b: body_t, spk: pkey, spq: pqpkey, sS1: signature, sS2: pqsignature,
+          pqx: pqpkey, k: seq_t, prev: digest, e: body_t, g1: signature, g2: pqsignature));
+  let mS = mkroot(sid, ps, b) in
+  (* S's self-signature, under the pin S itself carries for its signer: says nothing on its own *)
+  if check(mS, spk, sS1) then
+  if pqcheck(mS, spq, sS2) then
+  let rd = hash(hk, wr(mS, sS1, sS2)) in
+  let mD = mkcap(pkE, pqx, sid, k, prev, rd, e) in
+  if check(mD, pkE, g1) then
+  if pqcheck(mD, pqx, g2) then
+  event AcceptRoot(sid, ps, b);
+  event AcceptK(sid, rd, k, prev, e);
+  out(cV2, ()).
+
+(* the session's revocation epoch, signed by the principal named in S, PQ part under the pin S lists for it; S is
+   accepted only together with an admitting root that is pinned-verified *)
+let EpochVerifier(hk: hashkey, pkE: pkey, pqPin: pqpkey) =
+  ! iW <= NW
+  in(cW, (sid: sid_t, o: other_t, pin: pqpkey, b: body_t, spk: pkey, spq: pqpkey, sS1: signature, sS2: pqsignature,
+          k: seq_t, prev: digest, e: body_t, g1: signature, g2: pqsignature,
+          x: epoch_t, w1: signature, w2: pqsignature));
+  let ps = mkps(pkE, pin, o) in
+  let mS = mkroot(sid, ps, b) in
+  if check(mS, spk, sS1) then
+  if pqcheck(mS, spq, sS2) then
+  let rd = hash(hk, wr(mS, sS1, sS2)) in
+  let mD = mkcap(pkE, pqPin, sid, k, prev, rd, e) in
+  if check(mD, pkE, g1) then
+  if pqcheck(mD, pqPin, g2) then
+  let mE = mkepoch(sid, x) in
+  if check(mE, pkE, w1) then
+  if pqcheck(mE, pin, w2) then           (* the pin read from S, which the pinned D_k authenticated *)
+  event AcceptEpoch(sid, x);
+  out(cW2, ()).
+
+process
+  in(c0, ());
+  new hk: hashkey;
+  new rkE: keyseed; let pkE = pkgen(rkE) in let skE = skgen(rkE) in
+  new rq: pqkeyseed; let pqP = pqpkgen(rq) in let pqsP = pqskgen(rq) in
+  out(c0, (pkE, skE, pqP));          (* Ed25519 is broken: the adversary holds skE *)
+  ( hash_oracle(hk) | WalletP(hk, pkE, skE, pqP, pqsP) | Verifier(hk, pkE, pqP) | EpochVerifier(hk, pkE, pqP) )

@@ -22,7 +22,6 @@ import type {
   PaymentConstraint,
   PaymentMandateClaims,
 } from './mandates';
-import { currencyExponent } from './mandates';
 import { isObject, type JsonObject } from './sdjwt';
 
 /** Usage state a verifier tracks for an open mandate (budget and recurrence need it). */
@@ -121,6 +120,15 @@ export interface PaymentCheckOptions {
   now: number;
 }
 
+/** A usage context with a NaN, negative or fractional counter would make the cap comparisons fail open: refuse it. */
+function contextProblem(c: MandateContext): string | undefined {
+  const ok = (n: unknown) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 && !Object.is(n, -0);
+  if (!ok(c.totalAmount) || !ok(c.totalUses) || (c.lastUsedDate !== undefined && !ok(c.lastUsedDate))) {
+    return 'mandate context must carry non-negative integer totalAmount, totalUses and lastUsedDate';
+  }
+  return undefined;
+}
+
 function evaluatePayment(c: PaymentConstraint, closed: PaymentMandateClaims, o: PaymentCheckOptions): string[] {
   const amt = closed.payment_amount;
   switch (c.type) {
@@ -146,9 +154,11 @@ function evaluatePayment(c: PaymentConstraint, closed: PaymentMandateClaims, o: 
     }
     case 'payment.budget': {
       if (amt.currency !== c.currency) return [`budget currency mismatch: expected ${c.currency}, got ${amt.currency}`];
-      // The official SDK converts the budget with `int(max * 100)`; any other exponent would be read differently by it.
-      if (currencyExponent(c.currency) !== 2) return [`budget in ${c.currency} is unsupported: budget.max is converted with a fixed x100 factor`];
+      // The official SDK converts the budget with `int(max * 100)` for every currency; this check reads it the same way, and
+      // the issuing side (`ap2BudgetMax`) chooses `max` so that this reading is never above the PCA cap.
       if (!o.context) return ['mandate context is required to evaluate a budget'];
+      const bad = contextProblem(o.context);
+      if (bad) return [bad];
       const scaled = c.max * 100;
       const maxMinor = Math.round(scaled);
       if (Math.abs(scaled - maxMinor) > 1e-6) return ['budget.max is not a whole number of minor units'];
@@ -157,6 +167,10 @@ function evaluatePayment(c: PaymentConstraint, closed: PaymentMandateClaims, o: 
     }
     case 'payment.agent_recurrence': {
       const v: string[] = [];
+      if (o.context) {
+        const bad = contextProblem(o.context);
+        if (bad) return [bad];
+      }
       if (c.max_occurrences !== undefined) {
         if (!o.context) return ['mandate context is required to evaluate recurrence limits'];
         if (o.context.totalUses >= c.max_occurrences) v.push(`maximum occurrences exceeded: ${o.context.totalUses} >= ${c.max_occurrences}`);
@@ -228,12 +242,12 @@ export function projectCheckout(payload: JsonObject): UcpCheckout {
   const line_items = (payload.line_items as unknown[]).map((li, i) => {
     if (!isObject(li) || typeof li.id !== 'string' || !isObject(li.item)) return bad(`line_items[${i}] is malformed`);
     const item = li.item as JsonObject;
-    if (typeof item.id !== 'string' || typeof item.title !== 'string' || !Number.isSafeInteger(item.price) || (item.price as number) < 0) bad(`line_items[${i}].item needs id, title and integer minor-unit price`);
+    if (typeof item.id !== 'string' || typeof item.title !== 'string' || !Number.isSafeInteger(item.price) || (item.price as number) < 0 || Object.is(item.price, -0)) bad(`line_items[${i}].item needs id, title and integer minor-unit price`);
     if (!Number.isSafeInteger(li.quantity) || (li.quantity as number) < 1) bad(`line_items[${i}].quantity must be a positive integer`);
     return { id: li.id, item: { id: item.id as string, title: item.title as string, price: item.price as number }, quantity: li.quantity as number };
   });
   const totals = (payload.totals as unknown[]).map((t, i) => {
-    if (!isObject(t) || typeof t.type !== 'string' || !Number.isSafeInteger(t.amount)) return bad(`totals[${i}] is malformed`);
+    if (!isObject(t) || typeof t.type !== 'string' || !Number.isSafeInteger(t.amount) || Object.is(t.amount, -0)) return bad(`totals[${i}] is malformed`);
     return { type: t.type as string, amount: t.amount as number };
   });
   let merchant: Merchant | undefined;

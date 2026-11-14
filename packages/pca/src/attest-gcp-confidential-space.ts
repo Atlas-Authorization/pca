@@ -1,6 +1,9 @@
 import { decodeCanonicalBase64url } from './strict-jws';
+import { setAssuranceLabel } from './assurance';
 import { x509ValidAt } from './x509-validity';
+import { rsaKeyOk, strictChainError } from './x509-strict';
 import { snapshotConfig } from './config-snapshot';
+import { assertJsonSize } from './policy-lists';
 /**
  * L0 HARDWARE backend — GOOGLE CLOUD CONFIDENTIAL SPACE ATTESTATION-TOKEN VERIFIER.
  *
@@ -250,8 +253,12 @@ export function parseGcpCsJwt(token: string): ParsedGcpCsJwt {
   let headerObj: unknown;
   let payloadObj: unknown;
   try {
-    headerObj = JSON.parse(decodeCanonicalBase64url(h).toString('utf8'));
-    payloadObj = JSON.parse(decodeCanonicalBase64url(p).toString('utf8'));
+    const hb = decodeCanonicalBase64url(h);
+    const pb = decodeCanonicalBase64url(p);
+    assertJsonSize(hb.length);
+    assertJsonSize(pb.length);
+    headerObj = JSON.parse(hb.toString('utf8'));
+    payloadObj = JSON.parse(pb.toString('utf8'));
   } catch (e) {
     throw new TypeError(`parseGcpCsJwt: malformed JSON segment: ${e instanceof Error ? e.message : 'unknown'}`);
   }
@@ -340,7 +347,7 @@ function keyFromJwk(jwk: GcpJwk, nc: NodeCrypto): import('node:crypto').KeyObjec
 
 function safeCertVerify(cert: import('node:crypto').X509Certificate, key: import('node:crypto').KeyObject): boolean {
   try {
-    return cert.verify(key);
+    return rsaKeyOk(key) && cert.verify(key);
   } catch {
     return false;
   }
@@ -379,6 +386,8 @@ export async function verifyJwkX5cChain(
   for (let i = 0; i < certs.length - 1; i++) {
     if (!safeCertVerify(certs[i]!, certs[i + 1]!.publicKey)) return `x5c link ${i} is not signed by the certificate above it`;
   }
+  const profile = strictChainError(certs.map((c) => new Uint8Array(c.raw)));
+  if (profile) return `x5c chain profile: ${profile}`;
   const spkiPins = new Set((anchors.trustedKeySpki ?? []).map((s) => s.toLowerCase()));
   for (const c of certs) {
     if (spkiPins.has(spkiSha256OfKey(c.publicKey, createHash))) return null; // a cert in the chain is a pinned key
@@ -461,8 +470,11 @@ async function resolveTrustedSigningKey(
   // x5c chain to a configured root?
   if (Array.isArray(jwk.x5c) && jwk.x5c.length > 0 && ((anchors.rootCertsPem?.length ?? 0) > 0 || spkiPins.size > 0)) {
     const chainErr = await verifyJwkX5cChain(jwk.x5c, anchors, opts);
-    if (chainErr === null) return { key, spkiSha256: spki, fromTrustedJwks: false, jwk };
-    return { reason: `signing key not trusted: ${chainErr}` };
+    if (chainErr !== null) return { reason: `signing key not trusted: ${chainErr}` };
+    // the chain vouches only for its own leaf: RSA n/e or EC x/y beside a genuine chain must not borrow its trust (RFC 7517 section 4.7)
+    const leaf = new nc.X509Certificate(Buffer.from(jwk.x5c[0] as string, 'base64'));
+    if (spkiSha256OfKey(leaf.publicKey, createHash) !== spki) return { reason: 'signing key not trusted: the JWK key is not the key of its x5c leaf' };
+    return { key, spkiSha256: spki, fromTrustedJwks: false, jwk };
   }
 
   return { reason: 'signing key is not anchored to any configured trust anchor (pinned JWKS / SPKI / root CA)' };
@@ -480,7 +492,7 @@ async function verifyJwsSignature(parsed: ParsedGcpCsJwt, key: import('node:cryp
     if (jwk.kty !== 'RSA') return `RS256 token but signing key is ${String(jwk.kty)} (not RSA)`;
     let ok = false;
     try {
-      ok = verify('RSA-SHA256', parsed.signingInput, key, parsed.signature);
+      ok = rsaKeyOk(key) && verify('RSA-SHA256', parsed.signingInput, key, parsed.signature);
     } catch {
       ok = false;
     }
@@ -621,7 +633,12 @@ function transformBinding(binding: Uint8Array, mode: GcpCsPolicy['nonceHash']): 
  * Wire it in: `createAttestationVerifier({ trustedAttestorKeys: [], hardwareVerifier: createGcpConfidentialSpaceVerifier(opts), resolveDocument })`,
  * or add it as one `AttestationRoot` in a `createMultiRootVerifier` policy.
  */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createGcpConfidentialSpaceVerifier(opts: GcpConfidentialSpaceVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createGcpConfidentialSpaceVerifierUnlabelled(opts), { level: 'hardware', vendor: 'gcp-confidential-space' });
+}
+
+function createGcpConfidentialSpaceVerifierUnlabelled(opts: GcpConfidentialSpaceVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts || !Array.isArray(opts.trustedIssuers) || opts.trustedIssuers.length === 0) {

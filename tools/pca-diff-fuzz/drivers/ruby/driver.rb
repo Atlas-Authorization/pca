@@ -1,5 +1,22 @@
 require 'json'
 require_relative '../../../../sdks/ruby-pca/lib/atlas_pca'
+require_relative '../../../../sdks/ruby-pca/test/support/producer_ops'
+
+PQ_KEY_SETS = {}
+
+# kind `produce`: raw = {op, args, keys, pq_keys?}, one producer vector case; answers {out} or {error: <message>}.
+def produce(raw)
+  o = AtlasPca.parse_json(raw, loose: true)
+  # seeded PQ keygen (SLH-DSA especially) once per key set, not once per line
+  pq = PQ_KEY_SETS[JSON.generate(o['pq_keys'])] ||= ProducerOps::PqKeys.new(o['pq_keys'] || {})
+  begin
+    { 'out' => ProducerOps.run({ 'op' => o['op'], 'args' => o['args'] }, ProducerOps.keys_of(o['keys']), pq) }
+  rescue ProducerOps::NotProduced
+    { 'error' => "unsupported_op: #{o['op']}" }
+  rescue StandardError => e
+    { 'error' => e.message.empty? ? e.class.name : e.message }
+  end
+end
 
 # Intent Layer v2 primitive kinds: raw = JSON text of the primitive's `input`; the response is {id, result: <exactly the
 # expect shape of that primitive>} (reasons are never part of it).
@@ -60,6 +77,19 @@ File.open(outp, 'w') do |o|
         r['allow'] = g.allow ? true : false
         r['checks'] = g.checks.to_h { |k, v| [k.to_s, v ? true : false] }
         r['unsupported_suite'] = g.reason if g.reason.to_s.include?(AtlasPca::UNSUPPORTED_SUITE)
+      elsif c['kind'] == 'policy'
+        # Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+        # the agent-native evaluator (predicates + tool_schema) over policy_caveats(grant, chain), as {allow, failed}; the action
+        # context is {action}, the tool call the signed verb + params (the reference's toolCallOf)
+        pv = AtlasPca.parse_json(c['raw'], loose: true)
+        act = pv['context']['action']
+        call = { 'tool' => act.is_a?(Hash) && act['verb'].is_a?(String) ? act['verb'] : '',
+                 'args' => act.is_a?(Hash) && act['params'].is_a?(Hash) ? act['params'] : {} }
+        ok, failed = AtlasPca.evaluate_agent_caveats(AtlasPca.policy_caveats(pv['grant'], pv['chain']), pv['context'], { 'action' => act }, call)
+        r['allow'] = ok ? true : false
+        r['failed'] = failed
+      elsif c['kind'] == 'produce'
+        r.merge!(produce(c['raw']))
       elsif V2_PRIMITIVES.key?(c['kind'])
         r['result'] = V2_PRIMITIVES[c['kind']].call(AtlasPca.parse_json_text(c['raw']))
       elsif c['kind'] == 'chain'

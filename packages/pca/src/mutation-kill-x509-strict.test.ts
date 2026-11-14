@@ -76,7 +76,7 @@ describe('readCertRoleInfo', () => {
   it('BasicConstraints: CA true / false / default, pathLen', () => {
     expect(readCertRoleInfo(certWith(bcExt(boolean(true))))).toStrictEqual({ hasBasicConstraints: true, ca: true, hasKeyUsage: false, keyCertSign: false });
     expect(readCertRoleInfo(certWith(bcExt(boolean(false))))).toStrictEqual({ hasBasicConstraints: true, ca: false, hasKeyUsage: false, keyCertSign: false });
-    expect(readCertRoleInfo(certWith(bcExt(tlv(0x01, B(0x01)))))).toMatchObject({ ca: true });
+    for (const b of [0x01, 0x02, 0x7f, 0x80, 0xfe]) throwsRange(() => readCertRoleInfo(certWith(bcExt(tlv(0x01, B(b))))), 'BasicConstraints cA is not a DER BOOLEAN'); // O3: DER 0x00 / 0xFF only
     expect(readCertRoleInfo(certWith(bcExt()))).toStrictEqual({ hasBasicConstraints: true, ca: false, hasKeyUsage: false, keyCertSign: false });
     // pathLen without cA: the INTEGER is the pathLen, not a boolean
     expect(readCertRoleInfo(certWith(bcExt(integer(3))))).toStrictEqual({ hasBasicConstraints: true, ca: false, pathLen: 3, hasKeyUsage: false, keyCertSign: false });

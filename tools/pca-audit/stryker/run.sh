@@ -20,11 +20,19 @@ delete b["$schema"];
 if(process.env.NO_RELATED)b.vitest={related:false};
 if(process.env.VITEST_CONFIG){b.vitest=Object.assign(b.vitest||{},{configFile:process.env.VITEST_CONFIG});}
 if(process.env.COVERAGE_OFF){b.coverageAnalysis="off";b.ignoreStatic=false;} // tests that run the code in child processes: perTest coverage never sees it
+if(process.env.TIMEOUT_MS)b.timeoutMS=Number(process.env.TIMEOUT_MS);
+if(process.env.CONCURRENCY)b.concurrency=Number(process.env.CONCURRENCY);
 if(process.env.INPLACE){b.inPlace=true;b.concurrency=1;}
 if(process.env.EXTRA_IGNORE)b.ignorePatterns=b.ignorePatterns.concat(process.env.EXTRA_IGNORE.split(","));
 if(process.env.ONLY_TESTS){const fs=require("fs"),path=require("path");const keep=new Set(process.env.ONLY_TESTS.split(","));const dir=path.join(process.argv[4],"packages",process.env.PKG||"pca");const walk=(d)=>fs.readdirSync(d,{withFileTypes:true}).flatMap((e)=>e.name==="node_modules"||e.name===".stryker-tmp"||e.name==="dist"?[]:e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);b.ignorePatterns=b.ignorePatterns.concat(walk(path.join(dir,"src")).filter((f)=>/\.test\.ts$/.test(f)).map((f)=>path.relative(dir,f)).filter((f)=>!keep.has(f)));}
 require("fs").writeFileSync(process.argv[5],JSON.stringify(b,null,1));
 ' "$here/stryker.base.json" "$name" "$mut" "$root" "$cfg"
 cd "$root/packages/$PKG"
+# the sandbox sits two levels below packages/$PKG, so a test's ../../<sibling>/... (e.g. ../../pca/conformance/*.json) resolves
+# inside .stryker-tmp-$name: link every sibling package there (ignorePatterns keeps Stryker from copying the links)
+if [ -z "${INPLACE:-}" ]; then
+  mkdir -p ".stryker-tmp-$name"
+  for d in "$root"/packages/*/; do ln -sfn "${d%/}" ".stryker-tmp-$name/$(basename "$d")"; done
+fi
 "$root/tools/pca-audit/node_modules/.bin/stryker" run "$cfg" || true
 rm -rf "$root/packages/$PKG/.stryker-tmp-$name"

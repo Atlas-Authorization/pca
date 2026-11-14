@@ -137,7 +137,7 @@ export function verifyLedgerConsistency(oldRoot: string, newRoot: string, proof:
     if (typeof oldRoot !== 'string' || typeof newRoot !== 'string') return false;
     const first = proof.oldSize;
     const second = proof.newSize;
-    if (!Number.isSafeInteger(first) || !Number.isSafeInteger(second) || first < 0 || first > second) return false;
+    if (!Number.isSafeInteger(first) || !Number.isSafeInteger(second) || first < 0 || first > second || Object.is(first, -0) || Object.is(second, -0)) return false;
     if (!Array.isArray(proof.path) || proof.path.length > MAX_CONSISTENCY_PATH) return false;
     if (first === 0) {
       if (proof.path.length !== 0 || oldRoot !== EMPTY_TREE_ROOT) return false;
@@ -148,6 +148,8 @@ export function verifyLedgerConsistency(oldRoot: string, newRoot: string, proof:
     const f = BigInt(first);
     if ((f & (f - 1n)) === 0n) path.unshift(unb64u(oldRoot));
     if (path.length === 0) return false;
+    // Every node is a SHA-256 output: a wrong-length element is malformed, refuse it in every mode (not only merkle-strict).
+    if (path.some((n) => n.length !== 32)) return false;
     let fn = f - 1n;
     let sn = BigInt(second) - 1n;
     while (fn & 1n) {
@@ -631,6 +633,63 @@ export function verifyHeadConsistency(
     // Enforce the signed prev_root hash-chain link when `older` is `newer`'s immediate predecessor.
     if (newer.size === older.size + 1 && newer.prev_root !== older.root) return false;
     return verifyLedgerConsistency(older.root, newer.root, proof);
+  } catch {
+    return false;
+  }
+}
+
+/** One link of a checkpoint chain: a signed head and the consistency proof from the PREVIOUS checkpoint to it (absent on the first). */
+export interface Checkpoint {
+  sth: SignedTreeHead;
+  proof?: ConsistencyProof;
+}
+
+export type CheckpointChainVerdict = { ok: true; head: SignedTreeHead } | { ok: false; at: number; reason: 'empty' | 'head' | 'proof_missing' | 'inconsistent' };
+
+/**
+ * Verify a sequence of pinned checkpoints end to end: every head is genuine (guardian signature, and the witness
+ * cosignature threshold when `requireWitnessThreshold` is given), the first needs no proof, and every later checkpoint
+ * carries a consistency proof that connects it to the checkpoint before (same log, signed `prev_root` link when adjacent,
+ * RFC 9162 path). A log that rewrote or dropped history between ANY two checkpoints fails at that boundary; `at` is the
+ * index of the first checkpoint that does not verify. An empty chain fails closed. Never throws.
+ */
+export function verifyCheckpointChain(
+  chain: readonly Checkpoint[],
+  guardianPublic: string,
+  requireWitnessThreshold?: WitnessPolicy,
+  pin?: PqPinPolicy,
+): CheckpointChainVerdict {
+  try {
+    if (!Array.isArray(chain) || chain.length === 0) return { ok: false, at: 0, reason: 'empty' };
+    for (let i = 0; i < chain.length; i++) {
+      const cp = chain[i];
+      if (!cp || !verifyTreeHead(cp.sth, guardianPublic, requireWitnessThreshold, pin)) return { ok: false, at: i, reason: 'head' };
+      if (i === 0) continue;
+      if (!cp.proof) return { ok: false, at: i, reason: 'proof_missing' };
+      if (!verifyHeadConsistency(chain[i - 1]!.sth, cp.sth, cp.proof, guardianPublic, requireWitnessThreshold, pin)) return { ok: false, at: i, reason: 'inconsistent' };
+    }
+    return { ok: true, head: chain[chain.length - 1]!.sth };
+  } catch {
+    return { ok: false, at: 0, reason: 'head' };
+  }
+}
+
+/**
+ * Split-view proof for signed tree heads: two heads, both genuinely signed by `guardianPublic`, for the same log and the same
+ * size but with different roots. The guardian signed two histories of one length, which is the one thing an honest log never
+ * does; the pair is self-contained evidence anyone can check (unlike a failed consistency proof, which proves nothing about who
+ * is at fault). Never throws.
+ */
+export function detectTreeHeadEquivocation(a: SignedTreeHead, b: SignedTreeHead, guardianPublic: string, pin?: PqPinPolicy): boolean {
+  try {
+    return (
+      verifyTreeHead(a, guardianPublic, undefined, pin) &&
+      verifyTreeHead(b, guardianPublic, undefined, pin) &&
+      a.instance_id === b.instance_id &&
+      a.principal === b.principal &&
+      a.size === b.size &&
+      a.root !== b.root
+    );
   } catch {
     return false;
   }

@@ -11,6 +11,7 @@ export * from './constraints';
 export * from './chain';
 export * from './pca';
 export * from './settlement';
+export * from './ledger';
 
 /** The AP2 repository commit whose schemas and documentation this package is checked against. */
 export const AP2_COMMIT = 'e1ea56db72a6385bce3e5c1112b3a56ce60acb43';
