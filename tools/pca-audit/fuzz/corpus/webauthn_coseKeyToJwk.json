@@ -1,0 +1,8 @@
+{
+ "target": "webauthn coseKeyToJwk",
+ "seeds": [
+  {
+   "b64": "pQECAyYgASFYIAcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHIlggCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk="
+  }
+ ]
+}

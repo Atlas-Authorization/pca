@@ -56,7 +56,7 @@ import { x509ValidityMs } from './x509-validity';
 import { sha384 } from '@noble/hashes/sha512';
 import { p384 } from '@noble/curves/p384';
 import { attestationBinding } from './attestation';
-import { RECOGNISED_CRITICAL_EXTENSIONS, checkChainRoles, ecPointFromKey, parseCertExtensions, parseTbsExtensions, tbsOfCertificate } from './x509-strict';
+import { RECOGNISED_CRITICAL_EXTENSIONS, certVerifiedUnder, checkChainRoles, ecPointFromKey, parseCertExtensions, parseTbsExtensions, tbsOfCertificate } from './x509-strict';
 import type { CertExtension } from './x509-strict';
 import type { MeasuredIdentity } from './attestation';
 
@@ -443,7 +443,7 @@ export async function verifyAmdCertChain(opts: {
     const ask = new X509Certificate(askPem);
     const ark = new X509Certificate(arkPem);
     // Order is fixed: [0] = ASK (issuer of the VCEK), [1] = ARK (self-signed root).
-    if (ark.subject !== ark.issuer || !ark.verify(ark.publicKey)) return { ok: false, reason: 'second certificate of the chain is not a self-signed ARK (chain out of order?)' };
+    if (ark.subject !== ark.issuer || !certVerifiedUnder(ark, ark.publicKey)) return { ok: false, reason: 'second certificate of the chain is not a self-signed ARK (chain out of order?)' };
     if (ask.subject === ask.issuer) return { ok: false, reason: 'first certificate of the chain is self-signed, not an ASK (chain out of order?)' };
     if (ask.subject !== vcek.issuer) return { ok: false, reason: 'ASK subject does not match the VCEK issuer' };
 
@@ -453,8 +453,8 @@ export async function verifyAmdCertChain(opts: {
     const arkFp = createHash('sha384').update(Buffer.from(arkSpki)).digest('hex');
     if (arkFp !== pin) return { ok: false, reason: 'ARK does not match the pinned AMD trust anchor' };
 
-    if (ask.issuer !== ark.subject || !ask.verify(ark.publicKey)) return { ok: false, reason: 'ASK is not signed by ARK' };
-    if (!vcek.verify(ask.publicKey)) return { ok: false, reason: 'VCEK is not signed by ASK' };
+    if (ask.issuer !== ark.subject || !certVerifiedUnder(ask, ark.publicKey)) return { ok: false, reason: 'ASK is not signed by ARK' };
+    if (!certVerifiedUnder(vcek, ask.publicKey)) return { ok: false, reason: 'VCEK is not signed by ASK' };
 
     // CA roles + critical-extension profile, from the real X.509 extension table.
     const ders: Array<[string, Uint8Array, InstanceType<typeof X509Certificate>]> = [

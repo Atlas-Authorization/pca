@@ -31,7 +31,8 @@ describe('verifier clock must be a safe integer (found by the differential)', ()
       expect(r.allow).toBe(false);
     }
     for (const now of [NOW, NOW + 500, NOW + 1000, NOW + 1001, LONG_AFTER, NOW - 60_000, NOW - 60_001]) {
-      expect(JSON.stringify(await coreWired(p, { grant, nowEpoch: now, audience: 'rs' }))).toBe(JSON.stringify(await coreLegacy(p, { grant, nowEpoch: now, audience: 'rs' })));
+      // 0.5 (B6): `counter` is now `counter_format`
+      expect(JSON.stringify(await coreWired(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: now, audience: 'rs' })).replace('"counter_format"', '"counter"')).toBe(JSON.stringify(await coreLegacy(p, { grant, nowEpoch: now, audience: 'rs' })));
     }
   });
 });

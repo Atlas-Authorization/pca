@@ -1,0 +1,44 @@
+name: Goal review (principal review and signing)
+
+# packages/pca-goal (PolicyCard, semantic diff, GoalApproval, loadApprovedGoal) plus the goal binding v3 and NL approval v2
+# tests in packages/pca, the independent regeneration of the goal-commit vectors, and the traceability check.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  goal-review:
+    name: goal review tests + vectors
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-goal... --filter=@atlasauth/pca...
+      - name: Build dependencies
+        run: pnpm -r --filter=@atlasauth/pca-goal^... run build
+      - name: Typecheck pca-goal
+        run: pnpm --filter @atlasauth/pca-goal run typecheck
+      - name: pca-goal tests (tamper tests for every approved field, card, diff, fatigue caps)
+        run: pnpm --filter @atlasauth/pca-goal run test
+      - name: Goal binding v3 and NL approval v2 tests (v1/v2 compatibility, vectors)
+        run: pnpm --filter @atlasauth/pca exec vitest run src/goal-binding-v3.test.ts src/nl-draft-approval.test.ts src/nl.test.ts src/mutation-kill-r13-g7-nl.test.ts src/nl-example.test.ts
+      - name: Goal-commit vectors are what the independent generator produces
+        run: |
+          node packages/pca/conformance/gen-goal-commit.mjs > "$RUNNER_TEMP/goal-commit-vectors.json"
+          diff "$RUNNER_TEMP/goal-commit-vectors.json" packages/pca/conformance/goal-commit-vectors.json

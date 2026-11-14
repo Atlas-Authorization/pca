@@ -54,7 +54,7 @@ export function parseClarifyRequest(body: unknown): ParsedClarify {
       // the wallet and the verifier, never taken from the agent.
       if (!(p === 'action.resource' || p.startsWith('action.params.'))) return { ok: false, error: `candidates[${i}].values may only name action.params.* or action.resource` };
       if (typeof v === 'number') {
-        if (!Number.isSafeInteger(v)) return { ok: false, error: `candidates[${i}].values.${p} must be a safe integer` };
+        if (!Number.isSafeInteger(v) || Object.is(v, -0)) return { ok: false, error: `candidates[${i}].values.${p} must be a safe integer` };
       } else if (typeof v !== 'string' || v.length > MAX_STRING) return { ok: false, error: `candidates[${i}].values.${p} must be a string (≤ ${MAX_STRING}) or an integer` };
       values[p] = v;
     }

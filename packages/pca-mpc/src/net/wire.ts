@@ -198,7 +198,7 @@ export function peekVersion(body: Buffer): number | null {
     const j = JSON.parse(body.toString('utf8')) as unknown;
     if (typeof j !== 'object' || j === null || Array.isArray(j)) return null;
     const v = (j as Record<string, unknown>).v;
-    return typeof v === 'number' && Number.isSafeInteger(v) ? v : null;
+    return typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0) ? v : null;
   } catch {
     return null;
   }
@@ -220,7 +220,7 @@ function envelopeShapeOk(o: Record<string, unknown>): boolean {
   if (Object.keys(o).length !== 6 || !('v' in o)) return false;
   if (typeof o.ty !== 'string' || !FRAME_TYPES.has(o.ty)) return false;
   if (typeof o.sid !== 'string' || typeof o.rd !== 'string') return false;
-  if (typeof o.seq !== 'number' || !Number.isSafeInteger(o.seq) || o.seq < 0) return false;
+  if (typeof o.seq !== 'number' || !Number.isSafeInteger(o.seq) || o.seq < 0 || Object.is(o.seq, -0)) return false;
   return 'd' in o;
 }
 
@@ -238,7 +238,7 @@ export function parseFrame(body: Buffer): Frame | null {
  */
 export function versionMismatch(body: Buffer): number | null {
   const o = parseObject(body);
-  if (o === null || typeof o.v !== 'number' || !Number.isSafeInteger(o.v) || o.v === WIRE_VERSION) return null;
+  if (o === null || typeof o.v !== 'number' || !Number.isSafeInteger(o.v) || Object.is(o.v, -0) || o.v === WIRE_VERSION) return null;
   return envelopeShapeOk(o) ? o.v : null;
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { b64u, generateKeyPair, hashCanonical, intentActionDigest, paramsDigest } from '@atlasauth/pca';
+import { b64u, generateKeyPair, hashCanonical, paramsDigest } from '@atlasauth/pca';
+import { intentActionDigest } from '@atlasauth/pca/ext/intent';
 import { rng } from '@atlasauth/pca-intent';
 import {
   actionValuesOf,
@@ -90,6 +91,8 @@ describe('M6 signed answer (observation v2)', () => {
     const a = answer();
     expect(answerShapeError({ ...a, note: 'hi' })).toBe('unknown member "note"');
     expect(answerShapeError({ ...a, ux: { ...a.ux, rationale: 'x' } })).toBe('ux: unknown member "rationale"');
+    expect(answerShapeError({ ...a, observed_at: -0 })).toBe('observed_at must be a non-negative safe integer');
+    expect(answerShapeError({ ...a, partial: { path: 'action.params.total', upTo: -0 } })).toBe('partial.upTo must be an integer');
   });
 });
 

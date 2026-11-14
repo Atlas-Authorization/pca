@@ -70,6 +70,9 @@ describe('R5-G1 wire version', () => {
     expect(versionMismatch(h({ v: 3, x: 'junk' }))).toBeNull();
     expect(versionMismatch(h({ v: 1 }))).toBeNull();
     expect(versionMismatch(h({ v: 3, ...ok, ty: 'bogus' }))).toBeNull();
+    // the lexeme -0 is not an integer (strict profile): a -0 version is malformed, never a version abort
+    expect(versionMismatch(Buffer.from(JSON.stringify({ v: 424242, ...ok }).replace('424242', '-0')))).toBeNull();
+    expect(peekVersion(Buffer.from('{"v":-0}'))).toBeNull();
     expect(versionMismatch(h({ v: 3, ...ok, seq: -1 }))).toBeNull();
     expect(versionMismatch(h({ v: 3, ...ok, extra: 1 }))).toBeNull();
     expect(versionMismatch(h({ v: 1.5, ...ok }))).toBeNull();

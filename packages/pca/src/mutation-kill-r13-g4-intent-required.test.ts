@@ -189,7 +189,7 @@ describe('verifyIntentRequired', () => {
   it('valid; key lookup skips null, primitives and other kids', () => {
     const s = signIntentRequired(BODY(), 'k1', SK());
     expect(verifyIntentRequired(s, [KEY()], NOW)).toEqual({ ok: true });
-    expect(verifyIntentRequired(s, [KEY()])).toEqual({ ok: true });
+    expect(verifyIntentRequired(s, [KEY()] , undefined as never)).toEqual({ ok: false, reason: 'the verifier clock is not a safe integer (fail closed)' });
     const other = { kid: 'k0', alg: 'ed25519' as const, pk: b64u(publicKeyOf(seed('other'))) };
     expect(verifyIntentRequired(s, [null, undefined, 5, 'k1', other, KEY()] as never, NOW)).toEqual({ ok: true });
   });

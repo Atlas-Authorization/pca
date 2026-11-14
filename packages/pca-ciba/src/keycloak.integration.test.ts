@@ -170,7 +170,7 @@ function stepUp(resource: string): StepUpRequest {
     riskPolicy: { theta1: 0.3, theta2: 0.6 },
     now: 0,
   });
-  const r = reviewAction(a, 'stripe.payout', resource, { amount: 80, currency: 'USD', payee: 'bob' }, { now: 1, goal: 'reconcile October refunds' });
+  const r = reviewAction(a, 'stripe.payout', resource, { amount: 80, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1, goal: 'reconcile October refunds' });
   if (r.kind !== 'step_up') throw new Error('expected a step_up');
   return r.request;
 }
@@ -179,6 +179,7 @@ const TOKEN_ONLY = { tokenOnly: true } as const;
 /** Keycloak only accepts scopes registered for the client, so no per-verb step-up scope. */
 const OP = { bindingMessage: TOKEN_ONLY, stepUpScope: false } as const;
 /** The unique binding message the broker will send for `resource`. */
+// Keycloak caps binding_message at 50 characters and the fixed head is 36, so resources stay under 15.
 const bmFor = (resource: string): string => toCibaAuthRequest(stepUp(resource), OP).binding_message;
 
 function decodeJwtPayload(jwt: string): Record<string, unknown> {
@@ -253,7 +254,7 @@ describe.skipIf(BASE === '')('pca-ciba against a real Keycloak', () => {
   it('POLL approve: binding_message and scope reach the device; slow_down is enforced and obeyed; the token is single-use', async () => {
     currentLabel = 'poll-approve';
     sleeps = [];
-    const resource = 'acct:poll-approve';
+    const resource = 'acct:poll';
     const flow = await client.initiate(stepUp(resource), { loginHint: USER, ...OP });
     expect(flow.expiresInSec).toBeGreaterThan(0);
     expect(flow.intervalSec).toBeGreaterThan(0);
@@ -290,7 +291,7 @@ describe.skipIf(BASE === '')('pca-ciba against a real Keycloak', () => {
   it('POLL deny: CANCELLED and UNAUTHORIZED both surface as access_denied', async () => {
     for (const [status, label] of [['CANCELLED', 'deny-cancelled'], ['UNAUTHORIZED', 'deny-unauthorized']] as const) {
       currentLabel = label;
-      const resource = `acct:${label}`;
+      const resource = `a:${status}`;
       const flow = await client.initiate(stepUp(resource), { loginHint: USER, ...OP });
       await deviceDecides(await channelFor(bmFor(resource)), status);
       const r = await client.poller(flow).wait();
@@ -339,7 +340,7 @@ describe.skipIf(BASE === '')('pca-ciba against a real Keycloak', () => {
   it('login_hint variants: username, e-mail and different case resolve; unknown user and missing hint are refused', async () => {
     currentLabel = 'login-hint';
     for (const hint of [USER, 'alice@example.test', USER.toUpperCase()]) {
-      const f = await client.initiate(stepUp(`acct:hint-${hint}`), { loginHint: hint, ...OP });
+      const f = await client.initiate(stepUp('acct:hint'), { loginHint: hint, ...OP });
       expect(f.authReqId.length).toBeGreaterThan(0);
     }
     await expect(client.initiate(stepUp('acct:nobody'), { loginHint: 'nobody-here', ...OP })).rejects.toMatchObject({ status: 400, errorDescription: 'invalid_user' });
@@ -366,7 +367,7 @@ describe.skipIf(BASE === '')('pca-ciba against a real Keycloak', () => {
     ] as const) {
       await setRealmAttrs({ cibaAuthRequestedUserHint: mode });
       try {
-        await expect(client.initiate(stepUp(`acct:${mode}`), { ...opts, ...OP })).rejects.toMatchObject({ status: 400, errorDescription: 'invalid_user' });
+        await expect(client.initiate(stepUp('acct:other'), { ...opts, ...OP })).rejects.toMatchObject({ status: 400, errorDescription: 'invalid_user' });
       } finally {
         await setRealmAttrs({ cibaAuthRequestedUserHint: 'login_hint' });
       }
