@@ -7,6 +7,10 @@
  * (for money-moving actions) the params field that carries the monetary amount so a `$X` limit can
  * be turned into a hard per-call ceiling predicate.
  *
+ * The built-in rows are DERIVED from the reviewed action definitions (`@atlasauth/pca-actions`, one `ActionDef` per action):
+ * `catalog-builtin.generated.ts` is written by that package's generator, so the class, blast and amount field here can never
+ * disagree with the signed schema, the operation binding or the Goal IR ontology built from the same definition.
+ *
  * This is DATA, not policy enforcement. Nothing here authorizes anything — the catalog only tells the
  * facade how a named action maps onto predicates/caveats/risk so the grant it mints is well-formed.
  * The resource server's verifier (`requirePCA` / the adjudicator) remains authoritative.
@@ -17,6 +21,8 @@
  * higher blast-radius / less reversible, never lower.
  */
 
+import { hashCanonical } from './hash';
+import { BUILTIN_ACTIONS } from './catalog-builtin.generated';
 import { REVERSIBILITY_ORDER } from './predicates';
 
 /** A reversibility class (spec §2.5 ordering reversible < rate_limited < irreversible). */
@@ -43,6 +49,10 @@ export interface ActionSpec {
   resource?: string;
   /** One-line human description (surfaced in approval UX / docs). */
   description: string;
+  /** Other names the definition answers to (`refund` for `stripe.refund`); the NL layer and `permissions` resolve them. */
+  aliases?: string[];
+  /** The trait closure of the definition (`pca.money_moving`, ...), sorted. Informational: the verifier recomputes it. */
+  traits?: string[];
 }
 
 /** Blast-radius presets by shape of action — conservative, overridable. */
@@ -54,57 +64,11 @@ export const BLAST = {
   moneyMovement: 0.9,
 } as const;
 
-function spec(
-  connector: string,
-  action: string,
-  reversibility: Reversibility,
-  blastRadius: number,
-  description: string,
-  extra: Partial<Pick<ActionSpec, 'amountField' | 'resource'>> = {},
-): ActionSpec {
-  return { connector, action, verb: `${connector}.${action}`, reversibility, blastRadius, description, ...extra };
-}
-
 /**
- * The built-in catalog. Deliberately small and additive — a caller can register their own actions
- * via `defineAction` / `registerActions` (merged into a per-facade catalog) without editing this file.
+ * The built-in catalog (the 21 reviewed connector actions), derived from their definitions. Deliberately small and additive: a
+ * caller can register their own actions via `defineAction` / `buildCatalog` / `extendCatalog` without editing anything here.
  */
-export const BUILTIN_ACTIONS: ActionSpec[] = [
-  // --- Stripe (payments) ---
-  spec('stripe', 'charge', 'reversible', BLAST.moneyMovement, 'Charge a customer (reversible via refund).', { amountField: 'amount' }),
-  spec('stripe', 'refund', 'rate_limited', BLAST.moneyMovement, 'Refund a charge (hard to undo; rate-limit).', { amountField: 'amount' }),
-  spec('stripe', 'payout', 'irreversible', BLAST.moneyMovement, 'Pay out funds to a bank account (irreversible).', { amountField: 'amount' }),
-  spec('stripe', 'create_customer', 'reversible', BLAST.reversibleWrite, 'Create a customer record.'),
-
-  // --- Email ---
-  spec('gmail', 'send', 'irreversible', BLAST.irreversibleWrite, 'Send an email (cannot be unsent).'),
-  spec('gmail', 'draft', 'reversible', BLAST.reversibleWrite, 'Create a draft (not sent).'),
-  spec('gmail', 'delete', 'irreversible', BLAST.irreversibleWrite, 'Permanently delete a message.'),
-
-  // --- GitHub ---
-  spec('github', 'read', 'reversible', BLAST.read, 'Read repository contents.', { resource: '*' }),
-  spec('github', 'create_pr', 'reversible', BLAST.reversibleWrite, 'Open a pull request.'),
-  spec('github', 'comment', 'reversible', BLAST.reversibleWrite, 'Comment on an issue or PR.'),
-  spec('github', 'merge_pr', 'rate_limited', BLAST.rateLimitedWrite, 'Merge a pull request.'),
-  spec('github', 'delete_repo', 'irreversible', BLAST.irreversibleWrite, 'Delete a repository (irreversible).'),
-
-  // --- Slack ---
-  spec('slack', 'post_message', 'rate_limited', BLAST.rateLimitedWrite, 'Post a message to a channel.'),
-  spec('slack', 'read', 'reversible', BLAST.read, 'Read channel history.'),
-
-  // --- Calendar ---
-  spec('calendar', 'create_event', 'reversible', BLAST.reversibleWrite, 'Create a calendar event.'),
-  spec('calendar', 'delete_event', 'rate_limited', BLAST.rateLimitedWrite, 'Delete a calendar event.'),
-
-  // --- Files / storage ---
-  spec('files', 'read', 'reversible', BLAST.read, 'Read a file.', { resource: '*' }),
-  spec('files', 'write', 'rate_limited', BLAST.rateLimitedWrite, 'Write/overwrite a file.'),
-  spec('files', 'delete', 'irreversible', BLAST.irreversibleWrite, 'Delete a file (irreversible).'),
-
-  // --- Generic HTTP ---
-  spec('http', 'get', 'reversible', BLAST.read, 'HTTP GET (read-only).', { resource: '*' }),
-  spec('http', 'post', 'rate_limited', BLAST.rateLimitedWrite, 'HTTP POST (side-effecting).'),
-];
+export { BUILTIN_ACTIONS } from './catalog-builtin.generated';
 
 /** A catalog is an immutable lookup over action specs, keyed by verb and by connector. */
 export interface Catalog {
@@ -114,11 +78,18 @@ export interface Catalog {
   forConnector(connector: string): ActionSpec[];
   /** Every action in the catalog. */
   all(): ActionSpec[];
+  /**
+   * Resolve `connector` + `action` as written by a human or a model: the exact verb, else an alias of exactly one action of that
+   * connector (`stripe` + `issue_refund` is `stripe.refund`). Absent or ambiguous: undefined (never a guess).
+   */
+  resolve?(connector: string, action: string): ActionSpec | undefined;
 }
 
 /** Define a single action spec (validates shape); use with `buildCatalog` to extend the built-ins. */
 export function defineAction(s: Omit<ActionSpec, 'verb'> & { verb?: string }): ActionSpec {
-  if (!s.connector || !s.action) throw new Error('defineAction: connector and action are required');
+  if (typeof s.connector !== 'string' || typeof s.action !== 'string' || !s.connector || !s.action) throw new Error('defineAction: connector and action are required');
+  if (/[\s.]/.test(s.connector)) throw new Error('defineAction: connector must not contain whitespace or a dot');
+  if (s.amountField !== undefined && (typeof s.amountField !== 'string' || s.amountField.length === 0)) throw new Error('defineAction: amountField must be a non-empty string');
   if (!['reversible', 'rate_limited', 'irreversible'].includes(s.reversibility)) {
     throw new Error(`defineAction: bad reversibility '${String(s.reversibility)}'`);
   }
@@ -136,8 +107,65 @@ export function buildCatalog(actions: ActionSpec[] = BUILTIN_ACTIONS): Catalog {
     get: (verb) => byVerb.get(verb),
     forConnector: (connector) => [...byVerb.values()].filter((a) => a.connector === connector),
     all: () => [...byVerb.values()],
+    resolve: (connector, action) => {
+      const exact = byVerb.get(`${connector}.${action}`);
+      if (exact) return exact;
+      const hits = [...byVerb.values()].filter((a) => a.connector === connector && a.aliases?.includes(action));
+      return hits.length === 1 ? hits[0] : undefined;
+    },
   };
 }
 
 /** The default catalog over the built-in actions. */
 export const DEFAULT_CATALOG: Catalog = buildCatalog();
+
+// ---- fail-closed lookup, schema pin, and no-downgrade extension -------------------------------------
+
+/** What a verb is treated as when the catalog does not know it: irreversible, maximum blast radius. */
+export function uncataloguedSpec(verb: string): ActionSpec {
+  const [connector, ...rest] = verb.split('.');
+  return {
+    connector: connector ?? verb,
+    action: rest.join('.') || verb,
+    verb,
+    reversibility: 'irreversible',
+    blastRadius: 1,
+    description: `(uncatalogued) ${verb}`,
+  };
+}
+
+/** Resolve a verb, failing closed: an unknown verb comes back as {@link uncataloguedSpec} with `catalogued: false`. */
+export function resolveAction(catalog: Catalog, verb: string): { spec: ActionSpec; catalogued: boolean } {
+  const spec = catalog.get(verb);
+  return spec ? { spec, catalogued: true } : { spec: uncataloguedSpec(verb), catalogued: false };
+}
+
+/**
+ * A digest of the whole catalog (SHA-256 over canonical JSON, sorted by verb). Pin it: a deployment that
+ * records the digest of the catalog it reviewed can refuse to start when the catalog has since changed.
+ */
+export function catalogDigest(catalog: Catalog): string {
+  const specs = [...catalog.all()].sort((a, b) => (a.verb < b.verb ? -1 : a.verb > b.verb ? 1 : 0));
+  return hashCanonical(specs);
+}
+
+/** Throws unless `catalog` hashes to `expected`. */
+export function assertCatalogPinned(catalog: Catalog, expected: string): void {
+  if (catalogDigest(catalog) !== expected) throw new Error('catalog does not match the pinned digest');
+}
+
+/**
+ * Extend a catalog with more actions. Unlike `buildCatalog([...a, ...b])`, an extra action may not replace an
+ * existing verb with a less cautious one (lower reversibility class or lower blast radius): that would let
+ * a plugin quietly relabel `gmail.send` as reversible.
+ */
+export function extendCatalog(base: Catalog, extra: ActionSpec[]): Catalog {
+  const sevOf = (c: string) => REVERSIBILITY_ORDER.indexOf(c as Reversibility);
+  for (const e of extra) {
+    const old = base.get(e.verb);
+    if (old && (sevOf(e.reversibility) < sevOf(old.reversibility) || e.blastRadius < old.blastRadius)) {
+      throw new Error(`extendCatalog: '${e.verb}' would be less cautious than the existing entry`);
+    }
+  }
+  return buildCatalog([...base.all(), ...extra]);
+}

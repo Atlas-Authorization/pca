@@ -918,6 +918,12 @@ export interface VerifyStepOptions {
   guard?: StepGuard;
   /** If set, the step's state_source must be one of these ids ('' / self-reported is refused). */
   trustedStateSources?: readonly string[];
+  /**
+   * Default `true` (0.5, B16): a step whose `after` state is self-reported by the prover (`state_source` '') is refused, whatever
+   * `trustedStateSources` lists. Pass `false` to accept self-reported state: the proof then shows only that the CLAIMED states
+   * descend, not that the world reached them.
+   */
+  requireAttestedState?: boolean;
   /** If set, must return true for the step (evidence check). */
   attestation?: StateAttestationVerifier;
 }
@@ -994,6 +1000,7 @@ export function verifyProgressStep(
     if (opts.trustedStateSources && !opts.trustedStateSources.includes(step.state_source)) {
       return fail('untrusted-state-source');
     }
+    if (opts.requireAttestedState !== false && step.state_source === '') return fail('untrusted-state-source');
     if (opts.guard && !runGuard(opts.guard, { seq: step.seq, before: step.before, after: step.after, action_digest: step.action_digest })) {
       return fail('prohibited');
     }

@@ -1,0 +1,1040 @@
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... No change.
+Doing simplify... Doing global dependency analysis on rq inside simplify... At 20, returned message pqP depends on rq.
+No change
+Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall e: body_t, p, r: digest, k: seq_t, s: sid_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e)) failed:
+  Found AcceptK(sid_2, rd_1, k_2, prev_2, e_2) at 261
+  but could not prove event(MintedP(s, r, k, p, e))
+Proof of forall b: body_t, ps: pset, s: sid_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b)) failed:
+  Found AcceptRoot(sid_2, ps_1, b_2) at 251
+  but could not prove event(RootSignedP(s, ps, b))
+Proof of forall x: epoch_t, s: sid_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x)) failed:
+  Found AcceptEpoch(sid_3, x_2) at 377
+  but could not prove event(PublishedP(s, x))
+Trying equivalence uf_cma(pqsign)... Failed.
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder pqP... Done.
+Doing remove assignments of binder pqsP... Done.
+Trying equivalence uf_cma(pqsign) with r_6, rq... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Applied collision k_2 <-R hashkey; forall x1, y1: wire; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing expand... Applied collision k_2 <-R hashkey; forall x1, y1: wire; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rq inside simplify... At 14, returned message pkgen2_1(rq) depends on rq.
+No change
+Doing global dependency analysis on rkE inside simplify... At 12, returned message pkE depends on rkE.
+No change
+Applied collision k_2 <-R hashkey; forall x1, y1: wire; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Doing global dependency analysis on rq inside simplify... At 14, returned message pkgen2_1(rq) depends on rq.
+No change
+Doing global dependency analysis on rkE inside simplify... At 12, returned message pkE depends on rkE.
+No change
+Run simplify 2 time(s). Maximum reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proved query forall e: body_t, p, r: digest, k: seq_t, s: sid_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e))
+Proved query forall b: body_t, ps: pset, s: sid_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b))
+Proved query forall x: epoch_t, s: sid_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x))
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     pqP: pqpkey <- pqpkgen(rq);
+     pqsP: pqskey <- pqskgen(rq);
+     return(pkE, skE, pqP);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pqP, others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       s2: pqsignature <- (r_4 <-R sign_seed; sign_r(mR, pqsP, r_4));
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pqP, sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         return(sign(mD, skE), (r_5 <-R sign_seed; sign_r(mD, pqsP, r_5)))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         return(sign(mE, skE), (r_6 <-R sign_seed; sign_r(mE, pqsP, r_6)))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+       if pqcheck(mS, spq_1, sS2_1) then
+       rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+       mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+       if check(mD_1, pkE, g1_1) then
+       if pqx = pqP then
+       if pqcheck(mD_1, pqP, g2_1) then
+       event AcceptRoot(sid_2, ps_1, b_2);
+       event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+       return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+       if pqcheck(mS_1, spq_2, sS2_2) then
+       rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+       mD_2: message <- mkcap(pkE, pqP, sid_3, k_3, prev_3, rd_2, e_3);
+       if check(mD_2, pkE, g1_2) then
+       if pqcheck(mD_2, pqP, g2_2) then
+       mE_1: message <- mkepoch(sid_3, x_2);
+       if check(mE_1, pkE, w1) then
+       if pqcheck(mE_1, pin, w2) then
+       event AcceptEpoch(sid_3, x_2);
+       return()
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 2 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     pqP: pqpkey <- pqpkgen(rq);
+     pqsP: pqskey <- pqskgen(rq);
+     return(pkE, skE, pqP);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pqP, others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       s2: pqsignature <- sign_r(mR, pqsP, r_4);
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pqP, sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         return(sign(mD, skE), sign_r(mD, pqsP, r_5))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         return(sign(mE, skE), sign_r(mE, pqsP, r_6))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+       if pqcheck(mS, spq_1, sS2_1) then
+       rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+       mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+       if check(mD_1, pkE, g1_1) then
+       if pqx = pqP then
+       if pqcheck(mD_1, pqP, g2_1) then
+       event AcceptRoot(sid_2, ps_1, b_2);
+       event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+       return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+       if pqcheck(mS_1, spq_2, sS2_2) then
+       rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+       mD_2: message <- mkcap(pkE, pqP, sid_3, k_3, prev_3, rd_2, e_3);
+       if check(mD_2, pkE, g1_2) then
+       if pqcheck(mD_2, pqP, g2_2) then
+       mE_1: message <- mkepoch(sid_3, x_2);
+       if check(mE_1, pkE, w1) then
+       if pqcheck(mE_1, pin, w2) then
+       event AcceptEpoch(sid_3, x_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder pqP
+  - Remove assignments on pqP (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     pqsP: pqskey <- pqskgen(rq);
+     return(pkE, skE, pqpkgen(rq));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pqpkgen(rq), others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       s2: pqsignature <- sign_r(mR, pqsP, r_4);
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pqpkgen(rq), sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         return(sign(mD, skE), sign_r(mD, pqsP, r_5))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         return(sign(mE, skE), sign_r(mE, pqsP, r_6))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+       if pqcheck(mS, spq_1, sS2_1) then
+       rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+       mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+       if check(mD_1, pkE, g1_1) then
+       if pqx = pqpkgen(rq) then
+       if pqcheck(mD_1, pqpkgen(rq), g2_1) then
+       event AcceptRoot(sid_2, ps_1, b_2);
+       event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+       return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+       if pqcheck(mS_1, spq_2, sS2_2) then
+       rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+       mD_2: message <- mkcap(pkE, pqpkgen(rq), sid_3, k_3, prev_3, rd_2, e_3);
+       if check(mD_2, pkE, g1_2) then
+       if pqcheck(mD_2, pqpkgen(rq), g2_2) then
+       mE_1: message <- mkepoch(sid_3, x_2);
+       if check(mE_1, pkE, w1) then
+       if pqcheck(mE_1, pin, w2) then
+       event AcceptEpoch(sid_3, x_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder pqsP
+  - Remove assignments on pqsP (definition removed, all usages removed)
+yields
+
+Game 4 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     return(pkE, skE, pqpkgen(rq));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pqpkgen(rq), others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       s2: pqsignature <- sign_r(mR, pqskgen(rq), r_4);
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pqpkgen(rq), sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         return(sign(mD, skE), sign_r(mD, pqskgen(rq), r_5))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         return(sign(mE, skE), sign_r(mE, pqskgen(rq), r_6))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+       if pqcheck(mS, spq_1, sS2_1) then
+       rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+       mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+       if check(mD_1, pkE, g1_1) then
+       if pqx = pqpkgen(rq) then
+       if pqcheck(mD_1, pqpkgen(rq), g2_1) then
+       event AcceptRoot(sid_2, ps_1, b_2);
+       event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+       return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+       if pqcheck(mS_1, spq_2, sS2_2) then
+       rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+       mD_2: message <- mkcap(pkE, pqpkgen(rq), sid_3, k_3, prev_3, rd_2, e_3);
+       if check(mD_2, pkE, g1_2) then
+       if pqcheck(mD_2, pqpkgen(rq), g2_2) then
+       mE_1: message <- mkepoch(sid_3, x_2);
+       if check(mE_1, pkE, w1) then
+       if pqcheck(mE_1, pin, w2) then
+       event AcceptEpoch(sid_3, x_2);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(pqsign) with r_6, rq [probability Ppq(time_1, #cE + #cD + NS, max(maxlength(game 4: mE), maxlength(game 4: mD), maxlength(game 4: mR)))]
+  - Equivalence uf_cma(pqsign) with variables: r_5 -> r2, r_4 -> r2, rq -> r_2, r_6 -> r2
+yields
+
+Game 5 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     return(pkE, skE, pkgen2_1(rq));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pkgen2_1(rq), others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       s2: pqsignature <- (x_3: message <- mR; sign_r2(x_3, skgen2_1(rq), r_4));
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pkgen2_1(rq), sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         return(sign(mD, skE), (x_4: message <- mD; sign_r2(x_4, skgen2_1(rq), r_5)))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         return(sign(mE, skE), (x_5: message <- mE; sign_r2(x_5, skgen2_1(rq), r_6)))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+       if (m_3: message <- mS; y: pqpkey <- spq_1; si: pqsignature <- sS2_1; {219}find u_24 = ri_24 <= NS suchthat defined(x_3[ri_24]) && (y = pkgen2_1(rq)) && (m_3 = x_3[ri_24]) && check2_1(m_3, y, si) then true orfind u_22 = ri_22 <= NK, u_23 = ri_23 <= NS suchthat defined(x_4[ri_22, ri_23]) && {243}((y = pkgen2_1(rq)) && (m_3 = x_4[ri_22, ri_23]) && check2_1(m_3, y, si)) then true orfind u_20 = ri_20 <= NE, u_21 = ri_21 <= NS suchthat defined(x_5[ri_20, ri_21]) && {266}((y = pkgen2_1(rq)) && (m_3 = x_5[ri_20, ri_21]) && check2_1(m_3, y, si)) then true else if y = pkgen2_1(rq) then false else pqcheck(m_3, y, si)) then
+       rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+       mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+       if check(mD_1, pkE, g1_1) then
+       if pqx = pkgen2_1(rq) then
+       if (m1: message <- mD_1; si1: pqsignature <- g2_1; {346}find u_19 = ri_19 <= NS suchthat defined(x_3[ri_19]) && {348}((m1 = x_3[ri_19]) && check2_1(m1, pkgen2_1(rq), si1)) then true orfind u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(x_4[ri_17, ri_18]) && (m1 = x_4[ri_17, ri_18]) && check2_1(m1, pkgen2_1(rq), si1) then true orfind u_15 = ri_15 <= NE, u_16 = ri_16 <= NS suchthat defined(x_5[ri_15, ri_16]) && {381}((m1 = x_5[ri_15, ri_16]) && check2_1(m1, pkgen2_1(rq), si1)) then true else false) then
+       event AcceptRoot(sid_2, ps_1, b_2);
+       event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+       return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+       if (m_4: message <- mS_1; y_1: pqpkey <- spq_2; si_1: pqsignature <- sS2_2; {466}find u_14 = ri_14 <= NS suchthat defined(x_3[ri_14]) && (y_1 = pkgen2_1(rq)) && (m_4 = x_3[ri_14]) && check2_1(m_4, y_1, si_1) then true orfind u_12 = ri_12 <= NK, u_13 = ri_13 <= NS suchthat defined(x_4[ri_12, ri_13]) && {490}((y_1 = pkgen2_1(rq)) && (m_4 = x_4[ri_12, ri_13]) && check2_1(m_4, y_1, si_1)) then true orfind u_10 = ri_10 <= NE, u_11 = ri_11 <= NS suchthat defined(x_5[ri_10, ri_11]) && {513}((y_1 = pkgen2_1(rq)) && (m_4 = x_5[ri_10, ri_11]) && check2_1(m_4, y_1, si_1)) then true else if y_1 = pkgen2_1(rq) then false else pqcheck(m_4, y_1, si_1)) then
+       rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+       mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+       if check(mD_2, pkE, g1_2) then
+       if (m1_1: message <- mD_2; si1_1: pqsignature <- g2_2; {587}find u_9 = ri_9 <= NS suchthat defined(x_3[ri_9]) && {589}((m1_1 = x_3[ri_9]) && check2_1(m1_1, pkgen2_1(rq), si1_1)) then true orfind u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(x_4[ri_7, ri_8]) && (m1_1 = x_4[ri_7, ri_8]) && check2_1(m1_1, pkgen2_1(rq), si1_1) then true orfind u_5 = ri_5 <= NE, u_6 = ri_6 <= NS suchthat defined(x_5[ri_5, ri_6]) && {622}((m1_1 = x_5[ri_5, ri_6]) && check2_1(m1_1, pkgen2_1(rq), si1_1)) then true else false) then
+       mE_1: message <- mkepoch(sid_3, x_2);
+       if check(mE_1, pkE, w1) then
+       if (m_5: message <- mE_1; y_2: pqpkey <- pin; si_2: pqsignature <- w2; {661}find u_4 = ri_4 <= NS suchthat defined(x_3[ri_4]) && {663}((y_2 = pkgen2_1(rq)) && (m_5 = x_3[ri_4]) && check2_1(m_5, y_2, si_2)) then true orfind u_2 = ri_2 <= NK, u_3 = ri_3 <= NS suchthat defined(x_4[ri_2, ri_3]) && {685}((y_2 = pkgen2_1(rq)) && (m_5 = x_4[ri_2, ri_3]) && check2_1(m_5, y_2, si_2)) then true orfind u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(x_5[ri, ri_1]) && (y_2 = pkgen2_1(rq)) && (m_5 = x_5[ri, ri_1]) && check2_1(m_5, y_2, si_2) then true else if y_2 = pkgen2_1(rq) then false else pqcheck(m_5, y_2, si_2)) then
+       event AcceptEpoch(sid_3, x_2);
+       return()
+     ))
+
+
+Applying simplify (non-expanded game) [probability Phash(time_2)]
+  - Simplification pass
+    - Replaced ((y = pkgen2_1(rq)) && (m_3 = x_5[ri_20, ri_21]) && check2_1(m_3, y, si)) with false at 266
+    - Remove branch 3 in find at 219
+    - Replaced ((y = pkgen2_1(rq)) && (m_3 = x_4[ri_22, ri_23]) && check2_1(m_3, y, si)) with false at 243
+    - Remove branch 2 in find at 219
+    - Replaced ((m1 = x_5[ri_15, ri_16]) && check2_1(m1, pkgen2_1(rq), si1)) with false at 381
+    - Remove branch 3 in find at 346
+    - Replaced ((m1 = x_3[ri_19]) && check2_1(m1, pkgen2_1(rq), si1)) with false at 348
+    - Remove branch 1 in find at 346
+    - Replaced ((y_1 = pkgen2_1(rq)) && (m_4 = x_5[ri_10, ri_11]) && check2_1(m_4, y_1, si_1)) with false at 513
+    - Remove branch 3 in find at 466
+    - Replaced ((y_1 = pkgen2_1(rq)) && (m_4 = x_4[ri_12, ri_13]) && check2_1(m_4, y_1, si_1)) with false at 490
+    - Remove branch 2 in find at 466
+    - Replaced ((m1_1 = x_5[ri_5, ri_6]) && check2_1(m1_1, pkgen2_1(rq), si1_1)) with false at 622
+    - Remove branch 3 in find at 587
+    - Replaced ((m1_1 = x_3[ri_9]) && check2_1(m1_1, pkgen2_1(rq), si1_1)) with false at 589
+    - Remove branch 1 in find at 587
+    - Replaced ((y_2 = pkgen2_1(rq)) && (m_5 = x_4[ri_2, ri_3]) && check2_1(m_5, y_2, si_2)) with false at 685
+    - Remove branch 2 in find at 661
+    - Replaced ((y_2 = pkgen2_1(rq)) && (m_5 = x_3[ri_4]) && check2_1(m_5, y_2, si_2)) with false at 663
+    - Remove branch 1 in find at 661
+yields
+
+Game 6 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     return(pkE, skE, pkgen2_1(rq));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pkgen2_1(rq), others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       s2: pqsignature <- (x_3: message <- mR; sign_r2(x_3, skgen2_1(rq), r_4));
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pkgen2_1(rq), sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         return(sign(mD, skE), (x_4: message <- mD; sign_r2(x_4, skgen2_1(rq), r_5)))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         return(sign(mE, skE), (x_5: message <- mE; sign_r2(x_5, skgen2_1(rq), r_6)))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+{209}  if (m_3: message <- mS; y: pqpkey <- spq_1; si: pqsignature <- sS2_1; find u_24 = ri_24 <= NS suchthat defined(x_3[ri_24]) && (y = pkgen2_1(rq)) && (m_3 = x_3[ri_24]) && check2_1(m_3, y, si) then true else {241}if y = pkgen2_1(rq) then false else pqcheck(m_3, y, si)) then
+       rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+       mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+       if check(mD_1, pkE, g1_1) then
+       if pqx = pkgen2_1(rq) then
+{293}  if (m1: message <- mD_1; si1: pqsignature <- g2_1; find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(x_4[ri_17, ri_18]) && (m1 = x_4[ri_17, ri_18]) && check2_1(m1, pkgen2_1(rq), si1) then true else false) then
+       event AcceptRoot(sid_2, ps_1, b_2);
+       event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+       return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+{378}  if (m_4: message <- mS_1; y_1: pqpkey <- spq_2; si_1: pqsignature <- sS2_2; find u_14 = ri_14 <= NS suchthat defined(x_3[ri_14]) && (y_1 = pkgen2_1(rq)) && (m_4 = x_3[ri_14]) && check2_1(m_4, y_1, si_1) then true else {410}if y_1 = pkgen2_1(rq) then false else pqcheck(m_4, y_1, si_1)) then
+       rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+       mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+       if check(mD_2, pkE, g1_2) then
+{456}  if (m1_1: message <- mD_2; si1_1: pqsignature <- g2_2; find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(x_4[ri_7, ri_8]) && (m1_1 = x_4[ri_7, ri_8]) && check2_1(m1_1, pkgen2_1(rq), si1_1) then true else false) then
+       mE_1: message <- mkepoch(sid_3, x_2);
+       if check(mE_1, pkE, w1) then
+{495}  if (m_5: message <- mE_1; y_2: pqpkey <- pin; si_2: pqsignature <- w2; find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(x_5[ri, ri_1]) && (y_2 = pkgen2_1(rq)) && (m_5 = x_5[ri, ri_1]) && check2_1(m_5, y_2, si_2) then true else {529}if y_2 = pkgen2_1(rq) then false else pqcheck(m_5, y_2, si_2)) then
+       event AcceptEpoch(sid_3, x_2);
+       return()
+     ))
+
+
+Applying expand [probability Phash(time_3)]
+  - Expand if/find/let
+    - Transformed find at 410 into a test
+    - Test at 456 always false
+    - Test at 456 always true
+    - Transformed find at 529 into a test
+    - Test at 529 always true
+    - Test at 495 always false
+    - Test at 495 always true
+    - Test at 378 always false
+    - Test at 378 always true
+    - Test at 456 always false
+    - Test at 456 always true
+    - Transformed find at 529 into a test
+    - Test at 529 always true
+    - Test at 495 always false
+    - Test at 495 always true
+    - Transformed find at 241 into a test
+    - Test at 293 always false
+    - Test at 293 always true
+    - Test at 209 always false
+    - Test at 209 always true
+    - Test at 293 always false
+    - Test at 293 always true
+yields
+
+Game 7 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     return(pkE, skE, pkgen2_1(rq));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pkgen2_1(rq), others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       x_3: message <- mR;
+       s2: pqsignature <- sign_r2(x_3, skgen2_1(rq), r_4);
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pkgen2_1(rq), sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         x_4: message <- mD;
+         return(sign(mD, skE), sign_r2(x_4, skgen2_1(rq), r_5))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         x_5: message <- mE;
+         return(sign(mE, skE), sign_r2(x_5, skgen2_1(rq), r_6))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+       m_3: message <- mS;
+       y: pqpkey <- spq_1;
+       si: pqsignature <- sS2_1;
+       find u_24 = ri_24 <= NS suchthat defined(x_3[ri_24]) && (y = pkgen2_1(rq)) && (m_3 = x_3[ri_24]) && check2_1(m_3, y, si) then
+       (
+         rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+         mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+         if check(mD_1, pkE, g1_1) then
+         if pqx = pkgen2_1(rq) then
+         m1: message <- mD_1;
+         si1: pqsignature <- g2_1;
+         find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(x_4[ri_17, ri_18]) && (m1 = x_4[ri_17, ri_18]) && check2_1(m1, pkgen2_1(rq), si1) then
+         event AcceptRoot(sid_2, ps_1, b_2);
+         event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+         return()
+       )
+       else
+         if y = pkgen2_1(rq) then
+           yield
+         else
+           if pqcheck(m_3, y, si) then
+           rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+           mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+           if check(mD_1, pkE, g1_1) then
+           if pqx = pkgen2_1(rq) then
+           m1: message <- mD_1;
+           si1: pqsignature <- g2_1;
+           find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(x_4[ri_17, ri_18]) && (m1 = x_4[ri_17, ri_18]) && check2_1(m1, pkgen2_1(rq), si1) then
+           event AcceptRoot(sid_2, ps_1, b_2);
+           event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+           return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+       m_4: message <- mS_1;
+       y_1: pqpkey <- spq_2;
+       si_1: pqsignature <- sS2_2;
+       find u_14 = ri_14 <= NS suchthat defined(x_3[ri_14]) && (y_1 = pkgen2_1(rq)) && (m_4 = x_3[ri_14]) && check2_1(m_4, y_1, si_1) then
+       (
+         rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+         mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+         if check(mD_2, pkE, g1_2) then
+         m1_1: message <- mD_2;
+         si1_1: pqsignature <- g2_2;
+         find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(x_4[ri_7, ri_8]) && (m1_1 = x_4[ri_7, ri_8]) && check2_1(m1_1, pkgen2_1(rq), si1_1) then
+         mE_1: message <- mkepoch(sid_3, x_2);
+         if check(mE_1, pkE, w1) then
+         m_5: message <- mE_1;
+         y_2: pqpkey <- pin;
+         si_2: pqsignature <- w2;
+         find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(x_5[ri, ri_1]) && (y_2 = pkgen2_1(rq)) && (m_5 = x_5[ri, ri_1]) && check2_1(m_5, y_2, si_2) then
+         event AcceptEpoch(sid_3, x_2);
+         return()
+       )
+       else
+         if y_1 = pkgen2_1(rq) then
+           yield
+         else
+           if pqcheck(m_4, y_1, si_1) then
+           rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+           mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+           if check(mD_2, pkE, g1_2) then
+           m1_1: message <- mD_2;
+           si1_1: pqsignature <- g2_2;
+           find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(x_4[ri_7, ri_8]) && (m1_1 = x_4[ri_7, ri_8]) && check2_1(m1_1, pkgen2_1(rq), si1_1) then
+           mE_1: message <- mkepoch(sid_3, x_2);
+           if check(mE_1, pkE, w1) then
+           m_5: message <- mE_1;
+           y_2: pqpkey <- pin;
+           si_2: pqsignature <- w2;
+           find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(x_5[ri, ri_1]) && (y_2 = pkgen2_1(rq)) && (m_5 = x_5[ri, ri_1]) && check2_1(m_5, y_2, si_2) then
+           event AcceptEpoch(sid_3, x_2);
+           return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on m_4 (definition removed, all usages removed)
+  - Remove assignments on y_1 (definition removed, all usages removed)
+  - Remove assignments on si_1 (definition removed, all usages removed)
+  - Remove assignments on m1_1 (definition removed, all usages removed)
+  - Remove assignments on si1_1 (definition removed, all usages removed)
+  - Remove assignments on m_5 (definition removed, all usages removed)
+  - Remove assignments on y_2 (definition removed, all usages removed)
+  - Remove assignments on si_2 (definition removed, all usages removed)
+  - Remove assignments on m1_1 (definition removed, all usages removed)
+  - Remove assignments on si1_1 (definition removed, all usages removed)
+  - Remove assignments on m_5 (definition removed, all usages removed)
+  - Remove assignments on y_2 (definition removed, all usages removed)
+  - Remove assignments on si_2 (definition removed, all usages removed)
+  - Remove assignments on m_3 (definition removed, all usages removed)
+  - Remove assignments on y (definition removed, all usages removed)
+  - Remove assignments on si (definition removed, all usages removed)
+  - Remove assignments on m1 (definition removed, all usages removed)
+  - Remove assignments on si1 (definition removed, all usages removed)
+  - Remove assignments on m1 (definition removed, all usages removed)
+  - Remove assignments on si1 (definition removed, all usages removed)
+  - Remove assignments on x_3 (definition removed, all usages removed)
+  - Remove assignments on x_5 (definition removed, all usages removed)
+  - Remove assignments on x_4 (definition removed, all usages removed)
+yields
+
+Game 8 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     return(pkE, skE, pkgen2_1(rq));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pkgen2_1(rq), others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       s2: pqsignature <- sign_r2(mR, skgen2_1(rq), r_4);
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pkgen2_1(rq), sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         return(sign(mD, skE), sign_r2(mD, skgen2_1(rq), r_5))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         return(sign(mE, skE), sign_r2(mE, skgen2_1(rq), r_6))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+{198}  find u_24 = ri_24 <= NS suchthat defined(mR[ri_24], r_4[ri_24]) && {201}((spq_1 = pkgen2_1(rq)) && (mS = mR[ri_24]) && check2_1(mS, spq_1, sS2_1)) then
+       (
+         rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+         mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+         if check(mD_1, pkE, g1_1) then
+         if pqx = pkgen2_1(rq) then
+{258}    find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(mD[ri_17, ri_18], r_5[ri_17, ri_18]) && {263}((mD_1 = mD[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) then
+         event AcceptRoot(sid_2, ps_1, b_2);
+         event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+         return()
+       )
+       else
+         if spq_1 = pkgen2_1(rq) then
+           yield
+         else
+           if pqcheck(mS, spq_1, sS2_1) then
+           rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+           mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+           if check(mD_1, pkE, g1_1) then
+           if pqx = pkgen2_1(rq) then
+{361}      find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(mD[ri_17, ri_18], r_5[ri_17, ri_18]) && {366}((mD_1 = mD[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) then
+           event AcceptRoot(sid_2, ps_1, b_2);
+           event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+           return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+{439}  find u_14 = ri_14 <= NS suchthat defined(mR[ri_14], r_4[ri_14]) && {442}((spq_2 = pkgen2_1(rq)) && (mS_1 = mR[ri_14]) && check2_1(mS_1, spq_2, sS2_2)) then
+       (
+         rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+         mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+         if check(mD_2, pkE, g1_2) then
+{493}    find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(mD[ri_7, ri_8], r_5[ri_7, ri_8]) && {498}((mD_2 = mD[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) then
+         mE_1: message <- mkepoch(sid_3, x_2);
+         if check(mE_1, pkE, w1) then
+{525}    find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(mE[ri, ri_1], r_6[ri, ri_1]) && {530}((pin = pkgen2_1(rq)) && (mE_1 = mE[ri, ri_1]) && check2_1(mE_1, pin, w2)) then
+         event AcceptEpoch(sid_3, x_2);
+         return()
+       )
+       else
+         if spq_2 = pkgen2_1(rq) then
+           yield
+         else
+           if pqcheck(mS_1, spq_2, sS2_2) then
+           rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+           mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+           if check(mD_2, pkE, g1_2) then
+{614}      find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(mD[ri_7, ri_8], r_5[ri_7, ri_8]) && {619}((mD_2 = mD[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) then
+           mE_1: message <- mkepoch(sid_3, x_2);
+           if check(mE_1, pkE, w1) then
+{646}      find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(mE[ri, ri_1], r_6[ri, ri_1]) && {651}((pin = pkgen2_1(rq)) && (mE_1 = mE[ri, ri_1]) && check2_1(mE_1, pin, w2)) then
+           event AcceptEpoch(sid_3, x_2);
+           return()
+     ))
+
+
+Applying simplify [probability Phash(time_4)]
+  - Simplification pass
+    - Replaced ((mD_2 = mD[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) with ((k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (wr(mS_1, sS1_2, sS2_2) = wr(mR[ri_8], s1[ri_8], s2[ri_8])) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) at 619
+    - Replaced ((pin = pkgen2_1(rq)) && (mE_1 = mE[ri, ri_1]) && check2_1(mE_1, pin, w2)) with ((sid_3 = sid_1[ri_1]) && (x_2 = x_1[ri, ri_1]) && check2_1(mE_1, pin, w2)) at 651
+    - Replaced defined condition mE[ri, ri_1], r_6[ri, ri_1] with x_1[ri, ri_1], sid_1[ri_1] in find at 646
+    - Replaced defined condition mD[ri_7, ri_8], r_5[ri_7, ri_8] with e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], mR[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8] in find at 614
+    - Replaced ((spq_2 = pkgen2_1(rq)) && (mS_1 = mR[ri_14]) && check2_1(mS_1, spq_2, sS2_2)) with ((spq_2 = pkgen2_1(rq)) && (sid_3 = sid_1[ri_14]) && (pin = pkgen2_1(rq)) && (o = others[ri_14]) && (b_3 = b_1[ri_14]) && check2_1(mS_1, spq_2, sS2_2)) at 442
+    - Replaced ((mD_2 = mD[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) with ((k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (wr(mS_1, sS1_2, sS2_2) = wr(mR[ri_8], s1[ri_8], s2[ri_8])) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) at 498
+    - Replaced ((pin = pkgen2_1(rq)) && (mE_1 = mE[ri, ri_1]) && check2_1(mE_1, pin, w2)) with ((sid_3 = sid_1[ri_1]) && (x_2 = x_1[ri, ri_1]) && check2_1(mE_1, pin, w2)) at 530
+    - Replaced defined condition mE[ri, ri_1], r_6[ri, ri_1] with x_1[ri, ri_1], sid_1[ri_1] in find at 525
+    - Replaced defined condition mD[ri_7, ri_8], r_5[ri_7, ri_8] with e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], mR[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8] in find at 493
+    - Replaced defined condition mR[ri_14], r_4[ri_14] with b_1[ri_14], others[ri_14], sid_1[ri_14] in find at 439
+    - Replaced ((mD_1 = mD[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) with ((k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (wr(mS, sS1_1, sS2_1) = wr(mR[ri_18], s1[ri_18], s2[ri_18])) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) at 366
+    - Replaced defined condition mD[ri_17, ri_18], r_5[ri_17, ri_18] with e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], mR[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18] in find at 361
+    - Replaced ((spq_1 = pkgen2_1(rq)) && (mS = mR[ri_24]) && check2_1(mS, spq_1, sS2_1)) with ((spq_1 = pkgen2_1(rq)) && (sid_2 = sid_1[ri_24]) && (ps_1 = ps[ri_24]) && (b_2 = b_1[ri_24]) && check2_1(mS, spq_1, sS2_1)) at 201
+    - Replaced ((mD_1 = mD[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) with ((k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (wr(mS, sS1_1, sS2_1) = wr(mR[ri_18], s1[ri_18], s2[ri_18])) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) at 263
+    - Replaced defined condition mD[ri_17, ri_18], r_5[ri_17, ri_18] with e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], mR[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18] in find at 258
+    - Replaced defined condition mR[ri_24], r_4[ri_24] with b_1[ri_24], ps[ri_24], sid_1[ri_24] in find at 198
+yields
+
+Game 9 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     return(pkE, skE, pkgen2_1(rq));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pkgen2_1(rq), others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       s2: pqsignature <- sign_r2(mR, skgen2_1(rq), r_4);
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pkgen2_1(rq), sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         return(sign(mD, skE), sign_r2(mD, skgen2_1(rq), r_5))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         return(sign(mE, skE), sign_r2(mE, skgen2_1(rq), r_6))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+{198}  find u_24 = ri_24 <= NS suchthat defined(b_1[ri_24], ps[ri_24], sid_1[ri_24]) && (spq_1 = pkgen2_1(rq)) && (sid_2 = sid_1[ri_24]) && (ps_1 = ps[ri_24]) && (b_2 = b_1[ri_24]) && check2_1(mS, spq_1, sS2_1) then
+       (
+         rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+         mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+         if check(mD_1, pkE, g1_1) then
+         if pqx = pkgen2_1(rq) then
+{271}    find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], mR[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18]) && {281}((k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (wr(mS, sS1_1, sS2_1) = wr(mR[ri_18], s1[ri_18], s2[ri_18])) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) then
+         event AcceptRoot(sid_2, ps_1, b_2);
+         event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+         return()
+       )
+       else
+         if spq_1 = pkgen2_1(rq) then
+           yield
+         else
+           if pqcheck(mS, spq_1, sS2_1) then
+           rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+           mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+           if check(mD_1, pkE, g1_1) then
+           if pqx = pkgen2_1(rq) then
+{409}      find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], mR[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18]) && {419}((k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (wr(mS, sS1_1, sS2_1) = wr(mR[ri_18], s1[ri_18], s2[ri_18])) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) then
+           event AcceptRoot(sid_2, ps_1, b_2);
+           event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+           return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+       find u_14 = ri_14 <= NS suchthat defined(b_1[ri_14], others[ri_14], sid_1[ri_14]) && (spq_2 = pkgen2_1(rq)) && (sid_3 = sid_1[ri_14]) && (pin = pkgen2_1(rq)) && (o = others[ri_14]) && (b_3 = b_1[ri_14]) && check2_1(mS_1, spq_2, sS2_2) then
+       (
+         rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+         mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+         if check(mD_2, pkE, g1_2) then
+{595}    find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], mR[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8]) && {605}((k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (wr(mS_1, sS1_2, sS2_2) = wr(mR[ri_8], s1[ri_8], s2[ri_8])) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) then
+         mE_1: message <- mkepoch(sid_3, x_2);
+         if check(mE_1, pkE, w1) then
+         find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(x_1[ri, ri_1], sid_1[ri_1]) && (sid_3 = sid_1[ri_1]) && (x_2 = x_1[ri, ri_1]) && check2_1(mE_1, pin, w2) then
+         event AcceptEpoch(sid_3, x_2);
+         return()
+       )
+       else
+         if spq_2 = pkgen2_1(rq) then
+           yield
+         else
+           if pqcheck(mS_1, spq_2, sS2_2) then
+           rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+           mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+           if check(mD_2, pkE, g1_2) then
+{750}      find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], mR[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8]) && {760}((k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (wr(mS_1, sS1_2, sS2_2) = wr(mR[ri_8], s1[ri_8], s2[ri_8])) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) then
+           mE_1: message <- mkepoch(sid_3, x_2);
+           if check(mE_1, pkE, w1) then
+           find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(x_1[ri, ri_1], sid_1[ri_1]) && (sid_3 = sid_1[ri_1]) && (x_2 = x_1[ri, ri_1]) && check2_1(mE_1, pin, w2) then
+           event AcceptEpoch(sid_3, x_2);
+           return()
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Replaced ((k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (wr(mS_1, sS1_2, sS2_2) = wr(mR[ri_8], s1[ri_8], s2[ri_8])) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) with ((k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (sid_3 = sid_1[ri_8]) && (pin = pkgen2_1(rq)) && (o = others[ri_8]) && (b_3 = b_1[ri_8]) && (sS1_2 = s1[ri_8]) && (sS2_2 = s2[ri_8]) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) at 760
+    - Replaced defined condition e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], mR[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8] with e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], b_1[ri_8], others[ri_8], sid_1[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8] in find at 750
+    - Replaced ((k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (wr(mS_1, sS1_2, sS2_2) = wr(mR[ri_8], s1[ri_8], s2[ri_8])) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) with ((k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (sid_3 = sid_1[ri_8]) && (o = others[ri_8]) && (b_3 = b_1[ri_8]) && (sS1_2 = s1[ri_8]) && (sS2_2 = s2[ri_8]) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2)) at 605
+    - Replaced defined condition e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], mR[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8] with e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], b_1[ri_8], others[ri_8], sid_1[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8] in find at 595
+    - Replaced ((k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (wr(mS, sS1_1, sS2_1) = wr(mR[ri_18], s1[ri_18], s2[ri_18])) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) with ((k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (sid_2 = sid_1[ri_18]) && (ps_1 = ps[ri_18]) && (b_2 = b_1[ri_18]) && (sS1_1 = s1[ri_18]) && (sS2_1 = s2[ri_18]) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) at 419
+    - Replaced defined condition e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], mR[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18] with e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], b_1[ri_18], ps[ri_18], sid_1[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18] in find at 409
+    - Replaced ((k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (wr(mS, sS1_1, sS2_1) = wr(mR[ri_18], s1[ri_18], s2[ri_18])) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) with ((k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (sid_2 = sid_1[ri_18]) && (others[u_24] = others[ri_18]) && (b_2 = b_1[ri_18]) && (sS1_1 = s1[ri_18]) && (sS2_1 = s2[ri_18]) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1)) at 281
+    - Replaced defined condition e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], mR[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18] with e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], b_1[ri_18], others[ri_18], sid_1[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18] in find at 271
+    - Replaced defined condition b_1[ri_24], ps[ri_24], sid_1[ri_24] with others[ri_24], b_1[ri_24], ps[ri_24], sid_1[ri_24] in find at 198
+yields
+
+Game 10 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkE <-R keyseed;
+     pkE: pkey <- pkgen(rkE);
+     skE: skey <- skgen(rkE);
+     rq <-R pqkeyseed;
+     return(pkE, skE, pkgen2_1(rq));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iS <= NS do
+       cR(sid_1: sid_t, others: other_t, b_1: body_t) :=
+       ps: pset <- mkps(pkE, pkgen2_1(rq), others);
+       mR: message <- mkroot(sid_1, ps, b_1);
+       s1: signature <- sign(mR, skE);
+       r_4 <-R sign_seed;
+       s2: pqsignature <- sign_r2(mR, skgen2_1(rq), r_4);
+       event RootSignedP(sid_1, ps, b_1);
+       return(s1, s2);
+       ((
+         foreach iK <= NK do
+         cD(k_1: seq_t, prev_1: digest, e_1: body_t) :=
+         rd: digest <- hash(hk_1, wr(mR, s1, s2));
+         mD: message <- mkcap(pkE, pkgen2_1(rq), sid_1, k_1, prev_1, rd, e_1);
+         event MintedP(sid_1, rd, k_1, prev_1, e_1);
+         r_5 <-R sign_seed;
+         return(sign(mD, skE), sign_r2(mD, skgen2_1(rq), r_5))
+       ) | (
+         foreach iE <= NE do
+         cE(x_1: epoch_t) :=
+         event PublishedP(sid_1, x_1);
+         mE: message <- mkepoch(sid_1, x_1);
+         r_6 <-R sign_seed;
+         return(sign(mE, skE), sign_r2(mE, skgen2_1(rq), r_6))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(sid_2: sid_t, ps_1: pset, b_2: body_t, spk_1: pkey, spq_1: pqpkey, sS1_1: signature, sS2_1: pqsignature, pqx: pqpkey, k_2: seq_t, prev_2: digest, e_2: body_t, g1_1: signature, g2_1: pqsignature) :=
+       mS: message <- mkroot(sid_2, ps_1, b_2);
+       if check(mS, spk_1, sS1_1) then
+       find u_24 = ri_24 <= NS suchthat defined(others[ri_24], b_1[ri_24], ps[ri_24], sid_1[ri_24]) && (spq_1 = pkgen2_1(rq)) && (sid_2 = sid_1[ri_24]) && (ps_1 = ps[ri_24]) && (b_2 = b_1[ri_24]) && check2_1(mS, spq_1, sS2_1) then
+       (
+         rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+         mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+         if check(mD_1, pkE, g1_1) then
+         if pqx = pkgen2_1(rq) then
+         find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], b_1[ri_18], others[ri_18], sid_1[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18]) && (k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (sid_2 = sid_1[ri_18]) && (others[u_24] = others[ri_18]) && (b_2 = b_1[ri_18]) && (sS1_1 = s1[ri_18]) && (sS2_1 = s2[ri_18]) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1) then
+         event AcceptRoot(sid_2, ps_1, b_2);
+         event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+         return()
+       )
+       else
+         if spq_1 = pkgen2_1(rq) then
+           yield
+         else
+           if pqcheck(mS, spq_1, sS2_1) then
+           rd_1: digest <- hash(hk_1, wr(mS, sS1_1, sS2_1));
+           mD_1: message <- mkcap(pkE, pqx, sid_2, k_2, prev_2, rd_1, e_2);
+           if check(mD_1, pkE, g1_1) then
+           if pqx = pkgen2_1(rq) then
+           find u_17 = ri_17 <= NK, u_18 = ri_18 <= NS suchthat defined(e_1[ri_17, ri_18], s2[ri_18], s1[ri_18], b_1[ri_18], ps[ri_18], sid_1[ri_18], prev_1[ri_17, ri_18], k_1[ri_17, ri_18]) && (k_2 = k_1[ri_17, ri_18]) && (prev_2 = prev_1[ri_17, ri_18]) && (sid_2 = sid_1[ri_18]) && (ps_1 = ps[ri_18]) && (b_2 = b_1[ri_18]) && (sS1_1 = s1[ri_18]) && (sS2_1 = s2[ri_18]) && (e_2 = e_1[ri_17, ri_18]) && check2_1(mD_1, pkgen2_1(rq), g2_1) then
+           event AcceptRoot(sid_2, ps_1, b_2);
+           event AcceptK(sid_2, rd_1, k_2, prev_2, e_2);
+           return()
+     ) | (
+       foreach iW <= NW do
+       cW(sid_3: sid_t, o: other_t, pin: pqpkey, b_3: body_t, spk_2: pkey, spq_2: pqpkey, sS1_2: signature, sS2_2: pqsignature, k_3: seq_t, prev_3: digest, e_3: body_t, g1_2: signature, g2_2: pqsignature, x_2: epoch_t, w1: signature, w2: pqsignature) :=
+       ps_2: pset <- mkps(pkE, pin, o);
+       mS_1: message <- mkroot(sid_3, ps_2, b_3);
+       if check(mS_1, spk_2, sS1_2) then
+       find u_14 = ri_14 <= NS suchthat defined(b_1[ri_14], others[ri_14], sid_1[ri_14]) && (spq_2 = pkgen2_1(rq)) && (sid_3 = sid_1[ri_14]) && (pin = pkgen2_1(rq)) && (o = others[ri_14]) && (b_3 = b_1[ri_14]) && check2_1(mS_1, spq_2, sS2_2) then
+       (
+         rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+         mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+         if check(mD_2, pkE, g1_2) then
+         find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], b_1[ri_8], others[ri_8], sid_1[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8]) && (k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (sid_3 = sid_1[ri_8]) && (o = others[ri_8]) && (b_3 = b_1[ri_8]) && (sS1_2 = s1[ri_8]) && (sS2_2 = s2[ri_8]) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2) then
+         mE_1: message <- mkepoch(sid_3, x_2);
+         if check(mE_1, pkE, w1) then
+         find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(x_1[ri, ri_1], sid_1[ri_1]) && (sid_3 = sid_1[ri_1]) && (x_2 = x_1[ri, ri_1]) && check2_1(mE_1, pin, w2) then
+         event AcceptEpoch(sid_3, x_2);
+         return()
+       )
+       else
+         if spq_2 = pkgen2_1(rq) then
+           yield
+         else
+           if pqcheck(mS_1, spq_2, sS2_2) then
+           rd_2: digest <- hash(hk_1, wr(mS_1, sS1_2, sS2_2));
+           mD_2: message <- mkcap(pkE, pkgen2_1(rq), sid_3, k_3, prev_3, rd_2, e_3);
+           if check(mD_2, pkE, g1_2) then
+           find u_7 = ri_7 <= NK, u_8 = ri_8 <= NS suchthat defined(e_1[ri_7, ri_8], s2[ri_8], s1[ri_8], b_1[ri_8], others[ri_8], sid_1[ri_8], prev_1[ri_7, ri_8], k_1[ri_7, ri_8]) && (k_3 = k_1[ri_7, ri_8]) && (prev_3 = prev_1[ri_7, ri_8]) && (sid_3 = sid_1[ri_8]) && (pin = pkgen2_1(rq)) && (o = others[ri_8]) && (b_3 = b_1[ri_8]) && (sS1_2 = s1[ri_8]) && (sS2_2 = s2[ri_8]) && (e_3 = e_1[ri_7, ri_8]) && check2_1(mD_2, pkgen2_1(rq), g2_2) then
+           mE_1: message <- mkepoch(sid_3, x_2);
+           if check(mE_1, pkE, w1) then
+           find u = ri <= NE, u_1 = ri_1 <= NS suchthat defined(x_1[ri, ri_1], sid_1[ri_1]) && (sid_3 = sid_1[ri_1]) && (x_2 = x_1[ri, ri_1]) && check2_1(mE_1, pin, w2) then
+           event AcceptEpoch(sid_3, x_2);
+           return()
+     ))
+
+
+Proved forall x: epoch_t, s: sid_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x)) in game 10
+Proved forall b: body_t, ps: pset, s: sid_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b)) in game 10
+Proved forall e: body_t, p, r: digest, k: seq_t, s: sid_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e)) in game 10
+Adv[Game 1: forall x: epoch_t, s: sid_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x))] <= Phash(time_4) + Phash(time_3) + Phash(time_2) + Ppq(time_1, #cE + #cD + NS, max(maxlength(game 4: mE), maxlength(game 4: mD), maxlength(game 4: mR))) + Adv[Game 10: forall x: epoch_t, s: sid_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x))]
+Adv[Game 10: forall x: epoch_t, s: sid_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x))] <= 0
+RESULT Proved forall x: epoch_t, s: sid_t; event(AcceptEpoch(s, x)) ==> event(PublishedP(s, x)) up to probability Phash(time_4) + Phash(time_3) + Phash(time_2) + Ppq(time_1, #cE + #cD + NS, max(maxlength(game 4: mE), maxlength(game 4: mD), maxlength(game 4: mR)))
+Adv[Game 1: forall b: body_t, ps: pset, s: sid_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b))] <= Phash(time_4) + Phash(time_3) + Phash(time_2) + Ppq(time_1, #cE + #cD + NS, max(maxlength(game 4: mE), maxlength(game 4: mD), maxlength(game 4: mR))) + Adv[Game 10: forall b: body_t, ps: pset, s: sid_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b))]
+Adv[Game 10: forall b: body_t, ps: pset, s: sid_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b))] <= 0
+RESULT Proved forall b: body_t, ps: pset, s: sid_t; event(AcceptRoot(s, ps, b)) ==> event(RootSignedP(s, ps, b)) up to probability Phash(time_4) + Phash(time_3) + Phash(time_2) + Ppq(time_1, #cE + #cD + NS, max(maxlength(game 4: mE), maxlength(game 4: mD), maxlength(game 4: mR)))
+Adv[Game 1: forall e: body_t, p, r: digest, k: seq_t, s: sid_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e))] <= Phash(time_4) + Phash(time_3) + Phash(time_2) + Ppq(time_1, #cE + #cD + NS, max(maxlength(game 4: mE), maxlength(game 4: mD), maxlength(game 4: mR))) + Adv[Game 10: forall e: body_t, p, r: digest, k: seq_t, s: sid_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e))]
+Adv[Game 10: forall e: body_t, p, r: digest, k: seq_t, s: sid_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e))] <= 0
+RESULT Proved forall e: body_t, p, r: digest, k: seq_t, s: sid_t; event(AcceptK(s, r, k, p, e)) ==> event(MintedP(s, r, k, p, e)) up to probability Phash(time_4) + Phash(time_3) + Phash(time_2) + Ppq(time_1, #cE + #cD + NS, max(maxlength(game 4: mE), maxlength(game 4: mD), maxlength(game 4: mR)))
+RESULT time_1 = time(pkgen) + time(skgen) + NS * time(mkps, maxlength(game 4: others)) + NS * time(mkroot, maxlength(game 4: sid_1), maxlength(game 4: ps), maxlength(game 4: b_1)) + NS * time(sign, maxlength(game 4: mR)) + NS * time(([1,NS])) + #cD * time(hash, length(wr, maxlength(game 4: mR), maxlength(game 4: s1), maxlength(game 4: s2))) + #cD * time(wr, maxlength(game 4: mR), maxlength(game 4: s1), maxlength(game 4: s2)) + #cD * time(mkcap, maxlength(game 4: sid_1), maxlength(game 4: k_1), maxlength(game 4: e_1)) + #cD * time(([1,NK], [1,NS])) + #cD * time(sign, maxlength(game 4: mD)) + #cE * time(([1,NE], [1,NS])) + #cE * time(mkepoch, maxlength(game 4: sid_1), maxlength(game 4: x_1)) + #cE * time(sign, maxlength(game 4: mE)) + NV * time(mkroot, maxlength(game 4: sid_2), maxlength(game 4: ps_1), maxlength(game 4: b_2)) + NV * time(check, maxlength(game 4: mS), maxlength(game 4: sS1_1)) + NV * time(hash, length(wr, maxlength(game 4: mS), maxlength(game 4: sS1_1), maxlength(game 4: sS2_1))) + NV * time(wr, maxlength(game 4: mS), maxlength(game 4: sS1_1), maxlength(game 4: sS2_1)) + NV * time(mkcap, maxlength(game 4: sid_2), maxlength(game 4: k_2), maxlength(game 4: e_2)) + NV * time(check, maxlength(game 4: mD_1), maxlength(game 4: g1_1)) + 2 * NV * time(([1,NV])) + NW * time(mkps, maxlength(game 4: o)) + NW * time(mkroot, maxlength(game 4: sid_3), maxlength(game 4: ps_2), maxlength(game 4: b_3)) + NW * time(check, maxlength(game 4: mS_1), maxlength(game 4: sS1_2)) + NW * time(hash, length(wr, maxlength(game 4: mS_1), maxlength(game 4: sS1_2), maxlength(game 4: sS2_2))) + NW * time(wr, maxlength(game 4: mS_1), maxlength(game 4: sS1_2), maxlength(game 4: sS2_2)) + NW * time(mkcap, maxlength(game 4: sid_3), maxlength(game 4: k_3), maxlength(game 4: e_3)) + NW * time(check, maxlength(game 4: mD_2), maxlength(game 4: g1_2)) + NW * time(mkepoch, maxlength(game 4: sid_3), maxlength(game 4: x_2)) + NW * time(check, maxlength(game 4: mE_1), maxlength(game 4: w1)) + NW * time(([1,NW])) + time + (2 * NV + 3 * NW - 1) * time(pqcheck, max(maxlength(game 4: mD_2), maxlength(game 4: mD_1), maxlength(game 4: mE_1), maxlength(game 4: mS_1), maxlength(game 4: mS)), max(maxlength(game 4: g2_2), maxlength(game 4: g2_1), maxlength(game 4: w2), maxlength(game 4: sS2_2), maxlength(game 4: sS2_1)))
+RESULT time_2 = time + time(game 5) = time + time(pkgen) + time(skgen) + (1 + NS + #cD + 2 * NV + 2 * NV * NS + 2 * NV * #cD + 2 * NV * #cE + 3 * NW * NS + 3 * NW * #cD + 3 * NW * #cE + 3 * NW) * time(pqpkgen) + NS * time(mkps, maxlength(game 5: others)) + NS * time(mkroot, maxlength(game 5: sid_1), maxlength(game 5: ps), maxlength(game 5: b_1)) + NS * time(sign, maxlength(game 5: mR)) + NS * time(sign_r, maxlength(game 5: x_3)) + (NS + #cD + #cE) * time(pqskgen) + NS * time(([1,NS])) + #cD * time(hash, length(wr, maxlength(game 5: mR), maxlength(game 5: s1), maxlength(game 5: s2))) + #cD * time(wr, maxlength(game 5: mR), maxlength(game 5: s1), maxlength(game 5: s2)) + #cD * time(mkcap, maxlength(game 5: sid_1), maxlength(game 5: k_1), maxlength(game 5: e_1)) + #cD * time(([1,NK], [1,NS])) + #cD * time(sign_r, maxlength(game 5: x_4)) + #cD * time(sign, maxlength(game 5: mD)) + #cE * time(([1,NE], [1,NS])) + #cE * time(mkepoch, maxlength(game 5: sid_1), maxlength(game 5: x_1)) + #cE * time(sign_r, maxlength(game 5: x_5)) + #cE * time(sign, maxlength(game 5: mE)) + NV * time(mkroot, maxlength(game 5: sid_2), maxlength(game 5: ps_1), maxlength(game 5: b_2)) + NV * time(check, maxlength(game 5: mS), maxlength(game 5: sS1_1)) + NV * NS * time(= message, maxlength(game 5: m_3), maxlength(game 5: x_3)) + (NV * NS + NV * #cD + NV * #cE + NV) * time(pqcheck, maxlength(game 5: m_3), maxlength(game 5: si)) + NV * #cD * time(= message, maxlength(game 5: m_3), maxlength(game 5: x_4)) + NV * #cE * time(= message, maxlength(game 5: m_3), maxlength(game 5: x_5)) + NV * time(hash, length(wr, maxlength(game 5: mS), maxlength(game 5: sS1_1), maxlength(game 5: sS2_1))) + NV * time(wr, maxlength(game 5: mS), maxlength(game 5: sS1_1), maxlength(game 5: sS2_1)) + NV * time(mkcap, maxlength(game 5: sid_2), maxlength(game 5: k_2), maxlength(game 5: e_2)) + NV * time(check, maxlength(game 5: mD_1), maxlength(game 5: g1_1)) + NV * NS * time(= message, maxlength(game 5: m1), maxlength(game 5: x_3)) + (NV * NS + NV * #cD + NV * #cE) * time(pqcheck, maxlength(game 5: m1), maxlength(game 5: si1)) + NV * #cD * time(= message, maxlength(game 5: m1), maxlength(game 5: x_4)) + NV * #cE * time(= message, maxlength(game 5: m1), maxlength(game 5: x_5)) + 2 * NV * time(([1,NV])) + NW * time(mkps, maxlength(game 5: o)) + NW * time(mkroot, maxlength(game 5: sid_3), maxlength(game 5: ps_2), maxlength(game 5: b_3)) + NW * time(check, maxlength(game 5: mS_1), maxlength(game 5: sS1_2)) + NW * NS * time(= message, maxlength(game 5: m_4), maxlength(game 5: x_3)) + (NW * NS + NW * #cD + NW * #cE + NW) * time(pqcheck, maxlength(game 5: m_4), maxlength(game 5: si_1)) + NW * #cD * time(= message, maxlength(game 5: m_4), maxlength(game 5: x_4)) + NW * #cE * time(= message, maxlength(game 5: m_4), maxlength(game 5: x_5)) + NW * time(hash, length(wr, maxlength(game 5: mS_1), maxlength(game 5: sS1_2), maxlength(game 5: sS2_2))) + NW * time(wr, maxlength(game 5: mS_1), maxlength(game 5: sS1_2), maxlength(game 5: sS2_2)) + NW * time(mkcap, maxlength(game 5: sid_3), maxlength(game 5: k_3), maxlength(game 5: e_3)) + NW * time(check, maxlength(game 5: mD_2), maxlength(game 5: g1_2)) + NW * NS * time(= message, maxlength(game 5: m1_1), maxlength(game 5: x_3)) + (NW * NS + NW * #cD + NW * #cE) * time(pqcheck, maxlength(game 5: m1_1), maxlength(game 5: si1_1)) + NW * #cD * time(= message, maxlength(game 5: m1_1), maxlength(game 5: x_4)) + NW * #cE * time(= message, maxlength(game 5: m1_1), maxlength(game 5: x_5)) + NW * time(mkepoch, maxlength(game 5: sid_3), maxlength(game 5: x_2)) + NW * time(check, maxlength(game 5: mE_1), maxlength(game 5: w1)) + NW * NS * time(= message, maxlength(game 5: m_5), maxlength(game 5: x_3)) + (NW * NS + NW * #cD + NW * #cE + NW) * time(pqcheck, maxlength(game 5: m_5), maxlength(game 5: si_2)) + NW * #cD * time(= message, maxlength(game 5: m_5), maxlength(game 5: x_4)) + NW * #cE * time(= message, maxlength(game 5: m_5), maxlength(game 5: x_5)) + NW * time(([1,NW]))
+RESULT time_3 = time + time(game 6) = time + time(pkgen) + time(skgen) + (1 + NS + #cD + NV * NS + 2 * NV + NV * #cD + NW * NS + NW * #cD + NW * #cE + 3 * NW) * time(pqpkgen) + NS * time(mkps, maxlength(game 6: others)) + NS * time(mkroot, maxlength(game 6: sid_1), maxlength(game 6: ps), maxlength(game 6: b_1)) + NS * time(sign, maxlength(game 6: mR)) + NS * time(sign_r, maxlength(game 6: x_3)) + (NS + #cD + #cE) * time(pqskgen) + NS * time(([1,NS])) + #cD * time(hash, length(wr, maxlength(game 6: mR), maxlength(game 6: s1), maxlength(game 6: s2))) + #cD * time(wr, maxlength(game 6: mR), maxlength(game 6: s1), maxlength(game 6: s2)) + #cD * time(mkcap, maxlength(game 6: sid_1), maxlength(game 6: k_1), maxlength(game 6: e_1)) + #cD * time(([1,NK], [1,NS])) + #cD * time(sign_r, maxlength(game 6: x_4)) + #cD * time(sign, maxlength(game 6: mD)) + #cE * time(([1,NE], [1,NS])) + #cE * time(mkepoch, maxlength(game 6: sid_1), maxlength(game 6: x_1)) + #cE * time(sign_r, maxlength(game 6: x_5)) + #cE * time(sign, maxlength(game 6: mE)) + NV * time(mkroot, maxlength(game 6: sid_2), maxlength(game 6: ps_1), maxlength(game 6: b_2)) + NV * time(check, maxlength(game 6: mS), maxlength(game 6: sS1_1)) + NV * NS * time(= message, maxlength(game 6: m_3), maxlength(game 6: x_3)) + (NV * NS + NV) * time(pqcheck, maxlength(game 6: m_3), maxlength(game 6: si)) + NV * time(hash, length(wr, maxlength(game 6: mS), maxlength(game 6: sS1_1), maxlength(game 6: sS2_1))) + NV * time(wr, maxlength(game 6: mS), maxlength(game 6: sS1_1), maxlength(game 6: sS2_1)) + NV * time(mkcap, maxlength(game 6: sid_2), maxlength(game 6: k_2), maxlength(game 6: e_2)) + NV * time(check, maxlength(game 6: mD_1), maxlength(game 6: g1_1)) + NV * #cD * time(= message, maxlength(game 6: m1), maxlength(game 6: x_4)) + NV * #cD * time(pqcheck, maxlength(game 6: m1), maxlength(game 6: si1)) + 2 * NV * time(([1,NV])) + NW * time(mkps, maxlength(game 6: o)) + NW * time(mkroot, maxlength(game 6: sid_3), maxlength(game 6: ps_2), maxlength(game 6: b_3)) + NW * time(check, maxlength(game 6: mS_1), maxlength(game 6: sS1_2)) + NW * NS * time(= message, maxlength(game 6: m_4), maxlength(game 6: x_3)) + (NW * NS + NW) * time(pqcheck, maxlength(game 6: m_4), maxlength(game 6: si_1)) + NW * time(hash, length(wr, maxlength(game 6: mS_1), maxlength(game 6: sS1_2), maxlength(game 6: sS2_2))) + NW * time(wr, maxlength(game 6: mS_1), maxlength(game 6: sS1_2), maxlength(game 6: sS2_2)) + NW * time(mkcap, maxlength(game 6: sid_3), maxlength(game 6: k_3), maxlength(game 6: e_3)) + NW * time(check, maxlength(game 6: mD_2), maxlength(game 6: g1_2)) + NW * #cD * time(= message, maxlength(game 6: m1_1), maxlength(game 6: x_4)) + NW * #cD * time(pqcheck, maxlength(game 6: m1_1), maxlength(game 6: si1_1)) + NW * time(mkepoch, maxlength(game 6: sid_3), maxlength(game 6: x_2)) + NW * time(check, maxlength(game 6: mE_1), maxlength(game 6: w1)) + NW * #cE * time(= message, maxlength(game 6: m_5), maxlength(game 6: x_5)) + (NW * #cE + NW) * time(pqcheck, maxlength(game 6: m_5), maxlength(game 6: si_2)) + NW * time(([1,NW]))
+RESULT time_4 = time + time(game 8) = time + time(pkgen) + time(skgen) + (1 + NS + #cD + NV * NS + 2 * NV + NV * NK * NS + NW * NS + 2 * NW + NW * NK * NS + NW * NE * NS) * time(pqpkgen) + NS * time(mkps, maxlength(game 8: others)) + NS * time(mkroot, maxlength(game 8: sid_1), maxlength(game 8: ps), maxlength(game 8: b_1)) + NS * time(sign, maxlength(game 8: mR)) + NS * time(sign_r, maxlength(game 8: mR)) + (NS + #cD + #cE) * time(pqskgen) + NS * time(([1,NS])) + #cD * time(hash, length(wr, maxlength(game 8: mR), maxlength(game 8: s1), maxlength(game 8: s2))) + #cD * time(wr, maxlength(game 8: mR), maxlength(game 8: s1), maxlength(game 8: s2)) + #cD * time(mkcap, maxlength(game 8: sid_1), maxlength(game 8: k_1), maxlength(game 8: e_1)) + #cD * time(([1,NK], [1,NS])) + #cD * time(sign_r, maxlength(game 8: mD)) + #cD * time(sign, maxlength(game 8: mD)) + #cE * time(([1,NE], [1,NS])) + #cE * time(mkepoch, maxlength(game 8: sid_1), maxlength(game 8: x_1)) + #cE * time(sign_r, maxlength(game 8: mE)) + #cE * time(sign, maxlength(game 8: mE)) + NV * time(mkroot, maxlength(game 8: sid_2), maxlength(game 8: ps_1), maxlength(game 8: b_2)) + NV * time(check, maxlength(game 8: mS), maxlength(game 8: sS1_1)) + NV * NS * time(= message, maxlength(game 8: mS), maxlength(game 8: mR)) + (NV * NS + NV) * time(pqcheck, maxlength(game 8: mS), maxlength(game 8: sS2_1)) + NV * time(hash, length(wr, maxlength(game 8: mS), maxlength(game 8: sS1_1), maxlength(game 8: sS2_1))) + NV * time(wr, maxlength(game 8: mS), maxlength(game 8: sS1_1), maxlength(game 8: sS2_1)) + NV * time(mkcap, maxlength(game 8: sid_2), maxlength(game 8: k_2), maxlength(game 8: e_2)) + NV * time(check, maxlength(game 8: mD_1), maxlength(game 8: g1_1)) + NV * NK * NS * time(= message, maxlength(game 8: mD_1), maxlength(game 8: mD)) + NV * NK * NS * time(pqcheck, maxlength(game 8: mD_1), maxlength(game 8: g2_1)) + 2 * NV * time(([1,NV])) + NW * time(mkps, maxlength(game 8: o)) + NW * time(mkroot, maxlength(game 8: sid_3), maxlength(game 8: ps_2), maxlength(game 8: b_3)) + NW * time(check, maxlength(game 8: mS_1), maxlength(game 8: sS1_2)) + NW * NS * time(= message, maxlength(game 8: mS_1), maxlength(game 8: mR)) + (NW * NS + NW) * time(pqcheck, maxlength(game 8: mS_1), maxlength(game 8: sS2_2)) + NW * time(hash, length(wr, maxlength(game 8: mS_1), maxlength(game 8: sS1_2), maxlength(game 8: sS2_2))) + NW * time(wr, maxlength(game 8: mS_1), maxlength(game 8: sS1_2), maxlength(game 8: sS2_2)) + NW * time(mkcap, maxlength(game 8: sid_3), maxlength(game 8: k_3), maxlength(game 8: e_3)) + NW * time(check, maxlength(game 8: mD_2), maxlength(game 8: g1_2)) + NW * NK * NS * time(= message, maxlength(game 8: mD_2), maxlength(game 8: mD)) + NW * NK * NS * time(pqcheck, maxlength(game 8: mD_2), maxlength(game 8: g2_2)) + NW * time(mkepoch, maxlength(game 8: sid_3), maxlength(game 8: x_2)) + NW * time(check, maxlength(game 8: mE_1), maxlength(game 8: w1)) + NW * NE * NS * time(= message, maxlength(game 8: mE_1), maxlength(game 8: mE)) + NW * NE * NS * time(pqcheck, maxlength(game 8: mE_1), maxlength(game 8: w2)) + NW * time(([1,NW]))
+All queries proved.

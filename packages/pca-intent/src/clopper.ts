@@ -130,10 +130,21 @@ export function clopperPearsonCertified(k: number, n: number, alpha: number): CP
   // k = n (including n = 0): cdfRec ≡ 1 > α on [0, 1], so cpUpper = 1.
   if (n === 0 || k === n) return { upper: 1, upperUnits: A, lowerUnits: A };
   const al = doubleToDyadic(alpha);
-  const exceeds = (a: bigint) => cdfExceeds(n, k, a, al);
-  const clamp = (a: bigint) => (a < 0n ? 0n : a > A ? A : a);
   // start just above the floating-point guess
-  let hi = clamp(BigInt(Math.ceil(floatGuess(k, n, alpha) * 2 ** CP_GRID_BITS)) + TOL_UNITS);
+  const start = clamp(BigInt(Math.ceil(floatGuess(k, n, alpha) * 2 ** CP_GRID_BITS)) + TOL_UNITS);
+  const { hi, lo } = certifyBracket(start, (a) => cdfExceeds(n, k, a, al));
+  return { upper: Number(hi) / 2 ** CP_GRID_BITS, upperUnits: hi, lowerUnits: lo };
+}
+
+const clamp = (a: bigint) => (a < 0n ? 0n : a > A ? A : a);
+
+/**
+ * Certifies a bracket [lo, hi] of at most TOL_UNITS around the point where `exceeds` (antitone on [0, A]: true below the
+ * point, false above) flips, starting from any `start`. Exported so the walks that a good starting guess never needs can be
+ * exercised directly.
+ */
+export function certifyBracket(start: bigint, exceeds: (a: bigint) => boolean): { hi: bigint; lo: bigint } {
+  let hi = start;
   // 1) certify the upper end: move up until cdfRec(hi) ≤ α (at q = 1, cdfRec = 0 for k < n)
   let step = TOL_UNITS;
   while (exceeds(hi)) {
@@ -155,7 +166,7 @@ export function clopperPearsonCertified(k: number, n: number, alpha: number): CP
     if (exceeds(mid)) lo = mid;
     else hi = mid;
   }
-  return { upper: Number(hi) / 2 ** CP_GRID_BITS, upperUnits: hi, lowerUnits: lo };
+  return { hi, lo };
 }
 
 /** Exact one-sided Clopper–Pearson upper bound (see {@link clopperPearsonCertified}). */

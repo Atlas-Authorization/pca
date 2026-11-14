@@ -1,0 +1,10 @@
+{
+ "target": "scitt verifyConsistencyProof (mutated)",
+ "seeds": [
+  {
+   "b64": "gwEEgVggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+   "old": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+   "nw": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+  }
+ ]
+}

@@ -54,6 +54,26 @@ func one(c in) (res map[string]any) {
 		res["suites"] = pca.SupportedSuites()
 		return
 	}
+	if c.Kind == "produce" {
+		// raw = {op, args, keys, pq_keys?}: one producer vector case; answer {out} or {error}.
+		pv, err := pca.ParseJSONLenient([]byte(c.Raw))
+		o, _ := pv.(map[string]any)
+		if err != nil || o == nil {
+			res["error"] = "parse"
+			return
+		}
+		op, _ := o["op"].(string)
+		args, _ := o["args"].(map[string]any)
+		keys, _ := o["keys"].(map[string]any)
+		pqKeys, _ := o["pq_keys"].(map[string]any)
+		out, err := pca.ProduceVector(op, args, keys, pqKeys)
+		if err != nil {
+			res["error"] = err.Error()
+		} else {
+			res["out"] = out
+		}
+		return
+	}
 	if c.Kind == "chain" {
 		// R4-01: raw = JSON text of {chain, expected_root_issuer?, pq_pins?, trusted_root?, allowed_suites?}.
 		pv, err := pca.StrictParse(c.Raw) // json.Number-preserving, same parser the SDK uses for chains
@@ -86,6 +106,32 @@ func one(c in) (res map[string]any) {
 		if strings.Contains(why, pca.UnsupportedSuite) {
 			res["unsupported_suite"] = why
 		}
+		return
+	}
+	if c.Kind == "policy" {
+		// Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+		// EvaluateAgentCaveats(PolicyCaveats(grant, chain), context, {action}, toolCall) as {allow, failed}: the agent-native
+		// evaluator (predicates + tool_schema); the tool call is the signed verb + params (the reference's toolCallOf)
+		pv, err := pca.ParseJSONLenient([]byte(c.Raw))
+		o, _ := pv.(map[string]any)
+		ctx, _ := o["context"].(map[string]any)
+		if err != nil || o == nil || ctx == nil {
+			res["error"] = "exception:policy"
+			return
+		}
+		act := ctx["action"]
+		am, _ := act.(map[string]any)
+		verb, _ := am["verb"].(string)
+		args, _ := am["params"].(map[string]any)
+		if args == nil {
+			args = map[string]any{}
+		}
+		ok, failed := pca.EvaluateAgentCaveats(pca.PolicyCaveats(o["grant"], o["chain"]), ctx, map[string]any{"action": act}, &pca.ToolCall{Tool: verb, Args: args})
+		if failed == nil {
+			failed = []string{}
+		}
+		res["allow"] = ok
+		res["failed"] = failed
 		return
 	}
 	if f, ok := v2Primitives[c.Kind]; ok {

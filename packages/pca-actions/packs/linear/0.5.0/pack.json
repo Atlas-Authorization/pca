@@ -1,0 +1,60 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "linear",
+  "version": "0.5.0",
+  "ns": [
+    "linear"
+  ],
+  "count": 568,
+  "root": "-64Fmw6BF0s2zVnUj83eKFgSaICcPE13l27hZ8ci33Y",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 403,
+    "unreviewed": 165
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "The Linear GraphQL schema is published in linear/linear under the MIT licence. Field names, argument names/types and the first sentence of a field description are carried; the trait review is ours.",
+  "sources": [
+    {
+      "id": "schema",
+      "kind": "graphql",
+      "uri": "https://github.com/linear/linear/blob/618a737a4e6aa279b7853c650f79f209a5142bbc/packages/sdk/src/schema.graphql",
+      "spec_digest": "sha256:20061a8427b66237c3e850775ddf0450b6d2de73a6250735d5e6b17070d4f7c8",
+      "licence": "MIT",
+      "licence_url": "https://github.com/linear/linear/blob/master/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "ae1a82777768aff047fb316130c0972f20a82a95578e4e073a3042b3acbd3447"
+  },
+  "shards": [
+    {
+      "file": "defs/000-linear_administrable_teams.jsonl",
+      "count": 568,
+      "bytes": 432035,
+      "sha256": "937b970d0b8272c45298ab7628a7e49f912391034a8ac45b56d933d7d1537e81",
+      "first": "linear.administrable_teams",
+      "last": "linear.workflow_states"
+    }
+  ],
+  "stats": {
+    "total": 568,
+    "authored": 403,
+    "unreviewed": 165,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "read": 163,
+      "create": 89,
+      "delete": 72,
+      "publish": 7,
+      "update": 200,
+      "privilege": 47,
+      "send": 1
+    }
+  }
+}

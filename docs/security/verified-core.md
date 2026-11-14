@@ -197,6 +197,7 @@ generator that stops reaching interesting inputs fails the suite.
   default**: the predicate / caveat evaluator, the risk score, budget arithmetic (`leak`, `debit`, `cost`), strict JSON and canonical
   encoding, the regex engine, Merkle consistency and revocation membership (all but the risk / budget arithmetic have an opt-in proved path),
   and with no proved model at all: **freshness / beacon / revocation-epoch verification**, **ZK verification**, **bond settlement**.
+* **The optional `fresh_at` consistency token.** It is a signed PCActn member (so the leaf signature covers it), its shape is checked by the extension wire validator and its `fresh_at` check runs in the extension layer after the core checks. It is not part of the proved core fold, so the proved core decision is the same with or without it; like the other extension members it is held to the shared conformance corpus (`fresh-at-vectors.json`), not proved.
 * Numeric details of the freshness gate (`epochMs`, `maxAgeMs` arithmetic on doubles) and of Policy-VM risk values.
 * Distributed replay-store atomicity, durability, and multi-instance clock skew.
 * Liveness / availability: the proofs say nothing about a verifier that is slow or unavailable.

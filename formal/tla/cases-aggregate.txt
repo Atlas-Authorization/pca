@@ -1,0 +1,17 @@
+# name | module | invariants (spec:/prop: prefixes as in run.sh) | constants (;-separated) | expected
+# T4 PrincipalAggregate (spec G-T8): a principal-scope cap shared by concurrent sessions, with crash, expiry under an arbitrary
+# clock, ledger restart and replay. The shipped protocol must satisfy every invariant; each mutant must violate the named one.
+agg_shipped_2s_3id          | PrincipalAggregate | TypeOK NoOverspend SpentBounded RanCounted | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="none"  | pass
+agg_shipped_3s_2id          | PrincipalAggregate | TypeOK NoOverspend SpentBounded RanCounted | Sessions={"s1","s2","s3"};Cap=3;Amts={1,2};MaxIds=2;Bug="none" | pass
+agg_stale_nocas             | PrincipalAggregate | NoOverspend   | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="stale"              | fail
+agg_no_cap                  | PrincipalAggregate | NoOverspend   | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="no_cap"             | fail
+agg_per_session_key_w9      | PrincipalAggregate | NoOverspend   | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="per_session_key"    | fail
+agg_late_commit             | PrincipalAggregate | NoOverspend   | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="late_commit"        | fail
+agg_release_committed       | PrincipalAggregate | RanCounted    | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="release_committed"  | fail
+agg_release_committed_spent | PrincipalAggregate | SpentBounded  | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="release_committed"  | fail
+agg_release_unreserved      | PrincipalAggregate | SpentBounded  | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="release_unreserved" | fail
+agg_expire_started          | PrincipalAggregate | RanCounted    | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="expire_started"     | fail
+agg_amnesia                 | PrincipalAggregate | RanCounted    | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="amnesia"            | fail
+# the mutants break ONLY their invariant: the others still hold, so each failure is attributable
+agg_stale_ranCounted_ok     | PrincipalAggregate | RanCounted    | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="stale"              | pass
+agg_unreserved_nooverspend_ok | PrincipalAggregate | NoOverspend | Sessions={"s1","s2"};Cap=3;Amts={1,2};MaxIds=3;Bug="release_unreserved" | pass

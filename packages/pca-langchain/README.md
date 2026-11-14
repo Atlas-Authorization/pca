@@ -1,5 +1,7 @@
 # @atlasauth/pca-langchain
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 LangChain adapter for Proof-Carrying Authority (PCA). `withPCA` wraps a LangChain structured tool so every invocation first builds a signed PCActn for the call (failing fast if the agent's own grant does not permit it), hands you the proof to forward to the resource server, and then runs the original tool.
 
 ## Install
@@ -44,6 +46,24 @@ The wrapped tool is a copy that keeps every other field (`name`, `description`, 
 
 - `withPCA(agent, spec, tool)` - spec is `{ verb, resource, aud?, failFast?, onProof? }`.
 - Re-exports `bridgeToolCall`, `pcaHeaders`, and the `PcaCall` type (`{ pcactn, encoded, headers }`) from `@atlasauth/pca`.
+
+## Fail-closed behaviour
+
+Every row is a call on which the wrapped tool does not run.
+
+| Missing or invalid | Result |
+|---|---|
+| The agent's local dry-run denies the action (over a limit, outside the grant) | Throws `PcaDenied` before `execute`; no proof is forwarded (default `failFast`) |
+| `onProof`, the `resource` function or the agent itself throws (the proof cannot be built) | The error reaches the caller and the tool does not run |
+| The wrapped tool exposes neither `func` nor `invoke` | Both entry points throw `withPCA: the wrapped tool exposes neither func() nor invoke()` |
+
+## Limits
+
+- It signs; it does not authorize. The resource server's verifier is the only authority, and a call that bypasses the wrapper simply carries no valid PCActn.
+- The local dry-run is an offline convenience. It sees only the policy the agent object holds, so it cannot evaluate server-only state; with `failFast: false` it is skipped entirely and the server is the only gate.
+- It does not verify, store, revoke or rate-limit anything, and it does not forward the proof for you: your `onProof` or handler must put it on the request.
+- Only the tool's `execute` is wrapped; a tool called by some other path is not covered.
+-
 
 ## Status
 

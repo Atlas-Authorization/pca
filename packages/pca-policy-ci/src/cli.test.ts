@@ -70,3 +70,28 @@ describe('CLI', () => {
     expect('args' in p && p.args.quiet).toBe(true);
   });
 });
+
+describe('--lint-rules-pin', () => {
+  it('passes when the pin equals the digest of the lint rule list, alone or with policies', async () => {
+    const { lintRulesDigest } = await import('@atlasauth/pca-actions');
+    const pin = join(dir, 'pin-ok');
+    writeFileSync(pin, lintRulesDigest() + '\n');
+    expect(capture(['--lint-rules-pin', pin])).toMatchObject({ code: 0, out: expect.stringContaining('matches the pin') });
+    expect(capture(['--lint-rules-pin', pin, cleanFile]).code).toBe(0);
+  });
+  it('fails on a changed rule list, a malformed pin, a missing file, and fails even if the policies pass', async () => {
+    const bad = join(dir, 'pin-bad');
+    writeFileSync(bad, 'A'.repeat(43));
+    expect(capture(['--lint-rules-pin', bad])).toMatchObject({ code: 1, out: expect.stringContaining('the rule list changed') });
+    expect(capture(['--lint-rules-pin', bad, cleanFile]).code).toBe(1);
+    writeFileSync(bad, 'nope');
+    expect(capture(['--lint-rules-pin', bad]).out).toContain('not a digest');
+    expect(capture(['--lint-rules-pin', join(dir, 'absent')])).toMatchObject({ code: 1, out: expect.stringContaining('cannot read') });
+    expect(parseArgs(['--lint-rules-pin'])).toHaveProperty('error');
+  });
+  it('the committed pin file of the action kit is current', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { checkLintRulesPin } = await import('./index');
+    expect(checkLintRulesPin(readFileSync(join(__dirname, '..', '..', 'pca-actions', 'lint-rules.digest'), 'utf8'))).toMatchObject({ ok: true });
+  });
+});

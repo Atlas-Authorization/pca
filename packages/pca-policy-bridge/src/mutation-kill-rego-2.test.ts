@@ -10,13 +10,13 @@ describe('rego round 2', () => {
   it('"not" must start the statement', () => {
     expect(preds('input.b == 2 not input.a == 1')).toEqual([]);
     expect(preds('x not input.a == 1')).toEqual([]);
-    expect(preds('not input.a == 1')).toEqual([{ verb: '*', where: [{ not: { field: 'env.a', op: 'eq', value: 1 } }] }]);
+    expect(preds('not input.a == 1')).toEqual([{ verb: '*', where: [{ not: { all_of: [{ field: 'env.a', op: 'exists' }, { field: 'env.a', op: 'eq', value: 1 }] } }] }]);
   });
   it('negating ref / != / glob conditions works', () => {
     expect(preds('not input.a != 1')).toEqual([{ verb: '*', where: [{ not: { field: 'env.a', op: 'ne', value: 1 } }] }]);
-    expect(preds('not input.a == input.b')).toEqual([{ verb: '*', where: [{ not: { field: 'env.a', op: 'eq', ref: 'env.b' } }] }]);
+    expect(preds('not input.a == input.b')).toEqual([{ verb: '*', where: [{ not: { all_of: [{ field: 'env.a', op: 'exists' }, { field: 'env.b', op: 'exists' }, { field: 'env.a', op: 'eq', ref: 'env.b' }] } }] }]);
     expect(preds('not input.a != input.b')).toEqual([{ verb: '*', where: [{ not: { field: 'env.a', op: 'ne', ref: 'env.b' } }] }]);
-    expect(preds('not glob.match("a*", [], input.p)')).toEqual([{ verb: '*', where: [{ not: { field: 'env.p', op: 'like', value: 'a*' } }] }]);
+    expect(preds('not glob.match("a*", null, input.p)')).toEqual([{ verb: '*', where: [{ not: { field: 'env.p', op: 'like', value: 'a*' } }] }]);
     expect(preds('not input.a < 3')).toEqual([{ verb: '*', where: [{ not: { field: 'env.a', op: 'lt', value: 3 } }] }]);
   });
   it('parentheses and brackets inside string literals fail closed', () => {

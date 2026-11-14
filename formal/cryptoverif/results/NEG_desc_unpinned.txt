@@ -1,0 +1,3 @@
+RESULT Proved forall s', s: sset_t, k: kappa_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> (s = s') up to probability Phash(time_1)
+RESULT Could not prove forall s: sset_t, n: n_t, t: t_t, x: gkey_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s)).
+rc=0 secs=0

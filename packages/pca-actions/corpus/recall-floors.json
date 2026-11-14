@@ -1,0 +1,39 @@
+{
+  "v": 2,
+  "alpha": 0.05,
+  "real": {
+    "min_entries": 2000,
+    "min_positives": {
+      "money_moving": 42,
+      "destructive": 150,
+      "external_communication": 78,
+      "privilege_change": 150,
+      "code_execution": 66,
+      "public_exposure": 19,
+      "financial_data_read": 80,
+      "scheduled": 11
+    },
+    "recall_lower": {
+      "money_moving": 0.62,
+      "destructive": 0.94,
+      "external_communication": 0.71,
+      "privilege_change": 0.57,
+      "code_execution": 0.78,
+      "public_exposure": 0.38,
+      "financial_data_read": 0.58,
+      "scheduled": 0.6
+    }
+  },
+  "regression": {
+    "recall_lower": {
+      "money_moving": 0.95,
+      "destructive": 0.95,
+      "external_communication": 0.95,
+      "privilege_change": 0.95,
+      "code_execution": 0.95,
+      "public_exposure": 0.91,
+      "financial_data_read": 0.92,
+      "scheduled": 0.89
+    }
+  }
+}

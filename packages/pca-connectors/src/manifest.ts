@@ -125,8 +125,28 @@ const CLIENT_AUTHS = new Set<string>(['post', 'basic']);
 const oneOf = (s: Set<string>): string => [...s].join(' | ');
 
 function isHttpsUrl(v: unknown): v is string {
-  return typeof v === 'string' && v.startsWith('https://');
+  if (typeof v !== 'string' || !v.startsWith('https://')) return false;
+  // The host may carry `{var}` placeholders. Check the shape with them replaced by a label, and refuse credentials in
+  // the URL (a manifest is data with no secrets), a placeholder that is the whole host (the caller would then choose
+  // where tokens go), and a fragment.
+  let u: URL;
+  try {
+    u = new URL(v.replace(/\{\w+\}/g, 'x'));
+  } catch {
+    return false;
+  }
+  if (u.protocol !== 'https:' || u.username !== '' || u.password !== '' || u.hash !== '') return false;
+  const rawHost = v.slice('https://'.length).split(/[/?#]/, 1)[0] ?? '';
+  return !/^\{\w+\}(:\d+)?$/.test(rawHost);
 }
+
+/** OAuth request parameters a manifest or a caller must not set through `authParams` / `extraParams`: the request builders own them. */
+export const RESERVED_AUTHORIZE_PARAMS: ReadonlySet<string> = new Set(['response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'code_challenge', 'code_challenge_method']);
+export const RESERVED_TOKEN_PARAMS: ReadonlySet<string> = new Set(['grant_type', 'code', 'redirect_uri', 'client_id', 'client_secret', 'code_verifier', 'refresh_token']);
+
+const HEADER_NAME = /^[A-Za-z0-9][A-Za-z0-9-]*$/;
+const FORBIDDEN_HEADERS = new Set(['host', 'content-length', 'content-type', 'transfer-encoding', 'connection', 'cookie', 'set-cookie']);
+const QUERY_NAME = /^[A-Za-z_][A-Za-z0-9_.-]*$/;
 
 /** The result of validating an untrusted manifest. */
 export type ManifestValidation =
@@ -161,6 +181,12 @@ export function validateManifest(input: unknown): ManifestValidation {
   if (!isStringArray(scopesAvailable)) issues.push('scopesAvailable must be an array of strings');
   const defaultScopes = prop(input, 'defaultScopes');
   if (!isStringArray(defaultScopes)) issues.push('defaultScopes must be an array of strings');
+  for (const [name, list] of [['scopesAvailable', scopesAvailable], ['defaultScopes', defaultScopes]] as const) {
+    if (isStringArray(list)) {
+      if (list.some((s) => s.length === 0 || /[\s,]/.test(s))) issues.push(`${name} entries must be non-empty and contain no whitespace or comma (a separator inside a scope would smuggle in another scope)`);
+      if (new Set(list).size !== list.length) issues.push(`${name} must not contain duplicates`);
+    }
+  }
   if (isStringArray(scopesAvailable) && isStringArray(defaultScopes) && scopesAvailable.length > 0) {
     const available = new Set(scopesAvailable);
     const missing = defaultScopes.filter((s) => !available.has(s));
@@ -181,6 +207,7 @@ export function validateManifest(input: unknown): ManifestValidation {
     if (sn !== undefined && typeof sn !== 'boolean') issues.push('refresh.supportsScopeNarrowing must be a boolean');
     const ep = prop(refresh, 'extraParams');
     if (ep !== undefined && !isStringRecord(ep)) issues.push('refresh.extraParams must be a string→string map');
+    else if (isStringRecord(ep)) for (const k of Object.keys(ep)) if (RESERVED_TOKEN_PARAMS.has(k)) issues.push(`refresh.extraParams may not set '${k}': the request builder owns it`);
   }
 
   const tokenPlacement = prop(input, 'tokenPlacement');
@@ -191,6 +218,14 @@ export function validateManifest(input: unknown): ManifestValidation {
   } else if (tokenPlacement === 'query' && !isNonEmptyString(prop(input, 'queryParam'))) {
     issues.push("tokenPlacement 'query' requires a non-empty queryParam");
   }
+  const headerName = prop(input, 'headerName');
+  if (typeof headerName === 'string' && (!HEADER_NAME.test(headerName) || FORBIDDEN_HEADERS.has(headerName.toLowerCase()))) {
+    issues.push(`headerName '${headerName}' must be an HTTP token and not a protocol header`);
+  }
+  const queryParam = prop(input, 'queryParam');
+  if (typeof queryParam === 'string' && !QUERY_NAME.test(queryParam)) issues.push(`queryParam '${queryParam}' must be a plain parameter name`);
+  const sepRaw = prop(input, 'scopeSeparator');
+  if (typeof sepRaw === 'string' && sepRaw.length === 0) issues.push('scopeSeparator must not be empty');
 
   const pkce = prop(input, 'pkce');
   if (pkce !== undefined && typeof pkce !== 'boolean') issues.push('pkce must be a boolean');
@@ -198,6 +233,7 @@ export function validateManifest(input: unknown): ManifestValidation {
   if (scopeSeparator !== undefined && typeof scopeSeparator !== 'string') issues.push('scopeSeparator must be a string');
   const authParams = prop(input, 'authParams');
   if (authParams !== undefined && !isStringRecord(authParams)) issues.push('authParams must be a string→string map');
+  else if (isStringRecord(authParams)) for (const k of Object.keys(authParams)) if (RESERVED_AUTHORIZE_PARAMS.has(k)) issues.push(`authParams may not set '${k}': the request builder owns it`);
   const clientAuth = prop(input, 'clientAuth');
   if (clientAuth !== undefined && (typeof clientAuth !== 'string' || !CLIENT_AUTHS.has(clientAuth))) {
     issues.push(`clientAuth must be one of ${oneOf(CLIENT_AUTHS)}`);
@@ -297,4 +333,11 @@ export function assertManifest(input: unknown): ProviderManifest {
   const result = validateManifest(input);
   if (!result.ok) throw new ManifestValidationError(result.issues);
   return result.manifest;
+}
+
+import { hashCanonical } from '@atlasauth/pca';
+
+/** A digest of a manifest (SHA-256 over canonical JSON). Pin the digest of a manifest you reviewed: a registry that is given the digest refuses a manifest that has since changed. */
+export function manifestDigest(manifest: ProviderManifest): string {
+  return hashCanonical(manifest);
 }

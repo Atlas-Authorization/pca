@@ -99,10 +99,13 @@ interface CertSpec {
   signer: Signer;
   notBefore: number;
   notAfter: number;
+  /** CA certificate: BasicConstraints CA:TRUE (critical) + KeyUsage keyCertSign|cRLSign, which the B15 strict chain profile requires of every issuer. */
+  ca?: boolean;
 }
+const CA_EXT = Uint8Array.from(Buffer.from('a3233021300f0603551d130101ff040530030101ff300e0603551d0f0101ff040403020106', 'hex'));
 const mkCert = (s: CertSpec): Uint8Array => {
   const alg = sigAlgOf(s.signer.priv);
-  const tbs = seq(tlv(0xa0, int(2)), int(0x2a), alg, name(s.issuer), seq(utc(s.notBefore), utc(s.notAfter)), name(s.subject), s.spki);
+  const tbs = seq(tlv(0xa0, int(2)), int(0x2a), alg, name(s.issuer), seq(utc(s.notBefore), utc(s.notAfter)), name(s.subject), s.spki, ...(s.ca ? [CA_EXT] : []));
   const sig = s.signer.priv.asymmetricKeyType === 'ed25519' ? crypto.sign(null, Buffer.from(tbs), s.signer.priv) : crypto.sign('sha256', Buffer.from(tbs), s.signer.priv);
   return seq(tbs, alg, tlv(0x03, cat(Uint8Array.from([0]), new Uint8Array(sig))));
 };
@@ -506,8 +509,8 @@ describe('evaluateMaaJwks: chained keys', () => {
   const leaf = ecKp();
   const CN_LEAF = 'Microsoft Azure Attestation 2020';
   const mkChain = (o: { leafCn?: string; leafTo?: number; midTo?: number; rootTo?: number; leafFrom?: number; midFrom?: number; rootFrom?: number; rootSigner?: KP; midSigner?: KP; leafSigner?: KP } = {}) => {
-    const rootC = mkCert({ subject: [[OID_CN, 'Root']], issuer: [[OID_CN, 'Root']], spki: root.spki, signer: o.rootSigner ?? root, notBefore: o.rootFrom ?? NOW - 3000 * DAY, notAfter: o.rootTo ?? NOW + 3000 * DAY });
-    const midC = mkCert({ subject: [[OID_CN, 'Mid']], issuer: [[OID_CN, 'Root']], spki: mid.spki, signer: o.midSigner ?? root, notBefore: o.midFrom ?? NOW - 2000 * DAY, notAfter: o.midTo ?? NOW + 2000 * DAY });
+    const rootC = mkCert({ subject: [[OID_CN, 'Root']], issuer: [[OID_CN, 'Root']], spki: root.spki, signer: o.rootSigner ?? root, notBefore: o.rootFrom ?? NOW - 3000 * DAY, notAfter: o.rootTo ?? NOW + 3000 * DAY, ca: true });
+    const midC = mkCert({ subject: [[OID_CN, 'Mid']], issuer: [[OID_CN, 'Root']], spki: mid.spki, signer: o.midSigner ?? root, notBefore: o.midFrom ?? NOW - 2000 * DAY, notAfter: o.midTo ?? NOW + 2000 * DAY, ca: true });
     const leafC = mkCert({ subject: [[OID_CN, o.leafCn ?? CN_LEAF]], issuer: [[OID_CN, 'Mid']], spki: leaf.spki, signer: o.leafSigner ?? mid, notBefore: o.leafFrom ?? NOW - 100 * DAY, notAfter: o.leafTo ?? NOW + 200 * DAY });
     return { rootC, midC, leafC };
   };
@@ -528,7 +531,7 @@ describe('evaluateMaaJwks: chained keys', () => {
     expect(why([key(mkChain({ leafSigner: other }))], pin)).toEqual(['c: chain link 0 is not signed by the next cert']);
     expect(why([key(mkChain({ midSigner: other }))], pin)).toEqual(['c: chain link 1 is not signed by the next cert']);
     expect(why([jwk([full.leafC, full.midC], 'c')], pin)).toEqual(['c: chain does not end in a self-signed root']);
-    expect(why([jwk([full.leafC, full.midC, mkCert({ subject: [[OID_CN, 'Root']], issuer: [[OID_CN, 'Root']], spki: root.spki, signer: other, notBefore: NOW - 3000 * DAY, notAfter: NOW + 3000 * DAY })], 'c')], pin)[0]).toMatch(/chain (link 1 is not signed|does not end in a self-signed root)/);
+    expect(why([jwk([full.leafC, full.midC, mkCert({ subject: [[OID_CN, 'Root']], issuer: [[OID_CN, 'Root']], spki: root.spki, signer: other, notBefore: NOW - 3000 * DAY, notAfter: NOW + 3000 * DAY, ca: true })], 'c')], pin)[0]).toMatch(/chain (link 1 is not signed|does not end in a self-signed root)/);
     expect(why([key()], { chainRootSpkiSha256: ['00'.repeat(32)] })).toEqual(['c: chain root is not pinned']);
   });
   it('leaf CN allowlist', () => {
@@ -549,8 +552,8 @@ describe('evaluateMaaJwks: chained keys', () => {
   });
   it('a root that is signed by its own key but names a different issuer is not self-signed', () => {
     const pin = { chainRootSpkiSha256: [root.spkiSha] };
-    const fakeRoot = mkCert({ subject: [[OID_CN, 'Root']], issuer: [[OID_CN, 'Someone Else']], spki: root.spki, signer: root, notBefore: NOW - 3000 * DAY, notAfter: NOW + 3000 * DAY });
-    const midC = mkCert({ subject: [[OID_CN, 'Mid']], issuer: [[OID_CN, 'Root']], spki: mid.spki, signer: root, notBefore: NOW - DAY, notAfter: NOW + DAY });
+    const fakeRoot = mkCert({ subject: [[OID_CN, 'Root']], issuer: [[OID_CN, 'Someone Else']], spki: root.spki, signer: root, notBefore: NOW - 3000 * DAY, notAfter: NOW + 3000 * DAY, ca: true });
+    const midC = mkCert({ subject: [[OID_CN, 'Mid']], issuer: [[OID_CN, 'Root']], spki: mid.spki, signer: root, notBefore: NOW - DAY, notAfter: NOW + DAY, ca: true });
     const leafC = mkCert({ subject: [[OID_CN, CN_LEAF]], issuer: [[OID_CN, 'Mid']], spki: leaf.spki, signer: mid, notBefore: NOW - DAY, notAfter: NOW + DAY });
     expect(why([jwk([leafC, midC, fakeRoot], 'c')], pin)).toEqual(['c: chain does not end in a self-signed root']);
   });

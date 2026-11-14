@@ -1,0 +1,65 @@
+(* PCA -- FR-5, FROST group-descriptor binding (packages/pca-pq-threshold/src/group.ts, docs/pca/security/proofs/
+   02-threshold-hybrid.md section B.3), computational proof (CryptoVerif).
+
+   Phi = (v, suite, X_g, t, n, kappa), kappa = SHA256("atlas-pca-pq-threshold/signer-set/v1\0" || enc(sorted (id, pk))),
+   signed by a setup authority under "atlas-pca-pq-threshold/group-descriptor/v1\0" || enc(Phi). The verifier accepts
+   only a descriptor that verifies under the PINNED authority key, names the pinned X_g and has t = the required t.
+   The authority key also signs other domain-separated artifacts (`OtherSign`).
+
+   q_desc   : an accepted descriptor was certified by the authority with exactly (X_g, t, n, kappa).
+   q_set    : an accepted descriptor binds one signer set: two accepted signer sets with the same kappa are equal (CR).
+   What it does NOT give (stated in FR-5): the descriptor is the authority's statement about how shares were dealt; a
+   dishonest authority certifies a false t. Assumptions: UF-CMA (deterministic signer: Ed25519), CR of SHA-256. *)
+
+param ND, NO, NV.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type hashkey [fixed].
+type kappa_t [fixed].
+type sset_t. type gkey_t. type t_t. type n_t. type other_t.
+
+proba Psign.
+proba Psigncoll.
+proba Phash.
+
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+expand CollisionResistant_hash_1(hashkey, sset_t, kappa_t, hash, hash_oracle, Phash).
+
+fun mkdesc(gkey_t, t_t, n_t, kappa_t): message [data].
+fun mkother(other_t): message [data].
+equation forall x: gkey_t, t: t_t, n: n_t, k: kappa_t, o: other_t; mkdesc(x, t, n, k) <> mkother(o).
+
+event Certified(gkey_t, t_t, n_t, sset_t).
+event Accept(gkey_t, t_t, n_t, sset_t).
+event AcceptK(kappa_t, sset_t).
+
+query x: gkey_t, t: t_t, n: n_t, s: sset_t; event(Accept(x, t, n, s)) ==> event(Certified(x, t, n, s)).
+query k: kappa_t, s: sset_t, s': sset_t; event(AcceptK(k, s)) && event(AcceptK(k, s')) ==> s = s'.
+
+channel c0, cA, cA2, cO, cO2, cV, cV2.
+
+let Authority(hk: hashkey, skA: skey) =
+  (! iD <= ND in(cA, (x: gkey_t, t: t_t, n: n_t, s: sset_t));
+     event Certified(x, t, n, s);
+     out(cA2, sign(mkdesc(x, t, n, hash(hk, s)), skA)))
+  | (! iO <= NO in(cO, o: other_t); out(cO2, sign(mkother(o), skA))).
+
+let Verifier(hk: hashkey, pkA: pkey) =
+  ! iV <= NV
+  in(cV, (xg: gkey_t, treq: t_t, n: n_t, s: sset_t, sg: signature, pkX: pkey));   (* pinned X_g and required t, the presented set *)
+  let k = hash(hk, s) in
+  if check(mkdesc(xg, treq, n, k), pkX, sg) then
+  event AcceptK(k, s);
+  event Accept(xg, treq, n, s);
+  out(cV2, ()).
+
+process
+  in(c0, ());
+  new hk: hashkey;
+  new rkA: keyseed; let pkA = pkgen(rkA) in let skA = skgen(rkA) in
+  out(c0, pkA);
+  ( hash_oracle(hk) | Authority(hk, skA) | Verifier(hk, pkA) )
