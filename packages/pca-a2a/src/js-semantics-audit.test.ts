@@ -53,8 +53,8 @@ describe('verifyAgentCard is total', () => {
     expect(await verifyAgentCard(null as unknown as AgentCard, { key })).toEqual({ ok: false, reason: 'agent card is not an object' });
     expect(await verifyAgentCard('card' as unknown as AgentCard, { key })).toEqual({ ok: false, reason: 'agent card is not an object' });
   });
-  it('a card with no strict canonical form (a 1e21 number) is refused, not thrown', async () => {
-    const card = { name: 'n', big: 1e21, signatures: [{ protected: 'e30', signature: 'AA' }] } as unknown as AgentCard;
+  it('a card with no JCS form (a NaN number) is refused, not thrown', async () => {
+    const card = { name: 'n', big: Number.NaN, signatures: [{ protected: 'e30', signature: 'AA' }] } as unknown as AgentCard;
     const r = await verifyAgentCard(card, { key });
     expect(r.ok).toBe(false);
     expect(r.reason).toMatch(/^agent card has no canonical form: /);

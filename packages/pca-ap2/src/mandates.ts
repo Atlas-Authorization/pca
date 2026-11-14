@@ -56,7 +56,7 @@ export function toMinorUnits(major: number, currency: string): number {
 /** Integer minor units to the major-unit number PCA budgets use (exact for any safe integer). */
 export function fromMinorUnits(minor: number, currency: string): number {
   const e = currencyExponent(currency);
-  if (!Number.isSafeInteger(minor) || minor < 0) throw new Ap2Error(`minor-unit amount must be a non-negative safe integer, got ${String(minor)}`);
+  if (!Number.isSafeInteger(minor) || minor < 0 || Object.is(minor, -0)) throw new Ap2Error(`minor-unit amount must be a non-negative safe integer, got ${String(minor)}`);
   return minor / 10 ** e;
 }
 
@@ -154,7 +154,7 @@ export interface CheckoutMandateClaims extends Common {
 
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const isNonEmptyStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
-const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v);
+const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0);
 const isNonNegInt = (v: unknown): v is number => isInt(v) && v >= 0;
 
 function merchantProblems(v: unknown, at: string): string[] {

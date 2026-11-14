@@ -1,5 +1,7 @@
 # @atlasauth/pca-attest-eat
 
+> Maturity: **hardened** (hardened, awaiting independent audit and hardware evaluation). The engineering is done and evidenced by tests and a mutation gate; it awaits an independent review and a real-hardware evidence canary (a captured report from a live AMD host verified end to end on a schedule). It is never production until then, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Per-session attestation freshness and channel binding for Proof-Carrying Authority (PCA). TEE evidence (for example an AMD SEV-SNP attestation report) captured once is a static blob that can be replayed or relayed onto another session. This package emits that evidence as an Entity Attestation Token (EAT, RFC 9711, compact JWS with `typ: eat+jwt`), binds it to a live channel (RA-TLS style `cnf`) and a fresh per-session nonce, and appraises it with a RATS-style split of evidence, endorsements and reference values (RFC 9334).
 
 It also verifies the AMD SEV-SNP report signature (ECDSA P-384) and the VCEK, ASK, ARK certificate chain using only `node:crypto`, and can co-sign the resulting verdict with a post-quantum signature.
@@ -59,9 +61,24 @@ To reach `affirming-hw-rooted`, pass `amd: { rawReport, vcek, ask, ark, family }
 - AMD SEV-SNP: `verifyAmdAttestation` (async; delegates to `@atlasauth/pca`), `KNOWN_AMD_ARK_SPKI_SHA384` (`milan`, `genoa`, `turin`), `parseReportTolerant`, `evidenceFromReport`, `measuredFromReport`
 - Post-quantum co-signing of a verdict: `verdictFromAppraisal`, `coSignAttestation`, `verifyCoSignedAttestation` (ML-DSA-65 by default; classical-only suites are refused)
 
+## Fail-closed table
+
+Each row is pinned by a test that asserts the exact outcome.
+
+| Missing or wrong | Result |
+|---|---|
+| Issuer, nonce or channel binding absent at build time | `buildEAT` throws; unbound evidence is never emitted |
+| Wrong signer, tampered payload, `alg` none or HS256, bad `typ`, unaccepted issuer or algorithm | `verifyEAT` throws "EAT invalid: ..." with the reason |
+| No server nonce supplied, token without `eat_nonce`, wrong nonce | freshness not ok, reason named |
+| `iat` in the future, older than `maxAgeMs`, or `maxAgeMs` not positive | freshness not ok |
+| No expected channel, token without `cnf`, other channel or key thumbprint | channel binding not ok |
+| Any failed gate in `verifyFreshAttestedEAT` | `ok: false`, no tier, the failing gate last in `reasons` |
+| AMD report or certificate chain that does not verify | `ok: false`, tier `contraindicated` |
+| Issuer not endorsed by the policy | `ok: false` |
+
 ## Status
 
-Cryptography here is unaudited. The AMD hardware root of trust (the ARK) is itself a classical ECDSA/RSA key; verification of it is real, but it is not a post-quantum guarantee. The optional post-quantum co-signature protects the recorded verdict after the classical hardware check has passed; it does not make AMD's root post-quantum.
+Hardened, awaiting independent audit and hardware evaluation. The AMD hardware root of trust (the ARK) is itself a classical ECDSA/RSA key; verification of it is real, but it is not a post-quantum guarantee. The optional post-quantum co-signature protects the recorded verdict after the classical hardware check has passed; it does not make AMD's root post-quantum.
 
 The EAT is emitted and consumed as a JWT only (`typ: eat+jwt`, EdDSA or ES256). Checked against standards material (committed with RFC sources and sha256): the RFC 7515 A.3 (ES256) and RFC 8037 A.4 (Ed25519) signature vectors verify through `verifyEAT` and fail with the expected reasons when altered; the RFC 7519 unsecured JWT and the RFC 9711 A.2.3 HS256 JWT are refused; the RFC 9711 Appendix A JSON claims sets are parsed as written (`eat_nonce`, `dbgstat`, `oemid`, `ueid`). Tokens built here verify in the independent `jose` library (6.2.3) and tokens signed by `jose` verify here, for both algorithms.
 

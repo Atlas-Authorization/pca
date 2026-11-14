@@ -1,19 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  BondLedger,
-  InMemoryBondAccount,
-  InsuranceCapitalPool,
-  SETTLEMENT_LEAF_DOMAIN,
-  type BondCurve,
-  type SettlementRecord,
-  appendSettlement,
-  bondAmount,
-  DEFAULT_BOND_POLICY,
-  settlementCommit,
-  settlementRecordDigest,
-  verifySettlement,
-  verifySettlementCommit,
-} from './bond-settlement';
+import { InsuranceCapitalPool, SETTLEMENT_LEAF_DOMAIN, type BondCurve, type SettlementRecord, appendSettlement, bondAmount, DEFAULT_BOND_POLICY, settlementCommit, settlementRecordDigest, settlementWireCheck, verifySettlement, verifySettlementCommit } from './bond-settlement';
+import { BondLedger, InMemoryBondAccount } from './bond-ledger-testing';
 import {
   TransparencyLedger,
   signTreeHead,
@@ -36,6 +23,9 @@ describe('A3d: SettlementRecord.guardian_epoch', () => {
     expect(verifySettlement(rec, Gpub)).toBe(true);
     const tampered: SettlementRecord = { ...rec, guardian_epoch: 43 };
     expect(verifySettlement(tampered, Gpub)).toBe(false); // epoch is inside the signed body
+    const z = mkLedger(0).openBond({ claimId: 'c1', amount: 10, depositor: 'alice', exposure: 5 });
+    expect(settlementWireCheck(z, Gpub)).toBe('ok');
+    expect(settlementWireCheck({ ...z, guardian_epoch: -0 }, Gpub)).toBe('shape'); // strict profile: never -0 (the signature alone would pass)
   });
 
   it('is absent (byte-identical to pre-epoch) when the ledger has no epoch', () => {

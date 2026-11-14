@@ -1,5 +1,7 @@
 # @atlasauth/pca-aggsig
 
+> Maturity: **hardened** (hardened, formally verified (model), awaiting independent audit). The engineering is done and evidenced by the community reference vectors, an independent implementation, abuse tests and a mutation gate; it awaits an independent review of the aggregation and proof-of-possession layers (O-1). It is never production until that review is done, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 BLS12-381 signature aggregation for Proof-Carrying Authority (PCA). A whole delegation chain's per-hop signatures, or a transparency-ledger witness quorum's cosignatures, collapse into one 96-byte aggregate that is checked with a single pairing-product verification. The scheme is BLS with proof-of-possession (`draft-irtf-cfrg-bls-signature`), minimal-pubkey-size variant (48-byte G1 keys, 96-byte G2 signatures).
 
 ## Install
@@ -70,9 +72,27 @@ Same-message aggregation is forgeable unless every key proved possession of its 
 
 Residual: this proves possession at registration time. The application still decides which keys deserve a registry slot (who may register), and a `RegisteredKey` is only as trustworthy as the channel that carried the PoP. Breaking change (unreleased): `aggregatePublicKeys` and `popVerify` removed; `aggregateVerify`, `fastAggregateVerify`, `verifyAggregatedChain` (new `registry` argument before `expectedRootPrincipal`) and `verifyAggregatedWitnessCosignatures` (takes `RegisteredKey[]`) changed signature.
 
+## Fail-closed behavior
+
+Every row is pinned by a test that asserts the exact outcome.
+
+| Missing or malformed input | Result |
+|---|---|
+| Public key is the identity, off the prime-order subgroup, not canonical or not 48 bytes | `keyValidate` false; `registerKey` returns `{ ok: false, reason }`; never admitted |
+| Proof of possession missing, wrong length, for another key, or a message signature | `registerKey` returns `{ ok: false, reason }` |
+| Key built from another key (`a*G - pk_victim`) | no valid proof exists; refused at registration |
+| Signature is the identity, off the curve, off the subgroup, flag-cleared or not canonical | `verify`, `fastAggregateVerify`, `aggregateVerify` false; `aggregate` throws `RangeError` |
+| Signer set is empty | verifiers return false; `aggregate` and `aggregatePublicKeys` throw `RangeError` |
+| Same key listed twice in a same-message aggregate | `fastAggregateVerify` false |
+| Same message twice in a distinct-message aggregate | `aggregateVerify` false |
+| Key is not a `RegisteredKey` (raw bytes, plain object, null) | public verifiers return false; no throw |
+| Chain issuer not in the registry, bad structure, depth over the bound, junk hop signature | `verifyAggregatedChain` returns `{ ok: false, reason }` |
+| Witness quorum member missing, substituted, extra or duplicated | `verifyAggregatedWitnessCosignatures` false |
+| Entropy source returns the degenerate key | `keyGen` throws |
+
 ## Status
 
-Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Experimental and unaudited.** BLS12-381 is not post-quantum.
+Part of [Proof-Carrying Authority](https://github.com/Atlas-Authorization/pca). **Hardened, awaiting independent audit.** BLS12-381 is not post-quantum.
 
 What is validated (proof-of-possession scheme, public keys in G1, signatures in G2):
 
@@ -85,7 +105,17 @@ What is not validated:
 - Only the minimal-pubkey-size, proof-of-possession variant is implemented. The basic and message-augmentation schemes and the signatures-in-G1 variant are not.
 - `aggregateVerify` additionally refuses repeated messages (stricter than the proof-of-possession scheme requires).
 - The delegation-chain and witness-cosignature layers are PCA-specific and have no external standard; they are covered by this package's own tests only.
-- Not constant-time, and no independent security audit.
+- Not constant-time, and no independent security audit (this is what the hardened label awaits).
+
+## Formal evidence
+
+Rogue-key defence, `PcaComp/Aggsig.lean`. What a machine checked, and what it did not.
+
+- Proved: without proof of possession the rogue-key attack is real (`rogue_key_attack`); with extracted secrets for every admitted key, a verifying aggregate on a message gives a verifying single-key signature of the honest key on the same message (`pop_reduction`, the Ristenpart-Yilek reduction); a message signature is a proof of possession only on a hash-domain collision (`pop_domain_separation`); the acceptance condition names distinct, registered keys only.
+- Assumed (named): NA-POP (extractability of the proof of possession), NA-BLS (single-key BLS is EUF-CMA under co-GDH on BLS12-381 in the ROM), NA-ROM for hash-to-curve.
+- Not modelled: the BLS12-381 arithmetic and encodings (covered by the community vectors and an independent implementation), subgroup checks.
+
+Reproduce: `formal/computational/check.sh lean` (core Lean 4, no Mathlib; it also prints the axioms each theorem uses, only `propext`, `Classical.choice` and `Quot.sound`). The models are hand-written from the code and are NOT statements about the shipped implementation: the independent audit of the implementation is still required, and this package stays hardened until then.
 
 ## License
 

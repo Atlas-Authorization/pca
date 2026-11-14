@@ -18,7 +18,8 @@ export function lnGamma(x: number): number {
   return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(a);
 }
 
-function betacf(a: number, b: number, x: number): number {
+/** The continued fraction of I_x(a, b) (modified Lentz; a zero denominator is replaced by 1e-300, never divided by). */
+export function betacf(a: number, b: number, x: number): number {
   const TINY = 1e-300;
   const qab = a + b;
   const qap = a + 1;

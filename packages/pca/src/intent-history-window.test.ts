@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MemoryIntentSessionStore, accPreState, admitIntentAction, inWindow, type AccumulatorDecl, type IntentEvent } from './index';
+import { accPreState, admitIntentAction, inWindow, type AccumulatorDecl, type IntentEvent } from './ext/intent';
+import { MemoryIntentSessionStore } from './intent-history-testing';
 
 /**
  * 0.4.2 SECURITY: a counted event stamped AFTER the candidate's time must count toward the cap (spec §2.1,
@@ -85,7 +86,7 @@ describe('accPreState: future-stamped events count; unreadable times fail closed
     const admitted: string[] = [];
     for (let k = 7; k >= 0; k--) {
       const id = `a${k}`;
-      const v = await admitIntentAction(store, {
+      const v = await admitIntentAction(store, { requireDurable: false,
         session: 's',
         root: { accumulators: [CAP], monitors: [] },
         event: { id, verb: 'pay', resource: 'r', params: { amount: 30_000 }, t: T + k },

@@ -4,10 +4,16 @@ name: Formal - model-to-code conformance (full)
 # size (~10^6 random cases + exhaustive small scopes), split into shards; every stage must report "disagree": 0, and the
 # harness self-test (deliberately broken model mutants) must kill every mutant not recorded as surviving. Differential testing, not a proof.
 # Runs on ci/** pushes and on demand; the smoke size runs in CI on every push.
+# Every stage except the small attestation one divides its cases by the shard count, so wall clock scales ~1/shards
+# (8 shards: ~2-3.5 h each; 32: ~30 min + setup). Default 32; pass `shards` to change it.
 on:
   push:
     branches: ['ci/**']
   workflow_dispatch:
+    inputs:
+      shards:
+        description: 'number of shards (default 32)'
+        default: '32'
 
 permissions:
   contents: read
@@ -17,14 +23,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.p.outputs.shards }}
+      list: ${{ steps.p.outputs.list }}
+    steps:
+      - id: p
+        env:
+          N: ${{ inputs.shards || '32' }}
+        run: |
+          [[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -ge 1 ] && [ "$N" -le 128 ] || { echo "::error::shards must be 1..128"; exit 1; }
+          echo "shards=$N" >> "$GITHUB_OUTPUT"
+          echo "list=[$(seq 0 $((N-1)) | paste -sd, -)]" >> "$GITHUB_OUTPUT"
+
   shard:
-    name: shard ${{ matrix.shard }}/8
+    needs: plan
+    name: shard ${{ matrix.shard }}/${{ needs.plan.outputs.shards }}
     runs-on: ubuntu-latest
     timeout-minutes: 340
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        shard: ${{ fromJSON(needs.plan.outputs.list) }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -35,14 +56,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install
         run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
       - name: Build packages/pca and its workspace dependencies (the harness loads their dist/)
         run: pnpm -r --filter=@atlasauth/pca... run build
-      - name: Full run, shard ${{ matrix.shard }} of 8
+      - name: Full run, shard ${{ matrix.shard }} of ${{ needs.plan.outputs.shards }}
         run: |
           set +e
-          bash verify/run-conformance.sh full ${{ matrix.shard }} 8 2>&1 | tee "$RUNNER_TEMP/conformance-${{ matrix.shard }}.txt"
+          bash verify/run-conformance.sh full ${{ matrix.shard }} ${{ needs.plan.outputs.shards }} 2>&1 | tee "$RUNNER_TEMP/conformance-${{ matrix.shard }}.txt"
           rc=${PIPESTATUS[0]}
           # a surviving model mutant must be one recorded (and discussed) in tools/pca-formal/results/mutants.txt
           new=$(grep SURVIVED .verify-work/conformance/mutants-${{ matrix.shard }}.txt | awk '{print $1}' | sort -u)

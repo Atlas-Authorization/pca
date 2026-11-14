@@ -1,12 +1,14 @@
 # @atlasauth/pca-store-conformance
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 A conformance kit for Proof-Carrying Authority replay and counter stores. A PCA verifier refuses a replayed action by
 consuming its nonce exactly once (`consumeOnce`) and by advancing per-stream counters (`advance`). This kit runs concurrent
 clients against **your** store adapter, with restarts and process crashes, records the history, and checks it for
 linearizability against that contract. A store that lets the same nonce through twice under load, or forgets consumed
 nonces after a restart, fails here instead of in production.
 
-> Status: **0.4.2, unaudited.**
+> Status: **0.5.0.** A store that passes the suite is checked against the behaviours listed here, not audited.
 
 ## Install
 
@@ -68,3 +70,25 @@ const report = await runConformance(adapter);
 A violation report includes the concurrent history that cannot be explained by any sequential order of operations, so you
 can reproduce it with `--seed`. Typical causes: a read-then-write instead of an atomic insert, a retention window that
 drops keys too early, or a cache in front of the store that is not shared between verifier instances.
+
+## Fail-closed behaviour
+
+The kit reports "pass" only when it saw definite answers and found no violation.
+
+| Missing or invalid | Result |
+|---|---|
+| A history that no sequential order explains (a double accept of one nonce, a counter that moves backward) | `fail`, exit code 1, with the minimal concurrent history |
+| Every call failed or timed out, so nothing definite was observed | `unresolved`, exit code 3; never `pass` |
+| The linearizability search ran out of budget | `unresolved`, exit code 3 |
+| A client that implements neither `consumeOnce` nor `advance` | Throws (exit 2) |
+| Adapter module that cannot be loaded, bad flag, unknown `--tests` name | Exit 2, nothing is reported as passing |
+| Adapter declares `durable: false` | The durability test is reported as `skip` with the reason |
+| Crash test without the adapter's module path | Reported as `skip` with the reason |
+| A store that forgets consumed nonces after a restart, drops live keys early, or accepts an equal counter twice | `fail` in the durability, retention, burst or concurrent test |
+
+## Limits
+
+- It tests the histories it generates (concurrent clients, restarts, crashes, a bounded search); a pass is evidence for those, not a proof that your store is correct under every schedule.
+- A `skip` counts as neither pass nor fail: an adapter that declares itself non-durable, or runs without a module path, passes without those tests, so read the per-test lines and not only the exit code.
+- Restart and crash tests only run when the adapter provides `restart` and `crash`, and the crash test runs your adapter in child processes.
+- It checks the replay and counter contract, not your store's performance, cost or security.

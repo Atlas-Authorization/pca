@@ -1,18 +1,14 @@
+import { hashCanonical, paramsDigest, type PCActn } from '@atlasauth/pca';
 import {
   actionDigest,
-  bondAmount,
-  DEFAULT_BOND_POLICY,
-  hashCanonical,
-  paramsDigest,
   semanticRiskContribution,
   verdictDigest,
   verifySemanticThreshold,
-  type BondPolicy,
   type Calibration,
   type JudgeVerdict,
-  type PCActn,
   type SemanticAttestationOpts,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
+import { bondAmount, DEFAULT_BOND_POLICY, type BondPolicy } from '@atlasauth/pca/ext/optimistic';
 import type { IntentLearner } from './learner';
 import { applyDivergence } from './map';
 import { cellOf, harmMax, harmOf, type Outcome, type VerbSpace } from './omega';

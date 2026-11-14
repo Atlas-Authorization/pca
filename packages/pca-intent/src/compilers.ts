@@ -1,5 +1,6 @@
 import { equivalent } from '@atlasauth/pca-analyzer';
-import { compilePolicy, DEFAULT_CATALOG, nlPrompt, parseNLPolicy, type Catalog, type Caveat, type Completion, type Predicate } from '@atlasauth/pca';
+import { compilePolicy, type Caveat, type Predicate } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, nlPrompt, parseNLPolicy, type Catalog, type Completion } from '@atlasauth/pca/ext/research';
 import { cellRep, cellStats, decodeCell, deriveOmega, verbCellCount, type DeriveOmegaOptions, type HarmModel, DEFAULT_HARM, type Omega } from './omega';
 import { admitter, normalizePolicy, type PolicyInput } from './policy';
 import { backTranslationDiff, claimDiff, type ClaimDiff } from './render';

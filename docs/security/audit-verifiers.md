@@ -11,6 +11,10 @@ Implementations in the matrix: the TypeScript reference, Go, Python, Ruby, PHP, 
 Kotlin and Swift are not in the process-per-vector matrix; their native runners are executed over the same
 core and full corpora instead (see "Kotlin and Swift").
 
+> **Current status.** This page records the audit as it was run, with eight implementations in the matrix.
+> Kotlin and Swift drivers have since been added to the cross-language gate, so the per-vector matrix now
+> covers all ten implementations (the TypeScript reference and the nine native verifiers).
+
 Each verifier runs its own strict JSON parser, its own canonicalizer and its own Ed25519 code on the same raw
 text. We compare the accept/reject verdict and the full check map
 (`wire, version, audience, validity, chain, grant_ref_bound, plan_inclusion, leaf_signature, counter`), so a
@@ -20,10 +24,11 @@ verifier that rejects for a different reason also counts as a disagreement.
 
 The corpus is split in two so that the language mirrors and every native test suite stay small:
 
-* `vectors.json` is the curated **core** (about 1.9 MB): the 172 golden vectors plus a deterministic,
-  representative sample of every adversarial family (90 `adv-*` vectors, for each family the smallest vector of
-  every distinct outcome class and then an even stride) and a sample of the adversarial primitives. Every
-  language's native suite and every public mirror vendors only this file.
+* `vectors.json` is the curated **core**. When this audit ran it held the 172 golden vectors plus a deterministic,
+  representative sample of every adversarial family (90 `adv-*` vectors: for each family the smallest vector of every
+  distinct outcome class and then an even stride) and a sample of the adversarial primitives, about 1.9 MB. It has
+  since grown to 676 vectors (96 `adv-*`), about 6 MB. Every language's native suite and every public mirror vendors
+  only this file.
 * `vectors-adversarial.json.gz` is the **full** adversarial set (about 1.1 MB compressed, 15 MB expanded).
   It is vendored only into the flagship `pca` repository and read by the monorepo gate. Native suites assert
   minimum vector counts, never exact sizes. Before the split `vectors.json` was 20 MB.
@@ -180,6 +185,9 @@ likely why a further 4,209 targeted vectors found nothing. This audit raises the
   vectors: 0 disagreements among ts, go, python, dotnet, rust and java; ruby and php agree with ts on a 6,668-vector run on a
   host with OpenSSL >= 3.5). Ruby and PHP verify ML-DSA through OpenSSL >= 3.5; on an older libcrypto they fail closed, so PQ
   positives are denied there (a host limitation, not a disagreement in the binding logic).
+  The root of the chain is covered the same way: every native verifier accepts a post-quantum or hybrid root only under a
+  verifier-side pin for the root issuer or byte-equality with the stored grant, refuses a pin that disagrees with the stored
+  grant, and runs the 31 `chain_pin` vectors natively.
 * **Post-quantum suites.** Verifiers implement different subsets of the ten signature suites. Vectors that
   need a real PQ verification under an unimplemented suite are skipped (reported, not counted as passed).
   Mutants derived from PQ vectors are committed only when their verdict does not depend on a PQ

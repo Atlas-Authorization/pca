@@ -10,13 +10,15 @@ import { generateKeyPair, encodeKey } from './keys';
 import { PCACTN_MAX_LIFETIME_MS, PCACTN_MAX_SKEW_MS, signPCActnSuite, verifyPCActnCore, type Hook, type PCActn } from './pcactn';
 import { signRevocationEpoch } from './revocation';
 import { AUD, NOW, setup } from './server/fixture.test-util';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /** A well-formed (canonical 43-char b64u) id that is NOT the given one: flip the first character only. */
 const otherId = (id: string): string => (id[0] === 'A' ? 'B' : 'A') + id.slice(1);
 
 const core = (s: ReturnType<typeof setup>, p: PCActn | Record<string, unknown>, over: Record<string, unknown> = {}) =>
-  verifyPCActnCore(p as PCActn, { grant: s.grant, nowEpoch: NOW, audience: AUD, ...over } as never);
+  verifyPCActnCore(p as PCActn, { insecureSkipPlanRootCheck: true, grant: s.grant, nowEpoch: NOW, audience: AUD, ...over } as never);
 
 describe('verifyPCActnCore: audience', () => {
   it('a signed aud with NO verifier audience fails with the normative message; null opts out; a match passes; a mismatch fails', async () => {
@@ -72,7 +74,7 @@ describe('verifyPCActnCore: validity window (every boundary, exact reason)', () 
   });
   it('the default clock is the wall clock (a 2026 fixture is expired "now")', async () => {
     const s = setup();
-    const r = await verifyPCActnCore(s.mk(s.plan[0]!), { grant: s.grant, audience: AUD });
+    const r = await verifyPCActnCore(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, grant: s.grant, audience: AUD });
     expect(r.checks.validity).toBe(Date.now() > NOW + 600_000 ? 'fail' : 'pass');
   });
 });
@@ -126,12 +128,12 @@ describe('verifyPCActnCore: plan, signature, counter', () => {
   });
   it('counter: 0 and a large safe integer pass; negative, fractional and unsafe fail with the reason', async () => {
     const s = setup();
-    expect((await core(s, s.mk(s.plan[0]!, { counter: 0 }))).checks.counter).toBe('pass');
-    expect((await core(s, s.mk(s.plan[0]!, { counter: Number.MAX_SAFE_INTEGER }))).checks.counter).toBe('pass');
+    expect((await core(s, s.mk(s.plan[0]!, { counter: 0 }))).checks.counter_format).toBe('pass');
+    expect((await core(s, s.mk(s.plan[0]!, { counter: Number.MAX_SAFE_INTEGER }))).checks.counter_format).toBe('pass');
     for (const bad of [-1, 1.5]) {
       const r = await core(s, s.mk(s.plan[0]!, { counter: bad }));
       expect(r.allow).toBe(false);
-      expect(r.checks.counter === 'fail' || r.checks.wire === 'fail').toBe(true);
+      expect(r.checks.counter_format === 'fail' || r.checks.wire === 'fail').toBe(true);
     }
   });
 });
@@ -259,10 +261,10 @@ describe('verifyPCActnCore: hooks, attestation gate, zk, bond, errors', () => {
     expect((await core(s, withZk, { hooks: { zk: off } })).checks.zk_compliance).toBe('fail');
     expect('zk_compliance' in (await core(s, s.mk(s.plan[0]!))).checks).toBe(false);
   });
-  it('a bond_ref is surfaced as not-enforced; absent records nothing', async () => {
+  it('a bond_ref is surfaced as unsupported (0.5); absent records nothing', async () => {
     const s = setup();
     const r = await core(s, s.mk(s.plan[0]!, { extra: { bond_ref: 'bond-1' } }));
-    if (r.checks.wire !== 'fail') expect(r.checks.bond).toBe('not-enforced');
+    if (r.checks.wire !== 'fail') expect(r.checks.bond).toBe('unsupported');
     expect('bond' in (await core(s, s.mk(s.plan[0]!))).checks).toBe(false);
   });
   it('a throwing hook is a malformed deny with the message, never an exception; wire failures are terminal and prefixed', async () => {
@@ -290,7 +292,8 @@ describe('verifyPCActnCore: hooks, attestation gate, zk, bond, errors', () => {
 
 describe('verifyPCActn: wrapper behaviours', () => {
   const ctx = (s: ReturnType<typeof setup>) => ({ plan: s.plan, risk: s.lowRisk, params: {} });
-  const base = (s: ReturnType<typeof setup>) => ({ grant: s.grant, now: NOW, audience: AUD });
+  // `require: []`: these tests read the report, they are not about the 0.5 default required checks (see server/breaking-05.test.ts)
+  const base = (s: ReturnType<typeof setup>) => ({ grant: s.grant, now: NOW, audience: AUD, require: [] as string[] });
   it('non-objects and undecodable text fail closed with the documented reasons', async () => {
     const s = setup();
     const n = await verifyPCActn(null as never, base(s));
@@ -306,10 +309,10 @@ describe('verifyPCActn: wrapper behaviours', () => {
   });
   it('a core denial is reported ONCE, first; an allow has no core reason', async () => {
     const s = setup();
-    const d = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), audience: 'other', context: ctx(s) });
+    const d = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), audience: 'other', context: ctx(s) });
     expect(d.reasons[0]).toBe('audience: aud does not match this resource server / instance');
     expect(d.reasons.filter((x) => x.startsWith('audience:')).length).toBe(1);
-    const ok = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { ...ctx(s), budget: { B: 1, tau: NOW, asOf: NOW } } });
+    const ok = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget: { B: 1, tau: NOW, asOf: NOW } } });
     expect(ok.allow).toBe(true);
     expect(ok.reasons.some((x) => x.startsWith('audience:'))).toBe(false);
   });
@@ -317,21 +320,21 @@ describe('verifyPCActn: wrapper behaviours', () => {
     const s = setup();
     const budget = { B: 1, tau: NOW, asOf: NOW };
     const other = setup();
-    const gr = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), grant: other.grant, context: ctx(s) });
+    const gr = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), grant: other.grant, context: ctx(s) });
     expect(gr.checks.grant_ref).toBe('fail');
     expect(gr.reasons).toContain('grant_ref: does not reference the supplied grant');
-    const pa = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { ...ctx(s), params: { nope: 1 }, budget } });
+    const pa = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), params: { nope: 1 }, budget } });
     expect(pa.checks.params_digest).toBe('fail');
     expect(pa.reasons).toContain('params_digest: supplied params do not hash to action.params_digest');
-    expect((await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { risk: s.lowRisk, budget } })).checks.params_digest).toBe('not-enforced');
-    const pr = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { ...ctx(s), plan: [s.plan[0]!], budget } });
+    expect((await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { risk: s.lowRisk, budget } })).checks.params_digest).toBe('not-enforced');
+    const pr = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), plan: [s.plan[0]!], budget } });
     expect(pr.checks.plan_root_authorized).toBe('fail');
     expect(pr.reasons).toContain('plan_root_authorized: known plan does not match plan.root');
-    const un = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { ...ctx(s), planAuthorized: false, budget } });
+    const un = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), planAuthorized: false, budget } });
     expect(un.reasons).toContain('plan_root_authorized: the plan root has not been authorized by the principal');
-    expect((await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { ...ctx(s), planAuthorized: true, budget } })).checks.plan_root_authorized).toBe('pass');
-    expect((await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { ...ctx(s), budget } })).checks.plan_root_authorized).toBe('not-enforced');
-    expect((await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { params: {}, risk: s.lowRisk, budget } })).checks.plan_root_authorized).toBe('not-enforced');
+    expect((await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), planAuthorized: true, budget } })).checks.plan_root_authorized).toBe('pass');
+    expect((await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget } })).checks.plan_root_authorized).toBe('not-enforced');
+    expect((await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { params: {}, risk: s.lowRisk, budget } })).checks.plan_root_authorized).toBe('not-enforced');
   });
   it('the revocation epoch is checked against the PCActn freshness.epoch and the grant', async () => {
     const s = setup();
@@ -340,16 +343,16 @@ describe('verifyPCActn: wrapper behaviours', () => {
     const budget = { B: 1, tau: NOW, asOf: NOW };
     const mkEp = (n: number) => s.mk(s.plan[0]!, { extra: { freshness: { beacon_ref: '', epoch: n, accumulator_witness: '' } } });
     const rev = { epoch: ep, guardianPublic: encodeKey(g.publicKey), lastAcceptedEpoch: 2 };
-    const pass = await verifyPCActn(mkEp(3), { ...base(s), context: { ...ctx(s), budget, revocationEpoch: rev } });
+    const pass = await verifyPCActn(mkEp(3), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget, revocationEpoch: rev } });
     expect(pass.checks.freshness).toBe('pass');
-    const old = await verifyPCActn(mkEp(2), { ...base(s), context: { ...ctx(s), budget, revocationEpoch: rev } });
+    const old = await verifyPCActn(mkEp(2), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget, revocationEpoch: rev } });
     expect(old.checks.freshness).toBe('fail');
     expect(old.reasons.some((x) => x.startsWith('freshness: PCActn freshness.epoch 2 predates the revocation epoch 3'))).toBe(true);
-    const roll = await verifyPCActn(mkEp(3), { ...base(s), context: { ...ctx(s), budget, revocationEpoch: { ...rev, lastAcceptedEpoch: 4 } } });
+    const roll = await verifyPCActn(mkEp(3), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget, revocationEpoch: { ...rev, lastAcceptedEpoch: 4 } } });
     expect(roll.reasons.some((x) => x.includes('(rollback)'))).toBe(true);
-    const wrongKey = await verifyPCActn(mkEp(3), { ...base(s), context: { ...ctx(s), budget, revocationEpoch: { ...rev, guardianPublic: encodeKey(generateKeyPair().publicKey) } } });
+    const wrongKey = await verifyPCActn(mkEp(3), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget, revocationEpoch: { ...rev, guardianPublic: encodeKey(generateKeyPair().publicKey) } } });
     expect(wrongKey.reasons).toContain('freshness: revocation epoch not signed by the pinned guardian');
-    expect((await verifyPCActn(mkEp(3), { ...base(s), context: { ...ctx(s), budget } })).checks.freshness).toBe('not-enforced');
+    expect((await verifyPCActn(mkEp(3), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget } })).checks.freshness).toBe('not-enforced');
   });
   it('liveness beacon: replay window, binding and the exact messages', async () => {
     const s = setup();
@@ -358,7 +361,7 @@ describe('verifyPCActn: wrapper behaviours', () => {
     const beacon = issueLivenessBeacon({ issuerSecret: issuer.secretKey, instance: 'inst', scope: s.grant.id, seq: 5, issuedAt: NOW - 1000 });
     const act = s.mk(s.plan[0]!, { extra: { freshness: { beacon_ref: beaconRef(beacon), epoch: 1, accumulator_witness: '' } } });
     const bc = (over: Record<string, unknown> = {}) => ({ beacon, issuers: [encodeKey(issuer.publicKey)], instance: 'inst', ...over });
-    const run = (p: PCActn, b: ReturnType<typeof bc>) => verifyPCActn(p, { ...base(s), context: { ...ctx(s), budget, beacon: b as never } });
+    const run = (p: PCActn, b: ReturnType<typeof bc>) => verifyPCActn(p, { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget, beacon: b as never } });
     expect((await run(act, bc())).checks.beacon).toBe('pass');
     expect((await run(act, bc({ lastAcceptedSeq: 5 }))).checks.beacon).toBe('pass'); // equal seq is not a replay
     expect((await run(act, bc({ lastAcceptedSeq: 4 }))).checks.beacon).toBe('pass');
@@ -370,13 +373,13 @@ describe('verifyPCActn: wrapper behaviours', () => {
     const badIssuer = await run(act, bc({ issuers: [encodeKey(generateKeyPair().publicKey)] }));
     expect(badIssuer.checks.beacon).toBe('fail');
     expect(badIssuer.reasons.some((x) => x.startsWith('beacon: ') && x.length > 'beacon: '.length)).toBe(true);
-    expect((await verifyPCActn(act, { ...base(s), context: { ...ctx(s), budget } })).checks.beacon).toBe('not-enforced');
+    expect((await verifyPCActn(act, { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget } })).checks.beacon).toBe('not-enforced');
   });
   it('reversibility: the authoritative class wins, a stricter declaration is honoured, unknown classes are the most restrictive', async () => {
     const s = setup();
     const budget = { B: 1, tau: NOW, asOf: NOW };
     const run = (decl: string, rs: string | undefined) =>
-      verifyPCActn(s.mk(s.plan[0]!, { tweak: (a) => void (a.reversibility_class = decl) }), { ...base(s), context: { ...ctx(s), budget, ...(rs !== undefined ? { reversibilityClass: rs } : {}) } });
+      verifyPCActn(s.mk(s.plan[0]!, { tweak: (a) => void (a.reversibility_class = decl) }), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget, ...(rs !== undefined ? { reversibilityClass: rs } : {}) } });
     const less = await run('reversible', 'irreversible');
     expect(less.checks.reversibility).toBe('fail');
     expect(less.reasons).toContain("reversibility: declared class 'reversible' is less restrictive than the authoritative 'irreversible'");
@@ -389,27 +392,27 @@ describe('verifyPCActn: wrapper behaviours', () => {
   });
   it('the budget: absent is fail-closed and says so; supplied is recorded as pass', async () => {
     const s = setup();
-    const none = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctx(s) });
+    const none = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: ctx(s) });
     expect(none.checks.budget).toBe('not-enforced');
     expect(none.reasons).toContain('budget: no budget supplied — fail-closed default (B=0, DENY-METERED): any machine-only (t<3) action must step-up / recharge');
-    const some = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { ...ctx(s), budget: { B: 1, tau: NOW, asOf: NOW } } });
+    const some = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget: { B: 1, tau: NOW, asOf: NOW } } });
     expect(some.checks.budget).toBe('pass');
     expect(some.reasons.some((x) => x.startsWith('budget:'))).toBe(false);
   });
   it('delegation depth is the number of hops beyond the root', async () => {
     const s = setup(); // chain = [grant, task] -> depth 1 (delegation_depth max 2 holds)
-    const r = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { ...ctx(s), budget: { B: 1, tau: NOW, asOf: NOW } } });
+    const r = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { ...ctx(s), budget: { B: 1, tau: NOW, asOf: NOW } } });
     expect(r.checks.policy).toBe('pass');
     expect(r.allow).toBe(true);
   });
   it('require: a required check that is absent or not-enforced denies with its reason; a pass does not', async () => {
     const s = setup();
     const budget = { B: 1, tau: NOW, asOf: NOW };
-    const r = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), require: ['counter', 'revocation', 'nonexistent'], context: { ...ctx(s), budget } });
+    const r = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), require: ['counter', 'revocation', 'nonexistent'], context: { ...ctx(s), budget } });
     expect(r.allow).toBe(false);
     expect(r.reasons).toContain('revocation: required check is not-enforced (default-deny: not enforced by this resource server)');
     expect(r.reasons).toContain('nonexistent: required check is absent (default-deny: not enforced by this resource server)');
-    expect(r.reasons.some((x) => x.startsWith('counter:'))).toBe(false);
+    expect(r.reasons.some((x) => x.startsWith('counter_format:'))).toBe(false);
   });
 });
 
@@ -449,18 +452,19 @@ describe('signPCActnSuite: fail-closed key-material errors name the missing fami
 describe('verifyPCActn: survivors of the second mutation round', () => {
   const budget = { B: 1, tau: NOW, asOf: NOW };
   const ctxOf = (s: ReturnType<typeof setup>, extra: Record<string, unknown> = {}) => ({ plan: s.plan, risk: s.lowRisk, params: {}, budget, ...extra });
-  const base = (s: ReturnType<typeof setup>) => ({ grant: s.grant, now: NOW, audience: AUD });
+  // `require: []`: these tests read the report, they are not about the 0.5 default required checks (see server/breaking-05.test.ts)
+  const base = (s: ReturnType<typeof setup>) => ({ grant: s.grant, now: NOW, audience: AUD, require: [] as string[] });
 
   it('an allow verdict reports the exact pass statuses (so a "required" check cannot be satisfied by an empty status)', async () => {
     const s = setup();
-    const v = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctxOf(s, { planAuthorized: true }), require: ['grant_ref', 'params_digest', 'plan_root_authorized', 'budget', 'audience', 'counter', 'grant_ref_bound', 'policy', 'delegated_caveats'] });
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: ctxOf(s, { planAuthorized: true }), require: ['grant_ref', 'params_digest', 'plan_root_authorized', 'budget', 'audience', 'counter_format', 'grant_ref_bound', 'policy', 'delegated_caveats'] });
     expect(v.allow).toBe(true);
-    expect(v.checks).toMatchObject({ grant_ref: 'pass', params_digest: 'pass', plan_root_authorized: 'pass', budget: 'pass', policy: 'pass', delegated_caveats: 'pass', audience: 'pass', counter: 'pass', grant_ref_bound: 'pass' });
+    expect(v.checks).toMatchObject({ grant_ref: 'pass', params_digest: 'pass', plan_root_authorized: 'pass', budget: 'pass', policy: 'pass', delegated_caveats: 'pass', audience: 'pass', counter_format: 'pass', grant_ref_bound: 'pass' });
   });
 
   it('enforceRequired never double-reports a check that already failed', async () => {
     const s = setup();
-    const v = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), audience: 'other', context: ctxOf(s), require: ['audience'] });
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), audience: 'other', context: ctxOf(s), require: ['audience'] });
     expect(v.allow).toBe(false);
     expect(v.reasons.filter((x) => x.includes('required check is'))).toEqual([]);
     expect(v.reasons.filter((x) => x.startsWith('audience:')).length).toBe(1);
@@ -469,7 +473,7 @@ describe('verifyPCActn: survivors of the second mutation round', () => {
 
   it('a grant that binds the agent REQUIRES a bound attestation, with the exact reason', async () => {
     const s = setup({ agentBinding: { operator: 'op' } });
-    const v = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctxOf(s) });
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: ctxOf(s) });
     expect(v.allow).toBe(false);
     expect(v.checks.attestation).toBe('fail');
     expect(v.reasons).toContain('attestation: the grant binds the agent (agent_binding) so a valid, bound attestation is REQUIRED');
@@ -477,33 +481,33 @@ describe('verifyPCActn: survivors of the second mutation round', () => {
 
   it('delegation depth is the hop count beyond the root: a hop capped at depth 0 is violated by a depth-1 chain, depth 1 is allowed', async () => {
     const zero = setup({ taskCaveats: [{ type: 'delegation_depth', max: 0 }] });
-    const bad = await verifyPCActn(zero.mk(zero.plan[0]!), { ...base(zero), context: ctxOf(zero) });
+    const bad = await verifyPCActn(zero.mk(zero.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(zero), context: ctxOf(zero) });
     expect(bad.checks.delegated_caveats).toBe('fail');
     expect(bad.reasons.some((x) => x.startsWith('delegated_caveats: delegation caveat(s) not satisfied: ') && x.length > 'delegated_caveats: delegation caveat(s) not satisfied: '.length)).toBe(true);
     const one = setup({ taskCaveats: [{ type: 'delegation_depth', max: 1 }] });
-    expect((await verifyPCActn(one.mk(one.plan[0]!), { ...base(one), context: ctxOf(one) })).checks.delegated_caveats).toBe('pass');
+    expect((await verifyPCActn(one.mk(one.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(one), context: ctxOf(one) })).checks.delegated_caveats).toBe('pass');
   });
 
   it('the stricter of the declared and the authoritative reversibility class is what delegated caveats see', async () => {
     const s = setup({ taskCaveats: [{ type: 'reversibility_max', class: 'reversible' }] });
     // n1 declares 'reversible'; the RS says 'reversible' too -> within the cap
-    const ok = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctxOf(s, { reversibilityClass: 'reversible' }) });
+    const ok = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: ctxOf(s, { reversibilityClass: 'reversible' }) });
     expect(ok.checks.delegated_caveats).toBe('pass');
     // the agent declares 'irreversible' (stricter than the RS's 'reversible'): the stricter class is honoured -> the cap is exceeded
-    const strict = await verifyPCActn(s.mk(s.plan[0]!, { tweak: (a) => void (a.reversibility_class = 'irreversible') }), { ...base(s), context: ctxOf(s, { reversibilityClass: 'reversible' }) });
+    const strict = await verifyPCActn(s.mk(s.plan[0]!, { tweak: (a) => void (a.reversibility_class = 'irreversible') }), { insecureSkipPlanRootCheck: true, ...base(s), context: ctxOf(s, { reversibilityClass: 'reversible' }) });
     expect(strict.checks.delegated_caveats).toBe('fail');
     // the RS says 'irreversible' and the agent declares 'reversible': hard failure AND the RS class is what the caveat sees
-    const lie = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctxOf(s, { reversibilityClass: 'irreversible' }) });
+    const lie = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: ctxOf(s, { reversibilityClass: 'irreversible' }) });
     expect(lie.checks.reversibility).toBe('fail');
     expect(lie.checks.delegated_caveats).toBe('fail');
     // equal classes: the declared one is used (no change)
-    const eq = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctxOf(s, { reversibilityClass: 'reversible' }) });
+    const eq = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: ctxOf(s, { reversibilityClass: 'reversible' }) });
     expect(eq.checks.reversibility).toBe('pass');
   });
 
   it('an empty capability chain is an ordinary deny (cap_chain fail), never a thrown-and-caught internal error', async () => {
     const s = setup();
-    const v = await verifyPCActn(s.mk(s.plan[0]!, { extra: { cap_chain: [] } }), { ...base(s), context: ctxOf(s) });
+    const v = await verifyPCActn(s.mk(s.plan[0]!, { extra: { cap_chain: [] } }), { insecureSkipPlanRootCheck: true, ...base(s), context: ctxOf(s) });
     expect(v.allow).toBe(false);
     expect(v.checks.cap_chain).toBe('fail');
     expect('malformed' in v.checks).toBe(false);
@@ -515,20 +519,20 @@ describe('verifyPCActn: survivors of the second mutation round', () => {
     const s = setup();
     const a = s.mk(s.plan[1]!);
     const ctx = { plan: s.plan, risk: { reversibility: 0, blastRadius: 0.5, confidence: 0.5, semanticDistance: 1 }, params: s.params, budget };
-    const missing = await verifyPCActn(a, { ...base(s), context: ctx });
+    const missing = await verifyPCActn(a, { insecureSkipPlanRootCheck: true, ...base(s), context: ctx });
     expect(missing.checks.threshold).toBe('fail');
     expect(missing.reasons.some((x) => /^threshold: t=\d \(\w+\) required but no threshold verifier is enforced$/.test(x))).toBe(true);
-    const rejected = await verifyPCActn(a, { ...base(s), context: ctx, hooks: { threshold: () => ({ enforced: true, ok: false }) } });
+    const rejected = await verifyPCActn(a, { insecureSkipPlanRootCheck: true, ...base(s), context: ctx, hooks: { threshold: () => ({ enforced: true, ok: false }) } });
     expect(rejected.checks.threshold).toBe('fail');
     expect(rejected.reasons.some((x) => /^threshold: t=\d required and the threshold proof was rejected$/.test(x))).toBe(true);
-    const passed = await verifyPCActn(a, { ...base(s), context: ctx, hooks: { threshold: () => ({ enforced: true, ok: true, t: missing.requiredThreshold.t }) } });
+    const passed = await verifyPCActn(a, { insecureSkipPlanRootCheck: true, ...base(s), context: ctx, hooks: { threshold: () => ({ enforced: true, ok: true, t: missing.requiredThreshold.t }) } });
     expect(passed.checks.threshold).toBe('pass');
     expect(passed.reasons.some((x) => x.startsWith('threshold:'))).toBe(false);
   });
 
   it('a single-signer action needs no threshold check at all', async () => {
     const s = setup();
-    const v = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: ctxOf(s) });
+    const v = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: ctxOf(s) });
     expect(v.requiredThreshold.t).toBe(1);
     expect(v.checks.threshold).toBe('not-enforced');
     expect(v.reasons.some((x) => x.startsWith('threshold:'))).toBe(false);
@@ -537,9 +541,9 @@ describe('verifyPCActn: survivors of the second mutation round', () => {
   it('informational policy reasons of an ADMITTED action carry the "policy: " prefix; a denial lists them too', async () => {
     const s = setup();
     // no budget: admitted only if r*kappa == 0; the verdict carries the fail-closed budget note plus any policy notes
-    const free = await verifyPCActn(s.mk(s.plan[0]!), { ...base(s), context: { plan: s.plan, risk: s.lowRisk, params: {} } });
+    const free = await verifyPCActn(s.mk(s.plan[0]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { plan: s.plan, risk: s.lowRisk, params: {} } });
     for (const r of free.reasons) expect(typeof r === 'string' && r.length > 0).toBe(true);
-    const denied = await verifyPCActn(s.mk(s.plan[1]!), { ...base(s), context: { plan: s.plan, risk: { reversibility: 0, blastRadius: 0.9, confidence: 0.1, semanticDistance: 1 }, params: s.params, budget } });
+    const denied = await verifyPCActn(s.mk(s.plan[1]!), { insecureSkipPlanRootCheck: true, ...base(s), context: { plan: s.plan, risk: { reversibility: 0, blastRadius: 0.9, confidence: 0.1, semanticDistance: 1 }, params: s.params, budget } });
     expect(denied.allow).toBe(false);
     expect(denied.reasons.length).toBeGreaterThan(0);
   });

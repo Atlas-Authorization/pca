@@ -111,6 +111,7 @@ export async function fakeVerify(pcactn: PCActn, opts?: FakeVerifyOptions): Prom
   // Explicit `audience` (including `null`) is honoured; otherwise default to the PCActn's own aud.
   const audience: string | null = opts && 'audience' in opts ? (opts.audience ?? null) : pcactn.aud;
   return verifyPCActnCore(pcactn, {
+    insecureSkipPlanRootCheck: true, // a test double, never a production verifier
     grant,
     // pca-unsafe-root: allow test double (fakeVerify) for locally built artifacts; a forged PQ root is refused without a pin
     ...(opts?.grant === undefined ? { grantFromArtifact: true } : {}),
@@ -202,3 +203,6 @@ export function tamper(encoded: string, mutate: (p: Record<string, unknown>) => 
   mutate(rec);
   return encodePCActn(decodePCActn(JSON.stringify(rec)));
 }
+
+// Shared acceptance matrix for resource-server adapters (the authorize pipeline through each framework's plumbing).
+export * from './adapter-acceptance';

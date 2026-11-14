@@ -1,0 +1,78 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "m365",
+  "version": "0.5.0",
+  "ns": [
+    "m365"
+  ],
+  "count": 1718,
+  "root": "Gi-scrzo9AqxL40sSg7ocFMI36AbE4ZJuwR5eoBsv98",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 1613,
+    "unreviewed": 105
+  },
+  "stability": "experimental",
+  "redistribution": "permitted",
+  "licence_notes": "The Microsoft Graph OpenAPI description (microsoftgraph/msgraph-metadata) is MIT licensed. Operation ids, parameter names/types and short summaries are carried for a curated slice of the v1.0 surface; the trait review is ours.",
+  "sources": [
+    {
+      "id": "graph-v1",
+      "kind": "openapi",
+      "uri": "https://github.com/microsoftgraph/msgraph-metadata/blob/1fd0ef510f79f3dadb3e083bdebc9496f939a11c/openapi/v1.0/openapi.yaml",
+      "spec_digest": "sha256:69de68b2c895bc608a58229e662e2b3eeb23524385516afc250ff0b8f165ff29",
+      "licence": "MIT",
+      "licence_url": "https://github.com/microsoftgraph/msgraph-metadata/blob/master/LICENSE"
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "34409ebe2d2cca55b0b67916dfd43ecb9155722f7345cd3045b1e2c273dc1059"
+  },
+  "shards": [
+    {
+      "file": "defs/000-m365_applications.jsonl",
+      "count": 622,
+      "bytes": 715954,
+      "sha256": "49ce592fa20e8ae3c4344e6e2e3232d815dcf29c81f71f8f02f7877de55bcdc1",
+      "first": "m365.applications.add_key",
+      "last": "m365.groups.planner.create_plans"
+    },
+    {
+      "file": "defs/001-m365_groups.jsonl",
+      "count": 597,
+      "bytes": 715901,
+      "sha256": "80e4d2bfe3aef37d9a2c0e4b422888b53a6f623cd547e2de1ad2296e1e7a43bc",
+      "first": "m365.groups.planner.list_plans",
+      "last": "m365.users.authentication.list_methods"
+    },
+    {
+      "file": "defs/002-m365_users.jsonl",
+      "count": 499,
+      "bytes": 584885,
+      "sha256": "101e4986e94364ee9df20bb09645787f3b9f5097b4a9455307b8c88d638445ff",
+      "first": "m365.users.authentication.list_operations",
+      "last": "m365.users.wipe_registrations_device_tag"
+    }
+  ],
+  "stats": {
+    "total": 1718,
+    "authored": 1613,
+    "unreviewed": 105,
+    "skipped": {},
+    "dropped_params": 188,
+    "by_effect": {
+      "create": 298,
+      "read": 892,
+      "privilege": 195,
+      "delete": 206,
+      "update": 291,
+      "exec": 6,
+      "send": 37,
+      "publish": 2,
+      "export": 1
+    }
+  }
+}

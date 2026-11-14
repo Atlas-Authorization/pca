@@ -4,23 +4,8 @@
  * session store (duplicate ids, settle, lock hand-off and cleanup). Exact outcomes throughout.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  COUNTED_STATUSES,
-  EVENT_STATUSES,
-  MemoryIntentSessionStore,
-  accContextFor as accContextFor_,
-  accKeyOf as accKeyOf_,
-  accPost as accPost_,
-  accPreState as accPreState_,
-  admitIntentAction,
-  inWindow as inWindow_,
-  isCounted as isCounted_,
-  monitorState as monitorState_,
-  monitorStep as monitorStep_,
-  settleIntentEvent,
-  type EventStatus,
-  type IntentEvent,
-} from './intent-history';
+import { COUNTED_STATUSES, EVENT_STATUSES, accContextFor as accContextFor_, accKeyOf as accKeyOf_, accPost as accPost_, accPreState as accPreState_, admitIntentAction, inWindow as inWindow_, isCounted as isCounted_, monitorState as monitorState_, monitorStep as monitorStep_, settleIntentEvent, type EventStatus, type IntentEvent } from './intent-history';
+import { MemoryIntentSessionStore } from './intent-history-testing';
 import type { AccumulatorDecl, MonitorDecl } from './intent-acc';
 
 // ---- exact outcomes: every call of the module under test is settled, so a thrown error is an outcome compared with
@@ -147,6 +132,13 @@ describe('accPost', () => {
   it('fails closed on an unreadable value or an overflow', () => {
     expect(accPost(SUM, H, { verb: 'pay', params: { total: -1 }, t: T })).toEqual(thrown('accPost: action.params.total must be a non-negative safe integer'));
     expect(accPost(SUM, [ev('pay', { total: Number.MAX_SAFE_INTEGER })], { verb: 'pay', params: { total: 1 }, t: T })).toEqual(thrown('accPost: overflow'));
+  });
+  it('refuses an agg outside sum / count / max / distinct, selected or not, keyed or not', () => {
+    for (const agg of ['SUM', 'tVm', '', 'avg', null, 1, undefined]) {
+      const bad = acc({ agg: agg as never });
+      for (const verb of ['pay', 'look']) expect(accPost(bad, H, { verb, params: { total: 5 }, t: T })).toEqual(thrown('accPost: unknown agg'));
+      expect(accPost({ ...bad, key: 'action.params.k' }, H, { verb: 'pay', params: { total: 5 }, t: T })).toEqual(thrown('accPost: unknown agg'));
+    }
   });
 });
 
@@ -318,7 +310,7 @@ describe('MemoryIntentSessionStore', () => {
     const seen: unknown[] = [];
     const run = (id: string, allow: boolean) =>
       settleA(() =>
-        admitIntentAction(store, {
+        admitIntentAction(store, { requireDurable: false,
           session: 's',
           root,
           event: { id, verb: 'pay', resource: 'r', params: { total: 3 }, t: T },

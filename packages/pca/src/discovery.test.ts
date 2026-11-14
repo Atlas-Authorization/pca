@@ -36,6 +36,8 @@ describe('discovery document', () => {
     const parsed = parseDiscoveryDocument(JSON.parse(JSON.stringify(doc)));
     expect(parsed).toEqual(doc);
     expect(() => parseDiscoveryDocument(null)).toThrow();
+    expect(() => parseDiscoveryDocument({ ...doc, intent: { versions: [2], tiers: { 'a.b': 0 } } })).not.toThrow();
+    expect(() => parseDiscoveryDocument({ ...doc, intent: { versions: [2], tiers: { 'a.b': -0 } } })).toThrow(/tiers/); // strict profile: never -0
     expect(() => parseDiscoveryDocument({ audience: '' })).toThrow(/audience/);
     expect(() => parseDiscoveryDocument({ audience: 'x', pca_versions: ['2'], signature_suites: [], action_header: 'h' })).toThrow(/pca_versions/);
     expect(() => parseDiscoveryDocument({ audience: 'x', pca_versions: [2], signature_suites: 'nope', action_header: 'h' })).toThrow(/signature_suites/);

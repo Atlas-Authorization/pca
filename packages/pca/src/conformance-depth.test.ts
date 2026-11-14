@@ -53,7 +53,7 @@ async function verdict(c: DepthCase): Promise<boolean> {
       } catch {
         return false;
       }
-      return (await verifyPCActnCore(tree as PCActn, { grant: inp.grant as Capability, nowEpoch: inp.now, audience: inp.aud })).allow;
+      return (await verifyPCActnCore(tree as PCActn, { insecureSkipPlanRootCheck: true, grant: inp.grant as Capability, nowEpoch: inp.now, audience: inp.aud })).allow;
     }
     case 'json_parse':
       try {

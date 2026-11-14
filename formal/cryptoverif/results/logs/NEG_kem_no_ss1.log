@@ -1,0 +1,1404 @@
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of (one-session) secrecy of k0 failed:
+  k0 is not defined only by restrictions or assignments.
+Trying equivalence rom(hash)... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Done.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on ss1 inside simplify... At 85, the term (x_O_1 = x1[ri_8]) depends on ss1
+No change
+Eliminated collisions between ss1 and ss0 Probability: 1 / |ss_t|
+(ss1 collides with a value independent of ss1 with probability at most 1 / |ss_t|;
+ ss0 does not depend on ss1)
+Doing global dependency analysis on ss1 inside simplify... At 83, the term (x_O_1 = x1[ri_8]) depends on ss1
+No change
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of (one-session) secrecy of k0 failed:
+  k0 is defined from r_1; at 23, bad usage(s) of r_1.
+Trying equivalence rom(hash)... Failed.
+Trying equivalence ind_cca2(enc)... Failed.
+Doing remove assignments of binder pk... Done.
+Doing remove assignments of binder sk... Done.
+Trying equivalence ind_cca2(enc) with r, rk... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Eliminated collisions between ss1 and ss0 Probability: 1 / |ss_t|
+(ss1 collides with a value independent of ss1 with probability at most 1 / |ss_t|;
+ ss0 does not depend on ss1)
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on ss1 inside simplify... At 77, the term (x_O_1 = x1[ri_8]) depends on ss1
+No change
+Eliminated collisions between ss1 and ss0 Probability: 1 / |ss_t|
+(ss1 collides with a value independent of ss1 with probability at most 1 / |ss_t|;
+ ss0 does not depend on ss1)
+Doing global dependency analysis on ss1 inside simplify... Done. Restarting simplify
+Eliminated collisions between mkin(ss1, ?, ?, ?) and x1 Probability: qH / |ss_t|
+(mkin(ss1, ?, ?, ?) collides with a value independent of ss1 with probability at most 1 / |ss_t|;
+ x1 does not depend on ss1)
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... Done.
+Doing merge branches... No change.
+Proof of (one-session) secrecy of k0 failed:
+  k0 is defined from r_1; at 18, bad usage(s) of r_1.
+Trying equivalence rom(hash)... Failed.
+Trying equivalence ind_cca2(enc)... Failed.
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk <-R hashkey;
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(hash(hk, x1))
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       c1s: ciphertext <- (m_1: ss_t <- ss1; pk_1: pkey <- pk; r <-R enc_seed; enc_r(m_1, pk_1, r));
+       k0: key_t <- hash(hk, mkin(ss0, s2s, c1s, c2s));
+       return(c1s);
+       foreach iD <= NK do
+       cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+       if c1 = c1s then
+         if (c2 = c2s) && (s2 = s2s) then
+           yield
+         else
+           return(hash(hk, mkin(ss1, s2, c1, c2)))
+       else
+         let injbot(m: ss_t) = dec(c1, sk) in
+         return(hash(hk, mkin(m, s2, c1, c2)))
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 2 is
+     c0() :=
+     hk <-R hashkey;
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(hash(hk, x1))
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       m_1: ss_t <- ss1;
+       pk_1: pkey <- pk;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(m_1, pk_1, r);
+       k0: key_t <- hash(hk, mkin(ss0, s2s, c1s, c2s));
+       return(c1s);
+       foreach iD <= NK do
+       cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+       if c1 = c1s then
+         if (c2 = c2s) && (s2 = s2s) then
+           yield
+         else
+           return(hash(hk, mkin(ss1, s2, c1, c2)))
+       else
+         let injbot(m: ss_t) = dec(c1, sk) in
+         return(hash(hk, mkin(m, s2, c1, c2)))
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on m_1 (definition removed, all usages removed)
+  - Remove assignments on pk_1 (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     hk <-R hashkey;
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return(hash(hk, x1))
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pk, r);
+       k0: key_t <- hash(hk, mkin(ss0, s2s, c1s, c2s));
+       return(c1s);
+       foreach iD <= NK do
+       cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+       if c1 = c1s then
+         if (c2 = c2s) && (s2 = s2s) then
+           yield
+         else
+           return(hash(hk, mkin(ss1, s2, c1, c2)))
+       else
+         let injbot(m: ss_t) = dec(c1, sk) in
+         return(hash(hk, mkin(m, s2, c1, c2)))
+     ))
+
+
+Applying equivalence rom(hash)
+  - Equivalence rom(hash) with variables: hk -> hk_1
+yields
+
+Game 4 is
+     c0() :=
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return((x_O: hin <- x1; find [unique] u_11 = ri_11 <= qH suchthat defined(x_O[ri_11], r_1[ri_11]) && (x_O = x_O[ri_11]) then r_1[u_11] orfind  suchthat defined(x_O_1, r_2) && (x_O = x_O_1) then r_2 orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x_O = x_O_2[ri_10]) then r_3[u_10] orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x_O = x_O_3[ri_9]) then r_4[u_9] else r_1 <-R key_t; r_1))
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pk, r);
+       k0: key_t <- (x_O_1: hin <- mkin(ss0, s2s, c1s, c2s); find [unique] u_8 = ri_8 <= qH suchthat defined(x_O[ri_8], r_1[ri_8]) && (x_O_1 = x_O[ri_8]) then r_1[u_8] else r_2 <-R key_t; r_2);
+       return(c1s);
+       foreach iD <= NK do
+       cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+       if c1 = c1s then
+         if (c2 = c2s) && (s2 = s2s) then
+           yield
+         else
+           return((x_O_2: hin <- mkin(ss1, s2, c1, c2); {114}find [unique] u_5 = ri_5 <= qH suchthat defined(x_O[ri_5], r_1[ri_5]) && (x_O_2 = x_O[ri_5]) then r_1[u_5] orfind  suchthat defined(x_O_1, r_2) && {125}(x_O_2 = x_O_1) then r_2 orfind u_4 = ri_4 <= NK suchthat defined(x_O_2[ri_4], r_3[ri_4]) && (x_O_2 = x_O_2[ri_4]) then r_3[u_4] orfind u_3 = ri_3 <= NK suchthat defined(x_O_3[ri_3], r_4[ri_3]) && {142}(x_O_2 = x_O_3[ri_3]) then r_4[u_3] else r_3 <-R key_t; r_3))
+       else
+         let injbot(m: ss_t) = dec(c1, sk) in
+         return((x_O_3: hin <- mkin(m, s2, c1, c2); {170}find [unique] u_2 = ri_2 <= qH suchthat defined(x_O[ri_2], r_1[ri_2]) && (x_O_3 = x_O[ri_2]) then r_1[u_2] orfind  suchthat defined(x_O_1, r_2) && {181}(x_O_3 = x_O_1) then r_2 orfind u_1 = ri_1 <= NK suchthat defined(x_O_2[ri_1], r_3[ri_1]) && {188}(x_O_3 = x_O_2[ri_1]) then r_3[u_1] orfind u = ri <= NK suchthat defined(x_O_3[ri], r_4[ri]) && (x_O_3 = x_O_3[ri]) then r_4[u] else r_4 <-R key_t; r_4))
+     ))
+
+
+Applying simplify (non-expanded game)
+  - Simplification pass
+    - Replaced (x_O_2 = x_O_3[ri_3]) with false at 142
+    - Remove branch 4 in find at 114
+    - Replaced (x_O_2 = x_O_1) with false at 125
+    - Remove branch 2 in find at 114
+    - Replaced (x_O_3 = x_O_2[ri_1]) with false at 188
+    - Remove branch 3 in find at 170
+    - Replaced (x_O_3 = x_O_1) with false at 181
+    - Remove branch 2 in find at 170
+yields
+
+Game 5 is
+     c0() :=
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       return((x_O: hin <- x1; find [unique] u_11 = ri_11 <= qH suchthat defined(x_O[ri_11], r_1[ri_11]) && (x_O = x_O[ri_11]) then r_1[u_11] orfind  suchthat defined(x_O_1, r_2) && (x_O = x_O_1) then r_2 orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x_O = x_O_2[ri_10]) then r_3[u_10] orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x_O = x_O_3[ri_9]) then r_4[u_9] else r_1 <-R key_t; r_1))
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pk, r);
+       k0: key_t <- (x_O_1: hin <- mkin(ss0, s2s, c1s, c2s); find [unique] u_8 = ri_8 <= qH suchthat defined(x_O[ri_8], r_1[ri_8]) && (x_O_1 = x_O[ri_8]) then r_1[u_8] else r_2 <-R key_t; r_2);
+       return(c1s);
+       foreach iD <= NK do
+       cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+       if c1 = c1s then
+         if (c2 = c2s) && (s2 = s2s) then
+           yield
+         else
+           return((x_O_2: hin <- mkin(ss1, s2, c1, c2); find [unique] u_5 = ri_5 <= qH suchthat defined(x_O[ri_5], r_1[ri_5]) && (x_O_2 = x_O[ri_5]) then r_1[u_5] orfind u_4 = ri_4 <= NK suchthat defined(x_O_2[ri_4], r_3[ri_4]) && (x_O_2 = x_O_2[ri_4]) then r_3[u_4] else r_3 <-R key_t; r_3))
+       else
+         let injbot(m: ss_t) = dec(c1, sk) in
+         return((x_O_3: hin <- mkin(m, s2, c1, c2); find [unique] u_2 = ri_2 <= qH suchthat defined(x_O[ri_2], r_1[ri_2]) && (x_O_3 = x_O[ri_2]) then r_1[u_2] orfind u = ri <= NK suchthat defined(x_O_3[ri], r_4[ri]) && (x_O_3 = x_O_3[ri]) then r_4[u] else r_4 <-R key_t; r_4))
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 6 is
+     c0() :=
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- x1;
+       find [unique] u_11 = ri_11 <= qH suchthat defined(x_O[ri_11], r_1[ri_11]) && (x_O = x_O[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x_O = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x_O = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x_O = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pk, r);
+       x_O_1: hin <- mkin(ss0, s2s, c1s, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(x_O[ri_8], r_1[ri_8]) && (x_O_1 = x_O[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(x_O[ri_5], r_1[ri_5]) && (x_O_2 = x_O[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(x_O_2[ri_4], r_3[ri_4]) && (x_O_2 = x_O_2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(x_O[ri_2], r_1[ri_2]) && (x_O_3 = x_O[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(x_O_3[ri], r_4[ri]) && (x_O_3 = x_O_3[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(x_O[ri_5], r_1[ri_5]) && (x_O_2 = x_O[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(x_O_2[ri_4], r_3[ri_4]) && (x_O_2 = x_O_2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(x_O[ri_2], r_1[ri_2]) && (x_O_3 = x_O[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(x_O_3[ri], r_4[ri]) && (x_O_3 = x_O_3[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on x_O (definition point kept, all usages removed)
+yields
+
+Game 7 is
+     c0() :=
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+ {16}  find [unique] u_11 = ri_11 <= qH suchthat defined(x1[ri_11], x_O[ri_11], r_1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pk, r);
+       x_O_1: hin <- mkin(ss0, s2s, c1s, c2s);
+ {81}  find [unique] u_8 = ri_8 <= qH suchthat defined(x1[ri_8], x_O[ri_8], r_1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+{121}        find [unique] u_5 = ri_5 <= qH suchthat defined(x1[ri_5], x_O[ri_5], r_1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(x_O_2[ri_4], r_3[ri_4]) && {137}(x_O_2 = x_O_2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+{168}      find [unique] u_2 = ri_2 <= qH suchthat defined(x1[ri_2], x_O[ri_2], r_1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(x_O_3[ri], r_4[ri]) && {184}(x_O_3 = x_O_3[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+{234}        find [unique] u_5 = ri_5 <= qH suchthat defined(x1[ri_5], x_O[ri_5], r_1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(x_O_2[ri_4], r_3[ri_4]) && {250}(x_O_2 = x_O_2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+{281}      find [unique] u_2 = ri_2 <= qH suchthat defined(x1[ri_2], x_O[ri_2], r_1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(x_O_3[ri], r_4[ri]) && {297}(x_O_3 = x_O_3[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying simplify [probability 1 / |ss_t|]
+  - Simplification pass
+    - Replaced (x_O_3 = x_O_3[ri]) with ((s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri])) at 297
+    - Replaced defined condition x_O_3[ri], r_4[ri] with r_4[ri], c2[ri], c1[ri], s2[ri] in find at 281
+    - Replaced defined condition x1[ri_2], x_O[ri_2], r_1[ri_2] with r_1[ri_2], x1[ri_2] in find at 281
+    - Replaced (x_O_2 = x_O_2[ri_4]) with ((s2 = s2[ri_4]) && (c2 = c2[ri_4])) at 250
+    - Replaced defined condition x_O_2[ri_4], r_3[ri_4] with r_3[ri_4], c2[ri_4], s2[ri_4] in find at 234
+    - Replaced defined condition x1[ri_5], x_O[ri_5], r_1[ri_5] with r_1[ri_5], x1[ri_5] in find at 234
+    - Replaced (x_O_3 = x_O_3[ri]) with ((s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri])) at 184
+    - Replaced defined condition x_O_3[ri], r_4[ri] with r_4[ri], c2[ri], c1[ri], s2[ri] in find at 168
+    - Replaced defined condition x1[ri_2], x_O[ri_2], r_1[ri_2] with r_1[ri_2], x1[ri_2] in find at 168
+    - Replaced (x_O_2 = x_O_2[ri_4]) with ((s2 = s2[ri_4]) && (c2 = c2[ri_4])) at 137
+    - Replaced defined condition x_O_2[ri_4], r_3[ri_4] with r_3[ri_4], c2[ri_4], s2[ri_4] in find at 121
+    - Replaced defined condition x1[ri_5], x_O[ri_5], r_1[ri_5] with r_1[ri_5], x1[ri_5] in find at 121
+    - Replaced defined condition x1[ri_8], x_O[ri_8], r_1[ri_8] with r_1[ri_8], x1[ri_8] in find at 81
+    - Replaced defined condition x1[ri_11], x_O[ri_11], r_1[ri_11] with r_1[ri_11], x1[ri_11] in find at 16
+yields
+
+Game 8 is
+     c0() :=
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       x_O: hin <- cst_hin;
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pk, r);
+       x_O_1: hin <- mkin(ss0, s2s, c1s, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying move all binders
+  - Move assignment to x_O
+yields
+
+Game 9 is
+     c0() :=
+     rk <-R keyseed;
+     pk: pkey <- pkgen(rk);
+     sk: skey <- skgen(rk);
+     return(pk);
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pk, r);
+       x_O_1: hin <- mkin(ss0, s2s, c1s, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying remove assignments of binder pk
+  - Remove assignments on pk (definition removed, all usages removed)
+yields
+
+Game 10 is
+     c0() :=
+     rk <-R keyseed;
+     sk: skey <- skgen(rk);
+     return(pkgen(rk));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pkgen(rk), r);
+       x_O_1: hin <- mkin(ss0, s2s, c1s, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, sk) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying remove assignments of binder sk
+  - Remove assignments on sk (definition removed, all usages removed)
+yields
+
+Game 11 is
+     c0() :=
+     rk <-R keyseed;
+     return(pkgen(rk));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r <-R enc_seed;
+       c1s: ciphertext <- enc_r(ss1, pkgen(rk), r);
+       x_O_1: hin <- mkin(ss0, s2s, c1s, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, skgen(rk)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec(c1, skgen(rk)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying equivalence ind_cca2(enc) with r, rk [probability Penc(time_1, NK)]
+  - Equivalence ind_cca2(enc) with variables: r -> r1, rk -> r_1
+yields
+
+Game 12 is
+     c0() :=
+     rk_1 <-R keyseed;
+     return(pkgen2(rk_1));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r_5 <-R enc_seed;
+       c1s: ciphertext <- (x1_1: ss_t <- ss1; m1: ciphertext <- enc_r2(Z(x1_1), pkgen2(rk_1), r_5); m1);
+       x_O_1: hin <- mkin(ss0, s2s, c1s, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = (m_3: ciphertext <- c1; {159}if defined(x1_1, m1) && (encode_idx_rk() = encode_idx_rk()) && (m1 = m_3) then injbot(x1_1) else dec2(m_3, skgen2(rk_1))) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = (m_2: ciphertext <- c1; {306}if defined(x1_1, m1) && (encode_idx_rk() = encode_idx_rk()) && (m1 = m_2) then injbot(x1_1) else dec2(m_2, skgen2(rk_1))) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying expand [probability 1 / |ss_t|]
+  - Expand if/find/let
+    - Remove branch 1 in find at 306
+    - Find at 306 removed (else branch kept if any)
+    - Remove branch 1 in find at 159
+    - Find at 159 removed (else branch kept if any)
+yields
+
+Game 13 is
+     c0() :=
+     rk_1 <-R keyseed;
+     return(pkgen2(rk_1));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r_5 <-R enc_seed;
+       x1_1: ss_t <- ss1;
+       m1: ciphertext <- enc_r2(Z(x1_1), pkgen2(rk_1), r_5);
+       c1s: ciphertext <- m1;
+       x_O_1: hin <- mkin(ss0, s2s, c1s, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           m_3: ciphertext <- c1;
+           let injbot(m: ss_t) = dec2(m_3, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(c1s);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = c1s then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           m_2: ciphertext <- c1;
+           let injbot(m: ss_t) = dec2(m_2, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on x1_1 (definition removed, all usages removed)
+  - Remove assignments on c1s (definition removed, all usages removed)
+  - Remove assignments on m_2 (definition removed, all usages removed)
+  - Remove assignments on m_3 (definition removed, all usages removed)
+yields
+
+Game 14 is
+     c0() :=
+     rk_1 <-R keyseed;
+     return(pkgen2(rk_1));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r_5 <-R enc_seed;
+       m1: ciphertext <- {62}enc_r2(Z(ss1), pkgen2(rk_1), r_5);
+       x_O_1: hin <- mkin(ss0, s2s, m1, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying simplify [probability 1 / |ss_t|]
+  - Simplification pass
+    - Replaced enc_r2(Z(ss1), pkgen2(rk_1), r_5) with enc_r2(Zss, pkgen2(rk_1), r_5) at 62
+yields
+
+Game 15 is
+     c0() :=
+     rk_1 <-R keyseed;
+     return(pkgen2(rk_1));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_10 = ri_10 <= NK suchthat defined(x_O_2[ri_10], r_3[ri_10]) && (x1 = x_O_2[ri_10]) then
+         return(r_3[u_10])
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r_5 <-R enc_seed;
+       m1: ciphertext <- enc_r2(Zss, pkgen2(rk_1), r_5);
+       x_O_1: hin <- mkin(ss0, s2s, m1, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_5 = ri_5 <= qH suchthat defined(r_1[ri_5], x1[ri_5]) && (x_O_2 = x1[ri_5]) then
+               return(r_1[u_5])
+             orfind u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying simplify [probability qH / |ss_t|]
+  - Global dependency analysis on ss1
+yields
+
+Game 16 is
+     c0() :=
+     rk_1 <-R keyseed;
+     return(pkgen2(rk_1));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       ss1 <-R ss_t;
+       r_5 <-R enc_seed;
+       m1: ciphertext <- enc_r2(Zss, pkgen2(rk_1), r_5);
+       x_O_1: hin <- mkin(ss0, s2s, m1, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             x_O_2: hin <- mkin(ss1, s2, c1, c2);
+             find [unique] u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying move all binders
+  - Move assignment to x_O_2
+  - Move assignment to x_O_2
+  - Move random number generation ss1
+yields
+
+Game 17 is
+     c0() :=
+     rk_1 <-R keyseed;
+     return(pkgen2(rk_1));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       r_5 <-R enc_seed;
+       m1: ciphertext <- enc_r2(Zss, pkgen2(rk_1), r_5);
+       x_O_1: hin <- mkin(ss0, s2s, m1, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         ss1 <-R ss_t;
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             find [unique] u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         ss1 <-R ss_t;
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             find [unique] u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+
+Applying SA rename new without array accesses and remove assignments of findcond
+  - Rename variable ss1 into ss1_2, ss1_1
+yields
+
+Game 18 is
+     c0() :=
+     rk_1 <-R keyseed;
+     return(pkgen2(rk_1));
+     ((
+       foreach iH <= qH do
+       ch1(x1: hin) :=
+       find [unique] u_11 = ri_11 <= qH suchthat defined(r_1[ri_11], x1[ri_11]) && (x1 = x1[ri_11]) then
+         return(r_1[u_11])
+       orfind  suchthat defined(x_O_1, r_2) && (x1 = x_O_1) then
+         return(r_2)
+       orfind u_9 = ri_9 <= NK suchthat defined(x_O_3[ri_9], r_4[ri_9]) && (x1 = x_O_3[ri_9]) then
+         return(r_4[u_9])
+       else
+         r_1 <-R key_t;
+         return(r_1)
+     ) | (
+       cC(c2s: ct2_t, s2s: ss2_t) :=
+       r_5 <-R enc_seed;
+       m1: ciphertext <- enc_r2(Zss, pkgen2(rk_1), r_5);
+       x_O_1: hin <- mkin(ss0, s2s, m1, c2s);
+       find [unique] u_8 = ri_8 <= qH suchthat defined(r_1[ri_8], x1[ri_8]) && (x_O_1 = x1[ri_8]) then
+       (
+         k0: key_t <- r_1[u_8];
+         ss1_2 <-R ss_t;
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             find [unique] u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+       )
+       else
+         r_2 <-R key_t;
+         k0: key_t <- r_2;
+         ss1_1 <-R ss_t;
+         return(m1);
+         foreach iD <= NK do
+         cD(c1: ciphertext, c2: ct2_t, s2: ss2_t) :=
+         if c1 = m1 then
+           if (c2 = c2s) && (s2 = s2s) then
+             yield
+           else
+             find [unique] u_4 = ri_4 <= NK suchthat defined(r_3[ri_4], c2[ri_4], s2[ri_4]) && (s2 = s2[ri_4]) && (c2 = c2[ri_4]) then
+               return(r_3[u_4])
+             else
+               r_3 <-R key_t;
+               return(r_3)
+         else
+           let injbot(m: ss_t) = dec2(c1, skgen2(rk_1)) in
+           x_O_3: hin <- mkin(m, s2, c1, c2);
+           find [unique] u_2 = ri_2 <= qH suchthat defined(r_1[ri_2], x1[ri_2]) && (x_O_3 = x1[ri_2]) then
+             return(r_1[u_2])
+           orfind u = ri <= NK suchthat defined(r_4[ri], c2[ri], c1[ri], s2[ri]) && (s2 = s2[ri]) && (c1 = c1[ri]) && (c2 = c2[ri]) then
+             return(r_4[u])
+           else
+             r_4 <-R key_t;
+             return(r_4)
+     ))
+
+RESULT time_1 = qH^2 * time(= hin, maxlength(game 11: x1), maxlength(game 11: x1)) + qH * time(= hin, maxlength(game 11: x1), maxlength(game 11: x_O_1)) + qH * NK * time(= hin, maxlength(game 11: x1), maxlength(game 11: x_O_2)) + qH * NK * time(= hin, maxlength(game 11: x1), maxlength(game 11: x_O_3)) + time(mkin, maxlength(game 11: c1s)) + qH * time(= hin, maxlength(game 11: x_O_1), maxlength(game 11: x1)) + NK * time(= ciphertext, maxlength(game 11: c1), maxlength(game 11: c1s)) + NK * qH * time(= hin, maxlength(game 11: x_O_2), maxlength(game 11: x1)) + NK * time(let injbot) + NK * time(mkin, maxlength(game 11: c1)) + NK * qH * time(= hin, maxlength(game 11: x_O_3), maxlength(game 11: x1)) + NK^2 * time(= ciphertext, maxlength(game 11: c1), maxlength(game 11: c1)) + time
+RESULT Could not prove one-session secrecy of k0.

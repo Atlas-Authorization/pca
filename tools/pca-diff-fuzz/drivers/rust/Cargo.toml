@@ -4,6 +4,11 @@ version = "0.0.0"
 edition = "2021"
 [dependencies]
 # `less`: the LESS suites through the patched reference C (sdks/pca-less-c), so the gate compares them too.
-atlas-pca = { path = "../../../../sdks/rust-pca", features = ["less"] }
+# `fndsa-sign`: the `produce` kind signs FN-DSA exactly (from the vector's SHAKE256 sign seed), so the producer layer compares it.
+atlas-pca = { path = "../../../../sdks/rust-pca", features = ["less", "fndsa-sign"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
+[features]
+default = ["fndsa-sign"]
+# mirrors the crate feature so the shared producer dispatch's `cfg(feature = "fndsa-sign")` holds here too
+fndsa-sign = []
 [workspace]

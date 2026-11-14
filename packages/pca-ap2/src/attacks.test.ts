@@ -181,7 +181,7 @@ describe('direct constraint semantics (stricter than the reference SDK where not
     expect(ctx(500)).toEqual([]); // 500 + 1000 = 1500 = 15.00 USD
     expect(ctx(501)).toHaveLength(1);
     expect(checkPaymentConstraints(popen(b), closed(), { now: NOW_S })).toEqual(['mandate context is required to evaluate a budget']);
-    expect(run([{ type: 'payment.budget', currency: 'JPY', max: 1 }], closed({ payment_amount: { amount: 1, currency: 'JPY' } }))[0]).toMatch(/unsupported/);
+    expect(run([{ type: 'payment.budget', currency: 'JPY', max: 1 }], closed({ payment_amount: { amount: 1, currency: 'JPY' } })).join()).not.toMatch(/unsupported/);
     expect(run([{ type: 'payment.budget', currency: 'USD', max: 10.001 }], closed())[0]).toMatch(/whole number of minor units/);
   });
 

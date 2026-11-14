@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { KeyObject } from 'node:crypto';
-import type { MeasuredIdentity } from '@atlasauth/pca';
+import type { MeasuredIdentity } from '@atlasauth/pca/ext/attestation';
 import { serializeSevSnpReport } from './test-support/sevsnp-report';
 import {
   EAT_TYP,
@@ -270,6 +270,11 @@ describe('appraise — RATS appraisal-policy split (evidence, referenceValues, e
     const r = appraise(unknown, { minTcb: 100 });
     expect(r.tier).toBe('rejected');
     expect(r.reasons.join(' ')).toMatch(/unknown format|failing closed/i);
+  });
+
+  it('rejected (fail closed) on a -0 TCB component (strict profile)', () => {
+    const negZero = claimsWith({ sevsnp: evidence({ reported_tcb: { bootloader: 3, tee: -0, snp: 20, microcode: 210 } }) });
+    expect(appraise(negZero, { minTcb: { bootloader: 3, tee: 0, snp: 20, microcode: 210 } }).tier).toBe('rejected');
   });
 
   it('contraindicated for a measurement not in reference values (runtime swap)', () => {

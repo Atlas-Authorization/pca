@@ -1,0 +1,38 @@
+(* PCA -- VOPRF verifiability against an active network adversary (packages/pca-oprf, RFC 9497 mode 0x01), ProVerif.
+   The client blinds H2G(x) with a fresh scalar, sends it, and accepts the server's answer only if the DLEQ proof verifies
+   under the PINNED public key. Query: an accepted output is always the PRF value under the pinned key (BadAccept is
+   unreachable). The adversary controls the network, may ask the server to evaluate any element, and may choose x.
+   Negative control (marker CHK removed): without the proof check an answer of the adversary's choosing is accepted.
+   Symbolic model: the group, DLEQ soundness and the blinding algebra are an equational theory; obliviousness and the DLEQ
+   extraction are in formal/computational/lean/PcaComp/Oprf.lean. *)
+free c: channel.
+type sk.
+type G.
+type sc.
+type dlproof.  (* `proof` is a ProVerif keyword *)
+fun H2G(bitstring): G.
+fun blind(G, sc): G.
+fun unblind(sc, G): G.
+fun eval(sk, G): G.
+fun dleq(sk, G, G): dlproof.
+fun pkof(sk): bitstring.
+fun chk(bitstring, G, G, dlproof): bool
+  reduc forall k: sk, b: G; chk(pkof(k), b, eval(k, b), dleq(k, b, eval(k, b))) = true.
+equation forall k: sk, h: G, r: sc; unblind(r, eval(k, blind(h, r))) = eval(k, h).
+
+free k: sk [private].
+event BadAccept(bitstring, G).
+event Accepted(bitstring, G).
+query x: bitstring, y: G; event(BadAccept(x, y)).
+query x: bitstring, y: G; event(Accepted(x, y)).
+
+let Server = ! ( in(c, b: G); out(c, (eval(k, b), dleq(k, b, eval(k, b)))) ).
+let Client = ! ( in(c, x: bitstring); new r: sc;
+  let b = blind(H2G(x), r) in out(c, b);
+  in(c, (z: G, p: dlproof));
+  if chk(pkof(k), b, z, p) = true then (*CHK*)
+  let y = unblind(r, z) in
+  event Accepted(x, y);
+  if y <> eval(k, H2G(x)) then event BadAccept(x, y) ).
+
+process out(c, pkof(k)); ( Server | Client )
