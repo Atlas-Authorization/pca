@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-cli",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "The pca dev CLI: decode and explain a PCActn (why it passed or failed each check), mint a dev grant/key, and simulate a policy over actions.",
   "keywords": [
     "cli",
@@ -39,7 +39,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@atlasauth/pca": "workspace:*"
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-actions": "workspace:*",
+    "@atlasauth/pca-dataflow": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
@@ -55,5 +57,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production"
   }
 }

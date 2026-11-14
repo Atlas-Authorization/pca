@@ -10,9 +10,9 @@ import {
   verifyInclusion,
   verifyPCActnCore,
   type Capability,
-  type IntentPolicy,
   type PCActn,
 } from './index';
+import { type IntentPolicy } from './ext/intent';
 import { verifyWithSuite } from './pq-test-support';
 import { type Signer, type ThresholdShare, verifyThreshold } from './threshold';
 
@@ -78,7 +78,7 @@ describe('conformance vectors (wire v2)', () => {
       // Intent Layer v2 (rules 13-15, 19): `context.intent_v2` is the VERIFIER state (schemas, session root, accumulators,
       // map disclosure), passed as-is, exactly as the generator (scripts/gen-conformance-intent-v2.mjs) and every native
       // driver do. Without it every v2 check reports "no ... configured".
-      const r = await verifyPCActnCore(p!, { grant: v.grant, nowEpoch: v.context.now, audience: v.context.aud, ...(v.context.allowed_suites !== undefined ? { allowedSuites: v.context.allowed_suites as never } : {}), ...(v.context.intent_policy_json !== undefined ? { intent: JSON.parse(v.context.intent_policy_json) as IntentPolicy } : v.context.intent_policy !== undefined ? { intent: v.context.intent_policy } : {}), ...(v.context.intent_v2 !== undefined ? { intentV2: v.context.intent_v2 as never } : {}) });
+      const r = await verifyPCActnCore(p!, { insecureSkipPlanRootCheck: true, grant: v.grant, nowEpoch: v.context.now, audience: v.context.aud, ...(v.context.allowed_suites !== undefined ? { allowedSuites: v.context.allowed_suites as never } : {}), ...(v.context.intent_policy_json !== undefined ? { intent: JSON.parse(v.context.intent_policy_json) as IntentPolicy } : v.context.intent_policy !== undefined ? { intent: v.context.intent_policy } : {}), ...(v.context.intent_v2 !== undefined ? { intentV2: v.context.intent_v2 as never } : {}) });
       expect(r.allow).toBe(v.expect.allow);
       if (v.expect.reason_contains !== undefined) expect(String(r.reason ?? '')).toContain(v.expect.reason_contains);
       const got: Record<string, boolean> = {};

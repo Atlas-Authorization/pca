@@ -1,0 +1,11 @@
+{
+ "target": "frost-net verifySignerPoP",
+ "seeds": [
+  {
+   "identifier": 1,
+   "publicKey": "TvTKJzdzTwz9keiNxrjFyO-FzqCpUeDGMFdt-OFMKXQ",
+   "R": "m0WrWqBSxKNmNtmLcA7KUxsrAe7EKtvP1jlKKdYtUfY",
+   "s": "XzJr26votFJWfCWE5mG9w39X07cGLVoI2X1HpSB3PQM"
+  }
+ ]
+}

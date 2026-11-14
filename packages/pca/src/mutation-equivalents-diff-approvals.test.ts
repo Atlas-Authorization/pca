@@ -26,7 +26,7 @@ describe('equivalence: approvals', () => {
   });
   it('EQ-APR-5 opts.goal undefined passes {goal: undefined}, which buildGoalLineage treats as absent', () => {
     const a = { ...real, dryRun: () => ({ allowed: true, t: 2 }) } as unknown as Agent;
-    const r = reviewAction(a, 'v', 'r', undefined, { now: 1 });
+    const r = reviewAction(a, 'v', 'r', undefined, { insecureUnboundApproval: true, now: 1 });
     expect(r.kind === 'step_up' && 'goal' in r.request.lineage).toBe(false);
     expect('goal' in buildGoalLineage(real, 'v', 'r', undefined, { goal: undefined })).toBe(false);
   });

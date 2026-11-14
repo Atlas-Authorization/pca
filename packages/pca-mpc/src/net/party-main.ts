@@ -35,8 +35,10 @@ export interface NodeConfig {
   /** Explicit opt-in for the test hooks; never set by production configs. */
   unsafeTestHooks?: boolean;
   dealerSeed?: string;
-  /** Which offline phase the parties run (default `trusted-dealer`). With `no-dealer` there is no dealer node. */
+  /** Which offline phase the parties run (default `no-dealer`, no dealer node). `trusted-dealer` also needs `insecureTrustedDealer: true`. */
   offline?: 'trusted-dealer' | 'no-dealer';
+  /** Explicit opt-in to the trusted-dealer offline phase (the dealer sees every share and key). */
+  insecureTrustedDealer?: boolean;
   /** TEST ONLY (dealer role): a lying dealer, `c = a*b + keepCDelta` (decimal string); same gating as `behavior`. */
   dealerFault?: { keepCDelta?: string; partnerCDelta?: Array<string | null>; macFaultAtInput?: number };
 }
@@ -86,6 +88,7 @@ async function main(): Promise<void> {
         Q: cfg.Q,
         mesh,
         seed: cfg.dealerSeed ? BigInt(cfg.dealerSeed) : undefined,
+        insecureTrustedDealer: cfg.insecureTrustedDealer,
         macFaultAtInput: df?.macFaultAtInput,
         fault: df
           ? {
@@ -110,6 +113,7 @@ async function main(): Promise<void> {
         input: cfg.input!,
         mesh,
         offline: cfg.offline,
+        insecureTrustedDealer: cfg.insecureTrustedDealer,
         behavior: cfg.behavior,
         unsafeTestHooks: hooksRequested ? true : undefined,
         sessionId: cfg.sessionId,

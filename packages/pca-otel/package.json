@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-otel",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "OpenTelemetry instrumentation for Proof-Carrying Authority: wrap a verification guard so each decision emits a span (tier, decision, budget) and metrics, with a no-op fallback when OpenTelemetry is absent.",
   "keywords": [
     "opentelemetry",
@@ -61,5 +61,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

@@ -18,6 +18,17 @@ fn stub_fmt_nonempty(_a: core::fmt::Arguments<'_>) -> String { String::from("<fm
 // PLUS these, so a harness asserting the size of the checks map must count them (it used to assert exactly 9, which the
 // stub's extra passing check contradicts).
 pub(crate) static mut V2_EXTRA: usize = 0;
+// serde_json's `Map` is an IndexMap (the crate enables `preserve_order`), whose `RandomState::new` reads OS randomness
+// (a foreign call Kani cannot model: 545 checks ended ERROR). This stub returns a FIXED SipHash seed, so the harness runs
+// the real IndexMap/hashbrown insert and lookup code. What the map harnesses assert (get returns exactly what insert
+// stored, or None) does not depend on the seed: insert and get hash the key with the same seed, so the seed only moves
+// where an entry sits, never whether it is found. Fully symbolic keys were tried and ran the solver out of the runner's
+// 15 GB during propositional reduction (SipHash over a symbolic 128-bit key).
+pub(crate) fn stub_random_state_new() -> std::hash::RandomState {
+    let keys: (u64, u64) = (0x0706_0504_0302_0100, 0x0f0e_0d0c_0b0a_0908);
+    // every bit pattern of two u64 is a valid RandomState (two SipHash keys)
+    unsafe { core::mem::transmute::<(u64, u64), std::hash::RandomState>(keys) }
+}
 pub(crate) fn stub_decide_intent_v2(_p: &serde_json::Value, _g: &serde_json::Value, _c: Option<&IntentV2Context>, _now: i64) -> IntentV2Decision {
     let mut d = IntentV2Decision::default();
     if kani::any() {
@@ -631,15 +642,16 @@ mod compositional {
         assert!(m.get(ABSENT[t]).is_none());
         core::mem::forget(model); core::mem::forget(m);
     }
-    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_ver() { json_field1(0) }
-    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_aud() { json_field1(1) }
-    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_iat() { json_field1(2) }
-    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_exp() { json_field1(3) }
-    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_counter() { json_field1(4) }
-    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_grant_ref() { json_field1(5) }
-    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_cap_chain() { json_field1(6) }
+    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::stub(std::hash::RandomState::new, crate::pca::proofs::stub_random_state_new)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_ver() { json_field1(0) }
+    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::stub(std::hash::RandomState::new, crate::pca::proofs::stub_random_state_new)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_aud() { json_field1(1) }
+    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::stub(std::hash::RandomState::new, crate::pca::proofs::stub_random_state_new)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_iat() { json_field1(2) }
+    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::stub(std::hash::RandomState::new, crate::pca::proofs::stub_random_state_new)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_exp() { json_field1(3) }
+    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::stub(std::hash::RandomState::new, crate::pca::proofs::stub_random_state_new)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_counter() { json_field1(4) }
+    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::stub(std::hash::RandomState::new, crate::pca::proofs::stub_random_state_new)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_grant_ref() { json_field1(5) }
+    #[kani::proof] #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)] #[kani::stub(std::hash::RandomState::new, crate::pca::proofs::stub_random_state_new)] #[kani::unwind(11)] #[kani::solver(cadical)] fn json_field1_cap_chain() { json_field1(6) }
     #[kani::proof]
     #[kani::stub(crate::pca::intent_v2::decide_intent_v2, crate::pca::proofs::stub_decide_intent_v2)]
+    #[kani::stub(std::hash::RandomState::new, crate::pca::proofs::stub_random_state_new)]
     #[kani::unwind(6)]
     #[kani::solver(cadical)]
     fn json_value_get_dispatch() {

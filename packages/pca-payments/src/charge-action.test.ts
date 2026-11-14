@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
-  TransparencyLedger,
   encodeKey,
   generateKeyPair,
   pcactnDigest,
-  verifyClaim,
-  verifyLedgerInclusion,
   verifyPCActnCore,
 } from '@atlasauth/pca';
+import { TransparencyLedger, verifyLedgerInclusion } from '@atlasauth/pca/ext/ledger';
+import { verifyClaim } from '@atlasauth/pca/ext/optimistic';
 import { buildPaymentMandate, type PaymentMandateParams } from './mandate';
 import { chargeToPCActn, openChargeBond } from './charge-action';
 
@@ -43,7 +42,7 @@ describe('chargeToPCActn → proof-carrying action', () => {
     expect(pcactn.action.verb).toBe('charge');
     expect(pcactn.risk_claim.r).toBeCloseTo(120 / 500);
 
-    const res = await verifyPCActnCore(pcactn, { grant: m.grant, audience: AUD, nowEpoch: NOW + 1000 });
+    const res = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant: m.grant, audience: AUD, nowEpoch: NOW + 1000 });
     expect(res.allow).toBe(true);
     expect(res.checks.cap_chain).toBe('pass');
     expect(res.checks.plan_inclusion).toBe('pass');

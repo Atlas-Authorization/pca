@@ -1,0 +1,30 @@
+{
+  "name": "pca-guides-b",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable companions to the how-to guides on obligations, leases and break glass, the token vault proxy, spend rails, the sandbox and the MCP pca_need flow.",
+  "scripts": {
+    "obligations-leases-break-glass": "tsx src/obligations-leases-break-glass.ts",
+    "token-vault-proxy": "tsx src/token-vault-proxy.ts",
+    "spend-rails": "tsx src/spend-rails.ts",
+    "sandbox": "tsx src/sandbox.ts",
+    "mcp-pca-need": "tsx src/mcp-pca-need.ts",
+    "start": "npm run obligations-leases-break-glass && npm run token-vault-proxy && npm run spend-rails && npm run sandbox && npm run mcp-pca-need",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "^0.5.0",
+    "@atlasauth/pca-connect": "^0.5.0",
+    "@atlasauth/pca-grants": "^0.5.0",
+    "@atlasauth/pca-mcp": "^0.5.0",
+    "@atlasauth/pca-mcp-rs": "^0.5.0",
+    "@atlasauth/pca-payments": "^0.5.0",
+    "@atlasauth/pca-sandbox": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

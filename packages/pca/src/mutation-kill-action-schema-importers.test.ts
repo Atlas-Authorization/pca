@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   type ActionVerbDecl,
+  type JsonSchemaLike,
   actionSchemaShapeError,
   draftSchemaFromMcpTools,
   draftSchemaFromOpenApi,
@@ -157,7 +158,7 @@ describe('draftSchemaFromMcpTools', () => {
 });
 
 describe('draftSchemaFromOpenApi', () => {
-  const body = (properties: Record<string, unknown>, required?: string[]) => ({ content: { 'application/json': { schema: { properties, ...(required ? { required } : {}) } } } });
+  const body = (properties: Record<string, JsonSchemaLike>, required?: string[]) => ({ content: { 'application/json': { schema: { properties, ...(required ? { required } : {}) } } } });
   it('verbs per operation: kind from x-pca-kind or GET/HEAD; reversibility; verb names; sorted; todos', () => {
     const d = draftSchemaFromOpenApi(
       {

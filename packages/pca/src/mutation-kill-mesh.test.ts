@@ -557,6 +557,21 @@ describe('assembleMeshProof / meshProofSize', () => {
     const p3 = assembleMeshProof({ chain: [root], hops: [d.evidence(root, h1), { ...d.evidence(root, h1), head: { ...h1, sig: 'other' } }], action, leafSecret: kp().secretKey });
     expect(p3.heads).toHaveLength(2);
   });
+  it('the same head body in another member order is the same table entry (keys are canonical JSON)', () => {
+    const { ws, d, root } = bracketed();
+    const h = d.publishHead(ws, 1);
+    const e = d.evidence(root, h);
+    const reordered = Object.fromEntries(Object.entries(h.head).reverse()) as typeof h.head;
+    expect(JSON.stringify(reordered)).not.toBe(JSON.stringify(h.head));
+    const action: MeshAction = { type: 'x', resource: '/', service_domain: d.id, nonce: 'n', at: 1 };
+    const p = assembleMeshProof({ chain: [root], hops: [e, { ...e, head: { ...h, head: reordered } }], action, leafSecret: kp().secretKey });
+    expect(p.heads).toHaveLength(1);
+    expect(p.hops.map((x) => x.head)).toEqual([0, 0]);
+    const leafRe = (l: unknown) => Object.fromEntries(Object.entries(l as object).reverse());
+    const cap = e.revocation.cap;
+    const p2 = assembleMeshProof({ chain: [root], hops: [e, { ...e, revocation: { ...e.revocation, cap: { ...cap, ...(cap.lo ? { lo: leafRe(cap.lo) } : {}), ...(cap.hi ? { hi: leafRe(cap.hi) } : {}) } as typeof cap } }], action, leafSecret: kp().secretKey });
+    expect(p2.rev_leaves).toEqual(p.rev_leaves);
+  });
   it('bracketing leaves are carried once and referenced by index; empty set has no lo/hi keys', () => {
     const { ws, d, root, k1, k2 } = bracketed();
     const c1 = mintRoot({ principalSecret: human.secretKey, principalPublic: pubOf(human.secretKey), holder: pubOf(k2.secretKey), caveats: [{ type: 'scope', actions: ['y'] }] });

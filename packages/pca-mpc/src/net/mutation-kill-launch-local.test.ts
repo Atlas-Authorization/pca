@@ -69,7 +69,7 @@ describe('freePort', () => {
 
 describe('launchLocal (scripted node program)', () => {
   it('trusted-dealer: n parties + one dealer, each given its own complete config', async () => {
-    const r = await launchLocal({ n: 2, Q: 7, vectors: [...V], mainJs: echoJs, dealerSeed: '42', recvTimeoutMs: 1234 });
+    const r = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 2, Q: 7, vectors: [...V], mainJs: echoJs, dealerSeed: '42', recvTimeoutMs: 1234 });
     expect(r.outputs.map((o) => [o.id, o.role, o.exitCode])).toEqual([[0, 'party', 0], [1, 'party', 0], [2, 'dealer', 0]]);
     expect(r.proxyLog).toEqual([]);
     expect(r.wallMs).toBeGreaterThanOrEqual(0);
@@ -85,7 +85,8 @@ describe('launchLocal (scripted node program)', () => {
       expect(c.id).toBe(id);
       expect(c.n).toBe(2);
       expect(c.Q).toBe(7);
-      expect(c.offline).toBeUndefined();
+      expect(c.offline).toBe('trusted-dealer');
+      expect(c.insecureTrustedDealer).toBe(true);
       expect(c.sessionId).toBe(sid);
       expect(c.input).toEqual(id < 2 ? V[id] : undefined);
       expect(c.listenHost).toBe('127.0.0.1');
@@ -106,7 +107,7 @@ describe('launchLocal (scripted node program)', () => {
     expect(new Set(e.map((x) => x.cfg.keyPath)).size).toBe(3);
   });
   it('defaults: recvTimeoutMs 30 s; every node gets a distinct identity', async () => {
-    const r = await launchLocal({ n: 1, vectors: [V[0]], mainJs: echoJs });
+    const r = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 1, vectors: [V[0]], mainJs: echoJs });
     const e = r.outputs.map((o) => o.json as Echo);
     expect(e.map((x) => x.cfg.recvTimeoutMs)).toEqual([T(30_000), T(30_000)]);
     expect(e[0]!.cfg.Q).toBeUndefined();
@@ -127,6 +128,7 @@ describe('launchLocal (scripted node program)', () => {
   });
   it('overrides are merged per node; a test hook marks the config and sets the hook environment for that node only', async () => {
     const r = await launchLocal({
+offline: 'trusted-dealer', insecureTrustedDealer: true,
       n: 2,
       vectors: [...V],
       mainJs: echoJs,
@@ -142,7 +144,7 @@ describe('launchLocal (scripted node program)', () => {
     expect(e[2]!.cfg.dealerFault).toEqual({ macFaultAtInput: 3 });
     expect(e[2]!.cfg.unsafeTestHooks).toBe(true);
     expect(e[2]!.hooksEnv).toBe('1');
-    const ff = await launchLocal({ n: 1, vectors: [V[0]], mainJs: echoJs, overrides: { 0: { frameFault: { kind: 'drop', round: 'x' } } } });
+    const ff = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 1, vectors: [V[0]], mainJs: echoJs, overrides: { 0: { frameFault: { kind: 'drop', round: 'x' } } } });
     expect((ff.outputs[0]!.json as Echo).hooksEnv).toBe('1');
     expect((ff.outputs[1]!.json as Echo).hooksEnv).toBeNull();
   });
@@ -150,7 +152,7 @@ describe('launchLocal (scripted node program)', () => {
     process.env.PCA_MPC_UNSAFE_TEST_HOOKS = '1';
     process.env.PCA_LAUNCH_TEST_MARK = 'inherited';
     try {
-      const r = await launchLocal({ n: 1, vectors: [V[0]], mainJs: echoJs, overrides: { 1: { behavior: { kind: 'crash', round: 'x' } } } });
+      const r = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 1, vectors: [V[0]], mainJs: echoJs, overrides: { 1: { behavior: { kind: 'crash', round: 'x' } } } });
       expect(r.outputs.map((o) => (o.json as Echo).hooksEnv)).toEqual([null, '1']);
       expect(r.outputs.map((o) => (o.json as Echo).mark)).toEqual(['inherited', 'inherited']);
     } finally {
@@ -171,7 +173,7 @@ describe('launchLocal (scripted node program)', () => {
     expect(o.outputs.map((x) => x.json)).toEqual([{ one: 1 }, { one: 1 }]);
   });
   it('a wire fault routes exactly one link (dialer -> target) through a proxy on its own port, with the delay scaled', async () => {
-    const r = await launchLocal({ n: 2, vectors: [...V], mainJs: echoJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'delay', dir: 'c2s', afterBytes: 0, ms: 10 } } });
+    const r = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 2, vectors: [...V], mainJs: echoJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'delay', dir: 'c2s', afterBytes: 0, ms: 10 } } });
     const e = r.outputs.map((o) => o.json as Echo);
     const real = e[0]!.cfg.nodes.map((n) => n.port);
     const seenBy1 = e[1]!.cfg.nodes.map((n) => n.port);
@@ -220,16 +222,16 @@ if (cfg.id === 0) {
 } else process.stdout.write('{}\\n');
 `,
     );
-    const r = await launchLocal({ n: 2, vectors: [...V], mainJs: srvJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'none', dir: 'c2s', afterBytes: 0 } } });
+    const r = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 2, vectors: [...V], mainJs: srvJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'none', dir: 'c2s', afterBytes: 0 } } });
     expect(r.outputs[1]!.json).toMatchObject({ got: 'ok' });
     expect(r.proxyLog).toEqual([]);
-    const r2 = await launchLocal({ n: 2, vectors: [...V], mainJs: srvJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'bitflip', dir: 'c2s', afterBytes: 0 } } });
+    const r2 = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 2, vectors: [...V], mainJs: srvJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'bitflip', dir: 'c2s', afterBytes: 0 } } });
     expect(r2.outputs[1]!.json).toMatchObject({ got: 'ok' });
     // one entry per proxied connection: node 1 retries while node 0 is not listening yet, so a slow runner can log it twice
     expect(r2.proxyLog.length).toBeGreaterThanOrEqual(1);
     expect(new Set(r2.proxyLog)).toEqual(new Set(['fault bitflip c2s after 0B']));
     // a delay fault without ms keeps the proxy's one-second default (the launcher only scales an ms that was given)
-    const r3 = await launchLocal({ n: 2, vectors: [...V], mainJs: srvJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'delay', dir: 'c2s', afterBytes: 0 } } });
+    const r3 = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 2, vectors: [...V], mainJs: srvJs, wireFault: { dialer: 1, target: 0, fault: { kind: 'delay', dir: 'c2s', afterBytes: 0 } } });
     expect(r3.outputs[1]!.json.got).toBe('ok');
     expect(r3.outputs[1]!.json.ms).toBeGreaterThanOrEqual(950);
     expect(r3.proxyLog.length).toBeGreaterThanOrEqual(1);

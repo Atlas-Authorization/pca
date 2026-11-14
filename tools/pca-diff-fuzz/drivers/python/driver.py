@@ -1,7 +1,7 @@
 import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "sdks", "python-pca"))
 sys.setrecursionlimit(1000)
-from atlas_pca import UNSUPPORTED_SUITE, canonicalize_strict, hash_canonical, strict_parse, supported_suites, verify_chain, verify_pcactn_core
+from atlas_pca import UNSUPPORTED_SUITE, canonicalize_strict, evaluate_agent_caveats, policy_caveats, hash_canonical, strict_parse, supported_suites, verify_chain, verify_pcactn_core
 from atlas_pca import intent_v2 as V2, intent_wb as WB
 from atlas_pca.intent_map import commit_leaves, decide_map_primitive
 
@@ -65,6 +65,26 @@ V2_PRIMITIVES = {
     "intent_map": _map,
 }
 
+_PQ_KEYS = {}
+
+
+def _produce(raw):
+    """kind `produce` (README): raw = {op, args, keys, pq_keys?}, one producer vector case; answers {out} or {error: <message>}."""
+    import producer_ops
+    from atlas_pca.ed25519 import allow_insecure_signer
+    allow_insecure_signer()  # the keys are the vector files' fixed test seeds; CI may run without the 'cryptography' package
+    o_ = json.loads(raw)
+    pk = json.dumps(o_.get("pq_keys"), sort_keys=True)
+    if pk not in _PQ_KEYS:  # seeded PQ keygen (SLH-DSA especially) once per key set, not once per line
+        _PQ_KEYS[pk] = producer_ops.PqKeys(o_.get("pq_keys") or {})
+    try:
+        return {"out": producer_ops.run({"op": o_["op"], "args": o_["args"]}, producer_ops.keys_of(o_["keys"]), _PQ_KEYS[pk])}
+    except producer_ops.NotProduced:
+        return {"error": "unsupported_op: " + o_["op"]}
+    except (ValueError, TypeError, KeyError, RuntimeError) as e:
+        return {"error": str(e) or type(e).__name__}
+
+
 inp, outp = sys.argv[1], sys.argv[2]
 with open(inp, encoding="utf-8") as f, open(outp, "w", encoding="utf-8") as o:
     for line in f:
@@ -93,9 +113,23 @@ with open(inp, encoding="utf-8") as f, open(outp, "w", encoding="utf-8") as o:
                 r["checks"] = {k: bool(v) for k, v in g.checks.items()}
                 if UNSUPPORTED_SUITE in (g.reason or ""):
                     r["unsupported_suite"] = g.reason
+            elif c["kind"] == "policy":
+                # Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+                # the agent-native evaluator (predicates + tool_schema) over policy_caveats(grant, chain), as {allow, failed}:
+                # the action context is {action}, the tool call the signed verb + params (the reference's toolCallOf)
+                o_ = json.loads(c["raw"])
+                act = o_["context"].get("action")
+                params = act.get("params") if isinstance(act, dict) else None
+                call = {"tool": act["verb"] if isinstance(act, dict) and isinstance(act.get("verb"), str) else "",
+                        "args": params if isinstance(params, dict) else {}}
+                ok, failed = evaluate_agent_caveats(policy_caveats(o_["grant"], o_["chain"]), o_["context"], {"action": act}, call)
+                r["allow"] = bool(ok)
+                r["failed"] = list(failed)
             elif c["kind"] in V2_PRIMITIVES:
                 # raw = the primitive's input as raw JSON text (README "Raw JSON text members": a bare -0 stays -0.0)
                 r["result"] = V2_PRIMITIVES[c["kind"]](json.loads(c["raw"], parse_int=lambda t: -0.0 if t == "-0" else int(t)))
+            elif c["kind"] == "produce":
+                r.update(_produce(c["raw"]))
             elif c["kind"] == "chain":
                 # R4-01: standalone verify_chain with verifier-side PQ authority; raw = {chain, expected_root_issuer?, pq_pins?, trusted_root?, allowed_suites?}
                 o_ = json.loads(c["raw"])

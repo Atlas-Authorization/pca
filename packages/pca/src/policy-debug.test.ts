@@ -199,7 +199,7 @@ describe('auditPCActn (verifier per-check table + decision explanation)', () => 
       exp: NOW + 60_000,
     });
     const di = deriveDecideInput(p, { plan: nodes, params: {}, risk: lowRisk, budget: fresh, now: NOW, grant: g });
-    const audit = await auditPCActn(p, di, { grant: g, nowEpoch: NOW, audience: 'rs-1' });
+    const audit = await auditPCActn(p, di, { insecureSkipPlanRootCheck: true, grant: g, nowEpoch: NOW, audience: 'rs-1' });
     expect(audit.verify.allow).toBe(true);
     expect(audit.verify.checks).toMatchObject({
       wire: 'pass',
@@ -209,7 +209,7 @@ describe('auditPCActn (verifier per-check table + decision explanation)', () => 
       cap_chain: 'pass',
       plan_inclusion: 'pass',
       leaf_signature: 'pass',
-      counter: 'pass',
+      counter_format: 'pass',
     });
     expect(audit.explanation.decision).toEqual(decide(di));
     expect(audit.explanation.autoAllow).toBe(true);
@@ -228,7 +228,7 @@ describe('auditPCActn (verifier per-check table + decision explanation)', () => 
     });
     p.action = { ...p.action, resource: '/acct/ALL' }; // tamper after signing
     const di = deriveDecideInput(p, { plan: nodes, params: {}, risk: lowRisk, budget: fresh, now: NOW, grant: g });
-    const audit = await auditPCActn(p, di, { grant: g, nowEpoch: NOW, audience: 'rs-1' });
+    const audit = await auditPCActn(p, di, { insecureSkipPlanRootCheck: true, grant: g, nowEpoch: NOW, audience: 'rs-1' });
     expect(audit.verify.allow).toBe(false);
     expect(audit.verify.checks.plan_inclusion).toBe('fail');
     expect(audit.verify.checks.leaf_signature).toBe('fail');

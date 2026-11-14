@@ -1,3 +1,5 @@
+import { setAssuranceLabel } from './assurance';
+import { assertOptionalStringList } from './policy-lists';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 HARDWARE backend — AMD SEV-SNP, REAL report → `HardwareAttestationVerifier` with per-family ARK pins.
@@ -71,7 +73,12 @@ export function pemToDer(pem: string): Uint8Array {
 }
 
 /** Build a `HardwareAttestationVerifier` for genuine AMD SEV-SNP reports. Fails closed. */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createAmdSnpVerifier(opts: AmdSnpVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createAmdSnpVerifierUnlabelled(opts), { level: 'hardware', vendor: 'amd-sev-snp' });
+}
+
+function createAmdSnpVerifierUnlabelled(opts: AmdSnpVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   const pin = opts?.family ? AMD_ARK_SPKI_SHA384[opts.family] : undefined;
@@ -80,6 +87,7 @@ export function createAmdSnpVerifier(opts: AmdSnpVerifierOptions): HardwareAttes
   if (!Array.isArray(opts.policy?.measurements) || opts.policy.measurements.length === 0) {
     throw new TypeError('createAmdSnpVerifier: policy.measurements must be a NON-EMPTY allowlist (accept-all is not permitted)');
   }
+  for (const k of ['hostData', 'chipIds'] as const) assertOptionalStringList('createAmdSnpVerifier', k, opts.policy[k]);
   // Snapshot the policy: the caller's object stays mutable, and the report-level check skips the measurement gate for an
   // EMPTY list, so an allowlist emptied after construction must not become accept-all.
   const policy = { ...opts.policy, measurements: Object.freeze([...opts.policy.measurements]) as string[] };

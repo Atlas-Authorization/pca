@@ -1,6 +1,6 @@
 /** Mutation-kill suite for the SEV-SNP side of index.ts: tolerant report parsing, evidence projection, verifyAmdAttestation, hardware tier. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parseSevSnpReport, toHex } from '@atlasauth/pca';
+import { parseSevSnpReport, toHex } from '@atlasauth/pca/ext/attestation';
 import { ecdsaSign } from './test-support/forge-x509';
 import { serializeSevSnpReport } from './test-support/sevsnp-report';
 import { FORGE_CHIP, forgeAmdChain, type AmdChainOptions } from './test-support/forge-amd';

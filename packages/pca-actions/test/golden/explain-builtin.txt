@@ -1,0 +1,158 @@
+## stripe.charge
+Charge a customer. This action moves money and cannot be undone.
+effective: risk 3, irreversible, blast 900k, escalation: cosign
+grant must carry: amount_cap, count_cap, window
+call must carry: fresh_revocation, idempotency
+traits: pca.irreversible, pca.money_moving
+review: confirmed
+
+## stripe.refund
+Refund a charge. This action moves money and cannot be undone.
+effective: risk 3, irreversible, blast 900k, escalation: cosign
+grant must carry: amount_cap, count_cap, window
+call must carry: fresh_revocation, idempotency
+traits: pca.irreversible, pca.money_moving
+review: confirmed
+
+## stripe.payout
+Pay out funds to a bank account. This action moves money and cannot be undone.
+effective: risk 3, irreversible, blast 900k, escalation: cosign
+grant must carry: amount_cap, count_cap, window
+call must carry: fresh_revocation, idempotency
+traits: pca.irreversible, pca.money_moving
+review: confirmed
+
+## stripe.create_customer
+Create a customer record. This action touches personal data.
+effective: risk 1, rate limited, blast 200k, escalation: auto
+grant must carry: resource_scope
+traits: pca.pii_access
+review: confirmed
+
+## gmail.send
+Send an email. This action sends to people outside your organisation, cannot be undone and touches personal data.
+effective: risk 2, irreversible, blast 800k, escalation: confirm
+grant must carry: rate_cap, recipient_scope, resource_scope
+call must carry: fresh_revocation
+traits: pca.external_communication, pca.irreversible, pca.pii_access
+review: confirmed
+
+## gmail.draft
+Create an email draft. This action touches personal data.
+effective: risk 1, reversible, blast 200k, escalation: auto
+grant must carry: resource_scope
+traits: pca.pii_access
+review: confirmed
+
+## gmail.delete
+Permanently delete a message. This action deletes or destroys data and cannot be undone.
+effective: risk 2, irreversible, blast 800k, escalation: confirm
+grant must carry: resource_scope
+call must carry: fresh_revocation
+traits: pca.destructive, pca.irreversible
+review: confirmed
+
+## github.read
+Read repository contents. This action only reads.
+effective: risk 0, reversible, blast 50k, escalation: auto
+grant must carry: nothing
+traits: none
+review: confirmed
+
+## github.create_pr
+Open a pull request. This action sends to people outside your organisation and cannot be undone.
+effective: risk 2, irreversible, blast 200k, escalation: confirm
+grant must carry: rate_cap, recipient_scope
+call must carry: fresh_revocation
+traits: pca.external_communication, pca.irreversible
+review: confirmed
+
+## github.comment
+Comment on an issue or pull request. This action sends to people outside your organisation and cannot be undone.
+effective: risk 2, irreversible, blast 200k, escalation: confirm
+grant must carry: rate_cap, recipient_scope
+call must carry: fresh_revocation
+traits: pca.external_communication, pca.irreversible
+review: confirmed
+
+## github.merge_pr
+Merge a pull request. This action cannot be undone.
+effective: risk 2, irreversible, blast 500k, escalation: confirm
+grant must carry: nothing
+call must carry: fresh_revocation
+traits: pca.irreversible
+review: confirmed
+
+## github.delete_repo
+Delete a repository. This action deletes or destroys data and cannot be undone.
+effective: risk 2, irreversible, blast 800k, escalation: confirm
+grant must carry: resource_scope
+call must carry: fresh_revocation
+traits: pca.destructive, pca.irreversible
+review: confirmed
+
+## slack.post_message
+Post a message to a channel. This action acts on many items at once, sends to people outside your organisation and cannot be undone.
+effective: risk 2, irreversible, blast 500k, escalation: confirm
+grant must carry: count_cap, rate_cap, recipient_scope
+call must carry: fresh_revocation
+traits: pca.bulk, pca.external_communication, pca.irreversible
+review: confirmed
+
+## slack.read
+Read channel history. This action only reads.
+effective: risk 0, reversible, blast 50k, escalation: auto
+grant must carry: nothing
+traits: none
+review: confirmed
+
+## calendar.create_event
+Create a calendar event. This action sends to people outside your organisation, cannot be undone and touches personal data.
+effective: risk 2, irreversible, blast 200k, escalation: confirm
+grant must carry: rate_cap, recipient_scope, resource_scope
+call must carry: fresh_revocation
+traits: pca.external_communication, pca.irreversible, pca.pii_access
+review: confirmed
+
+## calendar.delete_event
+Delete a calendar event. This action deletes or destroys data.
+effective: risk 2, rate limited, blast 500k, escalation: confirm
+grant must carry: resource_scope
+traits: pca.destructive
+review: confirmed
+
+## files.read
+Read a file. This action acts on many items at once.
+effective: risk 2, reversible, blast 50k, escalation: auto
+grant must carry: count_cap
+traits: pca.bulk
+review: confirmed
+
+## files.write
+Write or overwrite a file. This action acts on many items at once.
+effective: risk 2, rate limited, blast 500k, escalation: auto
+grant must carry: count_cap
+traits: pca.bulk
+review: confirmed
+
+## files.delete
+Delete a file. This action acts on many items at once, deletes or destroys data and cannot be undone.
+effective: risk 2, irreversible, blast 800k, escalation: confirm
+grant must carry: count_cap, resource_scope
+call must carry: fresh_revocation
+traits: pca.bulk, pca.destructive, pca.irreversible
+review: confirmed
+
+## http.get
+HTTP GET. This action acts on many items at once and reaches out to the network.
+effective: risk 2, reversible, blast 50k, escalation: auto
+grant must carry: count_cap, recipient_scope
+traits: pca.bulk, pca.network_egress
+review: confirmed
+
+## http.post
+HTTP POST. This action acts on many items at once and reaches out to the network.
+effective: risk 2, rate limited, blast 500k, escalation: auto
+grant must carry: count_cap, recipient_scope
+traits: pca.bulk, pca.network_egress
+review: confirmed

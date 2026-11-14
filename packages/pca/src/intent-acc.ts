@@ -64,7 +64,18 @@ export interface AccumulatorDecl {
   /** Wallet-held caps (the question cap). */
   cap?: number;
   holder: AccHolder;
+  /**
+   * Whose events the accumulator counts. Absent or `session`: this session's (the default, as before). `principal`, `org`
+   * and `fleet`: every session and delegated agent of that principal / org / fleet share ONE state, keyed by the principal
+   * (never by the grant or session), so N sessions cannot each spend a full cap (W9). Such a state must live in a durable
+   * `BudgetLedger` (budget-ledger.ts); the declaration must carry `domain_max`, which is the cap the ledger enforces
+   * atomically. Only a site-local holder can be scoped (a sequenced holder is already shared across sites by its receipts).
+   */
+  scope?: AccScope;
 }
+
+export type AccScope = 'session' | 'principal' | 'org' | 'fleet';
+export const ACC_SCOPES: readonly AccScope[] = ['session', 'principal', 'org', 'fleet'];
 
 export type MonitorKind = 'requires_prior' | 'precedes' | 'never' | 'always' | 'responds_within';
 export const MONITOR_KINDS: readonly MonitorKind[] = ['requires_prior', 'precedes', 'never', 'always', 'responds_within'];
@@ -119,7 +130,7 @@ const predicateShapeOk = (p: unknown): boolean => isObj(p) && (typeof p.verb ===
 
 export function accumulatorDeclError(a: unknown): string | null {
   if (!isObj(a)) return 'accumulator must be an object';
-  for (const k of Object.keys(a)) if (!['id', 'agg', 'val', 'unit', 'sel', 'win', 'key', 'domain_max', 'cap', 'holder'].includes(k)) return `accumulator: unknown member '${k}'`;
+  for (const k of Object.keys(a)) if (!['id', 'agg', 'val', 'unit', 'sel', 'win', 'key', 'domain_max', 'cap', 'holder', 'scope'].includes(k)) return `accumulator: unknown member '${k}'`;
   if (typeof a.id !== 'string' || !ACC_ID_RE.test(a.id) || RESERVED_NAMES.has(a.id)) return 'accumulator id must match [A-Za-z0-9_]{1,64} and not be __proto__ / constructor / prototype';
   const at = `accumulator '${a.id}'`;
   if (!ACC_AGGS.includes(a.agg as AccAgg)) return `${at}: unknown agg`;
@@ -157,6 +168,13 @@ export function accumulatorDeclError(a: unknown): string | null {
     if (h.root_pq_pk !== undefined && decodeB64uStrict(h.root_pq_pk) === null) return `${at}: holder.root_pq_pk is not canonical base64url`;
     if (h.keys_uri !== undefined && (typeof h.keys_uri !== 'string' || h.keys_uri.length === 0)) return `${at}: holder.keys_uri must be a non-empty string`;
   } else return `${at}: unknown holder kind`;
+  if (a.scope !== undefined) {
+    if (!ACC_SCOPES.includes(a.scope as AccScope)) return `${at}: unknown scope`;
+    if (a.scope !== 'session') {
+      if (h.kind !== 'site_local') return `${at}: a ${String(a.scope)}-scoped accumulator has a site_local holder (the ledger is the holder)`;
+      if (a.domain_max === undefined) return `${at}: a ${String(a.scope)}-scoped accumulator needs domain_max (the cap the ledger enforces)`;
+    }
+  }
   const wallet = h.kind === 'wallet';
   if (wallet !== (sel.event !== undefined)) return `${at}: wallet events are wallet-held and only wallet events are`;
   if (!wallet) {

@@ -245,7 +245,7 @@ async function main() {
   // ═════════════════════════════════════════════════════════════════════════════════════════
   step(6, 'the verifier checks the PCActn offline -> ALLOW, then anchors it');
   // pca-core-verify: allow primitive-by-primitive tour: this stage shows the structural verifier alone; the decision is the Policy VM above (verifyPCActn / requirePCA combine both)
-  const v1 = await verifyPCActnCore(pc1, { grant: G, audience: AUDIENCE });
+  const v1 = await verifyPCActnCore(pc1, { insecureSkipPlanRootCheck: true, grant: G, audience: AUDIENCE });
   say(`verifyPCActnCore   : ${v1.allow ? 'ALLOW' : 'REJECT'}`);
   showChecks(v1.checks);
   const root1 = anchor(pc1);
@@ -265,7 +265,7 @@ async function main() {
   };
   const rogue = emit(rogueNode, {}, 0.1, { proofNode: 'n1' }); // ... using n1's real proof
   // pca-core-verify: allow primitive-by-primitive tour: structural rejection shown on its own, next to the Policy VM's independent denial
-  const vRogue = await verifyPCActnCore(rogue, { grant: G, audience: AUDIENCE });
+  const vRogue = await verifyPCActnCore(rogue, { insecureSkipPlanRootCheck: true, grant: G, audience: AUDIENCE });
   say(`verifyPCActnCore   : ${vRogue.allow ? 'ALLOW' : 'REJECTED'}   reason: ${vRogue.reason}`);
   showChecks(vRogue.checks);
   const dRogue = ask(rogueNode, {}, { semanticDistance: 1, reversibility: 0, blastRadius: 1, taint: 0, confidence: 0.5 });
@@ -288,7 +288,7 @@ async function main() {
     const d = ask(n, params, risk);
     const pc = emit(n, params, d.r);
     // pca-core-verify: allow primitive-by-primitive tour: proof validity printed next to decide(); admission is decided by decide()
-    const v = await verifyPCActnCore(pc, { grant: G, audience: AUDIENCE });
+    const v = await verifyPCActnCore(pc, { insecureSkipPlanRootCheck: true, grant: G, audience: AUDIENCE });
     say(`${label}`);
     say(`  budget before : ${bar(before.B, riskPolicy.bMax)}`);
     say(`  decide        : ${verdict(d)}`);

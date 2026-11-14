@@ -18,7 +18,7 @@ import { encodeKey } from './keys';
 import { DEFAULT_RISK_POLICY } from './risk';
 
 const core = (s: ReturnType<typeof setup>, p: PCActn | Record<string, unknown>, over: Record<string, unknown> = {}) =>
-  verifyPCActnCore(p as PCActn, { grant: s.grant, nowEpoch: NOW, audience: AUD, ...over } as never);
+  verifyPCActnCore(p as PCActn, { insecureSkipPlanRootCheck: true, grant: s.grant, nowEpoch: NOW, audience: AUD, ...over } as never);
 const rndN = (n: number) => crypto.getRandomValues(new Uint8Array(n));
 const rnd = () => rndN(32);
 
@@ -29,12 +29,12 @@ describe('verifyPCActnCore: status marks and exact reasons', () => {
     expect(r.allow).toBe(true);
     expect(r.checks).toMatchObject({
       wire: 'pass', version: 'pass', audience: 'pass', validity: 'pass', cap_chain: 'pass', grant_ref_bound: 'pass',
-      plan_inclusion: 'pass', plan_root_authorized: 'not-enforced', leaf_signature: 'pass', counter: 'pass', taint_gate: 'not-enforced',
+      plan_inclusion: 'pass', plan_root_authorized: 'not-enforced', leaf_signature: 'pass', counter_format: 'pass', taint_gate: 'not-enforced',
     });
   });
-  it('bond_ref marks bond not-enforced; absent leaves it unmarked', async () => {
+  it('bond_ref marks bond unsupported; absent leaves it unmarked', async () => {
     const s = setup();
-    expect((await core(s, s.mk(s.plan[0]!, { extra: { bond_ref: 'b' } }))).checks.bond).toBe('not-enforced');
+    expect((await core(s, s.mk(s.plan[0]!, { extra: { bond_ref: 'b' } }))).checks.bond).toBe('unsupported');
     expect((await core(s, s.mk(s.plan[0]!))).checks.bond).toBeUndefined();
   });
   it('a non-safe-integer verifier clock is a validity failure with its own reason', async () => {
@@ -64,10 +64,10 @@ describe('verifyPCActnCore: status marks and exact reasons', () => {
   });
   it('counter must be a non-negative safe integer (0 allowed)', async () => {
     const s = setup();
-    expect((await core(s, s.mk(s.plan[0]!, { counter: 0 }))).checks.counter).toBe('pass');
+    expect((await core(s, s.mk(s.plan[0]!, { counter: 0 }))).checks.counter_format).toBe('pass');
     const r = await core(s, s.mk(s.plan[0]!, { extra: { counter: -1 } }));
-    expect(r.checks.counter).toBe('fail');
-    expect(r.reason).toBe('counter: missing or not a non-negative safe integer');
+    expect(r.checks.counter_format).toBe('fail');
+    expect(r.reason).toBe('counter_format: missing or not a non-negative safe integer');
     for (const c of [1.5, '1', null]) {
       expect((await core(s, s.mk(s.plan[0]!, { extra: { counter: c } }))).allow, String(c)).toBe(false);
     }
@@ -116,16 +116,16 @@ describe('verifyPCActnCore: leaf suite policy and PQ binding reasons', () => {
     const { sig: _s, ...body }: Record<string, unknown> = { ...s.mk(s.plan[0]!), grant_ref: grant.id, cap_chain: [grant] };
     const pq = mlDsa65Keygen(rnd());
     const signed = signPCActnSuite(body as never, { alg: 'hybrid-ed25519-ml-dsa-65', edLeafSecret: agent.secretKey, mlDsa: pq });
-    const opts = { grant, nowEpoch: NOW, audience: AUD } as never;
+    const opts = { grant, nowEpoch: NOW, audience: AUD, insecureSkipPlanRootCheck: true } as never;
     const r = await verifyPCActnCore(signed, opts);
     expect(r.checks.leaf_signature).toBe('fail');
     expect(r.reason).toContain("leaf_signature: leaf: suite 'hybrid-ed25519-ml-dsa-65' needs a PQ key bound to the signer");
-    const ok = await verifyPCActnCore(signed, { ...(opts as object), allowUnboundPq: true } as never);
+    const ok = await verifyPCActnCore(signed, { insecureSkipPlanRootCheck: true, ...(opts as object), allowUnboundPq: true } as never);
     expect(ok.checks.leaf_signature).toBe('pass');
-    const pol = await verifyPCActnCore(signed, { ...(opts as object), allowUnboundPq: true, allowedSuites: ['ed25519'] } as never);
+    const pol = await verifyPCActnCore(signed, { insecureSkipPlanRootCheck: true, ...(opts as object), allowUnboundPq: true, allowedSuites: ['ed25519'] } as never);
     expect(pol.checks.leaf_signature).toBe('fail');
     expect(pol.reason).toBe("leaf_signature: signature suite 'hybrid-ed25519-ml-dsa-65' is not allowed by this verifier's suite policy");
-    const pol2 = await verifyPCActnCore(signed, { ...(opts as object), allowUnboundPq: true, allowedSuites: ['ed25519', 'hybrid-ed25519-ml-dsa-65'] } as never);
+    const pol2 = await verifyPCActnCore(signed, { insecureSkipPlanRootCheck: true, ...(opts as object), allowUnboundPq: true, allowedSuites: ['ed25519', 'hybrid-ed25519-ml-dsa-65'] } as never);
     expect(pol2.checks.leaf_signature).toBe('pass');
     void holderPqCommitment; void encodeMlDsaPublicKey;
   });
