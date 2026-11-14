@@ -63,11 +63,17 @@ export interface ConsoleView {
   agents: AgentSummary[];
   totals: { actions: number; autos: number; stepUps: number; denies: number; executed: number };
   window: { from: number; to: number };
+  /** Events left out because they had no finite time or no agent id. */
+  dropped: number;
 }
 
 /** Project a stream of activity events into a per-agent console view with a threat read. */
 export function buildConsole(events: ActivityEvent[]): ConsoleView {
   const byAgent = new Map<string, ActivityEvent[]>();
+  // An event with no usable time or agent cannot be placed in a timeline or attributed; it is counted, not guessed.
+  const all = events;
+  events = all.filter((e) => e !== null && typeof e === 'object' && Number.isFinite(e.at) && typeof e.agent === 'string' && e.agent.length > 0);
+  const dropped = all.length - events.length;
   for (const e of events) {
     const arr = byAgent.get(e.agent) ?? [];
     arr.push(e);
@@ -114,7 +120,7 @@ export function buildConsole(events: ActivityEvent[]): ConsoleView {
     { actions: 0, autos: 0, stepUps: 0, denies: 0, executed: 0 },
   );
   const ats = events.map((e) => e.at);
-  return { agents, totals, window: { from: ats.length ? Math.min(...ats) : 0, to: ats.length ? Math.max(...ats) : 0 } };
+  return { agents, totals, window: { from: ats.length ? Math.min(...ats) : 0, to: ats.length ? Math.max(...ats) : 0 }, dropped };
 }
 
 /** Agents whose current threat read is not calm (the console's "anomalies" panel). */
@@ -132,6 +138,7 @@ export interface FreezeSet {
 export const EMPTY_FREEZE: FreezeSet = { frozen: [] };
 
 export function freezeAgent(set: FreezeSet, agent: string): FreezeSet {
+  if (typeof agent !== 'string' || agent.length === 0) throw new TypeError('freezeAgent: agent must be a non-empty string');
   if (set.frozen.includes(agent)) return set;
   return { frozen: [...set.frozen, agent].sort() };
 }
@@ -141,5 +148,7 @@ export function unfreezeAgent(set: FreezeSet, agent: string): FreezeSet {
 }
 
 export function isFrozen(set: FreezeSet, agent: string): boolean {
+  // Fail closed: an action with no identifiable agent, or a malformed set, is treated as frozen.
+  if (typeof agent !== 'string' || agent.length === 0 || set === null || typeof set !== 'object' || !Array.isArray(set.frozen)) return true;
   return set.frozen.includes(agent);
 }

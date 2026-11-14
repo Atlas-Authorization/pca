@@ -27,7 +27,7 @@
 import { createHash, randomBytes, sign as nodeSign, verify as nodeVerify, type KeyObject } from 'node:crypto';
 import { SignJWT, jwtVerify, type KeyLike, type JWTPayload } from 'jose';
 import { assertCanonicalCompactJws, decodeCanonicalBase64url } from '@atlasauth/pca';
-import type { AgentPassport } from '@atlasauth/pca';
+import type { AgentPassport } from '@atlasauth/pca/ext/attestation';
 
 // ---------------------------------------------------------------------------------------------------
 // small JSON + base64url + narrowing helpers (no `any`)
@@ -145,6 +145,7 @@ export function ed25519FromDidKey(did: string): Uint8Array {
 
 export const VC_CONTEXT = 'https://www.w3.org/ns/credentials/v2';
 export const AGENT_PASSPORT_CONTEXT = 'https://atlasauth.net/credentials/agent-passport/v1';
+export { AGENT_PASSPORT_CONTEXT_DOC, AGENT_PASSPORT_CONTEXT_DIGEST, resolveAgentPassportContext } from './context';
 export const AGENT_PASSPORT_VC_TYPE = 'AgentPassportCredential';
 
 /** The passport fields emitted as selectively-disclosable SD-JWT claims (the sensitive measurements). */
@@ -234,7 +235,11 @@ export interface VerifiedPassportVC {
  * in `credentialSubject._sd` (an unrecognised disclosure is rejected). Any tamper — a flipped JWT byte, a
  * forged disclosure — fails. Returns the reconstructed passport plus the issuer/subject DIDs.
  */
-export async function verifyPassportVC(vc: string, issuerVerifyKey: KeyLike | Uint8Array): Promise<VerifiedPassportVC> {
+export async function verifyPassportVC(
+  vc: string,
+  issuerVerifyKey: KeyLike | Uint8Array,
+  options: { expectedIssuerDid?: string } = {},
+): Promise<VerifiedPassportVC> {
   const parts = vc.split('~');
   const jwt = parts[0];
   if (jwt === undefined || jwt === '') throw new Error('pca-vc: empty SD-JWT');
@@ -250,6 +255,8 @@ export async function verifyPassportVC(vc: string, issuerVerifyKey: KeyLike | Ui
   if (!isObject(vcClaim)) throw new Error('pca-vc: missing vc claim');
   const ctx = vcClaim['@context'];
   if (!Array.isArray(ctx) || ctx[0] !== VC_CONTEXT) throw new Error(`pca-vc: @context must begin with ${VC_CONTEXT}`);
+  // Exactly the two contexts this package defines terms for: an extra or unknown context could redefine the passport terms.
+  if (ctx.length !== 2 || ctx[1] !== AGENT_PASSPORT_CONTEXT) throw new Error(`pca-vc: @context must be exactly [${VC_CONTEXT}, ${AGENT_PASSPORT_CONTEXT}]`);
   const types = vcClaim.type;
   if (!Array.isArray(types) || !types.includes('VerifiableCredential') || !types.includes(AGENT_PASSPORT_VC_TYPE)) {
     throw new Error(`pca-vc: type must include VerifiableCredential and ${AGENT_PASSPORT_VC_TYPE}`);
@@ -295,6 +302,10 @@ export async function verifyPassportVC(vc: string, issuerVerifyKey: KeyLike | Ui
 
   const issuerDid = asString(payload.iss, 'iss');
   const subjectDid = asString(cs.id, 'credentialSubject.id');
+  // The JWT `sub` and the VC subject id are the same identity; a disagreement is a malformed or spliced credential.
+  if (payload.sub !== subjectDid) throw new Error('pca-vc: sub does not match credentialSubject.id');
+  // The verification key is the caller's; binding it to the claimed issuer is theirs unless they pin the DID here.
+  if (options.expectedIssuerDid !== undefined && issuerDid !== options.expectedIssuerDid) throw new Error('pca-vc: iss does not match expectedIssuerDid');
   return { passport, issuerDid, subjectDid };
 }
 

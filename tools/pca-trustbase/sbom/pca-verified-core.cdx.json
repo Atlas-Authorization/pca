@@ -7,8 +7,8 @@
       "type": "library",
       "bom-ref": "root",
       "name": "@atlasauth/pca-verified-core",
-      "version": "0.4.3",
-      "purl": "pkg:npm/%40atlasauth/pca-verified-core@0.4.3",
+      "version": "0.5.0",
+      "purl": "pkg:npm/%40atlasauth/pca-verified-core@0.5.0",
       "licenses": [
         {
           "license": {
@@ -128,6 +128,26 @@
         {
           "alg": "SHA-512",
           "content": "879fb53b3cdf082dc47fb55bb4a75cbfbcecb2d510c140e5629513be3794b0902cb0f80b9fb4336dba0fb4be6ba34e0cab4acf3ac33397bab98486d1b36c03d4"
+        }
+      ],
+      "properties": [
+        {
+          "name": "pca:role",
+          "value": "dev/test only; not shipped"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/tsx@4.23.1",
+      "name": "tsx",
+      "version": "4.23.1",
+      "scope": "excluded",
+      "purl": "pkg:npm/tsx@4.23.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1901e79087f1cb1d70602392ff0a278a4e4c551654f618b54c4666cc6652089075cbd620a19f07ea2b4d13fbb8b2e13ec8b98ecee1381394b84d9fd95f6c1c59"
         }
       ],
       "properties": [

@@ -1,6 +1,5 @@
+import { canonicalizeStrict, compareUtf8 } from '@atlasauth/pca';
 import {
-  canonicalizeStrict,
-  compareUtf8,
   effectiveSensitivity,
   verbReversibility,
   walletFloorOverrides,
@@ -8,7 +7,7 @@ import {
   type ActionSchema,
   type SensitivityOverride,
   type UnsignedActionSchema,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 import { deriveOmega, OTHER, type CatValue, type Dim, type NumDim, type Omega, type VerbSpace } from './omega';
 import type { PolicyInput } from './policy';
 import type { IntentSlots, SlotConstraint } from './slots';

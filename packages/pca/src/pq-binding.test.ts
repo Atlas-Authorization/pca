@@ -5,7 +5,9 @@ import { encodeKey, generateKeyPair } from './keys';
 import { buildPCActn, signPCActnSuite } from './pcactn';
 import { encodeMlDsaPublicKey, mlDsa65Keygen } from './pq';
 import { DEFAULT_RISK_POLICY } from './risk';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /**
  * F-2 / F-4 regressions (docs/pca/security/proofs/02-threshold-hybrid.md C.2): the PQ key of a hybrid or pure-PQ
@@ -31,7 +33,7 @@ function setup(opts: { bindPq: boolean }) {
     return b as never;
   };
   const verify = (p: unknown, extra: Record<string, unknown> = {}) =>
-    verifyPCActn(p as never, { grant, audience: 'x', now: NOW, context: { risk: safeRisk, budget: { B: 1, tau: NOW } }, ...extra });
+    verifyPCActn(p as never, { insecureSkipPlanRootCheck: true, grant, audience: 'x', now: NOW, context: { risk: safeRisk, budget: { B: 1, tau: NOW } }, ...extra });
   return { P, A, agentPq, grant, body, verify };
 }
 

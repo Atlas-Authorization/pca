@@ -1,6 +1,6 @@
 ---
 title: Audit in tests
-order: 33
+order: 34
 ---
 
 # Audit in tests
@@ -21,7 +21,7 @@ Re-run the cheap parts with one command: `bash scripts/pca-audit-all.sh` (a few 
 | Timing | dudect-style harness (Welch t-test on cropped distributions, `tools/pca-audit/timing`) | Positive and negative controls plus the signing, KEM and FROST operations. |
 | Differential | `scripts/pca-conformance-all.sh` | Eight verifiers (TypeScript, Go, Python, Ruby, PHP, .NET, Rust, Java) over 5501 vectors including 80 new strict-JSON boundary vectors produced by the fuzzer: 0 disagreements. |
 | Supply chain | `tools/pca-audit/supply/sbom.mjs` | A CycloneDX 1.5 SBOM per published package (76), lockfile integrity (3308 registry entries, all sha512, none from git or tarball URLs), install-script scan, provenance readiness (76 of 76 have repository, license, files list, public access, engines, README). |
-| Threat model | `scripts/check-pca-traceability.mjs` | T-001..T-051 and G-01..G-18 all map to an existing test; the four previous gaps (T-008, T-015, T-019, T-041) now have tests. |
+| Threat model | `scripts/check-pca-traceability.mjs` | T-001..T-052 and G-01..G-19 all map to an existing test; the four previous gaps (T-008, T-015, T-019, T-041) now have tests. |
 
 ## Defects found and fixed
 

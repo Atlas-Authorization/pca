@@ -2,6 +2,8 @@
 // Used by the generator (expected verdicts) and by the all-languages runner (ref-driver.ts).
 import { safeParse } from '../../../tools/pca-diff-fuzz/gen/safejson';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type * as PcaT from '../../pca/src/index';
 
 const nodeRequire = createRequire(__filename);
@@ -17,7 +19,7 @@ export type PCActn = PcaT.PCActn; type Capability = PcaT.Capability;
 
 
 // ---------------------------------------------------------------- reference oracle (mirrors tools/pca-diff-fuzz/gen/oracle.ts)
-const CK = [['version', 'version'], ['audience', 'audience'], ['validity', 'validity'], ['chain', 'cap_chain'], ['grant_ref_bound', 'grant_ref_bound'], ['plan_inclusion', 'plan_inclusion'], ['leaf_signature', 'leaf_signature'], ['counter', 'counter']] as const;
+const CK = [['version', 'version'], ['audience', 'audience'], ['validity', 'validity'], ['chain', 'cap_chain'], ['grant_ref_bound', 'grant_ref_bound'], ['plan_inclusion', 'plan_inclusion'], ['leaf_signature', 'leaf_signature'], ['counter_format', 'counter_format']] as const;
 export async function refVerify(rawStr: string, grantStr: string, now: number, aud: string, allowedSuites?: string[], intentPolicy?: PcaT.IntentPolicy, intentPolicyJson?: string, intentV2?: unknown): Promise<Record<string, unknown>> {
   // `intent_policy_json` is the policy as raw JSON text (lexical forms such as 950000.0 / 1e6 survive transport); it wins.
   if (intentPolicyJson !== undefined) intentPolicy = JSON.parse(intentPolicyJson) as PcaT.IntentPolicy;
@@ -25,7 +27,7 @@ export async function refVerify(rawStr: string, grantStr: string, now: number, a
     let p: PCActn | undefined;
     try { p = pca.decodePCActn(rawStr); } catch { /* wire failure */ }
     if (p === undefined) return { allow: false, checks: { wire: false } };
-    const g = await pca.verifyPCActnCore(p, { grant: safeParse(grantStr) as Capability, nowEpoch: now, audience: aud, ...(allowedSuites !== undefined ? { allowedSuites: allowedSuites as never } : {}), ...(intentPolicy !== undefined ? { intent: intentPolicy } : {}), ...(intentV2 !== undefined ? { intentV2: intentV2 as never } : {}) });
+    const g = await pca.verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: safeParse(grantStr) as Capability, nowEpoch: now, audience: aud, ...(allowedSuites !== undefined ? { allowedSuites: allowedSuites as never } : {}), ...(intentPolicy !== undefined ? { intent: intentPolicy } : {}), ...(intentV2 !== undefined ? { intentV2: intentV2 as never } : {}) });
     // Intent Layer M2: `intent` is reported only when evaluated (the PCActn carries `intent` or the policy is active).
     const intent = g.checks.intent !== undefined ? [['intent', g.checks.intent === 'pass']] : [];
     // `unsupported_suite`: the reference itself refused with that reason (a suite no verifier implements, e.g. an
@@ -44,6 +46,25 @@ export function refChain(rawStr: string): Record<string, unknown> {
       ...(o.allowed_suites !== undefined ? { allowedSuites: o.allowed_suites as never } : {}),
     });
     return { allow: r.ok, checks: { chain: r.ok } };
+  } catch (e) { return { error: 'exception:' + (e as Error).message.slice(0, 60) }; }
+}
+// Layered conformance (packages/pca/conformance/LAYERS.md): the policy and stateful layers, evaluated by the same shared
+// modules the generators and the TS conformance test use.
+const scriptUrl = (f: string) => pathToFileURL(join(__dirname, '../../pca/scripts', f)).href;
+/** Policy layer (kind `policy`): raw = JSON text `{ grant, chain, context }`. `allow` / `failed` are the caveat projection
+ *  (what the native drivers answer); `decision` is the whole policy decision (no native driver answers it yet). */
+export async function refPolicy(rawStr: string): Promise<Record<string, unknown>> {
+  try {
+    const m = await import(scriptUrl('policy-decision.mjs'));
+    const r = m.evaluatePolicyVector(pca, safeParse(rawStr));
+    return { allow: r.caveats.allow, failed: r.caveats.failed, decision: r.decision };
+  } catch (e) { return { error: 'exception:' + (e as Error).message.slice(0, 60) }; }
+}
+/** Stateful layer (kind `stateful`): raw = JSON text of one sequence; one `{ allow, failed }` (or null) per step. */
+export async function refStateful(rawStr: string): Promise<Record<string, unknown>> {
+  try {
+    const m = await import(scriptUrl('stateful-sequence.mjs'));
+    return { steps: await m.runSequence(pca, safeParse(rawStr)) };
   } catch (e) { return { error: 'exception:' + (e as Error).message.slice(0, 60) }; }
 }
 export function refCanon(rawStr: string): Record<string, unknown> {

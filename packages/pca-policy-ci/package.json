@@ -1,7 +1,7 @@
 {
   "name": "@atlasauth/pca-policy-ci",
-  "version": "0.4.3",
-  "description": "CI gate for PCA policies: statically flag over-broad grants, privilege-escalation in delegation chains, unused/redundant caveats, and reachability of dangerous actions — fail the build before an unsafe policy ships.",
+  "version": "0.5.0",
+  "description": "CI gate for PCA policies: statically flag over-broad grants, privilege-escalation in delegation chains, unused/redundant caveats, and reachability of dangerous actions \u2014 fail the build before an unsafe policy ships.",
   "keywords": [
     "policy",
     "ci",
@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-actions": "workspace:*",
     "@atlasauth/pca-analyzer": "workspace:*"
   },
   "devDependencies": {
@@ -57,5 +58,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

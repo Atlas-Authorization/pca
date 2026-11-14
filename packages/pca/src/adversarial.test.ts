@@ -43,14 +43,8 @@ import { RevocationSet, checkRevocationEpoch, signRevocationEpoch, verifyNonMemb
 import { mintGrant } from './envelope';
 import { type DecideInput, decide } from './policy-vm';
 import { DEFAULT_RISK_POLICY } from './risk';
-import {
-  BondLedger,
-  DEFAULT_BOND_POLICY,
-  InMemoryBondAccount,
-  bondAmount,
-  computeSlashSplit,
-  verifySettlement,
-} from './bond-settlement';
+import { DEFAULT_BOND_POLICY, bondAmount, computeSlashSplit, verifySettlement } from './bond-settlement';
+import { BondLedger, InMemoryBondAccount } from './bond-ledger-testing';
 import {
   adjudicateDispute,
   openOptimistic,
@@ -163,21 +157,21 @@ describe('§ wire-canonical-form (canonical malleability)', () => {
   it('an UNKNOWN top-level field is a wire failure', async () => {
     const { grant, mk } = buildChainAndActn();
     const p = { ...mk(0), smuggled: 'unsigned-field' } as unknown as PCActn;
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.wire).toBe('fail');
   });
   it('a NON-CANONICAL base64url fixed-length field (grant_ref) is a wire failure', async () => {
     const { grant, mk } = buildChainAndActn();
     const p = { ...mk(0), grant_ref: mk(0).grant_ref + 'A' } as unknown as PCActn; // wrong length
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.wire).toBe('fail');
   });
   it('a tampered signed number that cannot encode canonically is rejected on the wire', async () => {
     const { grant, mk } = buildChainAndActn();
     const p = { ...mk(0), risk_claim: { r: 1e-9, inputs: {} } } as unknown as PCActn; // sub-1e-6 magnitude
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.wire).toBe('fail');
   });
@@ -189,41 +183,41 @@ describe('§ wire-canonical-form (canonical malleability)', () => {
 describe('§ replay (freshness binding)', () => {
   it('an audience MISMATCH is rejected (cross-instance replay)', async () => {
     const { grant, mk } = buildChainAndActn();
-    const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-OTHER' });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-OTHER' });
     expect(r.allow).toBe(false);
     expect(r.checks.audience).toBe('fail');
   });
   it('FAIL-CLOSED: a verifier that forgets its audience rejects an aud-bearing PCActn', async () => {
     const { grant, mk } = buildChainAndActn();
-    const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW }); // audience omitted
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW }); // audience omitted
     expect(r.allow).toBe(false);
     expect(r.checks.audience).toBe('fail');
   });
   it('an EXPIRED PCActn (now > exp) is rejected', async () => {
     const { grant, mk } = buildChainAndActn();
-    const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW + 120_000, audience: 'rs-1' });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW + 120_000, audience: 'rs-1' });
     expect(r.allow).toBe(false);
     expect(r.checks.validity).toBe('fail');
   });
   it('a FUTURE-dated PCActn (iat beyond skew) is rejected', async () => {
     const { grant, mk } = buildChainAndActn();
-    const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW - 120_000, audience: 'rs-1' });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW - 120_000, audience: 'rs-1' });
     expect(r.allow).toBe(false);
     expect(r.checks.validity).toBe('fail');
   });
   it('an over-LIFETIME window (exp - iat > max) is rejected', async () => {
     const { grant, body, S } = buildChainAndActn();
     const long = signPCActn({ ...body(0), exp: NOW + PCACTN_MAX_LIFETIME_MS + 1 }, S.secretKey);
-    const r = await verifyPCActnCore(long, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const r = await verifyPCActnCore(long, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.validity).toBe('fail');
   });
   it('a NEGATIVE counter is rejected (type gate; monotonic anti-replay is RS state, see F-2)', async () => {
     const { grant, body, S } = buildChainAndActn();
     const neg = signPCActn({ ...body(0), counter: -1 }, S.secretKey);
-    const r = await verifyPCActnCore(neg, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const r = await verifyPCActnCore(neg, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
-    expect(r.checks.counter).toBe('fail');
+    expect(r.checks.counter_format).toBe('fail');
   });
 });
 
@@ -236,20 +230,20 @@ describe('§ downgrade (suite + threshold)', () => {
     const mlDsa = mlDsa65Keygen(new Uint8Array(32).fill(3));
     const signed = signPCActnSuite(body(0), { alg: 'ml-dsa-65', mlDsa });
     // sanity: the real ml-dsa object verifies its leaf signature
-    const good = await verifyPCActnCore(signed, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const good = await verifyPCActnCore(signed, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(good.checks.leaf_signature).toBe('pass');
     // DOWNGRADE: drop alg + pq_pk. `sig` is now a 3309-byte ML-DSA sig under an absent (=> ed25519) suite
     // whose wire rule demands a 64-byte sig and forbids pq_pk ⇒ wire fail.
     const { alg: _a, pq_pk: _p, ...downgraded } = signed as PCActn & { pq_pk?: string };
     void _a; void _p;
-    const r = await verifyPCActnCore(downgraded as PCActn, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const r = await verifyPCActnCore(downgraded as PCActn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.wire).toBe('fail');
   });
   it('an UNKNOWN signature alg fails closed on the wire', async () => {
     const { grant, mk } = buildChainAndActn();
     const p = { ...mk(0), alg: 'ed448-fantasy' } as unknown as PCActn;
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.wire).toBe('fail');
   });
@@ -356,7 +350,7 @@ describe('§ plan-inclusion-forgery', () => {
     const { grant, mk } = buildChainAndActn();
     const p = mk(0);
     p.action = { ...p.action, resource: 'sess/ALL' };
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.plan_inclusion).toBe('fail');
   });

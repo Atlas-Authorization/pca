@@ -1,0 +1,33 @@
+{
+ "target": "revocation epoch + liveness beacon verifiers",
+ "seeds": [
+  {
+   "ep": {
+    "instance_id": "i",
+    "grant_ref": "gr",
+    "epoch": 3,
+    "set_size": 0,
+    "root": "AAAA",
+    "issued_at": 1791288000000,
+    "not_after": 1791288060000,
+    "guardian": "v38mpX54OoE0_mjyBTel6bjtmTJPyrIkJOw5ww5bj9U",
+    "sig": "As7AQpKJO8YedcvNnoL-YrDbQNLHEmJAoteuO9chLcG-2NLKJ4-SWu3VRILwx_WCSGTxddIHRsToMDp6UvwaBQ"
+   },
+   "guardian": "v38mpX54OoE0_mjyBTel6bjtmTJPyrIkJOw5ww5bj9U",
+   "beacon": {
+    "v": 2,
+    "instance": "i",
+    "scope": "*",
+    "epoch": 29854800,
+    "seq": 4,
+    "issued_at": 1791288000000,
+    "not_after": 1791288300000,
+    "issuer": "v38mpX54OoE0_mjyBTel6bjtmTJPyrIkJOw5ww5bj9U",
+    "sig": "fwAwFyWnqjbrjUFLuqpXUz0PZguDyvl_CF110XxhRr2Ncu7MoOkm1MzZU6-nhmlrz98kF5rZ3ThAQAUDEWCJBg"
+   },
+   "prev": {
+    "seq": 3
+   }
+  }
+ ]
+}

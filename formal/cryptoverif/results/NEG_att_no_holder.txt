@@ -1,0 +1,2 @@
+RESULT Could not prove forall n: nonce_t, x: act_t, h: hpkey, c: pkey; event(AcceptAct(c, h, x, n)) ==> (event(GuestSigned(h, x, n)) || event(ChipBroken(c))); forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; inj-event(Accept(c, h, g, e, n, m)) ==> (inj-event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))); forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; event(Accept(c, h, g, e, n, m)) ==> (event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))).
+rc=0 secs=0

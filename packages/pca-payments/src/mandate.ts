@@ -56,6 +56,11 @@ export interface PaymentMandateParams {
   goal?: string;
   /** Deterministic salt for the goal commitment (tests); random 16 bytes otherwise. */
   goalSalt?: string;
+  /**
+   * Require X, Y, the cumulative cap and any replenish to be safe integers (minor units). Default TRUE (0.5; it was false
+   * before). Pass `false` only to keep a legacy mandate with fractional terms.
+   */
+  strictMinorUnits?: boolean;
   /** Decision-time anchor (epoch ms) for the initial budget + period caveats. Default `Date.now()`. */
   now?: number;
 }
@@ -87,15 +92,27 @@ export interface PaymentMandate {
   goalSalt: string;
 }
 
+/** A merchant id that cannot act as a resource pattern: no `*`, no control characters. */
+export const isPlainId = (x: unknown): x is string => typeof x === 'string' && x.length > 0 && !/[*\u0000-\u001f\u007f]/.test(x);
+
 const isFiniteNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 
 /** Validate the params and throw on anything that would make an incoherent mandate. */
 function validate(p: PaymentMandateParams): void {
+  if (p.strictMinorUnits !== false) {
+    for (const [k, v] of [['perTransactionCap', p.perTransactionCap], ['autoApproveThreshold', p.autoApproveThreshold], ['cumulativeCap', p.cumulativeCap], ['replenishPerCosign', p.replenishPerCosign ?? 0]] as const) {
+      if (!Number.isSafeInteger(v)) throw new Error(`buildPaymentMandate: ${k} must be a safe integer in minor units (strictMinorUnits)`);
+    }
+  }
   if (!Array.isArray(p.merchants) || p.merchants.length === 0) {
     throw new Error('buildPaymentMandate: at least one allowlisted merchant is required');
   }
   if (p.merchants.some((m) => typeof m !== 'string' || m.length === 0)) {
     throw new Error('buildPaymentMandate: merchant ids must be non-empty strings');
+  }
+  // `merchant:<id>` is matched as a resource pattern: a trailing `*` would turn one allowlist entry into a prefix wildcard.
+  if (p.merchants.some((m) => !isPlainId(m))) {
+    throw new Error('buildPaymentMandate: merchant ids must not contain `*` or control characters');
   }
   if (typeof p.currency !== 'string' || p.currency.length === 0) {
     throw new Error('buildPaymentMandate: currency is required');

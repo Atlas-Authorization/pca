@@ -49,5 +49,9 @@ const md = ['| package | killed | timeout | survived | no coverage | other | sco
   `| **all** | ${tot.killed} | ${tot.timeout} | ${tot.survived} | ${tot.nocov} | ${tot.other} | ${score(tot)} | ${problems.length ? 'FAIL' : 'ok'} |`].join('\n');
 console.log(md);
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Stryker (TypeScript), ${n} shards\n\n${md}\n`);
+// reports/mutation-summary.json: the merge result for the release evidence report (uploaded as the mutation-summary artifact)
+writeFileSync(join(dir, 'mutation-summary.json'), JSON.stringify({ tool: 'Stryker', shards: n, verdict: problems.length ? 'fail' : 'pass', score: score(tot),
+  counts: tot, survivors: tot.survived + tot.nocov, problems: problems.length,
+  packages: rows.map((r) => ({ package: r.pkg, score: score(r), ledger: r.ledger })) }, null, 1) + '\n');
 if (problems.length) { console.error('\n' + problems.join('\n\n')); process.exit(1); }
 console.log('\nOK: every planned report present; every survivor is a listed equivalent and no listed equivalent is stale');

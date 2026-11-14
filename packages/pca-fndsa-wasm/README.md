@@ -1,5 +1,7 @@
 # @atlasauth/pca-fndsa-wasm
 
+> Maturity: **hardened** (hardened, formally verified (model), awaiting final standard and independent audit). The engineering is done and evidenced by tests and a mutation gate; it awaits the final FIPS 206 text (the draft's key and signature encodings may change before the crate's 1.0) and an independent review of the wasm binding. It is never production until then, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 The **FN-DSA (Falcon, FIPS 206) signature backend** for `@atlasauth/pca`'s post-quantum suite
 registry. It provides key generation, signing and — the operation the PCA verifier actually performs
 — **signature verification**, for the two standardized parameter sets:
@@ -71,6 +73,20 @@ pnpm test         # vitest: round-trips, cross-implementation vectors and negati
 ```
 
 Native round-trip and tamper tests for the FN-DSA arithmetic live in `crate/src/lib.rs` (`cargo test`).
+
+## Fail-closed table
+
+Each row is pinned by a test that asserts the exact outcome.
+
+| Missing or wrong | Result |
+|---|---|
+| Unknown parameter set | `FnDsaError` "unsupported FN-DSA variant: ..." |
+| Seed, signing key, verifying key or signature of the wrong size | `FnDsaError` naming the field, expected and actual size |
+| Message longer than `MSG_CAP` | `FnDsaError` (sign and verify); exactly `MSG_CAP` is accepted |
+| Well-sized but undecodable verifying key, all-zero or all-0xFF signature | `verify` false |
+| Well-sized but undecodable signing key | `FnDsaError` "wasm sign failed" |
+| `.wasm` file missing or corrupt | importing the package throws; there is no JavaScript fallback |
+| Signature from the other parameter set | `FnDsaError` (size mismatch) |
 
 ## Standard status (honest note)
 
@@ -149,6 +165,16 @@ The shipped `wasm/pca_fndsa_wasm.wasm` is built from the Rust source in `crate/`
 | locked crates | fn-dsa 0.4.0 (and its locked transitive crates) |
 
 Verify: `bash crate/build-wasm.sh && shasum -a 256 wasm/pca_fndsa_wasm.wasm` (needs `rustup target add wasm32-unknown-unknown`). The script passes `--remap-path-prefix` for the crate, home, cargo registry and rustc sysroot and `-Cdebuginfo=0`, so the build is path-independent: no host path is embedded, and the same sha256 results from any checkout location.
+
+## Formal evidence
+
+Suite pinning, `PcaComp/Wrap.lean`. What a machine checked, and what it did not.
+
+- Proved: the verifier takes the suite from the pinned key, never from the signature, so a signature claiming another suite is rejected and no two suites verify one key (`pinned_accepts_only_pinned_suite`, `no_downgrade`); the hybrid wrapper accepts only if both components accept (`hybrid_needs_both`), and the EasyCrypt AND-combiner results H-1, H-3 and H-4 carry the security argument; the pinned-key rule is PIN / PIN-2.
+- Assumed (named): NA-PQ (FN-DSA security, FIPS 206 draft), NA-ED.
+- Not modelled: FN-DSA itself, floating-point and timing behaviour, the wasm binding.
+
+Reproduce: `formal/computational/check.sh lean` (core Lean 4, no Mathlib; it also prints the axioms each theorem uses, only `propext`, `Classical.choice` and `Quot.sound`). The models are hand-written from the code and are NOT statements about the shipped implementation: the independent audit of the implementation is still required, and this package stays hardened until then.
 
 ## License
 

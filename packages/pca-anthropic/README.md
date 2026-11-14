@@ -1,5 +1,7 @@
 # @atlasauth/pca-anthropic
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Anthropic (Claude) adapter for Proof-Carrying Authority (PCA). It sits between a Claude `tool_use` block and the `tool_result` you send back: it turns the block into a PCActn (a signed proof-carrying action) using a PCA `Agent`, runs your handler with the proof in hand, and returns the `tool_result` block, including the error-shaped result Claude expects when a tool is declined or throws.
 
 It does not authorize anything itself: it attaches a proof, and the resource server's verifier decides. A handler that forgets to forward the proof just produces a downstream call without a valid PCActn, which fails server-side.
@@ -51,9 +53,27 @@ const toolResults = await handleToolUses(
 - Types: `ToolUseBlock`, `ToolResultBlock`, `ToolMapping`, `ToolHandler`.
 - Re-exports from `@atlasauth/pca`: `pcaHeaders`, `PcaCall`.
 
+## Fail-closed behaviour
+
+| Missing or invalid | Result |
+|---|---|
+| The mapping declines the tool (returns `null`) | Handler not run; a `tool_result` with `is_error: true` is returned |
+| No handler is registered for the tool name | Handler not run; `is_error: true` result |
+| The handler throws | An `is_error: true` result carrying the error message |
+| The agent cannot build the PCActn (the proof cannot be built) | `handleToolUse` rejects; no handler runs |
+| A block in `handleToolUses` that is not `tool_use` | Ignored |
+
+## Limits
+
+- It signs; it does not authorize. It does not dry-run the policy, so an over-cap or out-of-scope call still produces a signed PCActn here and is refused only by the resource server's verifier.
+- A handler that does not forward the proof downstream makes the downstream action fail server-side; this adapter cannot force it.
+- The handler's error message is returned to the model as `content`; keep secrets out of thrown errors.
+- It is matched structurally; the Anthropic SDK is never imported or version-checked.
+-
+
 ## Status
 
-Experimental. The underlying cryptography in `@atlasauth/pca` has not been independently audited.
+Production tier: this package signs; it does not authorize. The resource server's verifier decides. The underlying cryptography in `@atlasauth/pca` has not been independently audited.
 
 Source and issues: https://github.com/Atlas-Authorization/pca
 
