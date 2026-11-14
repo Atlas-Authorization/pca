@@ -1,0 +1,30 @@
+{
+ "trait": "pca.network_egress",
+ "card": {
+  "verb": "golden.network_egress",
+  "title": "Do the network egress thing",
+  "text": "Do the network egress thing. This action reaches out to the network.",
+  "risk": "elevated",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "recipient_scope"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.network_egress"
+ ],
+ "floor": {
+  "risk": 1,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "recipient_scope"
+  ],
+  "context": [],
+  "prules": []
+ }
+}

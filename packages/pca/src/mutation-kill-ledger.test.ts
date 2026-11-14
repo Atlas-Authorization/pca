@@ -1,6 +1,6 @@
 /** Mutation-kill tests for ledger.ts: consistency proofs, STH / witness verification, domain separation, bounds. */
 import { describe, expect, it } from 'vitest';
-import { b64u, canonicalBytes, utf8 } from './hash';
+import { b64u, canonicalBytes, sha256, utf8 } from './hash';
 import { generateKeyPair, publicKeyOf, verifyB64u } from './keys';
 import {
   STH_DOMAIN,
@@ -53,6 +53,22 @@ describe('verifyLedgerConsistency', () => {
         }
       }
     }
+  });
+  it('a path node or old root that is not exactly 32 bytes is refused in default mode', () => {
+    const p = L.consistencyProof(1, 2);
+    expect(verifyLedgerConsistency(roots[1]!, roots[2]!, p)).toBe(true);
+    const node = (l: Uint8Array, r: Uint8Array) => sha256(cat(cat(new Uint8Array([1]), l), r));
+    const c = new Uint8Array(32).fill(9);
+    for (const len of [31, 33]) {
+      const bad = new Uint8Array(len).fill(7);
+      // Without the length check this 1->2 "proof" verifies: old size 1 starts from the old root itself.
+      const forgedNew = b64u(node(bad, c));
+      expect(verifyLedgerConsistency(b64u(bad), forgedNew, { oldSize: 1, newSize: 2, path: [b64u(c)] }), `oldRoot ${len}`).toBe(false);
+      expect(verifyLedgerConsistency(b64u(c), b64u(node(c, bad)), { oldSize: 1, newSize: 2, path: [b64u(bad)] }), `path ${len}`).toBe(false);
+    }
+    // 32-byte control: the same construction is accepted.
+    const ok = new Uint8Array(32).fill(7);
+    expect(verifyLedgerConsistency(b64u(ok), b64u(node(ok, c)), { oldSize: 1, newSize: 2, path: [b64u(c)] })).toBe(true);
   });
   it('size arguments: non-integers, negatives and first > second are refused', () => {
     const p = L.consistencyProof(3, 8);

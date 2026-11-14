@@ -1,12 +1,10 @@
 import {
-  DEFAULT_CATALOG,
   isGroupCondition,
   isLeafCondition,
-  type Catalog,
   type Condition,
   type Predicate,
-  type Reversibility,
 } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, type Catalog, type Reversibility } from '@atlasauth/pca/ext/research';
 import { normalizePolicy, type PolicyInput } from './policy';
 import type { IntentSlots } from './slots';
 

@@ -36,6 +36,15 @@ describe('revocation proofs: strict shapes', () => {
     expect(verifyMembership(set.root, { ...m, index: 2 ** 53 }, 'c')).toBe(false);
     expect(verifyMembership(set.root, { ...m, index: 1.5 }, 'c')).toBe(false);
   });
+  it('strict profile: a size or index of -0 is refused (0 verifies)', () => {
+    const empty = new RevocationSet();
+    expect(verifyNonMembership(empty.root, { size: 0 }, 'b')).toBe(true);
+    expect(verifyNonMembership(empty.root, { size: -0 }, 'b')).toBe(false);
+    const m = set.membershipProof('a');
+    expect(m.index).toBe(0);
+    expect(verifyMembership(set.root, m, 'a')).toBe(true);
+    expect(verifyMembership(set.root, { ...m, index: -0 }, 'a')).toBe(false);
+  });
 });
 
 describe('revocation epoch: issued_at / not_after are safe integers', () => {
@@ -51,6 +60,12 @@ describe('revocation epoch: issued_at / not_after are safe integers', () => {
   it('a guardian-signed epoch with a null / string / fractional window is malformed (it used to pass the window by coercion)', () => {
     for (const over of [{ issued_at: null }, { issued_at: NOW + 0.5 }, { not_after: String(NOW + 60_000) }, { not_after: NOW + 60_000.5 }]) {
       expect(checkRevocationEpoch(ep(over), { guardianPublic: gPub, now: NOW, grantRef: 'g' }), JSON.stringify(over)).toEqual({ ok: false, reason: 'malformed revocation epoch' });
+    }
+  });
+  it('strict profile: an epoch, set_size, issued_at or not_after of -0 is malformed (a signature over 0 does not admit it)', () => {
+    for (const k of ['epoch', 'set_size', 'issued_at', 'not_after']) {
+      const e = ep({ [k]: 0, ...(k === 'set_size' ? { root: new RevocationSet().root } : {}) });
+      expect(checkRevocationEpoch({ ...e, [k]: -0 }, { guardianPublic: gPub, now: 0, grantRef: 'g' }), k).toEqual({ ok: false, reason: 'malformed revocation epoch' });
     }
   });
 });

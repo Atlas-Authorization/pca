@@ -7,6 +7,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { generateKeyPair } from './keys';
 import { DEFAULT_RISK_POLICY } from './risk';
+import { RATE_LIMITED_REFUND_CATALOG } from './rate-limited-refund.test-util';
 
 /** Capture an outcome so a thrown error is compared (name + message) instead of failing the test as an error. */
 type Settled<T> = { ok: true; value: T } | { ok: false; error: { name: string; message: string } };
@@ -71,7 +72,7 @@ describe('facade: compilePolicy', () => {
   });
   it('reversibility_max is the strictest granted class', async () => {
     const f = await fresh();
-    expect(f.compilePolicy({ permissions: { github: ['read', 'merge_pr'] } }).caveats[0]).toStrictEqual({ type: 'reversibility_max', class: 'rate_limited' });
+    expect(f.compilePolicy({ permissions: { github: ['read', 'merge_pr'] } }).caveats[0]).toStrictEqual({ type: 'reversibility_max', class: 'irreversible' });
     expect(f.compilePolicy({ permissions: { gmail: ['draft', 'send'] } }).caveats[0]).toStrictEqual({ type: 'reversibility_max', class: 'irreversible' });
     expect(f.compilePolicy({ permissions: { gmail: ['draft'] } }).caveats[0]).toStrictEqual({ type: 'reversibility_max', class: 'reversible' });
   });
@@ -98,8 +99,12 @@ describe('facade: compilePolicy', () => {
     const p = f.compilePolicy({ permissions: { stripe: ['refund', 'charge'] }, limits: { refund: '$100', charge: '$500' } });
     expect(p.riskPolicy).toStrictEqual({
       weights: { alpha: 0, beta: 0, gamma: 1, delta: 0, epsilon: 0, zeta: 0 },
-      theta1: 1, theta2: 1, kappa: 500, lambda: 0, rho: DEFAULT_RISK_POLICY.rho, bMax: 600,
+      // a refund and a charge are irreversible (one definition): the default co-sign tiers stay (W7b)
+      theta1: DEFAULT_RISK_POLICY.theta1, theta2: DEFAULT_RISK_POLICY.theta2, kappa: 500, lambda: 0, rho: DEFAULT_RISK_POLICY.rho, bMax: 600,
     });
+    // with nothing irreversible granted the within-cap tiers open up (theta = 1)
+    const q = f.compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$100' }, catalog: RATE_LIMITED_REFUND_CATALOG });
+    expect([q.riskPolicy.theta1, q.riskPolicy.theta2, q.riskPolicy.kappa, q.riskPolicy.bMax]).toEqual([1, 1, 100, 100]);
     expect(settle(() => { const r = f.compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$0' } }).riskPolicy; return [r.kappa, r.bMax]; })).toEqual(ok([1, 1]));
   });
   it('a riskPolicy override merges its weights over the derived ones', async () => {

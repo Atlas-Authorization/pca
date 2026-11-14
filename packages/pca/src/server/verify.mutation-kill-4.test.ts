@@ -4,7 +4,9 @@ import { encodeKey, generateKeyPair } from '../keys';
 import { mintRoot } from '../capability';
 import { buildPCActn } from '../pcactn';
 import { encodeMlDsaPublicKey, mlDsa65Keygen } from '../pq';
-import { verifyPCActn } from './verify';
+import { verifyPCActn as verifyPCActn05 } from './verify';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 const AUD = 'rs-mk4';
 const NOW = Date.UTC(2026, 9, 11, 12, 0, 0);
@@ -29,24 +31,24 @@ describe('verifyPCActn pq_pin', () => {
   it('an Ed25519 grant passes pq_pin even with an empty pin table', async () => {
     const { grant, actn } = grantAndActn(false);
     expect(grant.alg).toBeUndefined();
-    const v = await verifyPCActn(actn, { grant, audience: AUD, now: NOW, pqPins: {} });
+    const v = await verifyPCActn(actn, { insecureSkipPlanRootCheck: true, grant, audience: AUD, now: NOW, pqPins: {} });
     expect(v.checks['pq_pin']).toBe('pass');
     expect(v.reasons.filter((r) => r.startsWith('pq_pin'))).toEqual([]);
   });
   it('missing pin and wrong pin carry their exact reasons', async () => {
     const { grant, actn } = grantAndActn(true);
-    const missing = await verifyPCActn(actn, { grant, audience: AUD, now: NOW, pqPins: {} });
+    const missing = await verifyPCActn(actn, { insecureSkipPlanRootCheck: true, grant, audience: AUD, now: NOW, pqPins: {} });
     expect(missing.checks['pq_pin']).toBe('fail');
     expect(missing.reasons).toContain('pq_pin: no server-side PQ pin for the grant issuer (suite ml-dsa-65)');
     const other = encodeMlDsaPublicKey(mlDsa65Keygen(new Uint8Array(32).fill(8)).publicKey);
-    const wrong = await verifyPCActn(actn, { grant, audience: AUD, now: NOW, pqPins: { [grant.issuer]: other } });
+    const wrong = await verifyPCActn(actn, { insecureSkipPlanRootCheck: true, grant, audience: AUD, now: NOW, pqPins: { [grant.issuer]: other } });
     expect(wrong.checks['pq_pin']).toBe('fail');
     expect(wrong.reasons).toContain('pq_pin: the grant pq_pk does not match the server-side pin');
   });
   it('a PQ grant without pq_pk never matches an absent pin', async () => {
     const { grant, actn } = grantAndActn(true);
     const { pq_pk: _drop, ...noPk } = grant;
-    const v = await verifyPCActn(actn, { grant: noPk as typeof grant, audience: AUD, now: NOW, pqPins: {} });
+    const v = await verifyPCActn(actn, { insecureSkipPlanRootCheck: true, grant: noPk as typeof grant, audience: AUD, now: NOW, pqPins: {} });
     expect(v.checks['pq_pin']).toBe('fail');
     expect(v.reasons).toContain('pq_pin: no server-side PQ pin for the grant issuer (suite ml-dsa-65)');
   });

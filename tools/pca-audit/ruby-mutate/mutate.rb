@@ -5,16 +5,20 @@
 # Operators (per AST node): relational/arithmetic/bitwise swaps, `!` removal, && <-> ||, && / || operand drop,
 # condition negate / true / false for if/unless/ternary/while/until, integer +1/-1/0, non-empty string -> "",
 # true<->false, nil->false?, return value dropped, array/hash literal emptied, statement deletion (-> nil),
-# predicate call (`foo?`) -> true / false, call -> receiver / first-arg, op-assign swaps.
+# predicate call (`foo?`) -> true / false, call -> receiver / first-arg, op-assign swaps, one-statement bodies deleted (blocks, when,
+# else, rescue, ensure, loops), `when` never matching, `||=` -> `=`, `&.` -> `.`, regexp never matching, next / break value -> nil,
+# logic symbols and non-message interpolated strings (the exemption rule: see MESSAGE_PROSE below).
 # Each mutant is evaluated in a forked child that re-defines the library from the mutated source and then runs the
 # oracle (oracle.rb): unit tests + core/adv corpus + snapshot. Exit 0 in the child == the oracle PASSED == SURVIVED.
 require 'parser/current'
 require 'json'
 require 'optparse'
+require 'tmpdir'
 
 opts = { jobs: 4, timeout: 120 }
 OptionParser.new do |o|
   o.on('--list') { opts[:list] = true }
+  o.on('--count-exempt') { opts[:count_exempt] = true }
   o.on('--jobs N', Integer) { |n| opts[:jobs] = n }
   o.on('--timeout S', Integer) { |n| opts[:timeout] = n }
   o.on('--only LIST') { |l| opts[:only] = l.split(',').map(&:to_i) }
@@ -53,9 +57,117 @@ SWAP = {
 }.freeze
 PRED_SKIP = %i[frozen? respond_to?].freeze
 
+# What is exempt from mutation, as a rule (--count-exempt prints how each side falls on a file). Floats are exempt. A symbol or
+# an interpolated string gets a mutant when it can decide something; the rest is names and human-readable text.
+#
+# A symbol is logic when it is compared, a `when` value, a lookup key or a stored tag: an operand of LOGIC_COMPARE, an argument of
+# LOOKUP_CALLS, a `when` value, an array element or an assigned value. Exempt: hash literal keys (the lookup side is mutated), and
+# metaprogramming names (attr_*, Struct.new, &:to_s, respond_to?, send, ...), which have no other reading.
+#
+# An interpolated string is exempt only when it is a message: it reads as prose (MESSAGE_PROSE) and sits where only a person reads
+# it, that is not in STRING_SINKS, not assigned to a variable (a label may be used later), and if a hash value then under a
+# MESSAGE_KEYS key. Anything else (a key, a canonical form, a signed or hashed input, SQL, a header) gets a mutant. A string
+# nested in another one is decided by the outer one. A reason can also carry meaning to a caller, so prose stops being exempt when
+# it carries a literal that any file of lib/ looks for (looked_for): a start_with? / end_with? prefix or suffix, an include?, index,
+# sub, gsub or split literal of 3+ characters, a compared literal the string can equal, a regexp that searches for a word, or a
+# code of REFUSAL_TABLE (explain_refusal reads the leading word and "code:"). Shorter literals and bare character classes ("e",
+# ":", /\s+/) match nearly every sentence and say nothing about it.
+LOGIC_COMPARE = %i[== != === eql? equal?].freeze
+LOOKUP_CALLS = %i[[] []= fetch dig key? has_key? include? member? delete values_at store].freeze
+STRING_SINKS = (LOGIC_COMPARE + LOOKUP_CALLS + %i[start_with? end_with? starts_with? match? =~ !~ sha256 digest hexdigest sign verify hash
+                                                  execute get_first_row b]).freeze
+MESSAGE_KEYS = %w[reason error detail note message why].freeze
+MESSAGE_PROSE = /[A-Za-z]{2,} /
+SYMBOL_NAME_CALLS = %i[new attr_reader attr_accessor attr_writer].freeze
+
+def logic_symbol?(parent, grandparent)
+  case parent&.type
+  when :send, :csend then LOGIC_COMPARE.include?(parent.children[1]) || LOOKUP_CALLS.include?(parent.children[1])
+  when :when, :lvasgn, :ivasgn then true
+  when :array then !(grandparent&.type == :send && SYMBOL_NAME_CALLS.include?(grandparent.children[1])) && grandparent&.type != :splat
+  else false
+  end
+end
+
+LOOKED_FOR_SUBSTRING = %i[include? index sub gsub split].freeze
+LOOKED_FOR_EQUAL = %i[== != ===].freeze
+
+def looked_for
+  @looked_for ||= begin
+    found = Hash.new { |h, k| h[k] = [] }
+    scan = lambda do |n|
+      next unless n.is_a?(Parser::AST::Node)
+
+      if %i[send csend].include?(n.type) && n.children[0]
+        recv, meth, *args = *n
+        [recv, *args].compact.each do |x|
+          if x.type == :str
+            v = x.children[0]
+            found[:prefix] << v if %i[start_with? starts_with?].include?(meth)
+            found[:suffix] << v if meth == :end_with?
+            found[:substring] << v if LOOKED_FOR_SUBSTRING.include?(meth) && v.size >= 3
+            found[:equal] << v if LOOKED_FOR_EQUAL.include?(meth) && v.size >= 3
+          elsif x.type == :regexp && x.children[0..-2].all? { |c| c.type == :str }
+            src = x.children[0..-2].map { |c| c.children[0] }.join
+            found[:regexp] << Regexp.new(src) if src.gsub(/\\./, '').gsub(/\[[^\]]*\]/, '').match?(/[A-Za-z]{3,}/)
+          end
+        end
+      end
+      if n.type == :casgn && n.children[1] == :REFUSAL_TABLE
+        rows = []
+        pick = ->(c) { c.is_a?(Parser::AST::Node) && (c.type == :array && c.children[0]&.type == :str ? rows << c.children[0].children[0] : c.children.each(&pick)) }
+        pick.call(n)
+        found[:code].concat(rows)
+      end
+      n.children.each(&scan)
+    end
+    root = FILE[%r{\A.*/lib/}] || "#{File.dirname(FILE)}/"
+    Dir.glob("#{root}**/*.rb").sort.each { |f| scan.call(parse_src(File.read(f))) }
+    found
+  end
+end
+
+def carries_looked_for?(node)
+  parts = node.children.map { |c| c.type == :str ? c.children[0] : nil }
+  text = parts.map { |x| x || "\0" }.join
+  head = parts.first.to_s
+  tail = parts.last.to_s
+  whole = Regexp.new("\\A#{parts.map { |x| x ? Regexp.escape(x) : '.*' }.join}\\z", Regexp::MULTILINE)
+  word = head[/\A[a-z_]+/]
+  f = looked_for
+  f[:prefix].any? { |l| head.start_with?(l) } || f[:suffix].any? { |l| tail.end_with?(l) } ||
+    f[:substring].any? { |l| text.include?(l) } || f[:equal].any? { |l| whole.match?(l) } ||
+    f[:regexp].any? { |r| r.match?(text.tr("\0", 'x')) } || f[:code].any? { |c| c == word || text.include?("#{c}:") }
+end
+
+def message_string?(node, ancestors)
+  return true if ancestors.any? { |a| a.type == :dstr }
+
+  text = node.children.select { |c| c.type == :str }.map { |c| c.children[0] }.join
+  return false unless text.match?(MESSAGE_PROSE)
+
+  if carries_looked_for?(node)
+    COUNTS[:dstr_looked_for] += 1
+    return false
+  end
+
+  parent = ancestors.last
+  case parent&.type
+  when :send, :csend then !STRING_SINKS.include?(parent.children[1])
+  when :pair
+    key = parent.children[0]
+    %i[str sym].include?(key.type) && MESSAGE_KEYS.include?(key.children[0].to_s)
+  when :lvasgn, :ivasgn, :casgn, :op_asgn then false
+  else true
+  end
+end
+
+COUNTS = Hash.new(0)
+
 def mutants_for(src)
   ast = parse_src(src)
   out = []
+  ancestors = []
   fns = [] # enclosing def names (the site's `fn`)
   franges = [] # their line ranges
   add = lambda do |node_or_range, repl, op|
@@ -70,13 +182,19 @@ def mutants_for(src)
     text = src[0...r.begin_pos] + repl + src[r.end_pos..]
     out << Mutant.new(out.size, r.line, op, orig, repl, text, fns.last, r.column, franges.last)
   end
+  # A body of one statement has no :begin, so stmt-delete never sees it: a bare `check(x)` in a block, when, else, rescue or
+  # ensure had no mutant at all. Literals have their own operators.
+  delete_single = lambda do |body|
+    add.call(body, 'nil', 'single-body-delete') if body.is_a?(Parser::AST::Node) && !%i[begin kwbegin nil true false int str].include?(body.type)
+  end
   walk = lambda do |n, parent|
     next unless n.is_a?(Parser::AST::Node)
 
     case n.type
-    when :send
+    when :send, :csend
       recv, meth, *args = *n
       sel = n.loc.selector
+      add.call(n.loc.dot, '.', 'csend->send') if n.type == :csend
       if SWAP.key?(meth) && recv && args.size == 1 && sel
         add.call(sel, SWAP[meth].to_s, "swap-#{meth}")
       elsif meth == :! && recv
@@ -94,6 +212,40 @@ def mutants_for(src)
       elsif recv && args.empty? && meth.to_s =~ /\A[a-z_]/ && !meth.to_s.end_with?('=', '?', '!') && n.loc.dot
         add.call(n, recv.loc.expression.source, "call->recv-#{meth}")
       end
+    when :sym
+      if logic_symbol?(parent, ancestors[-2])
+        COUNTS[:symbol_logic] += 1
+        add.call(n, n.loc.expression.source.start_with?(':') ? ':__mutated__' : '__mutated__', 'sym-logic')
+      else
+        COUNTS[:symbol_exempt] += 1
+      end
+    when :dstr
+      if message_string?(n, ancestors)
+        COUNTS[:dstr_exempt] += 1
+      else
+        COUNTS[:dstr_logic] += 1
+        add.call(n, '""', 'dstr-empty')
+      end
+    when :or_asgn, :and_asgn
+      add.call(n.loc.operator, '=', "#{n.type}->asgn")
+    when :regexp
+      add.call(n, '/(?!)/', 'regexp-never')
+    when :next, :break
+      add.call(n, "#{n.type} nil", "#{n.type}-nil") if n.children.any?
+    when :block, :numblock
+      delete_single.call(n.children[2])
+    when :when
+      conds = n.children[0...-1]
+      add.call(conds.first.loc.expression.join(conds.last.loc.expression), '->(_) { false }', 'when-never')
+      delete_single.call(n.children.last)
+    when :case
+      delete_single.call(n.children.last)
+    when :resbody
+      delete_single.call(n.children[2])
+    when :rescue
+      delete_single.call(n.children[0]) unless %i[def defs].include?(parent&.type) # there body-delete removes it
+    when :ensure
+      delete_single.call(n.children[1])
     when :and, :or
       l, r = *n
       op = n.type == :and ? '&&' : '||'
@@ -110,6 +262,7 @@ def mutants_for(src)
         add.call(cond, 'false', 'cond-false')
       end
     when :while, :until, :while_post, :until_post
+      delete_single.call(n.children[1])
       cond = n.children[0]
       add.call(cond, "!(#{cond.loc.expression.source})", 'loop-cond-negate')
       add.call(cond, 'false', 'loop-cond-false') if n.type == :while
@@ -158,7 +311,9 @@ def mutants_for(src)
       franges.push(n.loc.expression.line..n.loc.expression.last_line)
       DEF_RANGES << franges.last
     end
+    ancestors.push(n)
     n.children.each { |c| walk.call(c, n) }
+    ancestors.pop
     if %i[def defs].include?(n.type)
       fns.pop
       franges.pop
@@ -169,6 +324,10 @@ def mutants_for(src)
 end
 
 mutants = mutants_for(SRC)
+if opts[:count_exempt]
+  puts JSON.generate(COUNTS)
+  exit
+end
 # de-duplicate identical (line, text)
 seen = {}
 mutants = mutants.select { |m| seen[[m.line, m.text]] ? false : (seen[[m.line, m.text]] = true) }
@@ -244,12 +403,13 @@ if opts[:carry]
   rerun, keep = mutants.partition do |m|
     st = prev[ckey.call(m.op, m.orig, m.repl, m.fn, SRC_LINES[m.line - 1].to_s.strip, OCC[m.line], m.col)]
     m.carried = st
-    everything || st.nil? || !st.start_with?('KILLED') || touched.call(m)
+    # a carried KILLED(timeout) was decided by no test (the per-test deadline now decides such mutants): it runs again
+    everything || st.nil? || !st.start_with?('KILLED') || st.start_with?('KILLED(timeout') || touched.call(m)
   end
   carried = keep.map { |m| record(m, m.carried).merge(carried: true) }
   $stderr.puts "carry: #{changed.size} changed line(s)#{everything ? ' (outside any def: everything re-runs)' : ''}; " \
                "#{carried.size} result(s) carried, #{rerun.size} to run (#{rerun.count { |m| m.carried.nil? }} unseen, " \
-               "#{rerun.count { |m| m.carried && !m.carried.start_with?('KILLED') }} earlier non-kills)"
+               "#{rerun.count { |m| m.carried && (!m.carried.start_with?('KILLED') || m.carried.start_with?('KILLED(timeout')) }} earlier non-kills / timeouts)"
   mutants = rerun
   if mutants.empty?
     puts JSON.pretty_generate(carried.sort_by { |x| x[:id] })
@@ -261,14 +421,38 @@ require_relative 'oracle'
 Oracle.prepare(FILE)
 $stderr.puts "mutants: #{mutants.size}"
 # Baseline: the UNMUTATED source applied the same way must pass the oracle, else every mutant would be "killed".
+# Every SystemStackError raised anywhere during a run (a kill test or the library may rescue it into an ordinary `false`):
+# counted by a :raise TracePoint. If the unmutated oracle raises none, a mutant decided after one is a RUN ERROR.
+def stack_raises
+  n = 0
+  tp = TracePoint.new(:raise) { |t| n += 1 if t.raised_exception.is_a?(SystemStackError) }
+  tp.enable
+  r = yield
+  [r, n]
+ensure
+  tp&.disable
+end
+t_base = Time.now
+br, bw = IO.pipe
 base = fork do
+  br.close
   $stdout.reopen('/dev/null', 'w')
   $VERBOSE = nil
   Oracle.apply(SRC, FILE)
-  exit!(Oracle.run ? 0 : 1)
+  Oracle.record_timings = true
+  ok, n = stack_raises { Oracle.run }
+  $stderr.puts "baseline oracle failed in #{Oracle.killer.inspect}#{Oracle.deadline_hit ? " (its flat #{Oracle::CLEAN_DEADLINE} s deadline)" : ''}" unless ok
+  vm_peak = (File.read('/proc/self/status')[/^VmPeak:\s+(\d+) kB/, 1].to_i * 1024 rescue 0) # Linux only (the CI); 0 elsewhere: no address-space cap
+  bw.write(JSON.generate({ 'stack' => n, 'timings' => Oracle.timings || {}, 'vm_peak' => vm_peak }))
+  bw.close
+  exit!(ok ? 0 : 1)
 rescue Exception # rubocop:disable Lint/RescueException
   exit!(2)
 end
+bw.close
+base_info = (JSON.parse(br.read) rescue { 'stack' => 0, 'timings' => {} })
+BASE_STACK_RAISES = base_info['stack'].to_i
+br.close
 Process.wait(base)
 unless $?.success?
   st = $?.exitstatus
@@ -286,6 +470,42 @@ unless $?.success?
   Process.wait(dbg)
   abort "baseline oracle FAILED on the unmutated source (status #{st})"
 end
+# Order probe: a mutant runs the kill tests in a per-mutant order (the move-to-front hint of recent killers), the baseline only in the
+# default one. A test that passes only after another (state one leaves behind: a patched method, a cache) would then fail on SOME mutants
+# of a behaviour-preserving change, a false kill. The unmutated suite must also pass in the exact reverse order.
+ord_pid = fork do
+  $stdout.reopen('/dev/null', 'w')
+  $VERBOSE = nil
+  Oracle.apply(SRC, FILE)
+  Oracle.record_timings = false
+  Oracle.hint = Oracle.test_names.reverse
+  ok = Oracle.run
+  $stderr.puts "order probe: the unmutated suite FAILED in reverse order, in #{Oracle.killer.inspect}#{Oracle.deadline_hit ? ' (deadline)' : ''}" unless ok
+  exit!(ok ? 0 : 1)
+rescue Exception => e # rubocop:disable Lint/RescueException
+  $stderr.puts "order probe raised #{e.class}: #{e.message}"
+  exit!(2)
+end
+Process.wait(ord_pid)
+abort 'the unmutated suite fails in reverse test order (an order-dependent test: every mutant it is reordered for could count as killed)' unless $?.success?
+unless Oracle.fresh_baseline_ok?
+  Oracle.fresh_baseline_ok?(err: $stderr)
+  abort 'the fresh-load probe FAILS on the unmutated source (every mutant it judges would count as killed)'
+end
+# The per-mutant limit is relative to the unmutated oracle's own run time (the go-mutate / swift-mutate rule): a fixed --timeout
+# near a slow oracle's duration counts SURVIVING mutants as timeout "kills" (a timeout is never an assertion). The baseline ran
+# alone, the mutants run --jobs at a time: 5x + 120 s (margin for GC pauses and a loaded runner, so a behaviour-preserving
+# mutant never times out), and never below --timeout. A timeout still needs a ledger entry: the merge treats it as a run error.
+base_s = Time.now - t_base
+LIMIT = [opts[:timeout], (5 * base_s + 120).ceil].max
+Oracle.deadline_cap = [LIMIT - 120, 60].max # a test deadline must fire before the process limit
+Oracle.clean_timings = base_info['timings'].freeze
+# A mutant that allocates without bound used to sit in GC retries near the shell's 6 GB `ulimit -v` until the process limit (no NoMemoryError,
+# no deadline delivered). Its address space is capped at 1.5x the clean suite's peak + 512 MB, so the allocation failure (a kill by the
+# running test) comes in seconds; a monitor thread (below) is the second layer.
+VM_LIMIT = base_info['vm_peak'].to_i.positive? ? (base_info['vm_peak'].to_i * 1.5 + 512 * 1024 * 1024).to_i : nil
+$stderr.puts "per-test deadline: max(#{Oracle::DEADLINE_FLOOR} s, #{Oracle::DEADLINE_FACTOR} x clean time) over #{Oracle.clean_timings.size} tests/stages; slowest clean #{Oracle.clean_timings.max_by { |_, v| v }&.then { |n, v| "#{n} #{v.round(1)}s" }}"
+$stderr.puts "baseline oracle passed in #{base_s.round(1)}s; per-mutant limit #{LIMIT}s; SystemStackErrors raised: #{BASE_STACK_RAISES}"
 if opts[:debug]
   mutants.each do |m|
     pid = fork do
@@ -310,27 +530,62 @@ until queue.empty? && running.empty?
   while running.size < opts[:jobs] && (m = queue.shift)
     Oracle.hint = hints.dup
     r, w = IO.pipe
+    progpath = File.join(Dir.tmpdir, "mutprog-#{Process.pid}-#{m.id}")
+    prog = File.open(progpath, 'w+')
     pid = fork do
       r.close
       # own process group: the parent's watchdog kills the whole group (a probe subprocess a mutant started included)
       Process.setpgid(0, 0)
       $stdout.reopen('/dev/null', 'w')
       $stderr.reopen('/dev/null', 'w')
-      Thread.new { sleep opts[:timeout]; Process.kill('KILL', Process.pid) }
+      Thread.new { sleep LIMIT; Process.kill('KILL', Process.pid) }
+      begin
+        Process.setrlimit(Process::RLIMIT_AS, VM_LIMIT) if VM_LIMIT
+      rescue StandardError, NotImplementedError
+        nil # above the hard limit / unsupported: keep the shell's ulimit
+      end
+      # second layer for a test that outlives its own deadline by 20 s (the Timeout interrupt not delivered: GC retries holding the
+      # lock): the monitor reports the kill by that test from its own thread and ends the process
+      Thread.new do
+        loop do
+          sleep 1
+          c = Oracle.current
+          next unless c && Process.clock_gettime(Process::CLOCK_MONOTONIC) - c[1] > c[2] + 20
+
+          begin
+            w.write("KILLED(deadline)\t#{c[0]}")
+            w.close
+          rescue StandardError
+            nil
+          end
+          exit!(0)
+        end
+      end
+      # A kill is a test (or corpus stage) answering wrong, raising, overflowing the stack, exhausting memory (ulimit -v:
+      # NoMemoryError) or exceeding its own deadline (Oracle::Deadline: killed-by-deadline <test>): each is that test failing, and
+      # the clean run of every test was green (the baseline above). Only a process that dies before any test ran, or a
+      # mutant that fails while the library is being loaded with a stack / memory error, is a RUN ERROR.
       status = begin
         $VERBOSE = nil
         Oracle.apply(m.text, FILE)
-        Oracle.run ? 'SURVIVED' : 'KILLED'
-      rescue Exception => e # rubocop:disable Lint/RescueException
-        "KILLED"
+        Oracle.progress = prog
+        if Oracle.run then 'SURVIVED'
+        elsif Oracle.deadline_hit then 'KILLED(deadline)'
+        else 'KILLED'
+        end
+      rescue NoMemoryError, SystemStackError => e
+        "RUN_ERROR(#{e.class})"
+      rescue Exception # rubocop:disable Lint/RescueException
+        'KILLED'
       end
-      status = "#{status}\t#{Oracle.killer}" if status == 'KILLED' && Oracle.killer
+      status = "#{status}\t#{Oracle.killer}" if status.start_with?('KILLED') && Oracle.killer
       w.write(status)
       w.close
       exit!(0)
     end
     w.close
-    running[pid] = [m, r, Time.now]
+    prog.close
+    running[pid] = [m, r, Time.now, progpath]
   end
   # Reap with a PARENT-SIDE deadline. The child's own timer thread (above) needs the interpreter lock: a mutant stuck in a long
   # C call that never yields it (catastrophic regexp backtracking, a huge bignum operation) is never killed by it, and a blocking
@@ -342,8 +597,8 @@ until queue.empty? && running.empty?
     break if pid
 
     now = Time.now
-    running.each do |cpid, (_m, _r, t)|
-      next unless now - t > opts[:timeout] + HARD_GRACE
+    running.each do |cpid, (_m, _r, t, _pp)|
+      next unless now - t > LIMIT + HARD_GRACE
 
       begin
         Process.kill('KILL', -cpid)
@@ -357,16 +612,30 @@ until queue.empty? && running.empty?
     end
     sleep 0.1
   end
-  m, r, started = running.delete(pid)
+  m, r, started, progpath = running.delete(pid)
   out = r.read
   r.close
+  last_test = (File.open(progpath, &:gets)&.chomp rescue nil)
+  File.delete(progpath) rescue nil # rubocop:disable Style/RescueModifier
   out, killer = out.split("\t", 2)
-  if killer && !killer.empty?
+  if killer && !killer.empty? && out == 'KILLED' # a deadline kill is the slowest test: never promoted to the front
     hints.delete(killer)
     hints.unshift(killer)
     hints.pop while hints.length > 8
   end
-  status = out.nil? || out.empty? ? (st.signaled? ? 'KILLED(timeout/crash)' : 'KILLED(crash)') : out
+  # no verdict written: past the limit = timeout (counted, reported per shard); a process that died while a test was running
+  # (NoMemoryError aborting the interpreter, a fatal crash) is a crash-kill by that test (the clean run of it was green);
+  # one that died before any test ran is a RUN ERROR
+  status = if out.nil? || out.empty?
+             if Time.now - started >= LIMIT then 'RUN_ERROR(timeout)'
+             elsif last_test && !last_test.empty? then (killer = last_test; 'KILLED(crash)')
+             elsif st.signaled? then "RUN_ERROR(SIG#{Signal.signame(st.termsig)})"
+             else "RUN_ERROR(exit #{st.exitstatus})"
+             end
+           else out
+           end
+  $stderr.puts "killed-by-deadline #{killer}" if status == 'KILLED(deadline)'
+  $stderr.puts "killed-by-crash #{killer}" if status == 'KILLED(crash)'
   results[m.id] = record(m, status)
   # MUT_STREAM=<file>: append each result as one JSON line the moment it completes (survives a wall-clock kill)
   File.open(ENV['MUT_STREAM'], 'a') { |f| f.puts(JSON.generate(results[m.id])) } if ENV['MUT_STREAM']

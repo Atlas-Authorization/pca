@@ -31,6 +31,7 @@ type Mut struct {
 	Desc   string `json:"mutant"`
 	Src    string `json:"line_text"`
 	start, end int
+	col        int // 1-based byte column of start (coverage block lookup)
 	repl   string
 	Status string `json:"status"`
 	// carry-forward identity (targeted mode): Key is stable across runs while the mutant's function is unchanged, DefHash is
@@ -41,6 +42,107 @@ type Mut struct {
 	ShellHash string `json:"shell_hash"`
 	SrcHash   string `json:"src_hash"`
 	Carried   bool   `json:"carried,omitempty"`
+	Evidence  string `json:"evidence,omitempty"` // run-error: the line that shows no test decided it
+}
+
+// isErrorResult: `err`, a package error value, or a new error built in the return.
+func isErrorResult(r ast.Expr) bool {
+	switch v := r.(type) {
+	case *ast.Ident:
+		return v.Name == "err" || strings.HasPrefix(v.Name, "Err")
+	case *ast.CallExpr:
+		if s, ok := v.Fun.(*ast.SelectorExpr); ok {
+			if p, ok := s.X.(*ast.Ident); ok {
+				return (p.Name == "errors" && s.Sel.Name == "New") || (p.Name == "fmt" && s.Sel.Name == "Errorf")
+			}
+		}
+	}
+	return false
+}
+
+// isReasonResult: a non-empty string literal, or a concatenation that starts with one.
+func isReasonResult(r ast.Expr) bool {
+	switch v := r.(type) {
+	case *ast.BasicLit:
+		return v.Kind == token.STRING && v.Value != `""` && v.Value != "``"
+	case *ast.BinaryExpr:
+		return v.Op == token.ADD && isReasonResult(v.X)
+	}
+	return false
+}
+
+// blankNoCall: `_ = x`, which does nothing to remove.
+func blankNoCall(x *ast.AssignStmt) bool {
+	for _, l := range x.Lhs {
+		if id, ok := l.(*ast.Ident); !ok || id.Name != "_" {
+			return false
+		}
+	}
+	for _, r := range x.Rhs {
+		if _, ok := r.(*ast.CallExpr); ok {
+			return false
+		}
+	}
+	return true
+}
+
+// capOutput keeps the first and last MiB of a mutant's output: a mutant that prints without end must not exhaust this
+// process (its address space is capped too). A "--- FAIL:" lost in the dropped middle only makes it a run error, never a kill.
+type capOutput struct{ head, tail []byte }
+
+func (c *capOutput) Write(p []byte) (int, error) {
+	const keep = 1 << 20
+	n := len(p)
+	if room := keep - len(c.head); room > 0 {
+		k := min(room, len(p))
+		c.head = append(c.head, p[:k]...)
+		p = p[k:]
+	}
+	c.tail = append(c.tail, p...)
+	if len(c.tail) > 2*keep {
+		c.tail = append(c.tail[:0], c.tail[len(c.tail)-keep:]...)
+	}
+	return n, nil
+}
+
+func (c *capOutput) String() string { return string(c.head) + string(c.tail) }
+
+// killedBy: the first failing test and its first message line (diagnostic only: it names the test that killed a mutant, so a
+// mutant that should be equivalent but is sometimes killed can be traced to its flaky test).
+func killedBy(o string) string {
+	ls := strings.Split(o, "\n")
+	for i, l := range ls {
+		if strings.HasPrefix(l, "--- FAIL:") {
+			out := strings.TrimSpace(l)
+			for j := i + 1; j < len(ls) && j <= i+2; j++ { if t := strings.TrimSpace(ls[j]); t != "" { out += " | " + t } }
+			if len(out) > 300 { out = out[:300] }
+			return out
+		}
+	}
+	return ""
+}
+
+// runErrorEvidence: a failing go test counts as a kill only when a test itself failed ("--- FAIL:", printed by t.Error/
+// t.Fatal and by the testing runner for a test that panicked). A runtime fatal error (out of memory under the shard's
+// ulimit -v, stack overflow, ...) or a signal death prints no such line: that is a run error, listed with this evidence.
+func runErrorEvidence(o string) string {
+	for _, l := range strings.Split(o, "\n") {
+		if strings.HasPrefix(l, "fatal error:") || strings.HasPrefix(l, "runtime: out of memory") || strings.HasPrefix(l, "signal: ") ||
+			strings.Contains(l, "goroutine stack exceeds") {
+			return strings.TrimSpace(l)
+		}
+	}
+	if strings.Contains(o, "--- FAIL:") { return "" }
+	// a panic in package init or in a goroutine the test started: name it, so the ledger reason can be checked against it
+	for _, l := range strings.Split(o, "\n") {
+		if strings.HasPrefix(l, "panic: ") { return "no test failed: " + strings.TrimSpace(l) }
+	}
+	return "no test failed: " + lastLine(o)
+}
+
+func lastLine(o string) string {
+	ls := strings.Split(strings.TrimSpace(o), "\n")
+	return strings.TrimSpace(ls[len(ls)-1])
 }
 
 type poolEntry struct{ S, D, H, A string }
@@ -107,12 +209,12 @@ func gen(path string) []Mut {
 	occ := map[string]int{}
 	add := func(p, e token.Pos, repl, desc string) {
 		s, en := fs.Position(p).Offset, fs.Position(e).Offset
-		ln := fs.Position(p).Line
+		ln, col := fs.Position(p).Line, fs.Position(p).Column
 		label, dh := "", sum(nil)
 		for _, sp := range spans {
 			if s >= sp.start && s < sp.end { label, dh = sp.label, sp.hash; break }
 		}
-		m := Mut{File: filepath.Base(path), Line: ln, Desc: desc, Src: strings.TrimSpace(lines[ln-1]), start: s, end: en, repl: repl, DefHash: dh, ShellHash: shell}
+		m := Mut{File: filepath.Base(path), Line: ln, Desc: desc, Src: strings.TrimSpace(lines[ln-1]), start: s, end: en, col: col, repl: repl, DefHash: dh, ShellHash: shell}
 		base := m.File + "|" + label + "|" + desc + "|" + m.Src
 		m.Key = fmt.Sprintf("%s|%d", base, occ[base])
 		occ[base]++
@@ -127,8 +229,10 @@ func gen(path string) []Mut {
 		case *ast.IfStmt:
 			c := x.Cond
 			if id, ok := c.(*ast.Ident); !ok || (id.Name != "true" && id.Name != "false") {
-				add(c.Pos(), c.End(), "true", "if-cond -> true")
-				add(c.Pos(), c.End(), "false", "if-cond -> false")
+				// keep the condition's text: `if v, ok := m[k]; ok` with the bare literal does not compile (ok unused), so it never ran
+				t := string(src[fs.Position(c.Pos()).Offset:fs.Position(c.End()).Offset])
+				add(c.Pos(), c.End(), "("+t+") || true", "if-cond -> true")
+				add(c.Pos(), c.End(), "("+t+") && false", "if-cond -> false")
 			}
 		case *ast.UnaryExpr:
 			if x.Op == token.NOT {
@@ -156,6 +260,15 @@ func gen(path string) []Mut {
 					if id.Name == "true" { o = "false" }
 					add(id.Pos(), id.End(), o, "return "+id.Name+" -> "+o)
 				}
+				switch {
+				case isErrorResult(r): // an early error return that reports success
+					add(r.Pos(), r.End(), "nil", "return error -> nil")
+				case isReasonResult(r): // this SDK reports a refusal as a reason string; "" is success
+					add(r.Pos(), r.End(), `""`, "return reason -> empty")
+				}
+				if l, ok := r.(*ast.BasicLit); ok && l.Kind == token.STRING && (l.Value == `""` || l.Value == "``") {
+					add(r.Pos(), r.End(), `"mutant"`, "return empty -> reason")
+				}
 			}
 		case *ast.AssignStmt:
 			if len(x.Rhs) == 1 && x.Tok == token.ASSIGN || x.Tok == token.DEFINE {
@@ -167,6 +280,9 @@ func gen(path string) []Mut {
 						add(id.Pos(), id.End(), o, "assign "+id.Name+" -> "+o)
 					}
 				}
+			}
+			if x.Tok != token.DEFINE && !blankNoCall(x) {
+				add(x.Pos(), x.End(), "_ = 0", "remove assignment")
 			}
 			if x.Tok == token.ADD_ASSIGN || x.Tok == token.SUB_ASSIGN {
 				o := "-="; if x.Tok == token.SUB_ASSIGN { o = "+=" }
@@ -180,8 +296,21 @@ func gen(path string) []Mut {
 			if _, ok := x.X.(*ast.CallExpr); ok {
 				add(x.Pos(), x.End(), "_ = 0", "remove call statement")
 			}
+		case *ast.DeferStmt:
+			add(x.Pos(), x.End(), "_ = 0", "remove defer")
+		case *ast.GoStmt:
+			add(x.Pos(), x.End(), "_ = 0", "remove go statement")
+		case *ast.BranchStmt:
+			if x.Label == nil && x.Tok == token.CONTINUE {
+				add(x.Pos(), x.End(), "_ = 0", "remove continue")
+				add(x.Pos(), x.End(), "break", "continue -> break")
+			} else if x.Label == nil && x.Tok == token.BREAK {
+				add(x.Pos(), x.End(), "_ = 0", "remove break")
+			}
 		case *ast.CaseClause:
-			// nothing
+			if n := len(x.Body); n > 0 {
+				add(x.Body[0].Pos(), x.Body[n-1].End(), "_ = 0", "remove case body")
+			}
 		}
 		return true
 	})
@@ -235,7 +364,7 @@ func main() {
 	for _, s := range strings.Split(*ids, ",") { var n int; if _, e := fmt.Sscanf(s, "%d", &n); e == nil { want[n] = true } }
 	for i := range all { if i%sn == si && (len(*ids) == 0 || want[i]) { mine = append(mine, &all[i]) } }
 	// Targeted mode. A pooled result is reused only when the mutant's function and the file's non-function code are token-identical
-	// (killed), or the whole production source is identical (build-failed: another file may have made it compile). Survivors,
+	// (killed only: a killed-timeout and a run-error are never carried, so a new deadline test re-measures them), or the whole production source is identical (build-failed: another file may have made it compile). Survivors,
 	// unseen mutants and everything else run again. Tests/corpus changes were vetted by baseline.mjs before the pool was handed over.
 	toRun := mine
 	if *carry != "" {
@@ -250,7 +379,7 @@ func main() {
 			switch {
 			case !ok: unseen++
 			case e.D != m.DefHash || e.H != m.ShellHash: changed++
-			case e.S == "killed" || e.S == "killed-timeout" || (e.S == "build-failed" && e.A == m.SrcHash):
+			case e.S == "killed" || (e.S == "build-failed" && e.A == m.SrcHash):
 				m.Status, m.Carried = e.S, true
 				continue
 			default: nonkill++
@@ -259,11 +388,26 @@ func main() {
 		}
 		fmt.Fprintf(os.Stderr, "go-mutate: carry: %d result(s) carried, %d to run (%d unseen, %d function/file changed, %d earlier non-kills or uncompilable under changed sources)\n", len(mine)-len(toRun), len(toRun), unseen, changed, nonkill)
 	}
-	// Baseline per mutated file (same flags and GOMUT_FILE as its mutants): it must PASS (a failing baseline would turn
-	// every mutant into a bogus kill), and it sets the per-mutant time limit. A fixed limit near the suite's own run time
-	// counted almost every mutant as "killed-timeout" once the oracle tests grew (the baseline took 40.0 s against 40 s).
+	// Coverage-guided test selection (default; -run turns it off for local dev). Every mutant used to run the WHOLE suite
+	// (~65 s) and every shard paid a ~1 min baseline per file (86 files), so shards hit the 5 h job limit. Instead: one
+	// coverage build, each top-level test run alone with a profile, and each mutant runs only the tests that execute its
+	// position. A test that never executes the mutated code cannot observe the mutant, so this never turns a kill into a
+	// survivor; a position outside every coverage block (package-level declarations, case expressions) runs the full suite.
+	cov := *runf == "" && len(toRun) > 0
+	var sel map[*Mut][]string // nil entry = full suite
+	durOf := map[string]time.Duration{}
+	var full time.Duration
+	if cov {
+		var err error
+		sel, full, err = coverageSelect(abs, tmp, *tags, *par, toRun, durOf)
+		if err != nil { fmt.Fprintf(os.Stderr, "go-mutate: %v; refusing to mutate\n", err); os.Exit(1) }
+	}
+	// Baseline per mutated file (non-coverage mode; same flags and GOMUT_FILE as its mutants): it must PASS (a failing
+	// baseline would turn every mutant into a bogus kill), and it sets the per-mutant time limit. A fixed limit near the
+	// suite's own run time counted almost every mutant as "killed-timeout" once the oracle tests grew.
 	base := map[string]time.Duration{}
 	for _, m := range toRun {
+		if cov { break }
 		if _, ok := base[m.File]; ok { continue }
 		bargs := []string{"test", "-count=1"}
 		if *tags != "" { bargs = append(bargs, "-tags", *tags) }
@@ -279,11 +423,27 @@ func main() {
 		base[m.File] = time.Since(t0)
 		fmt.Fprintf(os.Stderr, "go-mutate: baseline %s %v\n", m.File, base[m.File].Round(time.Second))
 	}
-	limitOf := func(f string) time.Duration {
-		l := 3*base[f] + 15*time.Second
-		if l < 40*time.Second { l = 40 * time.Second }
+	limitOf := func(m *Mut) time.Duration {
+		d := base[m.File]
+		if cov {
+			if names, ok := sel[m]; ok && names != nil {
+				d = 0
+				for _, n := range names { d += durOf[n] }
+			} else { d = full }
+		}
+		// margin: a timeout is not a kill (it needs a proof that the mutant itself loops), so GC pauses, -j 3 contention and
+		// slow runners must never time out a behaviour-preserving mutant
+		l := 5*d + 30*time.Second
+		if l < 60*time.Second { l = 60 * time.Second }
 		return l
 	}
+	var doneN int64
+	var doneMu sync.Mutex
+	t0 := time.Now()
+	// Every mutant's package build lands in GOCACHE (~100 MB for this package): ~150 mutants filled a runner's disk. Keep
+	// what the cache held before the mutants ran and drop the rest every 20 mutants, with no mutant in flight (gc).
+	var gc sync.RWMutex
+	cacheDir, keep := cacheSnapshot()
 	ch := make(chan *Mut)
 	var wg sync.WaitGroup
 	for w := 0; w < *par; w++ {
@@ -291,6 +451,13 @@ func main() {
 		go func(w int) {
 			defer wg.Done()
 			for m := range ch {
+				// no test executes this position (in the unmutated run): nothing can observe the mutant, so it only gets
+				// compiled (a mutant that does not compile is build-failed, not an uncovered survivor)
+				uncovered := false
+				if names, ok := sel[m]; cov && ok && len(names) == 0 { uncovered = true }
+				gc.RLock()
+				wt := filepath.Join(tmp, fmt.Sprintf("t%d", m.ID))
+				os.MkdirAll(wt, 0o755)
 				p := filepath.Join(abs, m.File)
 				src, _ := os.ReadFile(p)
 				mut := string(src[:m.start]) + m.repl + string(src[m.end:])
@@ -299,20 +466,24 @@ func main() {
 				ov, _ := json.Marshal(map[string]any{"Replace": map[string]string{p: mp}})
 				op := filepath.Join(tmp, fmt.Sprintf("o%d.json", m.ID))
 				os.WriteFile(op, ov, 0o644)
-				lim := limitOf(m.File)
+				lim := limitOf(m)
 				hard := lim + time.Minute
 				if *timeout > hard { hard = *timeout }
 				ctx, cancel := context.WithTimeout(context.Background(), hard)
-				targs := []string{"test", "-count=1", "-failfast", "-timeout", lim.String(), "-overlay", op}
+				targs := []string{"test", "-count=1", "-failfast", "-vet=off", "-timeout", lim.String(), "-overlay", op} // vet would turn a mutant such as `s == "a" && s == "b"` into a build failure no test decided
 				if *tags != "" { targs = append(targs, "-tags", *tags) }
 				if *runf != "" { targs = append(targs, "-run", *runf) }
+				if names := sel[m]; cov && names != nil { targs = append(targs, "-run", "^("+strings.Join(names, "|")+")$") }
+				if uncovered { targs = append(targs, "-run", "^$") }
 				cmd := exec.Command("go", append(targs, ".")...)
 				cmd.Dir = abs
-				// the heavy oracle tests run only when they cover the mutated file (see k042RequireCovers in the tests)
-				cmd.Env = append(os.Environ(), "GOMUT_FILE="+m.File)
+				// GOTMPDIR: a killed (timed-out) go test leaves its test binary behind; it goes with wt
+				cmd.Env = append(os.Environ(), "GOTMPDIR="+wt)
+				// non-coverage mode: the heavy oracle tests run only when they cover the mutated file (k042RequireCovers)
+				if !cov { cmd.Env = append(cmd.Env, "GOMUT_FILE="+m.File) }
 				cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-				var ob strings.Builder
-				cmd.Stdout, cmd.Stderr = &ob, &ob
+				ob := &capOutput{}
+				cmd.Stdout, cmd.Stderr = ob, ob
 				cmd.Start()
 				done := make(chan error, 1)
 				go func() { done <- cmd.Wait() }()
@@ -330,12 +501,20 @@ func main() {
 				switch {
 				case err == nil: m.Status = "SURVIVED"
 				case strings.Contains(string(o), "[build failed]") || strings.Contains(string(o), "[setup failed]"): m.Status = "build-failed"
-				case strings.Contains(string(o), "test timed out"): m.Status = "killed-timeout"
-				case timedOut: m.Status = "killed-timeout"
-				default: m.Status = "killed"
+				case strings.Contains(string(o), "test timed out"): m.Status, m.Evidence = "killed-timeout", "go test -timeout "+lim.String()+" expired"
+				case timedOut: m.Status, m.Evidence = "killed-timeout", "hard limit "+hard.String()+" expired"
+				default:
+					m.Status = "killed"
+					if ev := runErrorEvidence(string(o)); ev != "" { m.Status, m.Evidence = "run-error", ev } else { m.Evidence = killedBy(string(o)) }
 				}
-				os.Remove(mp); os.Remove(op)
-				if m.Status == "SURVIVED" { fmt.Printf("SURVIVED %d %s:%d %s | %s\n", m.ID, m.File, m.Line, m.Desc, m.Src) }
+				os.Remove(mp); os.Remove(op); os.RemoveAll(wt)
+				gc.RUnlock()
+				if m.Status == "run-error" { fmt.Printf("RUN-ERROR %d %s:%d:%d %s | %s | %s\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src, m.Evidence) }
+				if m.Status == "SURVIVED" && uncovered { fmt.Printf("SURVIVED %d %s:%d:%d %s | %s (no test executes it)\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src) } else if m.Status == "SURVIVED" { fmt.Printf("SURVIVED %d %s:%d:%d %s | %s\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src) }
+				doneMu.Lock(); doneN++; n := doneN
+				if n%100 == 0 { fmt.Fprintf(os.Stderr, "go-mutate: %d/%d mutants run, %v\n", n, len(toRun), time.Since(t0).Round(time.Second)) }
+				doneMu.Unlock()
+				if n%20 == 0 { gc.Lock(); trimCache(cacheDir, keep); gc.Unlock() }
 			}
 		}(w)
 	}

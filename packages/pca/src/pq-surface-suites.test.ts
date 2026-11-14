@@ -35,7 +35,8 @@ import {
 import { checkRevocationEpoch, signRevocationEpoch } from './revocation';
 import { issueLivenessBeacon, verifyLivenessBeacon } from './beacons';
 import { cosignTreeHead, signTreeHead, verifyTreeHead, verifyWitnessCosignatures, verifyWitnessedHead, TransparencyLedger } from './ledger';
-import { BondLedger, InMemoryBondAccount, verifySettlement } from './bond-settlement';
+import { verifySettlement } from './bond-settlement';
+import { BondLedger, InMemoryBondAccount } from './bond-ledger-testing';
 import { createDevAttestor, verifyAttestation } from './attestation';
 import { mintGrant } from './envelope';
 import { buildPCActn } from './pcactn';

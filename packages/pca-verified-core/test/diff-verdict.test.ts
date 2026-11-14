@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { mintGrant } from '../../pca/src/envelope';
 import { intentGoal } from '../../pca/src/intent-binding';
 import { encodeKey, generateKeyPair } from '../../pca/src/keys';
-import { ARTIFACT_SIZE_REASON, MAX_ARTIFACT_BYTES, buildPCActn as buildLegacy, decodePCActn, verifyPCActnCore as coreWired, type PCActn, type VerifyHooks } from '../../pca/src/pcactn';
+import { ARTIFACT_SIZE_REASON, MAX_ARTIFACT_BYTES, buildPCActn as buildLegacy, decodePCActn, type PCActn, type VerifyHooks } from '../../pca/src/pcactn';
+import { verifyPCActnCore as coreWiredStrict } from '../../pca/src/pcactn-full';
 import { DEFAULT_RISK_POLICY } from '../../pca/src/risk';
 import { enforceRequired as enforceWired, verifyPCActn as verifyWired, type PcaVerdict } from '../../pca/src/server/verify';
 import { verifyPCActnCore as coreLegacy } from './support/legacy/pcactn';
@@ -166,7 +167,23 @@ const fuzzSeed = (fixed: number): { seed?: number } => {
   if (e !== undefined && e !== '' && Number.isSafeInteger(Number(e))) return { seed: Number(e) };
   return { seed: fixed };
 };
-const canon = (v: unknown) => JSON.stringify(v, (_k, x) => (x === undefined ? '__undef__' : typeof x === 'number' && !Number.isFinite(x) ? String(x) : x));
+// 0.5 (B6) split the verifier's `counter` check into `counter_format` (+ `replay` with a store); the frozen legacy still says `counter`.
+// Both sides are compared under the old name, key order preserved.
+// 0.5 defaults the verifier to DEFAULT_REQUIRED_CHECKS (default-deny) and reports a carried-but-unimplemented feature (bond_ref) as
+// `unsupported` and denies it; the frozen legacy has neither. Pin both off (require: [], allowUnsupported: ['bond']) and compare
+// `unsupported` as the legacy `not-enforced`, so every other difference still fails.
+// 0.5 (K5) refuses a verifier with no authorizedPlanRoots; the frozen legacy reports `not-enforced`. The explicit opt-out makes the wired side report the same.
+const coreWired = (p: any, o: Record<string, unknown>) => coreWiredStrict(p, { insecureSkipPlanRootCheck: true, ...o } as never);
+const verifyWiredOld = (p: unknown, o: Record<string, unknown>) => verifyWired(p as never, { require: [], allowUnsupported: ['bond'], insecureSkipPlanRootCheck: true, ...o } as never);
+const oldName = (k: string) => k.replace(/\bcounter_format\b/g, 'counter');
+const canon = (v: unknown) =>
+  JSON.stringify(v, (_k, x) =>
+    x === undefined ? '__undef__'
+    : typeof x === 'number' && !Number.isFinite(x) ? String(x)
+    : x === 'unsupported' ? 'not-enforced'
+    : typeof x === 'string' ? oldName(x)
+    : x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).map(([k, y]) => [oldName(k), y]))
+    : x);
 
 describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeScript (test/support/legacy) vs the PRODUCTION code that delegates to the verified core', () => {
   it('agrees (JSON-identical, key order included) on every conformance vector at the core level', async () => {
@@ -246,7 +263,7 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
           continue;
         }
         const a = await verifyLegacy(p, o);
-        const b = await verifyWired(p, o);
+        const b = await verifyWiredOld(p, o);
         expect(canon(b), v.name).toBe(canon(a));
         if (a.allow) allowed++;
       }
@@ -284,7 +301,7 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
         n++;
         continue;
       }
-      same(await verifyWired(v.pcactn_json, o), await verifyLegacy(v.pcactn_json, o), v.name);
+      same(await verifyWiredOld(v.pcactn_json, o), await verifyLegacy(v.pcactn_json, o), v.name);
       n++;
     }
     expect(n).toBeGreaterThan(1000);
@@ -301,7 +318,7 @@ describe('differential: verifyPCActnCore / verifyPCActn: frozen pre-wiring TypeS
         const p = r.next(3) === 0 ? mutate(base.p, r) : base.p;
         const opts = options(r, base.grant);
         const a = await verifyLegacy(p, opts);
-        const b = await verifyWired(p, opts);
+        const b = await verifyWiredOld(p, opts);
         same(b, a);
         if (a.allow) allowed++; else denied++;
       }),

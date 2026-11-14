@@ -18,7 +18,7 @@ import type {
   VaultFetch,
   VaultHttpResponse,
 } from '@atlasauth/pca-connect';
-import { type ProviderManifest, ConnectorError } from './manifest';
+import { type ProviderManifest, ConnectorError, RESERVED_TOKEN_PARAMS } from './manifest';
 import { type ProviderRegistry, defaultRegistry } from './registry';
 import { substituteVars } from './authorize';
 
@@ -101,6 +101,19 @@ function errText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Replace every secret in `text`, so a provider error body or a transport error that echoes the request cannot leak one. */
+function redact(text: string, secrets: readonly (string | undefined)[]): string {
+  let out = text;
+  for (const s of secrets) if (s !== undefined && s.length > 0) out = out.split(s).join('[redacted]');
+  return out;
+}
+
+function checkExtraParams(extra: Record<string, string> | undefined, what: string): void {
+  for (const k of Object.keys(extra ?? {})) {
+    if (RESERVED_TOKEN_PARAMS.has(k)) throw new ConnectorError(`${what}: extraParams may not set '${k}'`);
+  }
+}
+
 /** Standard base64 (padded) of `s` — for HTTP Basic client authentication (RFC 6749 §2.3.1). */
 function basicAuthHeader(clientId: string, clientSecret: string): string {
   let s = b64u(utf8(`${clientId}:${clientSecret}`)).replace(/-/g, '+').replace(/_/g, '/');
@@ -156,16 +169,17 @@ async function postToken(
     delete body['client_secret'];
   }
 
+  const secrets = [clientSecret, params['code'], params['code_verifier'], params['refresh_token'], headers['authorization']];
   let res: VaultHttpResponse;
   try {
     res = await fetchImpl(tokenEndpoint, { method: 'POST', headers, body: formEncode(body) });
   } catch (e) {
-    throw new ConnectorError(`[${manifest.id}] token transport error: ${errText(e)}`);
+    throw new ConnectorError(`[${manifest.id}] token transport error: ${redact(errText(e), secrets)}`);
   }
   if (!res.ok) {
     let detail = '';
     try {
-      detail = (await res.text()).slice(0, 256);
+      detail = redact((await res.text()).slice(0, 256), secrets);
     } catch {
       detail = '<unreadable body>';
     }
@@ -174,8 +188,9 @@ async function postToken(
   let json: unknown;
   try {
     json = await res.json();
-  } catch (e) {
-    throw new ConnectorError(`[${manifest.id}] unparseable token JSON: ${errText(e)}`);
+  } catch {
+    // the parser's message quotes the start of the body, which may hold a token
+    throw new ConnectorError(`[${manifest.id}] unparseable token JSON`);
   }
   return parseTokenResponse(json, manifest.id);
 }
@@ -221,6 +236,8 @@ export async function exchangeCode(args: ExchangeCodeArgs): Promise<StoredConnec
   const now = args.now ?? Date.now();
   const requested = args.scopes ?? manifest.defaultScopes;
 
+  if (typeof args.code !== 'string' || args.code.length === 0) throw new ConnectorError(`[${manifest.id}] an authorization code is required`);
+  checkExtraParams(args.extraParams, `[${manifest.id}] exchangeCode`);
   if (manifest.pkce === true && args.codeVerifier === undefined) {
     throw new ConnectorError(`[${manifest.id}] provider uses PKCE; a codeVerifier is required to exchange the code`);
   }
@@ -252,6 +269,8 @@ export async function refresh(args: RefreshArgs): Promise<StoredConnection> {
   }
   const now = args.now ?? Date.now();
   const requested = args.scopes ?? manifest.defaultScopes;
+  if (typeof args.refreshToken !== 'string' || args.refreshToken.length === 0) throw new ConnectorError(`[${manifest.id}] a refresh token is required`);
+  checkExtraParams(args.extraParams, `[${manifest.id}] refresh`);
 
   const params: Record<string, string> = {
     grant_type: 'refresh_token',

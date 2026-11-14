@@ -5,9 +5,11 @@
 //          intent_v2?) (strict parse failure == wire failure); a verdict whose reason carries `unsupported_suite` is tagged
 // chain  : Pca.verifyChain(chain, expected_root_issuer?, allowed_suites?, pq_pins?, trusted_root?)
 // canon  : strict parse + canonicalizeStrict + hashStrict of ANY JSON text
+// produce: ProducerOps.run(op, args) over {op, args, keys, pq_keys?}; answers {out} or {error}
 // intent_*: an Intent Layer v2 primitive (raw = its `input` as JSON text); `result` in the `expect` shape, `reason` when
 //          refused.
 import net.atlasauth.pca.verifier.ActionSchema
+import net.atlasauth.pca.verifier.Caveats
 import net.atlasauth.pca.verifier.IntentClassifier
 import net.atlasauth.pca.verifier.IntentJs
 import net.atlasauth.pca.verifier.IntentMap
@@ -131,6 +133,28 @@ private fun one(c: Map<String, Any?>): String {
                 )
                 val ok = why.isEmpty()
                 "{\"id\":$id,\"allow\":$ok,\"checks\":{\"chain\":$ok}${suiteTag(why)}}"
+            }
+            kind == "policy" -> {
+                // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+                // Authorize.evaluateAgentCaveats(policyCaveats(grant, chain), context, {action}, toolCall) as {allow, failed}: the
+                // agent-native evaluator (predicates + tool_schema); the tool call is the signed verb + params (the reference's toolCallOf)
+                val pv = Json.parseLenient(raw) as Map<String, Any?>
+                val pctx = pv["context"] as Map<String, Any?>
+                val pact = pctx["action"] as? Map<String, Any?>
+                val pcall = linkedMapOf<String, Any?>("tool" to (pact?.get("verb") as? String ?: ""), "args" to (pact?.get("params") as? Map<*, *> ?: emptyMap<String, Any?>()))
+                val pr = net.atlasauth.pca.verifier.Authorize.evaluateAgentCaveats(Caveats.policyCaveats(pv["grant"], pv["chain"]), pctx, mapOf("action" to pctx["action"]), pcall)
+                "{\"id\":$id,\"allow\":${pr.ok},\"failed\":" + pr.failed.joinToString(",", "[", "]") { esc(it) } + "}"
+            }
+            kind == "produce" -> {
+                // Producer layer: raw = {op, args, keys, pq_keys?}; answers {out} in the case's expect shape, or {error} (the refusal text)
+                val pr = Json.parseLenient(raw) as Map<String, Any?>
+                try {
+                    val o = net.atlasauth.pca.verifier.ProducerOps(pr["keys"] as Map<String, Any?>?, pr["pq_keys"] as Map<String, Any?>?)
+                        .run(pr["op"] as String, pr["args"] as Map<String, Any?>)
+                    "{\"id\":$id,\"out\":${Json.canonicalize(o)}}"
+                } catch (e: RuntimeException) {
+                    "{\"id\":$id,\"error\":${esc(e.message ?: e.javaClass.simpleName)}}"
+                }
             }
             kind.startsWith("intent_") -> {
                 val r = intentPrimitive(kind, Json.parseLenient(raw)) ?: return "{\"id\":$id,\"error\":${esc("exception:$kind")}}"

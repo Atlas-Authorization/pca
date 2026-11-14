@@ -9,7 +9,10 @@ import { resolve } from 'node:path';
 import { decodeProtectedHeader } from 'jose';
 import type { JWK } from 'jose';
 import { describe, expect, it } from 'vitest';
-import { athFor, jwkThumbprint, verifyDpopProof } from './index';
+import { athFor, jwkThumbprint, verifyDpopProof as verifyDpopProofRaw } from './index';
+
+// 0.5: a replay store is required by default; these suites mostly exercise other checks, so they opt out explicitly.
+const verifyDpopProof: typeof verifyDpopProofRaw = (p, o) => verifyDpopProofRaw(p, { requireReplayStore: false, ...o });
 
 interface Fixture {
   sha256_of_source: string;

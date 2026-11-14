@@ -30,7 +30,7 @@ fi
 if [ "$what" = lean ] || [ "$what" = all ]; then
   echo "== lake build (lean/)"
   (cd lean && lake build) || rc=1
-  printf 'import PcaComp\n#print axioms PcaComp.Chain.chain_attenuation\n#print axioms PcaComp.Chain.no_widening_after\n#print axioms PcaComp.NonMember.nonmember_sound\n' \
+  printf 'import PcaComp\n#print axioms PcaComp.Chain.chain_attenuation\n#print axioms PcaComp.Chain.no_widening_after\n#print axioms PcaComp.NonMember.nonmember_sound\n#print axioms PcaComp.Fame.decrypt_exponent\n#print axioms PcaComp.Span.span_program_solved\n#print axioms PcaComp.Kem.hybrid_secret_if_kem1_secret\n#print axioms PcaComp.Kem.hybrid_secret_if_kem2_secret\n#print axioms PcaComp.Ratchet.forward_secrecy\n#print axioms PcaComp.Ratchet.no_pcs\n#print axioms PcaComp.Oprf.oblivious\n#print axioms PcaComp.Oprf.dleq_special_soundness\n#print axioms PcaComp.Oprf.revocation_set_sound\n#print axioms PcaComp.Aggsig.pop_reduction\n#print axioms PcaComp.Aggsig.rogue_key_attack\n#print axioms PcaComp.Frost.aggregate_verifies\n#print axioms PcaComp.Frost.cheater_identified\n#print axioms PcaComp.Frost.accepted_has_honest_signer\n#print axioms PcaComp.Witness.no_split_view\n#print axioms PcaComp.Vdf.wesolowski_complete\n#print axioms PcaComp.Wrap.transcript_inj\n#print axioms PcaComp.Wrap.statement_bound\n' \
     | (cd lean && lake env lean --stdin) || rc=1
 fi
 if [ "$what" = leanmath ] || [ "$what" = all ]; then

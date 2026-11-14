@@ -1,7 +1,10 @@
 import { compactJwsAliases } from '@atlasauth/pca';
 import { exportJWK, generateKeyPair } from 'jose';
 import { describe, expect, it } from 'vitest';
-import { createDpopProof, verifyDpopProof } from './index';
+import { createDpopProof, verifyDpopProof as verifyDpopProofRaw } from './index';
+
+// 0.5: a replay store is required by default; these suites mostly exercise other checks, so they opt out explicitly.
+const verifyDpopProof: typeof verifyDpopProofRaw = (p, o) => verifyDpopProofRaw(p, { requireReplayStore: false, ...o });
 
 const URL1 = 'https://api.atlasauth.net/v1/pca/exec';
 

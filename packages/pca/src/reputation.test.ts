@@ -24,7 +24,7 @@ describe('reputation', () => {
     const slashed = reputation({
       subject: 'a',
       events: Array.from({ length: 10 }, (_, i) => ev('auto', i)),
-      disputes: [{ subject: 'a', slashed: true, at: 1 }, { subject: 'a', slashed: true, at: 2 }],
+      disputes: [{ id: 'd1', subject: 'a', slashed: true, at: 1 }, { id: 'd2', subject: 'a', slashed: true, at: 2 }],
     });
     expect(slashed.slashes).toBe(2);
     expect(slashed.score).toBeLessThan(0.5);
@@ -48,7 +48,7 @@ describe('priceCoverage', () => {
     const bad = reputation({
       subject: 'c',
       events: Array.from({ length: 4 }, (_, i) => ev('auto', i)),
-      disputes: [{ subject: 'c', slashed: true, at: 1 }, { subject: 'c', slashed: true, at: 2 }, { subject: 'c', slashed: true, at: 3 }],
+      disputes: [{ id: 'd3', subject: 'c', slashed: true, at: 1 }, { id: 'd4', subject: 'c', slashed: true, at: 2 }, { id: 'd5', subject: 'c', slashed: true, at: 3 }],
     });
     const p = priceCoverage(bad, 1000);
     expect(p.declined).toBe(true);
