@@ -161,7 +161,7 @@ describe('default production path = proved code', () => {
   it('the enforce.taint gate of verifyPCActnCore is the proved gate', async () => {
     const s = setup();
     const p = s.mk(s.plan[0]!, { extra: { provenance: { causal_hash: '', taint_level: 0, trusted_refs: ['d1'] } } }) as PCActn;
-    const core = (taint: unknown) => verifyPCActnCore(p, { grant: s.grant, nowEpoch: FX_NOW, audience: AUD, enforce: { taint } } as never);
+    const core = (taint: unknown) => verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: s.grant, nowEpoch: FX_NOW, audience: AUD, enforce: { taint } } as never);
     const reg = new InMemoryTrustedInputRegistry().recordTrusted('d1');
     const ok = await core({ ctx: { registry: reg }, maxTaint: 0 });
     expect(spy('taintGateVerified')).toHaveBeenCalledTimes(1);

@@ -9,20 +9,19 @@ import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import {
   DEFAULT_RISK_POLICY,
-  type FrostParticipantShare,
   type PCActn,
   type PlanNode,
   attenuate,
   b64u,
   buildPCActn,
   encodeKey,
-  frostTrustedDealerKeygen,
   generateKeyPair,
   mintGrant,
   mlDsa65Keygen,
   mlDsa65Sign,
   thresholdMessage,
 } from '@atlasauth/pca';
+import { type FrostParticipantShare, frostTrustedDealerKeygen, pqQuorumRepresentative } from '@atlasauth/pca/ext/frost';
 import {
   MAX_PQ_SIGNER_ENTRIES,
   createHybridThresholdVerifier,
@@ -90,9 +89,9 @@ describe('action binding and quorum accounting', () => {
     expect(dup.pq.count).toBe(1);
     expect(dup.ok).toBe(false);
     const outsider = mlDsa65Keygen(seed(99));
-    const forged = { pk: b64u(outsider.publicKey), sig: b64u(mlDsa65Sign(outsider.secretKey, thresholdMessage(actionA))) };
+    const forged = { pk: b64u(outsider.publicKey), sig: b64u(mlDsa65Sign(outsider.secretKey, pqQuorumRepresentative(thresholdMessage(actionA)))) };
     expect(verifyHybridThreshold(actionA, withPq([good0, forged]), opts).pq.count).toBe(1);
-    const otherAction = { pk: good1.pk, sig: b64u(mlDsa65Sign(pq[1]!.secretKey, thresholdMessage(actionB))) };
+    const otherAction = { pk: good1.pk, sig: b64u(mlDsa65Sign(pq[1]!.secretKey, pqQuorumRepresentative(thresholdMessage(actionB)))) };
     expect(verifyHybridThreshold(actionA, withPq([good0, otherAction]), opts).pq.count).toBe(1);
     expect(verifyHybridThreshold(actionA, withPq([good0, { pk: good1.pk, sig: good0.sig }]), opts).pq.count).toBe(1);
   });

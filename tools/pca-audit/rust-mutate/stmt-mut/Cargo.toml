@@ -1,0 +1,14 @@
+[package]
+name = "stmt-mut"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Lists the statement-form mutants cargo-mutants does not make (pca-rust mutation workflow; driver: ../stmt-run.mjs)"
+
+# standalone: never a member of the repo it is laid into
+[workspace]
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
+serde_json = "1"

@@ -1,0 +1,7 @@
+{
+  "ns": "acme",
+  "version": "0.1.0",
+  "stability": "draft",
+  "site": "https://acme.example.com",
+  "aud": "acme-api"
+}

@@ -6,7 +6,9 @@
  * characters and translate `context.a == (X::"q"` into a condition the policy never stated.
  */
 import { describe, expect, it } from 'vitest';
-import { cedarToPca } from './cedar';
+import { translateCedar } from './cedar';
+const cedarToPca = (text: string) => translateCedar(text, false); // structure tests: bare expressions, no error guards
+
 
 describe('r11: only a fully-enclosing parenthesis is stripped from a single term', () => {
   it('a term that does not start with "(" is not unwrapped', () => {

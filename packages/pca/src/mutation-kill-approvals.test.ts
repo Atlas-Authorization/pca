@@ -128,7 +128,7 @@ describe('reviewAction', () => {
   it('dryRun receives verb, resource, params and the same now', () => {
     const seen: unknown[] = [];
     const a = mk({ dryRun: (...args: unknown[]) => (seen.push(args), { allowed: true, t: 1 }) });
-    reviewAction(a, 'v', 'res', { p: 1 }, { now: NOW });
+    reviewAction(a, 'v', 'res', { p: 1 }, { insecureUnboundApproval: true, now: NOW });
     expect(seen).toEqual([['v', 'res', { p: 1 }, { now: NOW }]]);
   });
   it('t=1 and t=undefined auto-admit', () => {
@@ -137,7 +137,7 @@ describe('reviewAction', () => {
   });
   it('step-up request fields, id derivation and optional keys', () => {
     const a = mk({ dryRun: () => ({ allowed: true, t: 3, reason: 'big' }) });
-    const r = reviewAction(a, 'v', 'res', { amt: 10 }, { now: NOW, goal: 'process October payouts' });
+    const r = reviewAction(a, 'v', 'res', { amt: 10 }, { insecureUnboundApproval: true, now: NOW, goal: 'process October payouts' });
     expect(r.kind).toBe('step_up');
     if (r.kind !== 'step_up') return;
     const q = r.request;
@@ -145,7 +145,7 @@ describe('reviewAction', () => {
     expect(q).toMatchObject({ verb: 'v', resource: 'res', params: { amt: 10 }, tier: 3, reason: 'big', goalCommit: commit, goal: 'process October payouts', requestedAt: NOW });
     expect(q.lineage.goalVerified).toBe(true);
     expect(q.lineage.goal).toBe('process October payouts');
-    const bare = reviewAction(mk({ dryRun: () => ({ allowed: true, t: 2 }) }), 'v', 'res', undefined, { now: NOW });
+    const bare = reviewAction(mk({ dryRun: () => ({ allowed: true, t: 2 }) }), 'v', 'res', undefined, { insecureUnboundApproval: true, now: NOW });
     if (bare.kind !== 'step_up') throw new Error('x');
     expect(bare.request.reason).toBe('requires tier 2 co-sign');
     expect('params' in bare.request).toBe(false);
@@ -156,13 +156,13 @@ describe('reviewAction', () => {
   });
   it('id depends on every input', () => {
     const a = mk({ dryRun: () => ({ allowed: true, t: 2 }) });
-    const id = (v: string, r: string, p: Record<string, unknown> | undefined, now: number) => (reviewAction(a, v, r, p, { now }) as { request: { id: string } }).request.id;
+    const id = (v: string, r: string, p: Record<string, unknown> | undefined, now: number) => (reviewAction(a, v, r, p, { now, insecureUnboundApproval: true }) as { request: { id: string } }).request.id;
     const base = id('v', 'r', { a: 1 }, 1);
     expect(new Set([base, id('w', 'r', { a: 1 }, 1), id('v', 's', { a: 1 }, 1), id('v', 'r', { a: 2 }, 1), id('v', 'r', { a: 1 }, 2), id('v', 'r', undefined, 1)]).size).toBe(6);
   });
   it('risk r: dollars model scales amount by kappa and clamps to [0,1]', () => {
     const rOf = (o: Over, params?: Record<string, unknown>) => {
-      const r = reviewAction(mk({ dryRun: () => ({ allowed: true, t: 2 }), ...o }), 'v', 'x', params, { now: 1 });
+      const r = reviewAction(mk({ dryRun: () => ({ allowed: true, t: 2 }), ...o }), 'v', 'x', params, { insecureUnboundApproval: true, now: 1 });
       return (r as { request: { r: number } }).request.r;
     };
     expect(rOf({ budgetModel: 'dollars', kappa: 200 }, { amt: 50 })).toBe(0.25);
@@ -183,17 +183,17 @@ describe('reviewAction', () => {
   it('standing approvals downgrade a step-up to auto only when they cover it', () => {
     const a = mk({ dryRun: () => ({ allowed: true, t: 2 }) });
     const ap = approveClass(['v'], { ttlMs: 1000, by: 'me', now: 100 });
-    expect(reviewAction(a, 'v', 'r', undefined, { now: 500, standing: [ap] }).kind).toBe('auto');
-    expect(reviewAction(a, 'v', 'r', undefined, { now: 2000, standing: [ap] }).kind).toBe('step_up');
-    expect(reviewAction(a, 'v', 'r', undefined, { now: 500, standing: [] }).kind).toBe('step_up');
-    expect(reviewAction(a, 'v', 'r', undefined, { now: 500 }).kind).toBe('step_up');
+    expect(reviewAction(a, 'v', 'r', undefined, { insecureUnboundApproval: true, now: 500, standing: [ap] }).kind).toBe('auto');
+    expect(reviewAction(a, 'v', 'r', undefined, { insecureUnboundApproval: true, now: 2000, standing: [ap] }).kind).toBe('step_up');
+    expect(reviewAction(a, 'v', 'r', undefined, { insecureUnboundApproval: true, now: 500, standing: [] }).kind).toBe('step_up');
+    expect(reviewAction(a, 'v', 'r', undefined, { insecureUnboundApproval: true, now: 500 }).kind).toBe('step_up');
     const denied = mk({ dryRun: () => ({ allowed: false, reason: 'x' }) });
-    expect(reviewAction(denied, 'v', 'r', undefined, { now: 500, standing: [ap] }).kind).toBe('deny'); // a standing approval never overrides a deny
+    expect(reviewAction(denied, 'v', 'r', undefined, { insecureUnboundApproval: true, now: 500, standing: [ap] }).kind).toBe('deny'); // a standing approval never overrides a deny
   });
   it('batchReview / pendingRequests keep only step-ups, in order', () => {
     let n = 0;
     const a = mk({ dryRun: () => ({ allowed: true, t: [1, 2, 3][n++ % 3] }) });
-    const reviews = batchReview(a, [{ verb: 'v', resource: 'a' }, { verb: 'v', resource: 'b' }, { verb: 'v', resource: 'c', params: { amt: 1 } }], { now: 9 });
+    const reviews = batchReview(a, [{ verb: 'v', resource: 'a' }, { verb: 'v', resource: 'b' }, { verb: 'v', resource: 'c', params: { amt: 1 } }], { now: 9, insecureUnboundApproval: true });
     expect(reviews.map((r) => r.kind)).toEqual(['auto', 'step_up', 'step_up']);
     expect(pendingRequests(reviews).map((r) => r.resource)).toEqual(['b', 'c']);
     expect(pendingRequests([{ kind: 'auto' }, { kind: 'deny', reason: 'x' }])).toEqual([]);
@@ -266,11 +266,11 @@ describe('residual boundaries', () => {
   });
   it('reviewAction on a grant with no readable envelope yields an empty goalCommit instead of throwing', () => {
     const bare = { ...mk({ dryRun: () => ({ allowed: true, t: 2 }) }), grant: { ...real.grant, caveats: [] } } as unknown as Agent;
-    const r = reviewAction(bare, 'v', 'r', undefined, { now: 1 });
+    const r = reviewAction(bare, 'v', 'r', undefined, { insecureUnboundApproval: true, now: 1 });
     expect(r.kind === 'step_up' && r.request.goalCommit).toBe('');
   });
   it('dollars model with an uncatalogued verb falls back to the default blast radius', () => {
-    const r = reviewAction(mk({ budgetModel: 'dollars', dryRun: () => ({ allowed: true, t: 2 }) }), 'unknown', 'r', { amt: 5 }, { now: 1 });
+    const r = reviewAction(mk({ budgetModel: 'dollars', dryRun: () => ({ allowed: true, t: 2 }) }), 'unknown', 'r', { amt: 5 }, { insecureUnboundApproval: true, now: 1 });
     expect(r.kind === 'step_up' && r.request.r).toBe(0.8);
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-fndsa-wasm",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "FN-DSA (Falcon, FIPS 206) signature backend for @atlasauth/pca: FN-DSA-512 / FN-DSA-1024 keygen, signing and verification from the vetted pure-Rust fn-dsa crate family (Thomas Pornin) compiled to WebAssembly. Verification is the PCA verifier's public-key operation.",
   "keywords": [
     "fn-dsa",
@@ -56,5 +56,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "hardened"
   }
 }

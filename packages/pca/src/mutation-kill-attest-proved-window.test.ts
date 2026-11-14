@@ -127,7 +127,7 @@ describe('hostile contexts are refusals with their own reasons', () => {
 describe('the self-declared-nonce hook on partial contexts', () => {
   const hook = createAttestationVerifier({ trustedAttestorKeys: [ATT_PUB], resolveDocument: () => doc(), now: () => T, insecure_selfDeclaredNonce: true });
   it('a context without a pcactn is refused, not thrown', async () => {
-    const r = await hook({ grant: grantWith() } as never);
+    const r: any = await hook({ grant: grantWith() } as never);
     expect(r.ok).toBe(false);
     expect(r.enforced).toBe(true);
     expect(r.present).toBe(true);
@@ -139,17 +139,17 @@ describe('the self-declared-nonce hook on partial contexts', () => {
     const doc2 = (holder: string) => doc({ binding: attestationBindingB64u({ holderPub: holder, grantRef: GREF, epoch: 1, nonce: NONCE }), issued_at: T - 1000 });
     const refusal = 'attestation binding not constructible: binding: holderPub required';
     const v = (d: AttestationDocument, ctx: unknown) => createAttestationVerifier({ trustedAttestorKeys: [ATT_PUB], resolveDocument: () => d, now: () => T, insecure_selfDeclaredNonce: true })(ctx as never);
-    expect((await v(doc2('last'), mk([{ holder: 'first' }, { holder: 'last' }]))).ok).toBe(true);
-    expect((await v(doc2('first'), mk([{ holder: 'first' }, { holder: 'last' }]))).ok).toBe(false);
-    expect((await v(doc2(HOLDER), mk([]))).ok).toBe(true);
-    const nonString = await v(doc2('x'), mk([{ holder: 5 }]));
+    expect(((await v(doc2('last'), mk([{ holder: 'first' }, { holder: 'last' }]))) as any).ok).toBe(true);
+    expect(((await v(doc2('first'), mk([{ holder: 'first' }, { holder: 'last' }]))) as any).ok).toBe(false);
+    expect(((await v(doc2(HOLDER), mk([]))) as any).ok).toBe(true);
+    const nonString: any = await v(doc2('x'), mk([{ holder: 5 }]));
     expect([nonString.ok, nonString.reason]).toEqual([false, refusal]);
   });
   it('the hook uses the wall clock by default', async () => {
     const d = doc({ issued_at: Date.now() - 1000, expires_at: Date.now() + 60_000 });
     const h = createAttestationVerifier({ trustedAttestorKeys: [ATT_PUB], resolveDocument: () => d, insecure_selfDeclaredNonce: true });
     const ctx = { pcactn: { grant_ref: GREF, attestation: { epoch: 1, quote_digest: NONCE }, cap_chain: [{ holder: HOLDER }] }, grant: grantWith() } as never;
-    const r = await h(ctx);
+    const r: any = await h(ctx);
     expect(r.reason).not.toBe('attestation expired');
     expect(r.reason).not.toBe('attestation not yet valid');
   });

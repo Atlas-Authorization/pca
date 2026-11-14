@@ -330,7 +330,7 @@ describe('NVIDIA SPDM verifier on forged evidence (full chain: SPDM + RIM + CRL 
       for (const [what, off] of offsets) {
         const ev = { evidence: flipAt(S.spdm.evidence, off), certChainPem: S.device.chainPem };
         const r = await reasonOf({ ev });
-        expect(r, what).toMatch(/^(GPU attestation report signature does not verify under the device identity key|GPU attestation report parse failed: )/);
+        expect(r, what).toMatch(/^(GPU attestation report signature does not verify under the device identity key|GPU attestation report parse failed: |SPDM version 0x\w+\/0x\w+ is not an accepted GET_MEASUREMENTS version)/);
       }
       // the data-only fields (no length semantics) must specifically fail the signature
       for (const off of [10, L.recordsOff + 8, L.responderNonceOff + 3, L.opaqueTlvOff[OPAQUE_TYPE.DRIVER_VERSION]!]) {
@@ -912,7 +912,8 @@ describe('driver / VBIOS version binding + firmware policy (nvidiaCollateralHook
 describe('revocation via CRL on the forged device chain', () => {
   const chain = S.device.certs.map((c) => new X509Certificate(c.pem));
   const crl = (idx: number, revoked: string[] = [], o: Parameters<typeof forgeNvidiaCrl>[2] = {}) => forgeNvidiaCrl(S.device, idx, { revoked, ...o });
-  const rev = (crls: Uint8Array[], now = NOW, need: string[] = []) => checkNvidiaChainRevocation(chain, crls, now, need);
+  // 'none': these cases pin per-CRL behaviour with partial CRL sets; CRL coverage has its own suite (mutation-kill-nvidia-crl-coverage.test.ts)
+  const rev = (crls: Uint8Array[], now = NOW, need: string[] = []) => checkNvidiaChainRevocation(chain, crls, now, need, 'none');
   const subj = (i: number) => chain[i]!.subject.replace(/\n/g, ', ');
 
   it('empty CRLs from the Identity CA and the root cover the chain', () => {
@@ -971,6 +972,15 @@ describe('revocation via CRL on the forged device chain', () => {
     expect(await reasonOf({ bundle: { crls: [], ocsp: S.ocsp }, hook: { revocation: 'crl' } })).toBe('revocation: no CRLs supplied');
     expect(await reasonOf({ bundle: { crls: [], ocsp: S.ocsp }, hook: { revocation: undefined, requireCrls: false } })).toBeUndefined();
     expect(await reasonOf({ bundle: { crls: [crl(3, [S.device.certs[2]!.serialHex])], ocsp: S.ocsp }, hook: { revocation: undefined, requireCrls: false } })).toBe(`revocation: chain certificate '${subj(2)}' is revoked`);
+  });
+  it('through the hook: CRL coverage (default cdp) fails a partial CRL set; OCSP-only mode and requireCrls:false demand no coverage', async () => {
+    const why = `revocation: no verified CRL from the issuer of chain certificate '${subj(2)}'`;
+    expect(await reasonOf({ bundle: { crls: [crl(4)] }, hook: { revocation: 'crl' } })).toBe(why);
+    expect(await reasonOf({ bundle: { crls: [crl(4)], ocsp: S.ocsp }, hook: { revocation: 'both' } })).toBe(why);
+    expect(await reasonOf({ bundle: { crls: [crl(4)] }, hook: { revocation: 'crl', requireCrlFor: 'cdp' } })).toBe(why);
+    expect(await reasonOf({ bundle: { crls: [crl(3), crl(4)] }, hook: { revocation: 'crl', requireCrlFor: 'all' } })).toBe(`revocation: no verified CRL from the issuer of chain certificate '${subj(0)}'`);
+    expect(await reasonOf({ bundle: { crls: [crl(4)], ocsp: S.ocsp }, hook: { revocation: 'ocsp' } })).toBeUndefined();
+    expect(await reasonOf({ bundle: { crls: [crl(4)] }, hook: { revocation: undefined, requireCrls: false } })).toBeUndefined();
   });
   it('through the hook: requireCrlIssuers names a missing issuer', async () => {
     expect(await reasonOf({ bundle: { crls: [crl(4)] }, hook: { revocation: 'crl', requireCrlIssuers: ['GH100 Identity'] } })).toBe("revocation: no verified CRL issued by a certificate matching 'GH100 Identity'");

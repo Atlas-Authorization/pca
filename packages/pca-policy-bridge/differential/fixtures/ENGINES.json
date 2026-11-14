@@ -1,0 +1,5 @@
+{
+  "cedar": "cedar-policy 4.2.2",
+  "opa": "v0.70.0",
+  "openfga": "v1.8.4"
+}

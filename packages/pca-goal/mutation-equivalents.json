@@ -1,0 +1,4 @@
+{
+ "about": "Surviving Stryker mutants of packages/pca-goal justified as equivalent, one entry per mutation site (same format and checker as tools/pca-audit/mutation-equivalents.json; checked with --package=pca-actions --ledger=this file). Empty means every mutant of the audited files is killed.",
+ "equivalents": []
+}

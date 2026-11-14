@@ -1,0 +1,8 @@
+{
+ "target": "frost-net decodeCommitments (oversize list is refused, not decoded)",
+ "seeds": [
+  {
+   "n": 4
+  }
+ ]
+}

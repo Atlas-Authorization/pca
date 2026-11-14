@@ -406,7 +406,7 @@ const SPEC_KEYS: Record<ArgSpec['type'], readonly string[]> = {
   array: ['type', 'items', 'minItems', 'maxItems'],
 };
 
-const nonNegInt = (x: unknown, max: number): x is number => fin(x) && Number.isInteger(x) && x >= 0 && x <= max;
+const nonNegInt = (x: unknown, max: number): x is number => fin(x) && Number.isInteger(x) && x >= 0 && !Object.is(x, -0) && x <= max;
 
 /**
  * Validate a schema (shape, depth, node count, bounds). Returns an error string, or null if valid.
@@ -455,7 +455,7 @@ function specError(spec: unknown, depth: number, budget: { nodes: number }): str
   }
   // scalars
   const ok = (v: unknown): boolean =>
-    t === 'string' ? isStr(v) && v.length <= 1024 : t === 'boolean' ? typeof v === 'boolean' : fin(v) && (t === 'number' || Number.isInteger(v));
+    t === 'string' ? isStr(v) && v.length <= 1024 : t === 'boolean' ? typeof v === 'boolean' : fin(v) && (t === 'number' || (Number.isInteger(v) && !Object.is(v, -0)));
   if (has(spec, 'const') && !ok(spec.const)) return 'bad const';
   if (spec.enum !== undefined) {
     if (!Array.isArray(spec.enum) || spec.enum.length === 0 || spec.enum.length > MAX_ENUM_VALUES || !spec.enum.every(ok)) return 'bad enum';
@@ -546,7 +546,7 @@ function checkValue(spec: ArgSpec, v: unknown, path: string, depth: number, budg
     }
     case 'number':
     case 'integer': {
-      if (!fin(v) || (spec.type === 'integer' && !Number.isInteger(v))) return `${path}: wrong type (expected ${spec.type})`;
+      if (!fin(v) || (spec.type === 'integer' && (!Number.isInteger(v) || Object.is(v, -0)))) return `${path}: wrong type (expected ${spec.type})`;
       if (spec.min !== undefined && v < spec.min) return `${path}: below min`;
       if (spec.max !== undefined && v > spec.max) return `${path}: above max`;
       break;
@@ -1099,7 +1099,7 @@ export function grantLease(args: {
   if (!nonEmpty(args.cap_id) || !nonEmpty(args.holder)) throw new TypeError('grantLease: cap_id and holder required');
   if (!fin(args.now) || !fin(args.ttl_ms) || args.ttl_ms <= 0 || args.ttl_ms > MAX_LEASE_TTL_MS) throw new RangeError('grantLease: invalid now/ttl_ms');
   if (args.hard_expires_at !== undefined && (!fin(args.hard_expires_at) || args.hard_expires_at <= args.now)) throw new RangeError('grantLease: hard_expires_at must be finite and in the future');
-  if (args.max_renewals !== undefined && !(Number.isInteger(args.max_renewals) && args.max_renewals >= 0)) throw new RangeError('grantLease: invalid max_renewals');
+  if (args.max_renewals !== undefined && !(Number.isInteger(args.max_renewals) && args.max_renewals >= 0 && !Object.is(args.max_renewals, -0))) throw new RangeError('grantLease: invalid max_renewals');
   const exp = args.hard_expires_at === undefined ? args.now + args.ttl_ms : Math.min(args.now + args.ttl_ms, args.hard_expires_at);
   const l: CapabilityLease = {
     cap_id: args.cap_id,
@@ -1123,8 +1123,8 @@ function leaseError(l: unknown): string | null {
   if (![l.issued_at, l.renewed_at, l.ttl_ms, l.expires_at].every(fin)) return 'malformed lease';
   const ttl = l.ttl_ms as number;
   if (ttl <= 0 || ttl > MAX_LEASE_TTL_MS) return 'malformed lease';
-  if (!(Number.isInteger(l.renewals) && (l.renewals as number) >= 0) || !(Number.isInteger(l.last_seq) && (l.last_seq as number) >= 0)) return 'malformed lease';
-  if (l.max_renewals !== undefined && !(Number.isInteger(l.max_renewals) && (l.max_renewals as number) >= 0)) return 'malformed lease';
+  if (!(Number.isInteger(l.renewals) && (l.renewals as number) >= 0) || !(Number.isInteger(l.last_seq) && (l.last_seq as number) >= 0) || Object.is(l.renewals, -0) || Object.is(l.last_seq, -0)) return 'malformed lease';
+  if (l.max_renewals !== undefined && !(Number.isInteger(l.max_renewals) && (l.max_renewals as number) >= 0 && !Object.is(l.max_renewals, -0))) return 'malformed lease';
   if (l.hard_expires_at !== undefined) {
     if (!fin(l.hard_expires_at)) return 'malformed lease';
     if ((l.expires_at as number) > l.hard_expires_at) return 'lease exceeds hard expiry';

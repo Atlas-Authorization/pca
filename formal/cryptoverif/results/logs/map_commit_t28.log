@@ -1,0 +1,1089 @@
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game 1))
+No change.
+Doing remove assignments of findcond... No change.
+Doing simplify... Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game 1))
+Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Run simplify 2 time(s). Maximum reached.
+Done.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm))) failed:
+  Found Accept(x_2, s_2, c_2, e_2) at 331
+  but could not prove event(Committed(s, c, vh, rh, vc, rc, vm, rm))
+Trying equivalence uf_cma(zkprove)... Failed.
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder img... Done.
+Doing remove assignments of binder zsk... Done.
+Trying equivalence uf_cma(zkprove) with zs... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+No change.
+Doing expand... Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Run simplify 2 time(s). Maximum reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm))) failed:
+  Found Accept(x_2, s_2, c_2, e_2) at 364
+  but could not prove event(Committed(s, c, vh, rh, vc, rc, vm, rm))
+Trying equivalence uf_cma(zkprove)... Failed:
+At 13, term pkgen2_1(zs) could not be discharged
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder pkP... Done.
+Doing remove assignments of binder skP... Done.
+Trying equivalence uf_cma(sign) with rkP... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on r0 inside simplify... At 111, returned message cm depends on r0.
+No change
+Doing global dependency analysis on r1 inside simplify... At 111, returned message cm depends on r1.
+No change
+Doing global dependency analysis on r2 inside simplify... At 111, returned message cm depends on r2.
+No change
+Doing global dependency analysis on r3 inside simplify... At 111, returned message cm depends on r3.
+No change
+Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Doing global dependency analysis on r0 inside simplify... At 111, returned message cm depends on r0.
+No change
+Doing global dependency analysis on r1 inside simplify... At 111, returned message cm depends on r1.
+No change
+Doing global dependency analysis on r2 inside simplify... At 111, returned message cm depends on r2.
+No change
+Doing global dependency analysis on r3 inside simplify... At 111, returned message cm depends on r3.
+No change
+Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Run simplify 2 time(s). Maximum reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Applied collision k_1 <-R hkey; forall x1, y1: hin; return((H(k_1, x1) = H(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Proved query forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm))) up to probability Phash(time + time(game [not shown yet]))
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     img: zkimg <- zkimgof(zs);
+     zsk: zkkey <- zkskgen(zs);
+     return(pkP, img);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       rootc: hout <- H(hk_1, nodein(H(hk_1, nodein(ac1, H(hk_1, leafin(tC, rc, vc)))), ac2));
+       rootm: hout <- H(hk_1, nodein(am2, H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if {209}(c_1 = H(hk_1, commitin(s4, rootc))) then
+       if {219}(c_1 = H(hk_1, commitin(s4, rootm))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       return(zkprove(mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1), zsk))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       if zkverify(mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2), img, pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying simplify [probability Phash(time_1)]
+  - Simplification pass
+    - Replaced (c_1 = H(hk_1, commitin(s4, rootc))) with (nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2) = nodein(H(hk_1, nodein(ac1, H(hk_1, leafin(tC, rc, vc)))), ac2)) at 209
+    - Replaced (c_1 = H(hk_1, commitin(s4, rootm))) with (nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2) = nodein(am2, H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1)))) at 219
+yields
+
+Game 2 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     img: zkimg <- zkimgof(zs);
+     zsk: zkkey <- zkskgen(zs);
+     return(pkP, img);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       rootc: hout <- H(hk_1, nodein(H(hk_1, nodein(ac1, H(hk_1, leafin(tC, rc, vc)))), ac2));
+       rootm: hout <- H(hk_1, nodein(am2, H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if {209}(nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2) = nodein(H(hk_1, nodein(ac1, H(hk_1, leafin(tC, rc, vc)))), ac2)) then
+       if {243}(nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2) = nodein(am2, H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1)))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       return(zkprove(mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1), zsk))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       if zkverify(mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2), img, pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying simplify [probability Phash(time_2)]
+  - Simplification pass
+    - Replaced (nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2) = nodein(H(hk_1, nodein(ac1, H(hk_1, leafin(tC, rc, vc)))), ac2)) with ((nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2)) at 209
+    - Replaced (nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2) = nodein(am2, H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1)))) with ((H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1)))) at 243
+yields
+
+Game 3 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     img: zkimg <- zkimgof(zs);
+     zsk: zkkey <- zkskgen(zs);
+     return(pkP, img);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       rootc: hout <- H(hk_1, nodein(H(hk_1, nodein(ac1, H(hk_1, leafin(tC, rc, vc)))), ac2));
+       rootm: hout <- H(hk_1, nodein(am2, H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       return(zkprove(mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1), zsk))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       if zkverify(mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2), img, pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying move all binders
+  - Move assignment to rootm
+  - Move assignment to rootc
+yields
+
+Game 4 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     img: zkimg <- zkimgof(zs);
+     zsk: zkkey <- zkskgen(zs);
+     return(pkP, img);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       return(zkprove(mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1), zsk))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       if zkverify(mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2), img, pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder img
+  - Remove assignments on img (definition removed, all usages removed)
+yields
+
+Game 5 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     zsk: zkkey <- zkskgen(zs);
+     return(pkP, zkimgof(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       return(zkprove(mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1), zsk))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       if zkverify(mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2), zkimgof(zs), pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder zsk
+  - Remove assignments on zsk (definition removed, all usages removed)
+yields
+
+Game 6 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, zkimgof(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       return(zkprove(mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1), zkskgen(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       if zkverify(mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2), zkimgof(zs), pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(zkprove) with zs [probability Pzk(time_3, NG, length(mkjournal, maxlength(game 6: s_1), maxlength(game 6: e_1)))]
+  - Equivalence uf_cma(zkprove) with variables: zs -> r_1
+yields
+
+Game 7 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       return((x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1); sign2_1(x_3, skgen2_1(zs))))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+{312}  if (m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2); si1: zkproof <- pf; find u = ri <= NG suchthat defined(x_3[ri]) && (m1 = x_3[ri]) && check2_1(m1, pkgen2_1(zs), si1) then true else false) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying expand [probability Phash(time_4)]
+  - Expand if/find/let
+    - Test at 312 always false
+    - Test at 312 always true
+yields
+
+Game 8 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+       si1: zkproof <- pf;
+       find u = ri <= NG suchthat defined(x_3[ri]) && (m1 = x_3[ri]) && check2_1(m1, pkgen2_1(zs), si1) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on si1 (definition removed, all usages removed)
+yields
+
+Game 9 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if {166}((nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2)) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+{326}  find u = ri <= NG suchthat defined(x_3[ri]) && {328}((m1 = x_3[ri]) && check2_1(m1, pkgen2_1(zs), pf)) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying simplify [probability Phash(time_5)]
+  - Simplification pass
+    - Replaced ((m1 = x_3[ri]) && check2_1(m1, pkgen2_1(zs), pf)) with ((actin(x_2) = actin(x_1[ri])) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) at 328
+    - Replaced defined condition x_3[ri] with x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri] in find at 326
+    - Replaced ((nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1) = nodein(ac1, H(hk_1, leafin(tC, rc, vc)))) && (ah2 = ac2)) with ((H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2)) at 166
+yields
+
+Game 10 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri]) && {332}((actin(x_2) = actin(x_1[ri])) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Replaced ((actin(x_2) = actin(x_1[ri])) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) with ((x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) at 332
+yields
+
+Game 11 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkP, pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkP, gsig) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri]) && (x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder pkP
+  - Remove assignments on pkP (definition removed, all usages removed)
+yields
+
+Game 12 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     skP: skey <- skgen(rkP);
+     zs <-R zkseed;
+     return(pkgen(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkgen(rkP), gsig) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri]) && (x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder skP
+  - Remove assignments on skP (definition removed, all usages removed)
+yields
+
+Game 13 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, sign(mkgrant(sid, cm), skgen(rkP)), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       if check(mkgrant(s_2, c_2), pkgen(rkP), gsig) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri]) && (x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rkP [probability Psign(time_6, NP, length(mkgrant, maxlength(game 13: sid)))]
+  - Equivalence uf_cma(sign) with variables: rkP -> r_1
+yields
+
+Game 14 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       return(cm, (x_4: message <- mkgrant(sid, cm); sign2(x_4, skgen2(rkP))), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+{298}  if (m1_1: message <- mkgrant(s_2, c_2); si1_1: signature <- gsig; find u_1 = ri_1 <= NP suchthat defined(x_4[ri_1]) && (m1_1 = x_4[ri_1]) && check2(m1_1, pkgen2(rkP), si1_1) then true else false) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri]) && (x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying expand [probability Phash(time_7)]
+  - Expand if/find/let
+    - Test at 298 always false
+    - Test at 298 always true
+yields
+
+Game 15 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       x_4: message <- mkgrant(sid, cm);
+       return(cm, sign2(x_4, skgen2(rkP)), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       m1_1: message <- mkgrant(s_2, c_2);
+       si1_1: signature <- gsig;
+       find u_1 = ri_1 <= NP suchthat defined(x_4[ri_1]) && (m1_1 = x_4[ri_1]) && check2(m1_1, pkgen2(rkP), si1_1) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri]) && (x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on si1_1 (definition removed, all usages removed)
+yields
+
+Game 16 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       x_4: message <- mkgrant(sid, cm);
+       return(cm, sign2(x_4, skgen2(rkP)), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       m1_1: message <- mkgrant(s_2, c_2);
+{305}  find u_1 = ri_1 <= NP suchthat defined(x_4[ri_1]) && {307}((m1_1 = x_4[ri_1]) && check2(m1_1, pkgen2(rkP), gsig)) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+{337}  find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri]) && {343}((x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying simplify [probability Phash(time_8)]
+  - Simplification pass
+    - Replaced ((m1_1 = x_4[ri_1]) && check2(m1_1, pkgen2(rkP), gsig)) with ((s_2 = sid[ri_1]) && (c_2 = cm[ri_1]) && check2(m1_1, pkgen2(rkP), gsig)) at 307
+    - Replaced ((x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (c_2 = c_1[ri]) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) with ((x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (nodein(H(hk_1, nodein(l0[u_1], l1[u_1])), H(hk_1, nodein(l2[u_1], l3[u_1]))) = nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh[ri], vh_2[ri])), ah1[ri])), ah2[ri])) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) at 343
+    - Replaced defined condition x_3[ri], e_1[ri], c_1[ri], s_1[ri], x_1[ri] with x_3[ri], e_1[ri], ah2[ri], ah1[ri], vh_2[ri], rh[ri], s_1[ri], x_1[ri] in find at 337
+    - Replaced defined condition x_4[ri_1] with l3[ri_1], l2[ri_1], l1[ri_1], l0[ri_1], cm[ri_1], sid[ri_1] in find at 305
+yields
+
+Game 17 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       x_4: message <- mkgrant(sid, cm);
+       return(cm, sign2(x_4, skgen2(rkP)), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       m1_1: message <- mkgrant(s_2, c_2);
+       find u_1 = ri_1 <= NP suchthat defined(l3[ri_1], l2[ri_1], l1[ri_1], l0[ri_1], cm[ri_1], sid[ri_1]) && (s_2 = sid[ri_1]) && (c_2 = cm[ri_1]) && check2(m1_1, pkgen2(rkP), gsig) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+{348}  find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], ah2[ri], ah1[ri], vh_2[ri], rh[ri], s_1[ri], x_1[ri]) && {357}((x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (nodein(H(hk_1, nodein(l0[u_1], l1[u_1])), H(hk_1, nodein(l2[u_1], l3[u_1]))) = nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh[ri], vh_2[ri])), ah1[ri])), ah2[ri])) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Applying simplify [probability Phash(time_9)]
+  - Simplification pass
+    - Replaced ((x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (nodein(H(hk_1, nodein(l0[u_1], l1[u_1])), H(hk_1, nodein(l2[u_1], l3[u_1]))) = nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh[ri], vh_2[ri])), ah1[ri])), ah2[ri])) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) with ((x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (nodein(l0[u_1], l1[u_1]) = nodein(H(hk_1, leafin(tH, rh[ri], vh_2[ri])), ah1[ri])) && (nodein(l2[u_1], l3[u_1]) = nodein(H(hk_1, leafin(tM, rm[ri], vm_2[ri])), am1[ri])) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf)) at 357
+    - Replaced defined condition x_3[ri], e_1[ri], ah2[ri], ah1[ri], vh_2[ri], rh[ri], s_1[ri], x_1[ri] with x_3[ri], e_1[ri], am1[ri], vm_2[ri], rm[ri], ah1[ri], vh_2[ri], rh[ri], s_1[ri], x_1[ri] in find at 348
+yields
+
+Game 18 is
+     c0() :=
+     hk_1 <-R hkey;
+     rkP <-R keyseed;
+     zs <-R zkseed;
+     return(pkgen2(rkP), pkgen2_1(zs));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iP <= NP do
+       cP(sid: sid_t, vh_1: lval, v1: lval, vm_1: lval, vl: lval) :=
+       r0 <-R salt;
+       r1 <-R salt;
+       r2 <-R salt;
+       r3 <-R salt;
+       l0: hout <- H(hk_1, leafin(tH, r0, vh_1));
+       l1: hout <- H(hk_1, leafin(tC, r1, v1));
+       l2: hout <- H(hk_1, leafin(tM, r2, vm_1));
+       l3: hout <- H(hk_1, leafin(tL, r3, vl));
+       root: hout <- H(hk_1, nodein(H(hk_1, nodein(l0, l1)), H(hk_1, nodein(l2, l3))));
+       cm: hout <- H(hk_1, commitin(s4, root));
+       event Committed(sid, cm, vh_1, r0, v1, r1, vm_1, r2);
+       x_4: message <- mkgrant(sid, cm);
+       return(cm, sign2(x_4, skgen2(rkP)), r0, r1, r2, r3)
+     ) | (
+       foreach iG <= NG do
+       cG(x_1: act_t, s_1: sid_t, c_1: hout, e_1: eps_t, vh_2: lval, rh: salt, ah1: hout, ah2: hout, vc: lval, rc: salt, ac1: hout, ac2: hout, vm_2: lval, rm: salt, am1: hout, am2: hout) :=
+       rooth: hout <- H(hk_1, nodein(H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)), ah2));
+       if c_1 = H(hk_1, commitin(s4, rooth)) then
+       if (H(hk_1, leafin(tH, rh, vh_2)) = ac1) && (ah1 = H(hk_1, leafin(tC, rc, vc))) && (ah2 = ac2) then
+       if (H(hk_1, nodein(H(hk_1, leafin(tH, rh, vh_2)), ah1)) = am2) && (ah2 = H(hk_1, nodein(H(hk_1, leafin(tM, rm, vm_2)), am1))) then
+       if cellof1(vh_2, x_1) then
+       if in_grant(vc) then
+       if risk_ok(vm_2, e_1) then
+       event GuestRan(x_1, s_1, c_1, e_1, vh_2, rh, vc, rc, vm_2, rm);
+       x_3: journal <- mkjournal(H(hk_1, actin(x_1)), s_1, c_1, e_1);
+       return(sign2_1(x_3, skgen2_1(zs)))
+     ) | (
+       foreach iV <= NV do
+       cV(x_2: act_t, s_2: sid_t, c_2: hout, e_2: eps_t, gsig: signature, pf: zkproof) :=
+       m1_1: message <- mkgrant(s_2, c_2);
+       find u_1 = ri_1 <= NP suchthat defined(l3[ri_1], l2[ri_1], l1[ri_1], l0[ri_1], cm[ri_1], sid[ri_1]) && (s_2 = sid[ri_1]) && (c_2 = cm[ri_1]) && check2(m1_1, pkgen2(rkP), gsig) then
+       if policy_ok(e_2) then
+       m1: journal <- mkjournal(H(hk_1, actin(x_2)), s_2, c_2, e_2);
+       find u = ri <= NG suchthat defined(x_3[ri], e_1[ri], am1[ri], vm_2[ri], rm[ri], ah1[ri], vh_2[ri], rh[ri], s_1[ri], x_1[ri]) && (x_2 = x_1[ri]) && (s_2 = s_1[ri]) && (nodein(l0[u_1], l1[u_1]) = nodein(H(hk_1, leafin(tH, rh[ri], vh_2[ri])), ah1[ri])) && (nodein(l2[u_1], l3[u_1]) = nodein(H(hk_1, leafin(tM, rm[ri], vm_2[ri])), am1[ri])) && (e_2 = e_1[ri]) && check2_1(m1, pkgen2_1(zs), pf) then
+       event Accept(x_2, s_2, c_2, e_2);
+       return()
+     ))
+
+
+Proved forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm))) in game 18 up to probability Phash(time_10)
+Adv[Game 1: forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm)))] <= Phash(time_9) + Phash(time_8) + Phash(time_7) + Psign(time_6, NP, length(mkgrant, maxlength(game 13: sid))) + Phash(time_5) + Phash(time_4) + Pzk(time_3, NG, length(mkjournal, maxlength(game 6: s_1), maxlength(game 6: e_1))) + Phash(time_2) + Phash(time_1) + Adv[Game 18: forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm)))]
+Adv[Game 18: forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm)))] <= Phash(time_10)
+RESULT Proved forall e: eps_t, c: hout, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists rm, rc, rh: salt, vm, vc, vh: lval; (event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm))) up to probability Phash(time_9) + Phash(time_8) + Phash(time_7) + Psign(time_6, NP, length(mkgrant, maxlength(game 13: sid))) + Phash(time_5) + Phash(time_4) + Pzk(time_3, NG, length(mkjournal, maxlength(game 6: s_1), maxlength(game 6: e_1))) + Phash(time_2) + Phash(time_1) + Phash(time_10)
+RESULT time_1 = time + time(game 1) = time + time(pkgen) + time(skgen) + time(zkimgof) + time(zkskgen) + NP * time(H, length(leafin, length(tH), maxlength(game 1: vh_1))) + NP * time(leafin, length(tH), maxlength(game 1: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 1: v1))) + NP * time(leafin, length(tC), maxlength(game 1: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 1: vm_1))) + NP * time(leafin, length(tM), maxlength(game 1: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 1: vl))) + NP * time(leafin, length(tL), maxlength(game 1: vl)) + (3 * NP + 6 * NG) * time(H, length(nodein)) + (3 * NP + 6 * NG) * time(nodein) + (NP + 3 * NG) * time(H, length(commitin, length(s4))) + (NP + 3 * NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 1: sid))) + NP * time(mkgrant, maxlength(game 1: sid)) + NG * time(H, length(leafin, length(tH), maxlength(game 1: vh_2))) + NG * time(leafin, length(tH), maxlength(game 1: vh_2)) + NG * time(H, length(leafin, length(tC), maxlength(game 1: vc))) + NG * time(leafin, length(tC), maxlength(game 1: vc)) + NG * time(H, length(leafin, length(tM), maxlength(game 1: vm_2))) + NG * time(leafin, length(tM), maxlength(game 1: vm_2)) + NG * time(cellof1, maxlength(game 1: vh_2), maxlength(game 1: x_1)) + NG * time(in_grant, maxlength(game 1: vc)) + NG * time(risk_ok, maxlength(game 1: vm_2), maxlength(game 1: e_1)) + NG * time(([1,NG])) + NG * time(zkprove, length(mkjournal, maxlength(game 1: s_1), maxlength(game 1: e_1))) + NG * time(mkjournal, maxlength(game 1: s_1), maxlength(game 1: e_1)) + NG * time(H, length(actin, maxlength(game 1: x_1))) + NG * time(actin, maxlength(game 1: x_1)) + NV * time(check, length(mkgrant, maxlength(game 1: s_2)), maxlength(game 1: gsig)) + NV * time(mkgrant, maxlength(game 1: s_2)) + NV * time(policy_ok, maxlength(game 1: e_2)) + NV * time(zkverify, length(mkjournal, maxlength(game 1: s_2), maxlength(game 1: e_2)), maxlength(game 1: pf)) + NV * time(mkjournal, maxlength(game 1: s_2), maxlength(game 1: e_2)) + NV * time(H, length(actin, maxlength(game 1: x_2))) + NV * time(actin, maxlength(game 1: x_2)) + NV * time(([1,NV]))
+RESULT time_2 = time + time(game 2) = time + time(pkgen) + time(skgen) + time(zkimgof) + time(zkskgen) + NP * time(H, length(leafin, length(tH), maxlength(game 2: vh_1))) + NP * time(leafin, length(tH), maxlength(game 2: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 2: v1))) + NP * time(leafin, length(tC), maxlength(game 2: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 2: vm_1))) + NP * time(leafin, length(tM), maxlength(game 2: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 2: vl))) + NP * time(leafin, length(tL), maxlength(game 2: vl)) + (3 * NP + 10 * NG) * time(H, length(nodein)) + (3 * NP + 14 * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 2: sid))) + NP * time(mkgrant, maxlength(game 2: sid)) + 2 * NG * time(H, length(leafin, length(tC), maxlength(game 2: vc))) + 2 * NG * time(leafin, length(tC), maxlength(game 2: vc)) + 2 * NG * time(= hin, length(nodein), length(nodein)) + 2 * NG * time(H, length(leafin, length(tM), maxlength(game 2: vm_2))) + 2 * NG * time(leafin, length(tM), maxlength(game 2: vm_2)) + 3 * NG * time(H, length(leafin, length(tH), maxlength(game 2: vh_2))) + 3 * NG * time(leafin, length(tH), maxlength(game 2: vh_2)) + NG * time(cellof1, maxlength(game 2: vh_2), maxlength(game 2: x_1)) + NG * time(in_grant, maxlength(game 2: vc)) + NG * time(risk_ok, maxlength(game 2: vm_2), maxlength(game 2: e_1)) + NG * time(([1,NG])) + NG * time(zkprove, length(mkjournal, maxlength(game 2: s_1), maxlength(game 2: e_1))) + NG * time(mkjournal, maxlength(game 2: s_1), maxlength(game 2: e_1)) + NG * time(H, length(actin, maxlength(game 2: x_1))) + NG * time(actin, maxlength(game 2: x_1)) + NV * time(check, length(mkgrant, maxlength(game 2: s_2)), maxlength(game 2: gsig)) + NV * time(mkgrant, maxlength(game 2: s_2)) + NV * time(policy_ok, maxlength(game 2: e_2)) + NV * time(zkverify, length(mkjournal, maxlength(game 2: s_2), maxlength(game 2: e_2)), maxlength(game 2: pf)) + NV * time(mkjournal, maxlength(game 2: s_2), maxlength(game 2: e_2)) + NV * time(H, length(actin, maxlength(game 2: x_2))) + NV * time(actin, maxlength(game 2: x_2)) + NV * time(([1,NV]))
+RESULT time_3 = time(pkgen) + time(skgen) + NP * time(H, length(leafin, length(tH), maxlength(game 6: vh_1))) + NP * time(leafin, length(tH), maxlength(game 6: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 6: v1))) + NP * time(leafin, length(tC), maxlength(game 6: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 6: vm_1))) + NP * time(leafin, length(tM), maxlength(game 6: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 6: vl))) + NP * time(leafin, length(tL), maxlength(game 6: vl)) + (3 * NP + 4 * NG) * time(H, length(nodein)) + (3 * NP + 6 * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 6: sid))) + NP * time(mkgrant, maxlength(game 6: sid)) + NG * time(= hin, length(nodein), length(nodein)) + NG * time(H, length(leafin, length(tC), maxlength(game 6: vc))) + NG * time(leafin, length(tC), maxlength(game 6: vc)) + NG * time(H, length(leafin, length(tM), maxlength(game 6: vm_2))) + NG * time(leafin, length(tM), maxlength(game 6: vm_2)) + 3 * NG * time(H, length(leafin, length(tH), maxlength(game 6: vh_2))) + 3 * NG * time(leafin, length(tH), maxlength(game 6: vh_2)) + NG * time(cellof1, maxlength(game 6: vh_2), maxlength(game 6: x_1)) + NG * time(in_grant, maxlength(game 6: vc)) + NG * time(risk_ok, maxlength(game 6: vm_2), maxlength(game 6: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 6: s_1), maxlength(game 6: e_1)) + NG * time(H, length(actin, maxlength(game 6: x_1))) + NG * time(actin, maxlength(game 6: x_1)) + NV * time(check, length(mkgrant, maxlength(game 6: s_2)), maxlength(game 6: gsig)) + NV * time(mkgrant, maxlength(game 6: s_2)) + NV * time(policy_ok, maxlength(game 6: e_2)) + NV * time(mkjournal, maxlength(game 6: s_2), maxlength(game 6: e_2)) + NV * time(H, length(actin, maxlength(game 6: x_2))) + NV * time(actin, maxlength(game 6: x_2)) + NV * time(([1,NV])) + time + (NV - 1) * time(zkverify, length(mkjournal, maxlength(game 6: s_2), maxlength(game 6: e_2)), maxlength(game 6: pf))
+RESULT time_4 = time + time(game 7) = time + time(pkgen) + time(skgen) + (1 + NV * NG) * time(zkimgof) + NP * time(H, length(leafin, length(tH), maxlength(game 7: vh_1))) + NP * time(leafin, length(tH), maxlength(game 7: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 7: v1))) + NP * time(leafin, length(tC), maxlength(game 7: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 7: vm_1))) + NP * time(leafin, length(tM), maxlength(game 7: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 7: vl))) + NP * time(leafin, length(tL), maxlength(game 7: vl)) + (3 * NP + 4 * NG) * time(H, length(nodein)) + (3 * NP + 6 * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 7: sid))) + NP * time(mkgrant, maxlength(game 7: sid)) + NG * time(= hin, length(nodein), length(nodein)) + NG * time(H, length(leafin, length(tC), maxlength(game 7: vc))) + NG * time(leafin, length(tC), maxlength(game 7: vc)) + NG * time(H, length(leafin, length(tM), maxlength(game 7: vm_2))) + NG * time(leafin, length(tM), maxlength(game 7: vm_2)) + 3 * NG * time(H, length(leafin, length(tH), maxlength(game 7: vh_2))) + 3 * NG * time(leafin, length(tH), maxlength(game 7: vh_2)) + NG * time(cellof1, maxlength(game 7: vh_2), maxlength(game 7: x_1)) + NG * time(in_grant, maxlength(game 7: vc)) + NG * time(risk_ok, maxlength(game 7: vm_2), maxlength(game 7: e_1)) + NG * time(([1,NG])) + NG * time(zkprove, maxlength(game 7: x_3)) + NG * time(zkskgen) + NG * time(mkjournal, maxlength(game 7: s_1), maxlength(game 7: e_1)) + NG * time(H, length(actin, maxlength(game 7: x_1))) + NG * time(actin, maxlength(game 7: x_1)) + NV * time(check, length(mkgrant, maxlength(game 7: s_2)), maxlength(game 7: gsig)) + NV * time(mkgrant, maxlength(game 7: s_2)) + NV * time(policy_ok, maxlength(game 7: e_2)) + NV * NG * time(= journal, maxlength(game 7: m1), maxlength(game 7: x_3)) + NV * NG * time(zkverify, maxlength(game 7: m1), maxlength(game 7: si1)) + NV * time(mkjournal, maxlength(game 7: s_2), maxlength(game 7: e_2)) + NV * time(H, length(actin, maxlength(game 7: x_2))) + NV * time(actin, maxlength(game 7: x_2)) + NV * time(([1,NV]))
+RESULT time_5 = time + time(game 9) = time + time(pkgen) + time(skgen) + (1 + NV * NG) * time(zkimgof) + NP * time(H, length(leafin, length(tH), maxlength(game 9: vh_1))) + NP * time(leafin, length(tH), maxlength(game 9: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 9: v1))) + NP * time(leafin, length(tC), maxlength(game 9: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 9: vm_1))) + NP * time(leafin, length(tM), maxlength(game 9: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 9: vl))) + NP * time(leafin, length(tL), maxlength(game 9: vl)) + (3 * NP + 4 * NG) * time(H, length(nodein)) + (3 * NP + 6 * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(sign, length(mkgrant, maxlength(game 9: sid))) + NP * time(mkgrant, maxlength(game 9: sid)) + NG * time(= hin, length(nodein), length(nodein)) + NG * time(H, length(leafin, length(tC), maxlength(game 9: vc))) + NG * time(leafin, length(tC), maxlength(game 9: vc)) + NG * time(H, length(leafin, length(tM), maxlength(game 9: vm_2))) + NG * time(leafin, length(tM), maxlength(game 9: vm_2)) + 3 * NG * time(H, length(leafin, length(tH), maxlength(game 9: vh_2))) + 3 * NG * time(leafin, length(tH), maxlength(game 9: vh_2)) + NG * time(cellof1, maxlength(game 9: vh_2), maxlength(game 9: x_1)) + NG * time(in_grant, maxlength(game 9: vc)) + NG * time(risk_ok, maxlength(game 9: vm_2), maxlength(game 9: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 9: s_1), maxlength(game 9: e_1)) + NG * time(H, length(actin, maxlength(game 9: x_1))) + NG * time(actin, maxlength(game 9: x_1)) + NG * time(zkprove, maxlength(game 9: x_3)) + NG * time(zkskgen) + NV * time(check, length(mkgrant, maxlength(game 9: s_2)), maxlength(game 9: gsig)) + NV * time(mkgrant, maxlength(game 9: s_2)) + NV * time(policy_ok, maxlength(game 9: e_2)) + NV * time(mkjournal, maxlength(game 9: s_2), maxlength(game 9: e_2)) + NV * time(H, length(actin, maxlength(game 9: x_2))) + NV * time(actin, maxlength(game 9: x_2)) + NV * NG * time(= journal, maxlength(game 9: m1), maxlength(game 9: x_3)) + NV * NG * time(zkverify, maxlength(game 9: m1), maxlength(game 9: pf)) + NV * time(([1,NV]))
+RESULT time_6 = (1 + NV * NG) * time(zkimgof) + NP * time(H, length(leafin, length(tH), maxlength(game 13: vh_1))) + NP * time(leafin, length(tH), maxlength(game 13: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 13: v1))) + NP * time(leafin, length(tC), maxlength(game 13: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 13: vm_1))) + NP * time(leafin, length(tM), maxlength(game 13: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 13: vl))) + NP * time(leafin, length(tL), maxlength(game 13: vl)) + (3 * NP + 4 * NG) * time(H, length(nodein)) + (3 * NP + 4 * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(mkgrant, maxlength(game 13: sid)) + NG * time(H, length(leafin, length(tC), maxlength(game 13: vc))) + NG * time(leafin, length(tC), maxlength(game 13: vc)) + NG * time(H, length(leafin, length(tM), maxlength(game 13: vm_2))) + NG * time(leafin, length(tM), maxlength(game 13: vm_2)) + 3 * NG * time(H, length(leafin, length(tH), maxlength(game 13: vh_2))) + 3 * NG * time(leafin, length(tH), maxlength(game 13: vh_2)) + NG * time(cellof1, maxlength(game 13: vh_2), maxlength(game 13: x_1)) + NG * time(in_grant, maxlength(game 13: vc)) + NG * time(risk_ok, maxlength(game 13: vm_2), maxlength(game 13: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 13: s_1), maxlength(game 13: e_1)) + NG * time(H, length(actin, maxlength(game 13: x_1))) + NG * time(actin, maxlength(game 13: x_1)) + NG * time(zkprove, maxlength(game 13: x_3)) + NG * time(zkskgen) + NV * time(mkgrant, maxlength(game 13: s_2)) + NV * time(policy_ok, maxlength(game 13: e_2)) + NV * time(mkjournal, maxlength(game 13: s_2), maxlength(game 13: e_2)) + NV * time(H, length(actin, maxlength(game 13: x_2))) + NV * time(actin, maxlength(game 13: x_2)) + NV * NG * time(= act_t, maxlength(game 13: x_2), maxlength(game 13: x_1)) + NV * NG * time(= sid_t, maxlength(game 13: s_2), maxlength(game 13: s_1)) + NV * NG * time(= eps_t, maxlength(game 13: e_2), maxlength(game 13: e_1)) + NV * NG * time(zkverify, maxlength(game 13: m1), maxlength(game 13: pf)) + NV * time(([1,NV])) + time + (NV - 1) * time(check, length(mkgrant, maxlength(game 13: s_2)), maxlength(game 13: gsig))
+RESULT time_7 = time + time(game 14) = time + (1 + NV * NG) * time(zkimgof) + (1 + NV * NP) * time(pkgen) + NP * time(H, length(leafin, length(tH), maxlength(game 14: vh_1))) + NP * time(leafin, length(tH), maxlength(game 14: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 14: v1))) + NP * time(leafin, length(tC), maxlength(game 14: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 14: vm_1))) + NP * time(leafin, length(tM), maxlength(game 14: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 14: vl))) + NP * time(leafin, length(tL), maxlength(game 14: vl)) + (3 * NP + 4 * NG) * time(H, length(nodein)) + (3 * NP + 4 * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(sign, maxlength(game 14: x_4)) + NP * time(skgen) + NP * time(mkgrant, maxlength(game 14: sid)) + NG * time(H, length(leafin, length(tC), maxlength(game 14: vc))) + NG * time(leafin, length(tC), maxlength(game 14: vc)) + NG * time(H, length(leafin, length(tM), maxlength(game 14: vm_2))) + NG * time(leafin, length(tM), maxlength(game 14: vm_2)) + 3 * NG * time(H, length(leafin, length(tH), maxlength(game 14: vh_2))) + 3 * NG * time(leafin, length(tH), maxlength(game 14: vh_2)) + NG * time(cellof1, maxlength(game 14: vh_2), maxlength(game 14: x_1)) + NG * time(in_grant, maxlength(game 14: vc)) + NG * time(risk_ok, maxlength(game 14: vm_2), maxlength(game 14: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 14: s_1), maxlength(game 14: e_1)) + NG * time(H, length(actin, maxlength(game 14: x_1))) + NG * time(actin, maxlength(game 14: x_1)) + NG * time(zkprove, maxlength(game 14: x_3)) + NG * time(zkskgen) + NV * NP * time(= message, maxlength(game 14: m1_1), maxlength(game 14: x_4)) + NV * NP * time(check, maxlength(game 14: m1_1), maxlength(game 14: si1_1)) + NV * time(mkgrant, maxlength(game 14: s_2)) + NV * time(policy_ok, maxlength(game 14: e_2)) + NV * time(mkjournal, maxlength(game 14: s_2), maxlength(game 14: e_2)) + NV * time(H, length(actin, maxlength(game 14: x_2))) + NV * time(actin, maxlength(game 14: x_2)) + NV * NG * time(= act_t, maxlength(game 14: x_2), maxlength(game 14: x_1)) + NV * NG * time(= sid_t, maxlength(game 14: s_2), maxlength(game 14: s_1)) + NV * NG * time(= eps_t, maxlength(game 14: e_2), maxlength(game 14: e_1)) + NV * NG * time(zkverify, maxlength(game 14: m1), maxlength(game 14: pf)) + NV * time(([1,NV]))
+RESULT time_8 = time + time(game 16) = time + (1 + NV * NG) * time(zkimgof) + (1 + NV * NP) * time(pkgen) + NP * time(H, length(leafin, length(tH), maxlength(game 16: vh_1))) + NP * time(leafin, length(tH), maxlength(game 16: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 16: v1))) + NP * time(leafin, length(tC), maxlength(game 16: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 16: vm_1))) + NP * time(leafin, length(tM), maxlength(game 16: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 16: vl))) + NP * time(leafin, length(tL), maxlength(game 16: vl)) + (3 * NP + 4 * NG) * time(H, length(nodein)) + (3 * NP + 4 * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(mkgrant, maxlength(game 16: sid)) + NP * time(sign, maxlength(game 16: x_4)) + NP * time(skgen) + NG * time(H, length(leafin, length(tC), maxlength(game 16: vc))) + NG * time(leafin, length(tC), maxlength(game 16: vc)) + NG * time(H, length(leafin, length(tM), maxlength(game 16: vm_2))) + NG * time(leafin, length(tM), maxlength(game 16: vm_2)) + 3 * NG * time(H, length(leafin, length(tH), maxlength(game 16: vh_2))) + 3 * NG * time(leafin, length(tH), maxlength(game 16: vh_2)) + NG * time(cellof1, maxlength(game 16: vh_2), maxlength(game 16: x_1)) + NG * time(in_grant, maxlength(game 16: vc)) + NG * time(risk_ok, maxlength(game 16: vm_2), maxlength(game 16: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 16: s_1), maxlength(game 16: e_1)) + NG * time(H, length(actin, maxlength(game 16: x_1))) + NG * time(actin, maxlength(game 16: x_1)) + NG * time(zkprove, maxlength(game 16: x_3)) + NG * time(zkskgen) + NV * time(mkgrant, maxlength(game 16: s_2)) + NV * NP * time(= message, maxlength(game 16: m1_1), maxlength(game 16: x_4)) + NV * NP * time(check, maxlength(game 16: m1_1), maxlength(game 16: gsig)) + NV * time(policy_ok, maxlength(game 16: e_2)) + NV * time(mkjournal, maxlength(game 16: s_2), maxlength(game 16: e_2)) + NV * time(H, length(actin, maxlength(game 16: x_2))) + NV * time(actin, maxlength(game 16: x_2)) + NV * NG * time(= act_t, maxlength(game 16: x_2), maxlength(game 16: x_1)) + NV * NG * time(= sid_t, maxlength(game 16: s_2), maxlength(game 16: s_1)) + NV * NG * time(= eps_t, maxlength(game 16: e_2), maxlength(game 16: e_1)) + NV * NG * time(zkverify, maxlength(game 16: m1), maxlength(game 16: pf)) + NV * time(([1,NV]))
+RESULT time_9 = time + time(game 17) = time + (1 + NV * NG) * time(zkimgof) + (1 + NV * NP) * time(pkgen) + NP * time(H, length(leafin, length(tH), maxlength(game 17: vh_1))) + NP * time(leafin, length(tH), maxlength(game 17: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 17: v1))) + NP * time(leafin, length(tC), maxlength(game 17: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 17: vm_1))) + NP * time(leafin, length(tM), maxlength(game 17: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 17: vl))) + NP * time(leafin, length(tL), maxlength(game 17: vl)) + (3 * NP + 4 * NG + 3 * NV * NG) * time(H, length(nodein)) + (3 * NP + 4 * NG + 5 * NV * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(mkgrant, maxlength(game 17: sid)) + NP * time(sign, maxlength(game 17: x_4)) + NP * time(skgen) + NG * time(H, length(leafin, length(tC), maxlength(game 17: vc))) + NG * time(leafin, length(tC), maxlength(game 17: vc)) + NG * time(H, length(leafin, length(tM), maxlength(game 17: vm_2))) + NG * time(leafin, length(tM), maxlength(game 17: vm_2)) + (3 * NG + NV * NG) * time(H, length(leafin, length(tH), maxlength(game 17: vh_2))) + (3 * NG + NV * NG) * time(leafin, length(tH), maxlength(game 17: vh_2)) + NG * time(cellof1, maxlength(game 17: vh_2), maxlength(game 17: x_1)) + NG * time(in_grant, maxlength(game 17: vc)) + NG * time(risk_ok, maxlength(game 17: vm_2), maxlength(game 17: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 17: s_1), maxlength(game 17: e_1)) + NG * time(H, length(actin, maxlength(game 17: x_1))) + NG * time(actin, maxlength(game 17: x_1)) + NG * time(zkprove, maxlength(game 17: x_3)) + NG * time(zkskgen) + NV * time(mkgrant, maxlength(game 17: s_2)) + NV * NP * time(= sid_t, maxlength(game 17: s_2), maxlength(game 17: sid)) + NV * NP * time(check, maxlength(game 17: m1_1), maxlength(game 17: gsig)) + NV * time(policy_ok, maxlength(game 17: e_2)) + NV * time(mkjournal, maxlength(game 17: s_2), maxlength(game 17: e_2)) + NV * time(H, length(actin, maxlength(game 17: x_2))) + NV * time(actin, maxlength(game 17: x_2)) + NV * NG * time(= act_t, maxlength(game 17: x_2), maxlength(game 17: x_1)) + NV * NG * time(= sid_t, maxlength(game 17: s_2), maxlength(game 17: s_1)) + NV * NG * time(= hin, length(nodein), length(nodein)) + NV * NG * time(= eps_t, maxlength(game 17: e_2), maxlength(game 17: e_1)) + NV * NG * time(zkverify, maxlength(game 17: m1), maxlength(game 17: pf)) + NV * time(([1,NV]))
+RESULT time_10 = time + time(game 18) = time + (1 + NV * NG) * time(zkimgof) + (1 + NV * NP) * time(pkgen) + NP * time(H, length(leafin, length(tH), maxlength(game 18: vh_1))) + NP * time(leafin, length(tH), maxlength(game 18: vh_1)) + NP * time(H, length(leafin, length(tC), maxlength(game 18: v1))) + NP * time(leafin, length(tC), maxlength(game 18: v1)) + NP * time(H, length(leafin, length(tM), maxlength(game 18: vm_1))) + NP * time(leafin, length(tM), maxlength(game 18: vm_1)) + NP * time(H, length(leafin, length(tL), maxlength(game 18: vl))) + NP * time(leafin, length(tL), maxlength(game 18: vl)) + (3 * NP + 4 * NG) * time(H, length(nodein)) + (3 * NP + 4 * NG + 4 * NV * NG) * time(nodein) + (NP + NG) * time(H, length(commitin, length(s4))) + (NP + NG) * time(commitin, length(s4)) + NP * time(([1,NP])) + NP * time(mkgrant, maxlength(game 18: sid)) + NP * time(sign, maxlength(game 18: x_4)) + NP * time(skgen) + NG * time(H, length(leafin, length(tC), maxlength(game 18: vc))) + NG * time(leafin, length(tC), maxlength(game 18: vc)) + (NG + NV * NG) * time(H, length(leafin, length(tM), maxlength(game 18: vm_2))) + (NG + NV * NG) * time(leafin, length(tM), maxlength(game 18: vm_2)) + (3 * NG + NV * NG) * time(H, length(leafin, length(tH), maxlength(game 18: vh_2))) + (3 * NG + NV * NG) * time(leafin, length(tH), maxlength(game 18: vh_2)) + NG * time(cellof1, maxlength(game 18: vh_2), maxlength(game 18: x_1)) + NG * time(in_grant, maxlength(game 18: vc)) + NG * time(risk_ok, maxlength(game 18: vm_2), maxlength(game 18: e_1)) + NG * time(([1,NG])) + NG * time(mkjournal, maxlength(game 18: s_1), maxlength(game 18: e_1)) + NG * time(H, length(actin, maxlength(game 18: x_1))) + NG * time(actin, maxlength(game 18: x_1)) + NG * time(zkprove, maxlength(game 18: x_3)) + NG * time(zkskgen) + NV * time(mkgrant, maxlength(game 18: s_2)) + NV * NP * time(= sid_t, maxlength(game 18: s_2), maxlength(game 18: sid)) + NV * NP * time(check, maxlength(game 18: m1_1), maxlength(game 18: gsig)) + NV * time(policy_ok, maxlength(game 18: e_2)) + NV * time(mkjournal, maxlength(game 18: s_2), maxlength(game 18: e_2)) + NV * time(H, length(actin, maxlength(game 18: x_2))) + NV * time(actin, maxlength(game 18: x_2)) + NV * NG * time(= act_t, maxlength(game 18: x_2), maxlength(game 18: x_1)) + NV * NG * time(= sid_t, maxlength(game 18: s_2), maxlength(game 18: s_1)) + 2 * NV * NG * time(= hin, length(nodein), length(nodein)) + NV * NG * time(= eps_t, maxlength(game 18: e_2), maxlength(game 18: e_1)) + NV * NG * time(zkverify, maxlength(game 18: m1), maxlength(game 18: pf)) + NV * time(([1,NV]))
+All queries proved.

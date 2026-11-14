@@ -188,23 +188,23 @@ describe('(5a) a trusted dealer that lies about c is detected', () => {
   const Q = 8;
 
   it('an honest verified dealer: correct result, labelled trusted-dealer, triples certified', () => {
-    const r = composeSecureMalicious(V, { Q, seed: 11n });
+    const r = composeSecureMalicious(V, { insecureTrustedDealer: true, Q, seed: 11n });
     expect(r.composed).toEqual(composeClear(V, Q));
     expect(r.offlineMode).toBe('trusted-dealer');
     expect(r.triplesVerified).toBe(true);
   });
 
   it('a dealer that gives a wrong product c = a*b + 1 aborts with MacCheckAbort (sacrifice), no output', () => {
-    expect(() => composeSecureMalicious(V, { Q, seed: 12n, dealer: { fault: { keepCDelta: 1n } } })).toThrow(MacCheckAbort);
-    expect(() => composeSecureMalicious(V, { Q, seed: 12n, dealer: { fault: { keepCDelta: 1n } } })).toThrow(/sacrifice FAILED/);
+    expect(() => composeSecureMalicious(V, { insecureTrustedDealer: true, Q, seed: 12n, dealer: { fault: { keepCDelta: 1n } } })).toThrow(MacCheckAbort);
+    expect(() => composeSecureMalicious(V, { insecureTrustedDealer: true, Q, seed: 12n, dealer: { fault: { keepCDelta: 1n } } })).toThrow(/sacrifice FAILED/);
   });
 
   it('every kind of lie is caught: tiny, huge, p-1, and a lie in the partner or in only one of the partners', () => {
     for (const keepCDelta of [1n, 2n, PRIME - 1n, 123456789012345n]) {
-      expect(() => composeSecureMalicious(V, { Q, seed: 13n, dealer: { fault: { keepCDelta } } })).toThrow(MacCheckAbort);
+      expect(() => composeSecureMalicious(V, { insecureTrustedDealer: true, Q, seed: 13n, dealer: { fault: { keepCDelta } } })).toThrow(MacCheckAbort);
     }
-    expect(() => composeSecureMalicious(V, { Q, seed: 14n, dealer: { fault: { partnerCDelta: [7n, undefined] } } })).toThrow(MacCheckAbort);
-    expect(() => composeSecureMalicious(V, { Q, seed: 14n, dealer: { fault: { partnerCDelta: [undefined, 7n] } } })).toThrow(MacCheckAbort);
+    expect(() => composeSecureMalicious(V, { insecureTrustedDealer: true, Q, seed: 14n, dealer: { fault: { partnerCDelta: [7n, undefined] } } })).toThrow(MacCheckAbort);
+    expect(() => composeSecureMalicious(V, { insecureTrustedDealer: true, Q, seed: 14n, dealer: { fault: { partnerCDelta: [undefined, 7n] } } })).toThrow(MacCheckAbort);
   });
 
   it('WITHOUT the verification the same lie slips through the MAC-check and corrupts the output (why it is needed)', () => {
@@ -214,11 +214,11 @@ describe('(5a) a trusted dealer that lies about c is detected', () => {
       { allow: 0, t: 1, rQuant: 3 },
     ];
     expect(composeClear(deny, Q).allow).toBe(0);
-    const wrong = composeSecureMalicious(deny, { Q, seed: 15n, dealer: { verifyTriples: false, fault: { keepCDelta: 1n } } });
+    const wrong = composeSecureMalicious(deny, { insecureTrustedDealer: true, Q, seed: 15n, dealer: { verifyTriples: false, fault: { keepCDelta: 1n } } });
     expect(wrong.macChecked).toBe(true); // the MACs are consistent with the lie
     expect(wrong.triplesVerified).toBe(false);
     expect(wrong.composed.allow).toBe(1); // silently wrong without the verification
-    expect(() => composeSecureMalicious(deny, { Q, seed: 15n, dealer: { fault: { keepCDelta: 1n } } })).toThrow(MacCheckAbort);
+    expect(() => composeSecureMalicious(deny, { insecureTrustedDealer: true, Q, seed: 15n, dealer: { fault: { keepCDelta: 1n } } })).toThrow(MacCheckAbort);
   });
 
   it('sacrificeVerify certifies exactly the triples with c = a*b and drops nothing else', () => {

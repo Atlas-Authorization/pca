@@ -1,0 +1,32 @@
+{
+ "trait": "pca.destructive",
+ "card": {
+  "verb": "golden.destructive",
+  "title": "Do the destructive thing",
+  "text": "Do the destructive thing. This action deletes or destroys data.",
+  "risk": "high",
+  "escalation": "confirm",
+  "reversibility": "rate_limited",
+  "blast_ppm": 50000,
+  "needs": [
+   "resource_scope"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.destructive"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "rate_limited",
+  "blast_ppm": 0,
+  "esc": 1,
+  "caveats": [
+   "resource_scope"
+  ],
+  "context": [],
+  "prules": [
+   "id_not_wildcard"
+  ]
+ }
+}

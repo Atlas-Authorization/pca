@@ -7,6 +7,8 @@ import {
 import {
   ML_DSA_65_PUBLIC_KEY_BYTES,
   type MlDsaKeyPair,
+  mlDsa65Sign,
+  mlDsa65VerifyB64u,
   signWithSuite,
   verifyWithSuite, resolvePqVerifyKey,
 } from './pq';
@@ -321,4 +323,96 @@ export function verifyHybridFrostCosign(
     return { ok: false, groupAlg, edOk, pqOk, reason: !edOk ? 'FROST Ed25519 group signature did not verify' : 'guardian ML-DSA-65 co-signature did not verify' };
   }
   return { ok: true, groupAlg, edOk: true, pqOk: true };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// ML-DSA-65 co-signer QUORUM (pqT-of-m multi-signature), format version 2.
+//
+// Moved here from the post-quantum threshold package so there is ONE implementation of the quorum counting. It is a
+// multi-signature of m ordinary single-party keys, not a threshold scheme. Version 2 (0.5) differs from the pre-0.5
+// block in two ways: the block carries an explicit `v: 2` that is checked strictly (a missing, older or unknown version
+// is refused with a typed reason), and every co-signature covers a domain-separated representative instead of the bare
+// message, so a version-1 co-signature cannot be re-labelled as version 2 or replayed into a different protocol.
+// ---------------------------------------------------------------------------------------------------------------
+
+export const PQ_QUORUM_VERSION = 2 as const;
+/** The co-signatures are ML-DSA-65 (FIPS 204, category 3). */
+export const PQ_QUORUM_ALG = 'ml-dsa-65' as const;
+/** At most this many co-signature entries of a presented block are examined (each costs one ML-DSA verification). */
+export const MAX_PQ_QUORUM_ENTRIES = 256;
+const PQ_QUORUM_DOMAIN = 'atlas-pca/pq-quorum/v2\0';
+
+/** One co-signer's ML-DSA-65 signature over the quorum representative. */
+export interface PqQuorumSignature {
+  /** b64u(1952) ML-DSA-65 public key. */
+  readonly pk: string;
+  /** b64u(3309) ML-DSA-65 signature. */
+  readonly sig: string;
+}
+
+export interface PqQuorumBlock {
+  readonly v: typeof PQ_QUORUM_VERSION;
+  readonly alg: typeof PQ_QUORUM_ALG;
+  /** Quorum size recorded at signing (informational; the verifier enforces its OWN pqT). */
+  readonly pqT: number;
+  readonly signers: readonly PqQuorumSignature[];
+}
+
+export interface PqQuorumVerdict {
+  readonly ok: boolean;
+  /** DISTINCT trusted keys whose co-signature verified over this message. */
+  readonly count: number;
+  readonly need: number;
+  readonly reason?: string;
+}
+
+/** The bytes every quorum co-signature covers: DOMAIN || sha256(message). */
+export function pqQuorumRepresentative(message: Uint8Array): Uint8Array {
+  return concat(utf8(PQ_QUORUM_DOMAIN), sha256(message));
+}
+
+/** One ML-DSA-65 co-signature per key pair over {@link pqQuorumRepresentative}`(message)`. */
+export function signPqQuorum(message: Uint8Array, keyPairs: readonly MlDsaKeyPair[], pqT?: number): PqQuorumBlock {
+  const rep = pqQuorumRepresentative(message);
+  const signers = keyPairs.map((k) => ({ pk: b64u(k.publicKey), sig: b64u(mlDsa65Sign(k.secretKey, rep)) }));
+  return { v: PQ_QUORUM_VERSION, alg: PQ_QUORUM_ALG, pqT: pqT ?? signers.length, signers };
+}
+
+/** The trusted pool as canonical b64u strings; entries that are not a well-formed ML-DSA-65 public key are ignored. */
+export function normalizePqQuorumPool(pks: readonly (Uint8Array | string)[]): Set<string> {
+  const pool = new Set<string>();
+  for (const p of pks) {
+    const s = p instanceof Uint8Array ? b64u(p) : p;
+    if (typeof s === 'string' && decodeB64uStrict(s, ML_DSA_65_PUBLIC_KEY_BYTES) !== null) pool.add(s);
+  }
+  return pool;
+}
+
+/**
+ * Count DISTINCT trusted keys whose co-signature verifies over `message`; ok iff the count reaches `pqT`. Total: never
+ * throws. A key outside the pool, a repeated key, a signature over another message and every malformed entry count for
+ * nothing. A block whose version is missing (the pre-0.5 format), 1 or unknown is refused before any verification.
+ */
+export function verifyPqQuorum(block: unknown, message: Uint8Array, trustedPool: ReadonlySet<string>, pqT: number): PqQuorumVerdict {
+  const no = (reason: string): PqQuorumVerdict => ({ ok: false, count: 0, need: pqT, reason });
+  if (!Number.isInteger(pqT) || pqT < 1) return no('pqT must be a positive integer');
+  if (typeof block !== 'object' || block === null) return no('malformed pq block');
+  const b = block as { v?: unknown; alg?: unknown; signers?: unknown };
+  if (b.v === undefined) return no('pq quorum version missing (pre-0.5 format is refused)');
+  if (b.v === 1) return no('pq quorum version 1 is no longer accepted (pre-0.5 format)');
+  if (b.v !== PQ_QUORUM_VERSION) return no('unsupported pq quorum version');
+  if (b.alg !== PQ_QUORUM_ALG || !Array.isArray(b.signers)) return no('malformed pq block');
+  const rep = pqQuorumRepresentative(message);
+  const counted = new Set<string>();
+  for (const entry of (b.signers as unknown[]).slice(0, MAX_PQ_QUORUM_ENTRIES)) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const s = entry as { pk?: unknown; sig?: unknown };
+    if (typeof s.pk !== 'string' || typeof s.sig !== 'string') continue;
+    if (!trustedPool.has(s.pk) || counted.has(s.pk)) continue;
+    if (!mlDsa65VerifyB64u(s.pk, rep, s.sig)) continue;
+    counted.add(s.pk);
+  }
+  const count = counted.size;
+  if (count >= pqT) return { ok: true, count, need: pqT };
+  return { ok: false, count, need: pqT, reason: `post-quantum quorum short: ${count} of ${pqT} required ML-DSA co-signatures` };
 }

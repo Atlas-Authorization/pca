@@ -8,9 +8,11 @@
  * buffered stdout always flushes first).
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 import { cmdDecode, cmdDiscovery, cmdExplain, cmdKeygen, cmdSimulate } from './index';
+import { cmdBuild, cmdConfirm, packText, cmdImportModel, cmdDiff, cmdActionExplain, cmdImport, cmdInit, cmdLint, cmdPublish, cmdSign, cmdSync, cmdTest, writeRulesReviews } from './actions';
 import { cmdSchemaConform, cmdSchemaInit, cmdSchemaPublish, cmdSchemaSign, cmdSchemaVerify } from './schema';
 
 const USAGE = `pca — Proof-Carrying Authority dev CLI
@@ -23,6 +25,34 @@ Usage:
                                       Replay actions against a compiled policy (auto/step_up/deny).
   pca discovery --aud <id> [--suites a,b] [--stepup <url>] [--revocation <url>] [--beacon <url>] [--attest <url>]
                                       Emit a .well-known/pca-configuration document.
+  pca actions init [--ns N] [--template minimal|saas|db|mcp|ecommerce|fintech|healthcare|saas_admin|devtools] [--dir actions] [--force]
+                                      Scaffold actions/<ns>.yaml and actions/pca.config.json (the business-type
+                                      templates add custom traits and business rules; all unreviewed).
+  pca actions confirm <verb>... | --origin union [--trait T] | --pack NAME|DIR --origin any [--packs-dir D] [--file F] --kid ID [--reviewer-key K --yes] [--final t1,t2] [--dismiss trait=reason;;...]
+  pca actions import <file|-> --from mcp|openapi|graphql|grpc|asyncapi|jsonschema --ns N [--suggest rules|none|model [--model ID] [--provider anthropic|openai]] [--verb V] [--uri U] [--licence L] [--out file]
+                                      Draft actions (all unreviewed) from a tool list, an OpenAPI 3 document or a JSON Schema.
+  pca actions lint [paths...] [--strict] [--format text|sarif]
+                                      24 rules, plus LP-001 (pinned builder identity) and LT-000/LT-001 (trace rules,
+                                      lethal trifecta); exit 1 on an error (on a warning too with --strict).
+  pca actions test [paths...]         Run each action's examples and the generic property checks.
+  pca actions explain <verb> [paths...]
+                                      The policy card, effective profile and what a grant must carry.
+  pca actions diff <old> <new>        Semantic diff per action: equal | narrow | widen | incomparable | added | removed.
+  pca actions build [paths...] [--out .pca]
+                                      Emit schema.json, pack.json, cards.json, ontology.json, mcp.json, types.d.ts.
+  pca actions sign --kid K --key <b64u-secret|@file> [--pack-kid K --pack-key ...] [paths...] [--out .pca]
+                                      Sign the built schema (site key) and pack (registry key).
+  pca actions publish [paths...] [--out .pca] [--api <https://instance> [--sk <sk_...> | env ATLAS_SECRET_KEY]]
+                                      Write .well-known/pca-actions.json; with --api anchor it in an Atlas instance and
+                                      publish the signed pack, its business rules and custom traits to the instance's
+                                      action registry (refused when it widens an action without a reviewer's signature).
+  pca actions sync [paths...] [--source NAME] [--check]
+                                      Re-import the sources named in pca.config.json and show the semantic diff: added and
+                                      changed actions land unreviewed, removed ones are deprecated at the next publish.
+                                      --check writes nothing and fails when a source changed (for CI).
+  (default paths: actions)
+
+Legacy (deprecated, removed next release; use pca actions):
   pca schema init --from openapi|mcp <file|-> --site <url> --aud <id> --version <v> [--prefix <verb.>]
                                       Draft an action schema (decisions to make go to stderr).
   pca schema sign <draft.json> --kid <kid> --key <b64u-secret|@file>
@@ -53,6 +83,8 @@ interface ParsedArgs {
  * `--flag value` and `--flag=value` out of the positionals. A bare `--flag` with no value is treated
  * as the empty string.
  */
+const BOOL_FLAGS = new Set(['strict', 'force', 'check']);
+
 function parseArgs(argv: string[]): ParsedArgs {
   const positionals: string[] = [];
   const flags: Record<string, string> = {};
@@ -66,7 +98,7 @@ function parseArgs(argv: string[]): ParsedArgs {
         flags[body.slice(0, eq)] = body.slice(eq + 1);
       } else {
         const next = argv[i + 1];
-        if (next !== undefined && !next.startsWith('--')) {
+        if (!BOOL_FLAGS.has(body) && next !== undefined && !next.startsWith('--')) {
           flags[body] = next;
           i++;
         } else {
@@ -137,7 +169,82 @@ async function main(): Promise<void> {
       );
       break;
     }
+    case 'actions': {
+      const sub = positionals[0];
+      const rest = positionals.slice(1);
+      const dflt = (xs: string[]): string[] => (xs.length > 0 ? xs : ['actions']);
+      const done = (r: { ok: boolean; text: string }): void => {
+        process.stdout.write(r.text + '\n');
+        if (!r.ok) process.exitCode = 1;
+      };
+      switch (sub) {
+        case 'init': {
+          const dir = flags.dir || 'actions';
+          done(cmdInit({ dir, ns: flags.ns || 'acme', ...(flags.template ? { template: flags.template } : {}), force: 'force' in flags }));
+          return;
+        }
+        case 'import': {
+          if (rest[0] === undefined || !flags.from || !flags.ns) throw new Error('actions import: <file|-> --from --ns are required');
+          const impOpts = { from: flags.from!, ns: flags.ns!, ...(flags.uri ? { uri: flags.uri } : {}), ...(flags.licence ? { licence: flags.licence } : {}), ...(flags.verb ? { verb: flags.verb } : {}), ...(flags.suggest ? { suggest: flags.suggest } : {}) };
+          const src = readSource(rest[0]);
+          const r = flags.suggest === 'model'
+            ? await cmdImportModel(src, { ...impOpts, suggest: 'rules', ...(flags.model ? { model: flags.model } : {}), ...(flags.provider ? { provider: flags.provider } : {}) }, process.env, (u, i) => fetch(u, i) as never)
+            : cmdImport(src, impOpts);
+          if (!r.ok) { done(r); return; }
+          if (flags.out) writeFileSync(flags.out, r.yaml);
+          else process.stdout.write(r.yaml);
+          for (const t of r.todo) process.stderr.write(`todo: ${t}\n`);
+          process.stderr.write(r.text + '\n');
+          return;
+        }
+        case 'review': // alias: `pca actions review --origin union --trait T` is the batch form of confirm
+        case 'confirm': {
+          if (rest.length === 0 && flags.origin === undefined) throw new Error('actions confirm: <verb>... or --origin union|any is required');
+          const file = flags.file ?? 'actions.yaml';
+          let source: string;
+          if (flags.pack !== undefined) {
+            if (flags.origin !== 'any' && rest.length === 0) throw new Error('actions confirm --pack: pass --origin any (every def of the pack) or the verbs to review');
+            const p = packText(flags.pack, flags['packs-dir'] ?? 'packs');
+            if (!p.ok) throw new Error(p.text);
+            source = p.text;
+          } else source = readFileSync(file, 'utf8');
+          const r = cmdConfirm(source, { verbs: rest, kid: flags.kid ?? '', ...(flags['reviewer-key'] ? { secret: flags['reviewer-key'] } : {}), ...(flags.final ? { final: flags.final.split(',').filter(Boolean) } : {}), dismiss: flags.dismiss ? flags.dismiss.split(';;') : [], yes: 'yes' in flags, ts: Math.floor(Date.now() / 1000), ...(flags.origin ? { origin: flags.origin } : {}), ...(flags.trait ? { trait: flags.trait } : {}) });
+          if (r.ok && r.yaml) writeFileSync(flags.out ?? (flags.pack !== undefined ? `${flags.pack.replace(/[^A-Za-z0-9._-]/g, '_')}.reviewed.yaml` : file), r.yaml);
+          // the reviewer's signatures over the confirmed actions' business rules, next to the reviewed file (build reads them)
+          if (r.ok && r.rulesReviews && Object.keys(r.rulesReviews).length > 0) writeRulesReviews(dirname(flags.out ?? file), r.rulesReviews);
+          done({ ok: r.ok, text: r.text });
+          return;
+        }
+        case 'lint': done(cmdLint(dflt(rest), { strict: 'strict' in flags, format: flags.format === 'sarif' ? 'sarif' : 'text' })); return;
+        case 'test': done(cmdTest(dflt(rest))); return;
+        case 'explain': {
+          if (rest[0] === undefined) throw new Error('actions explain: <verb> is required');
+          done(cmdActionExplain(dflt(rest.slice(1)), rest[0]));
+          return;
+        }
+        case 'diff': {
+          if (rest.length !== 2) throw new Error('actions diff: <old> <new> are required');
+          done(cmdDiff([rest[0]!], [rest[1]!]));
+          return;
+        }
+        case 'build': done(cmdBuild(dflt(rest), flags.out ? { out: flags.out } : {})); return;
+        case 'sign': {
+          if (!flags.kid || !flags.key) throw new Error('actions sign: --kid and --key are required');
+          done(cmdSign(dflt(rest), { kid: flags.kid!, key: flags.key!, ...(flags.out ? { out: flags.out } : {}), ...(flags['pack-kid'] ? { packKid: flags['pack-kid'] } : {}), ...(flags['pack-key'] ? { packKey: flags['pack-key'] } : {}) }));
+          return;
+        }
+        case 'publish': {
+          // the secret key may come from ATLAS_SECRET_KEY instead of the command line (CI)
+          const sk = flags.sk ?? (flags.api ? process.env.ATLAS_SECRET_KEY : undefined);
+          done(await cmdPublish(dflt(rest), { ...(flags.out ? { out: flags.out } : {}), ...(flags.api ? { api: flags.api } : {}), ...(sk ? { sk } : {}) }));
+          return;
+        }
+        case 'sync': done(await cmdSync(dflt(rest), { ...(flags.source ? { source: flags.source } : {}), check: 'check' in flags })); return;
+        default: throw new Error(`actions: unknown sub-command '${String(sub)}'\n\n${USAGE}`);
+      }
+    }
     case 'schema': {
+      process.stderr.write('pca schema is deprecated and will be removed in the next release; use pca actions (import, sign, publish)\n');
       const sub = positionals[0];
       const a = positionals.slice(1);
       if (sub === 'init') {
