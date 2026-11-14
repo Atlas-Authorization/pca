@@ -4,6 +4,7 @@ import {
   type AccumulatorDecl,
   type AccWindow,
   type MonitorDecl,
+  ACC_AGGS,
   accSelects,
   accValueOf,
   combineAcc,
@@ -110,6 +111,8 @@ export function accPreState(a: AccumulatorDecl, history: readonly IntentEvent[],
 
 /** post_ψ(ξ, ω, t) (spec §2.1): the pre-state combined with ω when ω ∈ sel, else the pre-state's value. */
 export function accPost(a: AccumulatorDecl, history: readonly IntentEvent[], cand: { verb: string; params: Record<string, unknown>; t: number }, schema?: Pick<ActionSchema, 'verbs'>): number {
+  // a host-built declaration is not validated here otherwise: an unknown agg would read as distinct in the pre-state and return undefined
+  if (!ACC_AGGS.includes(a.agg)) throw new Error('accPost: unknown agg');
   const pre = a.key !== null && accKeyOf(a, cand.params) === null ? emptyPre(a) : accPreState(a, history, cand, schema);
   if (!accSelects(a, cand.verb, schema)) return preValue(a, pre);
   const v = accValueOf(a, cand.verb, cand.params, schema);
@@ -190,46 +193,12 @@ export interface SessionTx {
  */
 export interface IntentSessionStore {
   withSession<T>(session: string, fn: (tx: SessionTx) => Promise<T>): Promise<T>;
-}
-
-/** In-process store with a per-session promise-chain mutex (tests, single-process sites). */
-export class MemoryIntentSessionStore implements IntentSessionStore {
-  private readonly logs = new Map<string, IntentEvent[]>();
-  private readonly locks = new Map<string, Promise<unknown>>();
-
-  async withSession<T>(session: string, fn: (tx: SessionTx) => Promise<T>): Promise<T> {
-    const prev = this.locks.get(session) ?? Promise.resolve();
-    let release!: () => void;
-    const mine = new Promise<void>((r) => (release = r));
-    const chained = prev.then(() => mine);
-    this.locks.set(session, chained);
-    await prev;
-    try {
-      const log = this.logs.get(session) ?? [];
-      this.logs.set(session, log);
-      const tx: SessionTx = {
-        events: async () => log.map((e) => ({ ...e })),
-        append: async (e) => {
-          if (log.some((x) => x.id === e.id)) throw new Error('duplicate event id');
-          log.push({ ...e });
-        },
-        setStatus: async (id, status) => {
-          const e = log.find((x) => x.id === id);
-          if (!e) return false;
-          e.status = status;
-          return true;
-        },
-      };
-      return await fn(tx);
-    } finally {
-      release();
-      if (this.locks.get(session) === chained) this.locks.delete(session);
-    }
-  }
-
-  snapshot(session: string): IntentEvent[] {
-    return (this.logs.get(session) ?? []).map((e) => ({ ...e }));
-  }
+  /**
+   * `true` when the history survives a restart of the process (a database row lock and rows). A store that does not say so
+   * is treated as volatile: after a restart its accumulators read zero, so a cap would admit again. `admitIntentAction`
+   * refuses such a store unless the caller passes `requireDurable: false` (0.5, B16: durable is the default).
+   */
+  readonly durable?: boolean;
 }
 
 /**
@@ -245,8 +214,11 @@ export async function admitIntentAction<V extends { allow: boolean }>(
     schema?: Pick<ActionSchema, 'verbs'>;
     event: Omit<IntentEvent, 'status'>;
     verify: (acc: { state: Record<string, AccPreState>; monitors: Record<string, string> }) => Promise<V>;
+    /** Default `true` (0.5, B16): a store that is not durable (see {@link IntentSessionStore.durable}) is refused. Pass `false` only for tests and single-process sites that accept losing every cap on restart. */
+    requireDurable?: boolean;
   },
 ): Promise<V> {
+  if (args.requireDurable !== false && store?.durable !== true) throw new Error('admitIntentAction: the session store is not durable (a restart would reset every cap); use a durable IntentSessionStore');
   return store.withSession(args.session, async (tx) => {
     const history = await tx.events();
     const acc = accContextFor(args.root, history, args.event, args.schema);

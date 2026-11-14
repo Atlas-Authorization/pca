@@ -1,6 +1,6 @@
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { issuePassport, type AgentPassport } from '@atlasauth/pca';
+import { issuePassport, type AgentPassport } from '@atlasauth/pca/ext/attestation';
 import {
   base58btcDecode,
   didKeyFromEd25519,

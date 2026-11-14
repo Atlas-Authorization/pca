@@ -104,9 +104,13 @@ describe('rule forms', () => {
     expect(e.predicates).toEqual([{ verb: '*', resource: '' }]);
     expect(e.report.translated).toEqual(['package p', 'allow → verb "*" (0 condition(s))']);
   });
-  it('later verb / resource statements override earlier ones', () => {
-    expect(preds('input.action == "a"\ninput.action == "b"\ninput.resource == "x"\ninput.resource == "y"')).toEqual([{ verb: 'b', resource: 'y' }]);
-    expect(preds('input.action == "a"\ninput.action in {"c"}')).toEqual([{ verb: ['c'] }]);
+  it('every action / resource statement must hold, so a second one narrows and a contradiction matches nothing', () => {
+    expect(preds('input.action == "a"\ninput.action == "b"\ninput.resource == "x"\ninput.resource == "y"')).toEqual([]);
+    expect(preds('input.action == "a"\ninput.action in {"c"}')).toEqual([]);
+    expect(preds('input.action in {"a","c"}\ninput.action == "a"')).toEqual([{ verb: 'a' }]);
+    expect(preds('input.action in {"a","c","d"}\ninput.action in {"d","c","z"}')).toEqual([{ verb: ['c', 'd'] }]);
+    expect(preds('input.resource == "x"\ninput.resource == "x"')).toEqual([{ verb: '*', resource: 'x' }]);
+    expect(preds('input.resource == "x"\ninput.resource == "y"\ninput.action == "a"')).toEqual([]);
   });
 });
 
@@ -178,9 +182,9 @@ describe('statements', () => {
     expect(preds('input.a == input.')).toEqual([]);
   });
   it('not', () => {
-    expect(cond('not input.a == 1')).toEqual([{ not: { field: 'env.a', op: 'eq', value: 1 } }]);
+    expect(cond('not input.a == 1')).toEqual([{ not: { all_of: [{ field: 'env.a', op: 'exists' }, { field: 'env.a', op: 'eq', value: 1 }] } }]);
     expect(cond('not   input.a > 2')).toEqual([{ not: { field: 'env.a', op: 'gt', value: 2 } }]);
-    expect(cond('not not input.a == 1')).toEqual([{ not: { not: { field: 'env.a', op: 'eq', value: 1 } } }]);
+    expect(cond('not not input.a == 1')).toEqual([{ not: { not: { all_of: [{ field: 'env.a', op: 'exists' }, { field: 'env.a', op: 'eq', value: 1 }] } } }]);
     expect(cond('not startswith(input.a, "p")')).toEqual([{ not: { field: 'env.a', op: 'prefix', value: 'p' } }]);
     expect(preds('not input.action == "x"')).toEqual([]);
     expect(preds('not input.resource == "x"')).toEqual([]);
@@ -201,10 +205,13 @@ describe('statements', () => {
     expect(preds('endswith(input.a, "p")')).toEqual([]);
   });
   it('glob.match', () => {
-    expect(cond('glob.match("a*", [], input.p)')).toEqual([{ field: 'env.p', op: 'like', value: 'a*' }]);
+    expect(cond('glob.match("a*", null, input.p)')).toEqual([{ field: 'env.p', op: 'like', value: 'a*' }]);
+    // an EMPTY delimiter list means "." in OPA (`*` stops at a dot), so a wildcard pattern is not translated
+    for (const p of ['a*', 'a?', 'a\\*']) expect(preds(`glob.match("${p}", [], input.p)`)).toEqual([]);
+    expect(cond('glob.match("abc", [], input.p)')).toEqual([{ field: 'env.p', op: 'like', value: 'abc' }]);
     expect(cond('glob.match("a?b", null, input.p.q)')).toEqual([{ field: 'env.p.q', op: 'like', value: 'a?b' }]);
     expect(cond('glob.match( "" , [ ] , input.p )')).toEqual([{ field: 'env.p', op: 'like', value: '' }]);
-    expect(cond('glob.match("a\\*", [], input.p)')).toEqual([{ field: 'env.p', op: 'like', value: 'a\\*' }]);
+    expect(cond('glob.match("a\\*", null, input.p)')).toEqual([{ field: 'env.p', op: 'like', value: 'a\\*' }]);
     for (const ch of ['[', ']', '{', '}']) expect(preds(`glob.match("a${ch}b", [], input.p)`)).toEqual([]);
     for (const bad of ['glob.match("a", ["/"], input.p)', 'glob.match("a", [], "x")', 'glob.match(a, [], input.p)', 'glob.match("a", input.p)', 'glob.match("a", [], input.p) == true', 'glob.match("a", nil, input.p)']) {
       expect(preds(bad)).toEqual([]);
@@ -238,7 +245,7 @@ describe('statements', () => {
     expect(cond('input.a == 1\ninput.b == 2\nnot input.c == 3')).toEqual([
       { field: 'env.a', op: 'eq', value: 1 },
       { field: 'env.b', op: 'eq', value: 2 },
-      { not: { field: 'env.c', op: 'eq', value: 3 } },
+      { not: { all_of: [{ field: 'env.c', op: 'exists' }, { field: 'env.c', op: 'eq', value: 3 }] } },
     ]);
   });
   it('multi-line rhs is not joined (regex s-flag guard)', () => {

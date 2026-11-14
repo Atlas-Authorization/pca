@@ -114,6 +114,12 @@ describe('createNvidiaSpdmVerifier constructor', () => {
 });
 
 describe('createNvidiaSpdmVerifier.verify', () => {
+  it('refuses a (validly signed) transcript below SPDM 1.1; 0x11 passes', async () => {
+    expect((await run(mk(tx({ version: 0x11 }).evidence))).ok).toBe(true);
+    const r = await run(mk(tx({ version: 0x10 }).evidence));
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/SPDM version 0x10\/0x10/);
+  });
   it('success: identity is EMPTY by default, hostAsserted is exact (digest in index order, leaf subject comma-joined, driver / vbios decoded)', async () => {
     const t = tx({ blocks: 3 });
     const r = await run(mk(t.evidence));

@@ -1,0 +1,115 @@
+(* PCA -- T28 (ZK intent statement, spec pca-intent-layer-v2.md section 3.10, tiers Z1/Z2) and the general zkVM
+   decision receipt (sdks/zkvm-pca: guest proves decide(...) = allow; host checks the receipt against the PINNED
+   image id, then check_context compares the journal with values the verifier recomputes from its own records),
+   computational proof (CryptoVerif).
+
+   zkVM soundness is a stated assumption (NA-ZKVM), modelled as follows. For the pinned image id, an accepted
+   (journal, proof) pair can only come from an execution of the guest program, on SOME input, that output that
+   journal. The guest is public: anyone (the adversary included) may run it on any input of its choice, which is the
+   oracle `Guest` below. Formally: the proof system for the pinned image behaves like a signature scheme whose only
+   signing oracle is "run the guest on input w and sign its journal G(w)"; NA-ZKVM is UF-CMA of that "scheme"
+   (knowledge soundness with the guest's own log as extractor). Proofs for any OTHER image id are adversarial
+   (the adversary knows that image's "key"); the verifier pins the image id (the negative control drops the pin).
+
+   The guest (Z1): inputs action x, map m, salt r, session sid, epsilon eps (and the rest of the decision input,
+   folded into x). It computes C = Commit(m; r) = H(m, r) (salted map commitment), d = H'(x) (pcactn digest) and
+   outputs journal (d, sid, C, eps) ONLY IF cell(x) is in G_tau(m) and the map's residual risk <= eps
+   (`admits(m, x, eps)`). For Z2 the guest recomputes the risk instead of reading the claim; same model, other
+   predicate.
+   The principal commits to its map: it signs a grant whose goal names (sid, C) (`pca-intent:v2c:<sid>:<map_commit>`).
+   The verifier: principal signature on the grant, eps within its policy, d = H'(x) recomputed from the PCActn it
+   verified, receipt valid under the pinned image.
+
+   Queries:
+   q_t28  : an accepted action x is admitted by the map m the PRINCIPAL committed to (GuestRan with that m and r and
+            Committed(sid, m, r)): soundness, from NA-ZKVM + collision resistance of H (binding) and H'.
+   q_bind : the journal's pcactn digest binds one action.
+   Hiding ("reveals only the public inputs"): the journal's only map-dependent value is C = H(m, r); hiding of that
+   commitment in the ROM is EasyCrypt HID (formal/computational/ec/PcaCommitROM.ec, |Pr0 - Pr1| <= 2 q pmax), and
+   zero knowledge of the proof is the named assumption NA-ZK. Not re-proved here.
+   Assumptions: NA-ZKVM, UF-CMA of the principal's signature, collision resistance of H and H'. *)
+
+param NP, NG, NV.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type zkseed [large, fixed].
+type zkimg [bounded].
+type zkkey [bounded].
+type zkproof.
+type journal.
+type hashkey [fixed].
+type hashkey2 [fixed].
+type commit_t [fixed].
+type digest [fixed].
+type salt_t [large, fixed].
+type mapsalt.
+type map_t. type act_t. type sid_t. type eps_t.
+
+proba Psign.
+proba Psigncoll.
+proba Pzk.
+proba Pzkcoll.
+proba Phash.
+proba Phash2.
+
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+(* NA-ZKVM: the pinned image's proofs as an unforgeable "signature" whose only signer is the guest *)
+expand UF_CMA_det_signature(zkseed, zkimg, zkkey, journal, zkproof, zkskgen, zkimgof, zkprove, zkverify, Pzk, Pzkcoll).
+expand CollisionResistant_hash_1(hashkey, mapsalt, commit_t, hc, hc_oracle, Phash).
+expand CollisionResistant_hash_1(hashkey2, act_t, digest, hd, hd_oracle, Phash2).
+
+fun ms(map_t, salt_t): mapsalt [data].
+fun admits(map_t, act_t, eps_t): bool.
+fun policy_ok(eps_t): bool.
+fun mkgrant(sid_t, commit_t): message [data].
+fun mkjournal(digest, sid_t, commit_t, eps_t): journal [data].
+
+event Committed(sid_t, map_t, salt_t, commit_t).
+event GuestRan(map_t, salt_t, act_t, sid_t, eps_t).
+event Accept(act_t, sid_t, commit_t, eps_t).
+event AcceptD(digest, act_t).
+
+query x: act_t, s: sid_t, c: commit_t, e: eps_t, m: map_t, r: salt_t;
+  event(Accept(x, s, c, e)) ==> event(Committed(s, m, r, c)) && event(GuestRan(m, r, x, s, e)).
+query d: digest, x: act_t, x': act_t; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> x = x'.
+
+channel c0, cP, cP2, cG, cG2, cV, cV2.
+
+let Principal(hk: hashkey, skP: skey) =
+  ! iP <= NP
+  in(cP, (s: sid_t, m: map_t));
+  new r: salt_t;
+  let c = hc(hk, ms(m, r)) in
+  event Committed(s, m, r, c);
+  out(cP2, (c, sign(mkgrant(s, c), skP))).
+
+(* the public guest: anyone may run it on any input; it emits a journal only for an admitting map *)
+let Guest(hk: hashkey, hk2: hashkey2, zsk: zkkey) =
+  ! iG <= NG
+  in(cG, (m: map_t, r: salt_t, x: act_t, s: sid_t, e: eps_t));
+  if admits(m, x, e) then
+  event GuestRan(m, r, x, s, e);
+  out(cG2, zkprove(mkjournal(hd(hk2, x), s, hc(hk, ms(m, r)), e), zsk)).
+
+let Verifier(hk2: hashkey2, pkP: pkey, img: zkimg) =
+  ! iV <= NV
+  in(cV, (x: act_t, s: sid_t, c: commit_t, e: eps_t, gsig: signature, pf: zkproof));
+  if true then
+  if policy_ok(e) then
+  let d = hd(hk2, x) in
+  if zkverify(mkjournal(d, s, c, e), img, pf) then
+  event AcceptD(d, x);
+  event Accept(x, s, c, e);
+  out(cV2, ()).
+
+process
+  in(c0, ());
+  new hk: hashkey; new hk2: hashkey2;
+  new rkP: keyseed; let pkP = pkgen(rkP) in let skP = skgen(rkP) in
+  new zs: zkseed; let img = zkimgof(zs) in let zsk = zkskgen(zs) in
+  out(c0, (pkP, img));
+  ( hc_oracle(hk) | hd_oracle(hk2) | Principal(hk, skP) | Guest(hk, hk2, zsk) | Verifier(hk2, pkP, img) )

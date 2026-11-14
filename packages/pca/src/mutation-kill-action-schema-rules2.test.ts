@@ -1,6 +1,6 @@
 /** 0.4.2 mutation kills (rule 14), second batch: max-class projection order, null keys, importer edge shapes, wallet-floor ordering. */
 import { describe, expect, it } from 'vitest';
-import { type ActionVerbDecl, actionSchemaShapeError, draftSchemaFromMcpTools, draftSchemaFromOpenApi, reversibilityOf, verbReversibility, walletFloorOverrides } from './action-schema';
+import { type ActionVerbDecl, type JsonSchemaLike, actionSchemaShapeError, draftSchemaFromMcpTools, draftSchemaFromOpenApi, reversibilityOf, verbReversibility, walletFloorOverrides } from './action-schema';
 
 const SITE = { site: 'https://s.example', aud: 's.example', version: '1' };
 const P = (type: string, extra: Record<string, unknown> = {}) => ({ type, semantic: 's', sensitivity: 'free', ...extra });
@@ -51,7 +51,7 @@ describe('importer edge shapes', () => {
     expect(d.schema.verbs[0]!.params['action.params.a']!.description).toBe('x'.repeat(1024));
   });
   it('OpenAPI: todos follow the sorted path order and sorted parameter order; a request body without content is no schema', () => {
-    const body = (properties: Record<string, unknown>) => ({ content: { 'application/json': { schema: { properties } } } });
+    const body = (properties: Record<string, JsonSchemaLike>) => ({ content: { 'application/json': { schema: { properties } } } });
     const d = draftSchemaFromOpenApi(
       {
         paths: {

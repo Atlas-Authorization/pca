@@ -23,7 +23,30 @@ export {
   ExpiredNoRefreshError,
   RefreshFailedError,
   UnknownConnectionError,
+  StoreError,
+  UnknownActionError,
+  UnconfirmedActionError,
+  RequestMismatchError,
+  BearerReleaseDisabledError,
+  ProxyFailedError,
 } from './errors';
+
+export {
+  type ProxyRequest,
+  type ProxyResponse,
+  type ProxyFetch,
+  type HttpRequestSpec,
+  type ReleaseReceipt,
+  type ReleaseReceiptBody,
+  DEFAULT_PROXY_HEADERS,
+  RELEASE_RECEIPT_DOMAIN,
+  httpExtractor,
+  outboundRequestDigest,
+  signReleaseReceipt,
+  verifyReleaseReceipt,
+} from './proxy';
+
+export { type KeyWrapper, LocalKeyWrapper, EncryptedConnectionStore } from './encrypted-store';
 
 export {
   type ProviderConfig,
@@ -37,13 +60,15 @@ export {
   type ConnectionKey,
   type ConnectionStore,
   type StoredConnection,
-  InMemoryConnectionStore,
   cloneConnection,
 } from './store';
 
 export {
   type ConnectionToken,
   type GetConnectionTokenArgs,
+  type ProxyCallArgs,
+  type ProxyResult,
+  type VaultAction,
   type PutConnectionArgs,
   type TokenVaultOptions,
   TokenVault,

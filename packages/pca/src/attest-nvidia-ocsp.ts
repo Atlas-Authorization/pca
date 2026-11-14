@@ -1,4 +1,5 @@
 import { x509ValidityMs } from './x509-validity';
+import { certVerifiedUnder, rsaKeyOk } from './x509-strict';
 /**
  * NVIDIA GPU-CC DEVICE-CHAIN REVOCATION VIA OCSP (RFC 6960).
  *
@@ -110,6 +111,9 @@ export function allAsn1TimesWellFormed(node: unknown, asn1: Asn1): boolean {
     const text = Buffer.from((node as { valueBlock: { valueHexView: Uint8Array } }).valueBlock.valueHexView).toString('latin1');
     return timeTextInRange(text, !(node instanceof asn1.GeneralizedTime)); // asn1js: GeneralizedTime extends UTCTime
   }
+  // OCTET/BIT STRING contents are opaque bytes (hashes, nonce, signature), not structure: asn1js auto-parses them, and a hash that
+  // happens to read as a bad time must not refuse a valid response (a CA with such a key hash would be refused on every response).
+  if (node instanceof asn1.OctetString || node instanceof asn1.BitString) return true;
   const kids = (node as { valueBlock?: { value?: unknown } }).valueBlock?.value;
   if (Array.isArray(kids)) for (const k of kids) if (!allAsn1TimesWellFormed(k, asn1)) return false;
   return true;
@@ -193,7 +197,7 @@ function verifySig(alg: string, tbs: Uint8Array, sig: Uint8Array, key: KeyObject
   if (!a) return false;
   const t = key.asymmetricKeyType;
   if ((a.kind === 'ec') !== (t === 'ec')) return false;
-  if (a.kind === 'rsa' && t !== 'rsa') return false;
+  if (a.kind === 'rsa' && (t !== 'rsa' || !rsaKeyOk(key))) return false;
   try {
     return cryptoVerify(a.hash, tbs, key, sig);
   } catch {
@@ -294,7 +298,7 @@ async function verifyInner(responseDer: Uint8Array, opts: VerifyNvidiaOcspOption
       // must be signed by a NVIDIA chain cert at or above the issuer
       const issuerIdx = opts.chain.findIndex((c) => c.raw.equals(opts.issuer.raw));
       const signers = issuerIdx >= 0 ? opts.chain.slice(issuerIdx) : [opts.issuer];
-      if (!signers.some((s) => cand.checkIssued(s) && cand.verify(s.publicKey))) {
+      if (!signers.some((s) => cand.checkIssued(s) && certVerifiedUnder(cand, s.publicKey))) {
         why = 'delegated responder certificate is not signed by the supplied NVIDIA chain';
         continue;
       }

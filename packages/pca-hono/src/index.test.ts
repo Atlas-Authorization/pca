@@ -76,3 +76,12 @@ describe('pcaHono', () => {
     expect(c.last.status).toBe(401);
   });
 });
+
+describe('0.5: the guard needs an operation mapping', () => {
+  it('is refused at construction without `operation` (a proof would be accepted for any operation the grant permits)', () => {
+    expect(() => pcaHono({ audience: AUD, resolveGrant: async () => null })).toThrow(/`operation` is required/);
+  });
+  it('insecureAllowUnboundOperation is the explicit migration opt-in', () => {
+    expect(() => pcaHono({ audience: AUD, resolveGrant: async () => null, insecureAllowUnboundOperation: true })).not.toThrow();
+  });
+});

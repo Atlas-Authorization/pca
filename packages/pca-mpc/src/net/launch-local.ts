@@ -38,8 +38,9 @@ export interface LaunchOptions {
   /** Route the connection `dialer -> target` through a faulty TCP proxy. */
   wireFault?: { dialer: number; target: number; fault: WireFault };
   dealerSeed?: string;
-  /** `trusted-dealer` (default; spawns a dealer process) or `no-dealer` (the parties run the OT offline phase). */
+  /** `no-dealer` (default: the parties run the OT offline phase) or `trusted-dealer` (spawns a dealer process; needs `insecureTrustedDealer: true`). */
   offline?: 'trusted-dealer' | 'no-dealer';
+  insecureTrustedDealer?: boolean;
 }
 
 export async function freePort(): Promise<number> {
@@ -55,7 +56,9 @@ export async function freePort(): Promise<number> {
 
 export async function launchLocal(o: LaunchOptions): Promise<{ outputs: NodeOutput[]; wallMs: number; proxyLog: string[] }> {
   const n = o.n;
-  const noDealer = o.offline === 'no-dealer';
+  const mode = o.offline ?? 'no-dealer';
+  if (mode === 'trusted-dealer' && o.insecureTrustedDealer !== true) throw new Error("launchLocal: offline 'trusted-dealer' requires insecureTrustedDealer: true");
+  const noDealer = mode === 'no-dealer';
   const nodeCount = noDealer ? n : n + 1;
   const dir = mkdtempSync(join(tmpdir(), 'pca-mpc-net-'));
   const sessionId = randomBytes(8).toString('hex');
@@ -82,7 +85,8 @@ export async function launchLocal(o: LaunchOptions): Promise<{ outputs: NodeOutp
       id,
       n,
       Q: o.Q,
-      offline: o.offline,
+      offline: mode,
+      insecureTrustedDealer: o.insecureTrustedDealer,
       sessionId,
       input: id < n ? o.vectors[id] : undefined,
       listenHost: '127.0.0.1',

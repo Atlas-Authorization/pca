@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-siem",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "SIEM export for PCA decisions: emit each verified/denied action as an OCSF Authorization event (and CEF), streamable to Splunk/Elastic/Datadog/Sentinel — the security-event feed complementing OTel traces.",
   "keywords": [
     "siem",
@@ -54,5 +54,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

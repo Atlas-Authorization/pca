@@ -90,6 +90,10 @@ function appendedCaveats(parent: Capability, child: Capability): Caveat[] {
   return child.caveats.slice(parent.caveats.length);
 }
 
+function checkNow(now: number | undefined, ctx: string): void {
+  if (now !== undefined && (typeof now !== 'number' || !Number.isFinite(now))) throw new TypeError(`${ctx}: now must be a finite number`);
+}
+
 function requireNonEmpty(chain: CapabilityChain, ctx: string): void {
   if (!Array.isArray(chain) || chain.length === 0) throw new Error(`${ctx}: empty chain`);
 }
@@ -130,6 +134,8 @@ export function rotateAgentKey(
   }
 
   const newHolder = encodeKey(opts.newKeyPair.publicKey);
+  if (newHolder === leaf.holder) throw new Error('rotateAgentKey: newKeyPair is the key being rotated out');
+  checkNow(opts.now, 'rotateAgentKey');
   const newLeaf = delegate(parent, newHolder, appendedCaveats(parent, leaf), opts.oldHolderSecret);
   const newChain: CapabilityChain = [...chain.slice(0, chain.length - 1), newLeaf];
 
@@ -193,6 +199,8 @@ export function rotatePrincipalKey(args: {
   }
 
   const newPrincipalPub = encodeKey(args.newPrincipalKeyPair.publicKey);
+  if (newPrincipalPub === oldRoot.issuer) throw new Error('rotatePrincipalKey: newPrincipalKeyPair is the key being rotated out');
+  checkNow(args.now, 'rotatePrincipalKey');
   const newRoot = mintRoot({
     principalSecret: args.newPrincipalKeyPair.secretKey,
     principalPublic: newPrincipalPub,
@@ -279,6 +287,10 @@ export function revokeAndReissueSubtree(
   }
 
   const newHolder = encodeKey(opts.newKeyPair.publicKey);
+  if (chain.slice(idx).some((c) => c.holder === newHolder)) {
+    throw new Error('revokeAndReissueSubtree: newKeyPair is a key held inside the compromised subtree');
+  }
+  checkNow(opts.now, 'revokeAndReissueSubtree');
   // Re-delegate from the safe ancestor straight to the new key, carrying the deepest leaf's appended
   // caveats so the re-issued authority equals the old narrowest leaf's (never widened).
   const newHop = delegate(ancestor, newHolder, appendedCaveats(ancestor, leaf), opts.ancestorSecret);
@@ -329,4 +341,64 @@ export function compromisedKeyFlow(
   }));
 
   return { revocations, reissued };
+}
+
+// ---- atomic rotate-and-revoke ---------------------------------------------------------------------
+
+/**
+ * The part of a revocation registry that {@link applyRotation} needs. `RevocationRegistry` from
+ * `@atlasauth/pca-revoke` satisfies it as is.
+ */
+export interface RevocationSink {
+  revoke(input: { kind: 'cap'; value: string; reason?: string; revokedAt?: number }): Promise<unknown>;
+  unrevoke(key: { kind: 'cap'; value: string }): Promise<boolean>;
+  lookup(kind: 'cap', value: string): Promise<unknown>;
+}
+
+/**
+ * Revoke what a rotation replaced, all or nothing. Every capability id the record(s) cover is revoked in
+ * `sink`; if any revoke throws, the ones this call added are removed again and the error is rethrown, so
+ * a failed rotation never leaves the old chain half revoked.
+ *
+ * It revokes capability ids only. The holder and issuer keys in a record are not revoked here: after an
+ * agent-key rotation the old key still signs the re-issued leaf, so revoking it would deny the new chain.
+ * It refuses, before touching the sink, a record that names no capability id, and a re-issued chain that
+ * shares an id with what is being revoked.
+ */
+export async function applyRotation(
+  sink: RevocationSink,
+  records: RevocationRecord | RevocationRecord[],
+  reissued?: CapabilityChain,
+): Promise<string[]> {
+  const list = Array.isArray(records) ? records : [records];
+  const todo = new Map<string, RevocationRecord>();
+  for (const r of list) {
+    const ids = r.capIds ?? (r.capId === undefined ? [] : [r.capId]);
+    for (const id of ids) {
+      if (typeof id !== 'string' || id.length === 0) throw new TypeError('applyRotation: a record names an invalid capability id');
+      if (!todo.has(id)) todo.set(id, r);
+    }
+  }
+  if (todo.size === 0) throw new Error('applyRotation: the record names no capability to revoke');
+  const kept = new Set((reissued ?? []).map((c) => c.id));
+  for (const id of todo.keys()) {
+    if (kept.has(id)) throw new Error('applyRotation: the re-issued chain contains a capability that is being revoked');
+  }
+  const added: string[] = [];
+  try {
+    for (const [id, r] of todo) {
+      if ((await sink.lookup('cap', id)) === undefined) added.push(id);
+      await sink.revoke({ kind: 'cap', value: id, reason: r.reason, revokedAt: r.revokedAt });
+    }
+  } catch (e) {
+    for (const id of added) {
+      try {
+        await sink.unrevoke({ kind: 'cap', value: id });
+      } catch {
+        // best effort: the original failure is the one to report
+      }
+    }
+    throw e;
+  }
+  return [...todo.keys()];
 }

@@ -1,6 +1,9 @@
 import { decodeCanonicalBase64url } from './strict-jws';
+import { setAssuranceLabel } from './assurance';
 import { x509ValidAt } from './x509-validity';
+import { rsaKeyOk, strictChainError } from './x509-strict';
 import { snapshotConfig } from './config-snapshot';
+import { assertJsonSize, assertOptionalStringList } from './policy-lists';
 /**
  * L0 HARDWARE backend — Microsoft Azure Attestation (MAA) JWT VERIFIER.
  *
@@ -239,8 +242,12 @@ export function parseMaaJwt(token: string): ParsedMaaJwt {
   let headerObj: unknown;
   let payloadObj: unknown;
   try {
-    headerObj = JSON.parse(decodeCanonicalBase64url(h).toString('utf8'));
-    payloadObj = JSON.parse(decodeCanonicalBase64url(p).toString('utf8'));
+    const hb = decodeCanonicalBase64url(h);
+    const pb = decodeCanonicalBase64url(p);
+    assertJsonSize(hb.length);
+    assertJsonSize(pb.length);
+    headerObj = JSON.parse(hb.toString('utf8'));
+    payloadObj = JSON.parse(pb.toString('utf8'));
   } catch (e) {
     throw new TypeError(`parseMaaJwt: malformed JSON segment: ${e instanceof Error ? e.message : 'unknown'}`);
   }
@@ -332,7 +339,7 @@ function certValid(cert: import('node:crypto').X509Certificate, nowMs: number, s
 
 function safeCertVerify(cert: import('node:crypto').X509Certificate, key: import('node:crypto').KeyObject): boolean {
   try {
-    return cert.verify(key);
+    return rsaKeyOk(key) && cert.verify(key);
   } catch {
     return false;
   }
@@ -390,6 +397,8 @@ export async function verifyX5cChain(
           return { ok: false, reason: `x5c link ${i} is not signed by the certificate above it` };
         }
       }
+      const profile = strictChainError(certs.slice(0, anchorIdx + 1).map((c) => new Uint8Array(c.raw)));
+      if (profile) return { ok: false, reason: `x5c chain profile: ${profile}` };
       const leaf = certs[0]!;
       return { ok: true, leaf, leafSpkiSha256: spkiSha256(leaf, createHash) };
     }
@@ -404,6 +413,8 @@ export async function verifyX5cChain(
     if (!resolved.rootKeys.some((k) => safeCertVerify(top, k))) {
       return { ok: false, reason: 'x5c chain does not anchor in a configured MAA trust root' };
     }
+    const profile = strictChainError(certs.map((c) => new Uint8Array(c.raw)));
+    if (profile) return { ok: false, reason: `x5c chain profile: ${profile}` };
     const leaf = certs[0]!;
     return { ok: true, leaf, leafSpkiSha256: spkiSha256(leaf, createHash) };
   } catch (e) {
@@ -444,7 +455,7 @@ async function verifyJwsSignature(parsed: ParsedMaaJwt, leaf: import('node:crypt
     const { verify } = await nodeCrypto();
     let ok = false;
     try {
-      ok = verify('RSA-SHA256', parsed.signingInput, leaf.publicKey, parsed.signature);
+      ok = rsaKeyOk(leaf.publicKey) && verify('RSA-SHA256', parsed.signingInput, leaf.publicKey, parsed.signature);
     } catch {
       ok = false;
     }
@@ -476,9 +487,9 @@ const SEVSNP_TCB_CLAIMS = [
   ['tee', 'x-ms-sevsnpvm-tee-svn', 'tee_svn'],
 ] as const;
 /** TDX MRTD claim keys. */
-// Real MAA TDX tokens (api 2023-04-01-preview) use snake_case top-level `tdx_*` claims; older/preview shapes used `x-ms-tdx-*`.
+// Real MAA TDX tokens (api 2023-04-01-preview) use snake_case top-level `tdx_*` claims; older shapes used `x-ms-tdx-*`.
 const TDX_MRTD_KEYS = ['tdx_mrtd', 'x-ms-tdx-mrtd'] as const;
-/** TDX report-data claim keys (Azure has used both spellings across previews). */
+/** TDX report-data claim keys (Azure has used both spellings across API versions). */
 const TDX_REPORTDATA_KEYS = ['tdx_report_data', 'x-ms-tdx-report-data', 'x-ms-tdx-reportdata'] as const;
 /** TDX RTMR0 claim keys. */
 const TDX_RTMR0_KEYS = ['tdx_rtmr0', 'x-ms-tdx-rtmr0'] as const;
@@ -622,7 +633,12 @@ function transformBinding(binding: Uint8Array, mode: AzureMaaPolicy['reportDataH
  * Wire it in: `createAttestationVerifier({ trustedAttestorKeys: [], hardwareVerifier: createAzureMaaVerifier(opts), resolveDocument })`,
  * or add it as one `AttestationRoot` in a `createMultiRootVerifier` policy.
  */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createAzureMaaVerifier(opts: AzureMaaVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createAzureMaaVerifierUnlabelled(opts), { level: 'hardware', vendor: 'azure-maa' });
+}
+
+function createAzureMaaVerifierUnlabelled(opts: AzureMaaVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts || !Array.isArray(opts.trustedIssuers) || opts.trustedIssuers.length === 0) {
@@ -642,6 +658,7 @@ export function createAzureMaaVerifier(opts: AzureMaaVerifierOptions): HardwareA
   if (!policy || (!hasSevSnp && !hasTdx)) {
     throw new TypeError('createAzureMaaVerifier: policy must set a NON-EMPTY sevSnpMeasurements and/or tdxMrtds allowlist (accept-all is not permitted)');
   }
+  for (const k of ['sevSnpHostData', 'tdxRtmrs', 'tdxAllowedTcbStatuses'] as const) assertOptionalStringList('createAzureMaaVerifier', k, policy[k]);
   if (policy.sevSnpMinTcb !== undefined) {
     const m = policy.sevSnpMinTcb as Record<string, unknown>;
     if (typeof m !== 'object' || m === null || Array.isArray(m)) throw new TypeError('createAzureMaaVerifier: policy.sevSnpMinTcb must be an object');
@@ -759,7 +776,7 @@ export function createAzureMaaVerifier(opts: AzureMaaVerifierOptions): HardwareA
           const tcbReported: Record<string, string> = {};
           for (const [name, claim, hostKey] of SEVSNP_TCB_CLAIMS) {
             const raw = teeClaims[claim];
-            const isSvn = typeof raw === 'number' && Number.isInteger(raw) && raw >= 0;
+            const isSvn = typeof raw === 'number' && Number.isInteger(raw) && raw >= 0 && !Object.is(raw, -0);
             if (isSvn) tcbReported[hostKey] = String(raw);
             const floor = policy.sevSnpMinTcb?.[name];
             if (floor === undefined) continue;

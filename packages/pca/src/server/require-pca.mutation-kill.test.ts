@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { beaconRef, issueLivenessBeacon } from '../beacons';
 import { encodeKey, generateKeyPair } from '../keys';
 import { RevocationSet, signRevocationEpoch, type RevocationEpoch } from '../revocation';
-import { defaultExtract, memoryPcaStore, requirePCA, type PcaStateStore } from './require-pca';
+import { defaultExtract, memoryPcaStore, requirePCA as requirePCA05, type PcaStateStore } from './require-pca';
 import { AUD, NOW, setup } from './fixture.test-util';
+const requirePCA = (o: Parameters<typeof requirePCA05>[0]): ReturnType<typeof requirePCA05> => requirePCA05({ insecureAllowUnboundOperation: true, multiInstance: false, ...o }); // unbound and single-instance on purpose: these tests are not about operation binding or store scope (see breaking-05.test.ts)
+
 
 const b64u = (s: string) => Buffer.from(s).toString('base64url');
 const s = setup();
@@ -118,7 +120,7 @@ describe('requirePCA: per-grant critical section', () => {
     expect(r1.ok).toBe(true);
     expect(r2.ok).toBe(true);
     expect(r3.ok).toBe(false);
-    expect(!r3.ok && r3.verdict.checks.counter).toBe('fail');
+    expect(!r3.ok && r3.verdict.checks.replay).toBe('fail');
   });
 });
 
@@ -133,18 +135,18 @@ describe('requirePCA: replay counter reporting', () => {
     if (!again.ok) {
       expect(again.status).toBe(403);
       expect(again.verdict.allow).toBe(false);
-      expect(again.verdict.checks.counter).toBe('fail');
-      expect(again.verdict.reasons).toContain('counter: 5 is not greater than last seen 5 (replay)');
+      expect(again.verdict.checks.replay).toBe('fail');
+      expect(again.verdict.reasons).toContain('replay: 5 is not greater than last seen 5 (replay)');
     }
     const lower = await g(body(s.mk(s.plan[0]!, { counter: 4 })));
     expect(lower.ok).toBe(false);
     const higher = await g(body(s.mk(s.plan[0]!, { counter: 6 })));
     expect(higher.ok).toBe(true);
-    expect(higher.ok && higher.verdict.checks.counter).toBe('pass');
+    expect(higher.ok && higher.verdict.checks.replay).toBe('pass');
   });
   it('without a store the counter is reported not-enforced (never pass)', async () => {
     const r = await requirePCA({ ...base(), insecureAllowUnenforced: true })(body(s.mk(s.plan[0]!)));
-    expect(r.ok && r.verdict.checks.counter).toBe('not-enforced');
+    expect(r.ok && r.verdict.checks.replay).toBe('not-enforced');
   });
 });
 

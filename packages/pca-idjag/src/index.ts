@@ -23,7 +23,7 @@
  * identity → PCA-principal mapping. This module adds only the ID-JAG-specific rules (single audience, the
  * required `act` agent claim, scope parsing) and the capability projection.
  */
-import { decodeJwt } from 'jose';
+import { decodeJwt, decodeProtectedHeader } from 'jose';
 import {
   OidcVerificationError,
   oidcPrincipal,
@@ -115,7 +115,24 @@ export interface VerifyIdJagOptions {
   discover?: boolean;
   /** Injectable `fetch` used for discovery (defaults to the global `fetch`). */
   fetch?: typeof fetch;
+  /**
+   * Enforce the draft's token shape (draft-ietf-oauth-identity-assertion-authz-grant-04, section 3.1): header
+   * `typ` is `oauth-id-jag+jwt`, `client_id` and `jti` are present, `client_id` equals `clientId`, and the `jti` is
+   * single-use through `consumeJti`. ON BY DEFAULT: pass `strictDraft: false` to opt out explicitly (a loose
+   * verification that checks neither `typ`, `client_id` nor `jti` and keeps no replay state).
+   */
+  strictDraft?: boolean;
+  /** With `strictDraft` (REQUIRED there): `client_id` must equal this value (the client authenticated at the token endpoint). */
+  clientId?: string;
+  /**
+   * With `strictDraft` (REQUIRED there): single-use check. Called once per verified grant with its `jti`; return
+   * `true` for a fresh one and `false` if it was already seen (the grant is then refused). Back it with a shared durable store.
+   */
+  consumeJti?: (jti: string, expSec: number) => boolean | Promise<boolean>;
 }
+
+/** Upper bound on an accepted ID-JAG string (adversarial-size guard, checked before any parsing). */
+export const MAX_ID_JAG_CHARS = 16384;
 
 /**
  * Verify an ID-JAG JWT and return the parsed grant. Fails CLOSED: any signature / issuer / audience /
@@ -127,6 +144,9 @@ export async function verifyIdJag(jwt: string, opts: VerifyIdJagOptions): Promis
   if (typeof jwt !== 'string' || jwt.length === 0) {
     throw new IdJagVerificationError('invalid_token', 'verifyIdJag: jwt must be a non-empty string');
   }
+  if (jwt.length > MAX_ID_JAG_CHARS) {
+    throw new IdJagVerificationError('invalid_token', 'verifyIdJag: jwt exceeds the size limit');
+  }
   if (opts === null || typeof opts !== 'object') {
     throw new IdJagVerificationError('config', 'verifyIdJag: opts is required');
   }
@@ -135,6 +155,14 @@ export async function verifyIdJag(jwt: string, opts: VerifyIdJagOptions): Promis
   }
   if (typeof opts.audience !== 'string' || opts.audience.length === 0) {
     throw new IdJagVerificationError('config', 'verifyIdJag: opts.audience is required (ID-JAG is single-audience)');
+  }
+
+  const strict = opts.strictDraft !== false;
+  if (strict && typeof opts.consumeJti !== 'function') {
+    throw new IdJagVerificationError('config', 'verifyIdJag: strictDraft requires opts.consumeJti (single-use store)');
+  }
+  if (strict && (typeof opts.clientId !== 'string' || opts.clientId.length === 0)) {
+    throw new IdJagVerificationError('config', 'verifyIdJag: strictDraft requires opts.clientId (the client authenticated at the token endpoint)');
   }
 
   // Reuse the OIDC verifier for every crypto + registered-claim check. It maps each jose failure onto a
@@ -198,6 +226,19 @@ export async function verifyIdJag(jwt: string, opts: VerifyIdJagOptions): Promis
   }
 
   const jti = typeof raw.jti === 'string' && raw.jti.length > 0 ? raw.jti : undefined;
+
+  if (strict) {
+    const fail = (m: string): never => { throw new IdJagVerificationError('grant', m); };
+    let typ: unknown;
+    try { typ = decodeProtectedHeader(jwt).typ; } catch { typ = undefined; }
+    if (typ !== 'oauth-id-jag+jwt') fail('ID-JAG header typ must be "oauth-id-jag+jwt"');
+    if (typeof raw.client_id !== 'string' || raw.client_id.length === 0) fail('ID-JAG is missing "client_id"');
+    if (raw.client_id !== opts.clientId) fail('ID-JAG client_id does not match the expected client');
+    if (jti === undefined) fail('ID-JAG is missing "jti"');
+    let fresh: boolean;
+    try { fresh = (await opts.consumeJti!(jti!, base.exp)) === true; } catch { fresh = false; }
+    if (!fresh) fail('ID-JAG jti was already used or the single-use store failed');
+  }
 
   return {
     iss: base.iss,

@@ -41,7 +41,7 @@ describe('constants / statement / bound', () => {
   });
   it('statement text is exact', () => {
     expect(safetyCertificateStatement(1.5)).toBe(
-      'Between two consecutive human co-signs, the total risk of autonomous actions Σ r(Aᵢ) ≤ 1.5 (= B_max / κ); hence the blast radius authorized per human checkpoint is at most 1.5.',
+      'Arithmetic consequence of the signed risk parameters: between two consecutive human co-signs, the total risk of autonomous actions Σ r(Aᵢ) ≤ 1.5 (= B_max / κ). This is not a claim that the agent or the system is safe.',
     );
   });
   it('bound is bMax/kappa, 0 for kappa<=0, clamps negative bMax', () => {
@@ -69,7 +69,7 @@ describe('issue', () => {
     expect('pq_pk' in c).toBe(false);
     expect('pq_sig' in c).toBe(false);
     expect(Object.keys(c).sort()).toEqual(
-      ['blastRadiusPerCheckpoint', 'bound', 'grant_ref', 'guardian', 'instance', 'issued_at', 'params', 'sig', 'statement', 'v'].sort(),
+      ['blastRadiusPerCheckpoint', 'bound', 'grant_ref', 'guardian', 'instance', 'issued_at', 'params', 'scope', 'sig', 'statement', 'v'].sort(),
     );
   });
   it('optional fields are ABSENT (not undefined) when not supplied; empty string is kept', () => {

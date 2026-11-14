@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // The Dafny JS runtime fix (src/runtime.ts): Seq.Concat copies with a loop, so a long sequence no longer overflows the stack.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { hardenDafnyRuntime } from '../src/runtime';
 import { wireAcceptsText, wireCanonicalOfText } from '../src/ext-wire';
 
@@ -63,5 +63,33 @@ describe('the proved strict-JSON parser at the profile maximum (1 MiB)', () => {
     for (const t of ['{"b":1,"a":[true,null,"é"]}', '{"a":1,"a":2}', '[1,]', '1.0', '"\\ud800"', ' [ ] ', '']) {
       expect(wireAcceptsText(t), t).toBe(wireCanonicalOfText(t) !== undefined);
     }
+  });
+});
+
+describe('hardenDafnyRuntime marker', () => {
+  it('marks the hardened runtime under its registered symbol, and a runtime carrying that mark is left alone', () => {
+    const d = fresh();
+    const key = Symbol.for('atlasauth.pca-verified-core.runtime-hardened');
+    expect(d.Seq[key]).toBeUndefined();
+    hardenDafnyRuntime(d);
+    expect(d.Seq[key]).toBe(true);
+    const marked = fresh();
+    const stock = marked.Seq.Concat;
+    Object.defineProperty(marked.Seq, key, { value: true });
+    hardenDafnyRuntime(marked);
+    expect(marked.Seq.Concat).toBe(stock);
+  });
+  it('the mark is the registered symbol in a freshly loaded copy of the module too', async () => {
+    vi.resetModules();
+    const m = await import('../src/runtime');
+    const key = Symbol.for('atlasauth.pca-verified-core.runtime-hardened');
+    const d = fresh();
+    m.hardenDafnyRuntime(d);
+    expect(d.Seq[key]).toBe(true);
+    const marked = fresh();
+    const stock = marked.Seq.Concat;
+    Object.defineProperty(marked.Seq, key, { value: true });
+    m.hardenDafnyRuntime(marked);
+    expect(marked.Seq.Concat).toBe(stock);
   });
 });

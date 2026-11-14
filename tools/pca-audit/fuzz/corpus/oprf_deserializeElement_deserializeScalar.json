@@ -1,0 +1,11 @@
+{
+ "target": "oprf deserializeElement / deserializeScalar",
+ "seeds": [
+  {
+   "b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
+  },
+  {
+   "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  }
+ ]
+}

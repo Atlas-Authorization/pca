@@ -947,3 +947,6 @@ export function renderMarkdown(report: ComplianceReport): string {
   lines.push('_Evidence mapping, not a legal certification: a `satisfied` status means the cryptographic evidence the control asks for is present in the supplied records._');
   return lines.join('\n');
 }
+
+// Control-status report over a console activity stream (formerly `complianceReport` in `@atlasauth/pca`).
+export * from './framework-report';

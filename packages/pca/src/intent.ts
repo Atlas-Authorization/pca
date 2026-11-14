@@ -76,7 +76,7 @@ export interface IntentVerifyOptions extends PqPinPolicy {
 export type IntentVerdict = { ok: true } | { ok: false; reason: string };
 
 const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
-const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v);
+const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0);
 const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
 /** Suite fields must be consistent: unknown `alg` refused; an Ed25519 artifact carries no `pq_pk` / `pq_sig` (unsigned malleability). */
