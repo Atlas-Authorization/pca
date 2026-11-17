@@ -5,7 +5,7 @@
 # is byte-identical to the fresh compile. (build-ext.sh itself dispatches to a remote runner; this is the same recipe, local.)
 set -euo pipefail
 D="formal/dafny"; GEN="packages/pca-verified-core/generated"
-FLAGS="--allow-warnings --verification-time-limit ${TL:-120} --resource-limit 0"
+FLAGS="--allow-warnings --verification-time-limit ${TL:-120} --resource-limit 0 --verify-included-files"
 rc=0
 for C in "$@"; do
   LC="$(echo "$C" | tr 'A-Z' 'a-z')"; SRC="$D/$C.dfy"

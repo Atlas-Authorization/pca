@@ -32,7 +32,10 @@
  * attestation, or an attestation about a different subject is rejected — never silently trusted.
  */
 
-import { type AgentPassport, canonicalBytes } from '@atlasauth/pca';
+import { canonicalBytes } from '@atlasauth/pca';
+import { jcsBytes, validateAgentCard1 } from './a2a-card';
+export { jcsBytes, validateAgentCard1 } from './a2a-card';
+import { type AgentPassport } from '@atlasauth/pca/ext/attestation';
 import {
   FlattenedSign,
   createLocalJWKSet,
@@ -77,6 +80,8 @@ interface SignDetachedOptions {
   kid?: string;
   /** Extra protected-header members covered by the signature (e.g. the `pca_passport` commitment). */
   header?: Record<string, unknown>;
+  /** Standard base64url-encoded payload in the signing input (A2A 1.0 section 8.4) instead of `b64:false`. */
+  standardPayload?: boolean;
 }
 
 /** Produce a detached-payload JWS over `payload` (the canonical bytes of the signed object). */
@@ -89,8 +94,7 @@ async function signDetached(
   const key: KeyLike | Uint8Array = isJwk(signingKey) ? await importJWK(signingKey, alg) : signingKey;
   const protectedHeader: Record<string, unknown> = {
     alg,
-    b64: false,
-    crit: ['b64'],
+    ...(opts.standardPayload ? { typ: 'JOSE' } : { b64: false, crit: ['b64'] }),
     ...(opts.kid !== undefined ? { kid: opts.kid } : {}),
     ...(opts.header ?? {}),
   };
@@ -111,6 +115,8 @@ export interface VerifyKeyOptions {
   key?: VerifyKeyInput;
   /** Expected JWS algorithm for `importJWK` of a plain JWK `key` (default `'EdDSA'`). */
   alg?: string;
+  /** `'a2a-1.0'`: also require the card to match the A2A 1.0 `AgentCard` message (see {@link validateAgentCard1}). */
+  schema?: 'a2a-1.0';
 }
 
 type ResolveOutcome = { resolver: KeyResolver } | { error: string };
@@ -127,6 +133,16 @@ async function resolveVerifyKey(opts: VerifyKeyOptions): Promise<ResolveOutcome>
   }
 }
 
+/** JWS payload member for `protectedB64`: raw bytes under `b64:false` (legacy detached profile), else the base64url text (A2A 1.0). */
+function payloadFor(protectedB64: string, payload: Uint8Array): Uint8Array | string {
+  try {
+    const h = JSON.parse(Buffer.from(protectedB64, 'base64url').toString('utf8')) as { b64?: unknown };
+    return h !== null && typeof h === 'object' && h.b64 === false ? payload : Buffer.from(payload).toString('base64url');
+  } catch {
+    return payload; // unparsable header: jose rejects it
+  }
+}
+
 type VerifyDetachedResult =
   | { ok: true; protectedHeader: Record<string, unknown> }
   | { ok: false; reason: string };
@@ -140,7 +156,7 @@ async function verifyDetached(
   if (typeof sig.protected !== 'string' || typeof sig.signature !== 'string') {
     return { ok: false, reason: 'signature is malformed' };
   }
-  const input: FlattenedJWSInput = { protected: sig.protected, payload, signature: sig.signature };
+  const input: FlattenedJWSInput = { protected: sig.protected, payload: payloadFor(sig.protected, payload) as never, signature: sig.signature };
   try {
     assertCanonicalJwsSegments(sig.protected, sig.signature); // canonical-spelling gate BEFORE jose
     // Split so each branch binds a single flattenedVerify overload (key-resolver vs. concrete key).
@@ -253,7 +269,7 @@ export function buildAgentCard(passport: AgentPassport | PassportRef, opts: Buil
 function cardSigningBytes(card: AgentCard): Uint8Array {
   const { signatures: _signatures, ...rest } = card;
   void _signatures;
-  return canonicalBytes(rest);
+  return jcsBytes(rest); // RFC 8785, as A2A 1.0 section 8.4 requires
 }
 
 export interface IssueAgentCardOptions {
@@ -261,8 +277,16 @@ export interface IssueAgentCardOptions {
   alg?: string;
   /** A passport reference to embed if the card does not already carry one. */
   passport?: PassportRef | { id: string };
-  /** Optional JWS `kid` (set it when verifiers resolve the key from a JWKS). */
+  /** Optional JWS `kid` (set it when verifiers resolve the key from a JWKS). Required for the `'a2a-1.0'` profile. */
   kid?: string;
+  /**
+   * `'pca-detached'` (default, unchanged): unencoded detached payload (`b64:false`). `'a2a-1.0'`: the signing input
+   * of A2A 1.0 section 8.4 (`BASE64URL(header) . BASE64URL(payload)`, header carries `alg`, `kid`, `typ:"JOSE"`), so
+   * any A2A 1.0 verifier can check the card. Needs `kid` (the spec makes it mandatory) or it throws.
+   */
+  profile?: 'pca-detached' | 'a2a-1.0';
+  /** `'a2a-1.0'`: refuse to sign a card that does not match the A2A 1.0 `AgentCard` message (see {@link validateAgentCard1}). */
+  schema?: 'a2a-1.0';
 }
 
 /**
@@ -284,9 +308,18 @@ export async function issueSignedAgentCard(
 
   // Embed the passport reference BEFORE signing so the signature covers it.
   const toSign: AgentCard = { ...card, ...(passport ? { pcaPassport: passport } : {}) };
+  if (opts.schema === 'a2a-1.0') {
+    const problems = validateAgentCard1(toSign);
+    if (problems.length > 0) throw new Error(`issueSignedAgentCard: the card does not match the A2A 1.0 schema: ${problems.join('; ')}`);
+  }
   const payload = cardSigningBytes(toSign);
+  const spec = opts.profile === 'a2a-1.0';
+  if (spec && (typeof opts.kid !== 'string' || opts.kid.length === 0)) {
+    throw new Error("issueSignedAgentCard: the 'a2a-1.0' profile requires a kid");
+  }
 
   const signature = await signDetached(payload, signingKey, {
+    ...(spec ? { standardPayload: true } : {}),
     ...(opts.alg !== undefined ? { alg: opts.alg } : {}),
     ...(opts.kid !== undefined ? { kid: opts.kid } : {}),
     ...(passport ? { header: { [PCA_PASSPORT_HEADER]: passport.id } } : {}),
@@ -318,15 +351,26 @@ export async function verifyAgentCard(
   card: AgentCard,
   opts: VerifyKeyOptions,
 ): Promise<AgentCardVerification> {
+  if (card === null || typeof card !== 'object') return { ok: false, reason: 'agent card is not an object' };
   const signatures = card.signatures;
   if (!Array.isArray(signatures) || signatures.length === 0) {
     return { ok: false, reason: 'agent card carries no signatures' };
+  }
+  if (opts.schema === 'a2a-1.0') {
+    const problems = validateAgentCard1(card);
+    if (problems.length > 0) return { ok: false, reason: `agent card does not match the A2A 1.0 schema: ${problems.join('; ')}` };
   }
 
   const resolved = await resolveVerifyKey(opts);
   if ('error' in resolved) return { ok: false, reason: resolved.error };
 
-  const payload = cardSigningBytes(card);
+  // A card value with no strict canonical form is a refusal, not an exception.
+  let payload: Uint8Array;
+  try {
+    payload = cardSigningBytes(card);
+  } catch (e) {
+    return { ok: false, reason: `agent card has no canonical form: ${(e as Error).message}` };
+  }
   let passportRef: string | undefined;
 
   for (let i = 0; i < signatures.length; i++) {
@@ -351,8 +395,9 @@ export async function verifyAgentCard(
 // ===================================================================================================
 
 /**
- * JSON-LD contexts for an AgentFacts document. The DID context plus the AgentFacts vocabulary (the second
- * entry is a placeholder for the canonical NANDA AgentFacts context URL — replace before production).
+ * @context of a PCA AgentFacts document. The DID context plus an identifier this package chose for the AgentFacts
+ * vocabulary: NANDA publishes no resolvable JSON-LD context, so this is a PCA profile, NOT NANDA-conformant. Pass
+ * `context` to `issueAgentFacts` to use another.
  */
 export const AGENT_FACTS_CONTEXT: readonly string[] = [
   'https://www.w3.org/ns/did/v1',

@@ -63,8 +63,64 @@ export function parseDiscoveryIntent(v: unknown): PcaDiscoveryIntent {
   if (o.tiers !== undefined) {
     if (o.tiers === null || typeof o.tiers !== 'object' || Array.isArray(o.tiers)) throw new Error('parseDiscoveryDocument: intent.tiers must be an object');
     const t = o.tiers as Record<string, unknown>;
-    if (!Object.values(t).every((n) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 4)) throw new Error('parseDiscoveryDocument: intent.tiers values must be integers 0..4');
+    if (!Object.values(t).every((n) => Number.isInteger(n) && (n as number) >= 0 && !Object.is(n, -0) && (n as number) <= 4)) throw new Error('parseDiscoveryDocument: intent.tiers values must be integers 0..4');
     out.tiers = { ...(t as Record<string, number>) };
+  }
+  return out;
+}
+
+/**
+ * Agent trust directory block (`@atlasauth/pca-directory`): where the site's directory log lives and the keys to pin for it. OPTIONAL
+ * and additive: a document without `directory` is byte-for-byte what it was, and a verifier that does not know the member ignores it.
+ * Discovery is fetched from the site itself, so these keys are a convenience to bootstrap from, not an independent root of trust:
+ * a relying party that needs one pins the log and witness keys out of band.
+ */
+export interface PcaDiscoveryDirectory {
+  /** The log's id, as written into its entries and stapled proofs. */
+  id?: string;
+  /** Absolute http(s) base URL of the log's routes (`/sth`, `/proof`, `/status`, ...). */
+  url: string;
+  /** The log's signing key(s), b64u, current first. */
+  log_keys: string[];
+  /** Trusted witnesses and the number whose cosignatures a head needs. */
+  witnesses?: { keys: string[]; threshold: number };
+  /** Entry modes the log accepts. */
+  modes?: ('public' | 'hashed')[];
+  /** Anyone may submit (a valid passport and a proof of possession are still required). */
+  open?: boolean;
+}
+
+const strList = (v: unknown, what: string): string[] => {
+  if (!Array.isArray(v) || v.length === 0 || !v.every((s) => typeof s === 'string' && s.length > 0) || new Set(v).size !== v.length) throw new Error(`parseDiscoveryDocument: ${what} must be a non-empty list of distinct strings`);
+  return [...(v as string[])];
+};
+
+/** Validate a `directory` discovery block (throws on anything malformed: fail closed). */
+export function parseDiscoveryDirectory(v: unknown): PcaDiscoveryDirectory {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) throw new Error('parseDiscoveryDocument: directory must be an object');
+  const o = v as Record<string, unknown>;
+  for (const k of Object.keys(o)) if (!['id', 'url', 'log_keys', 'witnesses', 'modes', 'open'].includes(k)) throw new Error(`parseDiscoveryDocument: directory has unknown member '${k}'`);
+  if (typeof o.url !== 'string' || !/^https?:\/\/[^\s/?#]+[^\s]*$/.test(o.url)) throw new Error('parseDiscoveryDocument: directory.url must be an absolute http(s) URL');
+  const out: PcaDiscoveryDirectory = { url: o.url, log_keys: strList(o.log_keys, 'directory.log_keys') };
+  if (o.id !== undefined) {
+    if (typeof o.id !== 'string' || o.id.length === 0) throw new Error('parseDiscoveryDocument: directory.id must be a non-empty string');
+    out.id = o.id;
+  }
+  if (o.witnesses !== undefined) {
+    const w = o.witnesses as Record<string, unknown> | null;
+    if (w === null || typeof w !== 'object' || Array.isArray(w) || Object.keys(w).some((k) => k !== 'keys' && k !== 'threshold')) throw new Error('parseDiscoveryDocument: directory.witnesses is {keys, threshold}');
+    const keys = strList(w.keys, 'directory.witnesses.keys');
+    if (!Number.isInteger(w.threshold) || (w.threshold as number) < 1 || (w.threshold as number) > keys.length) throw new Error('parseDiscoveryDocument: directory.witnesses.threshold must be an integer from 1 to the number of keys');
+    out.witnesses = { keys, threshold: w.threshold as number };
+  }
+  if (o.modes !== undefined) {
+    const m = strList(o.modes, 'directory.modes');
+    if (!m.every((x) => x === 'public' || x === 'hashed')) throw new Error("parseDiscoveryDocument: directory.modes lists 'public' and/or 'hashed'");
+    out.modes = m as ('public' | 'hashed')[];
+  }
+  if (o.open !== undefined) {
+    if (typeof o.open !== 'boolean') throw new Error('parseDiscoveryDocument: directory.open must be a boolean');
+    out.open = o.open;
   }
   return out;
 }
@@ -94,6 +150,13 @@ export interface PcaDiscoveryDocument {
   metadata?: Record<string, unknown>;
   /** Intent Layer v2 block (see {@link PcaDiscoveryIntent}). */
   intent?: PcaDiscoveryIntent;
+  /**
+   * The decision-obligation kinds this resource server performs (`log`, `notify`, `redact`, `watermark`, `require_receipt`).
+   * A decision whose `allow` carries a kind outside this list is a deny at this server. Absent: none supported.
+   */
+  obligations_supported?: string[];
+  /** Agent trust directory block (see {@link PcaDiscoveryDirectory}). Optional; absent is today's document. */
+  directory?: PcaDiscoveryDirectory;
 }
 
 export interface BuildDiscoveryOptions {
@@ -106,10 +169,12 @@ export interface BuildDiscoveryOptions {
   trustedRoots?: string[];
   metadata?: Record<string, unknown>;
   intent?: PcaDiscoveryIntent;
+  obligationsSupported?: string[];
+  directory?: PcaDiscoveryDirectory;
 }
 
 const DEFAULT_SUITES = ['ed25519', 'ml-dsa-65', 'hybrid-ed25519-ml-dsa-65'];
-const DEFAULT_REQUIRED = ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'];
+const DEFAULT_REQUIRED = ['counter_format', 'replay', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'];
 
 /** Build a well-formed discovery document. Throws on an empty audience. */
 export function buildDiscoveryDocument(opts: BuildDiscoveryOptions): PcaDiscoveryDocument {
@@ -126,6 +191,8 @@ export function buildDiscoveryDocument(opts: BuildDiscoveryOptions): PcaDiscover
     ...(opts.trustedRoots ? { trusted_roots: opts.trustedRoots } : {}),
     ...(opts.metadata ? { metadata: opts.metadata } : {}),
     ...(opts.intent ? { intent: parseDiscoveryIntent(opts.intent) } : {}),
+    ...(opts.obligationsSupported ? { obligations_supported: [...opts.obligationsSupported] } : {}),
+    ...(opts.directory ? { directory: parseDiscoveryDirectory(opts.directory) } : {}),
   };
 }
 
@@ -152,6 +219,11 @@ export function parseDiscoveryDocument(value: unknown): PcaDiscoveryDocument {
   if (Array.isArray(v.trusted_roots) && v.trusted_roots.every((s) => typeof s === 'string')) doc.trusted_roots = v.trusted_roots as string[];
   if (v.metadata !== null && typeof v.metadata === 'object') doc.metadata = v.metadata as Record<string, unknown>;
   if (v.intent !== undefined) doc.intent = parseDiscoveryIntent(v.intent);
+  if (v.obligations_supported !== undefined) {
+    if (!Array.isArray(v.obligations_supported) || !v.obligations_supported.every((s) => typeof s === 'string')) throw new Error('parseDiscoveryDocument: obligations_supported must be a string[]');
+    doc.obligations_supported = [...(v.obligations_supported as string[])];
+  }
+  if (v.directory !== undefined) doc.directory = parseDiscoveryDirectory(v.directory);
   return doc;
 }
 

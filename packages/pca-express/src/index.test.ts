@@ -79,3 +79,29 @@ describe('pcaExpress', () => {
     expect(seen).toBe(401);
   });
 });
+
+describe('0.5: the guard needs an operation mapping', () => {
+  it('is refused at construction without `operation` (a proof would be accepted for any operation the grant permits)', () => {
+    expect(() => pcaExpress({ audience: AUD, resolveGrant: async () => null })).toThrow(/`operation` is required/);
+  });
+  it('insecureAllowUnboundOperation is the explicit migration opt-in', () => {
+    expect(() => pcaExpress({ audience: AUD, resolveGrant: async () => null, insecureAllowUnboundOperation: true })).not.toThrow();
+  });
+});
+
+describe('observe mode', () => {
+  it('always calls next, records the would-deny, and never answers 401/403', async () => {
+    const { mkdtempSync, readFileSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const file = join(mkdtempSync(join(tmpdir(), 'pca-exp-')), 'o.jsonl');
+    const mw = pcaExpress({ audience: 'x', resolveGrant: async () => null, observe: { file, env: {}, log: () => undefined }, operation: () => ({ verb: 'shop.get', resource: '/o' }) } as never);
+    let nexted = false;
+    let finish: () => void = () => undefined;
+    const res = { statusCode: 200, on: (_e: string, f: () => void) => { finish = f; }, status() { throw new Error('must not answer'); } };
+    await mw({ headers: {}, body: {}, method: 'GET', url: '/o' } as never, res as never, () => { nexted = true; });
+    finish();
+    expect(nexted).toBe(true);
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({ verb: 'shop.get', would: 'deny', outcome: 'allow' });
+  });
+});

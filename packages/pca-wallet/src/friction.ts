@@ -1,4 +1,4 @@
-import type { Reversibility } from '@atlasauth/pca';
+import type { Reversibility } from '@atlasauth/pca/ext/research';
 import { frictionRank, FRICTION_ORDER, maxFriction, type FrictionTier } from './wire';
 
 /**

@@ -1,0 +1,74 @@
+{
+  "name": "@atlasauth/pca-proxy",
+  "version": "0.5.0",
+  "description": "Zero-code PCA enforcement: a drop-in proxy that puts Proof-Carrying Authority in front of any MCP server (stdio or streamable HTTP) or HTTP API, with no SDK and no change to the agent or the upstream. Default-deny, observe mode, step-up approvals, provenance labelling of tool results, hash-chained audit receipts, OpenTelemetry.",
+  "keywords": [
+    "mcp",
+    "proxy",
+    "reverse proxy",
+    "sidecar",
+    "agent authorization",
+    "prompt injection",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-proxy"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pca-proxy": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-actions": "workspace:*",
+    "@atlasauth/pca-ciba": "workspace:*",
+    "@atlasauth/pca-control-plane": "workspace:*",
+    "@atlasauth/pca-events": "workspace:*",
+    "@atlasauth/pca-gateway": "workspace:*",
+    "@atlasauth/pca-otel": "workspace:*",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@atlasauth/pca-autopilot": "workspace:*",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "deploy",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
+  }
+}

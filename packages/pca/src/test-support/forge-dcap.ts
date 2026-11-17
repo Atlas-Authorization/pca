@@ -136,6 +136,10 @@ export interface IntelPkiOptions {
   rootValidity?: readonly [Date, Date];
   caValidity?: readonly [Date, Date];
   tcbSigningValidity?: readonly [Date, Date];
+  /** Extra DER extensions appended to the Root CA / Platform CA / TCB-signing leaf (e.g. an unknown critical extension). */
+  rootExtra?: readonly Extension[];
+  caExtra?: readonly Extension[];
+  tcbSigningExtra?: readonly Extension[];
 }
 
 export function forgeIntelPki(seed = 'intel-test-pki', po: IntelPkiOptions = {}): IntelTestPki {
@@ -153,7 +157,7 @@ export function forgeIntelPki(seed = 'intel-test-pki', po: IntelPkiOptions = {})
     serial: serialFor(`${seed}/root`),
     notBefore: po.rootValidity?.[0] ?? D('2018-05-21T10:45:10Z'),
     notAfter: po.rootValidity?.[1] ?? D('2049-12-31T23:59:59Z'),
-    extensions: [ext.authorityKeyId(rootKey), ext.crlDistributionPoint(ROOT_CRL_URI), ext.subjectKeyId(rootKey), ext.keyUsage(['keyCertSign', 'cRLSign']), ext.basicConstraints(true, 1)],
+    extensions: [ext.authorityKeyId(rootKey), ext.crlDistributionPoint(ROOT_CRL_URI), ext.subjectKeyId(rootKey), ext.keyUsage(['keyCertSign', 'cRLSign']), ext.basicConstraints(true, 1), ...(po.rootExtra ?? [])],
   });
   const platformCa = forgeCert({
     subject: caDn,
@@ -169,6 +173,7 @@ export function forgeIntelPki(seed = 'intel-test-pki', po: IntelPkiOptions = {})
       ext.subjectKeyId(caKey),
       ext.keyUsage(['keyCertSign', 'cRLSign']),
       ...(po.caBasicConstraints === 'absent' ? [] : [po.caBasicConstraints === 'ca-false' ? ext.basicConstraints(false) : ext.basicConstraints(true, 0)]),
+      ...(po.caExtra ?? []),
     ],
   });
   const tcbSigning = forgeCert({
@@ -179,7 +184,7 @@ export function forgeIntelPki(seed = 'intel-test-pki', po: IntelPkiOptions = {})
     serial: serialFor(`${seed}/tcb-signing`),
     notBefore: po.tcbSigningValidity?.[0] ?? D('2018-05-21T10:50:10Z'),
     notAfter: po.tcbSigningValidity?.[1] ?? D('2034-05-21T10:50:10Z'),
-    extensions: [ext.authorityKeyId(rootKey), ext.crlDistributionPoint(ROOT_CRL_URI), ext.subjectKeyId(tcbSigningKey), ext.keyUsage(['digitalSignature']), ext.basicConstraints(false)],
+    extensions: [ext.authorityKeyId(rootKey), ext.crlDistributionPoint(ROOT_CRL_URI), ext.subjectKeyId(tcbSigningKey), ext.keyUsage(['digitalSignature']), ext.basicConstraints(false), ...(po.tcbSigningExtra ?? [])],
   });
   return { seed, rootKey, caKey, tcbSigningKey, root, platformCa, tcbSigning, rootSpkiSha256: rootKey.spkiSha256, rootDn, caDn, tcbDn };
 }
@@ -269,6 +274,8 @@ export interface ForgeTdxOptions {
     noSgxExtension?: boolean;
     /** Publish this SubjectPublicKeyInfo instead of the leaf's P-256 key (e.g. RSA, off-curve point). */
     spkiOverride?: Uint8Array;
+    /** Extra DER extensions appended to the PCK leaf. */
+    extraExtensions?: readonly Extension[];
   };
   qe?: {
     cpusvn?: Bytes;
@@ -351,6 +358,7 @@ export function forgeTdxQuote(o: ForgeTdxOptions = {}): ForgedTdxQuote {
     ext.keyUsage(['digitalSignature', 'nonRepudiation']),
     ...(caExt === 'absent' ? [] : [ext.basicConstraints(caExt === true)]),
     ...(o.pck?.noSgxExtension ? [] : [sgxExtension({ fmspc: pckSpec.fmspcHex, sgxTcb: pckSpec.sgxTcb, pcesvn: pckSpec.pcesvn, cpusvn: pckSpec.cpusvn, ...(o.pck?.ext ?? {}) })]),
+    ...(o.pck?.extraExtensions ?? []),
   ];
   const pck = forgeCert({
     subject: INTEL_DN('Intel SGX PCK Certificate'),

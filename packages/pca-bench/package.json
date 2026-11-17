@@ -1,0 +1,42 @@
+{
+  "name": "@atlasauth/pca-bench",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-language performance gate for PCA verification: a shared deterministic benchmark corpus, a result schema, a statistical regression gate, and the TypeScript harness (the nine native SDKs ship their own harness under bench/).",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-bench"
+  },
+  "scripts": {
+    "corpus": "node gen-corpus.mjs > corpus.json",
+    "bench": "node bench.mjs --corpus corpus.json --out result-ts.json",
+    "gate": "node compare.mjs gate --baseline baseline-ts.json --candidate result-ts.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "tinybench": "2.9.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "gen-corpus.mjs",
+    "bench.mjs",
+    "compare.mjs",
+    "lib.mjs",
+    "schema",
+    "SPEC.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "pca": {
+    "maturity": "experimental"
+  }
+}

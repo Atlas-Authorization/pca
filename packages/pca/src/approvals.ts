@@ -17,6 +17,7 @@ import { type Capability, attenuate } from './capability';
 import type { Agent } from './facade';
 import type { ParsedLimit } from './facade';
 import { hashCanonical, compareUtf8 } from './hash';
+import { approvalRenderDigest, type ApprovalRender } from './approval-render';
 import { readEnvelope, verifyGoalCommit } from './envelope';
 import { type RiskPolicy, type TrustBudget, recharge, rechargeFull } from './risk';
 
@@ -150,6 +151,10 @@ export interface StepUpRequest {
   /** Risk value the action carries. */
   r: number;
   requestedAt: number;
+  /** K7: the canonical approval render of this exact action (what the approver must be shown). Present when a `renderer` was supplied. */
+  render?: ApprovalRender;
+  /** K7: H(R). The approval challenge / escalation answer commits to it; an approver client re-renders and refuses on mismatch. */
+  renderDigest?: string;
 }
 
 /** The outcome of reviewing one intended action. */
@@ -164,6 +169,19 @@ export interface ReviewOptions {
   goal?: string;
   /** Standing "approve class for N hours" grants that can downgrade a step-up to auto. */
   standing?: ClassApproval[];
+  /**
+   * K7: build the canonical approval render of the action (`renderApproval` in `@atlasauth/pca-actions`). With it every step-up
+   * carries `render` + `renderDigest`. A renderer that throws makes the review a `deny`: an action that cannot be displayed
+   * completely is never put to a human.
+   */
+  renderer?: (verb: string, resource: string, params: Record<string, unknown> | undefined) => ApprovalRender;
+  /**
+   * DOCUMENTED INSECURE opt-out. By default (K7) a step-up request is created only together with its canonical approval render
+   * (`renderer`; `renderersFromDefs` in `@atlasauth/pca-actions` derives one from the pinned action definitions): what the approver
+   * sees is what is signed. Without a renderer the review is a `deny` ("approval render required") unless this is `true`, which keeps
+   * the pre-render behaviour of an unbound request.
+   */
+  insecureUnboundApproval?: boolean;
 }
 
 /**
@@ -184,6 +202,19 @@ export function reviewAction(
   if (dr.t === 1 || dr.t === undefined) return { kind: 'auto' };
   if (opts.standing && coveredByAny(opts.standing, verb, resource, now)) return { kind: 'auto' };
   const tier = dr.t as 2 | 3;
+  let render: ApprovalRender | undefined;
+  let renderDigest: string | undefined;
+  if (!opts.renderer && opts.insecureUnboundApproval !== true) {
+    return { kind: 'deny', reason: 'approval render required: pass a renderer (renderersFromDefs from the pinned action definitions), or insecureUnboundApproval: true' };
+  }
+  if (opts.renderer) {
+    try {
+      render = opts.renderer(verb, resource, params);
+      renderDigest = approvalRenderDigest(render);
+    } catch (err) {
+      return { kind: 'deny', reason: `approval render failed (fail closed): ${err instanceof Error ? err.message : 'unknown'}` };
+    }
+  }
   const goalCommit = readEnvelope(agent.grant)?.goal_commit ?? '';
   const lineage = buildGoalLineage(agent, verb, resource, params, { ...(opts.goal !== undefined ? { goal: opts.goal } : {}) });
   const request: StepUpRequest = {
@@ -198,6 +229,7 @@ export function reviewAction(
     lineage,
     r: 0, // filled below
     requestedAt: now,
+    ...(render !== undefined && renderDigest !== undefined ? { render, renderDigest } : {}),
   };
   // surface the risk the admit path used (recompute via the agent's own policy for consistency)
   request.r = riskForReview(agent, verb, params);

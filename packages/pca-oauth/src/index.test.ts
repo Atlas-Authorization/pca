@@ -63,7 +63,7 @@ describe('protectedResourceMetadata (RFC 9728)', () => {
       authorizationServers: ['https://as.acme.com'],
       resourceName: 'Acme API',
     });
-    const roundTripped = parseProtectedResourceMetadata(JSON.parse(JSON.stringify(prm)));
+    const roundTripped = parseProtectedResourceMetadata(JSON.parse(JSON.stringify(prm)), { expectedResource: AUDIENCE });
     expect(roundTripped).toEqual(prm);
     expect(roundTripped.resource).toBe(AUDIENCE);
     expect(roundTripped.pca.audience).toBe(AUDIENCE);
@@ -180,5 +180,16 @@ describe('upgradeUnauthorizedChallenge (glue)', () => {
     const upgraded = upgradeUnauthorizedChallenge(deny, PRM_URL);
     expect(upgraded.wwwAuthenticate).toContain('resource_metadata=');
     expect(upgraded.wwwAuthenticate).toContain('PCA realm="pca"');
+  });
+});
+
+describe('wwwAuthenticate pca_need (K6) - T-582', () => {
+  it('adds the pca_need auth-param after scope and leaves every other parameter as it was', async () => {
+    const { wwwAuthenticate } = await import('./index');
+    const need = { v: 1 as const, kind: 'scope' as const, verb: 'v', resource: 'r', scopes: ['a:b'] };
+    const plain = wwwAuthenticate('https://rs.example/.well-known/oauth-protected-resource', { error: 'insufficient_scope', scope: 'a:b', includePca: false });
+    const withNeed = wwwAuthenticate('https://rs.example/.well-known/oauth-protected-resource', { error: 'insufficient_scope', scope: 'a:b', includePca: false, pcaNeed: need });
+    expect(withNeed.startsWith(`${plain}, pca_need="`)).toBe(true);
+    expect(withNeed.replace(/, pca_need="[^"]*"/, '')).toBe(plain);
   });
 });

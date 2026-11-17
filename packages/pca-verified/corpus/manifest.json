@@ -1,0 +1,110 @@
+{
+  "format": "pca-verified-corpus/1",
+  "corpus_version": "1.1.0",
+  "protocol_version": "1",
+  "sha256": "cf9b90a30f04bfb9380e40d32079822787e56aa13d001c6868c8b55bbb877e2f",
+  "bytes": 56308453,
+  "items": 6631,
+  "layers": {
+    "suites": 1,
+    "proof": 1423,
+    "capability": 478,
+    "wire": 4090,
+    "policy": 452,
+    "producer": 167,
+    "stateful": 20
+  },
+  "profiles": {
+    "core-verifier": {
+      "title": "Core Verifier",
+      "description": "Verifies PCActns: strict wire format, proofs, delegation chains, policy caveats, and a truthful suite manifest. A suite the implementation does not declare must be refused, never accepted.",
+      "layers": [
+        "wire",
+        "proof",
+        "capability",
+        "policy",
+        "suites"
+      ],
+      "items": 6444,
+      "layer_items": {
+        "suites": 1,
+        "proof": 1423,
+        "capability": 478,
+        "wire": 4090,
+        "policy": 452
+      }
+    },
+    "producer": {
+      "title": "Producer",
+      "description": "Signs and builds PCA artifacts: every producer vector must reproduce the reference output byte for byte (an undeclared suite may be refused).",
+      "layers": [
+        "producer"
+      ],
+      "items": 167,
+      "layer_items": {
+        "producer": 167
+      }
+    },
+    "pq": {
+      "title": "Post-quantum",
+      "description": "Verifies the post-quantum and hybrid suites: declares at least ML-DSA-65 and the Ed25519 + ML-DSA-65 hybrid and verifies every vector that uses only declared suites.",
+      "layers": [
+        "wire",
+        "proof",
+        "capability",
+        "policy"
+      ],
+      "requires_suites": [
+        "ml-dsa-65",
+        "hybrid-ed25519-ml-dsa-65"
+      ],
+      "items": 208,
+      "layer_items": {
+        "wire": 148,
+        "proof": 31,
+        "capability": 29
+      }
+    },
+    "stateful": {
+      "title": "Stateful",
+      "description": "Runs ordered sequences against one store: replay, counter ordering, revocation mid-sequence, trust-budget depletion.",
+      "layers": [
+        "stateful"
+      ],
+      "items": 20,
+      "layer_items": {
+        "stateful": 20
+      }
+    }
+  },
+  "registered_suites": [
+    "ed25519",
+    "ml-dsa-65",
+    "hybrid-ed25519-ml-dsa-65",
+    "hybrid-nested-ed25519-ml-dsa-65",
+    "slh-dsa-sha2-128f",
+    "hybrid-ed25519-slh-dsa-sha2-128f",
+    "ml-dsa-87",
+    "hybrid-ed25519-ml-dsa-87",
+    "slh-dsa-sha2-256s",
+    "hybrid-ed25519-slh-dsa-sha2-256s",
+    "fn-dsa-512",
+    "fn-dsa-1024",
+    "less-cat1",
+    "hybrid-ed25519-less-cat1"
+  ],
+  "sources": {
+    "vectors.json": "c770f65053c80e3ed32274984a86a9f607ae68e23e53b36a82c66e4c6a0a05a5",
+    "vectors-adversarial.json.gz": "be40234a5b5a4d487b70d8c7c0e533b6c9e9a3db8eb139f286973b169967aa5c",
+    "policy-vectors.json": "6ec8ab1b61bf66be83bd34b04c775f2726f0ed99836af0c9c336485d3d990830",
+    "producer-vectors.json": "987f4419eeef1910a8f513e2d988fd83098aa20368e3c956ac70b68b4aa10af0",
+    "producer-pq-vectors.json": "9af1fad66b1ce801d0919880d1c3056bfeb24673561b4e3ee64bf79201e87710",
+    "stateful-vectors.json": "495d248c5a52872a61b7826858b43552d373b1c52ddca7b0dd22dabbcea1ef7a"
+  },
+  "extended": {
+    "adversarial": 626,
+    "regressions": 81,
+    "waived": 0,
+    "skipped": 0
+  }
+}

@@ -1,0 +1,25 @@
+# The same API, ENFORCE mode. `make enforce` adds agent.issuedGrant (the grant the human signed, and the key that signed it):
+# from then on a call runs only if that grant admits it. Default deny: a route that is not in the OpenAPI document is refused.
+mode: enforce
+audience: orders-api
+agent:
+  goal: handle customer orders
+  principalKeyEnv: PCA_PRINCIPAL_KEY
+state: { dir: /data/state-enforce, hmacKeyEnv: PCA_STATE_HMAC }
+audit: { path: /data/audit/http.audit.jsonl }       # the same hash chain continues from observe mode
+approvals: { store: /data/approvals-http.json, waitSeconds: 1 }   # nobody answers in the demo: anything held for a human times out and is refused
+http:
+  upstream: http://orders-api:9000
+  listen: { host: 0.0.0.0, port: 8788 }
+  mode: sidecar
+  ns: orders
+  openapi: /box/sample/openapi.yaml
+  upstreamHeaders: { Authorization: "Bearer ${UPSTREAM_TOKEN}" }
+  actions:
+    # What each action IS (read or write, reversible or not) is the operator's knowledge. Whether it may run is decided by the
+    # grant a human signs in enforce mode: an action the signed grant does not admit is refused whatever this says.
+    listOrders:  { policy: allow,   effect: read }
+    getOrder:    { policy: allow,   effect: read }
+    createOrder: { policy: approve, effect: write, reversibility: reversible }
+    refundOrder: { policy: approve, effect: write, reversibility: irreversible }
+    deleteOrder: { policy: approve, effect: write, reversibility: irreversible }

@@ -1,0 +1,12 @@
+# pca-proxy in front of an MCP server. `pca-proxy init mcp -- <command>` writes this file with the pins filled in.
+mode: enforce
+mcp:
+  upstream: { command: npx, args: ["-y", "@modelcontextprotocol/server-github"], env: { GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}" } }
+  ns: github
+  tools:
+    search_issues: { policy: allow,   effect: read,  pin: "<digest from pca-proxy init>" }
+    get_issue:     { policy: allow,   effect: read,  pin: "<digest from pca-proxy init>" }
+    create_issue:  { policy: allow,   effect: write, reversibility: reversible, limit: "10/hour", pin: "<digest from pca-proxy init>" }
+    create_pull_request: { policy: approve, effect: write, pin: "<digest from pca-proxy init>" }
+audit: { path: ./pca-proxy.audit.jsonl }
+approvals: { store: ./pca-proxy.approvals.json, waitSeconds: 120 }

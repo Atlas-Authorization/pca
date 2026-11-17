@@ -1,0 +1,71 @@
+# pca-proxy as a sidecar in the API's pod. The Service points at the proxy (8788); the API listens on the pod's loopback only,
+# so nothing can reach it except through the proxy. Agents call http://orders-api and hold no API credential.
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: pca-proxy-config }
+data:
+  pca-proxy.yaml: |
+    mode: enforce
+    audience: orders-api
+    audit: { path: /var/lib/pca-proxy/audit.jsonl }
+    approvals: { store: /var/lib/pca-proxy/approvals.json, waitSeconds: 120 }
+    http:
+      upstream: http://127.0.0.1:9000
+      listen: { host: 0.0.0.0, port: 8788 }
+      mode: sidecar
+      ns: orders
+      openapi: /etc/pca-proxy/openapi.yaml
+      upstreamHeaders: { Authorization: "Bearer ${UPSTREAM_TOKEN}" }
+      actions:
+        listOrders:  { policy: allow,   effect: read }
+        getOrder:    { policy: allow,   effect: read }
+        createOrder: { policy: allow,   effect: write, reversibility: reversible, limit: "20/hour" }
+        refundOrder: { policy: approve, effect: write, reversibility: irreversible }
+  openapi.yaml: |
+    # the API's OpenAPI document goes here
+    openapi: 3.0.3
+    info: { title: orders, version: "1" }
+    paths: {}
+---
+apiVersion: v1
+kind: Secret
+metadata: { name: pca-proxy-secrets }
+type: Opaque
+stringData:
+  UPSTREAM_TOKEN: "replace-me"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: orders-api }
+spec:
+  replicas: 2                          # each replica keeps its own budget and replay state: that is per-proxy, which is what a sidecar grant is
+  selector: { matchLabels: { app: orders-api } }
+  template:
+    metadata: { labels: { app: orders-api } }
+    spec:
+      securityContext: { runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: api
+          image: example.com/orders-api:latest          # the real API: bind it to 127.0.0.1:9000 so only the sidecar can reach it
+          env: [{ name: LISTEN, value: "127.0.0.1:9000" }]
+        - name: pca-proxy
+          image: example.com/pca-proxy:0.5.0            # built from deploy/Dockerfile
+          args: ["http", "--config", "/etc/pca-proxy/pca-proxy.yaml"]
+          envFrom: [{ secretRef: { name: pca-proxy-secrets } }]
+          ports: [{ name: http, containerPort: 8788 }]
+          readinessProbe: { tcpSocket: { port: 8788 }, periodSeconds: 5 }
+          resources: { requests: { cpu: 50m, memory: 64Mi }, limits: { memory: 256Mi } }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          volumeMounts:
+            - { name: config, mountPath: /etc/pca-proxy, readOnly: true }
+            - { name: state, mountPath: /var/lib/pca-proxy }
+      volumes:
+        - { name: config, configMap: { name: pca-proxy-config } }
+        - { name: state, emptyDir: {} }        # use a persistent volume if the audit log must outlive the pod
+---
+apiVersion: v1
+kind: Service
+metadata: { name: orders-api }
+spec:
+  selector: { app: orders-api }
+  ports: [{ name: http, port: 80, targetPort: http }]

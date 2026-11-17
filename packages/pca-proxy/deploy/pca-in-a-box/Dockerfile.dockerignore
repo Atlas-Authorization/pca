@@ -1,0 +1,21 @@
+# Keeps the build context to what the box needs. (BuildKit reads <Dockerfile>.dockerignore next to the Dockerfile.)
+**/node_modules
+**/dist
+**/.git
+.git
+sdks
+docs
+tools
+formal
+proofs
+e2e
+drafts
+samples
+scratch*
+load
+terraform-provider-*
+pulumi-*
+.*memory
+**/*.tsbuildinfo
+**/.env
+**/.env.*

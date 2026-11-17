@@ -40,6 +40,23 @@ import {
 
 export type Verdict = 'allow' | 'deny';
 
+const MAX_TEXT = 400;
+
+/**
+ * Remove what looks like a credential from text the explainer builds out of untrusted fields (a caveat value, a
+ * resource, an audience, a reason): JWTs, bearer credentials, URL userinfo, `token=` / `password=` style pairs and
+ * long unbroken token runs. Output is cut to 400 characters. A net, not a proof.
+ */
+export function cleanText(text: string): string {
+  let t = String(text);
+  t = t.replace(/\beyJ[\w-]{5,}\.[\w-]{5,}\.[\w-]*/g, '[redacted]');
+  t = t.replace(/\b(Bearer|Basic|Token)\s+[\w.~+/=-]{6,}/gi, '$1 [redacted]');
+  t = t.replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]*:[^\s/@]*@/gi, '$1[redacted]@');
+  t = t.replace(/\b((?:token|secret|password|passwd|pwd|api[_-]?key|key|signature|sig|credential|authorization|auth)["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s"'&,;]+)/gi, '$1[redacted]');
+  t = t.replace(/[A-Za-z0-9_-]{40,}/g, '[redacted]');
+  return t.length > MAX_TEXT ? `${t.slice(0, MAX_TEXT)}...` : t;
+}
+
 // ---- shared helpers -------------------------------------------------------------------------------
 
 /** Abbreviate a long b64u key for display: first `n` chars + an ellipsis. */
@@ -106,7 +123,7 @@ export const VERIFY_CHECK_ORDER = [
   'grant_ref_bound',
   'plan_inclusion',
   'leaf_signature',
-  'counter',
+  'counter_format',
 ] as const;
 export type VerifyCheckName = (typeof VERIFY_CHECK_ORDER)[number];
 
@@ -119,7 +136,9 @@ const CHECK_TITLE: Record<string, string> = {
   grant_ref_bound: 'grant reference binding',
   plan_inclusion: 'plan inclusion',
   leaf_signature: 'leaf signature',
-  counter: 'counter',
+  counter_format: 'counter format',
+  counter: 'counter format',
+  replay: 'replay',
   plan_root_authorized: 'plan-root authorization',
   taint_gate: 'taint gate',
   attestation: 'agent attestation',
@@ -247,6 +266,7 @@ function pinpoint(name: string, p: PCActn, verifyResult: VerifyResult, now: numb
       return { detail: tail ?? l.detail, ...(l.hop !== undefined ? { hop: l.hop } : {}), remedy: l.remedy };
     }
     case 'counter':
+    case 'counter_format':
       return { detail: tail ?? `counter ${num(p.counter)} is missing or not a non-negative safe integer`, remedy: 'use a strictly increasing per-holder counter; a repeated counter is a replay.' };
     case 'malformed':
       return { detail: tail ?? 'the PCActn is structurally malformed', remedy: 'rebuild the action with the SDK; do not construct the wire object by hand.' };
@@ -282,6 +302,7 @@ function passDetail(name: string, p: PCActn): string {
       return `leaf holder ${short(leaf?.holder)} signature valid (suite ${p.alg ?? 'ed25519'})`;
     }
     case 'counter':
+    case 'counter_format':
       return `counter ${num(p.counter)} well-formed`;
     default:
       return 'ok';
@@ -317,7 +338,7 @@ export class VerificationExplanation {
   }
 
   toText(): string {
-    const glyph: Record<PresentedStatus, string> = { pass: '✓', fail: '✗', 'not-enforced': '·', skipped: '–' };
+    const glyph: Record<PresentedStatus, string> = { pass: '✓', fail: '✗', 'not-enforced': '·', unsupported: '?', skipped: '–' };
     const lines: string[] = [];
     lines.push(`PCA verification — ${this.verdict.toUpperCase()}`);
     lines.push(this.summary);
@@ -339,7 +360,27 @@ export class VerificationExplanation {
  * `opts.now` (epoch ms) lets the `validity` pinpoint distinguish "expired" from "clock-skew" precisely;
  * omit it and the authoritative `verifyResult.reason` is used instead.
  */
+function cleanCheck(c: CheckExplanation): CheckExplanation {
+  return { ...c, detail: cleanText(c.detail) };
+}
+
+function deniedVerification(why: string): VerificationExplanation {
+  const e: CheckExplanation = { name: 'malformed', status: 'fail', title: CHECK_TITLE.malformed ?? 'structure', detail: why, remedy: 'pass the PCActn and the verifier result you verified.', decisive: true };
+  return new VerificationExplanation({ verdict: 'deny', allow: false, checks: [e], decisive: e, summary: `Denied: ${why}` });
+}
+
 export function explainVerification(pcActn: PCActn, verifyResult: VerifyResult, opts: { now?: number } = {}): VerificationExplanation {
+  if (pcActn === null || typeof pcActn !== 'object' || verifyResult === null || typeof verifyResult !== 'object') {
+    return deniedVerification('the PCActn or the verifier result is missing');
+  }
+  try {
+    return explainVerificationInner(pcActn, verifyResult, opts);
+  } catch {
+    return deniedVerification('the PCActn or the verifier result is malformed');
+  }
+}
+
+function explainVerificationInner(pcActn: PCActn, verifyResult: VerifyResult, opts: { now?: number }): VerificationExplanation {
   const statuses = verifyResult?.checks ?? {};
   const seen = new Set<string>();
   const ordered: string[] = [];
@@ -377,6 +418,8 @@ export function explainVerification(pcActn: PCActn, verifyResult: VerifyResult, 
       detail = passDetail(name, pcActn);
     } else if (status === 'not-enforced') {
       detail = 'not enforced by this verifier (no hook / opt-out)';
+    } else if (status === 'unsupported') {
+      detail = 'the PCActn carries a feature this verifier does not implement (never a pass)';
     } else {
       detail = 'not reached (a terminal earlier check stopped evaluation)';
     }
@@ -390,14 +433,23 @@ export function explainVerification(pcActn: PCActn, verifyResult: VerifyResult, 
     checks.push(entry);
   }
 
-  const verdict: Verdict = verifyResult?.allow ? 'allow' : 'deny';
+  // Allow only on an explicit `allow: true` that no check contradicts. Truthy values ('false', 1) and an allow with a
+  // failing check are explained as denials: an explainer must never present as allowed what the verifier did not allow.
+  const hasChecks = verifyResult?.checks !== null && typeof verifyResult?.checks === 'object' && !Array.isArray(verifyResult?.checks);
+  const claimedAllow = verifyResult?.allow === true && hasChecks; // a result with no per-check statuses proves nothing
+  const contradicted = claimedAllow && decisiveName !== undefined;
+  const verdict: Verdict = claimedAllow && !contradicted ? 'allow' : 'deny';
   const summary = verdict === 'allow'
     ? `All ${checks.filter((c) => c.status === 'pass').length} evaluated checks passed (no check failed).`
-    : decisive
-      ? `Denied at the "${decisive.title}" check: ${decisive.detail}`
-      : `Denied: ${verifyResult?.reason ?? 'a check failed'}`;
+    : verifyResult?.allow === true && !hasChecks
+      ? 'Denied: the verifier result carries no per-check statuses (an allow without evidence is treated as a denial).'
+    : contradicted
+      ? `Denied: the verifier result says allow but the "${decisive?.title ?? decisiveName}" check failed (inconsistent result, treated as a denial).`
+      : decisive
+        ? `Denied at the "${decisive.title}" check: ${decisive.detail}`
+        : `Denied: ${typeof verifyResult?.reason === 'string' ? verifyResult.reason : 'a check failed'}`;
 
-  return new VerificationExplanation({ verdict, allow: !!verifyResult?.allow, checks, decisive, summary });
+  return new VerificationExplanation({ verdict, allow: verdict === 'allow', checks: checks.map(cleanCheck), decisive: decisive ? cleanCheck(decisive) : undefined, summary: cleanText(summary) });
 }
 
 // =================================================================================================
@@ -593,10 +645,36 @@ export class DecisionExplanation {
  * caveat's individual outcome are re-derived from the REAL evaluators); without them it falls back to
  * the decision's own `reasons`.
  */
+const NO_DECISION: PolicyDecision = {
+  admit: false,
+  needStepUp: false,
+  releaseGuardianShare: false,
+  r: 1,
+  requiredThreshold: { t: 3, proof: 'human', optimisticAllowed: false } as unknown as RequiredThreshold,
+  budget: { B: 0, tau: 0, asOf: 0 } as unknown as TrustBudget,
+  reasons: ['no policy decision supplied (default-deny)'],
+} as unknown as PolicyDecision;
+
 export function explainDecision(
   pcActn: PCActn,
   decision: PolicyDecision,
   opts: { envelope?: Envelope; context?: DecisionContext } = {},
+): DecisionExplanation {
+  // A missing or malformed decision is a denial, never a throw and never an allow.
+  if (decision === null || typeof decision !== 'object' || decision.requiredThreshold === null || typeof decision.requiredThreshold !== 'object') {
+    return explainDecisionInner(pcActn, NO_DECISION, opts);
+  }
+  try {
+    return explainDecisionInner(pcActn, decision, opts);
+  } catch {
+    return explainDecisionInner(pcActn, { ...NO_DECISION, reasons: ['the policy decision could not be explained (default-deny)'] } as PolicyDecision, {});
+  }
+}
+
+function explainDecisionInner(
+  pcActn: PCActn,
+  decision: PolicyDecision,
+  opts: { envelope?: Envelope; context?: DecisionContext },
 ): DecisionExplanation {
   const env = opts.envelope;
   const ctx = opts.context ?? {};
@@ -604,12 +682,13 @@ export function explainDecision(
 
   // Disposition + verdict. `admit` = autonomous allow (no human). Otherwise step-up (guardian share
   // released but a co-sign is needed) or denied (policy not satisfied, share withheld).
-  const disposition: 'auto-admit' | 'step-up' | 'denied' = decision.admit
+  const admitted = decision.admit === true; // strict: a truthy non-boolean is not an admission
+  const disposition: 'auto-admit' | 'step-up' | 'denied' = admitted
     ? 'auto-admit'
-    : decision.releaseGuardianShare
+    : decision.releaseGuardianShare === true
       ? 'step-up'
       : 'denied';
-  const verdict: Verdict = decision.admit ? 'allow' : 'deny';
+  const verdict: Verdict = admitted ? 'allow' : 'deny';
 
   // ---- authority: the granting predicate ----
   const grant: GrantExplanation = { granted: decision.releaseGuardianShare };
@@ -680,7 +759,7 @@ export function explainDecision(
   const costVal = kappa !== undefined ? budgetCost(decision.r, kappa) : undefined;
   const budgetDepleted = reasons.some((r) => r.includes('budget depleted'));
   let path: string;
-  if (decision.admit) {
+  if (admitted) {
     path = `auto-admitted at t=${rt.t} (${rt.proof}); metered`;
   } else if (!decision.releaseGuardianShare) {
     path = 'guardian share withheld — policy not satisfied (no autonomous or guardian path)';
@@ -690,7 +769,7 @@ export function explainDecision(
     path = `step-up to t=${rt.t} (${rt.proof}) co-signature required`;
   }
   const admission: AdmissionExplanation = {
-    admit: decision.admit,
+    admit: admitted,
     needStepUp: decision.needStepUp,
     releaseGuardianShare: decision.releaseGuardianShare,
     budget: decision.budget,
@@ -701,7 +780,7 @@ export function explainDecision(
 
   // ---- the single decisive reason ----
   let decisive: { reason: string; remedy?: string } | undefined;
-  if (!decision.admit) {
+  if (!admitted) {
     if (!grant.granted) {
       decisive = { reason: grant.reason ?? 'action not permitted by the envelope predicates (default-deny)', remedy: 'grant a predicate that permits this verb+resource (and satisfies its where bound).' };
     } else {
@@ -716,13 +795,15 @@ export function explainDecision(
     }
   }
 
-  const summary = decision.admit
+  const summary = admitted
     ? `Auto-admitted: ${grant.predicate ? `predicate #${grant.predicateIndex}` : 'policy'} grants it, all caveats held, risk r=${num(decision.r)} is in the t=${rt.t} band and the budget covers it.`
     : decisive
       ? `${verdict === 'deny' && disposition === 'denied' ? 'Denied' : 'Needs step-up'}: ${decisive.reason}`
       : `Not auto-admitted (t=${rt.t}).`;
 
-  return new DecisionExplanation({ verdict, disposition, grant, caveats, risk, admission, decisive, reasons, summary });
+  const cleanedCaveats = caveats.map((c) => ({ ...c, detail: cleanText(c.detail) }));
+  const cleanedDecisive = decisive ? { ...decisive, reason: cleanText(decisive.reason) } : undefined;
+  return new DecisionExplanation({ verdict, disposition, grant, caveats: cleanedCaveats, risk, admission, decisive: cleanedDecisive, reasons: reasons.map((r) => cleanText(String(r))), summary: cleanText(summary) });
 }
 
 // =================================================================================================
@@ -773,6 +854,11 @@ export class ChainExplanation {
   readonly leafHolder: string | undefined;
   readonly budgetNodes: BudgetAllocNode[];
   readonly summary: string;
+  /**
+   * Present only when the chain was checked (`explainChain(chain, { verify: true })`). Without it the trace shows what
+   * the chain CLAIMS: no signature, link or caveat rule was checked.
+   */
+  readonly verification?: { ok: boolean; reason?: string };
 
   constructor(fields: {
     depth: number;
@@ -781,7 +867,9 @@ export class ChainExplanation {
     leafHolder: string | undefined;
     budgetNodes: BudgetAllocNode[];
     summary: string;
+    verification?: { ok: boolean; reason?: string };
   }) {
+    if (fields.verification !== undefined) this.verification = fields.verification;
     this.depth = fields.depth;
     this.hops = fields.hops;
     this.rootIssuer = fields.rootIssuer;
@@ -793,6 +881,7 @@ export class ChainExplanation {
   toText(): string {
     const lines: string[] = [];
     lines.push(`PCA delegation chain — ${this.depth} hop(s) (attenuation trace)`);
+    lines.push(this.verification === undefined ? 'UNVERIFIED: this trace shows what the chain claims; no signature or link was checked.' : this.verification.ok ? 'verified: signatures, links and caveat rules hold.' : `NOT VALID: ${this.verification.reason ?? 'the chain failed verification'}`);
     lines.push(this.summary);
     lines.push('');
     for (const h of this.hops) {
@@ -814,7 +903,22 @@ export class ChainExplanation {
  * from the principal's root grant down to the acting leaf and shrank at every hop. Read-only; does not
  * verify signatures (run `verifyChain` for that).
  */
-export function explainChain(chain: CapabilityChain): ChainExplanation {
+export function explainChain(chain: CapabilityChain, opts: { verify?: boolean; expectedRootIssuer?: string } = {}): ChainExplanation {
+  const out = explainChainInner(chain);
+  if (opts.verify !== true) return out;
+  let ok = false;
+  let reason: string | undefined = 'chain is not an array';
+  try {
+    const res = Array.isArray(chain) ? verifyChain(chain, opts.expectedRootIssuer) : { ok: false as const, reason };
+    ok = res.ok;
+    reason = res.ok ? undefined : res.reason;
+  } catch {
+    reason = 'chain could not be verified';
+  }
+  return new ChainExplanation({ depth: out.depth, hops: out.hops, rootIssuer: out.rootIssuer, leafHolder: out.leafHolder, budgetNodes: out.budgetNodes, summary: out.summary, verification: { ok, ...(reason !== undefined ? { reason: cleanText(reason) } : {}) } });
+}
+
+function explainChainInner(chain: CapabilityChain): ChainExplanation {
   const hops: HopExplanation[] = [];
   const safeChain = Array.isArray(chain) ? chain : [];
   for (let i = 0; i < safeChain.length; i++) {
@@ -836,7 +940,7 @@ export function explainChain(chain: CapabilityChain): ChainExplanation {
       alg: cap.alg ?? 'ed25519',
       addedCaveats: added,
       addedCaveatTypes: added.map((cv) => caveatParts(cv).type),
-      narrowed: hopNarrowedSummary(isRoot, added),
+      narrowed: cleanText(hopNarrowedSummary(isRoot, added)),
     };
     if (budgetCv && isBudgetAllocCaveat(budgetCv)) hop.budgetAlloc = budgetCv.limit;
     hops.push(hop);

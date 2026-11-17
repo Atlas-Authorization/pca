@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pca-bench-result/1",
+  "title": "PCA benchmark result",
+  "type": "object",
+  "required": ["schema", "lang", "impl", "impl_version", "tool", "runtime", "runner", "corpus", "scenarios"],
+  "properties": {
+    "schema": { "const": "pca-bench-result/1" },
+    "lang": { "enum": ["ts", "go", "rust", "python", "ruby", "php", "java", "kotlin", "dotnet", "swift"] },
+    "impl": { "type": "string" },
+    "impl_version": { "type": "string" },
+    "tool": { "type": "string", "description": "the benchmark tool and version that produced the timings" },
+    "runtime": { "type": "string" },
+    "runner": {
+      "type": "object",
+      "required": ["os", "arch", "cpu"],
+      "properties": { "os": { "type": "string" }, "arch": { "type": "string" }, "cpu": { "type": "string" }, "cores": { "type": "integer" } }
+    },
+    "corpus": { "type": "object", "required": ["version", "digest"], "properties": { "version": { "type": "integer" }, "digest": { "type": "string" } } },
+    "repeats": { "type": "integer", "description": "set by `compare.mjs merge`: how many runs were pooled" },
+    "cold_start_ns": { "type": "object", "additionalProperties": { "type": "number" }, "description": "first call in a fresh process, per scenario id" },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "enum": ["verify", "authorize", "canonicalize", "sign"] },
+          "group": { "type": "string" },
+          "pair": { "type": "string", "description": "deny scenarios: the allow scenario this one must not be slower than" },
+          "status": { "enum": ["ok", "skipped", "error"] },
+          "note": { "type": "string" },
+          "ops_per_sec": { "type": "number" },
+          "mean_ns": { "type": "number" },
+          "p50_ns": { "type": "number" },
+          "p95_ns": { "type": "number" },
+          "p99_ns": { "type": "number" },
+          "rounds_ns": { "type": "array", "items": { "type": "number" }, "description": "median ns/op of each time-ordered round; the sample the gate tests" },
+          "allocs_per_op": { "type": ["number", "null"] },
+          "bytes_per_op": { "type": ["number", "null"] }
+        }
+      }
+    }
+  }
+}

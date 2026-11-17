@@ -14,7 +14,7 @@ const risk = { reversibility: 0, blastRadius: 0.5, confidence: 0.5, semanticDist
 async function classVerdict(declared: string, authoritative: string, capClass: string) {
   const s = setup({ taskCaveats: [{ type: 'reversibility_max', class: capClass }] });
   const p = s.mk(s.plan[0]!, { tweak: (a) => { a.reversibility_class = declared; } });
-  return verifyPCActn(p, { grant: s.grant, now: NOW, audience: AUD, context: { risk, params: {}, reversibilityClass: authoritative } });
+  return verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: s.grant, now: NOW, audience: AUD, context: { risk, params: {}, reversibilityClass: authoritative } });
 }
 
 describe('server verifier: reversibility class ranking covers the caveat vocabulary (rate_limited)', () => {

@@ -1,0 +1,72 @@
+{
+  "name": "@atlasauth/pca-verified",
+  "version": "0.5.0",
+  "description": "PCA Verified: a standalone conformance runner and attestation programme. Drive any PCA verifier or producer through the documented driver protocol over the versioned, hash-pinned corpus, then get a signed, third-party-verifiable conformance statement, a badge and a transparency-logged registry entry.",
+  "keywords": [
+    "conformance",
+    "certification",
+    "attestation",
+    "transparency",
+    "scitt",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-verified"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pca-verified": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./templates/*": "./templates/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "corpus": "node scripts/build-corpus.mjs",
+    "corpus:check": "node scripts/build-corpus.mjs --check"
+  },
+  "dependencies": {
+    "@atlasauth/pca-attest-eat": "workspace:*",
+    "@atlasauth/pca-scitt": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "corpus",
+    "templates",
+    "trust",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
+  }
+}

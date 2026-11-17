@@ -1,0 +1,71 @@
+{
+  "name": "@atlasauth/pca-control-plane",
+  "version": "0.5.0",
+  "description": "A live authority control plane for Proof-Carrying Authority: ingest signed action and verdict events, keep per-agent and fleet baselines, and issue signed, expiring, tighten-only directives (tighten, shrink budget, require step-up, freeze) that the existing revocation, signals and risk-policy hooks consume. Loosening needs a signed human action.",
+  "keywords": [
+    "control plane",
+    "kill switch",
+    "anomaly detection",
+    "freeze",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-control-plane"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pca-control-plane": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./human": {
+      "types": "./dist/human.d.ts",
+      "default": "./dist/human.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-events": "workspace:*",
+    "@atlasauth/pca-revoke": "workspace:*",
+    "@atlasauth/pca-signals": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
+  }
+}

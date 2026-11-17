@@ -1,0 +1,69 @@
+{
+  "name": "@atlasauth/pca-sandbox",
+  "version": "0.5.0",
+  "description": "Optional runtime containment for Proof-Carrying Authority: a WebAssembly capability sandbox whose only authority is handles minted from verified PCActns, a default-deny egress proxy, and sandbox profiles (seccomp, Landlock, macOS) generated from what was authorized.",
+  "keywords": [
+    "sandbox",
+    "webassembly",
+    "wasi",
+    "capabilities",
+    "egress proxy",
+    "seccomp",
+    "landlock",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-sandbox"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "@types/node": "^22.9.0"
+  },
+  "files": [
+    "dist",
+    "vectors",
+    "wit",
+    "linux",
+    "wasmtime-host/src",
+    "wasmtime-host/Cargo.toml",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "@atlasauth/pca-dev-mcp",
+  "version": "0.5.0",
+  "description": "An MCP server for coding agents (Claude Code, Cursor, Codex and others): detect what a project is, plan the exact PCA integration, explain a proof or a refusal, lint and simulate a policy, import actions from OpenAPI or MCP tool lists, run the deployment doctor and search the PCA docs offline. Read-only by default. Ships rules and skills for every major coding agent.",
+  "keywords": [
+    "mcp",
+    "coding agent",
+    "claude code",
+    "cursor",
+    "codex",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-dev-mcp"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pca-dev-mcp": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "prepack": "node scripts/bundle-docs.mjs"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-actions": "workspace:*",
+    "@atlasauth/pca-doctor": "workspace:*",
+    "@atlasauth/pca-explain": "workspace:*",
+    "@atlasauth/pca-init": "workspace:*",
+    "@atlasauth/pca-policy-ci": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "kit",
+    "docs-bundle",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
+  }
+}

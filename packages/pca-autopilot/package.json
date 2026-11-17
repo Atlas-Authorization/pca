@@ -1,0 +1,69 @@
+{
+  "name": "@atlasauth/pca-autopilot",
+  "version": "0.5.0",
+  "description": "Policy autopilot for Proof-Carrying Authority: observe an agent, then generate the tightest grant, policy and budget that covers what it actually did, verify it by replaying every observed action through the real verifier, show the excess authority it still permits, and let a human sign it once. Continuous mode proposes minimal amendments and tightening. A proposal is never authority.",
+  "keywords": [
+    "least privilege",
+    "policy generation",
+    "agent authorization",
+    "audit",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-autopilot"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./passkey": {
+      "types": "./dist/passkey.d.ts",
+      "default": "./dist/passkey.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-analyzer": "workspace:*",
+    "@atlasauth/pca-explain": "workspace:*",
+    "@atlasauth/pca-grants": "workspace:*",
+    "@atlasauth/pca-policy-ci": "workspace:*",
+    "@atlasauth/pca-webauthn": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
+  }
+}

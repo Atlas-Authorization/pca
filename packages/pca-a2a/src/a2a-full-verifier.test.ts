@@ -7,6 +7,7 @@ import {
   merkleRoot,
   mintRoot,
   mlDsa65Keygen,
+  paramsDigest,
   buildPCActn,
   planNodeLeaf,
   type PCActn,
@@ -29,7 +30,7 @@ const a = agent({ principal, goal: 'reconcile refunds', permissions: { stripe: [
 /** What a resource server knows about the action: its own copy of the one-node plan (authorized) and a budget. */
 const ctxFor = (p: PCActn, params: Record<string, unknown>) => {
   const plan: PlanNode[] = [{ id: p.plan.node_id, verb: p.action.verb, resource: p.action.resource, params_digest: p.action.params_digest, reversibility_class: p.action.reversibility_class }];
-  return { params, plan, planAuthorized: merkleRoot(plan.map(planNodeLeaf)) === p.plan.root, budget: { B: 1000, tau: NOW, asOf: NOW } };
+  return { params, plan, planAuthorized: merkleRoot(plan.map(planNodeLeaf)) === p.plan.root, budget: { B: 1000, tau: NOW, asOf: NOW }, risk: { semanticDistance: 0, reversibility: 1, blastRadius: 0, taint: 0, confidence: 1 } };
 };
 const base = (p: PCActn, params: Record<string, unknown>) => ({
   aud: AUD,
@@ -94,8 +95,10 @@ describe('A2A: the full verifier decides', () => {
   it('no budget supplied: fail-closed deny-metered budget forces a step-up (budget / threshold enforced)', async () => {
     const params = { amount: 90, currency: 'usd' };
     const p = act('stripe.refund', 'charge:ch_1', params);
-    const { budget: _b, ...ctxNoBudget } = ctxFor(p, params);
+    const { budget: _b, risk, ...rest } = ctxFor(p, params);
     void _b;
+    // a priced action (90 of the 500 limit): a zero-risk action costs nothing, so it would pass even on the empty default budget
+    const ctxNoBudget = { ...rest, risk: { ...risk, blastRadius: 90 / 500 } };
     const r = await a2a.verifyA2ATask(task(p), { aud: AUD, now: NOW, hooks: { revocation: () => ({ enforced: true as const, ok: true }) }, context: ctxNoBudget, grant: a.grant });
     expect(r.ok).toBe(false);
   });
@@ -120,5 +123,42 @@ describe('A2A: the full verifier decides', () => {
     expect(unpinned.result?.checks['pq_pin']).toBe('fail');
     const pinned = await a2a.verifyA2ATask(task(p), { ...base(p, {}), expectedRootIssuer: pPub, pqPins: { [pPub]: encodeMlDsaPublicKey(ml.publicKey) } });
     expect(pinned.result?.checks['pq_pin']).toBe('pass');
+  });
+
+  it('operator pins reach the verifier: a classical root from a pinned issuer is refused (pq_pin), stored grant or expectedRootIssuer; unpinned is unchanged', async () => {
+    const holder = generateKeyPair();
+    const ed = mintRoot({ principalSecret: principal.secretKey, principalPublic: pPub, holder: encodeKey(holder.publicKey), caveats: [{ type: 'ttl', secs: 3600 }] });
+    const plan = [{ id: 'n', verb: 'stripe.refund', resource: 'charge:ch_1', reversibility_class: 'reversible' as const }];
+    const p = buildPCActn({ grant: ed, chain: [ed], plan, nodeId: 'n', counter: 1, signerSecret: holder.secretKey, aud: AUD, now: NOW });
+    const pins = { [pPub]: encodeMlDsaPublicKey(mlDsa65Keygen(new Uint8Array(32).fill(4)).publicKey) };
+    const REASON = 'pq_pin: the grant issuer is pinned to a post-quantum key; a classical grant is refused';
+    for (const authority of [{ expectedRootIssuer: pPub }, { grant: ed }]) {
+      const pinned = await a2a.verifyA2ATask(task(p), { ...base(p, {}), ...authority, pqPins: pins });
+      expect(pinned.ok).toBe(false);
+      expect(pinned.result?.checks['pq_pin']).toBe('fail');
+      expect(pinned.reason).toContain(REASON);
+      const unpinned = await a2a.verifyA2ATask(task(p), { ...base(p, {}), ...authority, pqPins: { somebody: 'k' } });
+      expect(unpinned.result?.checks['pq_pin']).toBe('pass');
+    }
+    // no pins configured: the check passes for a classical root (the default map is empty)
+    expect((await a2a.verifyA2ATask(task(p), { ...base(p, {}), expectedRootIssuer: pPub })).result?.checks['pq_pin']).toBe('pass');
+    // the payment mandate path hands the same options to the verifier. A binding failure (params without the amount) is a refusal with
+    // a reason and NO result: it never reaches the verifier, so it proves nothing about pins and must still deny
+    const mandate0 = a2a.a2aPaymentMandateFromPca(p, { amount: { currency: 'USD', value: 10 }, paymentMethod: { type: 'card', token: 'tok_1' }, now: NOW });
+    const bindingFailure = await a2a.verifyA2APaymentMandate(mandate0, p, { ...base(p, {}), expectedRootIssuer: pPub, pqPins: pins });
+    expect(bindingFailure.ok).toBe(false);
+    expect(bindingFailure.result).toBeUndefined();
+    expect(bindingFailure.reason).toBe('the PCActn params carry no integer minor-unit amount to bind the mandate amount to');
+    // a mandate that binds reaches the verifier, where the pin refuses the classical root
+    const payParams = { amount: 10, currency: 'USD', payment_method: { type: 'card', token: 'tok_1' } };
+    const payPlan = [{ id: 'n', verb: 'stripe.refund', resource: 'charge:ch_1', params_digest: paramsDigest(payParams), reversibility_class: 'reversible' as const }];
+    const pp = buildPCActn({ grant: ed, chain: [ed], plan: payPlan, nodeId: 'n', params: payParams, counter: 2, signerSecret: holder.secretKey, aud: AUD, now: NOW });
+    const mandate = a2a.a2aPaymentMandateFromPca(pp, { amount: { currency: 'USD', value: 10 }, paymentMethod: payParams.payment_method, now: NOW });
+    const refused = await a2a.verifyA2APaymentMandate(mandate, pp, { ...base(pp, payParams), expectedRootIssuer: pPub, pqPins: pins });
+    expect(refused.ok).toBe(false);
+    expect(refused.result?.checks['pq_pin']).toBe('fail');
+    expect(refused.reason).toContain(REASON);
+    const unpinnedMandate = await a2a.verifyA2APaymentMandate(mandate, pp, { ...base(pp, payParams), expectedRootIssuer: pPub, pqPins: { somebody: 'k' } });
+    expect(unpinnedMandate.result?.checks['pq_pin']).toBe('pass');
   });
 });

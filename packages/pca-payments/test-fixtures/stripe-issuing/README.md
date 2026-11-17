@@ -1,0 +1,1 @@
+These fixtures follow the object shapes in the Stripe Issuing documentation (issuing_authorization.request webhook, issuing.authorization and issuing.transaction objects, fetched 2026-10). They were written to that documented shape; they are NOT captured from a live Stripe account. Replace them with captured events when a sandbox account is available.

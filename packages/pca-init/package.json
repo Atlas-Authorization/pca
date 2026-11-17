@@ -1,0 +1,63 @@
+{
+  "name": "@atlasauth/pca-init",
+  "version": "0.5.0",
+  "description": "Add Proof-Carrying Authority to an existing app with one command: detect the language and framework, show the plan as a diff, then add the package, the wiring, dev keys, an observe-mode config and your action definitions. Or put pca-proxy in front with no code at all.",
+  "keywords": [
+    "onboarding",
+    "scaffolding",
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-init"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-actions": "workspace:*",
+    "@atlasauth/pca-doctor": "workspace:*",
+    "@atlasauth/pca-proxy": "workspace:*",
+    "typescript": "^5.6.3",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.4"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
+  }
+}

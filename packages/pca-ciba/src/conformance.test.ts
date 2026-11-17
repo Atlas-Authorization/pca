@@ -21,7 +21,8 @@ import { join } from 'node:path';
 import * as client from 'openid-client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { agent, generateKeyPair, reviewAction, type StepUpRequest } from '@atlasauth/pca';
-import { createCibaBroker, toCibaAuthRequest, type CibaAuthRequest } from './index';
+import { toCibaAuthRequest, type CibaAuthRequest } from './index';
+import { createCibaBroker } from './testing';
 
 const PKG = join(__dirname, '..');
 const SPEC = JSON.parse(readFileSync(join(PKG, 'fixtures', 'ciba-core-1_0-examples.json'), 'utf8')) as {
@@ -51,7 +52,7 @@ function mkStepUp(over?: { goal?: string; verb?: string; resource?: string }): S
     riskPolicy: { theta1: 0.3, theta2: 0.6 },
     now: 0,
   });
-  const r = reviewAction(a, 'stripe.payout', over?.resource ?? 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { now: 1, goal: over?.goal ?? 'reconcile October refunds' });
+  const r = reviewAction(a, 'stripe.payout', over?.resource ?? 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1, goal: over?.goal ?? 'reconcile October refunds' });
   if (r.kind !== 'step_up') throw new Error('expected a step_up');
   return over?.verb === undefined ? r.request : { ...r.request, verb: over.verb };
 }

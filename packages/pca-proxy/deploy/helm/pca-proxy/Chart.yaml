@@ -1,0 +1,7 @@
+apiVersion: v2
+name: pca-proxy
+description: PCA in front of an API or an MCP server, as a gateway (own Deployment and Service) or as a sidecar (config and container for your pod), with an optional control-plane reporting agent.
+type: application
+version: 0.5.0
+appVersion: "0.5.0"
+keywords: [pca, agent-authorization, mcp, proxy, sidecar]

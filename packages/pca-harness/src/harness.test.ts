@@ -84,12 +84,12 @@ describe('B1 harness — attest the mediator, not the weights', () => {
     // The signed action carries the committed plan root and an inclusion proof.
     expect(res.pcactn.plan.root).toBe(h.planRoot);
     expect(res.pcactn.plan.node_id).toBe('n1');
-    const v = await verifyPCActnCore(res.pcactn, { grant, audience: AUD });
+    const v = await verifyPCActnCore(res.pcactn, { insecureSkipPlanRootCheck: true, grant, audience: AUD });
     expect(v.allow).toBe(true);
     expect(v.checks.plan_inclusion).toBe('pass');
     expect(v.checks.leaf_signature).toBe('pass');
     // A verifier at a different audience rejects it (freshness binding).
-    expect((await verifyPCActnCore(res.pcactn, { grant, audience: 'ins_other' })).checks.audience).toBe('fail');
+    expect((await verifyPCActnCore(res.pcactn, { insecureSkipPlanRootCheck: true, grant, audience: 'ins_other' })).checks.audience).toBe('fail');
     expect(h.counter).toBe(1);
   });
 
@@ -152,5 +152,44 @@ describe('B1 harness — attest the mediator, not the weights', () => {
     expect(m1).toMatch(/^[A-Za-z0-9_-]{43}$/);
     // And it is exactly the pure-function digest over the manifest (what an attestation would cover).
     expect(h.harnessMeasurement()).toBe(computeHarnessMeasurement('0.1.0', ENFORCED_CHECKS, DEFAULT_RISK_POLICY));
+  });
+
+  // missing-X-gives-Y table: every malformed oracle output or config is refused with an exact outcome.
+  describe('fail-closed table', () => {
+    const ok1 = { verb: 'read', resource: 'doc:1', nodeId: 'n1' };
+    it.each([
+      ['oracle throws', () => { throw new Error('upstream 500'); }, 'bad_candidate', 'oracle failed: upstream 500'],
+      ['oracle rejects', () => Promise.reject(new Error('timeout')), 'bad_candidate', 'oracle failed: timeout'],
+      ['oracle returns null', () => null as unknown as Candidate, 'bad_candidate', 'oracle returned a malformed candidate'],
+      ['missing nodeId', () => ({ verb: 'read', resource: 'doc:1' }) as unknown as Candidate, 'bad_candidate', 'oracle returned a malformed candidate'],
+      ['inputs not an array', () => ({ ...ok1, inputs: 'x' }) as unknown as Candidate, 'bad_candidate', 'candidate.inputs is not an array'],
+      ['unknown node', () => ({ ...ok1, nodeId: 'zz' }), 'out_of_plan', "node 'zz' is not in the committed plan"],
+    ])('%s -> %s', async (_n, propose, reason, detail) => {
+      const h = mkHarness();
+      const res = await h.step(propose);
+      expect(res).toMatchObject({ ok: false, reason, detail });
+      expect(h.counter).toBe(0);
+    });
+
+    it('an input with a typo or null provenance counts as UNTRUSTED (taint 1), never trusted', async () => {
+      for (const bad of [{ ref: 'a', provenance: 'Trusted' }, null, { provenance: 'trusted' }, 'x']) {
+        const h = mkHarness();
+        const res = await h.step(oracle({ ...ok1, inputs: [bad as never] }));
+        if (!res.ok) throw new Error('unreachable');
+        expect(res.risk.taint).toBe(1);
+        expect(res.pcactn.provenance.trusted_refs).toEqual([]);
+      }
+    });
+
+    it.each([
+      ['empty plan', { plan: [] }, /non-empty/],
+      ['duplicate node ids', { plan: [plan[0], plan[0]] }, /unique/],
+      ['short secret', { agentSecret: new Uint8Array(5) }, /32-byte/],
+      ['NaN budget', { budget: { B: NaN, tau: 1, asOf: 1 } }, /finite/],
+      ['negative budget', { budget: { B: -1, tau: 1, asOf: 1 } }, /finite/],
+      ['empty audience', { audience: '' }, /audience/],
+    ])('constructor refuses %s', (_n, over, re) => {
+      expect(() => mkHarness(over as never)).toThrow(re);
+    });
   });
 });

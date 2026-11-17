@@ -1,0 +1,229 @@
+name: PCA Verified self-hosting
+
+# Our own implementations through our own conformance programme. The TypeScript reference and the native verifiers (from their
+# own public repos, at the SAME ref as this run) are driven by the public `pca-verified` runner over the hash-pinned corpus, exactly
+# as a third party would; each profile a driver fully passes gets a signed conformance statement, every statement is re-verified
+# against its report, and all statements go into a transparency-logged registry with its static listing. Runs on every ci/** push
+# (including ci/build-**); the statements, reports, registry and listing are uploaded as artifacts.
+on:
+  push:
+    branches: ['ci/**', 'ci/build-**']
+  workflow_dispatch:
+    inputs:
+      native_ref:
+        description: 'Ref of the native verifier repos (default: the ref of this run)'
+        required: false
+        default: ''
+      require_native:
+        description: 'Profiles every native driver must pass (comma separated)'
+        required: false
+        default: 'core-verifier'
+
+permissions:
+  contents: read
+  id-token: write # the workflow's OIDC identity signs the build-provenance attestation of the statements
+  attestations: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BC_VERSION: '1.80'
+  NATIVE_REF: ${{ inputs.native_ref || github.ref_name }}
+
+jobs:
+  # The bundled corpus is regenerated from the repository and must equal the committed one: the generated adversarial / mutation items
+  # and the regression vectors with their reference verdicts, checked item by item against the committed manifest.jsonl.
+  corpus:
+    name: corpus regenerates identically
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install (reference implementation + corpus generator)
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca... --filter=@atlasauth/pca-conformance...
+      - name: Build (the reference loads its built workspace dependencies)
+        run: pnpm -r --filter=@atlasauth/pca... --filter=@atlasauth/pca-conformance... run build
+      - name: Generated corpus matches the committed manifest.jsonl
+        run: packages/pca/node_modules/.bin/tsx packages/pca-conformance/adversarial/gen-adversarial.ts --corpus "$RUNNER_TEMP/adv.jsonl" --out "$RUNNER_TEMP/manifest.regen.jsonl" && cmp "$RUNNER_TEMP/manifest.regen.jsonl" packages/pca-conformance/adversarial/manifest.jsonl
+      - name: Reference verdicts for the generated items and the regression vectors
+        run: packages/pca/node_modules/.bin/tsx packages/pca-verified/scripts/gen-reference-items.ts --adversarial-corpus "$RUNNER_TEMP/adv.jsonl" --out "$RUNNER_TEMP/ref-items.jsonl"
+      - name: Regenerated corpus (uploaded, commit it when this job reports drift)
+        run: node packages/pca-verified/scripts/build-corpus.mjs --reference-items "$RUNNER_TEMP/ref-items.jsonl" --out "$RUNNER_TEMP/corpus"
+      - name: Upload the regenerated corpus
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pca-verified-corpus
+          path: ${{ runner.temp }}/corpus/*
+          if-no-files-found: ignore
+      - name: Committed corpus has no drift
+        run: node packages/pca-verified/scripts/build-corpus.mjs --reference-items "$RUNNER_TEMP/ref-items.jsonl" --check
+
+  verified:
+    needs: corpus
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # OpenSSL >= 3.5 (ubuntu-26.04): Ruby and PHP get ML-DSA from libcrypto. Swift needs CryptoKit, so it runs on macOS.
+          - name: TypeScript reference + 8 native drivers (Linux)
+            os: ubuntu-26.04
+            langs: go,python,ruby,php,dotnet,rust,java,kotlin
+          - name: TypeScript reference + 9 native drivers (macOS)
+            os: macos-latest
+            langs: go,python,ruby,php,dotnet,rust,java,kotlin,swift
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native verifiers at ${{ env.NATIVE_REF }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/native" sdks
+          for r in go python ruby php dotnet rust java kotlin swift; do
+            url="https://github.com/${{ github.repository_owner }}/pca-$r.git"
+            # the release-candidate push lands the flagship first: wait up to 20 min for each native repo's ref
+            for i in $(seq 1 40); do
+              git ls-remote --exit-code "$url" "refs/heads/$NATIVE_REF" "refs/tags/$NATIVE_REF" >/dev/null 2>&1 && break
+              [ "$i" = 40 ] && { echo "::error::pca-$r has no ref '$NATIVE_REF' (push the native repos at the same ref)"; exit 1; }
+              echo "waiting for pca-$r@$NATIVE_REF ($i/40)"; sleep 30
+            done
+            git clone -q --depth 1 --branch "$NATIVE_REF" "$url" "$RUNNER_TEMP/native/pca-$r"
+            echo "pca-$r @ $(git -C "$RUNNER_TEMP/native/pca-$r" rev-parse HEAD)"
+          done
+          # the drivers expect the verifiers under sdks/<lang>-pca; the Rust verifier is one crate of the pca-rust workspace.
+          # sdks/pca-less-c (libatlas_less for the FFI backends) ships in this repo.
+          for r in go python ruby php dotnet java kotlin swift; do cp -R "$RUNNER_TEMP/native/pca-$r" "sdks/$r-pca"; done
+          cp -R "$RUNNER_TEMP/native/pca-rust/crates/atlas-pca" sdks/rust-pca
+      - name: Select Xcode 26 (CryptoKit ML-DSA for the Swift verifier)
+        if: runner.os == 'macOS'
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: sdks/go-pca/go.mod
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sodium, ffi
+          ini-values: ffi.enable=true
+          coverage: none
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: dtolnay/rust-toolchain@stable
+      # JDK 23: the Java / Kotlin LESS backends use the FFM API (JDK 22+); the drivers pass --enable-native-access
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '23'
+      # the Kotlin driver is compiled with the kotlin-compiler-embeddable jars a Gradle distribution ships in lib/.
+      # 9.3.1 (Kotlin 2.2.21) is the distribution the gate is run with locally; 8.9 (Kotlin 1.9.x) ships no
+      # kotlinx-coroutines-core-jvm in lib/, so the gate skipped Kotlin ("incomplete kotlin compiler jars") and failed.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Kotlin compiler jars
+        shell: bash
+        run: |
+          g="$(command -v gradle)"; home="$(cd "$(dirname "$(readlink -f "$g" 2>/dev/null || python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$g")")/.." && pwd)"
+          # every jar scripts/pca-conformance-all.mjs kotlinToolchain() needs, so a short distribution fails here, by name
+          for j in kotlin-compiler-embeddable- kotlin-stdlib- kotlin-script-runtime- kotlin-reflect- kotlin-daemon-embeddable- kotlinx-coroutines-core-jvm- annotations-; do
+            ls "$home/lib" | grep -E "^$j.*\.jar$" >/dev/null || { echo "::error::no $j*.jar in $home/lib"; exit 1; }
+          done
+          echo "PCA_KOTLIN_LIB=$home/lib" >> "$GITHUB_ENV"
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install (reference implementation + corpus generator)
+        run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca... --filter=@atlasauth/pca-conformance... --filter=@atlasauth/pca-verified...
+      - name: Build (the reference loads its built workspace dependencies)
+        run: pnpm -r --filter=@atlasauth/pca... --filter=@atlasauth/pca-conformance... --filter=@atlasauth/pca-verified... run build
+      - name: BouncyCastle for the Java / Kotlin verifiers
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/bcprov.jar" "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar"
+          echo "PCA_BC_JAR=$RUNNER_TEMP/bcprov.jar" >> "$GITHUB_ENV"
+      # ML-DSA session-root vectors (adv1563-1569): PHP (ATLAS_PCA_LIBCRYPTO) and Ruby (LD_LIBRARY_PATH) reach ML-DSA only through an
+      # OpenSSL >= 3.5 libcrypto. scripts/pca-conformance-all.mjs points both drivers at /opt/openssl35 when it exists; build it once, cached.
+      - name: OpenSSL 3.5 (cached)
+        if: runner.os == 'Linux'
+        id: ossl
+        uses: actions/cache@v4
+        with:
+          path: /opt/openssl35
+          key: openssl-3.5.9-${{ matrix.os }}
+      - name: Build OpenSSL 3.5
+        if: runner.os == 'Linux' && steps.ossl.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz | tar xz
+          cd openssl-3.5.9 && ./Configure --prefix=/opt/openssl35 --libdir=lib shared no-tests > /dev/null
+          make -j4 > /dev/null && sudo make install_sw > /dev/null
+      - name: OpenSSL 3.5 present
+        if: runner.os == 'Linux'
+        run: LD_LIBRARY_PATH=/opt/openssl35/lib /opt/openssl35/bin/openssl version | grep -E '^OpenSSL 3\.[5-9]'
+      - name: Python verifier backends
+        run: python -m pip install cryptography dilithium-py
+      - name: Runner tests (adversarial drivers, tampered reports, wrong-corpus statements, badge and registry refusals)
+        run: pnpm --filter @atlasauth/pca-verified test
+      # The drivers are built exactly as the cross-language gate builds them; this step only prepares them and records how to run each.
+      - name: Prepare the native drivers
+        run: scripts/pca-conformance-all.sh --emit-drivers "$RUNNER_TEMP/drivers.json" --langs ${{ matrix.langs }}
+      - name: Every driver through pca-verified (statements, self-attested)
+        env:
+          PCA_VERIFIED_KEY_PEM: ${{ secrets.PCA_VERIFIED_KEY_PEM }}
+        run: >
+          node scripts/pca-verified-selfhost.mjs --phase run --drivers "$RUNNER_TEMP/drivers.json" --out "$RUNNER_TEMP/pca-verified"
+          --impl-version "${{ github.ref_name }}" --require-native "${{ inputs.require_native || 'core-verifier' }}"
+      # CI-attested tier: GitHub's Sigstore build-provenance attestation over the exact statement bytes (the .cose files), signed by this
+      # workflow's identity and logged in Rekor. Public repositories only (the offline verifier pins the public-good Sigstore root).
+      - name: Attest the statements (Sigstore build provenance)
+        id: attest
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ runner.temp }}/pca-verified/*/*.cose
+      - name: Verify every statement (CI tier when attested), registry, listing
+        env:
+          ATT_ARGS: ${{ steps.attest.outputs.bundle-path != '' && format('--attestation {0} --ci-repo {1} --ci-workflow verified.yml', steps.attest.outputs.bundle-path, github.repository) || '' }}
+        run: >
+          node scripts/pca-verified-selfhost.mjs --phase publish --out "$RUNNER_TEMP/pca-verified"
+          --impl-version "${{ github.ref_name }}" $ATT_ARGS
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          f="$RUNNER_TEMP/pca-verified/selfhost.json"
+          [ -f "$f" ] && node -e 'const j=require(process.argv[1]);console.log("### PCA Verified self-hosting\n\n| driver | result |\n|---|---|");for(const r of j.drivers)console.log("| "+r.name+" | "+(r.skipped?"skipped: "+r.skipped:r.error||Object.entries(r.status).map(([p,s])=>p+" "+s).join(", "))+" |");for(const x of j.failures)console.log("\n- FAIL: "+x)' "$f" >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Upload statements, reports, registry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pca-verified-${{ runner.os }}
+          path: |
+            ${{ runner.temp }}/pca-verified/**
+            !${{ runner.temp }}/pca-verified/signing-key.pem
+      - name: Upload the attestation bundle
+        if: always() && steps.attest.outputs.bundle-path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: pca-verified-attestation-${{ runner.os }}
+          path: ${{ steps.attest.outputs.bundle-path }}
+          if-no-files-found: ignore

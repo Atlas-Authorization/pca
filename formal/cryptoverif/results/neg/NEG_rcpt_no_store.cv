@@ -1,0 +1,121 @@
+(* PCA Intent Layer v2 -- sequencer reservation receipts and root-signed sequencer key sets (rule 15 step 5b-5d),
+   computational proof (CryptoVerif).
+
+   Code modelled (packages/pca/src/intent-acc.ts verifyReceiptAgainstHolder, verifySequencerKeySet,
+   verifyAccReceiptSignature, pcactnReservationDigest; intent-v2.ts accStep):
+   - The session root S names a SEQUENCED holder by its long-lived ROOT key `holder.root` (authentic because S is:
+     intent_delta.cv q_root).
+   - The root key signs key sets `pca-sequencer-keys` (domain atlas-pca/sequencer-keys/v1) listing receipt-signing
+     keys {kid, pk, not_before, not_after}. Modelled as one signed entry statement (kid, pk, window) per honest
+     signing key: acceptance needs "the root signed a set that lists (kid, pk, window)", which is what the entry
+     statement says.
+   - A receipt (domain atlas-pca/acc-receipt/v1) is signed by a key-set entry's pk over
+     (session, acc, seq, pre, delta, post, pcactn_digest, aud, issued_at, expires_at, kid, ledger).
+     pcactn_digest = H(PCActn body without signatures). `rest` abstracts the numeric fields the verifier compares
+     (pre, delta, post, issued_at, expires_at, ledger): they are signed, so they are bound like the others.
+   - The verifier recomputes pcactn_digest from the PCActn it is verifying, checks session, acc and aud, requires
+     the key set to verify under holder.root, the entry to list (kid, signer) with issued_at in its window, the
+     receipt signature, and `seq > last_seq[acc]`. The model checks "(sid, acc, seq) not yet accepted" (an atomic
+     consume-once table). The code's check refuses every seq <= last, a superset of what the table refuses, so an
+     acceptance under the code's check is an acceptance here, and the injective query transfers.
+
+   Corruption: the adversary may corrupt any receipt-signing key (CorruptKey event), e.g. a retired one. The queries
+   with "|| event(CorruptKey(pk))" bound what a leaked key buys: receipts under THAT key only. The root key is honest.
+
+   Assumptions: UF-CMA (deterministic signer) of the root's and the signing keys' scheme, collision resistance of H. *)
+
+param NK, NE, NR, NV, NO.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type hashkey [fixed].
+type digest [fixed].
+type kid_t. type window_t. type sid_t. type accid_t. type seq_t. type aud_t. type rest_t. type act_t. type other_t.
+
+proba Psign.
+proba Psigncoll.
+proba Phash.
+
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+expand CollisionResistant_hash_1(hashkey, act_t, digest, hash, hash_oracle, Phash).
+
+fun inwin(rest_t, window_t): bool.                 (* not_before <= issued_at <= not_after *)
+fun mkentry(kid_t, pkey, window_t): message [data].                                    (* sequencer-keys/v1 *)
+fun mkrcpt(sid_t, accid_t, seq_t, digest, aud_t, kid_t, rest_t): message [data].       (* acc-receipt/v1 *)
+fun mkother(other_t): message [data].
+equation forall k: kid_t, p: pkey, w: window_t, s: sid_t, a: accid_t, q: seq_t, d: digest, u: aud_t, k2: kid_t, r: rest_t;
+  mkentry(k, p, w) <> mkrcpt(s, a, q, d, u, k2, r).
+equation forall k: kid_t, p: pkey, w: window_t, o: other_t; mkentry(k, p, w) <> mkother(o).
+equation forall s: sid_t, a: accid_t, q: seq_t, d: digest, u: aud_t, k2: kid_t, r: rest_t, o: other_t;
+  mkrcpt(s, a, q, d, u, k2, r) <> mkother(o).
+
+table accepted(sid_t, accid_t, seq_t).
+
+(* the root key is honest (uf_cma); the receipt-signing keys may be corrupted (uf_cma_corrupt, a manual step) *)
+proof {
+  crypto uf_cma(sign) rkR;
+  crypto uf_cma_corrupt(sign) rk;
+  auto
+}
+
+event EntrySigned(kid_t, pkey, window_t).
+event Issued(pkey, sid_t, accid_t, seq_t, act_t, aud_t, kid_t, rest_t).
+event CorruptKey(pkey).
+event AcceptR(pkey, sid_t, accid_t, seq_t, act_t, aud_t, kid_t, rest_t).
+event AcceptEntry(kid_t, pkey, window_t).
+event AcceptD(digest, act_t).
+
+(* the key-set entry used was signed by the sequencer root *)
+query k: kid_t, p: pkey, w: window_t; event(AcceptEntry(k, p, w)) ==> event(EntrySigned(k, p, w)).
+(* receipt unforgeability with signing-key rotation and corruption: an accepted receipt was issued by the honest
+   sequencer for exactly this session, accumulator, seq, PCActn, audience, kid and values, unless its own signing
+   key was leaked *)
+query p: pkey, s: sid_t, a: accid_t, q: seq_t, x: act_t, u: aud_t, k: kid_t, r: rest_t;
+  event(AcceptR(p, s, a, q, x, u, k, r)) ==> event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p)).
+(* injective: with honest signing keys, each acceptance is paired with its own issuance (no receipt is counted
+   twice at a verifier); this is what lets the TLA+ NoOverspend of the sequencer transfer to accepted actions *)
+query p: pkey, s: sid_t, a: accid_t, q: seq_t, x: act_t, u: aud_t, k: kid_t, r: rest_t;
+  inj-event(AcceptR(p, s, a, q, x, u, k, r)) ==> inj-event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p)).
+(* a receipt binds one action: two accepted actions with the same pcactn_digest are equal *)
+query d: digest, x: act_t, x': act_t; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> x = x'.
+
+channel c0, cK, cK2, cE, cE2, cI, cI2, cC, cC2, cRo, cRo2, cV, cV2.
+
+(* the sequencer: root key, NK rotating receipt-signing keys, each published in NE root-signed entries (any kid,
+   any window the operator chooses) and issuing NR receipts (any values the reservation produces) *)
+let Sequencer(hk: hashkey, skR: skey) =
+  (! iO <= NO in(cRo, o: other_t); out(cRo2, sign(mkother(o), skR)))
+  |
+  ! iK <= NK
+  in(cK, ());
+  new rk: keyseed; let pk: pkey = pkgen(rk) in let sk: skey = skgen(rk) in
+  out(cK2, pk);
+  ( (! iE <= NE in(cE, (kid: kid_t, w: window_t)); event EntrySigned(kid, pk, w); out(cE2, sign(mkentry(kid, pk, w), skR)))
+  | (! iI <= NR in(cI, (s: sid_t, a: accid_t, q: seq_t, x: act_t, u: aud_t, kid: kid_t, r: rest_t));
+       event Issued(pk, s, a, q, x, u, kid, r);
+       out(cI2, sign(mkrcpt(s, a, q, hash(hk, x), u, kid, r), sk)))
+  | (in(cC, ()); event CorruptKey(pk); out(cC2, rk)) ).   (* the leaked key seed (any key material) *)
+
+let Verifier(hk: hashkey, pkR: pkey) =
+  ! iV <= NV
+  in(cV, (s: sid_t, a: accid_t, u: aud_t, x: act_t,               (* this PCActn: session, claim id, aud, body *)
+          q: seq_t, kid: kid_t, r: rest_t, spk: pkey, rsig: signature,
+          w: window_t, esig: signature));
+  if check(mkentry(kid, spk, w), pkR, esig) then
+  if inwin(r, w) then
+  let d = hash(hk, x) in
+  if check(mkrcpt(s, a, q, d, u, kid, r), spk, rsig) then
+  event AcceptEntry(kid, spk, w);
+  event AcceptD(d, x);
+  event AcceptR(spk, s, a, q, x, u, kid, r);
+  out(cV2, ()).
+
+process
+  in(c0, ());
+  new hk: hashkey;
+  new rkR: keyseed; let pkR = pkgen(rkR) in let skR = skgen(rkR) in
+  out(c0, pkR);
+  ( hash_oracle(hk) | Sequencer(hk, skR) | Verifier(hk, pkR) )

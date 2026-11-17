@@ -48,7 +48,7 @@
 //! whose addresses the `ptr_*` exports return; the module instantiates with an empty import object
 //! and is driven single-threaded (write inputs -> call op -> read an output buffer).
 
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "capi")), no_std)]
 
 use pqc_kyber::indcpa::{indcpa_dec, indcpa_enc, indcpa_keypair};
 use rand_core::{CryptoRng, RngCore};
@@ -72,20 +72,7 @@ const PK_BYTES: usize = 1184; // t̂ || rho
 const SK_BYTES: usize = 1152;
 const CT_BYTES: usize = 1088;
 const SYM_BYTES: usize = 32; // seed / coins / message
-
-// --- Fixed linear-memory I/O buffers (stable for the life of the instance). ---
-static mut SEED: [u8; SYM_BYTES] = [0u8; SYM_BYTES];
-static mut COINS: [u8; SYM_BYTES] = [0u8; SYM_BYTES];
-static mut MSG: [u8; SYM_BYTES] = [0u8; SYM_BYTES];
-static mut PK: [u8; PK_BYTES] = [0u8; PK_BYTES];
-static mut SK: [u8; SK_BYTES] = [0u8; SK_BYTES];
-static mut CT: [u8; CT_BYTES] = [0u8; CT_BYTES];
-static mut RA: [u8; TVEC_BYTES] = [0u8; TVEC_BYTES];
-static mut RB: [u8; TVEC_BYTES] = [0u8; TVEC_BYTES];
-static mut ROUT: [u8; TVEC_BYTES] = [0u8; TVEC_BYTES];
-/// Random-oracle input buffer (domain-separation tag || sid || index || the other branch's t̂, etc.).
-const HASHIN_CAP: usize = 4096;
-static mut HASHIN: [u8; HASHIN_CAP] = [0u8; HASHIN_CAP];
+const HASHIN_CAP: usize = 4096; // random-oracle input cap
 
 // ===================================================================================================
 // Pure-Rust core (operates on slices; the extern "C" exports below drive it over the static buffers,
@@ -121,6 +108,25 @@ impl CryptoRng for NullRng {}
 fn kpke_keygen_into(seed: &[u8], pk: &mut [u8], sk: &mut [u8]) -> bool {
     let mut rng = NullRng;
     indcpa_keypair(pk, sk, Some((seed, seed)), &mut rng).is_ok()
+}
+
+/// K-PKE.KeyGen(d) exactly as FIPS 203 Algorithm 13 derives it, via RustCrypto `ml-kem` (ML-KEM.KeyGen_internal(d, z) embeds it: the encapsulation key
+/// is the K-PKE public key and the first `SK_BYTES` of the decapsulation key are the K-PKE secret key; `z` is irrelevant and fixed to zero). This is
+/// what the TypeScript reference derives through @noble/post-quantum. The 32-byte `seed` is FIPS 203's `d`.
+#[cfg(feature = "hoststd")]
+fn kpke_keygen_fips203_into(seed: &[u8], pk: &mut [u8], sk: &mut [u8]) -> bool {
+    use ml_kem::{EncodedSizeUser, KemCore, MlKem768, B32};
+    let mut d = B32::default();
+    d.copy_from_slice(seed);
+    let z = B32::default();
+    let (dk, ek) = MlKem768::generate_deterministic(&d, &z);
+    let (ek, dk) = (ek.as_bytes(), dk.as_bytes());
+    if ek.len() != PK_BYTES || dk.len() < SK_BYTES {
+        return false;
+    }
+    pk.copy_from_slice(&ek[..]);
+    sk.copy_from_slice(&dk[..SK_BYTES]);
+    true
 }
 
 /// K-PKE CPA encryption (vetted `pqc_kyber::indcpa::indcpa_enc`) of a 32-byte `msg` under `pk`
@@ -264,134 +270,345 @@ fn stage(out: &mut [u8], i: usize, c: u16) {
     enc_pair(out, group, c0, c1);
 }
 
-// ===================================================================================================
-// C-ABI exports (fixed static buffers; mirror @atlasauth/pca-mpc-wasm's ptr_* + op style).
-// ===================================================================================================
+#[cfg(not(feature = "capi"))]
+mod wasm_abi {
+    use super::*;
 
-#[no_mangle]
-pub extern "C" fn ptr_seed() -> *mut u8 {
-    core::ptr::addr_of_mut!(SEED) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_coins() -> *mut u8 {
-    core::ptr::addr_of_mut!(COINS) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_msg() -> *mut u8 {
-    core::ptr::addr_of_mut!(MSG) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_pk() -> *mut u8 {
-    core::ptr::addr_of_mut!(PK) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_sk() -> *mut u8 {
-    core::ptr::addr_of_mut!(SK) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_ct() -> *mut u8 {
-    core::ptr::addr_of_mut!(CT) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_ra() -> *mut u8 {
-    core::ptr::addr_of_mut!(RA) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_rb() -> *mut u8 {
-    core::ptr::addr_of_mut!(RB) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_rout() -> *mut u8 {
-    core::ptr::addr_of_mut!(ROUT) as *mut u8
-}
-#[no_mangle]
-pub extern "C" fn ptr_hashin() -> *mut u8 {
-    core::ptr::addr_of_mut!(HASHIN) as *mut u8
-}
+    // --- Fixed linear-memory I/O buffers (stable for the life of the instance). ---
+    static mut SEED: [u8; SYM_BYTES] = [0u8; SYM_BYTES];
+    static mut COINS: [u8; SYM_BYTES] = [0u8; SYM_BYTES];
+    static mut MSG: [u8; SYM_BYTES] = [0u8; SYM_BYTES];
+    static mut PK: [u8; PK_BYTES] = [0u8; PK_BYTES];
+    static mut SK: [u8; SK_BYTES] = [0u8; SK_BYTES];
+    static mut CT: [u8; CT_BYTES] = [0u8; CT_BYTES];
+    static mut RA: [u8; TVEC_BYTES] = [0u8; TVEC_BYTES];
+    static mut RB: [u8; TVEC_BYTES] = [0u8; TVEC_BYTES];
+    static mut ROUT: [u8; TVEC_BYTES] = [0u8; TVEC_BYTES];
+    /// Random-oracle input buffer (domain-separation tag || sid || index || the other branch's t̂, etc.).
+    static mut HASHIN: [u8; HASHIN_CAP] = [0u8; HASHIN_CAP];
 
-// Lengths, so the TS binding never hardcodes a size the crate might change.
-#[no_mangle]
-pub extern "C" fn len_pk() -> i32 {
-    PK_BYTES as i32
-}
-#[no_mangle]
-pub extern "C" fn len_sk() -> i32 {
-    SK_BYTES as i32
-}
-#[no_mangle]
-pub extern "C" fn len_ct() -> i32 {
-    CT_BYTES as i32
-}
-#[no_mangle]
-pub extern "C" fn len_tvec() -> i32 {
-    TVEC_BYTES as i32
-}
-#[no_mangle]
-pub extern "C" fn len_sym() -> i32 {
-    SYM_BYTES as i32
-}
+    // ===================================================================================================
+    // C-ABI exports (fixed static buffers; mirror @atlasauth/pca-mpc-wasm's ptr_* + op style).
+    // ===================================================================================================
 
-/// `(PK, SK) = K-PKE.KeyGen(SEED)` — deterministic. Returns 1 on success, 0 on failure.
-#[no_mangle]
-pub extern "C" fn kpke_keygen() -> i32 {
-    let seed = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(SEED) as *const u8, SYM_BYTES) };
-    let pk = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(PK) as *mut u8, PK_BYTES) };
-    let sk = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(SK) as *mut u8, SK_BYTES) };
-    i32::from(kpke_keygen_into(seed, pk, sk))
-}
-
-/// `CT = K-PKE.Enc(PK, MSG; COINS)`. Returns 1.
-#[no_mangle]
-pub extern "C" fn kpke_enc() -> i32 {
-    let pk = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(PK) as *const u8, PK_BYTES) };
-    let msg = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(MSG) as *const u8, SYM_BYTES) };
-    let coins = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(COINS) as *const u8, SYM_BYTES) };
-    let ct = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(CT) as *mut u8, CT_BYTES) };
-    kpke_enc_into(pk, msg, coins, ct);
-    1
-}
-
-/// `MSG = K-PKE.Dec(SK, CT)`. Returns 1.
-#[no_mangle]
-pub extern "C" fn kpke_dec() -> i32 {
-    let sk = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(SK) as *const u8, SK_BYTES) };
-    let ct = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(CT) as *const u8, CT_BYTES) };
-    let msg = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(MSG) as *mut u8, SYM_BYTES) };
-    kpke_dec_into(sk, ct, msg);
-    1
-}
-
-/// `ROUT = (RA + RB) mod q`. Returns 1.
-#[no_mangle]
-pub extern "C" fn ring_add() -> i32 {
-    let a = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(RA) as *const u8, TVEC_BYTES) };
-    let b = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(RB) as *const u8, TVEC_BYTES) };
-    let out = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(ROUT) as *mut u8, TVEC_BYTES) };
-    ring_add_into(a, b, out);
-    1
-}
-
-/// `ROUT = (RA - RB) mod q`. Returns 1.
-#[no_mangle]
-pub extern "C" fn ring_sub() -> i32 {
-    let a = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(RA) as *const u8, TVEC_BYTES) };
-    let b = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(RB) as *const u8, TVEC_BYTES) };
-    let out = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(ROUT) as *mut u8, TVEC_BYTES) };
-    ring_sub_into(a, b, out);
-    1
-}
-
-/// `ROUT = SampleNTT(SHAKE128(HASHIN[..len]))` — a uniform ring vector. Returns 1.
-#[no_mangle]
-pub extern "C" fn hash_to_ring(len: i32) -> i32 {
-    let n = len as usize;
-    if n > HASHIN_CAP {
-        return 0;
+    #[no_mangle]
+    pub extern "C" fn ptr_seed() -> *mut u8 {
+        core::ptr::addr_of_mut!(SEED) as *mut u8
     }
-    let input = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(HASHIN) as *const u8, n) };
-    let out = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(ROUT) as *mut u8, TVEC_BYTES) };
-    hash_to_ring_into(input, out);
-    1
+    #[no_mangle]
+    pub extern "C" fn ptr_coins() -> *mut u8 {
+        core::ptr::addr_of_mut!(COINS) as *mut u8
+    }
+    #[no_mangle]
+    pub extern "C" fn ptr_msg() -> *mut u8 {
+        core::ptr::addr_of_mut!(MSG) as *mut u8
+    }
+    #[no_mangle]
+    pub extern "C" fn ptr_pk() -> *mut u8 {
+        core::ptr::addr_of_mut!(PK) as *mut u8
+    }
+    #[no_mangle]
+    pub extern "C" fn ptr_sk() -> *mut u8 {
+        core::ptr::addr_of_mut!(SK) as *mut u8
+    }
+    #[no_mangle]
+    pub extern "C" fn ptr_ct() -> *mut u8 {
+        core::ptr::addr_of_mut!(CT) as *mut u8
+    }
+    #[no_mangle]
+    pub extern "C" fn ptr_ra() -> *mut u8 {
+        core::ptr::addr_of_mut!(RA) as *mut u8
+    }
+    #[no_mangle]
+    pub extern "C" fn ptr_rb() -> *mut u8 {
+        core::ptr::addr_of_mut!(RB) as *mut u8
+    }
+    #[no_mangle]
+    pub extern "C" fn ptr_rout() -> *mut u8 {
+        core::ptr::addr_of_mut!(ROUT) as *mut u8
+    }
+    #[no_mangle]
+    pub extern "C" fn ptr_hashin() -> *mut u8 {
+        core::ptr::addr_of_mut!(HASHIN) as *mut u8
+    }
+
+    // Lengths, so the TS binding never hardcodes a size the crate might change.
+    #[no_mangle]
+    pub extern "C" fn len_pk() -> i32 {
+        PK_BYTES as i32
+    }
+    #[no_mangle]
+    pub extern "C" fn len_sk() -> i32 {
+        SK_BYTES as i32
+    }
+    #[no_mangle]
+    pub extern "C" fn len_ct() -> i32 {
+        CT_BYTES as i32
+    }
+    #[no_mangle]
+    pub extern "C" fn len_tvec() -> i32 {
+        TVEC_BYTES as i32
+    }
+    #[no_mangle]
+    pub extern "C" fn len_sym() -> i32 {
+        SYM_BYTES as i32
+    }
+
+    /// `(PK, SK) = K-PKE.KeyGen(SEED)` — deterministic. Returns 1 on success, 0 on failure.
+    #[no_mangle]
+    pub extern "C" fn kpke_keygen() -> i32 {
+        let seed = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(SEED) as *const u8, SYM_BYTES) };
+        let pk = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(PK) as *mut u8, PK_BYTES) };
+        let sk = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(SK) as *mut u8, SK_BYTES) };
+        i32::from(kpke_keygen_into(seed, pk, sk))
+    }
+
+    /// `CT = K-PKE.Enc(PK, MSG; COINS)`. Returns 1.
+    #[no_mangle]
+    pub extern "C" fn kpke_enc() -> i32 {
+        let pk = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(PK) as *const u8, PK_BYTES) };
+        let msg = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(MSG) as *const u8, SYM_BYTES) };
+        let coins = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(COINS) as *const u8, SYM_BYTES) };
+        let ct = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(CT) as *mut u8, CT_BYTES) };
+        kpke_enc_into(pk, msg, coins, ct);
+        1
+    }
+
+    /// `MSG = K-PKE.Dec(SK, CT)`. Returns 1.
+    #[no_mangle]
+    pub extern "C" fn kpke_dec() -> i32 {
+        let sk = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(SK) as *const u8, SK_BYTES) };
+        let ct = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(CT) as *const u8, CT_BYTES) };
+        let msg = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(MSG) as *mut u8, SYM_BYTES) };
+        kpke_dec_into(sk, ct, msg);
+        1
+    }
+
+    /// `ROUT = (RA + RB) mod q`. Returns 1.
+    #[no_mangle]
+    pub extern "C" fn ring_add() -> i32 {
+        let a = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(RA) as *const u8, TVEC_BYTES) };
+        let b = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(RB) as *const u8, TVEC_BYTES) };
+        let out = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(ROUT) as *mut u8, TVEC_BYTES) };
+        ring_add_into(a, b, out);
+        1
+    }
+
+    /// `ROUT = (RA - RB) mod q`. Returns 1.
+    #[no_mangle]
+    pub extern "C" fn ring_sub() -> i32 {
+        let a = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(RA) as *const u8, TVEC_BYTES) };
+        let b = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(RB) as *const u8, TVEC_BYTES) };
+        let out = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(ROUT) as *mut u8, TVEC_BYTES) };
+        ring_sub_into(a, b, out);
+        1
+    }
+
+    /// `ROUT = SampleNTT(SHAKE128(HASHIN[..len]))` — a uniform ring vector. Returns 1.
+    #[no_mangle]
+    pub extern "C" fn hash_to_ring(len: i32) -> i32 {
+        let n = len as usize;
+        if n > HASHIN_CAP {
+            return 0;
+        }
+        let input = unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(HASHIN) as *const u8, n) };
+        let out = unsafe { core::slice::from_raw_parts_mut(core::ptr::addr_of_mut!(ROUT) as *mut u8, TVEC_BYTES) };
+        hash_to_ring_into(input, out);
+        1
+    }
+}
+
+// ===================================================================================================
+// Host C ABI (cargo feature `capi`): caller-owned buffers, every pointer paired with its length, an int
+// status, no global state (so it is thread-safe). 0 = ok, negative = refused (nothing written on refusal).
+// ===================================================================================================
+#[cfg(feature = "capi")]
+pub mod capi {
+    use super::*;
+
+    pub const LWEOT_OK: i32 = 0;
+    pub const LWEOT_ERR_ARG: i32 = -1; // null pointer or wrong length
+    pub const LWEOT_ERR_INTERNAL: i32 = -2;
+
+    unsafe fn rd<'a>(p: *const u8, len: usize, want: usize) -> Option<&'a [u8]> {
+        if p.is_null() || len != want {
+            return None;
+        }
+        Some(core::slice::from_raw_parts(p, len))
+    }
+    unsafe fn wr<'a>(p: *mut u8, len: usize, want: usize) -> Option<&'a mut [u8]> {
+        if p.is_null() || len != want {
+            return None;
+        }
+        Some(core::slice::from_raw_parts_mut(p, len))
+    }
+
+    #[no_mangle]
+    pub extern "C" fn lweot_len_pk() -> usize { PK_BYTES }
+    #[no_mangle]
+    pub extern "C" fn lweot_len_sk() -> usize { SK_BYTES }
+    #[no_mangle]
+    pub extern "C" fn lweot_len_ct() -> usize { CT_BYTES }
+    #[no_mangle]
+    pub extern "C" fn lweot_len_tvec() -> usize { TVEC_BYTES }
+    #[no_mangle]
+    pub extern "C" fn lweot_len_sym() -> usize { SYM_BYTES }
+    #[no_mangle]
+    pub extern "C" fn lweot_hashin_cap() -> usize { HASHIN_CAP }
+
+    /// `(pk, sk) = K-PKE.KeyGen(seed)` (deterministic).
+    #[no_mangle]
+    pub unsafe extern "C" fn lweot_kpke_keygen(
+        seed: *const u8, seed_len: usize, pk: *mut u8, pk_len: usize, sk: *mut u8, sk_len: usize,
+    ) -> i32 {
+        let (Some(seed), Some(pk), Some(sk)) =
+            (rd(seed, seed_len, SYM_BYTES), wr(pk, pk_len, PK_BYTES), wr(sk, sk_len, SK_BYTES))
+        else { return LWEOT_ERR_ARG };
+        if kpke_keygen_into(seed, pk, sk) { LWEOT_OK } else { LWEOT_ERR_INTERNAL }
+    }
+
+    /// `(pk, sk) = K-PKE.KeyGen(d)` as FIPS 203 Algorithm 13 derives it (deterministic): the key pair the endemic receiver uses.
+    #[no_mangle]
+    pub unsafe extern "C" fn lweot_kpke_keygen_fips203(
+        seed: *const u8, seed_len: usize, pk: *mut u8, pk_len: usize, sk: *mut u8, sk_len: usize,
+    ) -> i32 {
+        let (Some(seed), Some(pk), Some(sk)) =
+            (rd(seed, seed_len, SYM_BYTES), wr(pk, pk_len, PK_BYTES), wr(sk, sk_len, SK_BYTES))
+        else { return LWEOT_ERR_ARG };
+        if kpke_keygen_fips203_into(seed, pk, sk) { LWEOT_OK } else { LWEOT_ERR_INTERNAL }
+    }
+
+    /// `ct = K-PKE.Enc(pk, msg; coins)`.
+    #[no_mangle]
+    pub unsafe extern "C" fn lweot_kpke_enc(
+        pk: *const u8, pk_len: usize, msg: *const u8, msg_len: usize, coins: *const u8, coins_len: usize,
+        ct: *mut u8, ct_len: usize,
+    ) -> i32 {
+        let (Some(pk), Some(msg), Some(coins), Some(ct)) = (
+            rd(pk, pk_len, PK_BYTES), rd(msg, msg_len, SYM_BYTES), rd(coins, coins_len, SYM_BYTES),
+            wr(ct, ct_len, CT_BYTES),
+        ) else { return LWEOT_ERR_ARG };
+        kpke_enc_into(pk, msg, coins, ct);
+        LWEOT_OK
+    }
+
+    /// `msg = K-PKE.Dec(sk, ct)`.
+    #[no_mangle]
+    pub unsafe extern "C" fn lweot_kpke_dec(
+        sk: *const u8, sk_len: usize, ct: *const u8, ct_len: usize, msg: *mut u8, msg_len: usize,
+    ) -> i32 {
+        let (Some(sk), Some(ct), Some(msg)) =
+            (rd(sk, sk_len, SK_BYTES), rd(ct, ct_len, CT_BYTES), wr(msg, msg_len, SYM_BYTES))
+        else { return LWEOT_ERR_ARG };
+        kpke_dec_into(sk, ct, msg);
+        LWEOT_OK
+    }
+
+    /// `out = (a + b) mod q` over serialized ring vectors.
+    #[no_mangle]
+    pub unsafe extern "C" fn lweot_ring_add(
+        a: *const u8, a_len: usize, b: *const u8, b_len: usize, out: *mut u8, out_len: usize,
+    ) -> i32 {
+        let (Some(a), Some(b), Some(out)) =
+            (rd(a, a_len, TVEC_BYTES), rd(b, b_len, TVEC_BYTES), wr(out, out_len, TVEC_BYTES))
+        else { return LWEOT_ERR_ARG };
+        ring_add_into(a, b, out);
+        LWEOT_OK
+    }
+
+    /// `out = (a - b) mod q` over serialized ring vectors.
+    #[no_mangle]
+    pub unsafe extern "C" fn lweot_ring_sub(
+        a: *const u8, a_len: usize, b: *const u8, b_len: usize, out: *mut u8, out_len: usize,
+    ) -> i32 {
+        let (Some(a), Some(b), Some(out)) =
+            (rd(a, a_len, TVEC_BYTES), rd(b, b_len, TVEC_BYTES), wr(out, out_len, TVEC_BYTES))
+        else { return LWEOT_ERR_ARG };
+        ring_sub_into(a, b, out);
+        LWEOT_OK
+    }
+
+    /// `out = SampleNTT(SHAKE128(input))`; input length 0..=lweot_hashin_cap().
+    #[no_mangle]
+    pub unsafe extern "C" fn lweot_hash_to_ring(
+        input: *const u8, input_len: usize, out: *mut u8, out_len: usize,
+    ) -> i32 {
+        if input_len > HASHIN_CAP || (input.is_null() && input_len != 0) {
+            return LWEOT_ERR_ARG;
+        }
+        let Some(out) = wr(out, out_len, TVEC_BYTES) else { return LWEOT_ERR_ARG };
+        let input: &[u8] = if input_len == 0 { &[] } else { core::slice::from_raw_parts(input, input_len) };
+        hash_to_ring_into(input, out);
+        LWEOT_OK
+    }
+}
+
+// ===================================================================================================
+// Safe Rust API (cargo feature `hoststd`, implied by `capi`): fixed-size arrays in, arrays out, for Rust crates that depend on this one directly.
+// The same vetted functions as the C ABI; nothing here touches global state.
+// ===================================================================================================
+#[cfg(feature = "hoststd")]
+pub mod safe {
+    use super::*;
+
+    pub const PK_LEN: usize = PK_BYTES;
+    pub const SK_LEN: usize = SK_BYTES;
+    pub const CT_LEN: usize = CT_BYTES;
+    pub const TVEC_LEN: usize = TVEC_BYTES;
+    pub const SYM_LEN: usize = SYM_BYTES;
+    pub const HASHIN_MAX: usize = HASHIN_CAP;
+
+    /// `(pk, sk) = K-PKE.KeyGen(seed)` (deterministic); `None` only if the vetted keygen refuses.
+    pub fn keygen(seed: &[u8; SYM_BYTES]) -> Option<([u8; PK_BYTES], [u8; SK_BYTES])> {
+        let mut pk = [0u8; PK_BYTES];
+        let mut sk = [0u8; SK_BYTES];
+        kpke_keygen_into(seed, &mut pk, &mut sk).then_some((pk, sk))
+    }
+
+    /// `(pk, sk) = K-PKE.KeyGen(d)` as FIPS 203 Algorithm 13 derives it (what the reference endemic receiver uses); `None` only if the key sizes are unexpected.
+    pub fn keygen_fips203(seed: &[u8; SYM_BYTES]) -> Option<([u8; PK_BYTES], [u8; SK_BYTES])> {
+        let mut pk = [0u8; PK_BYTES];
+        let mut sk = [0u8; SK_BYTES];
+        kpke_keygen_fips203_into(seed, &mut pk, &mut sk).then_some((pk, sk))
+    }
+
+    /// `ct = K-PKE.Enc(pk, msg; coins)` under any 1184-byte key (a real one or the uniform one the endemic construction derives).
+    pub fn enc(pk: &[u8; PK_BYTES], msg: &[u8; SYM_BYTES], coins: &[u8; SYM_BYTES]) -> [u8; CT_BYTES] {
+        let mut ct = [0u8; CT_BYTES];
+        kpke_enc_into(pk, msg, coins, &mut ct);
+        ct
+    }
+
+    /// `msg = K-PKE.Dec(sk, ct)`.
+    pub fn dec(sk: &[u8; SK_BYTES], ct: &[u8; CT_BYTES]) -> [u8; SYM_BYTES] {
+        let mut msg = [0u8; SYM_BYTES];
+        kpke_dec_into(sk, ct, &mut msg);
+        msg
+    }
+
+    /// `(a + b) mod q` over serialized ring vectors.
+    pub fn ring_add(a: &[u8; TVEC_BYTES], b: &[u8; TVEC_BYTES]) -> [u8; TVEC_BYTES] {
+        let mut out = [0u8; TVEC_BYTES];
+        ring_add_into(a, b, &mut out);
+        out
+    }
+
+    /// `(a - b) mod q` over serialized ring vectors.
+    pub fn ring_sub(a: &[u8; TVEC_BYTES], b: &[u8; TVEC_BYTES]) -> [u8; TVEC_BYTES] {
+        let mut out = [0u8; TVEC_BYTES];
+        ring_sub_into(a, b, &mut out);
+        out
+    }
+
+    /// `SampleNTT(SHAKE128(input))`, a uniform ring vector; `None` when the input exceeds `HASHIN_MAX`.
+    pub fn hash_to_ring(input: &[u8]) -> Option<[u8; TVEC_BYTES]> {
+        if input.len() > HASHIN_CAP {
+            return None;
+        }
+        let mut out = [0u8; TVEC_BYTES];
+        hash_to_ring_into(input, &mut out);
+        Some(out)
+    }
 }
 
 // ===================================================================================================
@@ -409,6 +626,24 @@ mod tests {
         let mut out = std::vec![0u8; n];
         r.read(&mut out);
         out
+    }
+
+    // The FIPS 203 derivation yields a pair the shared enc/dec accept, and differs from the pre-standard pqc_kyber derivation (G(d) vs G(d || k)).
+    #[cfg(feature = "hoststd")]
+    #[test]
+    fn fips203_keygen_roundtrips_and_differs_from_pqc_kyber() {
+        let seed = gen(b"fips203-seed", SYM_BYTES);
+        let (mut pk, mut sk) = ([0u8; PK_BYTES], [0u8; SK_BYTES]);
+        assert!(kpke_keygen_fips203_into(&seed, &mut pk, &mut sk));
+        let (mut pk0, mut sk0) = ([0u8; PK_BYTES], [0u8; SK_BYTES]);
+        assert!(kpke_keygen_into(&seed, &mut pk0, &mut sk0));
+        assert_ne!(pk, pk0);
+        let (msg, coins) = (gen(b"m", SYM_BYTES), gen(b"c", SYM_BYTES));
+        let mut ct = [0u8; CT_BYTES];
+        kpke_enc_into(&pk, &msg, &coins, &mut ct);
+        let mut out = [0u8; SYM_BYTES];
+        kpke_dec_into(&sk, &ct, &mut out);
+        assert_eq!(&out[..], &msg[..]);
     }
 
     #[test]

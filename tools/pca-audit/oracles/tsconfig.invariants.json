@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../../..",
+    "paths": {
+      "fast-check": ["tools/pca-audit/oracles/fast-check-stub.mjs"],
+      "@atlasauth/pca": ["packages/pca/src/index.ts"],
+      "@atlasauth/pca/ext/*": ["packages/pca/src/ext/*.ts"],
+      "@atlasauth/pca/*": ["packages/pca/src/*.ts"],
+      "@atlasauth/pca-scitt/testing": ["packages/pca-scitt/src/testing.ts"],
+      "@atlasauth/pca-*": ["packages/pca-*/src/index.ts"]
+    }
+  }
+}

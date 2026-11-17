@@ -11,7 +11,7 @@
  *
  * This package is that active boundary, layered strictly ON TOP of the core (no core edit). It keeps a
  * pluggable {@link RevocationRegistry} of revocations keyed by a specific capability id, an agent holder
- * key, a principal/root issuer, or a delegation-subtree prefix. {@link isRevoked} walks EVERY hop of a
+ * key, a principal/root issuer, or a delegation-subtree prefix. {@link checkRevocation} walks EVERY hop of a
  * PCActn's `cap_chain` against the registry; {@link verifyWithRevocation} ANDs the core outcome with the
  * revocation gate and fails closed. {@link RevocationRegistry.killAgent} / `.killSubtree` are the
  * instant kill-switch. {@link ingestCaepEvent} bridges an OpenID Shared-Signals / CAEP revocation event
@@ -30,7 +30,7 @@ import type { Capability, CapabilityChain, PCActn, VerifyResult } from '@atlasau
 
 /**
  * What a revocation is keyed on:
- *  - `cap`    — a specific capability id (`Capability.id`). Because {@link isRevoked} checks EVERY hop,
+ *  - `cap`    — a specific capability id (`Capability.id`). Because {@link checkRevocation} checks EVERY hop,
  *               revoking a mid-chain cap id denies that cap AND its whole delegation subtree (a content-
  *               addressed id only ever appears in chains that descend through it).
  *  - `holder` — an agent holder key (`Capability.holder`, b64u): denies any action whose chain includes a
@@ -100,7 +100,10 @@ function serializePrefix(prefix: string[]): string {
 
 /** True when a revocation is in effect at `now` (a future `notBefore` has not yet been reached). */
 export function isActiveAt(entry: RevocationEntry, now: number): boolean {
-  return entry.notBefore === undefined || now >= entry.notBefore;
+  if (entry.notBefore === undefined) return true;
+  // Fail closed: a non-finite clock or schedule can never be shown to be "in the future", so it bites.
+  if (!Number.isFinite(now) || !Number.isFinite(entry.notBefore)) return true;
+  return now >= entry.notBefore;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -113,16 +116,16 @@ export function isActiveAt(entry: RevocationEntry, now: number): boolean {
  * a database, or a distributed cache; the in-memory default below is the reference implementation.
  */
 export interface RevocationStore {
-  /** Insert or replace the entry at its `(kind, value)` key. */
-  add(entry: RevocationEntry): void;
-  /** Remove the entry at `(kind, value)`. Returns true when something was removed. */
-  remove(kind: RevocationTargetKind, value: string): boolean;
+  /** Insert or replace the entry at its `(kind, value)` key. Must be atomic: after it resolves every reader sees the entry. */
+  add(entry: RevocationEntry): Promise<void>;
+  /** Remove the entry at `(kind, value)`. Resolves true when something was removed. */
+  remove(kind: RevocationTargetKind, value: string): Promise<boolean>;
   /** The entry at `(kind, value)`, or undefined. */
-  get(kind: RevocationTargetKind, value: string): RevocationEntry | undefined;
+  get(kind: RevocationTargetKind, value: string): Promise<RevocationEntry | undefined>;
   /** Every stored entry (a snapshot copy). */
-  all(): RevocationEntry[];
+  all(): Promise<RevocationEntry[]>;
   /** Drop every entry. */
-  clear(): void;
+  clear(): Promise<void>;
 }
 
 function storeKey(kind: RevocationTargetKind, value: string): string {
@@ -134,23 +137,23 @@ function storeKey(kind: RevocationTargetKind, value: string): string {
 export class InMemoryRevocationStore implements RevocationStore {
   private readonly entries = new Map<string, RevocationEntry>();
 
-  add(entry: RevocationEntry): void {
+  async add(entry: RevocationEntry): Promise<void> {
     this.entries.set(storeKey(entry.kind, entry.value), entry);
   }
 
-  remove(kind: RevocationTargetKind, value: string): boolean {
+  async remove(kind: RevocationTargetKind, value: string): Promise<boolean> {
     return this.entries.delete(storeKey(kind, value));
   }
 
-  get(kind: RevocationTargetKind, value: string): RevocationEntry | undefined {
+  async get(kind: RevocationTargetKind, value: string): Promise<RevocationEntry | undefined> {
     return this.entries.get(storeKey(kind, value));
   }
 
-  all(): RevocationEntry[] {
+  async all(): Promise<RevocationEntry[]> {
     return [...this.entries.values()];
   }
 
-  clear(): void {
+  async clear(): Promise<void> {
     this.entries.clear();
   }
 }
@@ -161,20 +164,29 @@ export class InMemoryRevocationStore implements RevocationStore {
 
 /**
  * A live, mutable registry of revocations. Mint it with the in-memory store (default) or any
- * {@link RevocationStore}. A resource server holds one and consults {@link isRevoked} /
+ * {@link RevocationStore}. A resource server holds one and consults {@link checkRevocation} /
  * {@link verifyWithRevocation} on every action, next to the core verifier.
  */
 export class RevocationRegistry {
   constructor(private readonly store: RevocationStore = new InMemoryRevocationStore()) {}
 
   /** Revoke a capability id, holder key, issuer key, or subtree prefix. Returns the stored entry. */
-  revoke(input: RevocationInput): RevocationEntry {
+  async revoke(input: RevocationInput): Promise<RevocationEntry> {
     const revokedAt = input.revokedAt ?? Date.now();
     const reason = input.reason ?? '';
+    if (typeof revokedAt !== 'number' || !Number.isFinite(revokedAt)) throw new TypeError('revoke: revokedAt must be a finite number');
+    if (input.notBefore !== undefined && (typeof input.notBefore !== 'number' || !Number.isFinite(input.notBefore))) {
+      throw new TypeError('revoke: notBefore must be a finite number');
+    }
+    if (typeof reason !== 'string') throw new TypeError('revoke: reason must be a string');
     let entry: RevocationEntry;
     if (input.kind === 'prefix') {
       if (!Array.isArray(input.prefix) || input.prefix.length === 0) {
         throw new TypeError('revoke: a prefix revocation requires a non-empty cap-id path');
+      }
+      // The path is serialized with ',' as separator: an element holding one would alias a different path.
+      if (input.prefix.some((id) => typeof id !== 'string' || id.length === 0 || id.includes(PREFIX_SEP))) {
+        throw new TypeError("revoke: every prefix element must be a non-empty string without ','");
       }
       entry = { kind: 'prefix', value: serializePrefix(input.prefix), prefix: [...input.prefix], reason, revokedAt };
     } else {
@@ -184,7 +196,7 @@ export class RevocationRegistry {
       entry = { kind: input.kind, value: input.value, reason, revokedAt };
     }
     if (input.notBefore !== undefined) entry.notBefore = input.notBefore;
-    this.store.add(entry);
+    await this.store.add(entry);
     return entry;
   }
 
@@ -196,7 +208,7 @@ export class RevocationRegistry {
   revokeSubtree(
     target: string | string[],
     opts: { reason?: string; revokedAt?: number; notBefore?: number } = {},
-  ): RevocationEntry {
+  ): Promise<RevocationEntry> {
     if (Array.isArray(target)) {
       return this.revoke({ kind: 'prefix', prefix: target, ...opts });
     }
@@ -204,7 +216,7 @@ export class RevocationRegistry {
   }
 
   /** Remove a revocation. Returns true when one was removed. */
-  unrevoke(key: RevocationKey): boolean {
+  async unrevoke(key: RevocationKey): Promise<boolean> {
     if (key.kind === 'prefix') {
       if (!Array.isArray(key.prefix) || key.prefix.length === 0) return false;
       return this.store.remove('prefix', serializePrefix(key.prefix));
@@ -213,34 +225,34 @@ export class RevocationRegistry {
   }
 
   /** Every active-or-scheduled revocation (a snapshot). */
-  list(): RevocationEntry[] {
+  list(): Promise<RevocationEntry[]> {
     return this.store.all();
   }
 
-  /** Point lookup of a `cap`/`holder`/`issuer` revocation (used by {@link isRevoked}). */
-  lookup(kind: 'cap' | 'holder' | 'issuer', value: string): RevocationEntry | undefined {
+  /** Point lookup of a `cap`/`holder`/`issuer` revocation (used by {@link checkRevocation}). */
+  lookup(kind: 'cap' | 'holder' | 'issuer', value: string): Promise<RevocationEntry | undefined> {
     return this.store.get(kind, value);
   }
 
-  /** Every subtree-`prefix` revocation (used by {@link isRevoked}). */
-  prefixes(): RevocationEntry[] {
-    return this.store.all().filter((e) => e.kind === 'prefix');
+  /** Every subtree-`prefix` revocation (used by {@link checkRevocation}). */
+  async prefixes(): Promise<RevocationEntry[]> {
+    return (await this.store.all()).filter((e) => e.kind === 'prefix');
   }
 
   /** Drop every revocation. */
-  clear(): void {
-    this.store.clear();
+  clear(): Promise<void> {
+    return this.store.clear();
   }
 
   // -- kill-switch (instant: no notBefore, so it bites any in-flight action immediately) --
 
   /** KILL-SWITCH: instantly revoke an agent by its holder key — denies EVERY in-flight action by it. */
-  killAgent(holder: string, opts: { reason?: string; revokedAt?: number } = {}): RevocationEntry {
+  killAgent(holder: string, opts: { reason?: string; revokedAt?: number } = {}): Promise<RevocationEntry> {
     return this.revoke({ kind: 'holder', value: holder, reason: opts.reason ?? 'kill-switch: agent killed', revokedAt: opts.revokedAt });
   }
 
   /** KILL-SWITCH: instantly revoke an entire delegation subtree rooted at `rootCapId`. */
-  killSubtree(rootCapId: string, opts: { reason?: string; revokedAt?: number } = {}): RevocationEntry {
+  killSubtree(rootCapId: string, opts: { reason?: string; revokedAt?: number } = {}): Promise<RevocationEntry> {
     return this.revoke({ kind: 'cap', value: rootCapId, reason: opts.reason ?? 'kill-switch: subtree killed', revokedAt: opts.revokedAt });
   }
 }
@@ -267,7 +279,7 @@ function startsWith(ids: string[], prefix: string[]): boolean {
  * its issuer (`issuer`) and its holder (`holder`), root→leaf, then every subtree `prefix`. Returns the
  * FIRST active match. A revocation whose `notBefore` is still in the future does not yet bite.
  */
-export function isRevoked(p: PCActn, registry: RevocationRegistry, opts: { now?: number } = {}): IsRevokedResult {
+async function scanRevoked(p: PCActn, registry: RevocationRegistry, opts: { now?: number } = {}): Promise<IsRevokedResult> {
   const now = opts.now ?? Date.now();
   const chain: CapabilityChain | undefined = p?.cap_chain;
   if (!Array.isArray(chain) || chain.length === 0) return { revoked: false };
@@ -282,14 +294,14 @@ export function isRevoked(p: PCActn, registry: RevocationRegistry, opts: { now?:
       ['holder', hop_.holder],
     ] as const) {
       if (typeof key !== 'string' || key.length === 0) continue;
-      const entry = registry.lookup(kind, key);
+      const entry = await registry.lookup(kind, key);
       if (entry && isActiveAt(entry, now)) return { revoked: true, matched: entry, reason: matchReason(entry) };
     }
     if (typeof hop_.id === 'string') ids.push(hop_.id);
   }
 
   // Subtree prefixes: scan the prefix entries and test the chain's id path against each.
-  for (const entry of registry.prefixes()) {
+  for (const entry of await registry.prefixes()) {
     if (entry.prefix && startsWith(ids, entry.prefix) && isActiveAt(entry, now)) {
       return { revoked: true, matched: entry, reason: matchReason(entry) };
     }
@@ -299,18 +311,44 @@ export function isRevoked(p: PCActn, registry: RevocationRegistry, opts: { now?:
 }
 
 /**
+ * The revocation check: it never throws and never reports "not revoked" because it could
+ * not look. A missing or malformed PCActn / `cap_chain`, a hop whose id, issuer or holder is not a
+ * non-empty string, a non-finite `now`, or a store that throws all yield `revoked: true` with a reason that
+ * starts `revocation check failed closed`. Use this wherever the answer gates an action.
+ */
+export async function checkRevocation(p: PCActn, registry: RevocationRegistry, opts: { now?: number } = {}): Promise<IsRevokedResult> {
+  const closed = (why: string): IsRevokedResult => ({ revoked: true, reason: `revocation check failed closed: ${why}` });
+  const now = opts.now ?? Date.now();
+  if (typeof now !== 'number' || !Number.isFinite(now)) return closed('clock is not a finite number');
+  const chain: unknown = p?.cap_chain;
+  if (!Array.isArray(chain) || chain.length === 0) return closed('the action carries no capability chain');
+  for (const hop of chain) {
+    const h = hop as Partial<Capability> | null;
+    for (const k of ['id', 'issuer', 'holder'] as const) {
+      const v = h?.[k];
+      if (typeof v !== 'string' || v.length === 0) return closed(`a chain hop has no ${k}`);
+    }
+  }
+  try {
+    return await scanRevoked(p, registry, { now });
+  } catch (e) {
+    return closed(`the revocation store failed (${e instanceof Error ? e.name : typeof e})`);
+  }
+}
+
+/**
  * Combine the core verify outcome with the revocation gate. Allow ONLY if the core verified AND nothing
  * in the chain is revoked. Fails closed: a core result that did not allow denies regardless of the
  * registry, and any revocation match denies regardless of the core result.
  */
-export function verifyWithRevocation(
+export async function verifyWithRevocation(
   p: PCActn,
   coreVerifyResult: VerifyResult,
   registry: RevocationRegistry,
   opts: { now?: number } = {},
-): VerifyWithRevocationResult {
+): Promise<VerifyWithRevocationResult> {
   const coreAllow = coreVerifyResult !== null && typeof coreVerifyResult === 'object' && coreVerifyResult.allow === true;
-  const revocation = isRevoked(p, registry, opts);
+  const revocation = await checkRevocation(p, registry, opts);
   const allow = coreAllow && !revocation.revoked;
   if (allow) return { allow, coreAllow, revocation };
   const reason = !coreAllow
@@ -393,13 +431,13 @@ function revokedAtFrom(event_timestamp: number | undefined): number {
  *  - `kill-switch`    → kill the agent's holder key (`agent`); if a `grant_ref` is named, also revoke that cap.
  *  - `session-revoked`→ when the subject carries an agent/holder key (`holder`/`agent`/`id` field), kill it.
  */
-export function ingestCaepEvent(event: IngestableCaepEvent, registry: RevocationRegistry): RevocationEntry[] {
+export async function ingestCaepEvent(event: IngestableCaepEvent, registry: RevocationRegistry): Promise<RevocationEntry[]> {
   const added: RevocationEntry[] = [];
   if (event.type === CAEP_EVENT_TYPES.grantRevoked) {
     const ev = event.payload;
     if (typeof ev.grant_ref === 'string' && ev.grant_ref.length > 0) {
       added.push(
-        registry.revoke({
+        await registry.revoke({
           kind: 'cap',
           value: ev.grant_ref,
           reason: ev.reason ?? 'CAEP grant-revoked',
@@ -411,17 +449,17 @@ export function ingestCaepEvent(event: IngestableCaepEvent, registry: Revocation
     const ev = event.payload;
     const revokedAt = revokedAtFrom(ev.event_timestamp);
     if (typeof ev.agent === 'string' && ev.agent.length > 0) {
-      added.push(registry.killAgent(ev.agent, { reason: ev.reason ?? 'CAEP kill-switch', revokedAt }));
+      added.push(await registry.killAgent(ev.agent, { reason: ev.reason ?? 'CAEP kill-switch', revokedAt }));
     }
     if (typeof ev.grant_ref === 'string' && ev.grant_ref.length > 0) {
-      added.push(registry.revoke({ kind: 'cap', value: ev.grant_ref, reason: ev.reason ?? 'CAEP kill-switch', revokedAt }));
+      added.push(await registry.revoke({ kind: 'cap', value: ev.grant_ref, reason: ev.reason ?? 'CAEP kill-switch', revokedAt }));
     }
   } else {
     const ev = event.payload;
     const holder = stringField(ev.subject, 'holder') ?? stringField(ev.subject, 'agent') ?? stringField(ev.subject, 'id');
     if (holder !== undefined) {
       added.push(
-        registry.killAgent(holder, {
+        await registry.killAgent(holder, {
           reason: ev.reason_admin ?? ev.reason_user ?? 'CAEP session-revoked',
           revokedAt: revokedAtFrom(ev.event_timestamp),
         }),

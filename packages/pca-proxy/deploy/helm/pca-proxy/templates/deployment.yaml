@@ -1,0 +1,63 @@
+{{- if eq .Values.mode "gateway" }}
+{{- if and .Values.persistence.enabled (gt (int .Values.replicaCount) 1) }}{{ fail "persistence.enabled needs replicaCount 1: each proxy owns its state directory" }}{{ end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pca-proxy.fullname" . }}
+  labels: {{- include "pca-proxy.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "pca-proxy.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "pca-proxy.selector" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include "pca-proxy.config" . | sha256sum }}
+        {{- with .Values.podAnnotations }}{{ toYaml . | nindent 8 }}{{ end }}
+    spec:
+      securityContext: { runAsNonRoot: true, fsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - {{- include "pca-proxy.container" . | nindent 10 }}
+        {{- if .Values.controlPlane.enabled }}
+        - {{- include "pca-proxy.controlPlaneContainer" . | nindent 10 }}
+        {{- end }}
+      volumes: {{- include "pca-proxy.volumes" . | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pca-proxy.fullname" . }}
+  labels: {{- include "pca-proxy.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector: {{- include "pca-proxy.selector" . | nindent 4 }}
+  ports: [{ name: http, port: {{ .Values.service.port }}, targetPort: http }]
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "pca-proxy.fullname" . }}
+  labels: {{- include "pca-proxy.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "pca-proxy.selector" . | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from: {{ toYaml .Values.networkPolicy.from | nindent 8 }}
+      ports: [{ port: 8788 }]
+{{- end }}
+{{- end }}

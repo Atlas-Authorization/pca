@@ -12,7 +12,8 @@
  * lets tests verify entirely in-memory.
  */
 import {
-  createRemoteJWKSet,
+  base64url,
+  decodeProtectedHeader,
   errors as joseErrors,
   jwtVerify,
   type JWK,
@@ -21,35 +22,17 @@ import {
   type JWTVerifyOptions,
   type KeyLike,
 } from 'jose';
+import { createHash } from 'node:crypto';
 import { assertCanonicalCompactJws } from '@atlasauth/pca';
 import { discoverOidc } from './discovery';
+import { OidcVerificationError, type OidcVerificationErrorCode } from './errors';
+import { createOidcJwks } from './jwks';
+
+export { OidcVerificationError } from './errors';
+export type { OidcVerificationErrorCode } from './errors';
 
 /** Any key material jose's `jwtVerify` accepts: a key/secret, a JWK, or a dynamic key resolver. */
 export type OidcVerifyKey = KeyLike | Uint8Array | JWK | JWTVerifyGetKey;
-
-/** A stable classification of why ID-token verification failed. */
-export type OidcVerificationErrorCode =
-  | 'config'
-  | 'invalid_token'
-  | 'signature'
-  | 'issuer'
-  | 'audience'
-  | 'expired'
-  | 'issued_at'
-  | 'not_before'
-  | 'nonce'
-  | 'azp'
-  | 'claims';
-
-/** The error thrown for any ID-token verification failure. `code` classifies the cause. */
-export class OidcVerificationError extends Error {
-  override readonly name = 'OidcVerificationError';
-  readonly code: OidcVerificationErrorCode;
-  constructor(code: OidcVerificationErrorCode, message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.code = code;
-  }
-}
 
 /** RFC 7800 `cnf` confirmation claim. `jwk` (proof-of-possession public key) roots a PCA principal. */
 export interface OidcConfirmation {
@@ -72,6 +55,8 @@ export interface OidcIdTokenClaims extends JWTPayload {
   exp: number;
   nonce?: string;
   azp?: string;
+  at_hash?: string;
+  c_hash?: string;
   auth_time?: number;
   email?: string;
   email_verified?: boolean;
@@ -95,6 +80,13 @@ export interface VerifyIdTokenOptions {
    * Defaults to `audience` when that is a single string.
    */
   authorizedParty?: string;
+  /**
+   * When set, the ID token's `at_hash` MUST be present and equal the left half of the hash of this
+   * access token (OIDC Core 3.1.3.6 / 3.2.2.9). Use it whenever you also use the access token.
+   */
+  accessToken?: string;
+  /** When set, the ID token's `c_hash` MUST be present and equal the hash of this authorization code (OIDC Core 3.3.2.11). */
+  code?: string;
   /** Clock skew tolerance in seconds (default 0). */
   clockToleranceSec?: number;
   /** When set, reject a token whose `iat` is older than this many seconds. */
@@ -107,8 +99,13 @@ export interface VerifyIdTokenOptions {
   jwksUri?: string;
   /** Resolve the JWKS endpoint from the issuer's `.well-known/openid-configuration` first. */
   discover?: boolean;
-  /** Injectable `fetch` used for discovery (defaults to the global `fetch`). */
+  /** Injectable `fetch` used for discovery (defaults to the global `fetch`). The JWKS request uses the global `fetch`. */
   fetch?: typeof fetch;
+  /**
+   * Require `https:` for `jwksUri`, for the issuer when `discover` is set, and for the discovered `jwks_uri`
+   * (default true). Pass `false` only for a local test issuer.
+   */
+  requireHttps?: boolean;
 }
 
 /** The asymmetric OIDC signing algorithms allowed by default (symmetric algs are excluded). */
@@ -167,17 +164,44 @@ export async function verifyIdToken(idToken: string, opts: VerifyIdTokenOptions)
     throw mapJoseError(cause);
   }
 
-  return projectClaims(payload, opts);
+  const claims = projectClaims(payload, opts);
+  const alg = decodeProtectedHeader(idToken).alg;
+  if (opts.accessToken !== undefined) checkHalfHash('at_hash', claims.at_hash, opts.accessToken, alg);
+  if (opts.code !== undefined) checkHalfHash('c_hash', claims.c_hash, opts.code, alg);
+  return claims;
 }
 
+/** OIDC Core 3.1.3.6: base64url(left half of H(value)), H chosen by the ID token's alg (EdDSA = SHA-512). */
+function checkHalfHash(name: 'at_hash' | 'c_hash', actual: string | undefined, value: string, alg: string | undefined): void {
+  if (actual === undefined) throw new OidcVerificationError(name, `id token is missing the expected ${name}`);
+  const bits = alg === 'EdDSA' ? 512 : /(256|384|512)$/.exec(alg ?? '')?.[1];
+  if (bits === undefined) throw new OidcVerificationError(name, `cannot compute ${name} for alg ${String(alg)}`);
+  const digest = createHash(`sha${bits}`).update(value, 'ascii').digest();
+  const expected = base64url.encode(digest.subarray(0, digest.length / 2));
+  if (actual !== expected) throw new OidcVerificationError(name, `id token ${name} does not match the supplied value`);
+}
+
+/**
+ * `key` wins, then `jwksUri`, then `discover`. A URI is wrapped in the fail-closed resolver (`createOidcJwks`: https,
+ * size cap, JWK Set shape, timeout), built per call, so no key set outlives the call. For caching across calls build the
+ * resolver once and pass it as `key`.
+ */
 async function resolveKey(opts: VerifyIdTokenOptions): Promise<OidcVerifyKey> {
   if (opts.key !== undefined) return opts.key;
-  if (opts.jwksUri !== undefined) return createRemoteJWKSet(new URL(opts.jwksUri));
-  if (opts.discover === true) {
-    const meta = await discoverOidc(opts.issuer, opts.fetch !== undefined ? { fetch: opts.fetch } : {});
-    return createRemoteJWKSet(new URL(meta.jwks_uri));
+  // requireHttps is passed through; both callees default it to true.
+  const requireHttps = opts.requireHttps;
+  let jwksUri = opts.jwksUri;
+  if (jwksUri === undefined && opts.discover === true) {
+    jwksUri = (await discoverOidc(opts.issuer, { requireHttps, fetch: opts.fetch })).jwks_uri;
   }
-  throw new OidcVerificationError('config', 'verifyIdToken: no key source (pass opts.key, opts.jwksUri, or opts.discover)');
+  if (jwksUri === undefined) {
+    throw new OidcVerificationError('config', 'verifyIdToken: no key source (pass opts.key, opts.jwksUri, or opts.discover)');
+  }
+  try {
+    return createOidcJwks({ jwksUri, requireHttps });
+  } catch (cause) {
+    throw new OidcVerificationError('config', `verifyIdToken: ${(cause as Error).message}`, { cause });
+  }
 }
 
 function projectClaims(payload: JWTPayload, opts: VerifyIdTokenOptions): OidcIdTokenClaims {
@@ -196,6 +220,8 @@ function projectClaims(payload: JWTPayload, opts: VerifyIdTokenOptions): OidcIdT
 
   const nonce = asString(payload.nonce);
   const azp = asString(payload.azp);
+  const atHash = asString(payload.at_hash);
+  const cHash = asString(payload.c_hash);
 
   // nonce binding (OIDC Core §3.1.3.7): when the RP supplied a nonce it MUST round-trip exactly.
   if (opts.nonce !== undefined && nonce !== opts.nonce) {
@@ -234,6 +260,8 @@ function projectClaims(payload: JWTPayload, opts: VerifyIdTokenOptions): OidcIdT
     exp,
     ...(nonce !== undefined ? { nonce } : {}),
     ...(azp !== undefined ? { azp } : {}),
+    ...(atHash !== undefined ? { at_hash: atHash } : {}),
+    ...(cHash !== undefined ? { c_hash: cHash } : {}),
     ...(authTime !== undefined ? { auth_time: authTime } : {}),
     ...(email !== undefined ? { email } : {}),
     ...(emailVerified !== undefined ? { email_verified: emailVerified } : {}),

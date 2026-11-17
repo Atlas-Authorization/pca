@@ -2,11 +2,22 @@
 
 See the full release notes in [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
 
-## 0.4.3 (2026-10-27)
+## 0.5.0 (unreleased)
 
-Security (0.4.3): the hardware attestation verifiers (AMD SEV-SNP, Intel DCAP / TDX, Azure Attestation, Google Confidential Space) now refuse evidence with a second encoding: a SEV-SNP report must be exactly 1184 bytes with zero reserved signature bytes; DCAP quotes may carry only zero bytes after the signature data; Intel PCK chains reject unrecognised critical extensions; the X.509 reader rejects trailing bytes, non-minimal DER lengths and keyUsage with more than 7 unused bits; MAA and Confidential Space tokens must be canonical base64url. Previously accepted malleable evidence is now rejected. See docs/pca/CHANGELOG.md.
+Security (0.5, PQ pins): a classical (Ed25519) grant naming an issuer that has a `pqPins` entry is refused by `verifyPCActn`, `requirePCA`, `authorize` and `verifyPCActnCore` (`pq_pin: the grant issuer is pinned to a post-quantum key; a classical grant is refused`); 0.4.2 and 0.4.3 let it pass, so the pin did not stop an attacker holding the issuer's classical key. Issuers without a pin are unchanged.
 
-## 0.4.2 (2026-10-25)
+### Hardening (0.5)
+
+- RSA public keys are usable only with a modulus of 512 to 16384 bits and an odd exponent of at least 3 and at most 32 bits, at every RSA verify (Intel TDX / SEV-SNP / NVIDIA chains and OCSP, MAA, Confidential Space, Sigstore). OpenSSL accepted e = 1, even exponents, 256-bit moduli and huge moduli. Denial texts are unchanged.
+- Certificate extension OIDs longer than 256 content bytes (`extension OID is too long`) or with an arc of more than 64 base-128 groups (`extension OID has an oversized arc`) are refused before any big-integer work.
+- A Sigstore bundle with more than 8 RFC 3161 timestamps is refused (`tsa: too many RFC 3161 timestamps (<n>, at most 8)`).
+- BasicConstraints `cA` must be a DER BOOLEAN (0x00 or 0xFF); other non-zero bytes were read as TRUE and are now refused (`BasicConstraints cA is not a DER BOOLEAN`).
+
+Security (0.5, NVIDIA collateral): by default every chain certificate that names a CRL distribution point must be covered by a verified CRL from its issuer; previously any one fresh CRL satisfied the check. New option `requireCrlFor` (`'cdp'` default, `'all'`, or chain indices).
+
+Fix (0.5, NVIDIA OCSP, TS + Go + Rust): the strict "every ASN.1 time is well formed" check no longer looks inside OCTET STRING or BIT STRING contents. asn1js auto-parses those bytes, so a response whose issuer-name hash, key hash, nonce or signature happened to read as a malformed time was refused ("malformed (out-of-range) ASN.1 time"); a CA whose key hash has that shape (about 4 in 65,536) had every valid response refused. Times in the response structure itself are still checked strictly. Java, Kotlin, .NET, PHP, Python, Ruby and Swift already behaved this way.
+
+Added (caveat language v2, track K1): `needs_discharge` third-party caveats with pinned, hop- or action-bound signed discharges, `sealed`, the holder-signed per-action `narrow` block, `max_uses` over the replay store, the bounded `derive` check and `spiffe_bound`; `evaluateK1`, `verifyDischarge`, `verifyNarrow`, `reserveMaxUses`; `k1` input on `decide`, `verifyPCActn`, `requirePCA` (+ `usesStore`). Vectors `conformance/caveat-lang-vectors.json`. Chains that carry one of these types without K1 input are refused, as unknown types always were.
 
 Security (0.4.2, r13 mutation review): `verifyAttestation` and `createAttestationVerifier` accepted an attestation when the verifier clock was not a finite number (`nowMs` NaN / Infinity / a string, or an `opts.now` hook returning one): every validity-window and nonce-age comparison came out false, which read as "within the window" and "fresh" (fail open). A non-finite clock is now refused (`verifier clock is not a finite time (fail closed)`). The verified-core twin already refused it.
 

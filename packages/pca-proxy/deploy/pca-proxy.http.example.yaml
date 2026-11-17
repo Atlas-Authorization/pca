@@ -1,0 +1,22 @@
+# pca-proxy in front of a REST API. Everything not listed here is refused.
+mode: enforce                        # observe first: it logs what enforce would refuse and blocks nothing
+audience: orders-api
+budget: { max: 50 }                  # blast-radius units per grant lifetime: a read costs 0.05, an irreversible write 0.8
+audit: { path: /var/lib/pca-proxy/audit.jsonl }
+approvals: { store: /var/lib/pca-proxy/approvals.json, waitSeconds: 120 }
+limits: { maxRequestBytes: 262144, maxResponseBytes: 1048576, upstreamTimeoutMs: 15000 }
+
+http:
+  upstream: http://127.0.0.1:9000     # the real API
+  listen: { host: 0.0.0.0, port: 8788 }
+  mode: sidecar                       # the proxy mints the proofs; the agent needs no SDK
+  ns: orders
+  openapi: /etc/pca-proxy/openapi.yaml
+  # the upstream credential lives here, not with the agent (the value comes from the environment)
+  upstreamHeaders: { Authorization: "Bearer ${UPSTREAM_TOKEN}" }
+  actions:
+    listOrders:  { policy: allow,   effect: read }
+    getOrder:    { policy: allow,   effect: read }
+    createOrder: { policy: allow,   effect: write, reversibility: reversible, limit: "20/hour" }
+    refundOrder: { policy: approve, effect: write, reversibility: irreversible }
+    deleteOrder: { policy: deny,    effect: write }

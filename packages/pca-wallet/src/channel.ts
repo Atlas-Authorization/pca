@@ -1,4 +1,6 @@
-import { decodeB64uStrict, hashCanonical, verifyIntentRequired, type ActionSchemaKey, type Reversibility, type SignedIntentRequired } from '@atlasauth/pca';
+import { decodeB64uStrict, hashCanonical } from '@atlasauth/pca';
+import { verifyIntentRequired, type ActionSchemaKey, type SignedIntentRequired } from '@atlasauth/pca/ext/intent';
+import { type Reversibility } from '@atlasauth/pca/ext/research';
 import { cellRep, cellStats, DEFAULT_HARM, type HarmModel, type IntentLearner, type Omega, type VerbSpace } from '@atlasauth/pca-intent';
 import { verifyAssertion, type CredentialPublicKey } from '@atlasauth/pca-webauthn';
 import { boxCells, cellInBox, cellOfAction, coordsOfCell, flatIndex, resolveCoords, type CellBox } from './box';
@@ -80,6 +82,8 @@ export interface DeviceTrust {
   rpId: string;
   origins: string[];
   credentials: Readonly<Record<string, CredentialPublicKey>>;
+  /** Last accepted signature counter per credential id (absent = 0). The wallet records each accepted assertion's counter here, so a cloned authenticator is refused. */
+  signCounts?: Record<string, number>;
 }
 
 export interface ChannelOptions {
@@ -538,8 +542,9 @@ export class TrustedChannel {
         const sg = decodeB64uStrict(wa.signature);
         if (!pk || !ad || !cd || !sg) return { ok: false, code: 'tier_evidence', reason: 'unknown credential or malformed assertion' };
         const challenge = deviceChallenge({ questionId, renderedDigest: it.card.rendered_digest, y: 1, ...(it.jit && it.irreversible && it.actionDigest ? { actionDigest: it.actionDigest } : {}) });
-        const res = verifyAssertion({ authenticatorData: ad, clientDataJSON: cd, signature: sg, publicKey: pk }, { expectedChallenge: challenge, rpId: dev.rpId, origins: dev.origins, requireUV: true });
+        const res = verifyAssertion({ authenticatorData: ad, clientDataJSON: cd, signature: sg, publicKey: pk }, { expectedChallenge: challenge, rpId: dev.rpId, origins: dev.origins, requireUV: true, storedSignCount: dev.signCounts?.[wa.credential_id] ?? 0 });
         if (!res.ok) return { ok: false, code: 'tier_evidence', reason: `security key: ${res.reason}` };
+        if (dev.signCounts) dev.signCounts[wa.credential_id] = res.signCount;
         return { ok: true, ux: { webauthn: { ...wa } } };
       }
     }

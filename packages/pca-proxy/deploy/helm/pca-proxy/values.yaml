@@ -1,0 +1,70 @@
+# How the proxy runs:
+#   gateway  its own Deployment and Service in front of `config.http.upstream` (agents call the Service; the API is not exposed to them)
+#   sidecar  this chart renders the ConfigMap and Secret only; add the container to your own pod (see NOTES.txt, or
+#            {{ include "pca-proxy.container" . }} from a parent chart). The API listens on the pod's loopback so only the proxy reaches it.
+mode: gateway
+
+image:
+  # build deploy/Dockerfile (published package) and push it where your cluster can pull it
+  repository: pca-proxy
+  tag: ""            # default: the chart's appVersion
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+replicaCount: 1      # each replica keeps its own budget, replay counters and audit chain (a per-proxy grant); persistence needs 1
+
+# The proxy's own configuration (pca-proxy.yaml), exactly as the pca-proxy README describes. The chart overrides only the paths
+# and the listen address so they match its volumes: audit.path, state.dir, approvals.store, http.listen, mcp.listen is untouched.
+# Start in observe mode; switch to enforce after you have read the audit log and a human signed the review.
+config:
+  mode: observe
+  audience: my-api
+  approvals: { waitSeconds: 120 }
+  http:
+    upstream: http://my-api.default.svc:8080
+    mode: sidecar
+    ns: api
+    actions: {}          # <operationId>: { policy: approve|allow|deny, effect: read|write, ... }; anything unlisted is refused
+# The OpenAPI document the actions map onto (the text of openapi.yaml). Leave empty if you use config.http.routes.
+openapi: ""
+
+# Settings of the agent whose grant the proxy mints (the `agent` block of the config).
+agent:
+  goal: ""               # the grant's goal, for the audit trail
+  # Secrets are never in values: name Secrets you created. Each is a base64url 32-byte key (pca-cli keygen / openssl rand -base64 32 | tr '+/' '-_' | tr -d =).
+  principalKeySecret: { name: "", key: principal.key }     # required: the key the proxy's grant derives from (stable across restarts)
+  stateHmacSecret: { name: "", key: state-hmac.key }        # optional: MACs the state journal
+  revocationFile: ""                                         # a path whose existence revokes the grant (mount your own)
+upstreamEnv: []          # extra env, e.g. the upstream credential: [{ name: UPSTREAM_TOKEN, valueFrom: { secretKeyRef: { name: api-creds, key: token } } }]
+
+service:
+  type: ClusterIP
+  port: 8788
+
+persistence:
+  enabled: false         # keep the audit log, approvals and state across pod restarts (needs replicaCount 1)
+  size: 1Gi
+  storageClassName: ""
+  existingClaim: ""
+
+# Reports every audit receipt to a PCA control plane (fleet view, freeze). Runs as a second container that follows the audit log.
+controlPlane:
+  enabled: false
+  version: "0.5.0"       # @atlasauth/pca-control-plane, installed at container start
+  image: node:22-alpine
+  url: ""                # the control plane's API origin, e.g. https://api.atlasauth.net
+  source: gateway        # the source id you pinned in the control plane
+  agentName: ""          # default: the release name
+  sourceKeySecret: { name: "", key: source.key }     # the source's secret key file (pca-control-plane keygen)
+  apiKeySecret: { name: "", key: ATLAS_SECRET_KEY }  # the API key the report endpoint needs
+
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { memory: 256Mi }
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: false         # gateway mode: only the namespaces/pods below may reach the proxy
+  from: []               # e.g. [{ podSelector: { matchLabels: { app: my-agent } } }]

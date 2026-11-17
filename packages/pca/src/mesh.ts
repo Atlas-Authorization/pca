@@ -36,7 +36,7 @@ import { b64u, canonicalBytes, hashCanonical, utf8, compareUtf8 } from './hash';
 import { type Capability, type Caveat, capHash, delegate, mintRoot, verifyChain } from './capability';
 import { encodeKey, publicKeyOf, sign, verifyB64u } from './keys';
 import { debit, debitConsolidated, safetyBound, subBudget } from './risk';
-import { type ConsistencyProof, TransparencyLedger, verifyLedgerConsistency } from './ledger';
+import { type ConsistencyProof, EMPTY_TREE_ROOT, TransparencyLedger, verifyLedgerConsistency } from './ledger';
 import { type InclusionProof, merkleProof, merkleRoot, verifyInclusion } from './merkle';
 import { type LeafProof, type NonMembershipProof, RevocationSet, verifyNonMembership } from './revocation';
 
@@ -240,7 +240,7 @@ export interface MeshVerdict {
 
 const isRec = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 const isStr = (x: unknown): x is string => typeof x === 'string';
-const isNat = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0;
+const isNat = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0 && !Object.is(x, -0);
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const own = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
 
@@ -381,7 +381,8 @@ export function checkHeadAdvance(prev: MeshHead, next: MeshHead, proof?: Consist
       if (!validConsistency(proof) || proof.oldSize !== prev.size || proof.newSize !== next.size) {
         return 'consistency proof required for a larger head';
       }
-      if (!verifyLedgerConsistency(prev.root, next.root, proof)) return 'head is not consistent with the previous head (fork or rewrite)';
+      // a head pins the empty log as root '': its RFC 9162 root is SHA-256("") (the consistency check wants that form)
+      if (!verifyLedgerConsistency(prev.size === 0 ? EMPTY_TREE_ROOT : prev.root, next.root, proof)) return 'head is not consistent with the previous head (fork or rewrite)';
     }
     if (next.rev_size === prev.rev_size && next.rev_root !== prev.rev_root) return 'equivocation (revocation set)';
     return undefined;
@@ -408,12 +409,44 @@ export interface MeshWitnessState {
   seen: { head: MeshHead; rev_ids: string[] }[];
 }
 
+/**
+ * Where a witness keeps what it has cosigned. `save` MUST be durable and atomic: when it returns, a restarted
+ * witness loads exactly this state. A witness that forgets across a restart can be walked back to cosign a fork.
+ * Synchronous on purpose: `cosign` must not return a signature before the state behind it is on disk.
+ */
+export interface MeshWitnessStore {
+  /** The last saved state, or undefined for a store that has never been written. Throws on corrupt data (never returns a partial state). */
+  load(): MeshWitnessState | undefined;
+  save(state: MeshWitnessState): void;
+}
+
+/** In-process store: a test double, and the default when no store is given. It does not survive a restart. */
+export class MemoryMeshWitnessStore implements MeshWitnessStore {
+  private state: string | undefined;
+  load(): MeshWitnessState | undefined {
+    return this.state === undefined ? undefined : (JSON.parse(this.state) as MeshWitnessState);
+  }
+  save(state: MeshWitnessState): void {
+    this.state = JSON.stringify(state);
+  }
+}
+
 /** Optional witness configuration. */
 export interface MeshWitnessOptions {
+  /**
+   * Durable memory. On construction the witness loads from it (a corrupt state throws: the witness never starts
+   * empty over damaged memory); every cosignature is issued only after the new state was saved, and a failed save
+   * refuses the cosignature and changes nothing.
+   */
+  store?: MeshWitnessStore;
   /** Witness's own clock; when set, heads timestamped beyond `now + maxClockSkewMs` are refused. */
   clock?: () => number;
   /** Default {@link DEFAULT_MAX_CLOCK_SKEW_MS}. */
   maxClockSkewMs?: number;
+}
+
+function stateOf(seen: Map<string, { head: MeshHead; rev: string[] }>): MeshWitnessState {
+  return { seen: [...seen.values()].map((s) => ({ head: { ...s.head }, rev_ids: [...s.rev] })).sort((a, b) => (a.head.domain < b.head.domain ? -1 : 1)) };
 }
 
 /**
@@ -432,6 +465,8 @@ export class MeshWitness {
     private readonly opts: MeshWitnessOptions = {},
   ) {
     this.id = encodeKey(publicKeyOf(secret));
+    const loaded = opts.store?.load();
+    if (loaded !== undefined) this.importState(loaded);
   }
 
   /** The newest head this witness cosigned for `domain` (what a domain must prove consistency from). */
@@ -462,13 +497,23 @@ export class MeshWitness {
       const now = new Set(set.list());
       if (!prev.rev.every((id) => now.has(id))) throw new Error('witness: revocation set drops a previously cosigned revocation');
     }
+    if (this.opts.store) {
+      // Persist first, commit to memory second: if the disk write fails nothing was cosigned and nothing changed.
+      const next = new Map(this.seen);
+      next.set(h.domain, { head: { ...h }, rev: set.list() });
+      try {
+        this.opts.store.save(stateOf(next));
+      } catch {
+        throw new Error('witness: could not persist state; refusing to cosign');
+      }
+    }
     this.seen.set(h.domain, { head: { ...h }, rev: set.list() });
     return { witness: this.id, sig: b64u(sign(this.secret, msg(COSIG_DOMAIN, h))) };
   }
 
   /** Export memory for persistence. Deterministic order. */
   exportState(): MeshWitnessState {
-    return { seen: [...this.seen.values()].map((s) => ({ head: { ...s.head }, rev_ids: [...s.rev] })).sort((a, b) => (a.head.domain < b.head.domain ? -1 : 1)) };
+    return stateOf(this.seen);
   }
 
   /** Restore memory; each record must be internally consistent (revocation list reproduces its root). */
@@ -637,7 +682,7 @@ export function assembleMeshProof(args: {
   const leaves: LeafProof[] = [];
   const leafIdx = new Map<string, number>();
   const leaf = (l: LeafProof): number => {
-    const k = JSON.stringify(l);
+    const k = b64u(canonicalBytes(l)); // canonical: the same leaf in any member order is one entry
     let i = leafIdx.get(k);
     if (i === undefined) {
       i = leaves.length;
@@ -652,7 +697,7 @@ export function assembleMeshProof(args: {
     ...(n.hi ? { hi: leaf(n.hi) } : {}),
   });
   const hops: HopEvidence[] = args.hops.map((ev) => {
-    const k = `${ev.head.sig}|${JSON.stringify(ev.head.head)}`;
+    const k = `${ev.head.sig}|${b64u(canonicalBytes(ev.head.head))}`;
     let i = headIdx.get(k);
     if (i === undefined) {
       i = heads.length;

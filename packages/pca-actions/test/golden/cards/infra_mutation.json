@@ -1,0 +1,30 @@
+{
+ "trait": "pca.infra_mutation",
+ "card": {
+  "verb": "golden.infra_mutation",
+  "title": "Do the infra mutation thing",
+  "text": "Do the infra mutation thing. This action changes infrastructure.",
+  "risk": "high",
+  "escalation": "auto",
+  "reversibility": "rate_limited",
+  "blast_ppm": 50000,
+  "needs": [
+   "resource_scope"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.infra_mutation"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "rate_limited",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "resource_scope"
+  ],
+  "context": [],
+  "prules": []
+ }
+}

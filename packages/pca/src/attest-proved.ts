@@ -263,7 +263,7 @@ export function createAttestationVerifierProved(opts: AttestationVerifierOpts): 
 const B64U_DIGEST = /^[A-Za-z0-9_-]{43}$/;
 const isRec = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 function parseHW(x: unknown): { version: number; digest: string } | undefined {
-  if (!isRec(x) || typeof x['version'] !== 'number' || !Number.isSafeInteger(x['version']) || typeof x['digest'] !== 'string' || !B64U_DIGEST.test(x['digest'])) return undefined;
+  if (!isRec(x) || typeof x['version'] !== 'number' || !Number.isSafeInteger(x['version']) || Object.is(x['version'], -0) || typeof x['digest'] !== 'string' || !B64U_DIGEST.test(x['digest'])) return undefined;
   return { version: x['version'], digest: x['digest'] };
 }
 

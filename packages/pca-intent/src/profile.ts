@@ -2,12 +2,9 @@ import {
   b64u,
   bindSuiteFields,
   canonicalBytesStrict,
-  checkSessionRevocation,
   decodeB64uStrict,
   hashCanonical,
   predicateMatches,
-  profileRevocationId,
-  profileRevocationScope,
   publicKeyOf,
   resolveSigAlg,
   signSuiteArtifact,
@@ -18,10 +15,15 @@ import {
   type ActionContext,
   type PqPinPolicy,
   type Predicate,
-  type SessionRevocationEvidence,
   type SignerSuiteOpts,
   type SigAlg,
 } from '@atlasauth/pca';
+import {
+  checkSessionRevocation,
+  profileRevocationId,
+  profileRevocationScope,
+  type SessionRevocationEvidence,
+} from '@atlasauth/pca/ext/intent';
 import { cellOf, type Omega } from './omega';
 import { outcomeToAction } from './policy';
 

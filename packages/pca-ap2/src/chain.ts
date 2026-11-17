@@ -320,11 +320,11 @@ export function splitChain(token: string): string[] {
 function checkTimes(label: string, o: JsonObject, now: number, skew: number): void {
   const { exp, iat } = o;
   if (exp !== undefined) {
-    if (!Number.isSafeInteger(exp)) throw new Ap2Error(`${label}: exp must be an integer`);
+    if (!Number.isSafeInteger(exp) || Object.is(exp, -0)) throw new Ap2Error(`${label}: exp must be an integer`);
     if (now > (exp as number) + skew) throw new Ap2Error(`${label}: expired at ${String(exp)}`);
   }
   if (iat !== undefined) {
-    if (!Number.isSafeInteger(iat)) throw new Ap2Error(`${label}: iat must be an integer`);
+    if (!Number.isSafeInteger(iat) || Object.is(iat, -0)) throw new Ap2Error(`${label}: iat must be an integer`);
     if ((iat as number) > now + skew) throw new Ap2Error(`${label}: iat is in the future`);
   }
 }

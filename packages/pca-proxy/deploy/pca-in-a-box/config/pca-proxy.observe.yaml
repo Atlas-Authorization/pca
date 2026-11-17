@@ -1,0 +1,26 @@
+# The orders API behind pca-proxy, OBSERVE mode: every call is forwarded and recorded; `pca autopilot` learns the tightest grant from it.
+mode: observe
+audience: orders-api
+agent:
+  goal: handle customer orders
+  principalKeyEnv: PCA_PRINCIPAL_KEY        # a dev key generated into the volume on first start
+state: { dir: /data/state-observe, hmacKeyEnv: PCA_STATE_HMAC }
+audit:
+  path: /data/audit/http.audit.jsonl
+  observedParams: { enabled: true, include: [qty] }   # lets `pca autopilot` learn limits (observe mode only)
+approvals: { store: /data/approvals-http.json, waitSeconds: 1 }
+http:
+  upstream: http://orders-api:9000
+  listen: { host: 0.0.0.0, port: 8788 }
+  mode: sidecar
+  ns: orders
+  openapi: /box/sample/openapi.yaml
+  upstreamHeaders: { Authorization: "Bearer ${UPSTREAM_TOKEN}" }   # the API credential stays with the proxy, not the agent
+  actions:
+    # What each action IS (read or write, reversible or not) is the operator's knowledge. Whether it may run is decided by the
+    # grant a human signs in enforce mode: an action the signed grant does not admit is refused whatever this says.
+    listOrders:  { policy: allow,   effect: read }
+    getOrder:    { policy: allow,   effect: read }
+    createOrder: { policy: approve, effect: write, reversibility: reversible }
+    refundOrder: { policy: approve, effect: write, reversibility: irreversible }
+    deleteOrder: { policy: approve, effect: write, reversibility: irreversible }

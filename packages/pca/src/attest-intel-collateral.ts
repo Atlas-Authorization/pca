@@ -1,4 +1,5 @@
 import { x509ValidAt } from './x509-validity';
+import { MAX_ATTEST_JSON_BYTES } from './policy-lists';
 /**
  * Intel PCS COLLATERAL verification for the genuine DCAP TDX quote path (the "online remainder" that
  * `attest-intel-tdx.ts` documents). Entirely OFFLINE given collateral bytes the caller fetched from Intel PCS:
@@ -238,12 +239,16 @@ function rawJsonObject(text: string, name: string): string | null {
 interface SignedDoc<T> {
   body: T;
 }
-function verifySignedJson(text: string, name: string, key: KeyObject): SignedDoc<Record<string, unknown>> | { error: string } {
+export function verifySignedJson(text: string, name: string, key: KeyObject): SignedDoc<Record<string, unknown>> | { error: string } {
+  if (text.length > MAX_ATTEST_JSON_BYTES) return { error: `${name}: malformed JSON segment: input too large` };
   const raw = rawJsonObject(text, name);
   if (raw === null) return { error: `${name} not found / malformed` };
   let doc: unknown;
+  let body: unknown;
   try {
     doc = JSON.parse(text);
+    // the body comes from the signed bytes: JSON.parse keeps the LAST duplicate member, and only the first is signed
+    body = JSON.parse(raw);
   } catch {
     return { error: `${name} document is not valid JSON` };
   }
@@ -251,7 +256,6 @@ function verifySignedJson(text: string, name: string, key: KeyObject): SignedDoc
   if (typeof sig !== 'string' || !/^[0-9a-fA-F]{128}$/.test(sig)) return { error: `${name} signature missing or malformed` };
   const ok = verify('sha256', Buffer.from(raw, 'utf8'), { key, dsaEncoding: 'ieee-p1363' }, Buffer.from(sig, 'hex'));
   if (!ok) return { error: `${name} signature does not verify under the TCB Signing certificate` };
-  const body = (doc as Record<string, unknown>)[name];
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return { error: `${name} is not an object` };
   return { body: body as Record<string, unknown> };
 }

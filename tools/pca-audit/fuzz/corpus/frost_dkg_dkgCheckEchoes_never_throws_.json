@@ -1,0 +1,22 @@
+{
+ "target": "frost-dkg dkgCheckEchoes (never throws)",
+ "seeds": [
+  [
+   {
+    "identifier": 1,
+    "sessionId": "ZnV6ei1ka2ctc2Vzc2lvbi0wMTIzNDU2Nzg5YWJjZGVm",
+    "transcriptDigest": "owKWD9lyy3IBLqkGaqahYb21qYass43sq2zFX66Ma-Y"
+   },
+   {
+    "identifier": 2,
+    "sessionId": "ZnV6ei1ka2ctc2Vzc2lvbi0wMTIzNDU2Nzg5YWJjZGVm",
+    "transcriptDigest": "owKWD9lyy3IBLqkGaqahYb21qYass43sq2zFX66Ma-Y"
+   },
+   {
+    "identifier": 3,
+    "sessionId": "ZnV6ei1ka2ctc2Vzc2lvbi0wMTIzNDU2Nzg5YWJjZGVm",
+    "transcriptDigest": "owKWD9lyy3IBLqkGaqahYb21qYass43sq2zFX66Ma-Y"
+   }
+  ]
+ ]
+}

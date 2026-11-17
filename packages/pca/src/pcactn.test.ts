@@ -63,15 +63,15 @@ function build() {
 describe('verifyPCActnCore', () => {
   it('well-formed PCActn is allowed; later checks are not-enforced', async () => {
     const { grant, mk } = build();
-    const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-1' });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1' });
     expect(r.allow).toBe(true);
-    expect(r.checks).toMatchObject({ wire: 'pass', version: 'pass', audience: 'pass', validity: 'pass', cap_chain: 'pass', plan_inclusion: 'pass', leaf_signature: 'pass', counter: 'pass', attestation: 'not-enforced', threshold: 'not-enforced', revocation: 'not-enforced' });
+    expect(r.checks).toMatchObject({ wire: 'pass', version: 'pass', audience: 'pass', validity: 'pass', cap_chain: 'pass', plan_inclusion: 'pass', leaf_signature: 'pass', counter_format: 'pass', attestation: 'not-enforced', threshold: 'not-enforced', revocation: 'not-enforced' });
   });
   it('tampered action breaks plan inclusion (and signature)', async () => {
     const { grant, mk } = build();
     const p = mk(0);
     p.action = { ...p.action, resource: 'sess/ALL' };
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(r.allow).toBe(false);
     expect(r.checks.plan_inclusion).toBe('fail');
     expect(r.checks.leaf_signature).toBe('fail');
@@ -80,7 +80,7 @@ describe('verifyPCActnCore', () => {
     const { grant, mk, S } = build();
     const p = mk(0);
     const { sig: _s, ...body } = { ...p, action: { ...p.action, verb: 'wire_money' } };
-    const r = await verifyPCActnCore(signPCActn(body, S.secretKey), { grant, nowEpoch: NOW });
+    const r = await verifyPCActnCore(signPCActn(body, S.secretKey), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(r.allow).toBe(false);
     expect(r.checks.plan_inclusion).toBe('fail');
     expect(r.checks.leaf_signature).toBe('pass');
@@ -89,14 +89,14 @@ describe('verifyPCActnCore', () => {
     const { grant, mk } = build();
     const p = mk(1);
     const { sig: _s, ...body } = p;
-    const r = await verifyPCActnCore(signPCActn(body, generateKeyPair().secretKey), { grant, nowEpoch: NOW });
+    const r = await verifyPCActnCore(signPCActn(body, generateKeyPair().secretKey), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(r.allow).toBe(false);
     expect(r.checks.leaf_signature).toBe('fail');
   });
   it('chain not rooted at the supplied grant fails', async () => {
     const { mk } = build();
     const other = build();
-    const r = await verifyPCActnCore(mk(0), { grant: other.grant, nowEpoch: NOW });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant: other.grant, nowEpoch: NOW });
     expect(r.allow).toBe(false);
     expect(r.checks.cap_chain).toBe('fail');
   });
@@ -104,13 +104,13 @@ describe('verifyPCActnCore', () => {
     const { grant, mk, S } = build();
     const { sig: _s, ...body } = mk(0);
     const neg = signPCActn({ ...body, counter: -1 }, S.secretKey);
-    expect((await verifyPCActnCore(neg, { grant, nowEpoch: NOW })).checks.counter).toBe('fail');
+    expect((await verifyPCActnCore(neg, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW })).checks.counter_format).toBe('fail');
     const bad = signPCActn({ ...body, counter: 'x' as unknown as number }, S.secretKey);
-    expect((await verifyPCActnCore(bad, { grant, nowEpoch: NOW })).checks.wire).toBe('fail');
-    const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { revocation: () => ({ enforced: true, ok: false, reason: 'revoked' }) } });
+    expect((await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW })).checks.wire).toBe('fail');
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', hooks: { revocation: () => ({ enforced: true, ok: false, reason: 'revoked' }) } });
     expect(r.allow).toBe(false);
     expect(r.reason).toMatch(/revoked/);
-    const m = await verifyPCActnCore({} as PCActn, { grant, nowEpoch: NOW });
+    const m = await verifyPCActnCore({} as PCActn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(m.allow).toBe(false);
   });
   it('encode/decode roundtrip and digest stable', async () => {
@@ -118,43 +118,43 @@ describe('verifyPCActnCore', () => {
     const p = mk(0);
     const q = decodePCActn(encodePCActn(p));
     expect(pcactnDigest(q)).toBe(pcactnDigest(p));
-    expect((await verifyPCActnCore(q, { grant, nowEpoch: NOW, audience: 'rs-1' })).allow).toBe(true);
+    expect((await verifyPCActnCore(q, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1' })).allow).toBe(true);
   });
 
   it('wire v2: ver 1 is rejected (version), unknown/missing fields are a wire failure', async () => {
     const { grant, mk, S } = build();
     const { sig: _s, ...body } = mk(0);
     const v1 = signPCActn({ ...body, ver: 1 }, S.secretKey);
-    const r1 = await verifyPCActnCore(v1, { grant, nowEpoch: NOW });
+    const r1 = await verifyPCActnCore(v1, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(r1.allow).toBe(false);
     expect(r1.checks.version).toBe('fail');
     const { aud: _a, ...noAud } = body;
-    const r2 = await verifyPCActnCore(signPCActn(noAud as never, S.secretKey), { grant, nowEpoch: NOW });
+    const r2 = await verifyPCActnCore(signPCActn(noAud as never, S.secretKey), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(r2.checks).toEqual({ wire: 'fail' });
-    const r3 = await verifyPCActnCore(signPCActn({ ...body, extra: 1 } as never, S.secretKey), { grant, nowEpoch: NOW });
+    const r3 = await verifyPCActnCore(signPCActn({ ...body, extra: 1 } as never, S.secretKey), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(r3.checks).toEqual({ wire: 'fail' });
   });
 
   it('freshness binding: audience mismatch, expiry, future iat, lifetime and exp<=iat are rejected', async () => {
     const { grant, mk, S } = build();
     const p = mk(0);
-    expect((await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'other-rs' })).checks.audience).toBe('fail');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'other-rs' })).checks.audience).toBe('fail');
     // FAIL-CLOSED: a signed aud + no verifier audience is a failure (was 'not-enforced')...
-    expect((await verifyPCActnCore(p, { grant, nowEpoch: NOW })).checks.audience).toBe('fail');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW })).checks.audience).toBe('fail');
     // ...unless the caller explicitly opts out with audience: null.
-    expect((await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: null })).checks.audience).toBe('not-enforced');
-    expect((await verifyPCActnCore(p, { grant, nowEpoch: NOW + 60_000 })).checks.validity).toBe('pass'); // == exp
-    expect((await verifyPCActnCore(p, { grant, nowEpoch: NOW + 60_001 })).checks.validity).toBe('fail');
-    expect((await verifyPCActnCore(p, { grant, nowEpoch: NOW - PCACTN_MAX_SKEW_MS })).checks.validity).toBe('pass');
-    expect((await verifyPCActnCore(p, { grant, nowEpoch: NOW - PCACTN_MAX_SKEW_MS - 1 })).checks.validity).toBe('fail');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: null })).checks.audience).toBe('not-enforced');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW + 60_000 })).checks.validity).toBe('pass'); // == exp
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW + 60_001 })).checks.validity).toBe('fail');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW - PCACTN_MAX_SKEW_MS })).checks.validity).toBe('pass');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW - PCACTN_MAX_SKEW_MS - 1 })).checks.validity).toBe('fail');
     const { sig: _s, ...body } = p;
     const long = signPCActn({ ...body, exp: NOW + PCACTN_MAX_LIFETIME_MS + 1 }, S.secretKey);
-    expect((await verifyPCActnCore(long, { grant, nowEpoch: NOW })).checks.validity).toBe('fail');
+    expect((await verifyPCActnCore(long, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW })).checks.validity).toBe('fail');
     const inv = signPCActn({ ...body, exp: NOW }, S.secretKey);
-    expect((await verifyPCActnCore(inv, { grant, nowEpoch: NOW })).checks.validity).toBe('fail');
+    expect((await verifyPCActnCore(inv, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW })).checks.validity).toBe('fail');
     // aud / iat / exp are SIGNED: editing them without re-signing breaks the leaf signature
     const tampered = { ...p, exp: p.exp + 1000 };
-    expect((await verifyPCActnCore(tampered, { grant, nowEpoch: NOW })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(tampered, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW })).checks.leaf_signature).toBe('fail');
   });
 
   it('optional slots are signed when present and absent => unchanged', async () => {
@@ -162,7 +162,7 @@ describe('verifyPCActnCore', () => {
     const p = mk(0);
     const { sig: _s, ...body } = p;
     const withSlots = signPCActn({ ...body, caution: 0.4, nonce: 'n-1', tool_binding: paramsDigest({ t: 1 }), rationale_commitment: paramsDigest({ r: 1 }), progress_step: { k: 1 }, prohibition_evidence: [] }, S.secretKey);
-    expect((await verifyPCActnCore(withSlots, { grant, nowEpoch: NOW, audience: 'rs-1' })).allow).toBe(true);
+    expect((await verifyPCActnCore(withSlots, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1' })).allow).toBe(true);
     expect((await verifyPCActnCore({ ...withSlots, caution: 0.1 }, { grant, nowEpoch: NOW })).checks.leaf_signature).toBe('fail');
     expect((await verifyPCActnCore({ ...withSlots, caution: 2 }, { grant, nowEpoch: NOW })).checks.wire).toBe('fail');
   });
@@ -171,23 +171,23 @@ describe('verifyPCActnCore', () => {
     const { grant, mk, S } = build();
     const p = mk(0); // carries a signed aud = 'rs-1'
     // (a) signed aud + undefined (unsupplied) audience => FAIL (was silently 'not-enforced')
-    const a = await verifyPCActnCore(p, { grant, nowEpoch: NOW });
+    const a = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(a.checks.audience).toBe('fail');
     expect(a.allow).toBe(false);
     expect(a.reason).toMatch(/audience/);
     // (b) signed aud + explicit null => deliberate opt-out => not-enforced, allowed
-    const b = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: null });
+    const b = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: null });
     expect(b.checks.audience).toBe('not-enforced');
     expect(b.allow).toBe(true);
     // (c) signed aud + matching audience => pass (and a non-matching one still fails)
-    const c = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1' });
+    const c = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1' });
     expect(c.checks.audience).toBe('pass');
     expect(c.allow).toBe(true);
-    expect((await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'other' })).checks.audience).toBe('fail');
+    expect((await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'other' })).checks.audience).toBe('fail');
     // (d) no aud at all => UNCHANGED: the wire check rejects a missing aud before the audience branch
     // runs, so the fail-closed logic does not alter that path.
     const { sig: _s, aud: _aud, ...noAud } = p;
-    const d = await verifyPCActnCore(signPCActn(noAud as never, S.secretKey), { grant, nowEpoch: NOW });
+    const d = await verifyPCActnCore(signPCActn(noAud as never, S.secretKey), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW });
     expect(d.checks).toEqual({ wire: 'fail' });
   });
 
@@ -212,7 +212,7 @@ describe('verifyPCActnCore — M1 taint gate (enforce.taint)', () => {
   const common = { nowEpoch: NOW, audience: 'rs-1' as const };
   it('gated OFF by default: taint_gate stays not-enforced (unchanged behaviour)', async () => {
     const { grant, mk } = build();
-    const r = await verifyPCActnCore(mk(0), { grant, ...common });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, ...common });
     expect(r.allow).toBe(true);
     expect(r.checks.taint_gate).toBe('not-enforced');
   });
@@ -221,7 +221,7 @@ describe('verifyPCActnCore — M1 taint gate (enforce.taint)', () => {
     const resign = resigner({ S, body: (() => { const { sig: _s, ...body } = mk(0); return body; })() });
     const registry = new InMemoryTrustedInputRegistry().recordTrusted('ref-x');
     const p = resign({ provenance: { causal_hash: 'c', taint_level: 0, trusted_refs: ['ref-x'] } });
-    const r = await verifyPCActnCore(p, { grant, ...common, enforce: { taint: { ctx: { registry }, maxTaint: 0 } } });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, ...common, enforce: { taint: { ctx: { registry }, maxTaint: 0 } } });
     expect(r.checks.taint_gate).toBe('pass');
     expect(r.allow).toBe(true);
   });
@@ -230,7 +230,7 @@ describe('verifyPCActnCore — M1 taint gate (enforce.taint)', () => {
     const resign = resigner({ S, body: (() => { const { sig: _s, ...body } = mk(0); return body; })() });
     const registry = new InMemoryTrustedInputRegistry().recordTrusted('ref-x'); // 'ref-y' is NOT vouched
     const p = resign({ provenance: { causal_hash: 'c', taint_level: 0, trusted_refs: ['ref-y'] } });
-    const r = await verifyPCActnCore(p, { grant, ...common, enforce: { taint: { ctx: { registry }, maxTaint: 0.25 } } });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, ...common, enforce: { taint: { ctx: { registry }, maxTaint: 0.25 } } });
     expect(r.checks.taint_gate).toBe('fail');
     expect(r.allow).toBe(false);
     expect(r.reason).toMatch(/taint/);
@@ -238,7 +238,7 @@ describe('verifyPCActnCore — M1 taint gate (enforce.taint)', () => {
   it('gated ON: an empty-lineage stub fails closed to worst-case taint 1', async () => {
     const { grant, mk } = build(); // mk(0) provenance.trusted_refs === []
     const registry = new InMemoryTrustedInputRegistry();
-    const r = await verifyPCActnCore(mk(0), { grant, ...common, enforce: { taint: { ctx: { registry }, maxTaint: 0.5 } } });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, ...common, enforce: { taint: { ctx: { registry }, maxTaint: 0.5 } } });
     expect(r.checks.taint_gate).toBe('fail');
     expect(r.allow).toBe(false);
   });
@@ -250,7 +250,7 @@ describe('verifyPCActnCore — M3 freshness gate (enforce.freshness)', () => {
   const freshFor = (epoch: number) => ({ beacon_ref: 'b', epoch, accumulator_witness: 'w' });
   it('gated OFF by default: no freshness check is emitted (byte-identical output)', async () => {
     const { grant, mk } = build();
-    const r = await verifyPCActnCore(mk(0), { grant, ...common });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, ...common });
     expect(r.allow).toBe(true);
     expect(r.checks.freshness).toBeUndefined();
   });
@@ -258,13 +258,13 @@ describe('verifyPCActnCore — M3 freshness gate (enforce.freshness)', () => {
     const { grant, S, mk } = build();
     const resign = resigner({ S, body: (() => { const { sig: _s, ...body } = mk(0); return body; })() });
     const p = resign({ freshness: freshFor(FRESH_EPOCH) });
-    const r = await verifyPCActnCore(p, { grant, ...common, enforce: { freshness: { maxAgeMs: 5 * BEACON_EPOCH_MS } } });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, ...common, enforce: { freshness: { maxAgeMs: 5 * BEACON_EPOCH_MS } } });
     expect(r.checks.freshness).toBe('pass');
     expect(r.allow).toBe(true);
   });
   it('gated ON: a stale anchor is rejected with a specific reason', async () => {
     const { grant, mk } = build(); // mk(0).freshness.epoch === 1 => anchor at ~1970 => very stale
-    const r = await verifyPCActnCore(mk(0), { grant, ...common, enforce: { freshness: { maxAgeMs: 5 * BEACON_EPOCH_MS } } });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, ...common, enforce: { freshness: { maxAgeMs: 5 * BEACON_EPOCH_MS } } });
     expect(r.checks.freshness).toBe('fail');
     expect(r.allow).toBe(false);
     expect(r.reason).toMatch(/stale/);
@@ -273,7 +273,7 @@ describe('verifyPCActnCore — M3 freshness gate (enforce.freshness)', () => {
     const { grant, S, mk } = build();
     const resign = resigner({ S, body: (() => { const { sig: _s, ...body } = mk(0); return body; })() });
     const p = resign({ freshness: { beacon_ref: '', epoch: 0, accumulator_witness: '' } });
-    const r = await verifyPCActnCore(p, { grant, ...common, enforce: { freshness: { maxAgeMs: 5 * BEACON_EPOCH_MS } } });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, ...common, enforce: { freshness: { maxAgeMs: 5 * BEACON_EPOCH_MS } } });
     expect(r.checks.freshness).toBe('fail');
     expect(r.reason).toMatch(/missing/);
   });
@@ -281,7 +281,7 @@ describe('verifyPCActnCore — M3 freshness gate (enforce.freshness)', () => {
     const { grant, S, mk } = build();
     const resign = resigner({ S, body: (() => { const { sig: _s, ...body } = mk(0); return body; })() });
     const p = resign({ freshness: freshFor(FRESH_EPOCH) });
-    const r = await verifyPCActnCore(p, { grant, ...common, enforce: { freshness: { maxAgeMs: 5 * BEACON_EPOCH_MS, now: NOW - 10 * BEACON_EPOCH_MS } } });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, ...common, enforce: { freshness: { maxAgeMs: 5 * BEACON_EPOCH_MS, now: NOW - 10 * BEACON_EPOCH_MS } } });
     expect(r.checks.freshness).toBe('fail');
     expect(r.reason).toMatch(/future/);
   });
@@ -315,7 +315,7 @@ describe('verifyPCActnCore — M5 TEE attestation gate (enforce.attestation)', (
     });
   const CLAIMS = { model_id: 'gpt-x', weights_digest: 'w1', runtime_measurement: 'm1', operator: 'acme', nonce: NONCE, issued_at: T - 1000, expires_at: T + 60_000 };
   const expectedBinding = () => ({ holderPub: HOLDER, grantRef: grant.id, epoch: 1, nonce: NONCE, nonceIssuedAt: T - 1000 });
-  const common = { grant, nowEpoch: T, audience: 'rs-m5' as const };
+  const common = { grant, nowEpoch: T, audience: 'rs-m5' as const, insecureSkipPlanRootCheck: true };
   const attestor = createDevAttestor(generateKeyPair().secretKey);
   const doc = attestor.attest({ ...CLAIMS, holder_pub: HOLDER, grant_ref: grant.id, epoch: 1 });
   const realVerifier = createAttestationVerifier({ trustedAttestorKeys: [attestor.publicKey], resolveDocument: attestationRegistry([doc]), expectedBinding, now: () => T });
@@ -326,7 +326,7 @@ describe('verifyPCActnCore — M5 TEE attestation gate (enforce.attestation)', (
     expect(r.allow).toBe(true);
   });
   it('gated ON: a VALID bound attestation passes', async () => {
-    const r = await verifyPCActnCore(attested(), { ...common, enforce: { attestation: { verifier: realVerifier } } });
+    const r = await verifyPCActnCore(attested(), { insecureSkipPlanRootCheck: true, ...common, enforce: { attestation: { verifier: realVerifier } } });
     expect(r.checks.attestation).toBe('pass');
     expect(r.allow).toBe(true);
   });
@@ -337,24 +337,24 @@ describe('verifyPCActnCore — M5 TEE attestation gate (enforce.attestation)', (
       expectedBinding,
       now: () => T,
     });
-    const r = await verifyPCActnCore(attested(), { ...common, enforce: { attestation: { verifier: rogue } } });
+    const r = await verifyPCActnCore(attested(), { insecureSkipPlanRootCheck: true, ...common, enforce: { attestation: { verifier: rogue } } });
     expect(r.checks.attestation).toBe('fail');
     expect(r.allow).toBe(false);
   });
   it('gated ON: an absent attestation document is rejected (fail closed)', async () => {
     const empty = createAttestationVerifier({ trustedAttestorKeys: [attestor.publicKey], resolveDocument: attestationRegistry([]), expectedBinding, now: () => T });
-    const r = await verifyPCActnCore(attested(), { ...common, enforce: { attestation: { verifier: empty } } });
+    const r = await verifyPCActnCore(attested(), { insecureSkipPlanRootCheck: true, ...common, enforce: { attestation: { verifier: empty } } });
     expect(r.checks.attestation).toBe('fail');
     expect(r.allow).toBe(false);
   });
   it('gated ON + required (default): a verifier that reports not-enforced fails closed', async () => {
-    const r = await verifyPCActnCore(attested(), { ...common, enforce: { attestation: { verifier: notEnforced } } });
+    const r = await verifyPCActnCore(attested(), { insecureSkipPlanRootCheck: true, ...common, enforce: { attestation: { verifier: notEnforced } } });
     expect(r.checks.attestation).toBe('fail');
     expect(r.allow).toBe(false);
     expect(r.reason).toMatch(/attestation required/);
   });
   it('gated ON + required:false: a not-enforced result is tolerated (explicit opt-out)', async () => {
-    const r = await verifyPCActnCore(attested(), { ...common, enforce: { attestation: { verifier: notEnforced, required: false } } });
+    const r = await verifyPCActnCore(attested(), { insecureSkipPlanRootCheck: true, ...common, enforce: { attestation: { verifier: notEnforced, required: false } } });
     expect(r.checks.attestation).toBe('not-enforced');
     expect(r.allow).toBe(true);
   });
@@ -375,7 +375,7 @@ describe('verifyPCActnCore zk_compliance fail-closed core', () => {
   it('present zk_compliance + NO hook => FAIL CLOSED (not silently accepted)', async () => {
     const { grant, S, mk } = build();
     const p = withZk(mk(0), S.secretKey, { system: 'something', proof: 'opaque' });
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1' });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1' });
     expect(r.checks.zk_compliance).toBe('fail');
     expect(r.allow).toBe(false);
     expect(r.reason).toMatch(/no zk verifier enforced it/);
@@ -384,7 +384,7 @@ describe('verifyPCActnCore zk_compliance fail-closed core', () => {
   it('present zk_compliance + passing hook => pass (allow when all else passes)', async () => {
     const { grant, S, mk } = build();
     const p = withZk(mk(0), S.secretKey, { system: 'something', proof: 'opaque' });
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: pass } });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: pass } });
     expect(r.checks.zk_compliance).toBe('pass');
     expect(r.allow).toBe(true);
   });
@@ -392,7 +392,7 @@ describe('verifyPCActnCore zk_compliance fail-closed core', () => {
   it('present zk_compliance + rejecting hook => fail', async () => {
     const { grant, S, mk } = build();
     const p = withZk(mk(0), S.secretKey, { system: 'something', proof: 'opaque' });
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: reject } });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: reject } });
     expect(r.checks.zk_compliance).toBe('fail');
     expect(r.allow).toBe(false);
   });
@@ -400,18 +400,18 @@ describe('verifyPCActnCore zk_compliance fail-closed core', () => {
   it('present zk_compliance + a hook that DECLINES to enforce => STILL fail closed', async () => {
     const { grant, S, mk } = build();
     const p = withZk(mk(0), S.secretKey, { system: 'something', proof: 'opaque' });
-    const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: notEnforced } });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: notEnforced } });
     expect(r.checks.zk_compliance).toBe('fail');
     expect(r.allow).toBe(false);
   });
 
   it('BACK-COMPAT: no zk_compliance => no zk check at all, allow unaffected', async () => {
     const { grant, mk } = build();
-    const r = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-1' });
+    const r = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1' });
     expect(r.checks.zk_compliance).toBeUndefined();
     expect(r.allow).toBe(true);
     // a supplied hook is never run when no proof is present
-    const r2 = await verifyPCActnCore(mk(0), { grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: reject } });
+    const r2 = await verifyPCActnCore(mk(0), { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', hooks: { zk: reject } });
     expect(r2.checks.zk_compliance).toBeUndefined();
     expect(r2.allow).toBe(true);
   });

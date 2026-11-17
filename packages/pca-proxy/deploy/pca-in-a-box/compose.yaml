@@ -1,0 +1,70 @@
+# PCA in a box: the whole flow on your machine. Everything is built from this repository; dev keys are generated into the
+# `data` volume on first start (nothing secret is committed). Ports are bound to 127.0.0.1 only.
+#   make demo        (or: docker compose up -d --build, then see README.md)
+x-box: &box
+  image: pca-box:local
+  build:
+    context: ../../../..
+    dockerfile: packages/pca-proxy/deploy/pca-in-a-box/Dockerfile
+  volumes: [data:/data]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  keys:                                  # one-shot: generates the dev keys on first start, never overwrites
+    <<: *box
+    entrypoint: ["node", "/box/tools/init-keys.mjs"]
+    restart: "no"
+
+  orders-api:                            # the sample API; only the proxy's credential is accepted, and no port is published
+    <<: *box
+    entrypoint: ["/box/entry.sh", "orders-api"]
+    depends_on: { keys: { condition: service_completed_successfully } }
+
+  pca-proxy:                             # PCA in front of the API. First start: observe mode. `make enforce` switches it.
+    <<: *box
+    entrypoint: ["/box/entry.sh", "proxy"]
+    ports: ["127.0.0.1:8788:8788"]
+    depends_on:
+      keys: { condition: service_completed_successfully }
+      orders-api: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(8788,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  dashboard:                             # live decisions, read-only view of the audit logs
+    <<: *box
+    entrypoint: ["/box/entry.sh", "dashboard"]
+    ports: ["127.0.0.1:8080:8080"]
+    volumes: [data:/data:ro]
+    depends_on: { keys: { condition: service_completed_successfully } }
+
+  directory-log:                         # optional trust directory (profile "trust"): an append-only log of agent passports
+    <<: *box
+    profiles: ["trust"]
+    entrypoint: ["/box/entry.sh", "directory-log"]
+    ports: ["127.0.0.1:8090:8080"]
+    depends_on: { keys: { condition: service_completed_successfully } }
+
+  directory-witness:                     # an independent witness that cosigns the log's heads
+    <<: *box
+    profiles: ["trust"]
+    entrypoint: ["/box/entry.sh", "directory-witness"]
+    ports: ["127.0.0.1:8091:8081"]
+    depends_on: { directory-log: { condition: service_started } }
+
+  agent:                                 # the sample agent script: `docker compose run --rm agent --expect observe|enforce`
+    <<: *box
+    profiles: ["tools"]
+    entrypoint: ["/box/entry.sh", "agent"]
+    command: ["--expect", "observe"]
+    depends_on: { pca-proxy: { condition: service_healthy } }
+
+  tools:                                 # one-off commands: pca autopilot ..., pca-proxy audit verify ..., the checks
+    <<: *box
+    profiles: ["tools"]
+    entrypoint: ["/box/entry.sh", "tools"]
+
+volumes:
+  data:

@@ -59,6 +59,15 @@ import type { BridgeResult, TranslationReport } from './types';
  *     extension functions (`ip(...)`, `decimal(...)`, `.isInRange(...)`, …).
  */
 export function cedarToPca(policyText: string): BridgeResult {
+  return translateCedar(policyText, true);
+}
+
+/**
+ * Internal: `errorGuards: false` omits the trailing "no attribute was missing" guard, leaving the bare
+ * structure of each expression. It is NOT exported from the package: without the guard the result is not
+ * exact for policies that read attributes the request may lack. The structure tests use it.
+ */
+export function translateCedar(policyText: string, errorGuards: boolean): BridgeResult {
   const report: TranslationReport = { source: 'cedar', translated: [], skipped: [], errors: [] };
   const predicates: Predicate[] = [];
   const denies: Predicate[] = [];
@@ -70,7 +79,7 @@ export function cedarToPca(policyText: string): BridgeResult {
 
   for (const stmt of statements) {
     try {
-      translateStatement(stmt, predicates, denies, report);
+      translateStatement(stmt, predicates, denies, report, errorGuards);
     } catch (e) {
       report.errors.push(`policy "${truncate(stmt)}": ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -84,7 +93,7 @@ const ENTITY_PARENTS = 'env.entity_parents';
 
 // --- statement ---------------------------------------------------------------------------------
 
-function translateStatement(stmt: string, permits: Predicate[], denies: Predicate[], report: TranslationReport): void {
+function translateStatement(stmt: string, permits: Predicate[], denies: Predicate[], report: TranslationReport, errorGuards: boolean): void {
   // Strip leading @annotation(...) heads.
   let body = stmt;
   const annot = /^\s*(@[A-Za-z_][\w]*\s*\([^)]*\)\s*)+/.exec(body);
@@ -106,6 +115,7 @@ function translateStatement(stmt: string, permits: Predicate[], denies: Predicat
   const scope = parseScope(scopeText);
 
   const where: Condition[] = [...scope.scopeConditions];
+  const guards: Condition[] = [];
 
   // Collect when / unless blocks.
   const blocks = parseConditionBlocks(rest);
@@ -117,7 +127,16 @@ function translateStatement(stmt: string, permits: Predicate[], denies: Predicat
       return;
     }
     where.push(block.kind === 'when' ? parsed : { not: parsed });
+    const g = noError(parsed);
+    if (g !== null) guards.push(g);
   }
+
+  // Cedar skips a policy whose condition raises an error (a missing attribute), for `unless` as much as for
+  // `when`; the core evaluator would instead let `not` of an undecidable leaf be decided by its siblings. The
+  // trailing guard makes the policy apply only when evaluating the expressions, left to right with
+  // short-circuiting, reads no absent attribute.
+  const conditionCount = where.length;
+  if (errorGuards && guards.length > 0) where.push(guards.length === 1 ? (guards[0] as Condition) : { all_of: guards });
 
   const predicate: Predicate = { verb: scope.verb };
   if (scope.resource !== undefined) predicate.resource = scope.resource;
@@ -126,12 +145,12 @@ function translateStatement(stmt: string, permits: Predicate[], denies: Predicat
   if (effect === 'permit') {
     permits.push(predicate);
     report.translated.push(
-      `permit → verb ${JSON.stringify(scope.verb)}${scope.resource ? ` on ${scope.resource}` : ''} (${where.length} condition(s))`,
+      `permit → verb ${JSON.stringify(scope.verb)}${scope.resource ? ` on ${scope.resource}` : ''} (${conditionCount} condition(s))`,
     );
   } else {
     denies.push(predicate);
     report.translated.push(
-      `forbid → deny verb ${JSON.stringify(scope.verb)}${scope.resource ? ` on ${scope.resource}` : ''} (${where.length} condition(s))`,
+      `forbid → deny verb ${JSON.stringify(scope.verb)}${scope.resource ? ` on ${scope.resource}` : ''} (${conditionCount} condition(s))`,
     );
   }
 }
@@ -298,6 +317,12 @@ function parseAtom(text: string): Condition | null {
 function buildComparison(lhsRaw: string, op: ConditionOp, rhsRaw: string): Condition | null {
   const field = toFieldPath(lhsRaw);
   if (field === null) return null; // arithmetic / method-call LHS not modeled
+  if (field === 'action.verb') {
+    // The verb is the entity id (`Action::"edit"` -> `edit`), exactly as in the scope. Only == and != are modeled.
+    if (op !== 'eq' && op !== 'ne') return null;
+    const id = entityId(rhsRaw);
+    return id === null ? null : { field, op, value: id };
+  }
   if (isPathExpr(rhsRaw)) {
     const refPath = toFieldPath(rhsRaw);
     if (refPath !== null) return { field, op, ref: refPath };
@@ -317,6 +342,14 @@ function buildWordOp(lhsRaw: string, kind: string, rhsRaw: string): Condition | 
 
   const field = toFieldPath(lhsRaw);
   if (field === null) return null;
+
+  if (field === 'action.verb') {
+    // `action in [Action::"a", ...]` / `action in Action::"a"`: the verb is one of the ids. Action groups are not modeled.
+    if (kind !== 'in') return null;
+    const inner = rhsRaw.startsWith('[') && rhsRaw.endsWith(']') ? rhsRaw.slice(1, -1) : rhsRaw;
+    const ids = splitTopLevel(inner, ',').map((x) => x.trim()).filter((x) => x.length > 0).map(entityId);
+    return ids.length > 0 && ids.every((i) => i !== null) ? { field, op: 'in', value: ids as string[] } : null;
+  }
 
   if (kind === 'is') {
     const type = typeName(rhsRaw);
@@ -491,30 +524,26 @@ function splitTopLevel(text: string, delim: string): string[] {
   const out: string[] = [];
   let depth = 0;
   let inStr = false;
-  let buf = '';
+  let start = 0; // slice, never per-character concatenation: a 100k-character run built a 100k-deep cons string
   for (let i = 0; i < text.length; i++) {
     const ch = text[i] ?? '';
     if (inStr) {
-      buf += ch;
       if (ch === '"') inStr = false;
       continue;
     }
     if (ch === '"') {
       inStr = true;
-      buf += ch;
       continue;
     }
     if (ch === '(' || ch === '[' || ch === '{') depth++;
     else if (ch === ')' || ch === ']' || ch === '}') depth--;
     if (depth === 0 && text.startsWith(delim, i)) {
-      out.push(buf);
-      buf = '';
+      out.push(text.slice(start, i));
       i += delim.length - 1;
-      continue;
+      start = i + 1;
     }
-    buf += ch;
   }
-  out.push(buf);
+  out.push(text.slice(start));
   return out;
 }
 
@@ -541,4 +570,52 @@ function matchDelim(text: string, open: number, o: string, c: string): number {
     }
   }
   return -1;
+}
+
+
+// --- Cedar evaluation-error semantics ------------------------------------------------------------
+
+/** Fields that exist on every request, so reading them never raises a Cedar error. */
+const TOTAL_FIELDS = new Set(['subject.id', 'action.verb', 'action.resource', 'env']);
+
+/** Attribute reads that can raise a Cedar "attribute missing" error: `principal.x`, `resource.x`, `context.x`. */
+function guardedPaths(field: string | undefined): string[] {
+  if (field === undefined || TOTAL_FIELDS.has(field) || field.startsWith('env.entity_parents')) return [];
+  return /^(subject\.|env\.)/.test(field) ? [field] : [];
+}
+
+const exists = (field: string): Condition => ({ field, op: 'exists' });
+const allOf = (xs: Condition[]): Condition => (xs.length === 1 ? (xs[0] as Condition) : { all_of: xs });
+const anyOf = (xs: Condition[]): Condition => (xs.length === 1 ? (xs[0] as Condition) : { any_of: xs });
+
+/**
+ * "Evaluating this expression raises no Cedar error", as a condition (null = it cannot). Cedar evaluates
+ * `a && b` and `a || b` left to right and does not look at `b` once `a` has decided, so `b` only needs its
+ * attributes present when `a` was true (for `&&`) or false (for `||`). Linear in the size of the expression.
+ */
+function noError(c: Condition): Condition | null {
+  if ('not' in c) return noError(c.not);
+  if ('all_of' in c || 'any_of' in c) {
+    const isAnd = 'all_of' in c;
+    const kids = isAnd ? c.all_of : c.any_of;
+    // Fold from the right: N(k1 op rest) = N(k1) && (k1 decides ? true : N(rest)).
+    let acc: Condition | null = null;
+    for (let i = kids.length - 1; i >= 0; i--) {
+      const kid = kids[i] as Condition;
+      const n = noError(kid);
+      const cont: Condition | null = acc === null ? null : anyOf([isAnd ? { not: kid } : kid, acc]);
+      acc = n === null ? cont : cont === null ? n : allOf([n, cont]);
+    }
+    return acc;
+  }
+  const leaf = c as { field?: string; ref?: string; op?: string };
+  if (leaf.op === 'exists' && leaf.field !== undefined) {
+    // `a.b has c` raises an error when `a.b` itself is missing; `principal has c` cannot.
+    const base = leaf.field.replace(/\.[^.]+$/, '');
+    const deep = base.split('.').length >= (base.startsWith('env.resource') ? 3 : 2);
+    const baseNeeds = deep ? guardedPaths(base).map(exists) : [];
+    return baseNeeds.length === 0 ? null : allOf(baseNeeds);
+  }
+  const needs: Condition[] = [...guardedPaths(leaf.field), ...guardedPaths(leaf.ref)].map(exists);
+  return needs.length === 0 ? null : allOf(needs);
 }

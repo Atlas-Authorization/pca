@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info: { title: orders, version: "1" }
+paths:
+  /orders:
+    get:
+      operationId: listOrders
+      responses: { "200": { description: ok } }
+    post:
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, qty]
+              additionalProperties: false
+              properties:
+                sku: { type: string, enum: [widget, gadget, gizmo] }
+                qty: { type: integer, minimum: 1, maximum: 10 }
+      responses: { "201": { description: created } }
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }]
+      responses: { "200": { description: ok } }
+    delete:
+      operationId: deleteOrder
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }]
+      responses: { "200": { description: deleted } }
+  /orders/{id}/refund:
+    post:
+      operationId: refundOrder
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }]
+      responses: { "200": { description: refunded } }

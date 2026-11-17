@@ -1,0 +1,16 @@
+# helm install pca ./deploy/helm/pca-proxy -f values.sidecar.example.yaml   (renders the ConfigMap; add the container to your pod)
+mode: sidecar
+agent:
+  goal: handle customer orders
+  principalKeySecret: { name: pca-proxy-keys, key: principal.key }
+config:
+  mode: observe
+  audience: orders-api
+  http:
+    upstream: http://127.0.0.1:9000        # your API, bound to the pod's loopback
+    mode: sidecar
+    ns: orders
+    actions:
+      listOrders: { policy: approve, effect: write }
+controlPlane:
+  enabled: false

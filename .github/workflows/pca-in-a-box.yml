@@ -1,0 +1,99 @@
+name: PCA in a box
+
+# The self-hostable quick start (packages/pca-proxy/deploy/pca-in-a-box): builds the image from this tree and runs the whole compose
+# stack end to end. The sample agent does its routine work through the HTTP proxy and the MCP proxy in observe mode; autopilot learns a
+# grant for each, a reviewer signs, and in enforce mode the proxies load the signed grants: what is inside a grant is allowed, what is
+# outside it (never observed, never signed) is refused by the grant itself. The assertions read the hash-chained audit logs, not what the
+# agent saw. Also brings up the optional trust directory (log + witness) and lints and renders the Helm chart in every mode.
+on:
+  push:
+    branches: ['ci/**']      # includes ci/build-**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compose:
+    name: compose stack end to end
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: packages/pca-proxy/deploy/pca-in-a-box
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose file is valid
+        run: docker compose -p pca-box --profile trust --profile tools config -q
+      - name: make demo (observe, autopilot propose, sign, enforce, check)
+        run: make demo
+      - name: The dashboard serves the decisions
+        run: |
+          set -e
+          curl -fsS http://127.0.0.1:8080/api/decisions > /tmp/decisions.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open('/tmp/decisions.json'))
+          print(len(d), 'decisions')
+          enforce = [x for x in d if x['mode'] == 'enforce']
+          # the grant a human signed is what is enforced: inside it allowed, outside it refused by the grant itself
+          inside = {(x['source'], x['verb'].split('.')[-1]) for x in enforce if x['allowed'] == 'true'}
+          outside = {(x['source'], x['verb'].split('.')[-1]) for x in enforce if x['code'] == 'grant_denied'}
+          for want in [('http', 'createOrder'), ('http', 'listOrders'), ('http', 'getOrder'), ('mcp', 'create_note'), ('mcp', 'search_notes')]:
+              assert want in inside, f'{want} should be allowed by the signed grant'
+          for want in [('http', 'refundOrder'), ('http', 'deleteOrder'), ('mcp', 'delete_note')]:
+              assert want in outside, f'{want} should be refused: it is outside the signed grant'
+          PY
+          curl -fsS http://127.0.0.1:8080/ > /tmp/dash.html
+          grep -q 'PCA in a box' /tmp/dash.html
+      - name: An unmapped route is refused at the proxy (default deny)
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8788/admin/export)
+          test "$code" -ge 400
+      - name: Trust directory log and witness (optional profile)
+        run: |
+          set -e
+          make trust
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8090/sth >/dev/null && curl -fsS http://127.0.0.1:8091/info >/dev/null && ok=1 && break; sleep 2; done
+          test "${ok:-0}" = 1
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -p pca-box --profile trust --profile tools logs --no-color --tail=200
+      - name: Tear down
+        if: always()
+        run: make clean
+
+  helm:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/pca-proxy/deploy/helm/pca-proxy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Lint
+        run: |
+          helm lint . --set agent.principalKeySecret.name=k
+          helm lint . -f values.sidecar.example.yaml
+      - name: Render gateway, sidecar, persistence and control-plane agent
+        run: |
+          set -e
+          base="--set agent.principalKeySecret.name=k --set agent.stateHmacSecret.name=k"
+          helm template t . $base --set-file openapi=../../../deploy/pca-in-a-box/sample/openapi.yaml > /tmp/gw.yaml
+          grep -q 'kind: Deployment' /tmp/gw.yaml && grep -q 'readOnlyRootFilesystem: true' /tmp/gw.yaml && grep -q 'mode: observe' /tmp/gw.yaml
+          helm template t . -f values.sidecar.example.yaml > /tmp/sc.yaml
+          if grep -q 'kind: Deployment' /tmp/sc.yaml; then echo 'sidecar mode rendered a Deployment'; exit 1; fi
+          helm template t . $base --set persistence.enabled=true > /tmp/pvc.yaml; grep -q PersistentVolumeClaim /tmp/pvc.yaml
+          helm template t . $base --set controlPlane.enabled=true --set controlPlane.url=https://cp.example --set controlPlane.sourceKeySecret.name=s --set controlPlane.apiKeySecret.name=a > /tmp/cp.yaml; grep -q control-plane-agent /tmp/cp.yaml
+      - name: The chart refuses what it must
+        run: |
+          refuses() { if helm template t . "$@" >/dev/null 2>&1; then echo "chart accepted: $*"; exit 1; fi; }
+          refuses                                                                                       # no principal key Secret named
+          refuses --set agent.principalKeySecret.name=k --set persistence.enabled=true --set replicaCount=2
+          refuses --set agent.principalKeySecret.name=k --set controlPlane.enabled=true                 # no control-plane URL

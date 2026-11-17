@@ -351,7 +351,7 @@ export function validateInvariant(inv: unknown): string[] {
       return [];
     case 'rate':
       if ((e = validateWhen(inv.when, 'when'))) return err(e);
-      if (!Number.isInteger(inv.max) || (inv.max as number) < 0 || (inv.max as number) > MAX_LEDGER) return err('max must be an integer in [0,10000]');
+      if (!Number.isInteger(inv.max) || (inv.max as number) < 0 || Object.is(inv.max, -0) || (inv.max as number) > MAX_LEDGER) return err('max must be an integer in [0,10000]');
       if (!fin(inv.window_secs) || inv.window_secs <= 0) return err('window_secs must be > 0');
       return [];
     case 'never_after':
@@ -397,7 +397,7 @@ export function validateConstitution(c: unknown): string[] {
 export function stateProblem(state: unknown): string | null {
   try {
     if (!isObj(state) || !fin(state.now) || !isObj(state.ledger) || !isObj(state.latched)) return 'malformed monitor state';
-    if (!Number.isInteger(state.seq) || (state.seq as number) < 0) return 'malformed monitor state: seq';
+    if (!Number.isInteger(state.seq) || (state.seq as number) < 0 || Object.is(state.seq, -0)) return 'malformed monitor state: seq';
     if (state.parent !== null && typeof state.parent !== 'string') return 'malformed monitor state: parent';
     if ((state.seq as number) === 0 && state.parent !== null) return 'malformed monitor state: genesis has a parent';
     if ((state.seq as number) > 0 && state.parent === null) return 'malformed monitor state: missing chain link';
@@ -911,6 +911,11 @@ export function verifySignedSafetyEvidence(signed: SignedSafetyEvidence, expecte
     const wantConst = expected.constitution !== undefined ? constitutionId(expected.constitution) : expected.constitutionId!;
     if (expected.constitution !== undefined && expected.constitutionId !== undefined && expected.constitutionId !== wantConst) return no('expected constitution and id disagree');
     if (ev.constitution !== wantConst) return no('constitution mismatch (evidence bound to another constitution)');
+    // a malformed expected constitution never verifies: an invariant without a string id would otherwise "cover" an id-less row (undefined === undefined)
+    if (expected.constitution !== undefined) {
+      const cp = validateConstitution(expected.constitution);
+      if (cp.length) return no('constitution malformed: ' + cp[0]);
+    }
 
     const wantState = expected.state !== undefined ? stateDigest(expected.state) : expected.stateDigest!;
     if (expected.state !== undefined && expected.stateDigest !== undefined && expected.stateDigest !== wantState) return no('expected state and digest disagree');
@@ -918,6 +923,7 @@ export function verifySignedSafetyEvidence(signed: SignedSafetyEvidence, expecte
 
     // internal consistency: the claimed verdict must follow from the claimed rows
     if (!Array.isArray(ev.evaluated) || !Array.isArray(ev.violated)) return no('malformed evidence');
+    if (ev.evaluated.some((r) => isObj(r) && has(r, 'id') && typeof r.id !== 'string')) return no('malformed evidence');
     const badRows = ev.evaluated.filter((r) => r?.result !== 'pass').map((r) => r?.id);
     if (ev.ok !== (badRows.length === 0 && ev.violated.length === 0)) return no('evidence verdict inconsistent with rows');
 

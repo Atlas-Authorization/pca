@@ -1,0 +1,17 @@
+{{- if eq .Values.mode "gateway" }}
+pca-proxy is running as a gateway in front of {{ .Values.config.http.upstream | default "your upstream" }}, in {{ .Values.config.mode }} mode.
+Point agents at http://{{ include "pca-proxy.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }} and keep the upstream off their network path.
+
+Read what it would refuse (observe mode), then learn and sign a grant:
+  kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "pca-proxy.fullname" . }} -c pca-proxy -- cat /var/lib/pca-proxy/audit.jsonl > pca.audit.jsonl
+  npx @atlasauth/pca-cli autopilot observe pca.audit.jsonl
+Switch to enforce by setting config.mode: enforce (and the reviewed config.http.actions), then helm upgrade.
+{{- else }}
+Sidecar mode: this release created the ConfigMap "{{ include "pca-proxy.fullname" . }}" (and nothing else). Add to your pod spec:
+
+  containers:
+    - {{- include "pca-proxy.container" . | nindent 6 }}
+  volumes: {{- include "pca-proxy.volumes" . | nindent 4 }}
+
+Bind your API to 127.0.0.1 inside the pod so the proxy is the only way in, and point the Service at port 8788.
+{{- end }}

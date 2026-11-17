@@ -117,7 +117,7 @@ export function checkRootCaveats(cfg: DoctorConfig, deps: { loadPca?: (dir?: str
   return { id, status: 'pass', detail: `${where}: root caveats enforced (max_spend 100 denies 150, allows 50; an unknown root caveat type denies)`, observed };
 }
 
-export const DEFAULT_REQUIRED = ['counter', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'];
+export const DEFAULT_REQUIRED = ['counter_format', 'replay', 'revocation', 'plan_root_authorized', 'audience', 'validity', 'grant_ref_bound'];
 
 export function checkEnforcement(cfg: DoctorConfig): CheckResult {
   const id = 'verifier.enforcement';

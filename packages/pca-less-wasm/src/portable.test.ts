@@ -44,7 +44,10 @@ describe('portable loader', () => {
   it('the browser-path sources import nothing from node:* and use no Node globals', () => {
     for (const f of ['core.ts', 'web.ts', 'embedded.ts']) {
       // strip comments (they legitimately mention node:*)
-      const src = readFileSync(join(__dirname, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const raw = readFileSync(join(__dirname, f), 'utf8');
+      // a Stryker-instrumented copy carries the tool's own preamble (it reads process.env): the unmutated source is what this test checks
+      if (raw.includes('stryNS_')) continue;
+      const src = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
       expect(src, f).not.toMatch(/node:|require\(|__dirname|process\.|\bBuffer\b/);
     }
   });

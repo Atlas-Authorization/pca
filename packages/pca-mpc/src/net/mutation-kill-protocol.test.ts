@@ -98,14 +98,14 @@ async function exec(o: Opts) {
     settle(
       i,
       runParty({
-        id: i, n: o.n, Q: o.Q, input: v, mesh: net.mesh(i) as unknown as never, offline, sessionId: sid,
+        id: i, n: o.n, Q: o.Q, input: v, mesh: net.mesh(i) as unknown as never, offline, insecureTrustedDealer: offline === 'trusted-dealer', sessionId: sid,
         behavior: o.behaviors?.[i], unsafeTestHooks: o.behaviors?.[i] ? true : undefined, forensicDeadlineMs: o.forensicDeadlineMs,
       }),
     ),
   );
   const dealer =
     offline === 'trusted-dealer'
-      ? settle(o.n, runDealer({ n: o.n, Q: o.Q, mesh: net.mesh(o.n) as unknown as never, seed: 7n, fault: o.dealerFault, macFaultAtInput: o.macFaultAtInput }))
+      ? settle(o.n, runDealer({ insecureTrustedDealer: true, n: o.n, Q: o.Q, mesh: net.mesh(o.n) as unknown as never, seed: 7n, fault: o.dealerFault, macFaultAtInput: o.macFaultAtInput }))
       : Promise.resolve<Outcome>({ ok: true });
   const [d, ...ps] = [await dealer, ...(await Promise.all(parties))];
   return { net, dealer: d!, ps };
@@ -251,8 +251,8 @@ describe('honest trusted-dealer runs', () => {
   }, 60_000);
   it('Q defaults to 100 when omitted', async () => {
     const net = new MemNet([0, 1, 2], 'sess');
-    const run = [0, 1].map((i) => runParty({ id: i, n: 2, input: V(1, 1, 100), mesh: net.mesh(i) as never, sessionId: 'sess' }));
-    const d = runDealer({ n: 2, mesh: net.mesh(2) as never, seed: 3n });
+    const run = [0, 1].map((i) => runParty({ offline: 'trusted-dealer', insecureTrustedDealer: true, id: i, n: 2, input: V(1, 1, 100), mesh: net.mesh(i) as never, sessionId: 'sess' }));
+    const d = runDealer({ insecureTrustedDealer: true, n: 2, mesh: net.mesh(2) as never, seed: 3n });
     const [a, b] = await Promise.all([...run, d]);
     expect((a as PartyResult).Q).toBe(100);
     expect((a as PartyResult).composed.rQuant).toBe(100);
@@ -260,8 +260,8 @@ describe('honest trusted-dealer runs', () => {
   });
   it('the dealer id defaults to n and can be configured', async () => {
     const net = new MemNet([0, 1, 5], 'sess');
-    const run = [0, 1].map((i) => runParty({ id: i, n: 2, Q: 1, input: V(1, 1, 1), mesh: net.mesh(i) as never, sessionId: 'sess', dealerId: 5 }));
-    const d = runDealer({ n: 2, Q: 1, mesh: net.mesh(5) as never, seed: 3n });
+    const run = [0, 1].map((i) => runParty({ offline: 'trusted-dealer', insecureTrustedDealer: true, id: i, n: 2, Q: 1, input: V(1, 1, 1), mesh: net.mesh(i) as never, sessionId: 'sess', dealerId: 5 }));
+    const d = runDealer({ insecureTrustedDealer: true, n: 2, Q: 1, mesh: net.mesh(5) as never, seed: 3n });
     const rs = await Promise.all([...run, d]);
     expect((rs[0] as PartyResult).composed.allow).toBe(1);
   });
@@ -270,7 +270,7 @@ describe('honest trusted-dealer runs', () => {
 describe('argument validation', () => {
   const mk = (o: Partial<Parameters<typeof runParty>[0]> = {}) => {
     const net = new MemNet([0, 1, 2], 's');
-    return runParty({ id: 0, n: 2, Q: 3, input: V(1, 1, 1), mesh: net.mesh(0) as never, sessionId: 's', ...o });
+    return runParty({ offline: 'trusted-dealer', insecureTrustedDealer: true, id: 0, n: 2, Q: 3, input: V(1, 1, 1), mesh: net.mesh(0) as never, sessionId: 's', ...o });
   };
   it('refuses a behaviour hook without unsafeTestHooks, before anything else', async () => {
     const e = (await mk({ behavior: { kind: 'crash', round: 'x' }, n: 0 }).catch((x) => x)) as NetAbort;
@@ -300,7 +300,7 @@ describe('argument validation', () => {
     // boundary values are accepted past validation (the run then waits on the dealer; abort it)
     for (const input of [V(0, 3, 0), V(1, 1, 3)]) {
       const net = new MemNet([0, 1, 2], 's', 100);
-      const e = (await runParty({ id: 0, n: 2, Q: 3, input, mesh: net.mesh(0) as never, sessionId: 's' }).catch((x) => x)) as NetAbort;
+      const e = (await runParty({ offline: 'trusted-dealer', insecureTrustedDealer: true, id: 0, n: 2, Q: 3, input, mesh: net.mesh(0) as never, sessionId: 's' }).catch((x) => x)) as NetAbort;
       expect(e.message).not.toContain('invalid decision vector');
     }
   });
@@ -524,8 +524,8 @@ describe('a lying trusted dealer is caught', () => {
 describe('session binding', () => {
   it('commitments are bound to the session id: a party running under another session cannot open', async () => {
     const net = new MemNet([0, 1, 2], 'sess');
-    const mk = (i: number, sid: string) => runParty({ id: i, n: 2, Q: 1, input: V(1, 1, 1), mesh: net.mesh(i) as never, sessionId: sid });
-    const d = runDealer({ n: 2, Q: 1, mesh: net.mesh(2) as never, seed: 1n });
+    const mk = (i: number, sid: string) => runParty({ offline: 'trusted-dealer', insecureTrustedDealer: true, id: i, n: 2, Q: 1, input: V(1, 1, 1), mesh: net.mesh(i) as never, sessionId: sid });
+    const d = runDealer({ insecureTrustedDealer: true, n: 2, Q: 1, mesh: net.mesh(2) as never, seed: 1n });
     const rs = await Promise.all([mk(0, 'sess').catch((e) => e), mk(1, 'other').catch((e) => e), d]);
     expect((rs[0] as NetAbort).kind === 'commitment' || (rs[1] as NetAbort).kind === 'commitment').toBe(true);
   });
@@ -585,7 +585,7 @@ describe('dealer randomness', () => {
   it('without a seed the dealer is random; with a seed it is reproducible', async () => {
     const dealOnce = async (seed?: bigint) => {
       const net = new MemNet([0, 1, 2], 'sess');
-      await runDealer({ n: 2, Q: 1, mesh: net.mesh(2) as never, seed });
+      await runDealer({ insecureTrustedDealer: true, n: 2, Q: 1, mesh: net.mesh(2) as never, seed });
       return (net.mesh(2).sent.find((m) => m.to === 0 && m.rd === 'prep')!.d as { nums: string[] }).nums;
     };
     const a = await dealOnce();
@@ -612,7 +612,7 @@ describe('dealer randomness', () => {
       return calls++ === idx ? 0n : real.call(this);
     });
     const net = new MemNet([0, 1, 2], 'sess');
-    await runDealer({ n: 2, Q: 1, mesh: net.mesh(2) as never, seed: 9n });
+    await runDealer({ insecureTrustedDealer: true, n: 2, Q: 1, mesh: net.mesh(2) as never, seed: 9n });
     const nums = (net.mesh(2).sent.find((m) => m.to === 0 && m.rd === 'prep')!.d as { nums: string[] }).nums;
     expect(nums[0]).not.toBe('0');
     const nums1 = (net.mesh(2).sent.find((m) => m.to === 1 && m.rd === 'prep')!.d as { nums: string[] }).nums;
@@ -620,7 +620,7 @@ describe('dealer randomness', () => {
   });
   it('pairwise tags and keys of each sharing are non-trivial and satisfy T_ij = K_ij + delta_j * x_i', async () => {
     const net = new MemNet([0, 1, 2], 'sess');
-    await runDealer({ n: 2, Q: 1, mesh: net.mesh(2) as never, seed: 11n });
+    await runDealer({ insecureTrustedDealer: true, n: 2, Q: 1, mesh: net.mesh(2) as never, seed: 11n });
     const nums = [0, 1].map((p) => (net.mesh(2).sent.find((m) => m.to === p && m.rd === 'prep')!.d as { nums: string[] }).nums.map((x) => BigInt('0x' + x)));
     const delta = [nums[0]![0]!, nums[1]![0]!];
     // alpha sharings first: per key (x, tag_to_other, key_for_other)
@@ -813,10 +813,10 @@ describe('timing statistics', () => {
   });
   it('the prep round reports only the bytes that arrived during preparation (a dealer that already sent counts once)', async () => {
     const net = new MemNet([0, 1, 2], 'sess');
-    await runDealer({ n: 2, Q: 1, mesh: net.mesh(2) as never, seed: 4n });
+    await runDealer({ insecureTrustedDealer: true, n: 2, Q: 1, mesh: net.mesh(2) as never, seed: 4n });
     const first = (net.mesh(2).sent.find((m) => m.to === 0 && m.rd === 'prep')!.d);
     const size = JSON.stringify(first).length + 'prep'.length;
-    const r = await runParty({ id: 0, n: 2, Q: 1, input: V(1, 1, 1), mesh: net.mesh(0) as never, sessionId: 'sess' }).catch((e) => e);
+    const r = await runParty({ offline: 'trusted-dealer', insecureTrustedDealer: true, id: 0, n: 2, Q: 1, input: V(1, 1, 1), mesh: net.mesh(0) as never, sessionId: 'sess' }).catch((e) => e);
     void r; // the second party is absent, so this run aborts later; only the prep round matters
     void size;
   }, 30_000);
@@ -1009,8 +1009,8 @@ describe('scripted conditions the protocol cannot produce on its own', () => {
       if (rd === 'prep.1') throw new TypeError('scripted transport failure');
       return recv(from, rd, t);
     };
-    const runs = vs4.map((v, i) => runParty({ id: i, n: 4, Q: 100, input: v, mesh: net.mesh(i) as never, sessionId: 'sess' }).catch((e) => e as NetAbort));
-    const d = runDealer({ n: 4, Q: 100, mesh: net.mesh(4) as never, seed: 2n }).catch(() => null);
+    const runs = vs4.map((v, i) => runParty({ offline: 'trusted-dealer', insecureTrustedDealer: true, id: i, n: 4, Q: 100, input: v, mesh: net.mesh(i) as never, sessionId: 'sess' }).catch((e) => e as NetAbort));
+    const d = runDealer({ insecureTrustedDealer: true, n: 4, Q: 100, mesh: net.mesh(4) as never, seed: 2n }).catch(() => null);
     const [e0] = await Promise.all(runs);
     await d;
     expect(e0).toBeInstanceOf(NetAbort);

@@ -6,7 +6,13 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 out="${1:-$here/build}"
 mkdir -p "$out"
-case "$(uname -s)" in Darwin) lib="$out/libatlas_less.dylib" ;; *) lib="$out/libatlas_less.so" ;; esac
-"${CC:-cc}" -O2 -std=c99 -fPIC -shared -DCATEGORY=252 -DTARGET=45 -I"$here/include" -I"$here" \
-  -o "$lib" "$here"/lib/*.c "$here/atlas_less.c" -lpthread
+# Windows builds with mingw-w64 gcc (CC=gcc), not MSVC: the reference uses GNU __attribute__((aligned)), variable-length arrays and
+# pthreads (atlas_less.c), none of which MSVC supports. winpthread and libgcc are linked statically so atlas_less.dll needs no runtime DLLs.
+case "$(uname -s)" in
+  Darwin) lib="$out/libatlas_less.dylib"; opts=(-fPIC); libs=(-lpthread) ;;
+  MINGW*|MSYS*|CYGWIN*) lib="$out/atlas_less.dll"; opts=(-static-libgcc); libs=(-Wl,-Bstatic -lpthread -Wl,-Bdynamic) ;;
+  *) lib="$out/libatlas_less.so"; opts=(-fPIC); libs=(-lpthread) ;;
+esac
+"${CC:-cc}" -O2 -std=c99 "${opts[@]}" -shared -DCATEGORY=252 -DTARGET=45 -I"$here/include" -I"$here" \
+  -o "$lib" "$here"/lib/*.c "$here/atlas_less.c" "${libs[@]}"
 echo "$lib"
