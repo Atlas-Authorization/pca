@@ -210,10 +210,12 @@ export function intervalEmpty(iv: NumInterval): boolean {
  * verdict here is sound as a necessary condition.
  */
 export function numericConjunctionSatisfiable(conditions: readonly Condition[]): boolean {
-  let iv = FULL_INTERVAL;
+  // One interval per field: bounds on different fields never constrain each other.
+  const byField = new Map<string, NumInterval>();
   for (const c of conditions) {
     if (!isLeafCondition(c) || c.ref !== undefined) continue;
-    iv = tightenInterval(iv, c.op, c.value);
+    byField.set(c.field, tightenInterval(byField.get(c.field) ?? FULL_INTERVAL, c.op, c.value));
   }
-  return !intervalEmpty(iv);
+  for (const iv of byField.values()) if (intervalEmpty(iv)) return false;
+  return true;
 }

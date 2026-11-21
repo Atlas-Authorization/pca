@@ -455,6 +455,8 @@ export interface ForgeRimOptions {
   wrapSignature?: boolean;
   /** Use this DigestValue instead of the correct one. */
   digestOverride?: string;
+  /** Write the Signature element and its children with no prefix (`<Signature xmlns="...xmldsig#">`), under the root's default namespace. */
+  unprefixedSignature?: boolean;
   /** Sign SignedInfo with this key instead of `signerKey` (SignatureValue will not verify under the leaf). */
   signWith?: ForgeKey;
 }
@@ -515,7 +517,9 @@ export function rimSignedInfoCanonical(xml: string): string {
   const doc = parseXml(xml);
   const si = doc.documentElement.getElementsByTagNameNS(NS_DSIG, 'SignedInfo').item(0);
   if (!si) throw new Error('no SignedInfo');
-  return new C14nCanonicalization().process(si as never, { ancestorNamespaces: ancestorNamespaces(si) } as never);
+  // per C14N 1.1: an unprefixed element's in-scope default namespace is emitted once (xml-crypto already writes it)
+  const anc = ancestorNamespaces(si).filter((x) => !(x.prefix === '' && !(si as { prefix?: string | null }).prefix));
+  return new C14nCanonicalization().process(si as never, { ancestorNamespaces: anc } as never);
 }
 
 export function forgeRim(o: ForgeRimOptions): string {
@@ -539,7 +543,8 @@ export function forgeRim(o: ForgeRimOptions): string {
       `<ds:SignedInfo><ds:CanonicalizationMethod Algorithm="${o.c14nUri ?? RIM_ALG.C14N11}"/><ds:SignatureMethod Algorithm="${o.sigMethodUri ?? RIM_ALG.ECDSA384}"/>` +
       `<ds:Reference URI="${o.referenceUri ?? ''}"><ds:Transforms>${transforms.map((t) => `<ds:Transform Algorithm="${t}"/>`).join('')}</ds:Transforms><ds:DigestMethod Algorithm="${o.digestMethodUri ?? RIM_ALG.SHA384}"/>${o.omitDigestValue ? '' : `<ds:DigestValue>${digestB64}</ds:DigestValue>`}</ds:Reference>` +
       `${o.extraReference ? `<ds:Reference URI="#other"><ds:DigestMethod Algorithm="${RIM_ALG.SHA384}"/><ds:DigestValue>${digestB64}</ds:DigestValue></ds:Reference>` : ''}</ds:SignedInfo>`;
-    const sigEl = `<ds:Signature xmlns:ds="${NS_DSIG}">${signedInfo}${o.omitSignatureValue ? '' : `<ds:SignatureValue>${sigB64}</ds:SignatureValue>`}${keyInfo}</ds:Signature>`;
+    const sigDs = `<ds:Signature xmlns:ds="${NS_DSIG}">${signedInfo}${o.omitSignatureValue ? '' : `<ds:SignatureValue>${sigB64}</ds:SignatureValue>`}${keyInfo}</ds:Signature>`;
+    const sigEl = o.unprefixedSignature ? sigDs.replace(/<ds:/g, '<').replace(/<\/ds:/g, '</').replace(` xmlns:ds="${NS_DSIG}"`, ` xmlns="${NS_DSIG}"`) : sigDs;
     const second = o.extraSignature === 'sibling' ? `<ds:Signature xmlns:ds="${NS_DSIG}"><ds:SignedInfo/></ds:Signature>` : '';
     return o.wrapSignature ? `<ns0:Wrapper>${sigEl}</ns0:Wrapper>${second}` : sigEl + second;
   };

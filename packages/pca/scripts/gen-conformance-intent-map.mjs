@@ -14,7 +14,8 @@
 import { createHash } from 'node:crypto';
 import { cloneJson, readCore, writeCore } from './conformance-io.mjs';
 
-const pca = process.env.PCA_SRC ? await import('../src/index.ts') : await import('../dist/index.js');
+import { loadPca } from './pca-all.mjs';
+const pca = await loadPca();
 
 const seed = (l) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)

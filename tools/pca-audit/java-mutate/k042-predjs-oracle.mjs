@@ -3,9 +3,10 @@
 //   PCA_SRC=<dir with packages/pca/src and its node_modules> tsx tools/pca-audit/java-mutate/k042-predjs-oracle.mjs \
 //       sdks/java-pca/test-data/k042-predjs.json
 // Every input is carried as JSON TEXT (ctx / cond / preds) so both sides parse the identical lexemes (1e400, -0, \ud800).
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 
-const SRC = process.env.PCA_SRC ?? new URL('../../../packages/pca/src/', import.meta.url).pathname;
+const SRC = process.env.PCA_SRC ?? fileURLToPath(new URL('../../../packages/pca/src/', import.meta.url));
 const P = await import(`${SRC.replace(/\/$/, '')}/predicates.ts`);
 const H = await import(`${SRC.replace(/\/$/, '')}/hash.ts`);
 

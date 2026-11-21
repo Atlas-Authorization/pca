@@ -267,6 +267,13 @@ describe('timelock layer', () => {
     for (const s of [0, -1, 1.5, NaN]) expect(err(() => calibrateSteps({ ...base, sampleSquarings: s })).message).toBe('calibrateSteps: sampleSquarings must be a safe integer >= 1');
     for (const a of [0.5, NaN, Infinity]) expect(err(() => calibrateSteps({ ...base, adversaryAdvantage: a })).message).toBe('calibrateSteps: adversaryAdvantage must be >= 1');
     expect(() => calibrateSteps({ N, desiredSeconds: 1, sampleSquarings: 1, adversaryAdvantage: 1, now: (() => { let q = 0; return () => (q += 10); })() })).not.toThrow();
+    for (const bad of [NaN, Infinity, -Infinity]) {
+      // an infinite elapsed time used to yield steps = 1, NaN one NaN steps
+      for (const reads of [[0, bad], [bad, 0]]) {
+        const q = [...reads];
+        expect(err(() => calibrateSteps({ N, desiredSeconds: 1, sampleSquarings: 1, adversaryAdvantage: 1, now: () => q.shift()! })).message).toBe('calibrateSteps: the clock must return finite times');
+      }
+    }
     // real clock: positive finite measurement
     const real = calibrateSteps({ N, desiredSeconds: 1, sampleSquarings: 2000 });
     expect(real.measuredSquaringsPerSecond).toBeGreaterThan(0);

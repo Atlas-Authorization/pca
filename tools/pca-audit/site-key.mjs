@@ -33,6 +33,8 @@ export function occurrenceAt(lines, lineno) {
  *   - otherwise a unique text is occurrence 1; otherwise the hint must sit on that text (exact) or nearest to one copy of it.
  */
 export function place(lines, text, { occurrence, hint } = {}) {
+  // a mutant of compiler-generated code with no source line at all (report line 0, empty text): one shared site per (mutant, fn)
+  if (text === '' && !hint) return { occurrence: 1, lineno: 0, how: 'no source line' };
   const at = linesWithText(lines, text);
   if (at.length === 0) return { error: 'text not in current source (report predates a code change)' };
   if (occurrence) {
@@ -53,6 +55,7 @@ export function place(lines, text, { occurrence, hint } = {}) {
 /** Static validation of one entry's site against the current source. Returns { errors: [], lineno }. */
 export function checkEntrySite(lines, e, label) {
   const errors = [];
+  if (e.line === '' && e.lineno === 0) return { errors, lineno: 0 }; // the no-source-line site above; needs fn and a reason
   const at = linesWithText(lines, e.line);
   if (at.length === 0) return { errors: [`STALE (source line gone): ${label}`] };
   if (e.occurrence === undefined) {

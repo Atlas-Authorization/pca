@@ -180,7 +180,7 @@ may create further keys of its own.
 
 **Verifier.** $\mathrm{Acc}(P,G,\mathrm{now})$: $G$ is a root grant returned by a $\mathrm{Hop}(P,\cdot,\cdot,\bot)$ query, $P\in K_h\setminus K_c$
 (an *uncorrupted principal*); `verifyPCActnCore(P, {grant: G, audience: aud, nowEpoch: now})` returns `allow` with
-`wire`, `version`, `audience`, `validity`, `cap_chain`, `grant_ref_bound`, `plan_inclusion`, `leaf_signature`, `counter` all
+`wire`, `version`, `audience`, `validity`, `cap_chain`, `grant_ref_bound`, `plan_inclusion`, `leaf_signature`, `counter_format` all
 `pass`.
 
 **Win condition.** $\mathcal A$ outputs $(P,\mathrm{now})$ such that $\mathrm{Acc}$ holds and **Bad**:

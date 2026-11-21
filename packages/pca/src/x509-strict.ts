@@ -98,7 +98,9 @@ export function readCertRoleInfo(certDer: Uint8Array): CertRoleInfo {
           const first = readTlv(certDer, c, bc.end);
           if (first.tag === 0x01) {
             if (first.end - first.start !== 1) throw new RangeError('BasicConstraints cA is not one byte');
-            info.ca = certDer[first.start] !== 0;
+            const caByte = certDer[first.start]!;
+            if (caByte !== 0x00 && caByte !== 0xff) throw new RangeError('BasicConstraints cA is not a DER BOOLEAN');
+            info.ca = caByte === 0xff;
             c = first.end;
           }
         }
@@ -132,17 +134,22 @@ export interface CertExtension {
 
 function oidToDotted(b: Uint8Array, t: Tlv): string {
   if (t.tag !== 0x06 || t.end <= t.start) throw new RangeError('extension OID is malformed');
+  // caps come before any BigInt work: the decimal decode is quadratic in the arc length
+  if (t.end - t.start > 256) throw new RangeError('extension OID is too long');
   const arcs: bigint[] = [];
   let v = 0n;
   let open = false;
+  let groups = 0;
   for (let i = t.start; i < t.end; i++) {
     const byte = b[i]!;
     if (!open && byte === 0x80) throw new RangeError('extension OID has a non-minimal arc');
+    if (++groups > 64) throw new RangeError('extension OID has an oversized arc');
     v = (v << 7n) | BigInt(byte & 0x7f);
     open = (byte & 0x80) !== 0;
     if (!open) {
       arcs.push(v);
       v = 0n;
+      groups = 0;
     }
   }
   if (open) throw new RangeError('extension OID is truncated');
@@ -255,6 +262,28 @@ export function checkChainRoles(orderedDer: readonly Uint8Array[]): string | und
   }
 }
 
+/** Critical extensions the JWS / SPDM chain verifiers process or can safely ignore: BasicConstraints, KeyUsage and ExtendedKeyUsage. */
+export const CHAIN_CRITICAL_OK: ReadonlySet<string> = new Set([...RECOGNISED_CRITICAL_EXTENSIONS, '2.5.29.37']);
+
+/**
+ * The shared chain profile of the MAA x5c, GCP x5c and NVIDIA device chain verifiers (0.5, B15): CA roles over the ordered
+ * chain (leaf first; see {@link checkChainRoles}) and no unrecognised critical extension on any certificate. Returns a
+ * failure reason or undefined. A DER read failure is a failure.
+ */
+export function strictChainError(orderedDer: readonly Uint8Array[]): string | undefined {
+  const roles = checkChainRoles(orderedDer);
+  if (roles) return roles;
+  try {
+    for (const [i, der] of orderedDer.entries()) {
+      const oid = unrecognisedCriticalExtension(der, CHAIN_CRITICAL_OK);
+      if (oid) return `certificate at depth ${i} has an unrecognised critical extension ${oid}`;
+    }
+    return undefined;
+  } catch (e) {
+    return `certificate extension parse failed: ${e instanceof Error ? e.message : 'invalid'}`;
+  }
+}
+
 const CURVES = {
   'P-256': { crv: 'P-256', coord: 32 },
   'P-384': { crv: 'P-384', coord: 48 },
@@ -284,4 +313,24 @@ export function ecPointFromKey(key: KeyObject, curve: 'P-256' | 'P-384'): Uint8A
   out.set(x, 1);
   out.set(y, 1 + want.coord);
   return out;
+}
+
+/**
+ * RSA public-key rule applied before any signature check: modulus 512..16384 bits, exponent odd, >= 3 and at most 32 bits.
+ * OpenSSL accepts e = 1, even exponents, 256-bit moduli and huge moduli; each makes a forged signature or a cheap DoS.
+ * Applies to `rsa` and `rsa-pss` keys; every other key type is not this function's business (true).
+ */
+export function rsaKeyOk(key: KeyObject): boolean {
+  const t = key.asymmetricKeyType;
+  if (t !== 'rsa' && t !== 'rsa-pss') return true;
+  const d = key.asymmetricKeyDetails;
+  const bits = d?.modulusLength;
+  const e = d?.publicExponent;
+  if (bits === undefined || e === undefined || bits < 512 || bits > 16384) return false;
+  return (e & 1n) === 1n && e >= 3n && e < 1n << 32n;
+}
+
+/** `cert.verify(key)` that first refuses an unusable RSA key (see {@link rsaKeyOk}). */
+export function certVerifiedUnder(cert: { verify(key: KeyObject): boolean }, key: KeyObject): boolean {
+  return rsaKeyOk(key) && cert.verify(key);
 }

@@ -10,13 +10,14 @@
 //
 //   npx tsx tools/pca-audit/java-mutate/k042-intentv2-oracle.mts     (from the repo root; deterministic)
 // writes sdks/java-pca/test-data/k042-intentv2-cases.json.gz
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 const pcaMod: any = await import(new URL('../../../packages/pca/src/index.ts', import.meta.url).href);
 const pca: any = pcaMod.decideIntentV2 ? pcaMod : pcaMod.default;
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const core = JSON.parse(readFileSync(ROOT + 'packages/pca/conformance/vectors.json', 'utf8'));
 const byName = new Map<string, any>();
 for (const v of core.vectors) byName.set(v.name, v);

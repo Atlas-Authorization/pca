@@ -17,3 +17,5 @@ export * from './ext-taint';
 export * from './ext-attest';
 export * from './ext-policyvm';
 export * from './ext-regex';
+export * from './goal';
+export * from './goalselect';

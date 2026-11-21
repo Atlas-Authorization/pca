@@ -8,7 +8,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 class UTC { constructor(public valueBlock: { valueHexView: Uint8Array; value?: unknown }) {} }
 class GEN extends UTC {} // asn1js: GeneralizedTime extends UTCTime
-const asn1 = { UTCTime: UTC, GeneralizedTime: GEN } as never;
+class OCT { constructor(public valueBlock: { value?: unknown }) {} }
+class BIT { constructor(public valueBlock: { value?: unknown }) {} }
+const asn1 = { UTCTime: UTC, GeneralizedTime: GEN, OctetString: OCT, BitString: BIT } as never;
 const t = (Cls: typeof UTC, text: string) => new Cls({ valueHexView: Buffer.from(text, 'latin1') });
 
 async function fresh() {

@@ -99,7 +99,8 @@
   "window": {
    "from": 5,
    "to": 40
-  }
+  },
+  "dropped": 0
  },
  "anomalies": [
   "a1"
@@ -116,6 +117,7 @@
   "window": {
    "from": 0,
    "to": 0
-  }
+  },
+  "dropped": 0
  }
 }

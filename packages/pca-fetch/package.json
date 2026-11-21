@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-fetch",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Runtime-neutral Web Fetch guard for Proof-Carrying Authority: verify an inbound PCActn in any Request→Response runtime (Cloudflare Workers, Deno, Bun, Vercel Edge, Lambda).",
   "keywords": [
     "web fetch",
@@ -41,6 +41,7 @@
     "@atlasauth/pca": "workspace:*"
   },
   "devDependencies": {
+    "@atlasauth/pca-testing": "workspace:*",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
@@ -54,5 +55,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production"
   }
 }

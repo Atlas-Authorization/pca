@@ -18,7 +18,7 @@
     "chain": true,
     "plan_inclusion": true,
     "leaf_signature": true,
-    "counter": true
+    "counter_format": true
    }
   },
   "dotnet": {
@@ -31,7 +31,7 @@
     "chain": true,
     "plan_inclusion": true,
     "leaf_signature": true,
-    "counter": true
+    "counter_format": true
    }
   },
   "go": {
@@ -39,7 +39,7 @@
    "checks": {
     "audience": true,
     "chain": true,
-    "counter": true,
+    "counter_format": true,
     "leaf_signature": true,
     "plan_inclusion": true,
     "validity": false,
@@ -57,7 +57,7 @@
     "chain": true,
     "plan_inclusion": true,
     "leaf_signature": true,
-    "counter": true
+    "counter_format": true
    }
   },
   "python": {
@@ -70,7 +70,7 @@
     "chain": true,
     "plan_inclusion": true,
     "leaf_signature": true,
-    "counter": true
+    "counter_format": true
    }
   },
   "ruby": {
@@ -83,7 +83,7 @@
     "chain": true,
     "plan_inclusion": true,
     "leaf_signature": true,
-    "counter": true
+    "counter_format": true
    }
   }
  },

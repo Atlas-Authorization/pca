@@ -1,0 +1,17 @@
+{
+ "target": "frost-dkg dkgVerifyRound1",
+ "seeds": [
+  {
+   "identifier": 1,
+   "sessionId": "ZnV6ei1ka2ctc2Vzc2lvbi0wMTIzNDU2Nzg5YWJjZGVm",
+   "coefficientCommitments": [
+    "-wmAIb0aAXfovBsNkPFBoX4qaMHaMMlPVzAG6I09DrE",
+    "nuxmgTEiASUqSj2e64aZkEimxTDkr3eB34kFiysP_xY"
+   ],
+   "proofOfKnowledge": {
+    "R": "FW6pU5Vn4Jyruy4P_G4cMMxrzw5Wdl8hR-tu2uh_r-4",
+    "mu": "JTKrHiNnvj5oO9R75YnhE5Ex1_pOloqUZ-hzsorYQAI"
+   }
+  }
+ ]
+}

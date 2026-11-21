@@ -222,7 +222,7 @@ function boxMasks(vs: VerbSpace, nCells: number, cellIdx: Int32Array, nCellsD: n
   const D = vs.dims.length;
   let boxes = 1;
   for (const c of nChoice) boxes *= c;
-  if (boxes > cap) throw new Error(`pca-intent: ${boxes} boxes for ${vs.verb} exceed the enumeration cap; coarsen the cuts`);
+  if (!(boxes <= cap)) throw new Error(`pca-intent: ${boxes} boxes for ${vs.verb} exceed the enumeration cap; coarsen the cuts`);
   const out: Uint8Array[] = [];
   const cur = new Array<number>(D).fill(0);
   for (let b = 0; b < boxes; b++) {
@@ -268,7 +268,7 @@ function enumerateUnions(boxes: Uint8Array[], k: number, cap: number, verb: stri
     for (const s of frontier) {
       for (const b of boxes) {
         work += 1;
-        if (work > cap) throw new Error(`pca-intent: the union-of-${k}-boxes class for ${verb} exceeds the enumeration cap; coarsen the cuts or lower k`);
+        if (!(work <= cap)) throw new Error(`pca-intent: the union-of-${k}-boxes class for ${verb} exceeds the enumeration cap; coarsen the cuts or lower k`);
         const u = new Uint8Array(s.length);
         for (let i = 0; i < s.length; i++) u[i] = s[i]! | b[i]!;
         const key = keyOf(u);
@@ -355,7 +355,7 @@ function enumerateDecisionLists(tests: Uint8Array[], nCells: number, L: number, 
       for (const t of tests) {
         for (const label of [0, 1]) {
           work += 1;
-          if (work > cap) throw new Error(`pca-intent: the decision-list class (≤ ${L} rules) for ${verb} exceeds the enumeration cap`);
+          if (!(work <= cap)) throw new Error(`pca-intent: the decision-list class (≤ ${L} rules) for ${verb} exceeds the enumeration cap`);
           const decided = new Uint8Array(nCells);
           const acc = new Uint8Array(nCells);
           let fresh = false;
@@ -399,7 +399,7 @@ function buildVerbModel(vs: VerbSpace, opts: FullOpts, harm: HarmModel): VerbMod
   if (hc.kind === 'box') {
     let boxes = 1;
     for (const c of nChoice) boxes *= c;
-    if (boxes + 1 > opts.maxHypotheses) {
+    if (!(boxes + 1 <= opts.maxHypotheses)) {
       throw new Error(`pca-intent: |Θ_${vs.verb}| = ${boxes + 1} exceeds maxHypotheses ${opts.maxHypotheses}; coarsen the cuts`);
     }
     nh = boxes + 1;
@@ -427,7 +427,7 @@ function buildVerbModel(vs: VerbSpace, opts: FullOpts, harm: HarmModel): VerbMod
       const tests = cond === 'atomic' ? atomicTests(vs, nCells, cellIdx, nCellsD) : dedupMasks(boxMasks(vs, nCells, cellIdx, nCellsD, contains, nChoice, opts.maxEnumeration));
       ({ sets, complexity: cx } = enumerateDecisionLists(tests, nCells, hc.maxRules, opts.maxEnumeration, vs.verb));
     }
-    if (sets.length + 1 > opts.maxHypotheses) {
+    if (!(sets.length + 1 <= opts.maxHypotheses)) {
       throw new Error(`pca-intent: |Θ_${vs.verb}| = ${sets.length + 1} exceeds maxHypotheses ${opts.maxHypotheses}; coarsen the cuts`);
     }
     nh = sets.length + 1;
@@ -1067,7 +1067,7 @@ export function elicit(learner: IntentLearner, answer: (q: Question) => 0 | 1, o
   const asked: Question[] = [];
   let seedQuestions = 0;
   for (const s of o.seed ?? []) {
-    if (asked.length >= o.maxQuestions) break;
+    if (!(asked.length < o.maxQuestions)) break;
     const m = learner.metrics();
     if (m.residualRisk <= o.epsRisk && m.burden <= o.epsBurden) break;
     const q = seedQuestion(learner, s);
@@ -1080,7 +1080,7 @@ export function elicit(learner: IntentLearner, answer: (q: Question) => 0 | 1, o
   while (stop === null) {
     const m = learner.metrics();
     if (m.residualRisk <= o.epsRisk && m.burden <= o.epsBurden) stop = 'converged';
-    else if (asked.length >= o.maxQuestions) stop = 'budget';
+    else if (!(asked.length < o.maxQuestions)) stop = 'budget';
     else {
       const q = learner.nextQuestion();
       if (!q) stop = 'no-disagreement';
@@ -1106,7 +1106,7 @@ export function auditRound(learner: IntentLearner, answer: (q: Question) => 0 | 
     const pending = learner.unconfirmedGrantCells();
     const mass = pending.reduce((s, x) => s + x.weight, 0);
     if (pending.length === 0 || mass <= o.epsRisk) return { asked: n, exhausted: false };
-    if (asked.length >= o.maxQuestions) return { asked: n, exhausted: true };
+    if (!(asked.length < o.maxQuestions)) return { asked: n, exhausted: true };
     const top = pending[0]!;
     const vs = learner.omega.verbs.find((v) => v.verb === top.verb)!;
     const q: Question = { verb: top.verb, cell: top.cell, outcome: cellRep(vs, top.cell), p: learner.acceptance(cellRep(vs, top.cell)), score: top.weight };

@@ -3,9 +3,10 @@ import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { b64u } from '@atlasauth/pca';
 import {
-  CborTag, TransparencyService, checkStatement, decode, encode, signStatement, verifyReceipt, verifyConsistencyProof,
+  CborTag,  checkStatement, decode, encode, signStatement, verifyReceipt, verifyConsistencyProof,
   HDR_CWT_CLAIMS, HDR_VDS, CWT_ISS, type CborKey, type CborValue,
 } from './index';
+import { TransparencyService } from './testing';
 import { leafHash, rootFromInclusionPath, verifyConsistencyPath, treeHash } from './rfc9162';
 
 const hex = (u: Uint8Array) => Buffer.from(u).toString('hex');

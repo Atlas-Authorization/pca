@@ -47,7 +47,8 @@ describe('session', () => {
     expect(sharesGoal({ ...s, members: [root, agentOf(grantFor('b'))] })).toBe(false);
     expect(settle(() => sharesGoal({ ...s, members: [root, agentOf({ caveats: [] })] }))).toEqual({ ok: true, value: false });
     const bare = startSession(agentOf({ caveats: [] }));
-    expect(settle(() => sharesGoal({ ...bare, members: [agentOf({ caveats: [] }), agentOf({ caveats: [] })] }))).toEqual({ ok: true, value: true });
+    // no readable goal commitment => members do not "share a goal" (fail closed; session.ts, and the 0.5 changelog entry for sharesGoal)
+    expect(settle(() => sharesGoal({ ...bare, members: [agentOf({ caveats: [] }), agentOf({ caveats: [] })] }))).toEqual({ ok: true, value: false });
   });
 });
 

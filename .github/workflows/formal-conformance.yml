@@ -4,10 +4,20 @@ name: Formal - model-to-code conformance (full)
 # size (~10^6 random cases + exhaustive small scopes), split into shards; every stage must report "disagree": 0, and the
 # harness self-test (deliberately broken model mutants) must kill every mutant not recorded as surviving. Differential testing, not a proof.
 # Runs on ci/** pushes and on demand; the smoke size runs in CI on every push.
+# Every stage except the small attestation one divides its cases by the shard count, so wall clock scales ~1/shards
+# (8 shards: ~2-3.5 h each; 32: ~30 min + setup). Default 32; pass `shards` to change it.
 on:
   push:
-    branches: ['ci/**']
+    branches: ['ci/**', '!ci/build-**']
   workflow_dispatch:
+    inputs:
+      force_full:
+        description: 'redo the work even when an earlier run passed on identical inputs'
+        type: boolean
+        default: false
+      shards:
+        description: 'number of shards (default 32)'
+        default: '32'
 
 permissions:
   contents: read
@@ -17,14 +27,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  reuse:
+    name: reuse check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      skip: ${{ steps.reuse.outputs.skip }}
+      hash: ${{ steps.reuse.outputs.hash }}
+      source: ${{ steps.reuse.outputs.source }}
+    steps:
+      - uses: actions/checkout@v4
+      # input-hash reuse (ci-reuse.mjs): when an earlier run recorded the same input hash, every other job of this run is skipped.
+      # continue-on-error: a failing check can only mean "no reuse"; FORCE_FULL / force_full / [force-full] bypass it.
+      - id: reuse
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_FULL: ${{ inputs.force_full || inputs.full || vars.FORCE_FULL == '1' || contains(github.event.head_commit.message, '[force-full]') }}
+          GATE_FULL: ${{ inputs.full || (startsWith(github.ref_name, 'ci/') && endsWith(github.ref_name, '-rc') || startsWith(github.ref_name, 'ci/gate-')) || contains(github.event.head_commit.message, '[force-full]') }}
+          PARTIAL: ${{ false }}
+          EXTRA: shards=${{ inputs.shards || '32' }}
+        run: node .github/scripts/ci-reuse.mjs check --workflow=formal-conformance --self=.github/workflows/formal-conformance.yml --exclude='docs/,examples/,*.md' --extra="$EXTRA" --always-full
+  plan:
+    if: ${{ needs.reuse.outputs.skip != 'true' }}
+    needs: reuse
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.p.outputs.shards }}
+      list: ${{ steps.p.outputs.list }}
+    steps:
+      - id: p
+        env:
+          N: ${{ inputs.shards || '32' }}
+        run: |
+          [[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -ge 1 ] && [ "$N" -le 128 ] || { echo "::error::shards must be 1..128"; exit 1; }
+          echo "shards=$N" >> "$GITHUB_OUTPUT"
+          echo "list=[$(seq 0 $((N-1)) | paste -sd, -)]" >> "$GITHUB_OUTPUT"
+
   shard:
-    name: shard ${{ matrix.shard }}/8
+    if: ${{ needs.reuse.outputs.skip != 'true' }}
+    needs: [reuse, plan]
+    name: shard ${{ matrix.shard }}/${{ needs.plan.outputs.shards }}
     runs-on: ubuntu-latest
     timeout-minutes: 340
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        shard: ${{ fromJSON(needs.plan.outputs.list) }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -35,14 +87,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install
         run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
       - name: Build packages/pca and its workspace dependencies (the harness loads their dist/)
         run: pnpm -r --filter=@atlasauth/pca... run build
-      - name: Full run, shard ${{ matrix.shard }} of 8
+      - name: Full run, shard ${{ matrix.shard }} of ${{ needs.plan.outputs.shards }}
         run: |
           set +e
-          bash verify/run-conformance.sh full ${{ matrix.shard }} 8 2>&1 | tee "$RUNNER_TEMP/conformance-${{ matrix.shard }}.txt"
+          bash verify/run-conformance.sh full ${{ matrix.shard }} ${{ needs.plan.outputs.shards }} 2>&1 | tee "$RUNNER_TEMP/conformance-${{ matrix.shard }}.txt"
           rc=${PIPESTATUS[0]}
           # a surviving model mutant must be one recorded (and discussed) in tools/pca-formal/results/mutants.txt
           new=$(grep SURVIVED .verify-work/conformance/mutants-${{ matrix.shard }}.txt | awk '{print $1}' | sort -u)
@@ -59,3 +113,23 @@ jobs:
           path: |
             .verify-work/conformance
             ${{ runner.temp }}/conformance-${{ matrix.shard }}.txt
+
+  reuse-record:
+    name: reuse record
+    needs: [reuse, plan, shard]
+    # only a run whose jobs all passed (skipped by their own conditions is fine), that was not partial and not itself a reuse, leaves a record
+    if: ${{ !cancelled() && needs.reuse.outputs.skip != 'true' && needs.reuse.outputs.hash != '' && !(false) && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.shard.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - id: rec
+        env:
+          GATE_FULL: ${{ inputs.full || (startsWith(github.ref_name, 'ci/') && endsWith(github.ref_name, '-rc') || startsWith(github.ref_name, 'ci/gate-')) || contains(github.event.head_commit.message, '[force-full]') }}
+          HASH: ${{ needs.reuse.outputs.hash }}
+        run: node .github/scripts/ci-reuse.mjs record --workflow=formal-conformance --hash="$HASH" --out="$RUNNER_TEMP/reuse-record" --always-full
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rec.outputs.artifact }}
+          path: ${{ runner.temp }}/reuse-record/
+          retention-days: 21

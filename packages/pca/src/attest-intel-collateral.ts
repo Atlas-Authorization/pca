@@ -1,4 +1,5 @@
 import { x509ValidAt } from './x509-validity';
+import { MAX_ATTEST_JSON_BYTES } from './policy-lists';
 /**
  * Intel PCS COLLATERAL verification for the genuine DCAP TDX quote path (the "online remainder" that
  * `attest-intel-tdx.ts` documents). Entirely OFFLINE given collateral bytes the caller fetched from Intel PCS:
@@ -178,8 +179,10 @@ export function verifyCrl(crlDer: Uint8Array, issuerKey: KeyObject, now: Date): 
     return { ok: false, reason: `CRL parse failed: ${e instanceof Error ? e.message : 'unknown'}` };
   }
   if (!verify('sha256', crl.tbs, issuerKey, Buffer.from(crl.sigDer))) return { ok: false, reason: 'CRL signature does not verify under the issuer' };
-  if (now.getTime() < crl.thisUpdate) return { ok: false, reason: 'CRL thisUpdate is in the future' };
-  if (now.getTime() > crl.nextUpdate) return { ok: false, reason: 'CRL is stale (nextUpdate passed)' };
+  const t = now.getTime();
+  if (!Number.isFinite(t) || !Number.isFinite(crl.thisUpdate) || !Number.isFinite(crl.nextUpdate)) return { ok: false, reason: 'CRL time is not finite' };
+  if (!(t >= crl.thisUpdate)) return { ok: false, reason: 'CRL thisUpdate is in the future' };
+  if (!(t <= crl.nextUpdate)) return { ok: false, reason: 'CRL is stale (nextUpdate passed)' };
   return { ok: true, revoked: crl.revoked };
 }
 export function serialIsRevoked(revoked: ReadonlySet<string>, serialHex: string): boolean {
@@ -238,12 +241,16 @@ function rawJsonObject(text: string, name: string): string | null {
 interface SignedDoc<T> {
   body: T;
 }
-function verifySignedJson(text: string, name: string, key: KeyObject): SignedDoc<Record<string, unknown>> | { error: string } {
+export function verifySignedJson(text: string, name: string, key: KeyObject): SignedDoc<Record<string, unknown>> | { error: string } {
+  if (text.length > MAX_ATTEST_JSON_BYTES) return { error: `${name}: malformed JSON segment: input too large` };
   const raw = rawJsonObject(text, name);
   if (raw === null) return { error: `${name} not found / malformed` };
   let doc: unknown;
+  let body: unknown;
   try {
     doc = JSON.parse(text);
+    // the body comes from the signed bytes: JSON.parse keeps the LAST duplicate member, and only the first is signed
+    body = JSON.parse(raw);
   } catch {
     return { error: `${name} document is not valid JSON` };
   }
@@ -251,7 +258,6 @@ function verifySignedJson(text: string, name: string, key: KeyObject): SignedDoc
   if (typeof sig !== 'string' || !/^[0-9a-fA-F]{128}$/.test(sig)) return { error: `${name} signature missing or malformed` };
   const ok = verify('sha256', Buffer.from(raw, 'utf8'), { key, dsaEncoding: 'ieee-p1363' }, Buffer.from(sig, 'hex'));
   if (!ok) return { error: `${name} signature does not verify under the TCB Signing certificate` };
-  const body = (doc as Record<string, unknown>)[name];
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return { error: `${name} is not an object` };
   return { body: body as Record<string, unknown> };
 }
@@ -260,8 +266,10 @@ function checkFresh(body: Record<string, unknown>, what: string, now: Date): str
   const issue = typeof body.issueDate === 'string' ? Date.parse(body.issueDate) : Number.NaN;
   const next = typeof body.nextUpdate === 'string' ? Date.parse(body.nextUpdate) : Number.NaN;
   if (!Number.isFinite(issue) || !Number.isFinite(next)) return `${what}: issueDate/nextUpdate missing`;
-  if (now.getTime() < issue) return `${what}: issueDate is in the future`;
-  if (now.getTime() > next) return `${what}: stale (nextUpdate passed)`;
+  const t = now.getTime();
+  if (!Number.isFinite(t)) return `${what}: clock is not finite`;
+  if (!(t >= issue)) return `${what}: issueDate is in the future`;
+  if (!(t <= next)) return `${what}: stale (nextUpdate passed)`;
   return null;
 }
 

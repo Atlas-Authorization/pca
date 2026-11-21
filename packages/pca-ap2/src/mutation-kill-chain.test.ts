@@ -387,6 +387,14 @@ describe('verifyDelegationChain: root', () => {
     expect(why(vchain(t({ iat: NOW + 5 }), k, { clockSkewSeconds: 5 }))).toBe('ACCEPTED');
     expect(why(vchain(t({ iat: NOW + 6 }), k, { clockSkewSeconds: 5 }))).toBe('root: iat is in the future');
     expect(why(vchain(t({ iat: 1.5 }), k))).toBe('root: iat must be an integer');
+    // a lenient JSON.parse reads the lexeme -0 as -0: the strict profile refuses it as a non-integer
+    const negZero = (claim: string) => {
+      const orig = JSON.stringify;
+      const spy = vi.spyOn(JSON, 'stringify').mockImplementation((...a: Parameters<typeof JSON.stringify>) => orig(...a).replace(`"${claim}":424242`, `"${claim}":-0`));
+      try { return t({ [claim]: 424242 }); } finally { spy.mockRestore(); }
+    };
+    expect(why(vchain(negZero('exp'), k))).toBe('root: exp must be an integer');
+    expect(why(vchain(negZero('iat'), k))).toBe('root: iat must be an integer');
   });
   it('root mandate times use the same bounds and the "root mandate" label', () => {
     const k = keys();

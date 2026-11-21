@@ -1,5 +1,6 @@
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
-import { compactJwsAliases, issuePassport } from '@atlasauth/pca';
+import { compactJwsAliases } from '@atlasauth/pca';
+import { issuePassport } from '@atlasauth/pca/ext/attestation';
 import { compactVerify } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { didKeyFromEd25519, passportToVC, verifyPassportVC } from './index';

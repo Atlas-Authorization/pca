@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { actionSchemaKeyOf, generateKeyPair, signActionSchema, verifyActionSchema } from '@atlasauth/pca';
+import { generateKeyPair } from '@atlasauth/pca';
+import { actionSchemaKeyOf, signActionSchema, verifyActionSchema } from '@atlasauth/pca/ext/intent';
 import { applySchemaDecisions, conformToolCall, draftActionSchemaFromMcp, verbOfTool } from './schema';
 
 const TOOLS = [

@@ -1,4 +1,5 @@
-import { hashCanonical, intentMapDigest as coreIntentMapDigest, type Caveat, type Predicate } from '@atlasauth/pca';
+import { hashCanonical, type Caveat, type Predicate } from '@atlasauth/pca';
+import { intentMapDigest as coreIntentMapDigest } from '@atlasauth/pca/ext/intent';
 import { IntentLearner, hypothesisClassName, type HypothesisClassName, type HypothesisClassSpec, type LearnerOptions, type Observation, type Strategy } from './learner';
 import type { CatValue, Dim, Omega, Outcome } from './omega';
 import type { PolicyInput } from './policy';
@@ -18,7 +19,7 @@ import type { Region } from './region';
  * All probabilities and metrics are integers in parts-per-million (ppm) so the digest is language-portable.
  */
 
-export { INTENT_MAP_DOMAIN } from '@atlasauth/pca';
+export { INTENT_MAP_DOMAIN } from '@atlasauth/pca/ext/intent';
 const PPM = 1_000_000;
 const ppm = (x: number) => Math.round(x * PPM);
 
@@ -119,6 +120,12 @@ export function omegaToJSON(o: Omega): OmegaJSON {
   };
 }
 
+/** A categorical dimension holds one of its values: with none it can hold nothing, so it is refused (never read as an empty list). */
+function catValues(d: { path: string; values?: CatValue[] }): CatValue[] {
+  if (!Array.isArray(d.values) || d.values.length === 0) throw new Error(`omegaFromJSON: categorical dimension '${d.path}' has no values`);
+  return d.values.map((x) => ({ ...x }));
+}
+
 export function omegaFromJSON(j: OmegaJSON): Omega {
   const tot = j.verbs.reduce((s, v) => s + v.w, 0);
   return {
@@ -128,7 +135,7 @@ export function omegaFromJSON(j: OmegaJSON): Omega {
       verb: v.verb,
       reversibility: v.reversibility as Omega['verbs'][number]['reversibility'],
       weight: v.w / tot,
-      dims: v.dims.map((d): Dim => (d.kind === 'num' ? { kind: 'num', path: d.path, lo: d.lo!, hi: d.hi!, cuts: [...(d.cuts ?? [])], dist: d.dist ?? 'uniform' } : { kind: 'cat', path: d.path, values: (d.values ?? []).map((x) => ({ ...x })) })),
+      dims: v.dims.map((d): Dim => (d.kind === 'num' ? { kind: 'num', path: d.path, lo: d.lo!, hi: d.hi!, cuts: [...(d.cuts ?? [])], dist: d.dist ?? 'uniform' } : { kind: 'cat', path: d.path, values: catValues(d) })),
     })),
   };
 }

@@ -1,0 +1,44 @@
+{
+ "target": "frost-net signer round2 (mutated request)",
+ "seeds": [
+  {
+   "typ": "pca.frost.round2.v1",
+   "session_id": "fuzz-session",
+   "message": "ZnV6eiBtZXNzYWdl",
+   "group_pk": "TJ97_gk9-Z3fRKhlcdBnEVasmmdkbBorU80Iio93jOI",
+   "commitments": [
+    {
+     "identifier": 1,
+     "hiding": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+     "binding": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+     "identifier": 2,
+     "hiding": "FT14BmBiy9xCT-4mKFD_edboWaMS69wp28xOM8Ex-28",
+     "binding": "xe9Tx255YV-NXxV6OjpTo2xu0FwnqOxWh-htjoW4pGU"
+    }
+   ],
+   "verification_shares": [
+    {
+     "identifier": 1,
+     "publicKey": "TvTKJzdzTwz9keiNxrjFyO-FzqCpUeDGMFdt-OFMKXQ"
+    },
+    {
+     "identifier": 2,
+     "publicKey": "FT14BmBiy9xCT-4mKFD_edboWaMS69wp28xOM8Ex-28"
+    }
+   ],
+   "allow": {
+    "body": {
+     "typ": "pca.frost.allow.v1",
+     "action_digest": "-TAxA5rLrrt8sPkddxS1wK0pTAAw53IdKbcT1yrtQN0",
+     "group_pk": "TJ97_gk9-Z3fRKhlcdBnEVasmmdkbBorU80Iio93jOI",
+     "nonce": "fuzz",
+     "expires_at": 1700000060000
+    },
+    "authority": "eXxGr-U2nZbGAK45O1pS4f7gDiUOgIdnGBjEvQ8CuJQ",
+    "sig": "lsH7pbtkd_oqIt_JQ-_V0rvYI4MeCfiEND90w_gbYCA7u4DT_ilMO1NbDWuUEiS60-iuO_iwcNrgKxjU-QMdAw"
+   }
+  }
+ ]
+}

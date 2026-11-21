@@ -87,7 +87,7 @@ const SEV_MEDIUM: Severity = { id: 3, name: 'Medium', cef: 5 };
 const SEV_HIGH: Severity = { id: 4, name: 'High', cef: 8 };
 
 /** Normative checks whose FAILURE means a real security event (tamper / forged authority), not a policy veto. */
-const SECURITY_CHECKS = ['wire', 'version', 'audience', 'validity', 'cap_chain', 'plan_inclusion', 'leaf_signature', 'counter'] as const;
+const SECURITY_CHECKS = ['wire', 'version', 'audience', 'validity', 'cap_chain', 'plan_inclusion', 'leaf_signature', 'counter_format', 'replay'] as const;
 
 // =================================================================================================
 // Normalization — one total, never-throwing pass over the record, shared by all three exporters
@@ -220,8 +220,23 @@ function severityFor(outcome: SiemOutcome, checks: Record<string, CheckStatus>, 
   return tier === 3 ? SEV_MEDIUM : tier === 2 ? SEV_LOW : SEV_INFO;
 }
 
+/** What the serializers may put in an event. */
+export interface SiemSerializeOptions {
+  /**
+   * How much of the leaf signature to log: `prefix` (default, the first 16 characters), `full`, or `omit`.
+   * The proof digest identifies the proof exactly; a log reader does not need the signature itself.
+   */
+  signature?: 'full' | 'prefix' | 'omit';
+}
+
+function shownSignature(sig: string, mode: SiemSerializeOptions['signature']): string {
+  if (mode === 'full') return sig;
+  if (mode === 'omit') return '(omitted)';
+  return sig.length <= 16 ? sig : `${sig.slice(0, 16)}…`;
+}
+
 /** One total pass: extract everything the exporters need. Never throws; degrades to best-effort values. */
-function normalize(record: PcaDecisionRecord): Normalized {
+function normalize(record: PcaDecisionRecord, opts?: SiemSerializeOptions): Normalized {
   const p = record.pcactn;
   const verify: VerifyResult = record.verify ?? { allow: false, checks: {} };
   const checks: Record<string, CheckStatus> = verify.checks ?? {};
@@ -262,7 +277,7 @@ function normalize(record: PcaDecisionRecord): Normalized {
     nonce: typeof p?.nonce === 'string' ? p.nonce : undefined,
     planRoot: str(p?.plan?.root, '(none)'),
     signatureSuite: str(p?.alg, 'ed25519'),
-    leafSignature: str(p?.sig, '(unsigned)'),
+    leafSignature: shownSignature(str(p?.sig, '(unsigned)'), opts?.signature),
     proofDigest: safeDigest(p),
     riskScore: finiteNum(record.decision?.r),
     tier,
@@ -395,8 +410,8 @@ export interface OcsfAuthorizeSessionEvent {
  * and `unmapped` carries the PCA-specifics — the cryptographic proof digest, the risk tier, and the full
  * delegation chain — so the SIEM record stays verifiable.
  */
-export function toOcsfEvent(record: PcaDecisionRecord): OcsfAuthorizeSessionEvent {
-  const n = normalize(record);
+export function toOcsfEvent(record: PcaDecisionRecord, opts?: SiemSerializeOptions): OcsfAuthorizeSessionEvent {
+  const n = normalize(record, opts);
   const activity = OCSF_ACTIVITY[n.outcome];
   const action = OCSF_ACTION[n.outcome];
   const className = 'Authorize Session';
@@ -486,8 +501,8 @@ function cefExtension(pairs: [string, string | number | boolean | undefined][]):
  * edge as custom string/number fields: the cryptographic proof digest (`cs1`), the full delegation chain
  * (`cs2`), the risk tier / proof strength, and the delegation depth.
  */
-export function toCef(record: PcaDecisionRecord): string {
-  const n = normalize(record);
+export function toCef(record: PcaDecisionRecord, opts?: SiemSerializeOptions): string {
+  const n = normalize(record, opts);
   const wireVer = finiteNum(record.pcactn?.ver);
   const deviceVersion = wireVer !== undefined ? String(wireVer) : '2';
   const signatureId = `pca-authz-${n.outcome}`;
@@ -609,8 +624,8 @@ export interface EcsEvent {
  * authorizing principal; `related.user` and `related.hash` carry every identity and the proof digest
  * for correlation; and the PCA edge (proof digest, risk tier, full delegation chain) lives under `pca.*`.
  */
-export function toEcs(record: PcaDecisionRecord): EcsEvent {
-  const n = normalize(record);
+export function toEcs(record: PcaDecisionRecord, opts?: SiemSerializeOptions): EcsEvent {
+  const n = normalize(record, opts);
   const relatedUsers = [n.agentHolder, ...(n.principal ? [n.principal] : []), ...n.approvers].filter((v, i, a) => a.indexOf(v) === i);
   const relatedHashes = [n.proofDigest, n.leafSignature].filter((v, i, a) => a.indexOf(v) === i);
 
@@ -710,11 +725,11 @@ export interface SiemSink {
 }
 
 /** Serialize a decision record into the given schema, as a shippable {@link SiemEvent}. */
-export function formatDecision(record: PcaDecisionRecord, format: SiemFormat): SiemEvent {
+export function formatDecision(record: PcaDecisionRecord, format: SiemFormat, opts?: SiemSerializeOptions): SiemEvent {
   if (format === 'cef') {
-    return { format, line: toCef(record) };
+    return { format, line: toCef(record, opts) };
   }
-  const object: OcsfAuthorizeSessionEvent | EcsEvent = format === 'ocsf' ? toOcsfEvent(record) : toEcs(record);
+  const object: OcsfAuthorizeSessionEvent | EcsEvent = format === 'ocsf' ? toOcsfEvent(record, opts) : toEcs(record, opts);
   return { format, object, line: JSON.stringify(object) };
 }
 
@@ -725,6 +740,21 @@ const CONTENT_TYPE: Record<SiemFormat, string> = {
 };
 
 /** The minimal shape of a `fetch` response this package reads — so any fetch (global or injected) fits. */
+/**
+ * Remove credentials from an error message before it is returned or handed to `onError`: URL userinfo,
+ * `token=` / `key=` style query or header pairs, bearer credentials and long token-like runs. Error text from a
+ * fetch implementation can quote the URL (which often carries a token) or a header.
+ */
+export function scrubError(message: string): string {
+  let t = String(message);
+  t = t.replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]*:[^\s/@]*@/gi, '$1[redacted]@');
+  t = t.replace(/\b(authorization["']?\s*[:=]\s*)[^\n"']*/gi, '$1[redacted]');
+  t = t.replace(/\b(Bearer|Basic|Splunk|Token)\s+[\w.~+/=-]{6,}/gi, '$1 [redacted]');
+  t = t.replace(/\b((?:token|secret|password|passwd|pwd|api[_-]?key|dd-api-key|key|signature|sig|credential)["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s"'&,;]+)/gi, '$1[redacted]');
+  t = t.replace(/[A-Za-z0-9_-]{32,}/g, '[redacted]');
+  return t.length > 300 ? `${t.slice(0, 300)}...` : t;
+}
+
 export interface FetchLikeResponse {
   ok: boolean;
   status: number;
@@ -732,7 +762,7 @@ export interface FetchLikeResponse {
 }
 
 /** An injectable `fetch`: the global one by default, or a mock in tests. */
-export type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<FetchLikeResponse>;
+export type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal }) => Promise<FetchLikeResponse>;
 
 export interface HttpSinkOptions {
   format: SiemFormat;
@@ -744,6 +774,10 @@ export interface HttpSinkOptions {
   contentType?: string;
   /** Sink name for diagnostics (default `http:<format>`). */
   name?: string;
+  /** Give up on a delivery after this many ms (default 10000). A hung collector must not hold the caller. */
+  timeoutMs?: number;
+  /** Passed to the serializers. */
+  serialize?: SiemSerializeOptions;
 }
 
 /**
@@ -764,11 +798,25 @@ export function httpSink(url: string, options: HttpSinkOptions): SiemSink {
         if (!doFetch) return { ok: false, error: 'no fetch implementation available (pass options.fetch)' };
         const body = events.map((e) => e.line).join('\n');
         const headers: Record<string, string> = { 'content-type': options.contentType ?? CONTENT_TYPE[format], ...(options.headers ?? {}) };
-        const res = await doFetch(url, { method: 'POST', headers, body });
-        if (res.ok) return { ok: true };
-        return { ok: false, error: `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}` };
+        const timeoutMs = options.timeoutMs ?? 10_000;
+        const ctl = new AbortController();
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<'timeout'>((resolve) => {
+          timer = setTimeout(() => {
+            resolve('timeout'); // settle first: an aborting fetch rejects synchronously and must not win the race
+            ctl.abort();
+          }, Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 10_000);
+        });
+        try {
+          const res = await Promise.race([doFetch(url, { method: 'POST', headers, body, signal: ctl.signal }), timeout]);
+          if (res === 'timeout') return { ok: false, error: 'delivery timed out' };
+          if (res.ok) return { ok: true };
+          return { ok: false, error: scrubError(`HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`) };
+        } finally {
+          if (timer !== undefined) clearTimeout(timer);
+        }
       } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : String(e) };
+        return { ok: false, error: scrubError(e instanceof Error ? e.message : String(e)) };
       }
     },
   };
@@ -801,7 +849,7 @@ export function consoleSink(options: ConsoleSinkOptions = {}): SiemSink {
         for (const e of events) logger(e.line);
         return { ok: true };
       } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : String(e) };
+        return { ok: false, error: scrubError(e instanceof Error ? e.message : String(e)) };
       }
     },
   };
@@ -812,8 +860,10 @@ export function consoleSink(options: ConsoleSinkOptions = {}): SiemSink {
 // =================================================================================================
 
 export interface ExportOptions {
-  /** Called (log + drop) when delivery fails. Wrapped so it can never throw back into the caller. */
+  /** Called (log + drop) when delivery fails. Wrapped so it can never throw back into the caller. The error message is scrubbed of credentials. */
   onError?: (error: Error, context: { sink: string; count: number }) => void;
+  /** Passed to the serializers (default: the signature is logged as a 16-character prefix). */
+  serialize?: SiemSerializeOptions;
 }
 
 export interface ExportResult {
@@ -822,6 +872,8 @@ export interface ExportResult {
   delivered: number;
   format: SiemFormat;
   error?: string;
+  /** Records that could not be serialized and were left out of the delivery (each one was reported to `onError`). */
+  skipped?: number;
 }
 
 function safeOnError(options: ExportOptions | undefined, error: Error, sink: string, count: number): void {
@@ -848,18 +900,29 @@ export async function exportDecision(record: PcaDecisionRecord, sink: SiemSink, 
  * and returned as a result, never thrown.
  */
 export async function exportBatch(records: readonly PcaDecisionRecord[], sink: SiemSink, options?: ExportOptions): Promise<ExportResult> {
-  const format = sink.format;
+  const format = sink?.format as SiemFormat;
   let count = 0;
   try {
-    const events = records.map((r) => formatDecision(r, format));
+    // One record that cannot be serialized must not take the others' audit trail with it.
+    const events: SiemEvent[] = [];
+    let skipped = 0;
+    for (const r of records) {
+      try {
+        events.push(formatDecision(r, format, options?.serialize));
+      } catch (e) {
+        skipped++;
+        safeOnError(options, new Error(scrubError(`record could not be serialized: ${e instanceof Error ? e.message : String(e)}`)), sink.name, 1);
+      }
+    }
     count = events.length;
+    if (events.length === 0 && skipped > 0) return { ok: false, delivered: 0, format, error: 'no record could be serialized', skipped };
     const res = await sink.deliver(events);
-    if (res.ok) return { ok: true, delivered: events.length, format };
-    const err = new Error(res.error ?? 'sink reported a delivery failure');
+    if (res.ok) return { ok: true, delivered: events.length, format, ...(skipped > 0 ? { skipped } : {}) };
+    const err = new Error(scrubError(res.error ?? 'sink reported a delivery failure'));
     safeOnError(options, err, sink.name, events.length);
-    return { ok: false, delivered: 0, format, error: err.message };
+    return { ok: false, delivered: 0, format, error: err.message, ...(skipped > 0 ? { skipped } : {}) };
   } catch (e) {
-    const err = e instanceof Error ? e : new Error(String(e));
+    const err = new Error(scrubError(e instanceof Error ? e.message : String(e)));
     safeOnError(options, err, sink?.name ?? '(unknown sink)', count);
     return { ok: false, delivered: 0, format, error: err.message };
   }

@@ -55,6 +55,25 @@ describe('durable-state: basics', () => {
     expect(JSON.parse(readFileSync(H(d), 'utf8')).seq).toBe(2);
   });
 
+  it('strict profile: a stored integer of -0 (head seq, journal ts, fence seq) is corrupt, never read as 0', async () => {
+    const h = 'a'.repeat(64);
+    const d1 = tmp();
+    writeFileSync(H(d1), '{"seq":0,"h":"' + h + '"}');
+    await expect(openDurableState({ dir: d1 })).resolves.toBeDefined();
+    writeFileSync(H(d1), '{"seq":-0,"h":"' + h + '"}');
+    await expect(openDurableState({ dir: d1 })).rejects.toMatchObject({ code: 'corrupt', message: expect.stringMatching(/state\.head has an invalid shape/) });
+    const d2 = tmp();
+    const s = await openDurableState({ dir: d2, now: () => 0 });
+    await s.set('x', 1);
+    expect(readFileSync(J(d2), 'utf8')).toContain('"ts":0,');
+    await expect(openDurableState({ dir: d2 })).resolves.toBeDefined();
+    writeFileSync(J(d2), readFileSync(J(d2), 'utf8').replace('"ts":0,', '"ts":-0,')); // the record hash is unchanged (JSON.stringify(-0) is "0")
+    await expect(openDurableState({ dir: d2 })).rejects.toMatchObject({ code: 'corrupt', message: expect.stringMatching(/journal line 1 has an invalid shape/) });
+    const d3 = tmp();
+    writeFileSync(join(d3, 'state.fence'), '{"v":1,"fences":[{"gen":3,"seq":-0,"h":"' + h + '"}]}');
+    await expect(openDurableState({ dir: d3 })).rejects.toMatchObject({ code: 'corrupt', message: expect.stringMatching(/state\.fence has an invalid entry/) });
+  });
+
   it('creates the directory 0700 and files 0600; rejects bad keys / non-serialisable / oversize values', async () => {
     const d = join(tmp(), 'sub');
     const s = await openDurableState({ dir: d, maxValueBytes: 64 });

@@ -26,7 +26,9 @@ The LESS signature verifier the native PCA verifiers link for the `less-cat1` an
   semantics of `lessCat1Verify` in packages/pca/src/pq.ts: public key 97,484 bytes, detached signature 1,153..1,329 bytes in
   steps of 16, valid iff `msg || sig` opens under the key and yields exactly `msg`. It runs the reference on its own thread
   with a 16 MiB stack (the verifier keeps about 0.4 MB of matrices on the stack) and touches no global state, so it is
-  thread-safe.
+  thread-safe. The same file also exports `atlas_less_cat1_keygen` and `atlas_less_cat1_sign` (caller-supplied entropy of at
+  least 32 bytes seeds the reference's process-global generator under a lock; the same seed gives the same key or signature),
+  used by the opt-in signing suites; the verify path is unchanged.
 
 ## Building
 

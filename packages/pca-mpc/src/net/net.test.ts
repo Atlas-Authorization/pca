@@ -44,7 +44,7 @@ const V3: DecisionVector[] = [
 ];
 
 const run = (o: Partial<LaunchOptions> & { vectors?: DecisionVector[] }) =>
-  launchLocal({ n: (o.vectors ?? V3).length, vectors: V3, mainJs, ...o });
+  launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: (o.vectors ?? V3).length, vectors: V3, mainJs, ...o });
 
 const parties = (outs: NodeOutput[]) => outs.filter((o) => o.role === 'party');
 
@@ -146,7 +146,7 @@ describe('honest multi-process runs == in-process runs', () => {
     const r = await run({ Q: 100 });
     const ps = parties(r.outputs);
     expect(ps.every((p) => p.json?.ok === true && p.exitCode === 0)).toBe(true);
-    const inproc = composeSecureMalicious(V3, { Q: 100 });
+    const inproc = composeSecureMalicious(V3, { insecureTrustedDealer: true, Q: 100 });
     for (const p of ps) {
       expect(p.json.result.composed).toEqual(inproc.composed);
       expect(p.json.result.composed).toEqual(composeClear(V3));

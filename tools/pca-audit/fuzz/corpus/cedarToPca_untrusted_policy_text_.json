@@ -1,0 +1,11 @@
+{
+ "target": "cedarToPca (untrusted policy text)",
+ "seeds": [
+  {
+   "text": "permit (principal, action == Action::\"read\", resource) when { context.amount < 100 };"
+  },
+  {
+   "text": "@id(\"x\") forbid (principal, action, resource);"
+  }
+ ]
+}

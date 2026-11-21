@@ -106,6 +106,13 @@ describe('notarizeResponse / verifyNotaryAttestation', () => {
     expect(verifyNotaryAttestation(tampered, { notaryKey })).toBe(false);
   });
 
+  it('a -0 observedAt or responseStatus is malformed (strict profile; the signature over 0 also covers -0)', () => {
+    const notaryKey = generateKeyPair();
+    const { attestation } = notarizeResponse(orderResponse(), { notaryKey, observedAt: 0 });
+    expect(verifyNotaryAttestation(attestation, { notaryKey })).toBe(true);
+    expect(verifyNotaryAttestation({ ...attestation, session: { ...attestation.session, observedAt: -0 } }, { notaryKey })).toBe(false);
+  });
+
   it('tampered body root fails', () => {
     const notaryKey = generateKeyPair();
     const { attestation } = notarizeResponse(orderResponse(), { notaryKey, observedAt: NOW });
@@ -170,6 +177,22 @@ describe('discloseField / verifyDisclosedField (selective redaction)', () => {
 
     expect(verifyDisclosedField(attestation, status, { notaryKey: other })).toBe(false);
     expect(verifyDisclosedField(attestation, { ...status, proof: { ...status.proof, size: status.proof.size + 1 } }, { notaryKey })).toBe(false);
+  });
+
+  it('a proof whose size differs from the committed leaf count is refused even when its path has the right length', () => {
+    // 3 chunks: the proof for chunk 0 has two siblings, and so does a proof for chunk 0 of a 4-leaf tree, so only the
+    // explicit size binding (not the Merkle path length) tells the claimed size 4 from the committed size 3.
+    const notaryKey = generateKeyPair();
+    const { attestation, witness } = notarizeResponse(
+      { request: { method: 'GET', url: 'https://api.example/doc' }, response: { status: 200, body: 'ABCDEFGHIJK' } },
+      { notaryKey, observedAt: NOW, textChunkSize: 4 },
+    );
+    expect(attestation.session.responseBodyCommit.size).toBe(3);
+    const c0 = discloseField(attestation, witness, ['#chunk', 0]);
+    expect(c0.proof.size).toBe(3);
+    expect(verifyDisclosedField(attestation, c0, { notaryKey })).toBe(true);
+    expect(verifyDisclosedField(attestation, { ...c0, proof: { ...c0.proof, size: 4 } }, { notaryKey })).toBe(false);
+    expect(verifyDisclosedField(attestation, { ...c0, proof: { ...c0.proof, size: 2 } }, { notaryKey })).toBe(false);
   });
 
   it('discloseField throws for an unknown path', () => {
@@ -292,5 +315,12 @@ describe('policy caveat: require an attested external fact', () => {
     expect(evaluateAttestedFactCaveat(caveat, { attestation, disclosure: status, pcActn: actn }).ok).toBe(false);
     // no PCActn supplied => refuse
     expect(evaluateAttestedFactCaveat(caveat, { attestation: bound, disclosure: status }).ok).toBe(false);
+  });
+});
+
+describe('requireAttestedFact path', () => {
+  it('a string path is refused (it would pass .slice() as a path no disclosure matches)', () => {
+    const k = generateKeyPair();
+    expect(() => requireAttestedFact({ notary: k, path: 'id' as never, equals: 1 })).toThrow(/array of segments/);
   });
 });

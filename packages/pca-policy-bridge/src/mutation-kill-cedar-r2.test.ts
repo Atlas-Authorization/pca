@@ -4,7 +4,9 @@
  * statement such as `xpermit(...)` would be translated as a wildcard permit instead of being skipped.
  */
 import { describe, expect, it } from 'vitest';
-import { cedarToPca } from './cedar';
+import { translateCedar } from './cedar';
+const cedarToPca = (text: string) => translateCedar(text, false); // structure tests: bare expressions, no error guards
+
 
 describe('r2: malformed statement heads are skipped, never translated', () => {
   it('a junk prefix before permit/forbid does not yield a grant', () => {

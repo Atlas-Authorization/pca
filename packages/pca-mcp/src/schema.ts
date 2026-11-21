@@ -19,7 +19,7 @@ import {
   type McpToolLike,
   type SchemaReversibility,
   type UnsignedActionSchema,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
 
 /** Anything that lists tools like an MCP client / server (`tools/list`), or the list itself. */
 export type ToolSource = readonly McpToolLike[] | { listTools(): Promise<{ tools: McpToolLike[] }> | { tools: McpToolLike[] } };
@@ -74,3 +74,26 @@ export function conformToolCall(schema: Pick<ActionSchema, 'verbs'>, toolName: s
   return conformAction(schema, verb, args);
 }
 
+
+/**
+ * Import an MCP tool list as ActionDefs (action kit): typed params with roles, nested bodies flattened, annotations kept as
+ * untrusted hints, every def `unreviewed` until a pinned reviewer signs it. This delegates to `importMcp` in
+ * `@atlasauth/pca-actions` (an optional, experimental package: install it to use this function; the v1 `draftActionSchemaFromMcp`
+ * above needs nothing). `suggest: 'rules'` also runs the deterministic trait suggestions.
+ */
+export async function importActionDefsFromMcp(
+  source: ToolSource,
+  opts: { ns: string; uri?: string; licence?: string; now?: number; suggest?: 'rules' | 'none' },
+): Promise<{ defs: unknown[]; todo: { where: string; code: string; message: string }[]; source: unknown }> {
+  let kit: typeof import('@atlasauth/pca-actions');
+  try {
+    kit = await import('@atlasauth/pca-actions');
+  } catch {
+    throw new Error('importActionDefsFromMcp needs the optional package @atlasauth/pca-actions; install it, or use draftActionSchemaFromMcp for a v1 draft');
+  }
+  const tools = Array.isArray(source) ? (source as readonly McpToolLike[]) : (await (source as { listTools(): Promise<{ tools: McpToolLike[] }> | { tools: McpToolLike[] } }).listTools()).tools;
+  const { suggest, ...rest } = opts;
+  const r = kit.importMcp({ tools }, rest);
+  const s = await kit.suggestDefs(r.defs, { mode: suggest ?? 'rules' });
+  return { defs: s.defs, todo: r.todo, source: r.source };
+}

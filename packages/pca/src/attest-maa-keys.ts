@@ -1,4 +1,5 @@
 import { x509ValidityMs } from './x509-validity';
+import { rsaKeyOk, strictChainError } from './x509-strict';
 import { snapshotConfig } from './config-snapshot';
 /**
  * Rotation-safe key trust store for Azure MAA token-signing keys.
@@ -309,7 +310,8 @@ function keyStrengthError(c: X509Certificate): string | null {
   const pk = c.publicKey;
   if (pk.asymmetricKeyType === 'rsa') {
     const bits = pk.asymmetricKeyDetails?.modulusLength ?? 0;
-    return bits >= 2048 && bits <= 8192 ? null : `RSA key size ${bits} outside 2048..8192`;
+    if (!(bits >= 2048 && bits <= 8192)) return `RSA key size ${bits} outside 2048..8192`;
+    return rsaKeyOk(pk) ? null : 'RSA public exponent must be odd, at least 3 and at most 32 bits';
   }
   if (pk.asymmetricKeyType === 'ec') {
     const curve = pk.asymmetricKeyDetails?.namedCurve ?? '';
@@ -319,7 +321,7 @@ function keyStrengthError(c: X509Certificate): string | null {
 }
 function safeVerify(c: X509Certificate, k: X509Certificate['publicKey']): boolean {
   try {
-    return c.verify(k);
+    return rsaKeyOk(k) && c.verify(k);
   } catch {
     return false;
   }
@@ -342,6 +344,7 @@ export function evaluateMaaJwks(jwks: MaaJwks, issuer: string, policy: MaaKeyPol
     const kid = key.kid ?? `#${i}`;
     const no = (reason: string) => void rejected.push({ kid, reason });
     try {
+      if (!Number.isFinite(nowMs) || !Number.isFinite(skew)) throw new Error('clock and skew must be finite');
       const x5c = key.x5c;
       if (!Array.isArray(x5c) || x5c.length === 0) {
         no('no x5c');
@@ -359,7 +362,7 @@ export function evaluateMaaJwks(jwks: MaaJwks, issuer: string, policy: MaaKeyPol
       const strength = keyStrengthError(leaf);
       if (strength) throw new Error(strength);
       if (certs.length === 1) {
-        if (nowMs - lv.from > maxAge) throw new Error('key older than maxKeyAgeMs');
+        if (!(nowMs - lv.from <= maxAge)) throw new Error('key older than maxKeyAgeMs');
         const cn = soleCn(leaf.subject);
         if (cn === undefined) throw new Error('subject is not a single CN');
         if (cn.includes('*')) throw new Error('wildcard CN rejected');
@@ -372,6 +375,8 @@ export function evaluateMaaJwks(jwks: MaaJwks, issuer: string, policy: MaaKeyPol
       // Chained key: only under an explicitly pinned root (and, when configured, a pinned intermediate).
       if (roots.size === 0) throw new Error('chained key ignored (no chainRootSpkiSha256 configured)');
       for (let j = 0; j < certs.length - 1; j++) if (!safeVerify(certs[j]!, certs[j + 1]!.publicKey)) throw new Error(`chain link ${j} is not signed by the next cert`);
+      const profile = strictChainError(certs.map((c) => new Uint8Array(c.raw)));
+      if (profile) throw new Error(`chain profile: ${profile}`);
       const top = certs[certs.length - 1]!;
       if (top.issuer !== top.subject || !safeVerify(top, top.publicKey)) throw new Error('chain does not end in a self-signed root');
       const rootSpki = spkiOf(top);
@@ -428,14 +433,14 @@ export interface MaaKeyTrust {
 function parseState(x: unknown, issuer: string): MaaKeyState | null {
   if (typeof x !== 'object' || x === null) return null;
   const s = x as Record<string, unknown>;
-  if (s['v'] !== 1 || s['issuer'] !== issuer || !Number.isSafeInteger(s['fetchedAtMs']) || !Array.isArray(s['anchors'])) return null;
+  if (s['v'] !== 1 || s['issuer'] !== issuer || !Number.isSafeInteger(s['fetchedAtMs']) || Object.is(s['fetchedAtMs'], -0) || !Array.isArray(s['anchors'])) return null;
   const anchors: MaaAnchorRecord[] = [];
   for (const a of s['anchors'] as unknown[]) {
     if (typeof a !== 'object' || a === null) return null;
     const r = a as Record<string, unknown>;
     if (typeof r['spki'] !== 'string' || !HEX64.test(r['spki'])) return null;
     if (r['kind'] !== 'self-signed' && r['kind'] !== 'chained-root' && r['kind'] !== 'chained-intermediate') return null;
-    if (![r['notBeforeMs'], r['notAfterMs'], r['firstSeenMs']].every((n) => Number.isSafeInteger(n))) return null;
+    if (![r['notBeforeMs'], r['notAfterMs'], r['firstSeenMs']].every((n) => Number.isSafeInteger(n) && !Object.is(n, -0))) return null;
     anchors.push({ spki: r['spki'], kind: r['kind'], notBeforeMs: r['notBeforeMs'] as number, notAfterMs: r['notAfterMs'] as number, firstSeenMs: r['firstSeenMs'] as number });
   }
   return { v: 1, issuer, fetchedAtMs: s['fetchedAtMs'] as number, anchors };
@@ -455,6 +460,8 @@ export function createMaaKeyTrust(opts: MaaKeyTrustOptions): MaaKeyTrust {
   const maxInitial = policy.maxInitialKeys ?? 8;
   const skew = policy.clockSkewMs ?? 60_000;
   const requireOverlap = policy.requireOverlap ?? true;
+  // an infinite or NaN window would admit every expired key or stale cache; a count or max-stale may be +Infinity (no cap) but never NaN
+  if (!Number.isFinite(ttl) || !Number.isFinite(skew) || [maxStale, maxNew, maxInitial].some(Number.isNaN)) throw new TypeError('createMaaKeyTrust: ttlMs and clockSkewMs must be finite; maxStaleMs and the key-count limits must not be NaN');
   const fail = (code: MaaKeyErrorCode, reason: string): MaaTrustResult => ({ ok: false, code, reason });
 
   const live = (a: MaaAnchorRecord[], nowMs: number) => a.filter((r) => nowMs - skew <= r.notAfterMs && nowMs + skew >= r.notBeforeMs);
@@ -513,7 +520,7 @@ export function createMaaKeyTrust(opts: MaaKeyTrustOptions): MaaKeyTrust {
           const parsed = parseState(rawState, issuer);
           if (!parsed) return fail('corrupt-state', 'persisted MAA key state failed validation');
           state = parsed;
-          if (nowMs < state.fetchedAtMs - skew) return fail('clock-regression', 'clock is behind the last persisted fetch time');
+          if (!(nowMs >= state.fetchedAtMs - skew)) return fail('clock-regression', 'clock is behind the last persisted fetch time');
         }
 
         // 1. Fresh cache.

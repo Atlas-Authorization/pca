@@ -95,3 +95,30 @@ describe('main', () => {
     expect(r.out).toContain('crash/advance');
   }, 60_000);
 });
+
+describe('--profile pca-state', () => {
+  it('parses the profile and validates --tests against it', () => {
+    expect(parseCli(['--profile', 'pca-state', '--tests', 'one-instance,instances'])).toEqual({
+      options: {}, json: false, help: false, conf: {}, profile: 'pca-state', pcaStateTests: ['one-instance', 'instances'],
+    });
+    expect(() => parseCli(['--profile', 'pca-state', '--tests', 'burst'])).toThrow('--tests: unknown test(s) burst');
+    expect(() => parseCli(['--tests', 'one-instance'])).toThrow('--tests: unknown test(s) one-instance');
+    expect(() => parseCli(['--profile', 'other'])).toThrow('--profile: unknown profile other (known: pca-state)');
+  });
+
+  it('exit 0 for the good in-memory reference, exit 1 for a bad one, exit 2 for an unknown adapter', async () => {
+    const good = await run(['--profile', 'pca-state', '--adapter', 'builtin:in-memory', '--tests', 'one-instance,retry-after-timeout', '--rounds', '3', '--clients', '5']);
+    expect(good.code).toBe(0);
+    expect(good.out.split('\n')).toEqual([
+      'pca-store-conformance (pca-state): in-memory atomic (atomicMemoryPcaStore) [atomic-claim] -> PASS',
+      expect.stringMatching(/^ {2}\[PASS\] one-instance +admitted per round \[1,1,1\]; state mode atomic-claim$/),
+      expect.stringMatching(/^ {2}\[PASS\] retry-after-timeout /),
+    ]);
+    const bad = await run(['--profile', 'pca-state', '--adapter', 'builtin:bad-read-then-write-claim', '--tests', 'one-instance', '--rounds', '2', '--clients', '4', '--json']);
+    expect(bad.code).toBe(1);
+    expect(JSON.parse(bad.out).tests[0]).toMatchObject({ test: 'one-instance', status: 'fail', admitted: [4, 4] });
+    const unknown = await run(['--profile', 'pca-state', '--adapter', 'builtin:nope']);
+    expect(unknown.code).toBe(2);
+    expect(unknown.err).toMatch(/^cannot load adapter: unknown built-in pca-state adapter 'nope'/);
+  }, 60_000);
+});

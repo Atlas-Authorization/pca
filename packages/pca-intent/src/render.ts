@@ -1,4 +1,5 @@
-import { DEFAULT_CATALOG, isGroupCondition, isLeafCondition, type Caveat, type Catalog, type Condition, type Predicate } from '@atlasauth/pca';
+import { isGroupCondition, isLeafCondition, type Caveat, type Condition, type Predicate } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, type Catalog } from '@atlasauth/pca/ext/research';
 import { cellRep, decodeCell, numCells, verbCellCount, type Dim, type Omega, type VerbSpace } from './omega';
 import { admitter, normalizePolicy, type PolicyInput } from './policy';
 import { slotsToPolicy, type IntentSlots } from './slots';

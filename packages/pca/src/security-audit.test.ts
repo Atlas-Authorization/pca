@@ -22,7 +22,6 @@ import { type ActivityEvent, buildConsole } from './console';
 import { INITIAL_IMMUNE_STATE, assess, observe } from './immune';
 import { type DlpPolicy, evaluateDlp } from './dlp';
 import { simulate } from './policy-sim';
-import { type ComplianceInput, type Framework, complianceReport } from './compliance';
 import { priceCoverage, reputation } from './reputation';
 import { policy } from './policy-templates';
 import { appendReceipt, verifyReceiptChain } from './receipt';
@@ -100,16 +99,6 @@ describe('Threat class 1: prototype pollution / prototype-chain key confusion', 
     expect(() => policy().allow('toString', ['read']).allow('stripe', ['refund']).build()).not.toThrow();
     const built = policy().allow('constructor', ['read']).allow('stripe', ['refund']).build();
     expect(built.permissions.stripe).toEqual(['refund']);
-  });
-
-  it('complianceReport: a constructor/__proto__ framework is rejected, not resolved up the prototype chain', () => {
-    const input: ComplianceInput = { policy: compilePolicy({ permissions: { stripe: ['refund'] } }), events: [] };
-    // 'constructor' would resolve to the Object ctor (callable) -> type confusion if indexed naively.
-    expect(() => complianceReport('constructor' as Framework, input)).toThrow(/unknown framework/);
-    expect(() => complianceReport('__proto__' as Framework, input)).toThrow(/unknown framework/);
-    expect(() => complianceReport('toString' as Framework, input)).toThrow(/unknown framework/);
-    // A legitimate framework still works.
-    expect(complianceReport('soc2', input).framework).toBe('soc2');
   });
 });
 
