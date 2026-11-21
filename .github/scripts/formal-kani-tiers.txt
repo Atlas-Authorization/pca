@@ -9,7 +9,8 @@
 exclude kani-rust-pca decision_logic_abstract$        did not finish in 8 h 23 m (CaDiCaL) / 4 h 57 m (kissat, 16 vCPU)
 exclude kani-rust-pca json_abs_pcactn_shape$          did not finish in 8 h 17 m / 3 h 05 m on 16 vCPU
 exclude kani-rust-pca b64u_wrapper_contract_le64$     about 4 h 50 m on 16 vCPU; over 6 h expected on 4 vCPU
-probe   kani-rust-pca json_field1_                    bounded-2 variants ran out of memory at 12 GB
+exclude kani-rust-pca json_value_get_dispatch$       serde_json Map is an IndexMap (preserve_order): hashbrown insert runs CBMC out of 15 GB in propositional reduction (fixed or symbolic SipHash seed); the same get/insert behaviour is tested exhaustively in pca-rust tests/json_map_dispatch.rs
+probe   kani-rust-pca json_field1_                    IndexMap insert runs CBMC out of 15 GB (as json_value_get_dispatch); bounded-2 variants already did at 12 GB
 long    kani-rust-pca ::d_                            decomposed decision harnesses: about 3 h 30 m each on the farm (0.4.2 freeze) without a verdict; B-tree unwinding
 probe   kani-rust-pca decode_b64u_no_panic_bounded$   lengths 4..7 ran out of memory at 12 GB
 probe   kani-rust-pca decision_aggregation$           monolithic decision harness (same B-tree loops)

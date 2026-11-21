@@ -1,0 +1,63 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "salesforce",
+  "version": "0.5.0",
+  "ns": [
+    "salesforce"
+  ],
+  "count": 112,
+  "root": "5pG6KWdVtids8McKOArYC-F6a1LY_j3XQJIL5Phn2-c",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 107,
+    "unreviewed": 5
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Hand written from the public Salesforce REST, Bulk, Tooling and Metadata API documentation (operation names only). No Salesforce API description or text is redistributed: its terms were not relied on.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/salesforce.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "0b05a68178f30a7de47345d20ef0ab1be517a077d4d90111c8e5e48f92294ba2"
+  },
+  "shards": [
+    {
+      "file": "defs/000-salesforce_account.jsonl",
+      "count": 112,
+      "bytes": 60795,
+      "sha256": "9826db1e1173e5b1f9c897d31e7aa5107c1388aa7c9bcc2d4a1740f26b8f97c8",
+      "first": "salesforce.account.create",
+      "last": "salesforce.user.set_password"
+    }
+  ],
+  "stats": {
+    "total": 112,
+    "authored": 107,
+    "unreviewed": 5,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "create": 16,
+      "delete": 20,
+      "read": 45,
+      "update": 21,
+      "exec": 6,
+      "sign": 1,
+      "export": 2,
+      "publish": 1,
+      "privilege": 13,
+      "send": 2
+    }
+  }
+}

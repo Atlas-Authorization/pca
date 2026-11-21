@@ -1,4 +1,12 @@
 {
+  // Builds (declaration + JS emit) run on tsc with these options. Typechecks run
+  // on tsgo (TypeScript 7, `@typescript/native-preview`), which no longer accepts
+  // the classic "Node" (node10) resolution below: the packages that inherit it
+  // typecheck with `--module preserve --moduleResolution bundler`, which reports
+  // the same diagnostics on this repo (measured package by package). Each
+  // typecheck keeps its incremental state in the package's
+  // node_modules/.cache/typecheck.tsbuildinfo, so an unchanged package
+  // re-checks in a fraction of the time.
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],

@@ -1,4 +1,5 @@
 import { x509ValidityMs } from './x509-validity';
+import { certVerifiedUnder, rsaKeyOk } from './x509-strict';
 /**
  * NVIDIA GPU-CC DEVICE-CHAIN REVOCATION VIA OCSP (RFC 6960).
  *
@@ -110,6 +111,9 @@ export function allAsn1TimesWellFormed(node: unknown, asn1: Asn1): boolean {
     const text = Buffer.from((node as { valueBlock: { valueHexView: Uint8Array } }).valueBlock.valueHexView).toString('latin1');
     return timeTextInRange(text, !(node instanceof asn1.GeneralizedTime)); // asn1js: GeneralizedTime extends UTCTime
   }
+  // OCTET/BIT STRING contents are opaque bytes (hashes, nonce, signature), not structure: asn1js auto-parses them, and a hash that
+  // happens to read as a bad time must not refuse a valid response (a CA with such a key hash would be refused on every response).
+  if (node instanceof asn1.OctetString || node instanceof asn1.BitString) return true;
   const kids = (node as { valueBlock?: { value?: unknown } }).valueBlock?.value;
   if (Array.isArray(kids)) for (const k of kids) if (!allAsn1TimesWellFormed(k, asn1)) return false;
   return true;
@@ -156,6 +160,7 @@ function certIdHashes(issuer: CertParts, hash: string): { name: Uint8Array; key:
 export async function buildNvidiaOcspRequest(cert: X509Certificate, issuer: X509Certificate, opts: { nonce?: Uint8Array; hash?: 'sha1' | 'sha256' | 'sha384' | 'sha512' } = {}): Promise<Uint8Array> {
   const l = await loadLibs();
   const hash = opts.hash ?? 'sha384';
+  if (!Object.hasOwn(OID_BY_HASH, hash)) throw new RangeError(`unsupported CertID hash ${String(hash)}`);
   const c = parseCert(l, cert);
   const i = parseCert(l, issuer);
   const h = certIdHashes(i, hash);
@@ -193,7 +198,7 @@ function verifySig(alg: string, tbs: Uint8Array, sig: Uint8Array, key: KeyObject
   if (!a) return false;
   const t = key.asymmetricKeyType;
   if ((a.kind === 'ec') !== (t === 'ec')) return false;
-  if (a.kind === 'rsa' && t !== 'rsa') return false;
+  if (a.kind === 'rsa' && (t !== 'rsa' || !rsaKeyOk(key))) return false;
   try {
     return cryptoVerify(a.hash, tbs, key, sig);
   } catch {
@@ -266,7 +271,13 @@ async function verifyInner(responseDer: Uint8Array, opts: VerifyNvidiaOcspOption
   const issuerOk = isIssuerId && verifySig(sigAlg, tbsBytes, sig, issuerPub);
   if (!issuerOk) {
     // delegated responder
-    const embedded = (basic.certs ?? []).map((c) => new X509Certificate(Buffer.from(c.toSchema().toBER(false))));
+    // The certificates are taken from the response's own bytes, never re-encoded: a re-encoding normalises a malformed certificate
+    // (a wrong inner length, a stray byte) into the genuine one, so a tampered copy verified. A malformed one is refused by node's DER parser.
+    const certNodes = (basicAsn.result as unknown as { valueBlock: { value: { idBlock: { tagClass: number; tagNumber: number }; valueBlock: { value?: { valueBeforeDecodeView: Uint8Array }[] } }[] } }).valueBlock.value
+      .find((n) => n.idBlock.tagClass === 3 && n.idBlock.tagNumber === 0)?.valueBlock.value?.[0];
+    const certBytes = ((certNodes as unknown as { valueBlock: { value?: { valueBeforeDecodeView: Uint8Array }[] } } | undefined)?.valueBlock.value ?? []).map((n) => view(n.valueBeforeDecodeView));
+    if (certBytes.length !== (basic.certs ?? []).length) return fail('embedded certificates do not match the response encoding');
+    const embedded = certBytes.map((b) => new X509Certificate(Buffer.from(b)));
     let found: X509Certificate | undefined;
     let why = 'no embedded responder certificate verifies the response';
     for (const cand of embedded) {
@@ -294,7 +305,7 @@ async function verifyInner(responseDer: Uint8Array, opts: VerifyNvidiaOcspOption
       // must be signed by a NVIDIA chain cert at or above the issuer
       const issuerIdx = opts.chain.findIndex((c) => c.raw.equals(opts.issuer.raw));
       const signers = issuerIdx >= 0 ? opts.chain.slice(issuerIdx) : [opts.issuer];
-      if (!signers.some((s) => cand.checkIssued(s) && cand.verify(s.publicKey))) {
+      if (!signers.some((s) => cand.checkIssued(s) && certVerifiedUnder(cand, s.publicKey))) {
         why = 'delegated responder certificate is not signed by the supplied NVIDIA chain';
         continue;
       }
@@ -325,11 +336,11 @@ async function verifyInner(responseDer: Uint8Array, opts: VerifyNvidiaOcspOption
   const producedAt = tbs.producedAt.getTime();
   const nextUpdate = single.nextUpdate?.getTime();
   if (!Number.isFinite(thisUpdate) || !Number.isFinite(producedAt)) return fail('response times are not parseable');
-  if (thisUpdate > opts.nowMs + skew) return fail('response thisUpdate is in the future');
-  if (producedAt > opts.nowMs + skew) return fail('response producedAt is in the future');
+  if (!(Number.isFinite(opts.nowMs) && Number.isFinite(skew) && thisUpdate <= opts.nowMs + skew)) return fail('response thisUpdate is in the future');
+  if (!(Number.isFinite(opts.nowMs) && Number.isFinite(skew) && producedAt <= opts.nowMs + skew)) return fail('response producedAt is in the future');
   if (nextUpdate !== undefined) {
     if (!Number.isFinite(nextUpdate) || nextUpdate < thisUpdate) return fail('response nextUpdate is invalid');
-    if (opts.nowMs > nextUpdate) return fail('response is stale (past nextUpdate)');
+    if (!(Number.isFinite(opts.nowMs) && opts.nowMs <= nextUpdate)) return fail('response is stale (past nextUpdate)');
   }
   if (opts.nowMs - thisUpdate > maxAge) return fail('response is older than the maximum accepted age');
 

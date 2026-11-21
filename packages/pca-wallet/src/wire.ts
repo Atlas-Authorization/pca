@@ -1,17 +1,15 @@
 import {
   b64u,
   canonicalBytesStrict,
-  cellCoordsError,
   decodeB64uStrict,
   hashCanonical,
-  intentActionDigest,
   paramsDigest,
   publicKeyOf,
   sign,
   utf8,
   verifyB64u,
-  type Friction,
 } from '@atlasauth/pca';
+import { cellCoordsError, intentActionDigest, type Friction } from '@atlasauth/pca/ext/intent';
 
 /**
  * WIRE FORMATS OF THE TRUSTED QUESTION CHANNEL (Intent Layer v2, docs/specs/pca-intent-layer-v2.md §3.3, §3.4, §4 M5/M6, §8).
@@ -99,7 +97,7 @@ export function actionValuesOf(a: PcaAction): ActionValues {
 
 export const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const isB64u32 = (v: unknown): v is string => decodeB64uStrict(v, 32) !== null;
-const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v);
+const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0);
 const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
 function domainMessage(domain: string, body: unknown): Uint8Array {

@@ -13,8 +13,8 @@ on:
         description: 'comma-separated shard numbers to run (empty = all 16)'
         default: ''
       shards:
-        description: 'number of shards to cut the plan into (default 16; a different count needs a full run: list every shard in only, no baselines)'
-        default: '16'
+        description: 'number of shards to cut the plan into (default 48; a different count needs a full run: list every shard in only, no baselines)'
+        default: '48'
       baseline_run:
         description: 'run id whose shard reports fill in the shards not run here (for the merge)'
         default: ''
@@ -37,17 +37,17 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 env:
-  SHARDS: ${{ inputs.shards || '16' }}
+  SHARDS: ${{ inputs.shards || '48' }}
 
 jobs:
   shard:
-    name: shard ${{ matrix.shard }}/${{ inputs.shards || '16' }}
+    name: shard ${{ matrix.shard }}/${{ inputs.shards || '48' }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(inputs.only != '' && format('[{0}]', inputs.only) || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]') }}
+        shard: ${{ fromJSON(inputs.only != '' && format('[{0}]', inputs.only) || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -59,6 +59,8 @@ jobs:
           node .github/scripts/ts-stryker-plan.mjs ${{ matrix.shard }} $SHARDS | tee "$RUNNER_TEMP/plan.txt"
           f=""; for p in $(cut -d' ' -f1 "$RUNNER_TEMP/plan.txt"); do f="$f --filter={./packages/$p}..."; done
           echo "FILTER=$f" >> "$GITHUB_ENV"
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install the whole workspace (a filtered install missed transitive deps at 48 shards) and the pinned Stryker
         run: |
           pnpm install --frozen-lockfile
@@ -75,7 +77,7 @@ jobs:
           if grep -qE '^pca ' "$RUNNER_TEMP/plan.txt"; then
             curl -fsSL -o "$RUNNER_TEMP/circom" https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
             chmod +x "$RUNNER_TEMP/circom"
-            CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
+            PCA_DEV_SETUP=1 CIRCOM="$RUNNER_TEMP/circom" bash packages/pca/circuits/setup.sh
           else
             echo "this shard does not mutate packages/pca: no circuit build needed"
           fi
@@ -136,4 +138,11 @@ jobs:
         with:
           name: ledger-check
           path: reports/ledger-check-*.txt
+          if-no-files-found: ignore
+      - name: Merge result for the release evidence report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-summary
+          path: reports/mutation-summary.json
           if-no-files-found: ignore

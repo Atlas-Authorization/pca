@@ -18,8 +18,9 @@
 # new sample proof is written alongside, so the committed pair stays self-consistent).
 #
 # Requirements: circom 2.x on PATH (or CIRCOM=/path/to/circom); snarkjs (optional dep of @atlasauth/pca).
-# Usage:  bash circuits/policyvm.setup.sh
+# Usage:  PCA_DEV_SETUP=1 bash circuits/policyvm.setup.sh   (DEV-ONLY single-party setup; see dev-only-guard.sh)
 set -euo pipefail
+source "$(dirname "$0")/dev-only-guard.sh"
 
 cd "$(dirname "$0")/.."                       # packages/pca
 CIRCOM="${CIRCOM:-circom}"

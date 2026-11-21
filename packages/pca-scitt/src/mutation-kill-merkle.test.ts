@@ -117,7 +117,7 @@ describe('inclusion proofs (exhaustive up to 17 leaves)', () => {
   it('out-of-range and malformed arguments return null / throw RangeError', () => {
     const l = leaves(5);
     const p = inclusionPath(l, 2);
-    for (const [idx, size] of [[-1, 5], [5, 5], [6, 5], [0, 0], [0, -1], [1.5, 5], [2, 5.5], [NaN, 5], [2, NaN], [Infinity, 5], [2, Infinity], [2 ** 53, 5], [2, 2 ** 53]] as [number, number][]) {
+    for (const [idx, size] of [[-1, 5], [5, 5], [6, 5], [0, 0], [0, -1], [1.5, 5], [2, 5.5], [NaN, 5], [2, NaN], [Infinity, 5], [2, Infinity], [2 ** 53, 5], [2, 2 ** 53], [-0, 5]] as [number, number][]) {
       expect(rootFromInclusionPath(l[2]!, idx, size, p)).toBeNull();
       expect(verifyInclusionPath(l[2]!, idx, size, p, treeHash(l))).toBe(false);
     }

@@ -3,9 +3,9 @@ import {
   mlDsa65Keygen,
   mlDsa87Keygen,
   generateKeyPair,
-  type MeasuredIdentity,
   type SuiteSecretKeys,
 } from '@atlasauth/pca';
+import { type MeasuredIdentity } from '@atlasauth/pca/ext/attestation';
 import {
   PQCOSIGN_DOMAIN,
   DEFAULT_PQ_COSIGN_SUITE,

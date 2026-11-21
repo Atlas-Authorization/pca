@@ -17,14 +17,16 @@
  * a web `Response`, which is exactly what an App-Router Route Handler is.
  */
 
-import { requirePCA, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
-import type { PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore } from '@atlasauth/pca';
+import { requirePCA, requireAuthorized, defaultExtract, memoryPcaStore } from '@atlasauth/pca';
+import type { AuthorizeOptions, AuthorizedOperation, PcaGuardResult, RequirePcaOptions, PcaRequestLike, PcaStateStore, RequireAuthorizedOptions } from '@atlasauth/pca';
 import type { PCActn } from '@atlasauth/pca';
 
 /** The verdict + PCActn handed to the wrapped handler on success. */
 export interface PcaAttachment {
   verdict: Extract<PcaGuardResult, { ok: true }>['verdict'];
   pcactn: PCActn;
+  /** The operation the decision is bound to (only with the `operation` option). */
+  operation?: AuthorizedOperation;
 }
 
 /** A Next.js App-Router Route Handler that receives the verified PCActn in its context. */
@@ -33,23 +35,35 @@ export type PcaRouteHandler = (req: Request, ctx: { pca: PcaAttachment }) => Res
 export interface PcaNextOptions extends RequirePcaOptions {
   /** Override the 401/403 response (otherwise a JSON error + WWW-Authenticate is returned). */
   onDeny?: (result: Extract<PcaGuardResult, { ok: false }>, req: Request) => Response | Promise<Response>;
+  /**
+   * The operation each request will execute, from your routing (verb / resource for the route, the parsed body as
+   * params), never from the PCActn. When set, requests are authorized by `authorize` (the strict pipeline: `budgetStore`
+   * and `hooks.revocation` are required, and a proof for another operation, other params, or params outside the grant
+   * is refused before your handler runs) and the bound `operation` is attached with the verdict. Absent: `requirePCA`,
+   * unchanged.
+   */
+  operation?: RequirePcaOptions['operation'];
+  /** With `operation`: `'single-step'` accepts a one-node plan equal to the bound operation (see `authorize`). */
+  plan?: AuthorizeOptions['plan'];
 }
 
 /** Wrap an App-Router Route Handler so it only runs for a valid PCActn. */
 export function withPCA(options: PcaNextOptions, handler: PcaRouteHandler): (req: Request) => Promise<Response> {
   const onDeny = options.onDeny;
-  const guard = requirePCA(options);
+  const guard = options.operation ? requireAuthorized(options as RequireAuthorizedOptions) : requirePCA(options);
   return async (req: Request): Promise<Response> => {
     const like: PcaRequestLike = {
       headers: { get: (n: string) => req.headers.get(n) },
       body: await req.clone().json().catch(() => undefined),
+      method: req.method,
+      url: req.url,
     };
     const result: PcaGuardResult = await guard(like);
     if (result.ok) {
-      return handler(req, { pca: { verdict: result.verdict, pcactn: result.pcactn } });
+      return handler(req, { pca: { verdict: result.verdict, pcactn: result.pcactn, ...(result.operation ? { operation: result.operation } : {}) } });
     }
     if (onDeny) return onDeny(result, req);
-    return new Response(JSON.stringify({ error: result.verdict.reasons?.[0] ?? 'forbidden', verdict: result.verdict }), {
+    return new Response(JSON.stringify({ error: result.verdict.reasons?.[0] ?? 'forbidden', verdict: result.verdict, decision: result.decision ?? 'deny', ...(result.escalation ? { escalation: result.escalation } : {}) }), {
       status: result.status,
       headers: {
         'content-type': 'application/json',
@@ -59,5 +73,5 @@ export function withPCA(options: PcaNextOptions, handler: PcaRouteHandler): (req
   };
 }
 
-export { requirePCA, defaultExtract, memoryPcaStore };
+export { requirePCA, requireAuthorized, defaultExtract, memoryPcaStore };
 export type { PcaGuardResult, RequirePcaOptions, PcaStateStore };

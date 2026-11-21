@@ -3,8 +3,10 @@ import { mintRoot, delegate } from './capability';
 import { encodeKey, generateKeyPair } from './keys';
 import { buildPCActn, signPCActn, verifyPCActnCore, type PCActn } from './pcactn';
 import { InMemoryReplayStore, guardPCActnReplay, type CounterStore, type ReplayStore } from './replay';
-import { DEFAULT_REQUIRED_CHECKS, verifyPCActn } from './server/verify';
+import { DEFAULT_REQUIRED_CHECKS, verifyPCActn as verifyPCActn05 } from './server/verify';
 import { b64u } from './hash';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /**
  * `grant_ref` binding (normative check `grant_ref_bound`): the signed `grant_ref` MUST be a non-empty string equal to
@@ -43,7 +45,7 @@ function fixture() {
     void _sig;
     return signPCActn({ ...body, grant_ref: ref as string }, deep ? S.secretKey : A.secretKey);
   };
-  const core = (p: PCActn) => verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: AUD });
+  const core = (p: PCActn) => verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD });
   return { P, A, S, grant, hop, act, withRef, core };
 }
 
@@ -111,10 +113,10 @@ describe('grant_ref_bound: the check', () => {
   it('is part of the default-deny profile of the resource-server layer', async () => {
     expect(DEFAULT_REQUIRED_CHECKS).toContain('grant_ref_bound');
     const f = fixture();
-    const v = await verifyPCActn(f.withRef(f.act(), b64u(new Uint8Array(32).fill(3))), { grant: f.grant, audience: AUD, now: NOW });
+    const v = await verifyPCActn(f.withRef(f.act(), b64u(new Uint8Array(32).fill(3))), { insecureSkipPlanRootCheck: true, grant: f.grant, audience: AUD, now: NOW });
     expect(v.allow).toBe(false);
     expect(v.checks.grant_ref_bound).toBe('fail');
-    const ok = await verifyPCActn(f.act(), { grant: f.grant, audience: AUD, now: NOW });
+    const ok = await verifyPCActn(f.act(), { insecureSkipPlanRootCheck: true, grant: f.grant, audience: AUD, now: NOW });
     expect(ok.checks.grant_ref_bound).toBe('pass');
   });
 });

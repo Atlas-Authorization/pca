@@ -206,6 +206,11 @@ describe('attest-maa-keys: bootstrap and rotation', () => {
     expect(code(await t.getTrustAnchors('https://evil.example', { nowMs: NOW }))).toBe('untrusted-issuer');
     await store.set(ISSUER, { v: 1, issuer: ISSUER, fetchedAtMs: NOW, anchors: [{ spki: 'zz', kind: 'self-signed', notBeforeMs: 0, notAfterMs: 1, firstSeenMs: 0 }] });
     expect(code(await t.getTrustAnchors(ISSUER, { nowMs: NOW }))).toBe('corrupt-state');
+    const neg0 = (JSON as unknown as { rawJSON(s: string): number }).rawJSON('-0'); // strict profile: a stored integer is never -0
+    await store.set(ISSUER, { v: 1, issuer: ISSUER, fetchedAtMs: neg0, anchors: [] });
+    expect(code(await t.getTrustAnchors(ISSUER, { nowMs: NOW }))).toBe('corrupt-state');
+    await store.set(ISSUER, { v: 1, issuer: ISSUER, fetchedAtMs: NOW, anchors: [{ spki: 'ab'.repeat(32), kind: 'self-signed', notBeforeMs: neg0, notAfterMs: 1, firstSeenMs: 0 }] });
+    expect(code(await t.getTrustAnchors(ISSUER, { nowMs: NOW }))).toBe('corrupt-state');
     const ok = trust([JWKS_A]);
     await ok.t.getTrustAnchors(ISSUER, { nowMs: NOW });
     expect(code(await ok.t.getTrustAnchors(ISSUER, { nowMs: NOW - DAY }))).toBe('clock-regression');

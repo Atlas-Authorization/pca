@@ -1,0 +1,1 @@
+{ "comment": "Pinned digest of the goal-compiler differential transcript (N=3000, SEED=7). Fill after the first green run on CI; the check still requires all five targets and the production bridge to agree byte for byte.", "transcriptSha256": "" }

@@ -39,7 +39,7 @@ import {
   SpdzEngine,
   type MacContext,
 } from './spdz';
-import type { OfflineProvider } from './mascot';
+import { makeNoDealerOffline, type OfflineProvider } from './mascot';
 import { thermometerDecode, thermometerEncode } from './thermometer';
 import { DEFAULT_Q, type DecisionVector } from './party';
 import { assertDecisionVectors, type ComposedDecision } from './compose';
@@ -55,6 +55,12 @@ export interface MaliciousMpcConfig {
    * absent, the trusted-dealer functions (`setupMac`/`genAuthTriple`/`authShare`) are used.
    */
   offline?: OfflineProvider;
+  /**
+   * Explicit opt-in to the TRUSTED-DEALER offline phase (one party-independent dealer sees every share and key).
+   * Without it and without `offline`, the default is a fresh NO-DEALER (OT-based) offline phase. `dealer` options
+   * need this flag.
+   */
+  insecureTrustedDealer?: boolean;
   /**
    * Trusted-dealer mode only (ignored when `offline` is set). `verifyTriples` (default true) certifies every
    * dealt triple by the sacrifice check; `fault` is a TEST-ONLY lying dealer.
@@ -98,7 +104,14 @@ export function composeSecureMalicious(
 
   // --- Offline: MAC key + authenticated input sharings + triples ---
   // Either a NO-DEALER provider (OT-based, mascot.ts) or the trusted dealer, behind one interface.
-  const offline = cfg.offline;
+  if (cfg.offline && cfg.insecureTrustedDealer) {
+    throw new Error('composeSecureMalicious: offline and insecureTrustedDealer are mutually exclusive (fail closed)');
+  }
+  if (cfg.dealer && cfg.insecureTrustedDealer !== true && !cfg.offline) {
+    throw new Error('composeSecureMalicious: dealer options require insecureTrustedDealer: true (fail closed)');
+  }
+  const offline: OfflineProvider | undefined =
+    cfg.offline ?? (cfg.insecureTrustedDealer === true ? undefined : makeNoDealerOffline(n, cfg.seed));
   if (offline && offline.n !== n) {
     throw new Error('composeSecureMalicious: offline provider party count != number of vectors');
   }

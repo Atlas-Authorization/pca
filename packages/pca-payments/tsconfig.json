@@ -1,9 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
+  // rootDir spans packages/: k4-vectors.test.ts reads vectors through sibling packages' sources. tsconfig.build.json pins rootDir for emit.
+  "compilerOptions": { "outDir": "./dist", "rootDir": "../" },
   "include": ["src/**/*"],
   "exclude": []
 }

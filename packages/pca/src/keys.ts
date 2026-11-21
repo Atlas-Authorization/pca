@@ -1,6 +1,8 @@
 import { ed25519 } from '@noble/curves/ed25519';
+import type { ExtPointConstructor } from '@noble/curves/abstract/edwards';
 
-const EdPoint = ed25519.ExtendedPoint;
+// Annotated so emitted declarations name the type portably.
+const EdPoint: ExtPointConstructor = ed25519.ExtendedPoint;
 import { b64u, decodeB64uStrict, unb64u } from './hash';
 
 export interface KeyPair {

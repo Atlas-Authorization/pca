@@ -1,5 +1,7 @@
 # @atlasauth/pca-fndsa
 
+> Maturity: **hardened** (hardened, formally verified (model), awaiting final standard and independent audit). The engineering is done and evidenced by tests and a mutation gate; it awaits the final FIPS 206 text (the draft's encodings may change) and an independent review of the wasm binding. It is never production until then, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 FN-DSA (Falcon, FIPS 206 draft) signature suites for Proof-Carrying Authority. It defines the suite ids, the fixed wire sizes, strict length enforcement and the PCA leaf-signature framing (pure and hybrid with Ed25519). The Falcon arithmetic itself is delegated to a pluggable backend, because a constant-time Falcon is not something to hand-roll in TypeScript. Use [`@atlasauth/pca-fndsa-wasm`](https://www.npmjs.com/package/@atlasauth/pca-fndsa-wasm) as the backend.
 
 FN-DSA keys and signatures are much smaller than ML-DSA's, which helps on bandwidth-bound surfaces.
@@ -50,9 +52,37 @@ For PCA artifacts, `signPcaWithFndsa({ alg, leaf, fnDsa, edSecret? })` returns t
 
 `FN_DSA_SUITES`, `isKnownFnDsaAlg`, `resolveFnDsaAlg`, `setFalconBackend`, `getFalconBackend`, `resetFalconBackend`, `fndsaSign`, `fndsaVerify`, `signPcaWithFndsa`, `verifyPcaFndsa`, `fndsaLeafMessage`, and the size constants. `registerTestBackend` and `mockKeypair` install a deterministic mock for tests only; never use them in production.
 
+## Fail-closed table
+
+Each row is pinned by a test that asserts the exact outcome.
+
+| Missing or wrong | Result |
+|---|---|
+| Unknown, non-string or inherited-property suite name | `verifyPcaFndsa` false; `resolveFnDsaAlg` null |
+| `pq_pk` or `sig` not a string, wrong length, or non-canonical base64url | false, backend never called |
+| Hybrid suite with a short Ed25519 half or a short FN-DSA half | false, backend never called |
+| A 512 key or signature under a 1024 suite (or the reverse) | false |
+| Raw verify with an unknown variant or non-bytes | `fndsaVerify` false |
+| Raw sign with an unknown variant, empty key or non-bytes message | `RangeError` or `TypeError` |
+| No backend registered | verification and signing throw the "no FN-DSA backend" error, never true |
+| Backend without `sign` | signing throws "verify-only" |
+| Backend returns a signature of the wrong length or not bytes | signing throws |
+| Backend verify returns false | false |
+| Hybrid signing without the Ed25519 secret | `TypeError` |
+
 ## Status
 
-Experimental and unaudited. The suite wiring (wire format, length checks, hybrid composition, PCActn leaf framing) is tested against the real `@atlasauth/pca-fndsa-wasm` backend for both parameter sets, with tampered action, swapped key, forged signature and missing/forged hybrid half rejected. The deterministic mock backend is kept only for wiring and negative-plumbing tests. The FN-DSA primitive itself has no official test vectors (none exist yet); see the backend package for what is cross-checked. FIPS 206 is still a draft, so key and signature encodings may change before the final standard. Signatures use the fixed-length padded encoding only. The core `@atlasauth/pca` verifier does not itself recognise these suite ids; verify FN-DSA artifacts with `verifyPcaFndsa`.
+Hardened, awaiting final standard (FIPS 206) and independent audit. The suite wiring (wire format, length checks, hybrid composition, PCActn leaf framing) is tested against the real `@atlasauth/pca-fndsa-wasm` backend for both parameter sets, with tampered action, swapped key, forged signature and missing/forged hybrid half rejected. The deterministic mock backend is kept only for wiring and negative-plumbing tests. The FN-DSA primitive itself has no official test vectors (none exist yet); see the backend package for what is cross-checked. FIPS 206 is still a draft, so key and signature encodings may change before the final standard. Signatures use the fixed-length padded encoding only. The core `@atlasauth/pca` verifier does not itself recognise these suite ids; verify FN-DSA artifacts with `verifyPcaFndsa`.
+
+## Formal evidence
+
+Suite pinning, `PcaComp/Wrap.lean`. What a machine checked, and what it did not.
+
+- Proved: the verifier takes the suite from the pinned key, never from the signature, so a signature claiming another suite is rejected and no two suites verify one key (`pinned_accepts_only_pinned_suite`, `no_downgrade`); the hybrid wrapper accepts only if both components accept (`hybrid_needs_both`), and the EasyCrypt AND-combiner results H-1, H-3 and H-4 carry the security argument; the pinned-key rule is PIN / PIN-2.
+- Assumed (named): NA-PQ (FN-DSA security, FIPS 206 draft), NA-ED.
+- Not modelled: FN-DSA itself, floating-point and timing behaviour, the wasm binding.
+
+Reproduce: `formal/computational/check.sh lean` (core Lean 4, no Mathlib; it also prints the axioms each theorem uses, only `propext`, `Classical.choice` and `Quot.sound`). The models are hand-written from the code and are NOT statements about the shipped implementation: the independent audit of the implementation is still required, and this package stays hardened until then.
 
 ## License
 

@@ -32,9 +32,9 @@ import type { Policy } from './policy';
  *   derive from the same signed capability. Encryption adds CONFIDENTIALITY (a passive observer, or a
  *   holder of a different/weaker capability, learns nothing) on top of the PCActn's AUTHORISATION.
  *
- * SECURITY: as in `abe.ts` — BSW07 CP-ABE (selective security in the paper's generic-group model, not
- * re-proved for this type-3 adaptation), integrity under AES-256-GCM. Not a NIZK. Keys carry a per-key
- * randomiser, so keys issued to different agents cannot be pooled to satisfy a policy neither satisfies.
+ * SECURITY: as in `abe.ts` — FAME CP-ABE (adaptive security in the random-oracle model, type-3 pairings),
+ * integrity under AES-256-GCM. Not a NIZK. Keys carry per-key randomisers, so keys issued to different agents
+ * cannot be pooled to satisfy a policy neither satisfies. Attributes in one policy must be distinct.
  */
 
 /** Result of a payload decryption attempt. `ok:false` means the key's authority did not satisfy the policy (or the ciphertext was tampered/malformed). */

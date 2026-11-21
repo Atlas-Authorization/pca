@@ -22,6 +22,8 @@ describe('adapters — ratchet leaf index ↔ PCActn.counter', () => {
   it('rejects a counter beyond the ratchet capacity', () => {
     expect(() => counterToLeafIndex(16, 4)).toThrowError(RatchetError);
     expect(() => counterToLeafIndex(-1, 4)).toThrowError(RatchetError);
+    expect(() => counterToLeafIndex(-0, 4)).toThrowError(RatchetError); // strict profile: never -0
+    expect(() => leafIndexToCounter(-0)).toThrowError(RatchetError);
     try {
       counterToLeafIndex(16, 4);
     } catch (e) {

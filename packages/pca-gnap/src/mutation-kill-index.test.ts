@@ -7,7 +7,6 @@ import {
   DEFAULT_RISK_POLICY,
   b64u,
   buildPCActn,
-  canonicalizeStrict,
   delegate,
   encodeMlDsaPublicKey,
   generateKeyPair,
@@ -42,14 +41,20 @@ import {
   gnapRequestRequiresStepUp,
   gnapStepUpShare,
   grantRequestToCapability,
+  gnapContentDigest,
   grantedAccessOf,
   holderJwk,
   normalizeAccess,
   resolveHolder,
   signGnapRequest,
-  verifyGnapRequest,
+  verifyGnapRequest as verifyGnapRequestReal,
   verifyGnapToken,
 } from './index';
+
+// verifyGnapRequest requires a replay store by default; these older tests are about the other checks, so the explicit
+// opt-out is pinned once here. draft-replay.test.ts covers the replay requirement itself.
+const verifyGnapRequest = (a: Parameters<typeof verifyGnapRequestReal>[0]) => verifyGnapRequestReal({ replayCheck: 'unchecked', ...a });
+
 
 afterEach(() => vi.useRealTimers());
 
@@ -715,7 +720,7 @@ describe('verifyGnapRequest', () => {
   /** Forge a detached JWS with an arbitrary protected header. */
   async function forge(header: Record<string, unknown>, forBody: unknown = body, key = c) {
     const k = await importJWK({ kty: 'OKP', crv: 'Ed25519', x: key.b64, d: b64u(key.secretKey) }, 'EdDSA');
-    const payload = utf8(canonicalizeStrict(JSON.parse(JSON.stringify(forBody))));
+    const payload = gnapContentDigest(JSON.parse(JSON.stringify(forBody)));
     const jws = await new FlattenedSign(payload).setProtectedHeader(header as never).sign(k);
     return `${jws.protected}..${jws.signature}`;
   }
@@ -909,7 +914,7 @@ describe('round-2 kills', () => {
     const c = kp();
     const body = { x: 1 };
     const k = await importJWK({ kty: 'OKP', crv: 'Ed25519', x: c.b64, d: b64u(c.secretKey) }, 'EdDSA');
-    const jws = await new FlattenedSign(utf8(canonicalizeStrict(body))).setProtectedHeader({ alg: 'EdDSA', typ: 'gnap-binding-jwsd', htm: 'POST', uri: 5, created: 1000 } as never).sign(k);
+    const jws = await new FlattenedSign(gnapContentDigest(body)).setProtectedHeader({ alg: 'EdDSA', typ: 'gnap-binding-jwsd', htm: 'POST', uri: 5, created: 1000 } as never).sign(k);
     const r = await verifyGnapRequest({ detachedJws: `${jws.protected}..${jws.signature}`, body, holder: c.b64, htm: 'POST', uri: 5 as never, now: 1_000_000 });
     expect(r).toStrictEqual({ ok: false, reason: 'uri does not match the request target' });
   });

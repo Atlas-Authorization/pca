@@ -1,0 +1,165 @@
+(* PCA -- hardware attestation (attestation.ts verifyAttestation + createAttestationVerifier, hardware-sevsnp.ts,
+   attest-amd-snp.ts), the "attest-the-mediator" sink check of T27, as a computational proof (CryptoVerif).
+   Paper version: docs/pca/security/proofs/03-attestation.md (AT-2, AT-3, AT-4, assumptions H1-H9).
+
+   Parties
+   - Vendor root (AMD ARK; Intel / NVIDIA roots are the same shape): its public key is PINNED by the verifier. It
+     certifies chip keys (VCEK) by signing cert(chip_id, vcek_pk). The ASK intermediate is folded into this one step
+     (each extra certificate level adds one UF-CMA term of the same form).
+   - Chips: NC chips, each with its VCEK. The VCEK signs reports report(measurement, report_data). By the hardware
+     assumption (below) it signs only:
+       (a) for a guest launched with an ALLOWLISTED measurement, i.e. the PCA mediator image: the honest guest code
+           requests report_data = RD(h, g, e, n) for ITS OWN holder key h (generated inside, never exported) and the
+           tuple (g, e, n) handed to it through its protocol (assumption H3: no attestation oracle in measured code);
+       (b) for any other guest (rogue image on genuine hardware): any report_data, but with that guest's measurement,
+           which is NOT allowlisted (bad(x) <> good(img)).
+     A chip may be physically compromised: ChipBroken(vcek) gives the adversary that VCEK (per-chip, not global).
+   - Verifier: the server picks the expected tuple (holder h, grant g, epoch e), issues a fresh nonce n (>= 128 bits)
+     that is consumed once (this verifier session ends after one acceptance), then checks: the chip certificate under
+     the pinned root, the report signature under the certified VCEK, allowed(measurement), report_data =
+     RD(h, g, e, n) = SHA-512(prefix || lp(h) || lp(g) || u64be(e) || lp(n)) (injective framing: Lean AT-1), and the
+     PCActn's leaf signature under h over a body that names the nonce (quote_digest = n).
+     The Dafny model formal/dafny/Attest.dfy (VerifySound, NonceAgeSound, HookSound) proves the code's decision
+     procedure is exactly this conjunction (stage order, nonce age, single consumption); here we prove the
+     conjunction is cryptographically sufficient.
+   - T27 (mediated sinks): the PCA mediator is the allowlisted guest; it signs actions carrying their flow labels with
+     h. A sink that accepts an action under an attested h gets exactly what the mediator emitted (AcceptAct query).
+     That the labels are the correct propagation is the interpreter's correctness (Dafny Taint.dfy for the label
+     algebra and gate), not cryptography.
+
+   Hardware assumption (the irreducible one; HW-ATT): the vendor signature schemes are UF-CMA, and a chip's VCEK secret
+   is used only by its secure processor, only to sign report(m, rd) where m is the launch measurement of the guest that
+   asked and rd is the value that guest supplied. (H1 + H2 of 03-attestation.md; H3 is about the allowlisted code.)
+
+   Queries (all with the "|| ChipBroken" escape of the chip that signed):
+   q_quote  : an accepted attestation was requested by a genuine allowlisted guest, for exactly (h, g, e, n, m);
+              so a rogue measurement is never accepted (measurement substitution fails).
+   q_inj    : injectively: one quote, one acceptance (replay of a quote fails; nonce consumed once).
+   q_act    : the accepted action was signed by that attested guest (relay: an action signed elsewhere fails).
+   Assumptions: HW-ATT, UF-CMA of Ed25519 for h, collision resistance of SHA-512. *)
+
+param NC, NB, NL, NQ, NR, NA, NV.
+
+(* the vendor root is honest (uf_cma); chips may be physically compromised (uf_cma_corrupt, a manual step) *)
+proof {
+  crypto uf_cma(sign) rr;
+  crypto uf_cma_corrupt(sign) rc;
+  auto
+}
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type hkeyseed [large, fixed].
+type hpkey [bounded].
+type hskey [bounded].
+type hsignature.
+type hmessage.
+type hashkey [fixed].
+type rd_t [fixed].
+type bind_t.
+type nonce_t [large, fixed].
+type meas_t. type chipid_t. type grant_t. type epoch_t. type act_t.
+
+proba Psign.
+proba Psigncoll.
+proba PsignH.
+proba PsigncollH.
+proba Phash.
+
+(* vendor scheme (ECDSA-P384 / RSA-PSS: randomised) for root and chip keys *)
+expand UF_CMA_proba_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+(* holder key scheme (Ed25519, deterministic) *)
+expand UF_CMA_det_signature(hkeyseed, hpkey, hskey, hmessage, hsignature, hskgen, hpkgen, hsign, hcheck, PsignH, PsigncollH).
+expand CollisionResistant_hash_1(hashkey, bind_t, rd_t, hash, hash_oracle, Phash).
+
+(* measurements: the allowlist is exactly the measurements good(img) of the PCA mediator images; a rogue image on
+   genuine hardware has a measurement bad(x) (hardware assumption: measurement integrity, rogue code cannot report
+   an allowlisted measurement) *)
+type img_t. type junk_t.
+fun good(img_t): meas_t [data].
+fun bad(junk_t): meas_t [data].
+equation forall i: img_t, x: junk_t; good(i) <> bad(x).
+fun bind(hpkey, grant_t, epoch_t, nonce_t): bind_t [data].     (* AT-1: lp/u64be framing is injective *)
+fun mkcert(chipid_t, pkey): message [data].
+fun mkrep(meas_t, rd_t): message [data].
+equation forall c: chipid_t, p: pkey, m: meas_t, r: rd_t; mkcert(c, p) <> mkrep(m, r).
+fun mkact(act_t, nonce_t): hmessage [data].                    (* the PCActn body names the nonce (quote_digest) *)
+
+event Certified(chipid_t, pkey).
+event GuestQuoted(hpkey, grant_t, epoch_t, nonce_t, meas_t).
+event GuestSigned(hpkey, act_t, nonce_t).
+event ChipBroken(pkey).
+event Accept(pkey, hpkey, grant_t, epoch_t, nonce_t, meas_t).
+event AcceptAct(pkey, hpkey, act_t, nonce_t).
+
+query c: pkey, h: hpkey, g: grant_t, e: epoch_t, n: nonce_t, m: meas_t;
+  event(Accept(c, h, g, e, n, m)) ==> event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c)).
+query c: pkey, h: hpkey, g: grant_t, e: epoch_t, n: nonce_t, m: meas_t;
+  inj-event(Accept(c, h, g, e, n, m)) ==> inj-event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c)).
+query c: pkey, h: hpkey, x: act_t, n: nonce_t;
+  event(AcceptAct(c, h, x, n)) ==> event(GuestSigned(h, x, n)) || event(ChipBroken(c)).
+
+channel c0, cC, cC2, cL, cL2, cQ, cQ2, cA, cA2, cR, cR2, cB, cB2, cV0, cV1, cV2, cV3.
+
+(* chips: NC chips with certified VCEKs.  Launches, rogue reports and physical compromise address a chip by its
+   chip id (a `find` over the chips); this flat layout is the same system as one nested process per chip. *)
+let Chips(skRoot: skey) =
+  ! iC <= NC
+  in(cC, cidC: chipid_t);
+  new rc: keyseed; let vpkC: pkey = pkgen(rc) in let vskC: skey = skgen(rc) in
+  event Certified(cidC, vpkC);
+  out(cC2, (vpkC, sign(mkcert(cidC, vpkC), skRoot))).
+
+(* honest launches of allowlisted images on chip `cid`: the PCA guest / mediator *)
+let Guests(hk: hashkey) =
+  ! iL <= NL
+  in(cL, (cid: chipid_t, im: img_t));
+  let mg: meas_t = good(im) in
+  find jc <= NC suchthat defined(cidC[jc], vskC[jc]) && cid = cidC[jc] then
+  new hs: hkeyseed; let hpk: hpkey = hpkgen(hs) in let hsk: hskey = hskgen(hs) in
+  out(cL2, hpk);
+  ( (! iQ <= NQ in(cQ, (g: grant_t, e: epoch_t, n: nonce_t));
+       event GuestQuoted(hpk, g, e, n, mg);
+       out(cQ2, sign(mkrep(mg, hash(hk, bind(hpk, g, e, n))), vskC[jc])))
+  | (! iA <= NA in(cA, (x: act_t, n: nonce_t));      (* a prompt-injected agent: signs any action *)
+       event GuestSigned(hpk, x, n);
+       out(cA2, hsign(mkact(x, n), hsk))) ).
+
+(* rogue images on genuine hardware: any report_data, non-allowlisted measurement *)
+let Rogue =
+  ! iR <= NR
+  in(cR, (cid: chipid_t, zz: img_t, rd: rd_t));
+  find jc <= NC suchthat defined(cidC[jc], vskC[jc]) && cid = cidC[jc] then
+  out(cR2, sign(mkrep(good(zz), rd), vskC[jc])).
+
+(* physical compromise of one chip *)
+let Break =
+  ! iB <= NB
+  in(cB, cid: chipid_t);
+  find jc <= NC suchthat defined(cidC[jc], vpkC[jc], rc[jc]) && cid = cidC[jc] then
+  event ChipBroken(vpkC[jc]);
+  out(cB2, rc[jc]).                                   (* the chip's key material *)
+
+let Verifier(hk: hashkey, pkRoot: pkey) =
+  ! iV <= NV
+  in(cV0, (h: hpkey, g: grant_t, e: epoch_t));        (* the server's expected binding *)
+  new n: nonce_t;                                     (* fresh, issued by the server, consumed by this session *)
+  out(cV1, n);
+  in(cV2, (cid: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x: act_t, asig: hsignature));
+  if check(mkcert(cid, vpk), pkRoot, csig) then
+  let good(im) = m in                                 (* m is on the allowlist *)
+  if check(mkrep(m, hash(hk, bind(h, g, e, n))), vpk, rsig) then
+  if hcheck(mkact(x, n), h, asig) then
+  event Accept(vpk, h, g, e, n, m);
+  event AcceptAct(vpk, h, x, n);
+  out(cV3, ()).
+
+process
+  in(c0, ());
+  new hk: hashkey;
+  new rr: keyseed; let pkRoot = pkgen(rr) in let skRoot = skgen(rr) in
+  out(c0, pkRoot);
+  ( hash_oracle(hk) | Chips(skRoot) | Guests(hk) | Rogue | Break | Verifier(hk, pkRoot) )

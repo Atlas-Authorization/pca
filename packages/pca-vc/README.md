@@ -1,5 +1,7 @@
 # @atlasauth/pca-vc
 
+> Maturity: **production**. Breaking changes to APIs or defaults are never made in a patch release. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Emit the PCA **agent passport** in the converging verifiable-identity formats: a **W3C Verifiable
 Credential 2.0** (as an **SD-JWT VC**) bound to a **did:key**, and request signatures per **RFC 9421 HTTP
 Message Signatures** using the **Web Bot Auth** `Signature-Agent` pattern.
@@ -41,7 +43,7 @@ import {
   didKeyFromEd25519, passportToVC, verifyPassportVC,
   signRequestMessage, verifyRequestSignature,
 } from '@atlasauth/pca-vc';
-import { issuePassport } from '@atlasauth/pca';
+import { issuePassport } from '@atlasauth/pca/ext/attestation';
 import { generateKeyPairSync } from 'node:crypto';
 
 const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -70,13 +72,35 @@ const ok = verifyRequestSignature({ method: 'POST', url: 'https://api.acme.com/v
 
 - `didKeyFromEd25519(publicKey: Uint8Array): string` / `ed25519FromDidKey(did): Uint8Array`
 - `passportToVC(passport, { issuerKey, issuerDid, subjectDid, ttlSec? }): Promise<string>`
-- `verifyPassportVC(vc, issuerVerifyKey): Promise<{ passport, issuerDid, subjectDid }>`
+- `verifyPassportVC(vc, issuerVerifyKey, { expectedIssuerDid? }): Promise<{ passport, issuerDid, subjectDid }>`
 - `signRequestMessage({ method, url, headers, key, keyid, created?, signatureAgent? }): { signatureInput, signature, signatureAgent? }`
 - `verifyRequestSignature({ method, url, headers, signatureInput, signature, signatureAgent? }, verifyKey): boolean`
 
+## Failure modes
+
+| Missing or wrong | Result |
+|---|---|
+| Empty or non-canonical token, wrong key, algorithm other than EdDSA, `typ` other than `vc+sd-jwt` | `verifyPassportVC` throws |
+| Missing `vc` claim, `@context` not exactly `[VC 2.0 context, agent-passport context]`, type missing `VerifiableCredential` or `AgentPassportCredential` | throws |
+| `_sd_alg` nested or not `sha-256`; disclosure not in `_sd`, duplicated, malformed, with an unexpected name | throws |
+| Subject field missing or of the wrong type; `sub` differing from `credentialSubject.id`; `iss` differing from `expectedIssuerDid` | throws |
+| Expired credential | throws |
+| Request signature: tampered method, URL, header or signature; non-Ed25519 `alg`; required component not covered; outside `maxAgeSec`; malformed input | `verifyRequestSignature` returns `false` and never throws |
+
+## Context document
+
+`AGENT_PASSPORT_CONTEXT_DOC` is the JSON-LD context for `AgentPassportCredential` (all terms protected), bundled and shipped as `context/agent-passport-v1.jsonld`. `resolveAgentPassportContext(iri)` is a document loader that returns it offline for its own IRI and nothing else; `AGENT_PASSPORT_CONTEXT_DIGEST` pins its content. Serve the file unchanged at the context IRI for verifiers that fetch.
+
+## Limits
+
+- The bridge re-expresses a passport; the passport and the signed action proof stay the source of truth.
+- SD-JWT VC and Web Bot Auth are drafts and the `vc+sd-jwt` type is pinned to the pre-rename drafts.
+- `iss` is not resolved from the DID for you: pin `expectedIssuerDid` or resolve the key yourself.
+- Derived components such as `@path` are not signed; replay inside the signature window is the caller's to prevent.
+
 ## Status
 
-Experimental. The SD-JWT VC and Web Bot Auth specifications are drafts and may change, and the cryptography in the PCA stack has not been independently audited. Untrusted `did:key` identifiers are length-bounded before the (quadratic) base58 decode.
+Production. Pinned to: W3C Verifiable Credentials Data Model 2.0 (`@context` v2), SD-JWT per RFC 9901, SD-JWT VC with the `vc+sd-jwt` media type of the drafts before the rename to `dc+sd-jwt` (`dc+sd-jwt` is rejected), RFC 9421 and the Web Bot Auth draft. The SD-JWT VC and Web Bot Auth specifications are drafts and may change, and the cryptography in the PCA stack has not been independently audited. Untrusted `did:key` identifiers are length-bounded before the (quadratic) base58 decode.
 
 What is validated:
 
@@ -84,7 +108,7 @@ What is validated:
 - SD-JWT VC: the credential verifies with the independent `@sd-jwt/core` 0.22.0 library (nested `credentialSubject._sd` disclosures resolve, a withheld disclosure stays hidden). `_sd_alg` is emitted at the top level of the payload, as RFC 9901 requires (credentials from releases that put it inside `credentialSubject` are rejected). `verifyPassportVC` is fail-closed: it pins EdDSA (a raw public key can no longer be used as an HMAC secret), checks `typ`, the VC 2.0 `@context` and credential type, `_sd_alg`, duplicate or unexpected disclosures, expiry and tampering.
 - RFC 9421 signatures interoperate in both directions with the Python `http-message-signatures` 2.0.1 library (Ed25519), including rejection of a tampered method, URL, header or signature. `verifyRequestSignature` can require covered components and a maximum signature age.
 
-Not validated: the RFC 9421 appendix test vectors (which use derived components such as `@path` that this package does not sign), the Web Bot Auth key-directory flow, and conformance of the emitted VC against a W3C JSON-LD validator. `verifyPassportVC` does not check that the `iss` DID matches the verification key you pass; do that in your key-resolution step.
+Not validated: the RFC 9421 appendix test vectors (which use derived components such as `@path` that this package does not sign), the Web Bot Auth key-directory flow, and conformance of the emitted VC against a W3C JSON-LD validator. `verifyPassportVC` checks that the JWT `sub` equals `credentialSubject.id`; it does not check that the `iss` DID matches the verification key you pass, so pin it with `expectedIssuerDid` (or resolve the key from the DID yourself). The second `@context` entry is this package's own agent-passport vocabulary, bundled with the package (see Context document) and required to be exactly that entry; the emitted VC is not run through a W3C JSON-LD validator.
 
 ## License
 

@@ -101,7 +101,7 @@ export class SlidingWindowCounter {
   tryAdd(now: number, cap: number): boolean {
     this.prune(now);
     if (this.times.length >= cap) return false;
-    if (this.times.length > 0 && now < this.times[this.times.length - 1]!) throw new Error('SlidingWindowCounter: time went backwards');
+    if (this.times.length > 0 && !(Number.isFinite(now) && now >= this.times[this.times.length - 1]!)) throw new Error('SlidingWindowCounter: time went backwards');
     this.times.push(now);
     return true;
   }

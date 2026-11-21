@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { cedarToPca } from './cedar';
+import { translateCedar } from './cedar';
+const cedarToPca = (text: string) => translateCedar(text, false); // structure tests: bare expressions, no error guards
+
 
 const EP = 'env.entity_parents';
 const P = (stmt: string) => cedarToPca(stmt);
@@ -187,7 +189,7 @@ describe('expressions', () => {
     expect(whereOf('context.ok != false')).toEqual({ field: 'env.ok', op: 'ne', value: false });
     expect(whereOf('context.a.b.c == "x"')).toEqual({ field: 'env.a.b.c', op: 'eq', value: 'x' });
     expect(whereOf('context == 1')).toEqual({ field: 'env', op: 'eq', value: 1 });
-    expect(whereOf('action == Action::"a"')).toEqual({ field: 'action.verb', op: 'eq', value: 'Action::a' });
+    expect(whereOf('action == Action::"a"')).toEqual({ field: 'action.verb', op: 'eq', value: 'a' });
     expect(whereOf('resource == Photo::"p"')).toEqual({ field: 'action.resource', op: 'eq', value: 'Photo::p' });
     expect(whereOf('resource.n == ""')).toEqual({ field: 'env.resource.n', op: 'eq', value: '' });
     expect(whereOf('context.s == "a<b==c"')).toEqual({ field: 'env.s', op: 'eq', value: 'a<b==c' });

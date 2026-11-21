@@ -297,6 +297,17 @@ describe('verifyFreshness', () => {
     for (const m of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) expect(f(claims(), { maxAgeMs: m }), String(m)).toEqual({ ok: false, reason: 'invalid maxAgeMs' });
     expect(f(claims(), { maxAgeMs: 1 }).ok).toBe(false);
   });
+  it('a non-finite or non-number clock skew is refused, never read as "no window"', () => {
+    const bad = { ok: false, reason: 'invalid clockSkewMs (must be a finite number)' };
+    for (const s of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, '5', null, {}]) {
+      expect(f(claims(), { now: 1_000_000 + 10_000_000, clockSkewMs: s }), String(s)).toEqual(bad); // stale token
+      expect(f(claims(), { now: 1_000_000 - 10_000_000, clockSkewMs: s }), String(s)).toEqual(bad); // future token
+      expect(f(claims(), { clockSkewMs: s }), String(s)).toEqual(bad); // even a fresh one
+    }
+    expect(f(claims(), { clockSkewMs: 0 })).toEqual({ ok: true });
+    expect(f(claims(), { clockSkewMs: -5 })).toEqual({ ok: true }); // a negative skew is clamped to 0
+    expect(f(claims(), { now: 1_000_000 + 10_001, clockSkewMs: -5 })).toEqual({ ok: false, reason: 'EAT is stale (iat older than maxAgeMs) — expired/replayed attestation' });
+  });
   it('future and stale boundaries with and without skew', () => {
     const iatMs = 1_000_000;
     expect(f(claims(), { now: iatMs })).toEqual({ ok: true });

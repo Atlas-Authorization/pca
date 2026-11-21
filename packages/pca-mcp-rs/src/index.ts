@@ -7,7 +7,8 @@
  *
  *   • keeps RFC 9728 Protected Resource Metadata discovery and the `WWW-Authenticate: Bearer
  *     resource_metadata="…"` 401 challenge (unchanged since 2025-11-25),
- *   • REPLACES Dynamic Client Registration with Client-ID Metadata Documents (CIMD): a client's
+ *   • PREFERS Client-ID Metadata Documents (CIMD, SHOULD) to Dynamic Client Registration (DCR, MAY, deprecated and retained
+ *     for compatibility; see `spec-conformance.ts`): a client's
  *     `client_id` IS an https URL that dereferences to its own RFC-7591-shaped metadata document, so a
  *     resource/authorization server never has to register a client out of band,
  *   • REQUIRES RFC 8707 resource-indicator enforcement (a credential is bound to exactly one resource
@@ -19,7 +20,7 @@
  * The AUTHORITY here is the PCActn, not a bearer token: a PCActn's SIGNED `aud` is the RFC 8707 resource
  * binding (it cannot be spoofed the way a `resource` indicator can), its capability chain roots at a
  * pinned issuer (the RFC 9207 anchor), and its signed caveats carry the scope grant that NARROWS down the
- * delegation chain. `authorizeRequest` is the admission check that verifies all of this through the PCA
+ * delegation chain. `admitRequest` is the admission check that verifies all of this through the PCA
  * core (`verifyPCActnCore`) and FAILS CLOSED: any missing / mismatched / unverifiable element denies with
  * the correct 401/403 + `WWW-Authenticate` challenge. Step-up is wired to PCA's FROST/CIBA threshold
  * surface: a tool that needs escalation returns a 401 the MCP client drives to collect a guardian /
@@ -45,14 +46,18 @@ import {
   buildDiscoveryDocument,
   decodePCActn,
   createThresholdVerifier,
+  deriveActionScopes,
+  encodePcaNeed,
   requiredThreshold,
   decodePcaHeader,
   verifyPCActnCore,
   WELL_KNOWN_PCA_PATH,
   type Capability,
   type CapabilityChain,
+  type ScopeAction,
   type Caveat,
   type CheckStatus,
+  type PcaNeed,
   type PcaDiscoveryDocument,
   type PCActn,
   type RequiredThreshold,
@@ -113,7 +118,7 @@ export interface ProtectedResourceMetadata extends PcaResourceExtension {
   resource: string;
   /**
    * RFC 9728 §3.1 `authorization_servers`: the issuer identifiers of the ASs that may issue credentials
-   * for this RS. This is the SAME allowlist `authorizeRequest` enforces as the RFC 9207 mix-up defense —
+   * for this RS. This is the SAME allowlist `admitRequest` enforces as the RFC 9207 mix-up defense —
    * discovery advertises exactly what admission enforces.
    */
   authorization_servers: string[];
@@ -235,6 +240,12 @@ export interface WwwAuthenticateChallengeOptions {
   /** Bearer realm (optional). */
   realm?: string;
   /**
+   * Add the additive `pca_need` auth-param (typed requirement for an argument-aware step-up). A stock MCP/OAuth client
+   * ignores unknown auth-params and steps up by `scope` as before. Advisory and unsigned: see `@atlasauth/pca` `PcaNeed`.
+   * An over-large or malformed need throws, like any other bad parameter.
+   */
+  pcaNeed?: PcaNeed;
+  /**
    * Append a PCA step-up challenge as a second RFC-7235 challenge so a PCA-aware client gets the FROST/CIBA
    * requirement in the same header. Ignored unless set. The structured {@link StepUpChallenge} carries the
    * same information for the MCP client to drive.
@@ -261,6 +272,7 @@ export function wwwAuthenticateChallenge(opts: WwwAuthenticateChallengeOptions):
   if (opts.error) params.push(`error="${quotedParam(opts.error)}"`);
   if (opts.errorDescription) params.push(`error_description="${quotedParam(opts.errorDescription)}"`);
   if (opts.scope) params.push(`scope="${quotedParam(opts.scope)}"`);
+  if (opts.pcaNeed) params.push(`pca_need="${quotedParam(encodePcaNeed(opts.pcaNeed))}"`);
   if (opts.acrValues) params.push(`acr_values="${quotedParam(opts.acrValues)}"`);
   if (typeof opts.maxAge === 'number' && Number.isFinite(opts.maxAge)) params.push(`max_age=${Math.max(0, Math.trunc(opts.maxAge))}`);
   const challenges: string[] = [`Bearer ${params.join(', ')}`];
@@ -538,7 +550,7 @@ export async function verifyStepUp(p: PCActn, tier: 2 | 3, grant: Capability, si
 }
 
 // ===================================================================================================
-// 6. authorizeRequest — the RS admission check
+// 6. admitRequest — the RS admission check (admission only; `authorizeRequest` runs the whole authorization)
 // ===================================================================================================
 
 /** Framework-agnostic request shape: headers (record or Headers-like) + an optional parsed/raw body. */
@@ -588,7 +600,7 @@ export function extractPCActn(req: McpRequestLike): PCActn | null {
   return null;
 }
 
-export interface AuthorizeRequestOptions {
+export interface AdmissionOptions {
   /** REQUIRED (RFC 8707): this RS's id. A PCActn whose signed `aud` differs is rejected (no cross-RS replay). */
   resource: string;
   /**
@@ -601,12 +613,23 @@ export interface AuthorizeRequestOptions {
   resolveGrant: (grantRef: string, pcactn: PCActn) => Capability | null | Promise<Capability | null>;
   /** The absolute PRM URL for the `WWW-Authenticate` challenge. */
   prmUrl: string;
+  /** Merkle plan roots the principal authorized; forwarded to `verifyPCActnCore` (`plan_root_authorized`). Required unless `insecureSkipPlanRootCheck` is set. */
+  authorizedPlanRoots?: readonly string[];
+  /** Explicit opt-out of `plan_root_authorized`; forwarded to `verifyPCActnCore`. */
+  insecureSkipPlanRootCheck?: boolean;
   /** The MCP tool being invoked (used to look up required scope + step-up tier). */
   tool?: string;
   /** Tool → required scope(s) map. The invoked tool's scopes must all be in the effective granted set. */
   toolScopes?: Record<string, string | string[]>;
   /** Explicit required scopes for this call (overrides `toolScopes[tool]`). */
   requiredScopes?: string[];
+  /**
+   * Required scopes DERIVED from the reviewed action (`ScopeAction.upstream.scopes_min`), by tool. When the invoked tool is listed
+   * here its scopes come from the action; a tool whose action is unconfirmed or malformed derives none and the call is refused
+   * (403 `forbidden`, fail closed), never admitted with an empty requirement. `requiredScopes` still overrides; `toolScopes` is
+   * ignored for a tool listed here.
+   */
+  toolActions?: Record<string, ScopeAction>;
   /** Base granted scopes when the grant does not express them as `scope` caveats. Intersected with caveats. */
   baseScopes?: string[];
   /** Fully override how the effective granted scopes are computed (else `accumulateScopes(leaf.caveats, baseScopes)`). */
@@ -639,6 +662,18 @@ export interface AuthorizeRequestOptions {
   now?: number;
   /** Bearer realm on the challenge (default "pca"). */
   realm?: string;
+  /**
+   * Scope hierarchy (MCP 2026-07-28 / draft, "Servers MUST account for scope hierarchies"): a broader scope implies the
+   * narrower ones listed under it, e.g. `{ 'files:*': ['files:read', 'files:write'] }`. Implication is transitive and only
+   * ever expands what a GRANTED scope covers for the scope check; it never widens the PCActn's own verified authority.
+   */
+  scopeHierarchy?: Record<string, string[]>;
+  /**
+   * The `pca_need` that rides on a `403 insufficient_scope` challenge. Default: derived from the verified PCActn (its verb
+   * and resource, the missing scopes, the grant). Pass a function to add a residual envelope or discharges, or `false` to
+   * omit the parameter. A throwing or malformed need is dropped (it is a hint; the denial itself is unchanged).
+   */
+  pcaNeed?: false | ((ctx: { pcactn: PCActn; grant: Capability; required: string[]; missing: string[] }) => PcaNeed | undefined | Promise<PcaNeed | undefined>);
 }
 
 export interface AuthorizeAllow {
@@ -661,14 +696,74 @@ export interface AuthorizeDeny {
   wwwAuthenticate: string;
   /** Present when the denial is a step-up requirement the MCP client must drive. */
   stepUp?: StepUpChallenge;
+  /** The `pca_need` carried on the challenge of a `403 insufficient_scope` (advisory; absent when disabled or dropped). */
+  pcaNeed?: PcaNeed;
   /** The PCA core verdict's per-check status, when verification ran. */
   checks?: Record<string, CheckStatus>;
+  /**
+   * A developer-facing suggestion for the most common cause of this denial (for logs, never for the client). It is not
+   * part of the `WWW-Authenticate` challenge and does not change the decision.
+   */
+  hint?: string;
 }
 
 export type AuthorizeResult = AuthorizeAllow | AuthorizeDeny;
 
-function requiredScopesFor(opts: AuthorizeRequestOptions): string[] {
+/** The granted scopes plus everything a broader granted scope implies (transitively, cycle-safe). */
+function expandScopes(granted: string[], hierarchy: Record<string, string[]> | undefined): Set<string> {
+  const out = new Set(granted);
+  if (!hierarchy) return out;
+  const queue = [...granted];
+  while (queue.length > 0) {
+    const s = queue.pop() as string;
+    if (!Object.prototype.hasOwnProperty.call(hierarchy, s)) continue;
+    for (const n of hierarchy[s] ?? []) {
+      if (!out.has(n)) {
+        out.add(n);
+        queue.push(n);
+      }
+    }
+  }
+  return out;
+}
+
+/** The `pca_need` for an insufficient_scope denial, or undefined. Any failure drops the hint, never the denial. */
+async function needFor(
+  opts: AdmissionOptions,
+  ctx: { pcactn: PCActn; grant: Capability; required: string[]; missing: string[] },
+): Promise<PcaNeed | undefined> {
+  if (opts.pcaNeed === false) return undefined;
+  try {
+    const need: PcaNeed | undefined = opts.pcaNeed
+      ? await opts.pcaNeed(ctx)
+      : {
+          v: 1,
+          kind: 'scope',
+          verb: ctx.pcactn.action.verb,
+          resource: ctx.pcactn.action.resource,
+          scopes: ctx.required,
+          grant_ref: ctx.pcactn.grant_ref,
+        };
+    if (need === undefined) return undefined;
+    encodePcaNeed(need); // validates and bounds it; throws on a malformed need
+    return need;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The scopes a listed tool needs from its action, or an error string when none can be derived. */
+function actionScopesFor(opts: AdmissionOptions): string[] | string | undefined {
+  if (opts.requiredScopes || opts.tool === undefined || !opts.toolActions || !Object.prototype.hasOwnProperty.call(opts.toolActions, opts.tool)) return undefined;
+  const d = deriveActionScopes(opts.toolActions[opts.tool]);
+  return d.ok ? d.scopes : d.code;
+}
+
+function requiredScopesFor(opts: AdmissionOptions): string[] {
   if (opts.requiredScopes) return opts.requiredScopes;
+  const fromAction = actionScopesFor(opts);
+  if (Array.isArray(fromAction)) return fromAction;
+  if (typeof fromAction === 'string') return []; // nothing derivable: the call is refused by admitRequest, never admitted on a guessed scope
   if (opts.tool !== undefined && opts.toolScopes) {
     const req = opts.toolScopes[opts.tool];
     if (req === undefined) return [];
@@ -677,24 +772,36 @@ function requiredScopesFor(opts: AuthorizeRequestOptions): string[] {
   return [];
 }
 
-async function requiredTierFor(opts: AuthorizeRequestOptions, pcactn: PCActn, grant: Capability): Promise<2 | 3 | undefined> {
+async function requiredTierFor(opts: AdmissionOptions, pcactn: PCActn, grant: Capability): Promise<2 | 3 | undefined> {
   // R3-08: every configured source contributes and the result is the MAX (a lower source never masks a higher one).
   let tier: 2 | 3 | undefined = opts.requiredTier;
   const raise = (t: 2 | 3 | undefined): void => {
     if (t !== undefined && (tier === undefined || t > tier)) tier = t;
   };
   if (opts.toolStepUp) {
-    if (opts.tool === undefined) throw new Error('authorizeRequest: `toolStepUp` is configured but no `tool` was passed, so the per-tool step-up tier cannot be applied (fail closed)');
+    if (opts.tool === undefined) throw new Error('admitRequest: `toolStepUp` is configured but no `tool` was passed, so the per-tool step-up tier cannot be applied (fail closed)');
     raise(Object.prototype.hasOwnProperty.call(opts.toolStepUp, opts.tool) ? opts.toolStepUp[opts.tool] : undefined);
   }
   if (opts.riskTiers) {
-    if (typeof opts.serverRisk !== 'function') throw new Error('authorizeRequest: `riskTiers` needs a server-computed `serverRisk` (the agent-signed risk_claim.r is never used)');
+    if (typeof opts.serverRisk !== 'function') throw new Error('admitRequest: `riskTiers` needs a server-computed `serverRisk` (the agent-signed risk_claim.r is never used)');
     const r = await opts.serverRisk(pcactn, grant);
     const rt: RequiredThreshold = requiredThreshold(typeof r === 'number' && Number.isFinite(r) ? r : 1, opts.riskTiers);
     raise(rt.t === 1 ? undefined : (rt.t as 2 | 3));
   }
   return tier;
 }
+
+/** Developer hints for the common configuration mistakes behind each denial (returned as `AuthorizeDeny.hint`). */
+const HINTS = {
+  missing: 'send the PCActn in the PCA-Action header: spread pcaHeaders(encoded) from @atlasauth/pca into the request headers',
+  unreadable: 'the PCA-Action header must be unpadded base64url of the encoded PCActn; build it with pcaHeaders(encoded), not the raw encoded JSON',
+  unknownGrant: "resolveGrant found no grant for this grant_ref: register the agent's grant with this server first (store it under grant.id) and look it up by that id",
+  audience: "mint the PCActn for this server: its aud must equal the `resource` option (agent({ aud }) or act(..., { aud }))",
+  issuer:
+    "for a grant minted with agent() or mintGrant() the issuer is the principal's public key (grant.issuer), not a URL: list that key in authorizationServers, or map the grant to your authorization server with resolveIssuer",
+  scope:
+    "granted scopes come from `scope` caveats ({ type: 'scope', scopes: [...] }) on the capability chain, or from baseScopes; a grant minted with agent() carries none",
+} as const;
 
 /**
  * The resource-server admission check for an MCP 2026-07-28 tool call, with a PCActn as the authority.
@@ -712,15 +819,21 @@ async function requiredTierFor(opts: AuthorizeRequestOptions, pcactn: PCActn, gr
  *      `insufficient_user_authentication` (RFC 9470) carrying the {@link StepUpChallenge}.
  *
  * On success it returns the verified PCActn, the grant, the effective granted scopes and the core checks.
+ *
+ * `authorizeRequest(req, { ...opts, admissionOnly: true })` calls this. It is an ADMISSION check, not the authorization decision. It does not evaluate the grant's predicates or limits (a
+ * refund-only grant's PCActn for `stripe.delete_customer`, or for an over-limit amount, is admitted), does not check that
+ * the PCActn's verb, resource and params are the tool call being made, and keeps no replay counter. Run the full
+ * verifier (`requirePCA` / `verifyPCActn` from `@atlasauth/pca`, with the tool arguments as `params`) before the tool
+ * does anything, and compare the PCActn's `action` with the call.
  */
-export async function authorizeRequest(req: McpRequestLike, opts: AuthorizeRequestOptions): Promise<AuthorizeResult> {
+export async function admitRequest(req: McpRequestLike, opts: AdmissionOptions): Promise<AuthorizeResult> {
   const realm = opts.realm ?? 'pca';
   const now = opts.now ?? Date.now();
   const deny = (
     status: 401 | 403,
     error: string,
     errorDescription: string,
-    extra: { scope?: string; stepUp?: StepUpChallenge; checks?: Record<string, CheckStatus> } = {},
+    extra: { scope?: string; pcaNeed?: PcaNeed; stepUp?: StepUpChallenge; checks?: Record<string, CheckStatus>; hint?: string } = {},
   ): AuthorizeDeny => {
     const header = wwwAuthenticateChallenge({
       resourceMetadataUrl: opts.prmUrl,
@@ -730,6 +843,7 @@ export async function authorizeRequest(req: McpRequestLike, opts: AuthorizeReque
       errorDescription: errorDescription.replace(/["\r\n]/g, ' '),
       realm,
       ...(extra.scope !== undefined ? { scope: extra.scope } : {}),
+      ...(extra.pcaNeed !== undefined ? { pcaNeed: extra.pcaNeed } : {}),
       ...(extra.stepUp
         ? { acrValues: extra.stepUp.acr, maxAge: 0, pcaStepUp: extra.stepUp }
         : {}),
@@ -741,16 +855,18 @@ export async function authorizeRequest(req: McpRequestLike, opts: AuthorizeReque
       errorDescription,
       wwwAuthenticate: header,
       ...(extra.stepUp ? { stepUp: extra.stepUp } : {}),
+      ...(extra.pcaNeed !== undefined ? { pcaNeed: extra.pcaNeed } : {}),
       ...(extra.checks ? { checks: extra.checks } : {}),
+      ...(extra.hint !== undefined ? { hint: extra.hint } : {}),
     };
   };
 
   try {
     if (typeof opts.resource !== 'string' || opts.resource.length === 0) {
-      throw new Error('authorizeRequest: `resource` is required');
+      throw new Error('admitRequest: `resource` is required');
     }
     if (!Array.isArray(opts.authorizationServers) || opts.authorizationServers.length === 0) {
-      throw new Error('authorizeRequest: `authorizationServers` is required (RFC 9207)');
+      throw new Error('admitRequest: `authorizationServers` is required (RFC 9207)');
     }
 
     // 1. extract
@@ -758,40 +874,56 @@ export async function authorizeRequest(req: McpRequestLike, opts: AuthorizeReque
     try {
       pcactn = extractPCActn(req);
     } catch (e) {
-      return deny(401, 'invalid_request', `unreadable PCActn: ${(e as Error).message}`);
+      return deny(401, 'invalid_request', `unreadable PCActn: ${(e as Error).message}`, { hint: HINTS.unreadable });
     }
-    if (pcactn === null) return deny(401, 'invalid_request', 'no PCActn presented (PCA-Action header or {pcactn} body)');
+    if (pcactn === null) {
+      // MCP 2025-11-25+ (Scope Selection Strategy): the first 401 SHOULD carry the scopes the resource needs.
+      const first = requiredScopesFor(opts);
+      return deny(401, 'invalid_request', 'no PCActn presented (PCA-Action header or {pcactn} body)', {
+        hint: HINTS.missing,
+        ...(first.length > 0 ? { scope: first.join(' ') } : {}),
+      });
+    }
     if (typeof pcactn !== 'object' || typeof pcactn.grant_ref !== 'string') {
       return deny(401, 'invalid_token', 'malformed PCActn');
     }
 
     // 2. resolve grant
     const grant = await opts.resolveGrant(pcactn.grant_ref, pcactn);
-    if (!grant) return deny(401, 'invalid_token', 'unknown grant_ref');
+    if (!grant) return deny(401, 'invalid_token', 'unknown grant_ref', { hint: HINTS.unknownGrant });
 
     // 3. RFC 8707 — resource-indicator / audience binding. The signed `aud` is the real binding (a
     // `resource` indicator can be dropped or spoofed in transit; the signature cannot).
     if (typeof pcactn.aud !== 'string' || pcactn.aud !== opts.resource) {
-      return deny(401, 'invalid_token', `RFC 8707: PCActn audience (${String(pcactn.aud)}) is not this resource server (${opts.resource})`);
+      return deny(401, 'invalid_token', `RFC 8707: PCActn audience (${String(pcactn.aud)}) is not this resource server (${opts.resource})`, { hint: HINTS.audience });
     }
 
     // 4. RFC 9207 — authorization-server issuer validation (mix-up defense).
     const issuer = opts.resolveIssuer ? opts.resolveIssuer(grant, pcactn) : grant.issuer;
     if (!opts.authorizationServers.includes(issuer)) {
-      return deny(401, 'invalid_token', `RFC 9207: credential issuer (${issuer}) is not an expected authorization server`);
+      return deny(401, 'invalid_token', `RFC 9207: credential issuer (${issuer}) is not an expected authorization server`, { hint: HINTS.issuer });
     }
 
     // 5. PCA core verification (crypto + binding). Pass THIS RS's audience so the core re-binds too.
-    const verdict = await verifyPCActnCore(pcactn, { grant, audience: opts.resource, nowEpoch: now });
+    const verdict = await verifyPCActnCore(pcactn, {
+      grant,
+      audience: opts.resource,
+      nowEpoch: now,
+      ...(opts.authorizedPlanRoots !== undefined ? { authorizedPlanRoots: opts.authorizedPlanRoots } : {}),
+      ...(opts.insecureSkipPlanRootCheck !== undefined ? { insecureSkipPlanRootCheck: opts.insecureSkipPlanRootCheck } : {}),
+    });
     if (!verdict.allow) {
       const reason = verdict.reason ?? 'PCActn verification failed';
       // Authentication-class failures are 401 (bad proof); everything else is a 403 (policy).
-      const authnChecks = ['wire', 'version', 'audience', 'validity', 'cap_chain', 'leaf_signature', 'malformed', 'counter'];
+      const authnChecks = ['wire', 'version', 'audience', 'validity', 'cap_chain', 'leaf_signature', 'malformed', 'counter_format'];
       const authnFailed = authnChecks.some((c) => verdict.checks[c] === 'fail');
       return authnFailed
         ? deny(401, 'invalid_token', reason, { checks: verdict.checks })
         : deny(403, 'forbidden', reason, { checks: verdict.checks });
     }
+
+    const derived = actionScopesFor(opts);
+    if (typeof derived === 'string') return deny(403, 'forbidden', `no scope can be derived for tool '${opts.tool}' (${derived}): the action is unknown or unconfirmed`, { checks: verdict.checks });
 
     // 6. scope accumulation — the narrowed granted scopes must cover the tool's required scope(s).
     const leaf = pcactn.cap_chain.at(-1);
@@ -800,11 +932,15 @@ export async function authorizeRequest(req: McpRequestLike, opts: AuthorizeReque
       ? opts.resolveGrantedScopes(grant, pcactn.cap_chain, pcactn)
       : accumulateScopes(leafCaveats, opts.baseScopes);
     const need = requiredScopesFor(opts);
-    const missing = need.filter((s) => !grantedScopes.includes(s));
+    const covered = expandScopes(grantedScopes, opts.scopeHierarchy);
+    const missing = need.filter((s) => !covered.has(s));
     if (missing.length > 0) {
+      const pcaNeed = await needFor(opts, { pcactn, grant, required: need, missing });
       return deny(403, 'insufficient_scope', `missing required scope(s): ${missing.join(' ')}`, {
         scope: need.join(' '),
+        ...(pcaNeed !== undefined ? { pcaNeed } : {}),
         checks: verdict.checks,
+        hint: HINTS.scope,
       });
     }
 
@@ -814,7 +950,7 @@ export async function authorizeRequest(req: McpRequestLike, opts: AuthorizeReque
       let satisfied = false;
       if (opts.stepUpSatisfied) satisfied = (await opts.stepUpSatisfied(pcactn, tier)) === true;
       else if (opts.stepUpSignerSet) satisfied = await verifyStepUp(pcactn, tier, grant, opts.stepUpSignerSet, now);
-      else throw new Error('authorizeRequest: a step-up tier applies but neither `stepUpSignerSet` nor `stepUpSatisfied` is configured (no presence-check default)');
+      else throw new Error('admitRequest: a step-up tier applies but neither `stepUpSignerSet` nor `stepUpSatisfied` is configured (no presence-check default)');
       if (!satisfied) {
         const stepUp: StepUpChallenge = {
           tier,
@@ -833,3 +969,7 @@ export async function authorizeRequest(req: McpRequestLike, opts: AuthorizeReque
     return deny(403, 'forbidden', `admission error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`);
   }
 }
+
+// The complete check for one MCP tool call (admission + call binding + the full verifier).
+export * from './tool-call';
+export * from './spec-conformance';

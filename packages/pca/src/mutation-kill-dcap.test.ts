@@ -68,11 +68,11 @@ describe('createIntelDcapVerifier constructor validation (exact messages)', () =
 
 describe('createIntelDcapVerifier.verify: quote verifier arguments', () => {
   it('forwards time, pin (lower-cased), and every policy field; omits absent/false ones', async () => {
-    await run(base({ mrSeams: [M], mrSignerSeams: [M], fmspcs: ['aa'], rtmrs: { 0: 'x' }, allowDebug: true }, { trustAnchorRootCaSpkiSha256: 'ABCDEF' }));
+    await run(base({ mrSeams: [M], mrSignerSeams: [M], fmspcs: ['aa'], rtmrs: ['x'], allowDebug: true }, { trustAnchorRootCaSpkiSha256: 'ABCDEF' }));
     const a = tdx.q.mock.calls[0]![0];
     expect(a.nowMs).toBe(1234);
     expect(a.trustAnchorRootCaSpkiSha256).toBe('abcdef');
-    expect(a.policy).toEqual({ mrtds: [M], mrSeams: [M], mrSignerSeams: [M], fmspcs: ['aa'], rtmrs: { 0: 'x' }, allowDebug: true });
+    expect(a.policy).toEqual({ mrtds: [M], mrSeams: [M], mrSignerSeams: [M], fmspcs: ['aa'], rtmrs: ['x'], allowDebug: true });
     await run(base({ allowDebug: false }));
     expect(tdx.q.mock.calls[1]![0].policy).toEqual({ mrtds: [M] });
     await run(base({ mrSignerSeams: [M] }));
