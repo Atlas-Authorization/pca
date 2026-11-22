@@ -348,7 +348,7 @@ function requirePolicyDim(policy: FheRiskPolicy): void {
   if (!(Number.isInteger(policy.scale) && policy.scale > 0)) throw new Error('policy.scale must be a positive integer');
   const ints = [...(policy.weightsScaled ?? []), ...(policy.kappaWeightsScaled ?? []), policy.budgetScaled];
   for (const v of ints) {
-    if (!(Number.isInteger(v) && Math.abs(v) < SIGNED_BOUND)) {
+    if (!(Number.isInteger(v) && !Object.is(v, -0) && Math.abs(v) < SIGNED_BOUND)) {
       throw new Error('policy coefficients must be integers with |value| < SIGNED_BOUND');
     }
   }
@@ -644,7 +644,8 @@ export function plaintextVerdict(
   budget: number,
 ): { r: number; admit: boolean } {
   const r = riskScore(inputs, core.weights);
-  return { r, admit: cost(r, core.kappa) <= budget };
+  // a budget that is not a finite number admits nothing (an infinite budget is refused at policy construction too)
+  return { r, admit: Number.isFinite(budget) && cost(r, core.kappa) <= budget };
 }
 
 // Origin authentication of the encrypted claim (signed claim, replay guard, verdict attestation).

@@ -1,5 +1,7 @@
 # @atlasauth/pca-scitt
 
+> Maturity: **production**. Breaking changes to APIs or defaults are never made in a patch release. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 SCITT transparency receipts for Proof-Carrying Authority (RFC 9943 architecture, RFC 9942 COSE Receipts). Each verified PCActn (or verdict) is signed as a COSE Signed Statement (`COSE_Sign1`), appended to an append-only RFC 6962 Merkle log, and returned with a COSE Receipt carrying an RFC 9162 inclusion proof against the log root. A third party can check it with only the statement, the receipt and a pinned root or the transparency service's public key.
 
 Self-contained: a small deterministic CBOR codec (RFC 8949 core-deterministic) and `node:crypto` for signing and hashing. Algorithms: `EdDSA` and `ES256`. The log is an RFC 9162 SHA-256 Merkle tree whose leaf entries are the raw Signed Statement bytes, so an independent RFC 9162 verifier can check a receipt's inclusion proof given the statement bytes. Receipts carry a detached payload, as RFC 9942 recommends.
@@ -16,12 +18,13 @@ Requires Node (uses `node:crypto` `KeyObject`s).
 
 ```ts
 import { generateKeyPairSync } from 'node:crypto';
-import { TransparencyService, verifyReceipt } from '@atlasauth/pca-scitt';
+import { verifyReceipt } from '@atlasauth/pca-scitt';
+import { TransparencyService } from '@atlasauth/pca-scitt/testing';
 
 const tsKey = generateKeyPairSync('ed25519');     // transparency service
 const issuerKey = generateKeyPairSync('ed25519'); // statement issuer (e.g. the resource server)
 
-const service = new TransparencyService({ alg: 'EdDSA', key: tsKey.privateKey, issuer: 'https://ts.example.com' });
+const service = new TransparencyService({ alg: 'EdDSA', key: tsKey.privateKey, issuer: 'https://ts.example.com' }); // in-memory: tests only, from '@atlasauth/pca-scitt/testing'
 
 const { statement, receipt, root } = service.appendAndReceipt(
   { verdict: 'allow', verb: 'refund' }, // typically the verified PCActn / decision record
@@ -40,12 +43,48 @@ verifyReceipt(receipt, statement, {});                  // false: no trust ancho
 
 - Statements: `signStatement`, `verifyStatement`, `checkStatement` (returns the failure reason), `statementPayload`, `statementLeaf`.
 - Receipts: `buildReceipt`, `verifyReceipt`, `encodeInclusionProof`, `decodeInclusionProof`.
-- Service: `TransparencyService` (`register`, `appendAndReceipt`, `getReceipt`, `consistencyProof`, `root`, `size`, `snapshot`), `registerStatement`, `verifyConsistencyProof`.
+- Service: `DurableTransparencyService` (`register`, `appendAndReceipt`, `getReceipt`, `getEntry`, `consistencyProof`, `root`, `size`), `FileScittLogStore`, `checkScittLogStore`, `ScittLogError`, `verifyConsistencyProof`. Test doubles on `/testing`: `TransparencyService`, `registerStatement`, `MemoryScittLogStore`.
 - Codec and constants: `encode`, `decode`, `CborTag`, `COSE_SIGN1_TAG`, `DEFAULT_CONTENT_TYPE`.
+
+## Durable transparency service
+
+`DurableTransparencyService` is the transparency service to run. All of its state lives in a `ScittLogStore` you supply (`size`, `getEntry`, `getNode`, `append`), with no in-memory default:
+
+```ts
+import { DurableTransparencyService, FileScittLogStore, checkScittLogStore } from '@atlasauth/pca-scitt';
+
+const store = FileScittLogStore.open('/var/lib/ts/log.bin');   // single process; use a database-backed store for a fleet
+const service = new DurableTransparencyService({ store, alg: 'EdDSA', key: tsKey.privateKey, issuer: 'https://ts.example.com' });
+const { receipt, root, index } = await service.register(statement);
+const consistency = await service.consistencyProof(oldSize); // verify with verifyConsistencyProof(proof, oldRoot, newRoot)
+```
+
+The log keeps the hash of every complete aligned subtree, so an append costs O(log n) store reads and writes, the root costs O(log n), and inclusion and consistency proofs cost O(log^2 n); nothing recomputes the tree. `append` must be a compare-and-set on the size that stores the entry and its new hashes together or not at all; run `checkScittLogStore(() => yourStore)` in your test suite to check that, immutability and a concurrent-append race. `FileScittLogStore` is the reference durable store: one append-only file of checksummed transactions, fsynced, a torn final record dropped on open, corruption elsewhere refused.
+
+The in-memory reference log (`TransparencyService`) and `MemoryScittLogStore` are on `@atlasauth/pca-scitt/testing` only.
+
+## Failure modes
+
+| Missing or wrong | Result |
+|---|---|
+| No store, or a store without the four methods | `ScittLogError` `store_required` |
+| Statement not a COSE_Sign1 with an embedded payload | `bad_statement`, nothing appended |
+| Stored subtree hash missing or malformed, entry missing, invalid size | `store_corrupt` |
+| The log keeps changing under an append (16 attempts) | `append_contention` |
+| Index or size out of range | `out_of_range` |
+| `verifyReceipt` with no anchor, a tampered statement, a forged receipt or a wrong root | `false`, never throws |
+| Non-canonical CBOR or COSE, high-S ES256 | rejected with a reason |
+| `verifyConsistencyProof` with wrong roots or sizes | `false` |
+
+## Limits
+
+- `FileScittLogStore` is single-process and keeps 32 bytes per subtree in memory; replicate or use a database for more.
+- Equivocation (two roots for one size) is detectable only by parties that pin roots and compare them; run witnesses.
+- The signed consistency-receipt form, RFC 9943 registration policies and a SCITT REST API are not implemented. The receipt leaf is the statement bytes, which RFC 9943 leaves to each service.
 
 ## Status
 
-Experimental and unaudited. `TransparencyService` is an in-memory reference implementation (it recomputes the Merkle tree on each registration), suitable for tests and small logs; it is not a production transparency service.
+Production. This package is a signer and VERIFIER of statements and receipts. `DurableTransparencyService` over a durable store is the transparency service; the in-memory `TransparencyService` is a test double on `@atlasauth/pca-scitt/testing`, not on the main entry. Verify receipts with `verifyReceipt`.
 
 What is validated:
 

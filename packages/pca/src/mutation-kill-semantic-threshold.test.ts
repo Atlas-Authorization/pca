@@ -136,6 +136,12 @@ describe('signJudgeVerdict', () => {
       expect(verifyJudgeVerdict(v, EXP, { allowUnboundPq: true })).toBe(true);
       expect(verifyJudgeVerdict(v, EXP, { pqPins: { [v.judge]: v.pq_pk! } })).toBe(true);
       expect(verifyJudgeVerdict({ ...v, score: 0.7 }, EXP, { allowUnboundPq: true })).toBe(false);
+      // total: a post-quantum verdict stripped of its pq_pk is refused, never thrown
+      const { pq_pk: _drop, ...noPk } = v;
+      for (const pin of [undefined, { allowUnboundPq: true }] as const) {
+        expect(() => verifyJudgeVerdict(noPk as typeof v, EXP, pin)).not.toThrow();
+        expect(verifyJudgeVerdict(noPk as typeof v, EXP, pin)).toBe(false);
+      }
     }
   });
 });

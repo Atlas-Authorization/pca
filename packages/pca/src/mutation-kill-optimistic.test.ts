@@ -249,7 +249,9 @@ describe('challenge window predicates', () => {
     expect(withinChallengeWindow(c, Number.NaN)).toBe(false);
     expect(withinChallengeWindow(c, -Infinity)).toBe(false);
     expect(withinChallengeWindow(c, Infinity)).toBe(false);
-    expect(claimStatus(c, -Infinity)).toBe('finalized');
+    // finalized opens settlement: a non-finite clock or window is refused, not read as closed
+    for (const bad of [Number.NaN, Infinity, -Infinity]) expect(() => claimStatus(c, bad)).toThrow(RangeError);
+    expect(() => claimStatus({ ...c, challenge_window_ms: Number.NaN } as BondedClaim, 6000)).toThrow(RangeError);
     expect(claimStatus(c, 6000)).toBe('open');
     expect(claimStatus(c, 6001)).toBe('finalized');
   });

@@ -1,4 +1,6 @@
+import { setAssuranceLabel } from './assurance';
 import { x509ValidAt } from './x509-validity';
+import { certVerifiedUnder, strictChainError } from './x509-strict';
 import { snapshotConfig } from './config-snapshot';
 /**
  * L0 HARDWARE backend — NVIDIA GPU confidential-computing attestation, REAL WIRE FORMAT.
@@ -217,10 +219,12 @@ export function verifyNvidiaDeviceChain(pem: string, rootSpkiSha256: string[], n
   for (let i = 0; i < chain.length - 1; i++) {
     const issuer = chain[i + 1]!;
     if (!issuer.ca) return { ok: false, reason: `device chain cert #${i + 1} issues a certificate but is not a CA` };
-    if (!chain[i]!.verify(issuer.publicKey)) return { ok: false, reason: `device chain link #${i} signature does not verify under its issuer` };
+    if (!certVerifiedUnder(chain[i]!, issuer.publicKey)) return { ok: false, reason: `device chain link #${i} signature does not verify under its issuer` };
   }
+  const profile = strictChainError(chain.map((c) => new Uint8Array(c.raw)));
+  if (profile) return { ok: false, reason: `device chain profile: ${profile}` };
   const root = chain[chain.length - 1]!;
-  if (!root.ca || !root.verify(root.publicKey)) return { ok: false, reason: 'device chain root is not a self-signed CA' };
+  if (!root.ca || !certVerifiedUnder(root, root.publicKey)) return { ok: false, reason: 'device chain root is not a self-signed CA' };
   const pins = new Set(rootSpkiSha256.map((p) => p.toLowerCase()));
   if (!pins.has(spkiSha256Hex(root))) return { ok: false, reason: 'chain root is not a pinned NVIDIA root' };
   return { ok: true, leaf: chain[0]!, chain };
@@ -297,7 +301,12 @@ function gpuMeasurementsDigest(report: ParsedNvidiaSpdmReport): string {
 }
 
 /** Build a `HardwareAttestationVerifier` for genuine NVIDIA Hopper/Blackwell GPU-CC evidence. Fails closed. */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createNvidiaSpdmVerifier(opts: NvidiaSpdmVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createNvidiaSpdmVerifierUnlabelled(opts), { level: 'hardware', vendor: 'nvidia-spdm' });
+}
+
+function createNvidiaSpdmVerifierUnlabelled(opts: NvidiaSpdmVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (!opts || !Array.isArray(opts.rootSpkiSha256) || opts.rootSpkiSha256.length === 0) {
@@ -307,6 +316,8 @@ export function createNvidiaSpdmVerifier(opts: NvidiaSpdmVerifierOptions): Hardw
   if (pinned.length === 0 && !opts.postVerify) throw new TypeError('createNvidiaSpdmVerifier: policy.measurements must be a NON-EMPTY pinned set unless a postVerify collateral hook supplies reference values (accept-all is not permitted)');
   const want = pinned.map(([i, d]) => [Number(i), String(d).toLowerCase()] as const);
   for (const [i] of want) if (!Number.isInteger(i) || i < 0 || i > 255) throw new TypeError('createNvidiaSpdmVerifier: measurement index out of range');
+  const lsi: unknown = opts.policy?.leafSubjectIncludes;
+  if (lsi !== undefined && lsi !== null && typeof lsi !== 'string') throw new TypeError('createNvidiaSpdmVerifier: policy.leafSubjectIncludes must be a string');
   const derive = opts.policy.deriveIdentity ?? defaultIdentity;
 
   return {
@@ -329,6 +340,8 @@ export function createNvidiaSpdmVerifier(opts: NvidiaSpdmVerifierOptions): Hardw
         } catch (e) {
           return fail(`GPU attestation report parse failed: ${e instanceof Error ? e.message : 'unknown'}`);
         }
+        // SPDM 1.1+ is the first version with the signed GET_MEASUREMENTS nonce/transcript layout parsed here; request and response must agree
+        if (report.request.version < 0x11 || report.response.version !== report.request.version) return fail(`SPDM version 0x${report.request.version.toString(16)}/0x${report.response.version.toString(16)} is not an accepted GET_MEASUREMENTS version`);
         if (!verifyNvidiaSpdmSignature(report, chain.leaf.publicKey)) return fail('GPU attestation report signature does not verify under the device identity key');
 
         if (!input.expected) return fail('no expected attestation binding supplied');

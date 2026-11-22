@@ -43,6 +43,12 @@ function expectedRiskRaw(inputs: RiskInputs, scale = DEFAULT_SCALE): number {
   return w.reduce((acc, wi, i) => acc + wi * (x[i] ?? 0), 0);
 }
 
+describe('plaintextVerdict budget that is not finite', () => {
+  it('never admits', () => {
+    for (const budget of [Number.NaN, Infinity, -Infinity]) expect(plaintextVerdict(inputsFor([0.1, 0.1, 0.1, 0.1, 0.1, 0.1]), DEFAULT_RISK_POLICY, budget).admit).toBe(false); // old: +Infinity admitted
+  });
+});
+
 describe('@atlasauth/pca-fhe risk gate under homomorphic encryption', () => {
   let keys: FheKeyset;
   let evalKeys: EvalKeys;

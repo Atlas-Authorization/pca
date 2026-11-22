@@ -36,7 +36,7 @@ import { b64u, canonicalBytes, hashCanonical, utf8, compareUtf8 } from './hash';
 import { type Capability, type Caveat, capHash, delegate, mintRoot, verifyChain } from './capability';
 import { encodeKey, publicKeyOf, sign, verifyB64u } from './keys';
 import { debit, debitConsolidated, safetyBound, subBudget } from './risk';
-import { type ConsistencyProof, TransparencyLedger, verifyLedgerConsistency } from './ledger';
+import { type ConsistencyProof, EMPTY_TREE_ROOT, TransparencyLedger, verifyLedgerConsistency } from './ledger';
 import { type InclusionProof, merkleProof, merkleRoot, verifyInclusion } from './merkle';
 import { type LeafProof, type NonMembershipProof, RevocationSet, verifyNonMembership } from './revocation';
 
@@ -240,7 +240,7 @@ export interface MeshVerdict {
 
 const isRec = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 const isStr = (x: unknown): x is string => typeof x === 'string';
-const isNat = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0;
+const isNat = (x: unknown): x is number => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0 && !Object.is(x, -0);
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const own = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
 
@@ -335,7 +335,7 @@ export function effectiveAuthority(caveats: Caveat[]): EffectiveAuthority | { er
 function narrows(child: EffectiveAuthority, parent: EffectiveAuthority): boolean {
   if (parent.actions !== undefined && (child.actions === undefined || !child.actions.every((a) => parent.actions!.includes(a)))) return false;
   if (parent.audience !== undefined && (child.audience === undefined || !child.audience.every((a) => parent.audience!.includes(a)))) return false;
-  if (parent.maxAmount !== undefined && (child.maxAmount === undefined || child.maxAmount > parent.maxAmount)) return false;
+  if (parent.maxAmount !== undefined && (child.maxAmount === undefined || !(child.maxAmount <= parent.maxAmount))) return false;
   if (parent.expiresAt !== undefined && (child.expiresAt === undefined || child.expiresAt > parent.expiresAt)) return false;
   if (parent.maxHops !== undefined && (child.maxHops === undefined || child.maxHops > parent.maxHops)) return false;
   // Every parent prefix constraint must still be implied by the child's (child keeps all of them).
@@ -346,8 +346,8 @@ function narrows(child: EffectiveAuthority, parent: EffectiveAuthority): boolean
 function admits(e: EffectiveAuthority, a: MeshAction, now: number, chainLen: number): string | undefined {
   if (e.actions !== undefined && !e.actions.includes(a.type)) return `action "${a.type}" not in scope`;
   for (const p of e.prefixes) if (!a.resource.startsWith(p)) return `resource "${a.resource}" outside prefix "${p}"`;
-  if (e.maxAmount !== undefined && (a.amount === undefined || a.amount > e.maxAmount)) return `amount exceeds ceiling ${e.maxAmount}`;
-  if (e.expiresAt !== undefined && now > e.expiresAt) return 'capability expired';
+  if (e.maxAmount !== undefined && (a.amount === undefined || !(a.amount <= e.maxAmount))) return `amount exceeds ceiling ${e.maxAmount}`;
+  if (e.expiresAt !== undefined && !(now <= e.expiresAt)) return 'capability expired';
   if (e.audience !== undefined && !e.audience.includes(a.service_domain)) return 'service domain not in audience';
   if (e.maxHops !== undefined && chainLen > e.maxHops) return `chain exceeds max_hops ${e.maxHops}`;
   return undefined;
@@ -381,7 +381,8 @@ export function checkHeadAdvance(prev: MeshHead, next: MeshHead, proof?: Consist
       if (!validConsistency(proof) || proof.oldSize !== prev.size || proof.newSize !== next.size) {
         return 'consistency proof required for a larger head';
       }
-      if (!verifyLedgerConsistency(prev.root, next.root, proof)) return 'head is not consistent with the previous head (fork or rewrite)';
+      // a head pins the empty log as root '': its RFC 9162 root is SHA-256("") (the consistency check wants that form)
+      if (!verifyLedgerConsistency(prev.size === 0 ? EMPTY_TREE_ROOT : prev.root, next.root, proof)) return 'head is not consistent with the previous head (fork or rewrite)';
     }
     if (next.rev_size === prev.rev_size && next.rev_root !== prev.rev_root) return 'equivocation (revocation set)';
     return undefined;
@@ -408,12 +409,44 @@ export interface MeshWitnessState {
   seen: { head: MeshHead; rev_ids: string[] }[];
 }
 
+/**
+ * Where a witness keeps what it has cosigned. `save` MUST be durable and atomic: when it returns, a restarted
+ * witness loads exactly this state. A witness that forgets across a restart can be walked back to cosign a fork.
+ * Synchronous on purpose: `cosign` must not return a signature before the state behind it is on disk.
+ */
+export interface MeshWitnessStore {
+  /** The last saved state, or undefined for a store that has never been written. Throws on corrupt data (never returns a partial state). */
+  load(): MeshWitnessState | undefined;
+  save(state: MeshWitnessState): void;
+}
+
+/** In-process store: a test double, and the default when no store is given. It does not survive a restart. */
+export class MemoryMeshWitnessStore implements MeshWitnessStore {
+  private state: string | undefined;
+  load(): MeshWitnessState | undefined {
+    return this.state === undefined ? undefined : (JSON.parse(this.state) as MeshWitnessState);
+  }
+  save(state: MeshWitnessState): void {
+    this.state = JSON.stringify(state);
+  }
+}
+
 /** Optional witness configuration. */
 export interface MeshWitnessOptions {
+  /**
+   * Durable memory. On construction the witness loads from it (a corrupt state throws: the witness never starts
+   * empty over damaged memory); every cosignature is issued only after the new state was saved, and a failed save
+   * refuses the cosignature and changes nothing.
+   */
+  store?: MeshWitnessStore;
   /** Witness's own clock; when set, heads timestamped beyond `now + maxClockSkewMs` are refused. */
   clock?: () => number;
   /** Default {@link DEFAULT_MAX_CLOCK_SKEW_MS}. */
   maxClockSkewMs?: number;
+}
+
+function stateOf(seen: Map<string, { head: MeshHead; rev: string[] }>): MeshWitnessState {
+  return { seen: [...seen.values()].map((s) => ({ head: { ...s.head }, rev_ids: [...s.rev] })).sort((a, b) => (a.head.domain < b.head.domain ? -1 : 1)) };
 }
 
 /**
@@ -432,6 +465,8 @@ export class MeshWitness {
     private readonly opts: MeshWitnessOptions = {},
   ) {
     this.id = encodeKey(publicKeyOf(secret));
+    const loaded = opts.store?.load();
+    if (loaded !== undefined) this.importState(loaded);
   }
 
   /** The newest head this witness cosigned for `domain` (what a domain must prove consistency from). */
@@ -448,7 +483,8 @@ export class MeshWitness {
     if (!verifyB64u(h.domain, msg(HEAD_DOMAIN, h), ch.sig)) throw new Error('witness: head not signed by its domain');
     if (this.opts.clock) {
       const skew = this.opts.maxClockSkewMs ?? DEFAULT_MAX_CLOCK_SKEW_MS;
-      if (h.timestamp > this.opts.clock() + skew) throw new Error('witness: head timestamp is in the future');
+      const clk = this.opts.clock();
+      if (!(Number.isFinite(clk) && Number.isFinite(skew) && h.timestamp <= clk + skew)) throw new Error('witness: head timestamp is in the future');
     }
     const ids = req.rev_ids;
     if (!Array.isArray(ids) || ids.length > MAX_REV_IDS || !ids.every(isStr)) throw new Error('witness: malformed revocation list');
@@ -458,9 +494,19 @@ export class MeshWitness {
     if (prev) {
       const why = checkHeadAdvance(prev.head, h, req.consistency);
       if (why) throw new Error(`witness: ${why}`);
-      if (h.timestamp < prev.head.timestamp) throw new Error('witness: timestamp regresses');
+      if (!(h.timestamp >= prev.head.timestamp)) throw new Error('witness: timestamp regresses');
       const now = new Set(set.list());
       if (!prev.rev.every((id) => now.has(id))) throw new Error('witness: revocation set drops a previously cosigned revocation');
+    }
+    if (this.opts.store) {
+      // Persist first, commit to memory second: if the disk write fails nothing was cosigned and nothing changed.
+      const next = new Map(this.seen);
+      next.set(h.domain, { head: { ...h }, rev: set.list() });
+      try {
+        this.opts.store.save(stateOf(next));
+      } catch {
+        throw new Error('witness: could not persist state; refusing to cosign');
+      }
     }
     this.seen.set(h.domain, { head: { ...h }, rev: set.list() });
     return { witness: this.id, sig: b64u(sign(this.secret, msg(COSIG_DOMAIN, h))) };
@@ -468,7 +514,7 @@ export class MeshWitness {
 
   /** Export memory for persistence. Deterministic order. */
   exportState(): MeshWitnessState {
-    return { seen: [...this.seen.values()].map((s) => ({ head: { ...s.head }, rev_ids: [...s.rev] })).sort((a, b) => (a.head.domain < b.head.domain ? -1 : 1)) };
+    return stateOf(this.seen);
   }
 
   /** Restore memory; each record must be internally consistent (revocation list reproduces its root). */
@@ -637,7 +683,7 @@ export function assembleMeshProof(args: {
   const leaves: LeafProof[] = [];
   const leafIdx = new Map<string, number>();
   const leaf = (l: LeafProof): number => {
-    const k = JSON.stringify(l);
+    const k = b64u(canonicalBytes(l)); // canonical: the same leaf in any member order is one entry
     let i = leafIdx.get(k);
     if (i === undefined) {
       i = leaves.length;
@@ -652,7 +698,7 @@ export function assembleMeshProof(args: {
     ...(n.hi ? { hi: leaf(n.hi) } : {}),
   });
   const hops: HopEvidence[] = args.hops.map((ev) => {
-    const k = `${ev.head.sig}|${JSON.stringify(ev.head.head)}`;
+    const k = `${ev.head.sig}|${b64u(canonicalBytes(ev.head.head))}`;
     let i = headIdx.get(k);
     if (i === undefined) {
       i = heads.length;
@@ -811,8 +857,8 @@ export function checkCosignedHead(ch: CosignedHead, expectedDomain: string, t: M
     if (good.size < t.threshold) return `head has ${good.size}/${t.threshold} trusted witness cosignatures`;
     const maxAge = t.maxHeadAgeMs ?? DEFAULT_MAX_HEAD_AGE_MS;
     const skew = t.maxClockSkewMs ?? DEFAULT_MAX_CLOCK_SKEW_MS;
-    if (h.timestamp > t.now + skew) return 'head timestamp is in the future';
-    if (t.now - h.timestamp > maxAge) return 'head is stale';
+    if (!(Number.isFinite(t.now) && Number.isFinite(skew) && h.timestamp <= t.now + skew)) return 'head timestamp is in the future';
+    if (!(Number.isFinite(t.now - h.timestamp) && t.now - h.timestamp <= maxAge)) return 'head is stale';
     const pin = t.pinnedHeads && own(t.pinnedHeads, h.domain) ? t.pinnedHeads[h.domain] : undefined;
     if (pin) {
       const why = checkHeadAdvance(pin, h, pinProof);
@@ -955,7 +1001,7 @@ export function verifyMeshProof(p: MeshProof, t: MeshTrust): MeshVerdict {
 
     // (f) the leaf action
     const skew = t.maxClockSkewMs ?? DEFAULT_MAX_CLOCK_SKEW_MS;
-    if (p.action.at > t.now + skew) return fail('action timestamp is in the future');
+    if (!(p.action.at <= t.now + skew)) return fail('action timestamp is in the future');
     if (t.maxActionAgeMs !== undefined && t.now - p.action.at > t.maxActionAgeMs) return fail('action is stale');
     const tip = chain[chain.length - 1]!;
     if (!verifyB64u(tip.holder, msg(ACTION_DOMAIN, { action: p.action, tip: capHash(tip) }), p.action_sig)) {
@@ -1338,7 +1384,7 @@ export function verifyTranslatedCapability(tc: TranslatedCapability, opts: Verif
     if (!narrows(effT, effS)) return fail('translated authority widens the source authority');
 
     // (7) optional expiry
-    if (opts.now !== undefined && effT.expiresAt !== undefined && opts.now > effT.expiresAt) return fail('translated capability expired');
+    if (opts.now !== undefined && effT.expiresAt !== undefined && !(Number.isFinite(opts.now) && opts.now <= effT.expiresAt)) return fail('translated capability expired');
 
     return { ok: true, from: tc.fromGuardian, to: tc.toGuardian, bridge: tc.bridge, effective: effT };
   } catch {
@@ -1447,14 +1493,14 @@ export function spendFederated(state: FederatedBudgetState, nodeId: string, c: n
 
   if (nodeId === rootId) {
     const r = state.nodes[rootId]!;
-    if (r.B < c) return { ok: false, reason: 'root budget insufficient' };
+    if (!(r.B >= c)) return { ok: false, reason: 'root budget insufficient' };
     nodes[rootId] = { ...r, B: debit({ B: r.B, tau: 0 }, c).B };
     return { ok: true, state: { ...state, nodes } };
   }
 
   // strict-interior ancestors (everything between the spender and the root)
   const interior = path.slice(1, -1);
-  for (const id of interior) if (state.nodes[id]!.B < c) return { ok: false, reason: `ancestor "${id}" budget insufficient` };
+  for (const id of interior) if (!(state.nodes[id]!.B >= c)) return { ok: false, reason: `ancestor "${id}" budget insufficient` };
 
   // root <-> spender: the consolidated debit (debits both iff both cover it)
   const dc = debitConsolidated({ B: state.nodes[rootId]!.B, tau: 0 }, { B: state.nodes[nodeId]!.B, tau: 0 }, c);

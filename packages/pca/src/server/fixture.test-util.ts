@@ -60,5 +60,5 @@ export function setup(opts: { extraPlan?: boolean; agentBinding?: Record<string,
   };
   // taint is RS-supplied: a missing value fails closed to the worst case (the agent's claim is never used).
   const lowRisk = { reversibility: 1, blastRadius: 0, confidence: 1, semanticDistance: 0, taint: 0 };
-  return { grant, plan, mk, lowRisk, params, aPub };
+  return { grant, plan, mk, lowRisk, params, aPub, agentSecret: agent.secretKey };
 }

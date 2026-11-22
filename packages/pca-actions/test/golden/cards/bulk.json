@@ -1,0 +1,32 @@
+{
+ "trait": "pca.bulk",
+ "card": {
+  "verb": "golden.bulk",
+  "title": "Do the bulk thing",
+  "text": "Do the bulk thing. This action acts on many items at once.",
+  "risk": "high",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "count_cap"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.bulk"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "count_cap"
+  ],
+  "context": [],
+  "prules": [
+   "array_bounded"
+  ]
+ }
+}

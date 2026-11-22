@@ -161,6 +161,7 @@ describe('validation messages', () => {
     await rejects(evalRiskGate(evalKeys, enc, null as any), 'policy must be an object');
     await rejects(evalRiskGate(evalKeys, enc, { ...policy, scale: 0 }), 'policy.scale must be a positive integer');
     await rejects(evalRiskGate(evalKeys, enc, { ...policy, budgetScaled: 0.5 }), 'policy coefficients must be integers with |value| < SIGNED_BOUND');
+    await rejects(evalRiskGate(evalKeys, enc, { ...policy, budgetScaled: -0 }), 'policy coefficients must be integers with |value| < SIGNED_BOUND'); // strict profile
     await rejects(evalRiskGate(evalKeys, enc, { ...policy, dim: 5 } as any), 'policy.dim must be 6');
     await rejects(evalRiskGate(evalKeys, enc, { ...policy, weightsScaled: [1, 2] }), 'policy weight vectors must have length 6');
     // a missing vector is not "a bad coefficient": it fails on the length read

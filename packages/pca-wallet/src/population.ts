@@ -115,7 +115,7 @@ export class PopulationAggregator {
     if (typeof v.principal !== 'string' || v.principal.length === 0) return { ok: false, reason: 'an accountable principal is required' };
     const mine = this.perPrincipal.get(v.principal) ?? new Set<string>();
     if (mine.has(v.cellKey)) return { ok: false, reason: 'one vote per principal per cell per period (sensitivity 1)' };
-    if (mine.size >= this.maxCells) return { ok: false, reason: `at most ${this.maxCells} cells per principal per period` };
+    if (!(mine.size < this.maxCells)) return { ok: false, reason: `at most ${this.maxCells} cells per principal per period` };
     mine.add(v.cellKey);
     this.perPrincipal.set(v.principal, mine);
     const c = this.votes.get(v.cellKey) ?? { yes: 0, total: 0 };

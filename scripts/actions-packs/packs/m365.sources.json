@@ -1,0 +1,13 @@
+[
+  {
+    "id": "graph-v1",
+    "repo": "microsoftgraph/msgraph-metadata",
+    "ref": "1fd0ef510f79f3dadb3e083bdebc9496f939a11c",
+    "path": "openapi/v1.0/openapi.yaml",
+    "sha256": "69de68b2c895bc608a58229e662e2b3eeb23524385516afc250ff0b8f165ff29",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/microsoftgraph/msgraph-metadata/blob/master/LICENSE",
+    "bytes": 44457302
+  }
+]

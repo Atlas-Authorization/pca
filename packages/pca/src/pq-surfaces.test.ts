@@ -24,7 +24,8 @@ import {
 } from './ledger';
 import { checkRevocationEpoch, signRevocationEpoch } from './revocation';
 import { issueLivenessBeacon, verifyLivenessBeacon } from './beacons';
-import { BondLedger, InMemoryBondAccount, verifySettlement } from './bond-settlement';
+import { verifySettlement } from './bond-settlement';
+import { BondLedger, InMemoryBondAccount } from './bond-ledger-testing';
 import { createAttestationVerifier, attestationRegistry, createDevAttestor } from './attestation';
 import { mintGrant } from './envelope';
 import { buildPCActn, type PCActn, type VerifyContext } from './pcactn';

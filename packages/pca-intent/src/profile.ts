@@ -2,12 +2,9 @@ import {
   b64u,
   bindSuiteFields,
   canonicalBytesStrict,
-  checkSessionRevocation,
   decodeB64uStrict,
   hashCanonical,
   predicateMatches,
-  profileRevocationId,
-  profileRevocationScope,
   publicKeyOf,
   resolveSigAlg,
   signSuiteArtifact,
@@ -18,10 +15,15 @@ import {
   type ActionContext,
   type PqPinPolicy,
   type Predicate,
-  type SessionRevocationEvidence,
   type SignerSuiteOpts,
   type SigAlg,
 } from '@atlasauth/pca';
+import {
+  checkSessionRevocation,
+  profileRevocationId,
+  profileRevocationScope,
+  type SessionRevocationEvidence,
+} from '@atlasauth/pca/ext/intent';
 import { cellOf, type Omega } from './omega';
 import { outcomeToAction } from './policy';
 
@@ -202,7 +204,7 @@ export interface ProfileUse {
 
 /** Is the profile in scope (and unexpired) for this action? */
 export function profileApplies(p: IntentProfileBody, u: ProfileUse): boolean {
-  if (!(u.now < p.expires_at)) return false;
+  if (!(Number.isFinite(u.now) && Number.isFinite(p.expires_at) && u.now < p.expires_at)) return false;
   if (p.scope.sites && !p.scope.sites.includes(u.aud)) return false;
   if (p.scope.verbs && !p.scope.verbs.includes(u.verb)) return false;
   if (p.scope.semantic_types && !(u.semantics ?? []).some((s) => p.scope.semantic_types!.includes(s))) return false;
@@ -254,7 +256,7 @@ export function profileCeiling(p: IntentProfileBody, u: Omit<ProfileUse, 'verb'>
 export function profileUsable(p: IntentProfile, c: { now: number; maxAgeMs: number; revocation?: SessionRevocationEvidence; last?: SessionRevocationEvidence; pin?: PqPinPolicy }): { ok: true } | { ok: false; reason: string } {
   const v = verifyIntentProfile(p, c.pin);
   if (!v.ok) return v;
-  if (!(c.now < p.expires_at)) return { ok: false, reason: 'the profile has expired' };
+  if (!(Number.isFinite(c.now) && Number.isFinite(p.expires_at) && c.now < p.expires_at)) return { ok: false, reason: 'the profile has expired' };
   // the session-revocation check with the profile as its scope (same epoch format, same T22 bound)
   const r = checkSessionRevocation(c.revocation, { session: p.profile_id, scope: profileRevocationScope(p.profile_id), authority: p.revocation.key ?? p.owner, ids: [profileRevocationId(p.profile_id, p.version)], now: c.now, maxAgeMs: c.maxAgeMs, ...(c.pin ? { pin: c.pin } : {}), ...(c.last ? { last: c.last } : {}) });
   return r.ok ? { ok: true } : { ok: false, reason: `profile revocation: ${r.reason}` };

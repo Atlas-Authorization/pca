@@ -505,7 +505,7 @@ describe('composition entry points reject out-of-domain decision vectors (fail c
   it('two parties with allow = -1 would multiply to +1 under the shared AND; every runner now refuses the vector', () => {
     const bad = [{ ...ok, allow: -1 }, { ...ok, allow: -1 }] as unknown as DecisionVector[];
     expect(() => composeSecure(bad, { Q: 4, seed: 1n })).toThrow(RangeError);
-    expect(() => composeSecureMalicious(bad, { Q: 4, seed: 1n })).toThrow(RangeError);
+    expect(() => composeSecureMalicious(bad, { insecureTrustedDealer: true, Q: 4, seed: 1n })).toThrow(RangeError);
     expect(() => composeClear(bad, 4)).toThrow(RangeError);
   });
 
@@ -529,7 +529,7 @@ describe('composition entry points reject out-of-domain decision vectors (fail c
     fc.assert(
       fc.property(fc.array(vec, { minLength: 1, maxLength: 4 }), (vs) => {
         const clear = composeClear(vs, 6);
-        return JSON.stringify(composeSecure(vs, { Q: 6 }).composed) === JSON.stringify(clear) && JSON.stringify(composeSecureMalicious(vs, { Q: 6 }).composed) === JSON.stringify(clear);
+        return JSON.stringify(composeSecure(vs, { Q: 6 }).composed) === JSON.stringify(clear) && JSON.stringify(composeSecureMalicious(vs, { insecureTrustedDealer: true, Q: 6 }).composed) === JSON.stringify(clear);
       }),
       { numRuns: 12 },
     );

@@ -1,0 +1,9 @@
+# an allow-list: the build needs only the library source, the verified core and the witness source
+*
+!packages/pca/src
+!packages/pca-verified-core
+!tools/pca-witness/src
+**/*.test.ts
+**/test-support
+**/node_modules
+**/dist

@@ -110,3 +110,17 @@ describe('authorizeCharge → PCA decision', () => {
     expect(auth(m, charge({ amount: 201 })).outcome).toBe('step_up'); // amount > Y
   });
 });
+
+describe('a non-finite budget clock fails closed', () => {
+  it('a budget whose asOf is NaN (no tau) is depleted: the charge is not auto-approved', () => {
+    const m = mk();
+    const nan = { ...m, budget: { B: m.budget.B, asOf: NaN } as never };
+    const d = auth(nan, charge({ amount: 50 }));
+    expect(d.outcome).not.toBe('auto');
+  });
+  it('a NaN decision clock on a budget that carries no tau is not auto-approved either', () => {
+    const m = mk();
+    const noTau = { ...m, budget: { B: m.budget.B } as never };
+    expect(auth(noTau, charge({ amount: 50 })).outcome).not.toBe('auto');
+  });
+});

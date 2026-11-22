@@ -5,7 +5,7 @@ order: 10
 
 # Agent quickstart: integrate your agent
 
-> Preview. The hosted `/v1/pca/*` surface must be enabled for the instance (see [Resource-server quickstart](./resource-server-quickstart.md#the-gate)).
+> Feature-gated. The hosted `/v1/pca/*` surface must be enabled for the instance (see [Resource-server quickstart](./resource-server-quickstart.md#the-gate)).
 
 Package: `@atlasauth/pca-agent`. It builds the plan commitment, the PCActn and the agent's threshold share for you. Concepts behind each step: [credential model](../concepts/credential-model.md), [plan commitment](../concepts/plan-commitment.md), [threshold and step-up](../concepts/threshold-and-step-up.md).
 

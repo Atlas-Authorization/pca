@@ -9,9 +9,13 @@ name: Formal - Kani
 # must report VERIFICATION SUCCESSFUL. Runs on ci/** pushes and on demand; never on main pushes.
 on:
   push:
-    branches: ['ci/**']
+    branches: ['ci/**', '!ci/build-**']
   workflow_dispatch:
     inputs:
+      force_full:
+        description: 'redo the work even when an earlier run passed on identical inputs'
+        type: boolean
+        default: false
       native_ref:
         description: 'Ref of the pca-rust repo (default: the ref of this run)'
         required: false
@@ -20,6 +24,10 @@ on:
         description: 'Also run the probe-tier harnesses (non-gating)'
         type: boolean
         default: false
+      only:
+        description: 'Run only the harnesses whose fully qualified name matches this regex (diagnosis; empty = all)'
+        required: false
+        default: ''
       kani_long:
         description: 'Run the long-tier harnesses (non-gating, up to 355 min each; manual dispatch only, never on push, so they do not hold free runner slots during an RC run)'
         type: boolean
@@ -36,7 +44,33 @@ env:
   NATIVE_REF: ${{ inputs.native_ref || github.ref_name }}
 
 jobs:
+  reuse:
+    name: reuse check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      skip: ${{ steps.reuse.outputs.skip }}
+      hash: ${{ steps.reuse.outputs.hash }}
+      source: ${{ steps.reuse.outputs.source }}
+    steps:
+      - uses: actions/checkout@v4
+      # input-hash reuse (ci-reuse.mjs): when an earlier run recorded the same input hash, every other job of this run is skipped.
+      # continue-on-error: a failing check can only mean "no reuse"; FORCE_FULL / force_full / [force-full] bypass it.
+      - id: reuse
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_FULL: ${{ inputs.force_full || inputs.full || vars.FORCE_FULL == '1' || contains(github.event.head_commit.message, '[force-full]') }}
+          GATE_FULL: ${{ inputs.full || (startsWith(github.ref_name, 'ci/') && endsWith(github.ref_name, '-rc') || startsWith(github.ref_name, 'ci/gate-')) || contains(github.event.head_commit.message, '[force-full]') }}
+          PARTIAL: ${{ inputs.only != '' || inputs.kani_probe || inputs.kani_long }}
+          EXTRA: ''
+        run: node .github/scripts/ci-reuse.mjs check --workflow=formal-kani --self=.github/workflows/formal-kani.yml --exclude='docs/,examples/,*.md' --external=repo:pca-rust --ref="$NATIVE_REF" --extra="$EXTRA" --always-full
   plan:
+    if: ${{ needs.reuse.outputs.skip != 'true' }}
+    needs: reuse
     name: plan
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -59,9 +93,12 @@ jobs:
         run: bash .github/scripts/formal-natives.sh "$NATIVE_REF"
       - name: List harnesses
         id: plan
+        env:
+          ONLY: ${{ inputs.only }}
         run: |
           rc=0; lf="$RUNNER_TEMP/kani-long.json"; echo '{"include":[]}' > "$lf"
           m="$(bash .github/scripts/formal-kani-plan.sh "${{ inputs.kani_probe || false }}" "$lf")" || rc=$?
+          if [ -n "$ONLY" ]; then m="$(echo "$m" | python3 -c 'import json,re,sys; d=json.load(sys.stdin); r=re.compile(sys.argv[1]); d["include"]=[j for j in d["include"] if r.search(j["harness"])]; print(json.dumps(d))' "$ONLY")"; fi
           echo "matrix=$m" >> "$GITHUB_OUTPUT"
           echo "$m" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["include"]), "harness job(s)")'
           if [ "${{ github.event_name == 'workflow_dispatch' && inputs.kani_long }}" != true ]; then echo '{"include":[]}' > "$lf"; fi
@@ -71,14 +108,14 @@ jobs:
 
   harness:
     name: ${{ matrix.crate }} ${{ matrix.harness }}
-    needs: plan
-    if: ${{ always() && needs.plan.outputs.matrix != '' && needs.plan.outputs.matrix != '{"include":[]}' }}
+    needs: [reuse, plan]
+    if: ${{ needs.reuse.outputs.skip != 'true' && (always() && needs.plan.outputs.matrix != '' && needs.plan.outputs.matrix != '{"include":[]}') }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     continue-on-error: ${{ matrix.probe }}
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 20
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
@@ -104,8 +141,10 @@ jobs:
           s=$(date +%s)
           ulimit -v 15000000   # fail cleanly (out of memory) instead of the runner being killed
           rc=0; cargo kani -Z stubbing -Z function-contracts -Z loop-contracts ${F:+--features "$F"} --harness "$H" --exact \
-            --output-format terse > "$log" 2>&1 || rc=$?
+            --output-format regular > "$log" 2>&1 || rc=$?
           echo "rc=$rc wall=$(( $(date +%s) - s ))s"; grep -a -E 'VERIFICATION:|Complete - |Runtime (Symex|Solver)|error' "$log" | tail -8 || true
+          # a failure names its failed checks here (unwinding assertion = bound too small; anything else = counterexample)
+          grep -aq 'VERIFICATION:- SUCCESSFUL' "$log" || { echo "failed checks:"; grep -a -B1 -A2 'Status: FAILURE' "$log" | head -60; }
           grep -aq 'VERIFICATION:- SUCCESSFUL' "$log" && [ "$rc" = 0 ]
       - uses: actions/upload-artifact@v4
         if: always()
@@ -117,14 +156,14 @@ jobs:
   # before it records an outcome is reported NOT-CONCLUDED by long-summary; nothing here can turn into a pass.
   long:
     name: long ${{ matrix.crate }} ${{ matrix.harness }}
-    needs: plan
-    if: ${{ always() && needs.plan.outputs.long_matrix != '' && needs.plan.outputs.long_matrix != '{"include":[]}' }}
+    needs: [reuse, plan]
+    if: ${{ needs.reuse.outputs.skip != 'true' && (always() && needs.plan.outputs.long_matrix != '' && needs.plan.outputs.long_matrix != '{"include":[]}') }}
     runs-on: ubuntu-latest
     timeout-minutes: 355
     continue-on-error: true
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 20
       matrix: ${{ fromJSON(needs.plan.outputs.long_matrix) }}
     steps:
       - name: Job clock
@@ -160,8 +199,8 @@ jobs:
 
   long-summary:
     name: long-tier summary
-    needs: [plan, long]
-    if: ${{ always() && needs.plan.outputs.long_matrix != '' && needs.plan.outputs.long_matrix != '{"include":[]}' }}
+    needs: [reuse, plan, long]
+    if: ${{ needs.reuse.outputs.skip != 'true' && (always() && needs.plan.outputs.long_matrix != '' && needs.plan.outputs.long_matrix != '{"include":[]}') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -193,3 +232,23 @@ jobs:
               print(f'| {c} | `{h}` | **{o}** | {w // 60} min | {d.replace("|", "/")} |')
           PY
           cat "$GITHUB_STEP_SUMMARY"
+
+  reuse-record:
+    name: reuse record
+    needs: [reuse, plan, harness, long, long-summary]
+    # only a run whose jobs all passed (skipped by their own conditions is fine), that was not partial and not itself a reuse, leaves a record
+    if: ${{ !cancelled() && needs.reuse.outputs.skip != 'true' && needs.reuse.outputs.hash != '' && !(inputs.only != '' || inputs.kani_probe || inputs.kani_long) && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - id: rec
+        env:
+          GATE_FULL: ${{ inputs.full || (startsWith(github.ref_name, 'ci/') && endsWith(github.ref_name, '-rc') || startsWith(github.ref_name, 'ci/gate-')) || contains(github.event.head_commit.message, '[force-full]') }}
+          HASH: ${{ needs.reuse.outputs.hash }}
+        run: node .github/scripts/ci-reuse.mjs record --workflow=formal-kani --hash="$HASH" --out="$RUNNER_TEMP/reuse-record" --always-full
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rec.outputs.artifact }}
+          path: ${{ runner.temp }}/reuse-record/
+          retention-days: 21

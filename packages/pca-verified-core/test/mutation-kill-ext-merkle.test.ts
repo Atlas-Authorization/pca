@@ -122,6 +122,10 @@ describe('tree builders and inclusion proofs', () => {
     // shapes that nothing guards: a swapped side flips the decision
     const flip = { ...good, path: good.path.map((s: any) => ({ ...s, side: s.side === 'L' ? 'R' : 'L' })) };
     expect(ok(root, flip)).toBe(false);
+    // -0 is not a wire integer (strict profile): an index-0 proof restated with index -0 is refused
+    const good0: any = inclusionProofVerified(leaves(n), 0);
+    expect(verifyInclusionVerified(root, good0, leaf(0))).toBe(true);
+    expect(verifyInclusionVerified(root, { ...good0, index: -0 }, leaf(0))).toBe(false);
     for (const p of [null, undefined, 5, {}, { ...good, path: 'x' }, { ...good, hash_suite: 'md5' }, { ...good, index: 1.5 }, { ...good, size: 1.5 }, { ...good, path: [null] }, { ...good, path: [{ side: 'Q', hash: 'AAAA' }] }, { ...good, path: [{ side: 'L', hash: '!' }] }]) {
       expect(inclusionRootVerified(p, leaf(i)), JSON.stringify(p)).toBeNull();
     }
@@ -162,6 +166,10 @@ describe('consistency proofs', () => {
     // equal sizes compare the two roots
     expect(verifyConsistencyVerified(o, o, { oldSize: 3, newSize: 3, path: [] })).toBe(true);
     expect(verifyConsistencyVerified(o, nw, { oldSize: 3, newSize: 3, path: [] })).toBe(false);
+    // -0 sizes are refused (strict profile, as ledger.ts verifyLedgerConsistency)
+    expect(verifyConsistencyVerified(EMPTY_TREE_ROOT, nw, { oldSize: 0, newSize: 6, path: [] })).toBe(true);
+    expect(verifyConsistencyVerified(EMPTY_TREE_ROOT, nw, { oldSize: -0, newSize: 6, path: [] })).toBe(false);
+    expect(verifyConsistencyVerified(EMPTY_TREE_ROOT, EMPTY_TREE_ROOT, { oldSize: 0, newSize: -0, path: [] })).toBe(false);
   });
 });
 
@@ -201,7 +209,8 @@ describe('ext-merkle glue edges', () => {
     }
   });
   it('non-integer index / size never yield a root', () => {
-    for (const [index, size] of [[0, 1.5], [0.5, 1], [0, Number.NaN], [Number.NaN, 1], [0, 2 ** 60], ['0', 1], [0, '1']] as const) {
+    expect(inclusionRootVerified({ index: 0, size: 1, path: [] }, leaf(0))).not.toBeNull();
+    for (const [index, size] of [[0, 1.5], [0.5, 1], [0, Number.NaN], [Number.NaN, 1], [0, 2 ** 60], ['0', 1], [0, '1'], [-0, 1]] as const) {
       expect(inclusionRootVerified({ index, size, path: [] }, leaf(0)), `${index}/${size}`).toBeNull();
     }
   });

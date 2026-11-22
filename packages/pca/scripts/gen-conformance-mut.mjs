@@ -18,7 +18,7 @@ const principal = mk('principal'), agent = mk('agent'), sub = mk('subagent'), ro
 const clone = cloneJson; // JSON deep copy that keeps -0 (conformance-io.mjs)
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 const KEYMAP = { chain: 'cap_chain' };
 
 const caveatA = { type: 'max_spend', usd: 100 };
@@ -51,7 +51,7 @@ const child = (parent, holderPub, caveats, sk) => reseal({ issuer: parent.holder
 
 const vectors = [];
 async function add(name, description, pcactn, must, { grant = root, plan = plan5, now = NOW, aud = AUD, requires } = {}) {
-  const r = await pca.verifyPCActnCore(pcactn, { grant, nowEpoch: now, audience: aud });
+  const r = await pca.verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: now, audience: aud });
   const c = r.checks;
   const checks = {};
   if (c.wire === 'fail') checks.wire = false;

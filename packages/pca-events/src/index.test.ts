@@ -12,9 +12,8 @@ import {
 
 const AT = 1_700_000_000_000;
 
-function sampleData(): Omit<StepUpEvent, 'id' | 'at'> & { at?: number } {
+function sampleData(): Omit<StepUpEvent, 'id' | 'at' | 'type'> & { at?: number } {
   return {
-    type: 'step_up.approved',
     at: AT,
     grant_ref: 'grant_abc',
     action: { verb: 'stripe.refund', resource: 'pi_123' },
@@ -48,7 +47,6 @@ describe('buildStepUpEvent', () => {
   it('defaults `at` to now and omits actor when absent', () => {
     const before = Date.now();
     const ev = buildStepUpEvent('step_up.created', {
-      type: 'step_up.created',
       grant_ref: 'grant_x',
       action: { verb: 'db.delete', resource: 'row_1' },
       tier: 3,
@@ -68,7 +66,6 @@ describe('serializeEvent / parseEvent', () => {
 
   it('round-trips an event without an actor', () => {
     const ev = buildStepUpEvent('step_up.expired', {
-      type: 'step_up.expired',
       at: AT,
       grant_ref: 'grant_y',
       action: { verb: 'k8s.scale', resource: 'deploy/web' },
@@ -90,7 +87,7 @@ describe('serializeEvent / parseEvent', () => {
 });
 
 describe('signWebhook / verifyWebhook', () => {
-  const secret = 'whsec_test_123';
+  const secret = 'whsec_test_123_0123456789abcdef';
   const payload = serializeEvent(buildStepUpEvent('step_up.approved', sampleData()));
   const T = 1_700_000_100; // unix seconds
 
@@ -113,7 +110,7 @@ describe('signWebhook / verifyWebhook', () => {
 
   it('rejects a wrong secret', () => {
     const sig = signWebhook(secret, payload, { timestamp: T });
-    expect(verifyWebhook('whsec_wrong', payload, sig, { now: T })).toBe(false);
+    expect(verifyWebhook('whsec_wrong_0123456789abcdefghij', payload, sig, { now: T })).toBe(false);
   });
 
   it('rejects a stale timestamp (older than tolerance)', () => {
@@ -142,7 +139,7 @@ describe('signWebhook / verifyWebhook', () => {
 
 describe('webhookHeaders', () => {
   it('returns a verifiable PCA-Signature plus content-type', () => {
-    const secret = 'whsec_hdr';
+    const secret = 'whsec_hdr_0123456789abcdefghijkl';
     const payload = '{"hello":"world"}';
     const T = 1_700_000_200;
     const headers = webhookHeaders(secret, payload, { timestamp: T });

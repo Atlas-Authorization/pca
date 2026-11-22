@@ -4,12 +4,13 @@
 //   cd <repo> && npx tsx tools/pca-audit/java-mutate/k042-mapartcls-oracle.mjs [out.json]
 // Every case is {fn, name, args, out}; the args are JSON text the Java test parses with Json.parseLenient (so -0 / 1.5 /
 // 2^53 / lone surrogates reach both sides as the same value). Deterministic: keys and salts are seeded.
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { createHash } from 'node:crypto';
 const pca = await import(new URL('../../../packages/pca/src/index.ts', import.meta.url).href);
 
-const OUT = process.argv[2] ?? new URL('../../../sdks/java-pca/test-data/k042-mapartcls.json.gz', import.meta.url).pathname;
+const OUT = process.argv[2] ?? fileURLToPath(new URL('../../../sdks/java-pca/test-data/k042-mapartcls.json.gz', import.meta.url));
 const seed = (l) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const mk = (l) => { const sk = seed(l); return { sk, pk: pca.b64u(pca.publicKeyOf(sk)) }; };
 const D = (l) => pca.b64u(seed(l));

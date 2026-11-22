@@ -18,6 +18,7 @@ import { ed25519, x25519 } from '../../../packages/pca/node_modules/@noble/curve
 import { generateKeyPair, sign } from '../../../packages/pca/src/keys';
 import { mlDsa65Keygen, mlDsa65Sign } from '../../../packages/pca/src/pq';
 import { hybridDecapsulate, hybridEncapsulate, hybridKemKeygen } from '../../../packages/pca/src/kem';
+import { ctAdd, ctMul, ctReduce } from '../../../packages/pca/src/ct-scalar';
 import { frostCommit, frostSign, frostTrustedDealerKeygen } from '../../../packages/pca/src/frost';
 
 const arg = (n: string, d: string) => {
@@ -140,8 +141,11 @@ const suite = (): Suite => {
     { name: 'x25519 scalar mult (ECDH): fixed secret vs random secrets', run: () => measure('x25519', N, (c) => (c === 0 ? kem.secretKey.slice(0, 32) : randomBytes(32)), (sk: Uint8Array) => x25519.getSharedSecret(sk, x25519.getPublicKey(randomBytes(32)))) },
     { name: 'ML-DSA-65 sign: fixed secret vs random secrets (rejection sampling is value-dependent by design; reported, not gated)', run: () => measure('ml-dsa-65 sign', Math.min(N, 1500), (c) => (c === 0 ? Uint8Array.from(fixedMl.secretKey) : mlDsa65Keygen(randomBytes(32)).secretKey), (sk: Uint8Array) => mlDsa65Sign(sk, msg)) },
     { name: 'hybrid KEM decapsulation: valid ciphertext vs random (invalid) ciphertexts', run: () => measure('hybrid decap', Math.min(N, 3000), (c) => (c === 0 ? Uint8Array.from(enc.ciphertext) : randomBytes(enc.ciphertext.length)), (ct: Uint8Array) => { try { return hybridDecapsulate(ct, kem.secretKey); } catch { return undefined; } }) },
+    { name: 'ct-scalar mul mod L (FROST/DKG secret path): fixed secret vs random secrets', run: () => { const pub = randomBytes(32); pub[31]! &= 0x0f; const fixed = new Uint8Array(32).fill(0x11); fixed[31] = 0x01; return measure('ct mul', N, (c) => (c === 0 ? Uint8Array.from(fixed) : (() => { const r = randomBytes(32); r[31]! &= 0x0f; return new Uint8Array(r); })()), (x: Uint8Array) => ctAdd(ctMul(x, pub), x), 5); } },
+    { name: 'CONTROL positive: the REPLACED BigInt mul/mod path, short secret vs full-size random secrets (must be flagged)', expectLeak: true, run: () => { const Ln = ed25519.CURVE.n; const pubN = 0x1234567890abcdefn; return measure('bigint mulmod', N, (c) => (c === 0 ? 3n : BigInt('0x' + randomBytes(31).toString('hex'))), (x: bigint) => { let a = x; for (let i = 0; i < 40; i++) a = (a * pubN + 7n) % Ln; return new Uint8Array([Number(a & 0xffn)]); }); } },
+    { name: 'ct-scalar 64-byte wide reduction (nonce hash-to-scalar): all-zero-ish input vs random input', run: () => measure('ct reduce', N, (c) => (c === 0 ? new Uint8Array(64).fill(1) : new Uint8Array(randomBytes(64))), (x: Uint8Array) => ctReduce(x), 5) },
     {
-      name: 'FROST round-2 sign (BigInt scalar arithmetic; documented NOT constant-time): fixed share vs random shares',
+      name: 'FROST round-2 sign (secret scalar arithmetic on the fixed-width ct-scalar path; noble point mult unchanged): fixed share vs random shares',
       expectLeak: false,
       // FROST nonces are one-shot (reuse throws), so every sample gets FRESH nonces; only the secret share differs by class.
       run: () => measure('frost sign', Math.min(N, 2000), (c, i) => mkFrost(c === 0 ? fixedShare : sharePool[i % sharePool.length]!), (x: ReturnType<typeof mkFrost>) => frostSign(x.share.identifier, x.share.share, dealer.groupPublicKey, { hiding: x.a.hidingNonce, binding: x.a.bindingNonce }, msg, x.commits)),
