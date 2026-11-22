@@ -1,0 +1,34 @@
+{
+ "trait": "pca.external_communication",
+ "card": {
+  "verb": "golden.external_communication",
+  "title": "Do the external communication thing",
+  "text": "Do the external communication thing. This action sends to people outside your organisation.",
+  "risk": "high",
+  "escalation": "auto",
+  "reversibility": "irreversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "rate_cap",
+   "recipient_scope"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.external_communication"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "irreversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "rate_cap",
+   "recipient_scope"
+  ],
+  "context": [],
+  "prules": [
+   "recipient_param_declared"
+  ]
+ }
+}

@@ -231,6 +231,7 @@ describe('V13 agent clarification: structured candidates, no text', () => {
       { candidates: [{ verb: 'cart.add', values: { 'env.acc.spend.post': 1 } }], reason: 'other' },
       { candidates: [{ ...add(3), label: 'the cheap one' }], reason: 'other' },
       { candidates: [{ verb: 'cart.add', values: { 'action.params.qty': 1.5 } }], reason: 'other' },
+      { candidates: [{ verb: 'cart.add', values: { 'action.params.qty': -0 } }], reason: 'other' },
       'approve please',
     ]) expect(h.ch.clarify(body).status).toBe(400);
     expect(h.ch.questionsAsked()).toBe(0);

@@ -7,6 +7,7 @@
  * fails closed on every ambiguity (duplicate digests, unreferenced disclosures, malformed base64url,
  * duplicate JSON keys, unknown `_sd_alg`, non-ES256 algorithms).
  */
+import { duplicateKey } from '@atlasauth/pca';
 import {
   createHash,
   createPrivateKey,
@@ -49,40 +50,9 @@ export function isObject(v: unknown): v is JsonObject {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-/**
- * Reject an object that repeats a key. `JSON.parse` silently keeps the last duplicate, which would let
- * two parties read different claims out of the same signed bytes. Run on text that already parsed, so
- * only string/brace structure needs tracking.
- */
 function assertNoDuplicateKeys(text: string, what: string): void {
-  const stack: (Set<string> | null)[] = [];
-  let expectKey = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i] as string;
-    if (c === '"') {
-      let j = i + 1;
-      while (text[j] !== '"') j += text[j] === '\\' ? 2 : 1;
-      const top = stack[stack.length - 1];
-      if (expectKey && top) {
-        const key = JSON.parse(text.slice(i, j + 1)) as string;
-        if (top.has(key)) throw new Ap2Error(`${what}: duplicate key ${JSON.stringify(key)}`);
-        top.add(key);
-        expectKey = false;
-      }
-      i = j;
-    } else if (c === '{') {
-      stack.push(new Set());
-      expectKey = true;
-    } else if (c === '[') {
-      stack.push(null);
-      expectKey = false;
-    } else if (c === '}' || c === ']') {
-      stack.pop();
-      expectKey = false;
-    } else if (c === ',') {
-      expectKey = stack[stack.length - 1] instanceof Set;
-    }
-  }
+  const key = duplicateKey(text);
+  if (key !== undefined) throw new Ap2Error(`${what}: duplicate key ${JSON.stringify(key)}`);
 }
 
 /**

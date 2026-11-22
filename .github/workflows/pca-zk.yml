@@ -1,0 +1,222 @@
+name: pca-zk (libpcazk)
+
+# The shared Groth16 library every native lane binds (pca_zk_verify / pca_zk_prove over arkworks, BN254 and BLS12-381):
+#   build      the shared library and the static archive on linux x64/arm64, macOS x64/arm64 and windows x64, the C header, a C smoke test
+#   corpus     the verification cases of the shared reference corpus replayed in strict and snarkjs-compat mode
+#   circuits   a small circuit built with circom and snarkjs on both curves: prove -> verify round trip, a proof from pca_zk_prove
+#              verified by snarkjs, a snarkjs proof verified by pca_zk_verify (strict and compat), tampering refused
+#   policyvm   the full Policy VM circuit (BN254, dev-only single-party setup): prove -> verify against the circuit's own artifacts
+#              and the same two cross-checks with snarkjs
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  pull_request:
+    paths:
+      - 'packages/pca-zk/**'
+      - '.github/scripts/build-libpcazk.sh'
+      - 'scripts/pca-ci-workflows/pca/workflows/pca-zk.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CIRCOM_URL: https://github.com/iden3/circom/releases/download/v2.2.2/circom-linux-amd64
+  CIRCOM_SHA256: f3d8d1fdbc123779b80e210c909ee941d7a1e130c70365524646b48b8b0fe9d5
+  PCA_ZK_REQUIRE: '1'
+  CRATE: packages/pca-zk/crate
+
+jobs:
+  build:
+    name: build (${{ matrix.plat }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, plat: linux_amd64 }
+          - { os: ubuntu-24.04-arm, plat: linux_arm64 }
+          - { os: macos-15-intel, plat: darwin_amd64 }
+          - { os: macos-latest, plat: darwin_arm64 }
+          - { os: windows-latest, plat: windows_amd64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Shared library
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="$(bash .github/scripts/build-libpcazk.sh "$RUNNER_TEMP/shared" "$PWD/$CRATE" | tail -1)"
+          ls -l "$d"
+          diff "$d/pca_zk.h" "$CRATE/include/pca_zk.h"
+      - name: Static archive (mingw ABI on windows, as cgo links it)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$RUNNER_OS" = Windows ]; then
+            rustup target add x86_64-pc-windows-gnu
+            export CARGO_BUILD_TARGET=x86_64-pc-windows-gnu
+          fi
+          d="$(PCA_STATIC=1 bash .github/scripts/build-libpcazk.sh "$RUNNER_TEMP/static" "$PWD/$CRATE" | tail -1)"
+          ls -l "$d"
+          test -s "$d/libpcazk.a"
+      - name: C smoke test (the header compiles, the library loads, refusals do not touch memory)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/t.c" <<'C'
+          #include <stdio.h>
+          #include "pca_zk.h"
+          int main(void) {
+            uint8_t *out = (uint8_t *)1; size_t n = 7; int32_t reason = 99;
+            printf("%s\n", pca_zk_version());
+            if (pca_zk_verify(0, 0, NULL, 0, NULL, 0, NULL, 0, NULL) != PCA_ZK_ERR_ARG) return 1;
+            if (pca_zk_verify(5, 0, (const uint8_t *)"{}", 2, (const uint8_t *)"{}", 2, (const uint8_t *)"[]", 2, &reason) != PCA_ZK_ERR_ARG) return 2;
+            if (pca_zk_verify(0, 0, (const uint8_t *)"{}", 2, (const uint8_t *)"{}", 2, (const uint8_t *)"[]", 2, &reason) != PCA_ZK_INVALID || reason == 0) return 3;
+            if (pca_zk_prove(0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, &out, &n) != PCA_ZK_ERR_ARG || out != NULL || n != 0) return 4;
+            pca_zk_free(NULL, 0);
+            puts(pca_zk_reason_text(reason));
+            return 0;
+          }
+          C
+          cc "$RUNNER_TEMP/t.c" -I "$RUNNER_TEMP/shared" -L "$RUNNER_TEMP/shared" -lpcazk -Wl,-rpath,"$RUNNER_TEMP/shared" -o "$RUNNER_TEMP/t"
+          "$RUNNER_TEMP/t"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libpcazk-${{ matrix.plat }}
+          path: |
+            ${{ runner.temp }}/shared
+            ${{ runner.temp }}/static
+          if-no-files-found: error
+
+  corpus:
+    name: corpus replay (strict and snarkjs-compat)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Shared corpus (the Go native repository at this ref)
+        run: |
+          set -euo pipefail
+          url="https://github.com/${{ github.repository_owner }}/pca-go.git"
+          ref="${{ github.ref_name }}"
+          for i in $(seq 1 40); do
+            git ls-remote --exit-code "$url" "refs/heads/$ref" "refs/tags/$ref" >/dev/null 2>&1 && break
+            [ "$i" = 40 ] && { echo "::error::pca-go has no ref '$ref'"; exit 1; }
+            sleep 30
+          done
+          git clone -q --depth 1 --branch "$ref" "$url" "$RUNNER_TEMP/pca-go"
+          echo "PCA_ZK_CORPUS=$RUNNER_TEMP/pca-go/testdata/ref-zk.json.gz" >> "$GITHUB_ENV"
+      - name: Unit tests and the corpus replay
+        working-directory: ${{ env.CRATE }}
+        run: cargo test --release --features capi --lib --test corpus # the prove tests need circuit artifacts: they run in the circuit jobs below
+
+  circuits:
+    name: small circuit, both curves, cross-checked with snarkjs
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install circom (pinned release, sha256-checked) and snarkjs
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/circom" "$CIRCOM_URL"
+          echo "$CIRCOM_SHA256  $RUNNER_TEMP/circom" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/circom"
+          npm install --no-audit --no-fund --prefix "$RUNNER_TEMP/sj" snarkjs@0.7.5
+          echo "SNARKJS=node $RUNNER_TEMP/sj/node_modules/snarkjs/build/cli.cjs" >> "$GITHUB_ENV"
+      - name: Compile and set up the circuit on BN254 and BLS12-381 (dev-only single-party setup)
+        run: |
+          set -euo pipefail
+          D="$RUNNER_TEMP/mul"; mkdir -p "$D"
+          # tag:circom/snarkjs curve name
+          for pair in bn254:bn128 bls12381:bls12381; do
+            tag=${pair%%:*}; prime=${pair#*:}
+            mkdir -p "$D/$tag"
+            "$RUNNER_TEMP/circom" "$CRATE/tests/circuits/mul.circom" --r1cs --wasm --prime "$prime" -o "$D/$tag"
+            cp "$D/$tag/mul_js/mul.wasm" "$D/mul_$tag.wasm"
+            $SNARKJS powersoftau new "$prime" 4 "$D/p0.ptau"
+            $SNARKJS powersoftau contribute "$D/p0.ptau" "$D/p1.ptau" --name=ci -e="pca-zk ci $tag $(date +%s%N)"
+            $SNARKJS powersoftau prepare phase2 "$D/p1.ptau" "$D/pf.ptau"
+            $SNARKJS groth16 setup "$D/$tag/mul.r1cs" "$D/pf.ptau" "$D/z0.zkey"
+            $SNARKJS zkey contribute "$D/z0.zkey" "$D/mul_$tag.zkey" --name=ci -e="pca-zk ci zkey $tag $(date +%s%N)"
+            $SNARKJS zkey export verificationkey "$D/mul_$tag.zkey" "$D/mul_${tag}_vkey.json"
+            rm -f "$D"/p0.ptau "$D"/p1.ptau "$D"/pf.ptau "$D"/z0.zkey
+          done
+          echo "PCA_ZK_MUL_DIR=$D" >> "$GITHUB_ENV"
+      - name: Round trip (the Rust tests) and the cli
+        working-directory: ${{ env.CRATE }}
+        run: |
+          cargo test --release --features cli --test prove mul_round_trip_both_curves
+          cargo build --release --features cli
+          echo "ZK=$PWD/target/release/pca-zk" >> "$GITHUB_ENV"
+      - name: A proof from pca_zk_prove verifies under snarkjs; a snarkjs proof verifies under pca_zk_verify
+        run: |
+          set -euo pipefail
+          D="$PCA_ZK_MUL_DIR"; IN="$CRATE/tests/circuits/mul.input.json"; W="$RUNNER_TEMP/x"; mkdir -p "$W"
+          for pair in bn254:bn254 bls12381:bls12-381; do
+            tag=${pair%%:*}; cv=${pair#*:}
+            # ours -> snarkjs
+            "$ZK" prove "$cv" "$D/mul_$tag.wasm" "$D/mul_$tag.zkey" "$IN" "$W/ours_proof.json" "$W/ours_public.json"
+            $SNARKJS groth16 verify "$D/mul_${tag}_vkey.json" "$W/ours_public.json" "$W/ours_proof.json"
+            # snarkjs -> ours (strict and compat)
+            $SNARKJS groth16 fullprove "$IN" "$D/mul_$tag.wasm" "$D/mul_$tag.zkey" "$W/sj_proof.json" "$W/sj_public.json"
+            "$ZK" verify "$cv" "$D/mul_${tag}_vkey.json" "$W/sj_proof.json" "$W/sj_public.json"
+            "$ZK" verify "$cv" "$D/mul_${tag}_vkey.json" "$W/sj_proof.json" "$W/sj_public.json" --compat
+            # a changed public signal is refused by both
+            echo '["34","11"]' > "$W/bad_public.json"
+            if "$ZK" verify "$cv" "$D/mul_${tag}_vkey.json" "$W/sj_proof.json" "$W/bad_public.json"; then echo "tampered signals accepted" >&2; exit 1; fi
+            if $SNARKJS groth16 verify "$D/mul_${tag}_vkey.json" "$W/bad_public.json" "$W/sj_proof.json"; then echo "snarkjs accepted tampered signals" >&2; exit 1; fi
+          done
+
+  policyvm:
+    name: full Policy VM circuit (BN254), prove and verify, cross-checked with snarkjs
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca...
+      - name: Install circom (pinned release, sha256-checked)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/circom" "$CIRCOM_URL"
+          echo "$CIRCOM_SHA256  $RUNNER_TEMP/circom" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/circom"
+          echo "CIRCOM=$RUNNER_TEMP/circom" >> "$GITHUB_ENV"
+      - name: Dev-only setup of the Policy VM circuit (2^18 powers of tau); writes the zkey, the witness wasm, the key and a snarkjs sample proof
+        working-directory: packages/pca
+        run: PCA_DEV_SETUP=1 bash circuits/policyvm.setup.sh
+      - name: Rust tests (prove -> verify, deterministic under a seed) and the cli
+        working-directory: ${{ env.CRATE }}
+        run: |
+          cargo test --release --features cli,parallel --test prove policyvm_bn254_round_trip
+          cargo build --release --features cli,parallel
+      - name: Cross-check with snarkjs
+        run: |
+          set -euo pipefail
+          C=packages/pca/circuits; ZK="$PWD/$CRATE/target/release/pca-zk"; W="$RUNNER_TEMP/pv"; mkdir -p "$W"
+          # the sample proof snarkjs made in the setup verifies under pca_zk_verify, strict and compat
+          jq .proof "$C/policyvm_sample_proof.json" > "$W/sj_proof.json"; jq .publicSignals "$C/policyvm_sample_proof.json" > "$W/sj_public.json"
+          "$ZK" verify bn254 "$C/policyvm_vkey.json" "$W/sj_proof.json" "$W/sj_public.json"
+          "$ZK" verify bn254 "$C/policyvm_vkey.json" "$W/sj_proof.json" "$W/sj_public.json" --compat
+          # a proof from pca_zk_prove verifies under snarkjs and carries the same public signals
+          "$ZK" prove bn254 "$C/build/policyvm_js/policyvm.wasm" "$C/build/policyvm_final.zkey" "$C/policyvm_sample_input.json" "$W/ours_proof.json" "$W/ours_public.json"
+          node packages/pca/node_modules/snarkjs/build/cli.cjs groth16 verify "$C/policyvm_vkey.json" "$W/ours_public.json" "$W/ours_proof.json"
+          diff <(jq -c . "$W/ours_public.json") <(jq -c . "$W/sj_public.json")

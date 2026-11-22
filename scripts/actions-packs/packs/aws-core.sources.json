@@ -1,0 +1,240 @@
+[
+  {
+    "id": "s3",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/s3/2006-03-01/service-2.json",
+    "sha256": "84c3a4e6ac1c80ed49cb1ddf1f548ea7f51d8a41acbfa0f198b9ba0028d784e8",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "s3"
+    },
+    "bytes": 1397156
+  },
+  {
+    "id": "ec2",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/ec2/2016-11-15/service-2.json",
+    "sha256": "d2fd8704aaf672c9683462d5cd9d60ce6d1266ec6b37215ffe8e6aacf9d41cb5",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "ec2"
+    },
+    "bytes": 4200802
+  },
+  {
+    "id": "iam",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/iam/2010-05-08/service-2.json",
+    "sha256": "15c70eaeb15bda321fbf0e9a0db35036d67c6ccd34d38acbcad3a086b89251c5",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "iam"
+    },
+    "bytes": 750921
+  },
+  {
+    "id": "sts",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/sts/2011-06-15/service-2.json",
+    "sha256": "d97a08aa49223dee070009624c1d70f5b6af6ccc43220cc30ff566d5f02f3c0b",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "sts"
+    },
+    "bytes": 135379
+  },
+  {
+    "id": "lambda",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/lambda/2015-03-31/service-2.json",
+    "sha256": "7edc869a62c7db51defdfe380122736c3a2912d37113f299c6f9e67eb855c971",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "lambda"
+    },
+    "bytes": 492950
+  },
+  {
+    "id": "rds",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/rds/2014-10-31/service-2.json",
+    "sha256": "807954c94f557701e1142b4e8bad1fc631b0ca191428dfe618abaf85f936918d",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "rds"
+    },
+    "bytes": 1299438
+  },
+  {
+    "id": "kms",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/kms/2014-11-01/service-2.json",
+    "sha256": "a565bf9811ffd4b5b67fbb3464090bc131f71766e0b291eb6922983a2180f1d8",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "kms"
+    },
+    "bytes": 537770
+  },
+  {
+    "id": "secretsmanager",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/secretsmanager/2017-10-17/service-2.json",
+    "sha256": "d568532fb0db48e0ce9c3c30b6f48aae734e1657105043990ef699ec48656671",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "secrets_manager"
+    },
+    "bytes": 151077
+  },
+  {
+    "id": "sesv2",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/sesv2/2019-09-27/service-2.json",
+    "sha256": "c24239d9a7eff955322d9c4121270d284d80183bb750d21d06a4209ca62b2bbe",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "ses"
+    },
+    "bytes": 477953
+  },
+  {
+    "id": "sns",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/sns/2010-03-31/service-2.json",
+    "sha256": "ffae4c31269cebee8af4027927b31f9fbc9df574fb971ad3764cd71199f93988",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "sns"
+    },
+    "bytes": 172724
+  },
+  {
+    "id": "sqs",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/sqs/2012-11-05/service-2.json",
+    "sha256": "282d08c85a2003ab91ed400a81339fe81952e446ae40a599877705903e870c0f",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "sqs"
+    },
+    "bytes": 157139
+  },
+  {
+    "id": "dynamodb",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/dynamodb/2012-08-10/service-2.json",
+    "sha256": "eec0aae0f5038fe5e1ce035230c64951edbebb24f7453a2992d968b0498ca621",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "dynamodb"
+    },
+    "bytes": 533433
+  },
+  {
+    "id": "cloudformation",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/cloudformation/2010-05-15/service-2.json",
+    "sha256": "142ac136f30bf2ba93723536c67e66443b00d86cc2128448916d6d7ab145eec3",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "cloudformation"
+    },
+    "bytes": 594167
+  },
+  {
+    "id": "route53",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/route53/2013-04-01/service-2.json",
+    "sha256": "29dae1683f6128df6cad788a27af0e1aa1ce0e71a99e99b1c4e4d6f24e2b159b",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "route53"
+    },
+    "bytes": 421673
+  },
+  {
+    "id": "ecr",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/ecr/2015-09-21/service-2.json",
+    "sha256": "81d9fb94eea1893ab7225736f5b3052b1cb9aeaac3d4c967dee3e07f2908754a",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "ecr"
+    },
+    "bytes": 258646
+  },
+  {
+    "id": "ecs",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/ecs/2014-11-13/service-2.json",
+    "sha256": "ba3b36de72d9f2ee08f4e05835a9d5f5ba83e02ab5742504427ae82aae81fa9e",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "ecs"
+    },
+    "bytes": 943840
+  },
+  {
+    "id": "eks",
+    "repo": "boto/botocore",
+    "ref": "2cd57933cf3d0135d7bbfdebcbb8e575af35d1db",
+    "path": "botocore/data/eks/2017-11-01/service-2.json",
+    "sha256": "d3d65dfdbea2994c54968950a7e15562e4a6a5dc1842f9e533cf02ebbb84a94e",
+    "kind": "botocore",
+    "licence": "Apache-2.0",
+    "licence_url": "https://github.com/boto/botocore/blob/develop/LICENSE.txt",
+    "opts": {
+      "service": "eks"
+    },
+    "bytes": 449896
+  }
+]

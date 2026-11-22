@@ -476,8 +476,8 @@ export function verifyCoSignedAttestation(
       if (!Number.isFinite(opts.maxAgeMs) || opts.maxAgeMs <= 0) {
         return { ...partial, reason: 'invalid maxAgeMs' };
       }
-      if (cosig.cosignedAt > now) return { ...partial, reason: 'co-sign timestamp is in the future' };
-      if (ageMs > opts.maxAgeMs) return { ...partial, reason: 'co-signature is stale (older than maxAgeMs)' };
+      if (!(cosig.cosignedAt <= now)) return { ...partial, reason: 'co-sign timestamp is in the future' };
+      if (!(ageMs <= opts.maxAgeMs)) return { ...partial, reason: 'co-signature is stale (older than maxAgeMs)' };
     }
 
     // Recompute the signed bytes from the artifact's OWN verdict — a tampered field no longer matches.

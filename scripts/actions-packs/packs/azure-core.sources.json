@@ -1,0 +1,212 @@
+[
+  {
+    "id": "compute",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/compute/resource-manager/Microsoft.Compute/Compute/stable/2026-04-01/ComputeRP.json",
+    "sha256": "4924365a99c34acffa6d5405f554283f2df042d1fdee1da471fe4e5124716dce",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "compute"
+    },
+    "bytes": 1062837
+  },
+  {
+    "id": "network_applicationgateway",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/network/resource-manager/Microsoft.Network/Network/stable/2026-03-01/applicationGateway.json",
+    "sha256": "6038be148094e25b27a0c3357cac5984140a6696255e1696c5d6fdeb208af5cc",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "network"
+    },
+    "bytes": 205247
+  },
+  {
+    "id": "network_firewall",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/network/resource-manager/Microsoft.Network/Network/stable/2026-03-01/firewall.json",
+    "sha256": "15eb16f4e2674d36b1c5a6f13abc6f304d4667925c23a34d2cfbc15634671002",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "network"
+    },
+    "bytes": 53166
+  },
+  {
+    "id": "network_firewallpolicy",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/network/resource-manager/Microsoft.Network/Network/stable/2026-03-01/firewallPolicy.json",
+    "sha256": "790498d38100437ac0c75e2a0f8569f573706ef27c2a29756d85e6179ea346a9",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "network"
+    },
+    "bytes": 101768
+  },
+  {
+    "id": "network_loadbalancer",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/network/resource-manager/Microsoft.Network/Network/stable/2026-03-01/loadBalancer.json",
+    "sha256": "b90c4fa94b6636d67ddd918e80bf184e85d7ff2c6370e0967723a4cbcda0d055",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "network"
+    },
+    "bytes": 104884
+  },
+  {
+    "id": "network_networkgateway",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/network/resource-manager/Microsoft.Network/Network/stable/2026-03-01/networkGateway.json",
+    "sha256": "97a5dbb82e00b2253f23924a13b2588da94de4399094e928b0e2a6919056210e",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "network"
+    },
+    "bytes": 231988
+  },
+  {
+    "id": "network_virtualnetwork",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/network/resource-manager/Microsoft.Network/Network/stable/2026-03-01/virtualNetwork.json",
+    "sha256": "0bfb316d7cbbecc06ae43c2cf57ed134d456e5b12607f9eab61c1a798d6452c5",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "network"
+    },
+    "bytes": 785043
+  },
+  {
+    "id": "storage",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/storage/resource-manager/Microsoft.Storage/Storage/stable/2026-09-01/openapi.json",
+    "sha256": "9b3aeac07a8682e7adc3055adbde5da2d5cfb3670891856b7733535ce4d0eef0",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "storage"
+    },
+    "bytes": 732126
+  },
+  {
+    "id": "keyvault",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/keyvault/resource-manager/Microsoft.KeyVault/KeyVault/stable/2026-05-15/openapi.json",
+    "sha256": "bd7abd994935675571c030ecb531d39f1eb7b83a3505a5ba8594a25847bdc07e",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "keyvault"
+    },
+    "bytes": 201233
+  },
+  {
+    "id": "authorization_roleassignments",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/authorization/resource-manager/Microsoft.Authorization/Authorization/stable/2022-04-01/authorization-RoleAssignmentsCalls.json",
+    "sha256": "0a4e9a83b672454c9005edd88fc7adde48a545a553cb6c74e921a72af67b5f43",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "authorization"
+    },
+    "bytes": 27971
+  },
+  {
+    "id": "authorization_roledefinitions",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/authorization/resource-manager/Microsoft.Authorization/Authorization/stable/2022-04-01/authorization-RoleDefinitionsCalls.json",
+    "sha256": "30d7eaad3b1c09e686affeefbd119bf2080a5ddb7bcba78e2955c20f343ffd59",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "authorization"
+    },
+    "bytes": 19077
+  },
+  {
+    "id": "authorization_denyassignments",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/authorization/resource-manager/Microsoft.Authorization/Authorization/stable/2022-04-01/authorization-DenyAssignmentCalls.json",
+    "sha256": "def1fbbbba2df435548d3ecbec5d4171872abcd75cfe34f3b2413f8a9a322a49",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "authorization"
+    },
+    "bytes": 19109
+  },
+  {
+    "id": "resources",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/resources/resource-manager/Microsoft.Resources/resources/stable/2025-04-01/resources.json",
+    "sha256": "399d827f9a8e5f82b89922f2155c2f8c34017a5764c3e2c492f743ee9a23fe62",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "resources"
+    },
+    "bytes": 118632
+  },
+  {
+    "id": "aks",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/containerservice/resource-manager/Microsoft.ContainerService/aks/stable/2026-08-01/managedClusters.json",
+    "sha256": "769625cd957b9d236f5a8af0af93e131ed53b5bd9d7022aeb5e8b88495f5e47d",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "aks"
+    },
+    "bytes": 461096
+  },
+  {
+    "id": "web",
+    "repo": "Azure/azure-rest-api-specs",
+    "ref": "e3442857cb92aa9a458550b3f26ef2cd31e9a3d4",
+    "path": "specification/web/resource-manager/Microsoft.Web/AppService/stable/2026-07-15/openapi.json",
+    "sha256": "e815aae0941df0c080aa2a0e5eb4731ca8a137ebfae953e649568b41308cbabd",
+    "kind": "openapi",
+    "licence": "MIT",
+    "licence_url": "https://github.com/Azure/azure-rest-api-specs/blob/main/LICENSE",
+    "opts": {
+      "svc": "web"
+    },
+    "bytes": 2044040
+  }
+]

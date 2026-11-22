@@ -193,7 +193,7 @@ describe('outcome resolution', () => {
 describe('severity', () => {
   const deny = (checks: any, extra: any = {}) => toOcsfEvent(rec({ verify: { allow: false, reason: 'r', checks } as any, ...extra }));
   it('deny: High when any security check failed, Medium otherwise', () => {
-    for (const k of ['wire', 'version', 'audience', 'validity', 'cap_chain', 'plan_inclusion', 'leaf_signature', 'counter']) {
+    for (const k of ['wire', 'version', 'audience', 'validity', 'cap_chain', 'plan_inclusion', 'leaf_signature', 'counter_format', 'replay']) {
       const o = deny({ [k]: 'fail' });
       expect([o.severity_id, o.severity]).toEqual([4, 'High']);
     }
@@ -216,7 +216,7 @@ describe('severity', () => {
     expect(sev(toCef(rec({ decision: admit({ requiredThreshold: { t: 3 } }) })))).toBe('5');
     expect(sev(toCef(rec({ verify: { allow: false, checks: { wire: 'fail' } } as any })))).toBe('8');
     expect(sev(toCef(rec({ verify: { allow: false, checks: {} } as any })))).toBe('5');
-    expect(toEcs(rec({ verify: { allow: false, checks: { counter: 'fail' } } as any })).event.severity).toBe(8);
+    expect(toEcs(rec({ verify: { allow: false, checks: { replay: 'fail' } } as any })).event.severity).toBe(8);
   });
 });
 
@@ -556,7 +556,9 @@ describe('sinks and export', () => {
     expect(httpSink('u', { format: 'ecs', fetch, name: 'N' }).name).toBe('N');
     expect(httpSink('u', { format: 'cef', fetch }).format).toBe('cef');
     expect(await httpSink('http://x', { format: 'cef', fetch, headers: { Authorization: 'Splunk t' } }).deliver(evs)).toEqual({ ok: true });
-    expect(calls[0]).toEqual(['http://x', { method: 'POST', headers: { 'content-type': 'text/plain; charset=utf-8', Authorization: 'Splunk t' }, body: 'a\nb' }]);
+    const { signal, ...sent } = calls[0][1];
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect([calls[0][0], sent]).toEqual(['http://x', { method: 'POST', headers: { 'content-type': 'text/plain; charset=utf-8', Authorization: 'Splunk t' }, body: 'a\nb' }]);
     await httpSink('u', { format: 'ocsf', fetch }).deliver(evs);
     expect(calls[1][1].headers).toEqual({ 'content-type': 'application/x-ndjson' });
     await httpSink('u', { format: 'ecs', fetch }).deliver(evs);
@@ -639,7 +641,9 @@ describe('sinks and export', () => {
     expect(r.ok).toBe(false);
     expect(errs3).toEqual([['nn', { sink: '(unknown sink)', count: 1 }]]);
     const errs4: any[] = [];
-    await exportBatch([{ pcactn: pcactn(), verify: verifyOk(), now: NOW }, null as any], { name: 'f', format: 'ocsf', deliver: () => ({ ok: true }) }, { onError: (e, c) => errs4.push(c) });
-    expect(errs4).toEqual([{ sink: 'f', count: 0 }]);
+    const r4 = await exportBatch([{ pcactn: pcactn(), verify: verifyOk(), now: NOW }, null as any], { name: 'f', format: 'ocsf', deliver: () => ({ ok: true }) }, { onError: (e, c) => errs4.push(c) });
+    // the record that cannot be serialized is reported and left out; the good one is still delivered
+    expect(errs4).toEqual([{ sink: 'f', count: 1 }]);
+    expect(r4).toEqual({ ok: true, delivered: 1, format: 'ocsf', skipped: 1 });
   });
 });

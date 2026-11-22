@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { p256 } from '@noble/curves/p256';
 import { ed25519 } from '@noble/curves/ed25519';
 import { sha256 } from '@noble/hashes/sha256';
-import { type PCActnBody, b64u, frostActionDigest, thresholdMessage } from '@atlasauth/pca';
+import { type PCActnBody, b64u, thresholdMessage } from '@atlasauth/pca';
+import { frostActionDigest } from '@atlasauth/pca/ext/frost';
 import {
   type Assertion,
   type VerifyExpectations,
@@ -10,8 +11,12 @@ import {
   coseKeyToJwk,
   parseAuthenticatorData,
   stepUpChallengeB64u,
-  verifyAssertion,
+  verifyAssertion as verifyAssertionRaw,
 } from './index';
+
+// 0.5: storedSignCount is required (0 = never used). These suites exercise other checks, so they default it to 0 here.
+const verifyAssertion = (a: Assertion, e: Omit<VerifyExpectations, 'storedSignCount'> & { storedSignCount?: number }) =>
+  verifyAssertionRaw(a, { storedSignCount: 0, ...e } as VerifyExpectations);
 
 // ------------------------------------------------------------------------------------------------
 // Minimal CBOR encoder for COSE_Key (test-only; the library has its own reader).
@@ -146,7 +151,7 @@ function ed25519Key(): EdDsaMaterial {
 }
 
 function expectations(overrides: Partial<VerifyExpectations> = {}): VerifyExpectations {
-  return { expectedChallenge: new Uint8Array(32), rpId: RP_ID, origins: [ORIGIN], requireUV: true, ...overrides };
+  return { expectedChallenge: new Uint8Array(32), rpId: RP_ID, origins: [ORIGIN], requireUV: true, storedSignCount: 0, ...overrides };
 }
 
 // ------------------------------------------------------------------------------------------------

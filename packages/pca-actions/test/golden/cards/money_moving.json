@@ -1,0 +1,42 @@
+{
+ "trait": "pca.money_moving",
+ "card": {
+  "verb": "golden.money_moving",
+  "title": "Do the money moving thing",
+  "text": "Do the money moving thing. This action moves money.",
+  "risk": "critical",
+  "escalation": "cosign",
+  "reversibility": "rate_limited",
+  "blast_ppm": 700000,
+  "needs": [
+   "amount_cap",
+   "count_cap",
+   "window"
+  ],
+  "context": [
+   "idempotency"
+  ]
+ },
+ "closure": [
+  "pca.money_moving"
+ ],
+ "floor": {
+  "risk": 3,
+  "rev": "rate_limited",
+  "blast_ppm": 700000,
+  "esc": 2,
+  "caveats": [
+   "amount_cap",
+   "count_cap",
+   "window"
+  ],
+  "context": [
+   "idempotency"
+  ],
+  "prules": [
+   "money_amount_bounded",
+   "money_has_currency",
+   "pay_has_idempotency"
+  ]
+ }
+}

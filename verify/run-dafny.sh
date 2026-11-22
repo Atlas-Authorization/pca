@@ -14,9 +14,15 @@ echo "== core: no assume/axiom/extern"
 if grep -nE '^[^/]*(\bassume\b|\{:axiom\}|\{:extern|\bextern\b|\{:verify +false)' ./*.dfy; then echo "FORBIDDEN construct found"; rc=1; fi
 echo "== core proofs"; ./build.sh --verify-only || rc=1
 if [ "$MODE" = full ]; then
-  for c in Wire Merkle Taint Attest PolicyVm Regex; do
+  for c in Wire Merkle Taint Attest PolicyVm Regex GoalTighten VerdictDecision WitnessQuorum; do
     echo "== $c (standalone)"; dafny verify "$c.dfy" $FLAGS || rc=1
   done
+  echo "== Goal (goal-to-decision compiler: GoalIr, GoalCompile, GoalWitness, GoalRender)"; dafny verify Goal.dfy --verify-included-files $FLAGS || rc=1
+  echo "== GoalPvmTie"; dafny verify GoalPvmTie.dfy --verify-included-files $FLAGS || rc=1
+  echo "== PolicyVmDecision"; dafny verify PolicyVmDecision.dfy --verify-included-files $FLAGS || rc=1
+  echo "== K1Compose (caveat language composes with the policy VM as a conjunction)"; dafny verify K1Compose.dfy --verify-included-files $FLAGS || rc=1
+  echo "== WorkflowAdmit (K5: no step outside the committed DAG is admitted; edges hold; receipts chain)"; dafny verify WorkflowAdmit.dfy $FLAGS || rc=1
+  echo "== ReadSide (K5: tighten-only masking, label soundness, sink rule)"; dafny verify ReadSide.dfy $FLAGS || rc=1
   echo "== GlueContract"; dafny verify GlueContract.dfy --verify-included-files $FLAGS || rc=1
 fi
 [ $rc = 0 ] && echo "DAFNY: ALL VERIFIED" || echo "DAFNY: FAILURES" >&2

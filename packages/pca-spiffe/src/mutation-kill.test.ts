@@ -124,6 +124,15 @@ describe('verifyJwtSvid options, claims and messages', () => {
     expect((await verifyJwtSvid(token, { ...base, key: publicKey, currentDate: new Date((t - 100) * 1000) })).expiresAt).toBe(t - 10);
     await expect(verifyJwtSvid(token, { ...base, key: publicKey, currentDate: new Date((t + 100) * 1000) })).rejects.toThrow();
   });
+  it('refuses an invalid currentDate and a non-finite clockTolerance', async () => {
+    const t = Math.floor(Date.now() / 1000);
+    const { token, publicKey } = await mint({ sub: SUB, aud: 'aud1', exp: t - 10 });
+    // an Invalid Date or an infinite tolerance would admit this expired token
+    await expect(verifyJwtSvid(token, { ...base, key: publicKey, currentDate: new Date(Number.NaN) })).rejects.toThrow('currentDate must be a valid Date');
+    for (const clockTolerance of [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NaN]) {
+      await expect(verifyJwtSvid(token, { ...base, key: publicKey, clockTolerance })).rejects.toThrow('clockTolerance must be a finite number >= 0');
+    }
+  });
   it('accepts a key resolver function', async () => {
     const { token, publicKey } = await mint({ sub: SUB, aud: 'aud1', exp: exp() });
     expect((await verifyJwtSvid(token, { ...base, key: async () => publicKey })).spiffeId.id).toBe(SUB);
@@ -221,6 +230,7 @@ describe('verifyX509Svid messages and validity boundaries (fixtures)', () => {
     is(thrown(() => verifyX509Svid([], opts)), 'chain_empty', 'certificate chain is empty');
     is(thrown(() => verifyX509Svid([gen('leaf'), gen('inter0')], { ...opts, maxChainLength: 1 })), 'chain_too_long', 'certificate chain is too long');
     expect(verifyX509Svid([gen('leaf'), gen('inter0')], { ...opts, maxChainLength: 2 }).spiffeId.path).toBe('/workload/db');
+    is(thrown(() => verifyX509Svid([gen('leaf'), gen('inter0')], { ...opts, maxChainLength: Number.NaN })), 'chain_too_long', 'certificate chain is too long'); // NaN made `>` false
     expect(verifyX509Svid([gen('leaf-direct')], { ...opts, maxChainLength: 1 }).spiffeId.path).toBe('/workload/db');
     is(thrown(() => verifyX509Svid([gen('leaf'), gen('inter0')], { ...opts, roots: [] })), 'chain_untrusted_root', 'trust bundle has no X.509 authorities');
     is(thrown(() => verifyX509Svid('garbage', opts)), 'malformed_certificate', 'no PEM certificate found');

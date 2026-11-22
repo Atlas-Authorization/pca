@@ -246,6 +246,12 @@ describe('one party and degenerate inputs', () => {
       expect(w.v.key).toEqual([0n]);
     }
   });
+  it('an in-memory receive refuses a non-finite timeout instead of waiting forever', async () => {
+    const net = new MemNet([0, 1], 'sess', 1000);
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      await expect(net.mesh(0).recv(1, 'x', bad)).rejects.toThrow('mesh: recv timeout must be a finite number >= 0'); // NaN made `left <= 0` false forever
+    }
+  });
   it('rejects an inconsistent chain count', async () => {
     const net = new MemNet([0], 'sess', 1000);
     const mesh = net.mesh(0) as unknown as never;

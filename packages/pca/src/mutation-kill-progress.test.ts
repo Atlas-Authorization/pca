@@ -7,41 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { b64u, canonicalBytes, hashCanonical, utf8 } from './hash';
 import { generateKeyPair, sign, verifyB64u } from './keys';
 import { mlDsa65Keygen } from './pq';
-import {
-  AttestedStateSource,
-  DEFAULT_POTENTIALS,
-  InMemoryStateSource,
-  PROGRESS_SIG_DOMAIN,
-  PROGRESS_VERSION,
-  PotentialRegistry,
-  ProgressTracker,
-  STATE_ATTESTATION_DOMAIN,
-  TRAJECTORY_ANCHOR_DOMAIN,
-  anchorTrajectoryHead,
-  attestedStateVerifier,
-  commitGoal,
-  dagRemainingPotential,
-  dagWeightedPotential,
-  goalDigest,
-  l1FeaturePotential,
-  progressStepDigest,
-  signProgressStep,
-  stateDigest,
-  trajectoryAnchorCommit,
-  trajectoryHead,
-  verifyGoalCommitment,
-  verifyProgressStep,
-  verifySignedProgressStep,
-  verifySignedTrajectory,
-  verifyStateAttestation,
-  verifyTrajectory,
-  verifyTrajectoryAnchor,
-  type Goal,
-  type ProgressStep,
-  type StateAttestation,
-  type VerifySignedStepOptions,
-  type VerifyStepResult,
-} from './progress';
+import { AttestedStateSource, DEFAULT_POTENTIALS, InMemoryStateSource, PROGRESS_SIG_DOMAIN, PROGRESS_VERSION, PotentialRegistry, ProgressTracker, STATE_ATTESTATION_DOMAIN, TRAJECTORY_ANCHOR_DOMAIN, anchorTrajectoryHead, attestedStateVerifier, commitGoal, dagRemainingPotential, dagWeightedPotential, goalDigest, l1FeaturePotential, progressStepDigest, signProgressStep, stateDigest, trajectoryAnchorCommit, trajectoryHead, verifyGoalCommitment, verifyStateAttestation, verifyTrajectoryAnchor, type Goal, type ProgressStep, type StateAttestation, type VerifySignedStepOptions, type VerifyStepResult } from './progress';
+import { verifyProgressStep, verifySignedProgressStep, verifySignedTrajectory, verifyTrajectory } from './test-support/progress-selfreported';
 
 const GOAL: Goal = { objective: { target: [10] }, potential: 'l1-feature-v1', metric: 'dist', epsilon: 2, explorationBudget: 5 };
 const C = commitGoal(GOAL).commitment;

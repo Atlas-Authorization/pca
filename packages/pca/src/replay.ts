@@ -219,6 +219,7 @@ export class InMemoryReplayStore implements ReplayStore, CounterStore {
 
   /** Drop only entries whose retention has fully elapsed (`retainUntil < now`). Never frees a still-valid key. */
   prune(nowMs: number): number {
+    if (!Number.isFinite(nowMs)) return 0; // an infinite clock must not expire live replay keys
     let n = 0;
     for (const [k, until] of this.seen) {
       if (until < nowMs) {
@@ -234,7 +235,7 @@ export class InMemoryReplayStore implements ReplayStore, CounterStore {
       return Promise.reject(new RangeError('consumeOnce: invalid key or retention horizon'));
     }
     const until = this.seen.get(key);
-    if (until !== undefined && until >= nowMs) return Promise.resolve(false);
+    if (until !== undefined && !(until < nowMs)) return Promise.resolve(false);
     if (until === undefined && this.seen.size >= this.maxEntries) {
       this.prune(nowMs);
       if (this.seen.size >= this.maxEntries) return Promise.reject(new Error('replay store full of live entries'));

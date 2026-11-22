@@ -1,0 +1,128 @@
+(* PCA Intent Layer v2 -- T28 SOUNDNESS against the CODE (spec 3.10a; packages/pca/src/intent-map-commit.ts
+   decideMapDisclosure, the guest's decide_map_disclosure in sdks/zkvm-pca/core/src/intent_map.rs; rule 19),
+   computational proof (CryptoVerif). Supersedes the abstract-commitment model zk_intent.cv for the map statement.
+
+   Wallet: commits the principal's map (adversary-chosen contents; the smallest layout the code accepts, n = 4: header 0
+   with first = 1 and cells = 1, cell 1, metrics 2 = n - 2, learner 3) with fresh per-leaf salts, signs the session grant whose goal names
+   (sid, map_commit) (pca-intent:v2c:<sid>:<map_commit>), and hands the agent EVERYTHING (all leaves and salts: the
+   agent is the adversary and knows the full map in the worst case).
+   Guest (public, NA-ZKVM as in zk_intent.cv: a journal for the pinned image is produced only by running the guest):
+   input action x, session, map_commit C, epsilon, and a Z0 disclosure (header, cell, metrics leaves with salts and
+   audit paths at their positions 0, first + flat = 1, n - 2 = 2, size n = 4). It recomputes each root by the RFC 9162
+   path for that (index, size), requires map_commit = SHA-256(TAG_COMMIT || n || root) for all three, that cell 1 is the
+   cell of x under the header (`cellof`), in_grant(cell), residual_risk(metrics) <= epsilon; then journals
+   (H(x), sid, C, epsilon). The disclosure is NOT in the journal.
+   Verifier: principal signature on the grant (sid, C), journal under the pinned image, H(x) recomputed from the PCActn.
+
+   q_t28 : an accepted action was checked by the guest against the PRINCIPAL's committed header, cell and metrics leaves
+           (exact values and salts): the action's cell is in G_tau(m_star) and R(m_star) <= eps.
+   Assumptions: NA-ZKVM, UF-CMA of the principal key, collision resistance of SHA-256 over the uniquely parseable inputs.
+   Binding for maps of ANY size is Lean PcaComp.MapCommit.open_binding / z0_binding (explicit collision extractor); this
+   model composes it with the signature and NA-ZKVM at the minimal size. *)
+
+param NP, NG, NV.
+
+type keyseed [large, fixed].
+type pkey [bounded].
+type skey [bounded].
+type signature.
+type message.
+type zkseed [large, fixed].
+type zkimg [bounded].
+type zkkey [bounded].
+type zkproof.
+type journal.
+type hkey [fixed].
+type hout [fixed].
+type salt [large, fixed].
+type hin.
+type tag_t. type lval. type size_t. type sid_t. type eps_t. type act_t.
+
+const tH, tC, tM, tL: tag_t.
+const s4: size_t.
+
+proba Psign.
+proba Psigncoll.
+proba Pzk.
+proba Pzkcoll.
+proba Phash.
+
+expand UF_CMA_det_signature(keyseed, pkey, skey, message, signature, skgen, pkgen, sign, check, Psign, Psigncoll).
+expand UF_CMA_det_signature(zkseed, zkimg, zkkey, journal, zkproof, zkskgen, zkimgof, zkprove, zkverify, Pzk, Pzkcoll).
+
+fun leafin(tag_t, salt, lval): hin [data].
+fun nodein(hout, hout): hin [data].
+fun commitin(size_t, hout): hin [data].
+fun actin(act_t): hin [data].
+equation forall t: tag_t, r: salt, v: lval, a: hout, b: hout; leafin(t, r, v) <> nodein(a, b).
+equation forall t: tag_t, r: salt, v: lval, z: size_t, a: hout; leafin(t, r, v) <> commitin(z, a).
+equation forall t: tag_t, r: salt, v: lval, x: act_t; leafin(t, r, v) <> actin(x).
+equation forall a: hout, b: hout, z: size_t, c: hout; nodein(a, b) <> commitin(z, c).
+equation forall a: hout, b: hout, x: act_t; nodein(a, b) <> actin(x).
+equation forall z: size_t, c: hout, x: act_t; commitin(z, c) <> actin(x).
+
+expand CollisionResistant_hash_1(hkey, hin, hout, H, hashoracle, Phash).
+
+fun cellof1(lval, act_t): bool.       (* first + flat(cell of x under header) = 1 and the cell leaf's coordinates match *)
+fun in_grant(lval): bool.
+fun risk_ok(lval, eps_t): bool.
+fun policy_ok(eps_t): bool.
+fun mkgrant(sid_t, hout): message [data].
+fun mkjournal(hout, sid_t, hout, eps_t): journal [data].
+
+event Committed(sid_t, hout, lval, salt, lval, salt, lval, salt).
+event GuestRan(act_t, sid_t, hout, eps_t, lval, salt, lval, salt, lval, salt).
+event Accept(act_t, sid_t, hout, eps_t).
+
+query x: act_t, s: sid_t, c: hout, e: eps_t, vh: lval, rh: salt, vc: lval, rc: salt, vm: lval, rm: salt;
+  event(Accept(x, s, c, e)) ==> event(Committed(s, c, vh, rh, vc, rc, vm, rm)) && event(GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm)).
+
+channel c0, cP, cP2, cG, cG2, cV, cV2.
+
+let Wallet(hk: hkey, skP: skey) =
+  ! iP <= NP
+  in(cP, (sid: sid_t, vh: lval, v1: lval, vm: lval, vl: lval));
+  new r0: salt; new r1: salt; new r2: salt; new r3: salt;
+  let l0 = H(hk, leafin(tH, r0, vh)) in
+  let l1 = H(hk, leafin(tC, r1, v1)) in
+  let l2 = H(hk, leafin(tM, r2, vm)) in
+  let l3 = H(hk, leafin(tL, r3, vl)) in
+  let root = H(hk, nodein(H(hk, nodein(l0, l1)), H(hk, nodein(l2, l3)))) in
+  let cm = H(hk, commitin(s4, root)) in
+  event Committed(sid, cm, vh, r0, v1, r1, vm, r2);
+  out(cP2, (cm, sign(mkgrant(sid, cm), skP), r0, r1, r2, r3)).
+
+(* the public guest: RFC 9162 roots for indices 0, 1, 2 of 4 *)
+let Guest(hk: hkey, zsk: zkkey) =
+  ! iG <= NG
+  in(cG, (x: act_t, s: sid_t, c: hout, e: eps_t,
+          vh: lval, rh: salt, ah1: hout, ah2: hout,
+          vc: lval, rc: salt, ac1: hout, ac2: hout,
+          vm: lval, rm: salt, am1: hout, am2: hout));
+  let rooth = H(hk, nodein(H(hk, nodein(H(hk, leafin(tH, rh, vh)), ah1)), ah2)) in
+  let rootc = H(hk, nodein(H(hk, nodein(ac1, H(hk, leafin(tC, rc, vc)))), ac2)) in
+  let rootm = H(hk, nodein(am2, H(hk, nodein(H(hk, leafin(tM, rm, vm)), am1)))) in
+  if c = H(hk, commitin(s4, rooth)) then
+  if c = H(hk, commitin(s4, rootc)) then
+  if cellof1(vh, x) then
+  if in_grant(vc) then
+  if risk_ok(vm, e) then
+  event GuestRan(x, s, c, e, vh, rh, vc, rc, vm, rm);
+  out(cG2, zkprove(mkjournal(H(hk, actin(x)), s, c, e), zsk)).
+
+let Verifier(hk: hkey, pkP: pkey, img: zkimg) =
+  ! iV <= NV
+  in(cV, (x: act_t, s: sid_t, c: hout, e: eps_t, gsig: signature, pf: zkproof));
+  if check(mkgrant(s, c), pkP, gsig) then
+  if policy_ok(e) then
+  if zkverify(mkjournal(H(hk, actin(x)), s, c, e), img, pf) then
+  event Accept(x, s, c, e);
+  out(cV2, ()).
+
+process
+  in(c0, ());
+  new hk: hkey;
+  new rkP: keyseed; let pkP = pkgen(rkP) in let skP = skgen(rkP) in
+  new zs: zkseed; let img = zkimgof(zs) in let zsk = zkskgen(zs) in
+  out(c0, (pkP, img));
+  ( hashoracle(hk) | Wallet(hk, skP) | Guest(hk, zsk) | Verifier(hk, pkP, img) )

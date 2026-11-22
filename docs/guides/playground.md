@@ -7,14 +7,14 @@ order: 12
 
 The PCA playground is an interactive, client-side demo of the framework. It is to PCA what an OIDC or JWT playground is to OAuth: mint the credential, forge a presentation, and watch the verifier's per-clause verdicts. It runs the **real** `@atlasauth/pca` library in the browser (bundled to `pca.esm.js`). Nothing is reimplemented and nothing leaves the page.
 
-Location: `tools/pca-playground` (files: `index.html`, `pca.esm.js`, `README.md`).
+Location: the [`playground/`](https://github.com/Atlas-Authorization/pca/tree/main/playground) directory of the PCA repository (files: `index.html`, `pca.esm.js`, `README.md`).
 
 ## Run it
 
 ES modules need `http://`, not `file://`.
 
 ```
-cd tools/pca-playground
+cd playground
 python3 -m http.server 8080
 # open http://localhost:8080
 ```
@@ -37,7 +37,7 @@ The out-of-plan rejection demo shows the first kill-chain cut: an action with no
 From the repository root, using the repo's existing esbuild (no new dependency):
 
 ```
-npx esbuild packages/pca/src/index.ts --bundle --format=esm --platform=browser --outfile=tools/pca-playground/pca.esm.js
+npx esbuild packages/pca/src/index.ts --bundle --format=esm --platform=browser --outfile=playground/pca.esm.js
 ```
 
 If `npx` cannot find it, call the esbuild binary under `node_modules/.pnpm/esbuild@0.24.2/node_modules/esbuild/bin/esbuild` with the same arguments.

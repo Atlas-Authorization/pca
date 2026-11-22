@@ -87,6 +87,7 @@ export class MemMesh {
     for (const p of to) this.send(p, rd, payload);
   }
   async recv(from: number, rd: string, timeoutMs = this.net.recvTimeoutMs): Promise<unknown> {
+    if (!(Number.isFinite(timeoutMs) && timeoutMs >= 0)) throw new RangeError('mesh: recv timeout must be a finite number >= 0');
     const q = this.inbox.get(from);
     if (!q) throw new Error(`mesh: no link to ${from}`);
     const deadline = Date.now() + timeoutMs;
@@ -111,7 +112,7 @@ export class MemMesh {
         throw e;
       }
       const left = deadline - Date.now();
-      if (left <= 0) {
+      if (!(left > 0)) {
         const e = new NetAbort('timeout', from, this.selfId, `no '${rd}' message from ${from} within ${timeoutMs}ms`, undefined, undefined, { deadlineMs: timeoutMs });
         this.fail(e);
         throw e;

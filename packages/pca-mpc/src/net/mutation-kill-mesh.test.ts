@@ -464,6 +464,17 @@ describe('abort frames from a peer', () => {
       fx.done();
     }
   }, T(60_000));
+  it('an accusation of -0 is not an integer (strict profile)', async () => {
+    const fx = await withPeer();
+    const b = Buffer.from(JSON.stringify({ v: WIRE_VERSION, ty: 'abort', sid: SID, seq: fx.peer.seq(), rd: 'abort', d: { kind: 'local', blamed: 424242, detail: 'd' } }).replace('424242', '-0'));
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(b.length, 0);
+    fx.peer.write(Buffer.concat([len, b]));
+    const e = (await fx.mesh.recv(1, 'x').catch((x) => x)) as NetAbort;
+    expect(e.kind).toBe('peer-abort');
+    expect(e.claimedBlame).toBeNull();
+    fx.done();
+  }, T(20_000));
   it('unknown kinds and non-string kinds are ignored; known kinds are kept', async () => {
     for (const [kind, want] of [['mac-check', 'mac-check'], ['version', 'version'], ['made-up', undefined], [5, undefined], [undefined, undefined]] as const) {
       const { fx, e } = await recvAbort({ kind, blamed: 0, detail: 'd' });
@@ -569,6 +580,16 @@ describe('recv', () => {
     const e = out as NetAbort;
     expect([e.kind, e.blamed, e.reporter, e.deadlineMs]).toEqual(['timeout', 1, 0, 5000]);
     expect(e.message).toContain("no 'x' message from 1 within 5000ms (deadline 5000ms; a silent peer is blamed on this local observation only)");
+    fx.done();
+  }, T(20_000));
+  it('a non-finite receive timeout is refused and a non-finite clock times the receive out, never an endless wait', async () => {
+    const fx = await withPeer();
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      await expect(fx.mesh.recv(1, 'x', bad)).rejects.toThrow('mesh: recv timeout must be a finite number >= 0');
+    }
+    vi.spyOn(fx.clock, 'now').mockReturnValue(Number.NaN); // NaN <= 0 is false: the old receive armed a timer and waited forever
+    const e = (await fx.mesh.recv(1, 'x', 5000).catch((x) => x)) as NetAbort;
+    expect(e.kind).toBe('timeout');
     fx.done();
   }, T(20_000));
   it('uses the configured recvTimeoutMs by default (and 20 s when unset)', async () => {

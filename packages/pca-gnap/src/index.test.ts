@@ -26,9 +26,14 @@ import {
   grantRequestToCapability,
   grantedAccessOf,
   signGnapRequest,
-  verifyGnapRequest,
+  verifyGnapRequest as verifyGnapRequestReal,
   verifyGnapToken,
 } from './index';
+
+// verifyGnapRequest requires a replay store by default; these older tests are about the other checks, so the explicit
+// opt-out is pinned once here. draft-replay.test.ts covers the replay requirement itself.
+const verifyGnapRequest = (a: Parameters<typeof verifyGnapRequestReal>[0]) => verifyGnapRequestReal({ replayCheck: 'unchecked', ...a });
+
 
 // ---- helpers --------------------------------------------------------------------------------
 

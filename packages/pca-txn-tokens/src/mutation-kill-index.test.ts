@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SignJWT, decodeProtectedHeader, importJWK } from 'jose';
 import { generateKeyPair, b64u } from '@atlasauth/pca';
-import { actDepth, fromTransactionToken, subActChain, toTransactionToken } from './index';
+import { actDepth, fromTransactionToken as fromTransactionTokenReal, subActChain, toTransactionToken as toTransactionTokenReal } from './index';
+
+// The package defaults are draft-11 + a required replay store; these tests exercise the legacy profile
+// unless a test passes its own options, so the shared defaults are pinned here once.
+const fromTransactionToken: typeof fromTransactionTokenReal = (jwt, key, opts = {}) =>
+  fromTransactionTokenReal(jwt, key, { profile: 'legacy', replayCheck: 'unchecked', ...opts });
+const toTransactionToken: typeof toTransactionTokenReal = (args) => toTransactionTokenReal({ profile: 'legacy', ...args });
+
 
 const ACTION = { verb: 'v.x', resource: 'r:1', aud: 'aud1' };
 const chainOf = (...hs: string[]) => hs.map((h, i) => ({ issuer: i === 0 ? 'P' : hs[i - 1], holder: h })) as never;

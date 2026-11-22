@@ -12,7 +12,7 @@ function stepUp(): StepUpRequest {
     riskPolicy: { theta1: 0.3, theta2: 0.6 },
     now: 0,
   });
-  const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { now: 1, goal: 'reconcile October refunds' });
+  const r = reviewAction(a, 'stripe.payout', 'acct:1', { amount: 80, currency: 'USD', payee: 'bob' }, { insecureUnboundApproval: true, now: 1, goal: 'reconcile October refunds' });
   if (r.kind !== 'step_up') throw new Error('expected step_up');
   return r.request;
 }

@@ -1,4 +1,5 @@
-import { b64u, generateKeyPair, hashCanonical, sha256, sign, signIntentRequired, utf8, type KeyPair, type SignedIntentRequired } from '@atlasauth/pca';
+import { b64u, generateKeyPair, hashCanonical, sha256, sign, utf8, type KeyPair } from '@atlasauth/pca';
+import { signIntentRequired, type SignedIntentRequired } from '@atlasauth/pca/ext/intent';
 import { rng, type Omega } from '@atlasauth/pca-intent';
 import {
   actionValuesOf,

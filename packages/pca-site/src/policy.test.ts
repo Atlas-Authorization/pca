@@ -49,6 +49,7 @@ describe('the §5 verifier policy', () => {
     expect(() => parseSitePolicy({ schema: { closed_world: false } })).toThrow(/closed-world/);
     expect(() => parseSitePolicy({ intent: { replay: 'sometimes' } })).toThrow();
     expect(() => parseSitePolicy({ intent: { max_residual_risk_ppm: 2_000_000 } })).toThrow();
+    expect(() => parseSitePolicy({ intent: { max_prior_admitted_ppm: -0 } })).toThrow(); // strict profile: never -0
     expect(() => parseSitePolicy({ provenance: { critical_max: 'friend' } })).toThrow();
     expect(() => parseSitePolicy({ schema: { digest: 'not-a-digest' } })).toThrow();
   });

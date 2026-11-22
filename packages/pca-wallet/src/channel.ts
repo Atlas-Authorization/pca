@@ -1,4 +1,6 @@
-import { decodeB64uStrict, hashCanonical, verifyIntentRequired, type ActionSchemaKey, type Reversibility, type SignedIntentRequired } from '@atlasauth/pca';
+import { decodeB64uStrict, hashCanonical } from '@atlasauth/pca';
+import { verifyIntentRequired, type ActionSchemaKey, type SignedIntentRequired } from '@atlasauth/pca/ext/intent';
+import { type Reversibility } from '@atlasauth/pca/ext/research';
 import { cellRep, cellStats, DEFAULT_HARM, type HarmModel, type IntentLearner, type Omega, type VerbSpace } from '@atlasauth/pca-intent';
 import { verifyAssertion, type CredentialPublicKey } from '@atlasauth/pca-webauthn';
 import { boxCells, cellInBox, cellOfAction, coordsOfCell, flatIndex, resolveCoords, type CellBox } from './box';
@@ -80,6 +82,8 @@ export interface DeviceTrust {
   rpId: string;
   origins: string[];
   credentials: Readonly<Record<string, CredentialPublicKey>>;
+  /** Last accepted signature counter per credential id (absent = 0). The wallet records each accepted assertion's counter here, so a cloned authenticator is refused. */
+  signCounts?: Record<string, number>;
 }
 
 export interface ChannelOptions {
@@ -294,8 +298,9 @@ export class TrustedChannel {
 
   private gate(): { ok: true } | { ok: false; code: RefusalCode; reason: string } {
     if (this.noise().frozen) return { ok: false, code: 'frozen', reason: 'the estimated false-yes rate is above η_stop: no more questions this session' };
-    if (this.sessionQuestions >= this.perSession) return { ok: false, code: 'cap_session', reason: `at most ${this.perSession} questions per session` };
-    if (this.o.hourly.count(this.o.now()) >= this.perHour) return { ok: false, code: 'cap_hour', reason: `at most ${this.perHour} questions per hour` };
+    if (!(this.sessionQuestions < this.perSession)) return { ok: false, code: 'cap_session', reason: `at most ${this.perSession} questions per session` };
+    const now = this.o.now();
+    if (!(Number.isFinite(now) && this.o.hourly.count(now) < this.perHour)) return { ok: false, code: 'cap_hour', reason: `at most ${this.perHour} questions per hour` };
     return { ok: true };
   }
 
@@ -434,7 +439,7 @@ export class TrustedChannel {
   /** The next screen. A typed or device question is always alone; tap/hold questions share up to `maxPerScreen`. */
   nextScreen(): Screen | null {
     const now = this.o.now();
-    for (const [id, it] of this.pending) if (it.expiresAt !== undefined && now > it.expiresAt) this.pending.delete(id);
+    for (const [id, it] of this.pending) if (it.expiresAt !== undefined && !(Number.isFinite(now) && now <= it.expiresAt)) this.pending.delete(id);
     const items = this.ordered().filter((it) => it.shownOn === undefined);
     if (items.length === 0) return null;
     const next = this.screenNo + 1;
@@ -459,7 +464,7 @@ export class TrustedChannel {
     if (!it) return { ok: false, code: 'unknown_question', reason: 'no such pending question' };
     if (it.shownOn === undefined) return { ok: false, code: 'not_shown', reason: 'the question was never shown' };
     const now = this.o.now();
-    if (it.expiresAt !== undefined && now > it.expiresAt) {
+    if (it.expiresAt !== undefined && !(Number.isFinite(now) && now <= it.expiresAt)) {
       this.pending.delete(questionId);
       return { ok: false, code: 'expired', reason: 'the question expired' };
     }
@@ -538,8 +543,9 @@ export class TrustedChannel {
         const sg = decodeB64uStrict(wa.signature);
         if (!pk || !ad || !cd || !sg) return { ok: false, code: 'tier_evidence', reason: 'unknown credential or malformed assertion' };
         const challenge = deviceChallenge({ questionId, renderedDigest: it.card.rendered_digest, y: 1, ...(it.jit && it.irreversible && it.actionDigest ? { actionDigest: it.actionDigest } : {}) });
-        const res = verifyAssertion({ authenticatorData: ad, clientDataJSON: cd, signature: sg, publicKey: pk }, { expectedChallenge: challenge, rpId: dev.rpId, origins: dev.origins, requireUV: true });
+        const res = verifyAssertion({ authenticatorData: ad, clientDataJSON: cd, signature: sg, publicKey: pk }, { expectedChallenge: challenge, rpId: dev.rpId, origins: dev.origins, requireUV: true, storedSignCount: dev.signCounts?.[wa.credential_id] ?? 0 });
         if (!res.ok) return { ok: false, code: 'tier_evidence', reason: `security key: ${res.reason}` };
+        if (dev.signCounts) dev.signCounts[wa.credential_id] = res.signCount;
         return { ok: true, ux: { webauthn: { ...wa } } };
       }
     }

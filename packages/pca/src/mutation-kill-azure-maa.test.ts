@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { sha256, sha512 } from '@noble/hashes/sha2';
 import { fetchMaaJwks, createAzureMaaVerifier, parseMaaJwt, verifyX5cChain, type MaaJwks } from './attest-azure-maa';
 import { attestationBinding, type ExpectedAttestationBinding } from './attestation';
-import { ecdsaSign, forgeCert, forgeKey, type ForgeKey } from './test-support/forge-x509';
+import { ecdsaSign, ext, forgeCert, forgeKey, type ForgeKey } from './test-support/forge-x509';
 
 const enc = (s: string) => new TextEncoder().encode(s);
 const hexOf = (b: Uint8Array) => Buffer.from(b).toString('hex');
@@ -23,8 +23,9 @@ const midK = forgeKey('maa-mid', 'P-256');
 const leafK = forgeKey('maa-leaf', 'P-256');
 const otherK = forgeKey('maa-other', 'P-256');
 const p384K = forgeKey('maa-p384', 'P-384');
-const cert = (cn: string, key: ForgeKey, issuerCn: string, signer: ForgeKey, nb = NB, na = NA, serial = 1n) =>
-  forgeCert({ subject: [['CN', cn]], issuer: [['CN', issuerCn]], subjectKey: key, signer, serial, notBefore: nb, notAfter: na });
+// B15: every issuer in an x5c chain must be a CA (root and mid here), a leaf must not assert CA:TRUE.
+const cert = (cn: string, key: ForgeKey, issuerCn: string, signer: ForgeKey, nb = NB, na = NA, serial = 1n, ca = cn === 'root' || cn === 'mid') =>
+  forgeCert({ subject: [['CN', cn]], issuer: [['CN', issuerCn]], subjectKey: key, signer, serial, notBefore: nb, notAfter: na, extensions: ca ? [ext.basicConstraints(true), ext.keyUsage(['keyCertSign', 'cRLSign'])] : [] });
 const root = cert('root', rootK, 'root', rootK);
 const mid = cert('mid', midK, 'root', rootK, NB, NA, 2n);
 const leaf = cert('leaf', leafK, 'mid', midK, NB, NA, 3n);
@@ -131,7 +132,7 @@ describe('verifyX5cChain', () => {
     const badLeaf = cert('leaf', leafK, 'mid', otherK, NB, NA, 3n); // leaf NOT signed by mid
     expect(await vx(x5c(badLeaf, mid, root), { rootSpkiSha256: [rootPin] })).toEqual(bad('x5c link 0 is not signed by the certificate above it'));
     // a single pinned cert needs no links
-    expect((await vx(x5c(root), { rootSpkiSha256: [rootPin] })).ok).toBe(true);
+    expect((await vx(x5c(cert('root', rootK, 'root', rootK, NB, NA, 1n, false)), { rootSpkiSha256: [rootPin] })).ok).toBe(true);
   });
   it('external root: the whole chain must link and the top must be signed by a configured root certificate', async () => {
     const chain = x5c(leaf, mid);

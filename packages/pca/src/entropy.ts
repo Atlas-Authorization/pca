@@ -21,6 +21,8 @@ import { hkdf } from '@noble/hashes/hkdf';
 import { sha256 } from '@noble/hashes/sha256';
 import { randomBytes as nobleRandomBytes } from '@noble/hashes/utils';
 import { utf8 } from './hash';
+import { type KeyPair } from './keys';
+import { ed25519 } from '@noble/curves/ed25519';
 
 // ---------------------------------------------------------------------------------------------------
 // Constants / limits
@@ -75,7 +77,11 @@ export interface QrngFetchResponse {
 /** Minimal fetch subset used by the HTTP backend (compatible with the global `fetch`). */
 export type QrngFetch = (
   url: string,
-  init?: { readonly headers?: Record<string, string>; readonly signal?: AbortSignal },
+  init?: {
+    readonly headers?: Record<string, string>;
+    readonly signal?: AbortSignal;
+    readonly redirect?: 'error' | 'follow' | 'manual';
+  },
 ) => Promise<QrngFetchResponse>;
 
 /** Configuration for {@link HttpQrngSource}. */
@@ -98,6 +104,8 @@ export interface HttpQrngConfig {
   readonly extraParams?: Readonly<Record<string, string>>;
   /** Build the full request URL yourself (overrides {@link lengthParam}/{@link extraParams}). */
   readonly buildUrl?: (base: string, numBytes: number) => string;
+  /** Permit plain http ONLY for a loopback host (localhost, 127.0.0.1, ::1), e.g. a local QRNG daemon. Default false: https only. */
+  readonly allowInsecureLoopback?: boolean;
   /** Inject a fetch implementation (for tests / custom transports). Defaults to the global `fetch`. */
   readonly fetchImpl?: QrngFetch;
 }
@@ -133,9 +141,10 @@ function defaultFetch(): QrngFetch | null {
  */
 export class HttpQrngSource implements QrngSource {
   readonly name: string;
-  private readonly cfg: Required<Omit<HttpQrngConfig, 'apiKey' | 'buildUrl' | 'fetchImpl' | 'extraParams'>> &
+  private readonly cfg: Required<Omit<HttpQrngConfig, 'apiKey' | 'buildUrl' | 'fetchImpl' | 'extraParams' | 'allowInsecureLoopback'>> &
     Pick<HttpQrngConfig, 'apiKey' | 'buildUrl' | 'extraParams'>;
   private readonly fetchImpl: QrngFetch | null;
+  private readonly allowInsecureLoopback: boolean;
 
   constructor(config: HttpQrngConfig) {
     if (typeof config.url !== 'string' || config.url.length === 0) {
@@ -160,6 +169,7 @@ export class HttpQrngSource implements QrngSource {
       extraParams: config.extraParams,
       buildUrl: config.buildUrl,
     };
+    this.allowInsecureLoopback = config.allowInsecureLoopback === true;
     this.fetchImpl = config.fetchImpl ?? defaultFetch();
     this.name = `http-qrng(${safeHost(config.url)})`;
   }
@@ -180,6 +190,8 @@ export class HttpQrngSource implements QrngSource {
     if (!doFetch) throw new Error('QRNG: no fetch implementation available in this runtime');
 
     const url = this.buildUrl(numBytes);
+    // Fail closed on transport: the key header and the entropy itself must not cross a cleartext link.
+    assertSecureTransport(url, this.allowInsecureLoopback);
     const headers: Record<string, string> = { accept: 'application/json, text/plain' };
     if (this.cfg.apiKey !== undefined && this.cfg.apiKey.length > 0) {
       headers[this.cfg.apiKeyHeader] = this.cfg.apiKey;
@@ -189,7 +201,7 @@ export class HttpQrngSource implements QrngSource {
     const timer = setTimeout(() => controller.abort(), this.cfg.timeoutMs);
     let res: QrngFetchResponse;
     try {
-      res = await doFetch(url, { headers, signal: controller.signal });
+      res = await doFetch(url, { headers, signal: controller.signal, redirect: 'error' });
     } catch (err) {
       // Normalize (and scrub) any transport/timeout error — never leak the key.
       throw new Error(`QRNG: fetch failed (${scrub(describeError(err), this.cfg.apiKey)})`);
@@ -281,6 +293,114 @@ export function unavailableSource(reason?: string): QrngSource {
 }
 
 // ---------------------------------------------------------------------------------------------------
+// Typed errors + NIST SP 800-90B 4.4 continuous health tests
+// ---------------------------------------------------------------------------------------------------
+
+export type EntropyErrorCode = 'quantum_required' | 'health_test_failed' | 'insecure_transport';
+
+/** Typed failure: only thrown where a caller demanded quantum entropy or the transport is unsafe. */
+export class EntropyError extends Error {
+  constructor(
+    readonly code: EntropyErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'EntropyError';
+  }
+}
+
+/** Health-test parameters. `h` is the claimed min-entropy per byte sample (1..8); alpha is fixed at 2^-20. */
+export interface HealthTestOptions {
+  /** Assessed min-entropy per 8-bit sample (default 8, the ideal source; set the vendor-assessed value). */
+  readonly h?: number;
+  /** APT window (default 512, the 90B value for non-binary samples; shrunk to the buffer if shorter). */
+  readonly window?: number;
+}
+
+export interface HealthVerdict {
+  readonly ok: boolean;
+  readonly test?: 'repetition-count' | 'adaptive-proportion';
+}
+
+/** SP 800-90B 4.4.1 cutoff: C = 1 + ceil(20 / H) for alpha = 2^-20. */
+export function repetitionCutoff(h: number): number {
+  return 1 + Math.ceil(20 / h);
+}
+
+/** The largest window of {@link proportionCutoff} (the tail is exact integer arithmetic over w * 61 bits). */
+export const PROPORTION_MAX_WINDOW = 65_536;
+
+/**
+ * 2^-h for h a multiple of 1/8 in [1/8, 64], by operations every platform and language computes identically: 0.5 multiplied floor(8h / 8)
+ * times (exact), then by sqrt(0.5) if bit 4 of (8h mod 8) is set, then by sqrt(sqrt(0.5)) if bit 2 is set, then by sqrt(sqrt(sqrt(0.5))) if
+ * bit 1 is set, in that order (`*` and sqrt are exactly rounded IEEE operations; pow is not).
+ */
+function proportionP(h: number): number {
+  const n = h * 8;
+  if (!(Number.isInteger(n) && n >= 1 && n <= 512)) throw new RangeError('proportionCutoff: h must be a multiple of 1/8 in [1/8, 64]');
+  let p = 1;
+  for (let i = 0; i < Math.floor(n / 8); i++) p *= 0.5;
+  const f = n % 8;
+  const s1 = Math.sqrt(0.5), s2 = Math.sqrt(s1), s3 = Math.sqrt(s2);
+  if (f & 4) p *= s1;
+  if (f & 2) p *= s2;
+  if (f & 1) p *= s3;
+  return p;
+}
+
+/**
+ * SP 800-90B 4.4.2 cutoff: 1 + CRITBINOM(W, p, 1 - 2^-20) with p = 2^-h: the smallest k with P[X <= k] >= 1 - 2^-20 for X ~ Bin(W, p) (k = W at
+ * most), plus one. Computed EXACTLY: p (the double proportionP gives) is the dyadic rational m / 2^e, every binomial term is an integer over
+ * 2^(e*W), and the comparison with 1 - 2^-20 is an integer comparison: no pow, exp or log, so no platform's libm can move the cutoff.
+ * Domain: h a multiple of 1/8 in [1/8, 64] and W an integer in [2, 65536]; anything else throws (never rounded).
+ */
+export function proportionCutoff(h: number, w: number): number {
+  if (!(Number.isInteger(w) && w >= 2 && w <= PROPORTION_MAX_WINDOW)) throw new RangeError('proportionCutoff: the window must be an integer in [2, 65536]');
+  const p = proportionP(h);
+  const bits = new BigUint64Array(new Float64Array([p]).buffer)[0]!;
+  const m = (bits & ((1n << 52n) - 1n)) | (1n << 52n);
+  const e = 1075n - (bits >> 52n); // p = m / 2^e (p is a normal double in [2^-64, 1/2])
+  const D = 1n << e;
+  const q = D - m; // 1 - p = q / D
+  const W = BigInt(w);
+  const scale = D ** W; // every term over D^W
+  const target = ((1n << 20n) - 1n) * scale; // cdf >= 1 - 2^-20  <=>  cdf_numerator * 2^20 >= (2^20 - 1) * D^W
+  let term = q ** W; // C(W,0) m^0 q^W
+  let cdf = term;
+  let k = 0n;
+  while ((cdf << 20n) < target && k < W) {
+    term = (term * (W - k) * m) / ((k + 1n) * q); // exact: the next term is an integer
+    k++;
+    cdf += term;
+  }
+  return 1 + Number(k);
+}
+
+/** Run the repetition-count and adaptive-proportion tests over one buffer. Fail closed on bad parameters. */
+export function healthTestBytes(bytes: Uint8Array, opts: HealthTestOptions = {}): HealthVerdict {
+  const h = opts.h ?? 8;
+  const w0 = opts.window ?? 512;
+  if (!(h >= 1 && h <= 8 && Number.isInteger(h * 8)) || !Number.isInteger(w0) || w0 < 2) return { ok: false, test: 'repetition-count' };
+  if (bytes.length === 0) return { ok: false, test: 'repetition-count' };
+  const rc = repetitionCutoff(h);
+  let run = 1;
+  for (let i = 1; i < bytes.length; i++) {
+    run = bytes[i] === bytes[i - 1] ? run + 1 : 1;
+    if (run >= rc) return { ok: false, test: 'repetition-count' };
+  }
+  const w = Math.min(w0, bytes.length, PROPORTION_MAX_WINDOW);
+  if (w < 2) return { ok: true }; // a window of one byte can never reach the cutoff (1 + CRITBINOM >= 2 for any p above 2^-20)
+  const ac = proportionCutoff(h, w);
+  for (let start = 0; start + w <= bytes.length; start += w) {
+    const first = bytes[start];
+    let count = 0;
+    for (let i = start; i < start + w; i++) if (bytes[i] === first) count++;
+    if (count >= ac) return { ok: false, test: 'adaptive-proportion' };
+  }
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------------------------------
 // Entropy combiner
 // ---------------------------------------------------------------------------------------------------
 
@@ -352,6 +472,10 @@ export interface SecureSeedOptions {
   readonly localBytes?: number;
   /** Extra domain-separation context for the combiner. */
   readonly context?: string;
+  /** Fail closed (throw EntropyError) when quantum bytes are not obtained and healthy, instead of falling back to CSPRNG-only. Default false. */
+  readonly requireQuantum?: boolean;
+  /** SP 800-90B health tests on every quantum buffer (default on). `false` disables them (tests only). */
+  readonly healthTest?: HealthTestOptions | false;
   /** Observability hook invoked (never throwing) when the QRNG is skipped/fails. */
   readonly onQrngError?: (err: unknown) => void;
   /** Inject a CSPRNG (for tests). Defaults to the platform CSPRNG. MUST return `n` random bytes. */
@@ -414,6 +538,10 @@ export async function secureSeed(opts: SecureSeedOptions = {}): Promise<SecureSe
       if (!(q instanceof Uint8Array) || q.length !== quantumBytes) {
         throw new Error(`QRNG: source returned ${q instanceof Uint8Array ? q.length : 'non-bytes'}, expected ${quantumBytes}`);
       }
+      if (opts.healthTest !== false) {
+        const v = healthTestBytes(q, opts.healthTest ?? {});
+        if (!v.ok) throw new EntropyError('health_test_failed', `QRNG: ${v.test ?? 'health'} test failed; source rejected`);
+      }
       quantum = q;
       usedQuantum = true;
     } catch (err) {
@@ -430,6 +558,10 @@ export async function secureSeed(opts: SecureSeedOptions = {}): Promise<SecureSe
     }
   }
 
+  if (opts.requireQuantum === true && !usedQuantum) {
+    local.fill(0);
+    throw new EntropyError('quantum_required', 'secureSeed: quantum entropy is required but was not obtained (fail-closed)');
+  }
   const seed = mixEntropy(local, quantum, { length, context: opts.context });
   local.fill(0); // best-effort zeroization
   return { seed, usedQuantum, quantumByteCount: usedQuantum ? quantum.length : 0, source: sourceName };
@@ -438,6 +570,19 @@ export async function secureSeed(opts: SecureSeedOptions = {}): Promise<SecureSe
 // ---------------------------------------------------------------------------------------------------
 // internal helpers (log-safe)
 // ---------------------------------------------------------------------------------------------------
+
+function assertSecureTransport(url: string, allowLoopback: boolean): void {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    throw new EntropyError('insecure_transport', 'QRNG: endpoint URL is not a valid URL');
+  }
+  if (u.protocol === 'https:') return;
+  const loop = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]';
+  if (u.protocol === 'http:' && allowLoopback && loop) return;
+  throw new EntropyError('insecure_transport', 'QRNG: endpoint must be https (http only for loopback with allowInsecureLoopback)');
+}
 
 function safeHost(url: string): string {
   try {
@@ -459,4 +604,19 @@ function describeError(err: unknown): string {
 function scrub(msg: string, apiKey: string | undefined): string {
   if (!apiKey || apiKey.length === 0) return msg;
   return msg.split(apiKey).join('[redacted]');
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Opt-in key generation path
+// ---------------------------------------------------------------------------------------------------
+
+/**
+ * Generate an Ed25519 key pair whose 32-byte secret is `secureSeed(...)` (CSPRNG mixed with a health-tested
+ * QRNG). Opt-in alternative to `generateKeyPair()`; same result type. Honors `requireQuantum`.
+ */
+export async function generateKeyPairWithEntropy(
+  opts: Omit<SecureSeedOptions, 'length'> = {},
+): Promise<KeyPair & { usedQuantum: boolean }> {
+  const { seed, usedQuantum } = await secureSeed({ ...opts, length: 32, context: opts.context ?? 'ed25519-key' });
+  return { secretKey: seed, publicKey: ed25519.getPublicKey(seed), usedQuantum };
 }

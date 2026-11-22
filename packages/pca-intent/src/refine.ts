@@ -222,7 +222,7 @@ export function elicitAdaptive(learner: IntentLearner, answer: (q: Question, l: 
   };
   let seedQuestions = 0;
   for (const s of o.seed ?? []) {
-    if (asked.length >= o.maxQuestions) break;
+    if (!(asked.length < o.maxQuestions)) break;
     const vs = l.omega.verbs.find((v: VerbSpace) => v.verb === s.verb);
     if (!vs || s.cell.length !== vs.dims.length) continue;
     const outcome = { verb: s.verb, values: Object.fromEntries(vs.dims.map((d, k) => [d.path, repValue(d, s.cell[k]!)])) };
@@ -235,7 +235,7 @@ export function elicitAdaptive(learner: IntentLearner, answer: (q: Question, l: 
   while (stop === null) {
     const m = l.metrics();
     if (m.residualRisk <= o.epsRisk && m.burden <= o.epsBurden) stop = 'converged';
-    else if (asked.length >= o.maxQuestions) stop = 'budget';
+    else if (!(asked.length < o.maxQuestions)) stop = 'budget';
     else {
       const q = l.nextQuestion();
       if (!q) stop = 'no-disagreement';
@@ -247,7 +247,7 @@ export function elicitAdaptive(learner: IntentLearner, answer: (q: Question, l: 
     for (;;) {
       const pending = l.unconfirmedGrantCells();
       if (pending.length === 0 || pending.reduce((s, x) => s + x.weight, 0) <= o.epsRisk) break;
-      if (asked.length >= o.maxQuestions) {
+      if (!(asked.length < o.maxQuestions)) {
         stop = 'budget';
         break;
       }

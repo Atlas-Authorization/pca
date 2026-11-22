@@ -88,22 +88,22 @@ describe('key sources', () => {
   it('jwksUri is used when no key is given; key wins over jwksUri', async () => {
     const t = await mk();
     hits = [];
-    const c = await verifyIdToken(t, { issuer: idp.issuer, audience: AUD, jwksUri: `${base}/jwks` });
+    const c = await verifyIdToken(t, { issuer: idp.issuer, audience: AUD, jwksUri: `${base}/jwks`, requireHttps: false });
     expect(c.sub).toBe('user-123');
     expect(hits).toEqual(['/jwks']);
     hits = [];
-    await verifyIdToken(t, { ...opts(), jwksUri: `${base}/jwks` });
+    await verifyIdToken(t, { ...opts(), jwksUri: `${base}/jwks`, requireHttps: false });
     expect(hits).toEqual([]);
     // jwksUri wins over discover
     const f = vi.fn();
-    await verifyIdToken(t, { issuer: idp.issuer, audience: AUD, jwksUri: `${base}/j2`, discover: true, fetch: f as never });
+    await verifyIdToken(t, { issuer: idp.issuer, audience: AUD, jwksUri: `${base}/j2`, discover: true, fetch: f as never, requireHttps: false });
     expect(f).not.toHaveBeenCalled();
   });
   it('discover resolves jwks_uri via the injected fetch', async () => {
     const t = await mk();
     const f = vi.fn(async () => new Response(JSON.stringify({ issuer: idp.issuer, jwks_uri: `${base}/disc-jwks` })));
     hits = [];
-    const c = await verifyIdToken(t, { issuer: idp.issuer, audience: AUD, discover: true, fetch: f as never });
+    const c = await verifyIdToken(t, { issuer: idp.issuer, audience: AUD, discover: true, fetch: f as never, requireHttps: false });
     expect(c.iss).toBe(idp.issuer);
     expect(f).toHaveBeenCalledTimes(1);
     expect((f.mock.calls[0] as unknown[])[0]).toBe(`${idp.issuer}/.well-known/openid-configuration`);
@@ -142,6 +142,13 @@ describe('time claims', () => {
     await expectErr(verifyIdToken(t5, { ...opts(), clockToleranceSec: 0 }), 'expired');
     await expectErr(verifyIdToken(t5, { ...opts(), clockToleranceSec: 5 }), 'expired');
     await expect(verifyIdToken(t5, { ...opts(), clockToleranceSec: 6 })).resolves.toBeDefined();
+  });
+  it('a non-finite clock tolerance or a NaN age limit is a config error, never a pass', async () => {
+    at();
+    const expired = await mk({ iat: NOW - 100, exp: NOW - 5 });
+    // Infinity tolerance would accept this expired token
+    for (const clockToleranceSec of [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NaN]) await expectErr(verifyIdToken(expired, { ...opts(), clockToleranceSec }), 'config');
+    await expectErr(verifyIdToken(await mk({ iat: NOW - 100, exp: NOW + 100 }), { ...opts(), maxTokenAgeSec: Number.NaN }), 'config');
   });
   it('expired carries the jose cause', async () => {
     at();

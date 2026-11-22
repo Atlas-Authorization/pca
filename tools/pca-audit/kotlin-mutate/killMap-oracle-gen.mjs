@@ -5,11 +5,12 @@
 //   K/tsx/run.sh tools/pca-audit/kotlin-mutate/killMap-oracle-gen.mjs [out.json]
 // Every case is {fn, name, args, out}; the file is written with a serializer that keeps -0 / 2^53 / lone surrogates, so
 // the Kotlin test (Json.parseLenient) sees the same values as TS. Deterministic: keys and salts are seeded.
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 const pca = await import(new URL('../../../packages/pca/src/index.ts', import.meta.url).href);
 
-const OUT = process.argv[2] ?? new URL('../../../sdks/kotlin-pca/test-data/killMap.json', import.meta.url).pathname;
+const OUT = process.argv[2] ?? fileURLToPath(new URL('../../../sdks/kotlin-pca/test-data/killMap.json', import.meta.url));
 const seed = (l) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const mk = (l) => { const sk = seed(l); return { sk, pk: pca.b64u(pca.publicKeyOf(sk)) }; };
 const D = (l) => pca.b64u(seed(l));

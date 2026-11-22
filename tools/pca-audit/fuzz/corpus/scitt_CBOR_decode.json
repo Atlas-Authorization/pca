@@ -1,0 +1,14 @@
+{
+ "target": "scitt CBOR decode",
+ "seeds": [
+  {
+   "b64": "hAFhYUIBAqEBAg=="
+  },
+  {
+   "b64": "0oRYJKMBJwN0YXBwbGljYXRpb24vcGNhK2pzb24PogFjaXNzAmJzMKBUeyJuIjowLCJ2ZXJiIjoieC55In1YQDDpMDvFQpCTX84iXiKqvFtNT2g1ONxrSo77DAWGOmQhlOq7HmrP90TRvrK/5oDbea/3BmLSFcSSoP+Kqf2BhgA="
+  },
+  {
+   "b64": "0oRNowEnD6EBYnRzGQGLAaEZAYyhIIFEgwEAgPZYQBA/vCGuWuqOlYmK2bt/1H5bgGWXhrqLfex5EyPCtikabBrHVlHVR4nU1CNKMBNgxgAvmw73E2ZP1DttMhKV3w8="
+  }
+ ]
+}

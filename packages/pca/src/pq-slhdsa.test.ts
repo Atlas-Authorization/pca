@@ -251,12 +251,12 @@ describe('end-to-end leaf: pure slh-dsa PCActn through verifyPCActnCore', () => 
     expect(p.alg).toBe(PURE);
     expect('pq_sig' in p).toBe(false);
     expect(validateWireV2(p)).toBeNull();
-    const r = await verifyPCActnCore(p, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(true);
     expect(r.checks.leaf_signature).toBe('pass');
 
     const bad: PCActn = { ...p, sig: flip(p.sig) };
-    const r2 = await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r2 = await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r2.checks.leaf_signature).toBe('fail');
   });
   it('verifyLeafSuite dispatches purely on alg for the pure slh-dsa leaf', () => {
@@ -275,7 +275,7 @@ describe('end-to-end leaf: pure slh-dsa PCActn through verifyPCActnCore', () => 
     const { alg: _droppedAlg, ...stripped } = p;
     void _droppedAlg;
     expect(validateWireV2(stripped)).not.toBeNull(); // ed25519 forbids pq_pk and wants a 64-byte sig
-    const r = await verifyPCActnCore(stripped, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(stripped, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.wire).toBe('fail');
     expect(Object.keys(r.checks)).toEqual(['wire']); // wire failure is terminal
@@ -288,7 +288,7 @@ describe('end-to-end leaf: hybrid-ed25519-slh-dsa PCActn through verifyPCActnCor
     const p = signPCActnSlh(body, { alg: HYBRID, slhDsa, edLeafSecret: agent.secretKey });
     expect(p.alg).toBe(HYBRID);
     expect(validateWireV2(p)).toBeNull();
-    const r = await verifyPCActnCore(p, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(true);
     expect(r.checks.leaf_signature).toBe('pass');
   });
@@ -297,7 +297,7 @@ describe('end-to-end leaf: hybrid-ed25519-slh-dsa PCActn through verifyPCActnCor
     const p = signPCActnSlh(body, { alg: HYBRID, slhDsa, edLeafSecret: agent.secretKey });
     const bad: PCActn = { ...p, pq_sig: flip(pqSigOf(p.pq_sig)) };
     expect(validateWireV2(bad)).toBeNull(); // still well-formed; the failure is cryptographic
-    const r = await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.leaf_signature).toBe('fail');
   });
@@ -305,7 +305,7 @@ describe('end-to-end leaf: hybrid-ed25519-slh-dsa PCActn through verifyPCActnCor
     const { body, agent, slhDsa, root } = fixture();
     const p = signPCActnSlh(body, { alg: HYBRID, slhDsa, edLeafSecret: agent.secretKey });
     const bad: PCActn = { ...p, sig: flip(p.sig) };
-    const r = await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.leaf_signature).toBe('fail');
   });
@@ -316,7 +316,7 @@ describe('end-to-end leaf: hybrid-ed25519-slh-dsa PCActn through verifyPCActnCor
     const { pq_sig: _droppedPq, ...dropped } = p;
     void _droppedPq;
     expect(validateWireV2(dropped)).not.toBeNull();
-    const r = await verifyPCActnCore(dropped, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(dropped, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.allow).toBe(false);
     expect(r.checks.wire).toBe('fail');
     expect(Object.keys(r.checks)).toEqual(['wire']); // wire failure is terminal
@@ -332,10 +332,10 @@ describe('leaf signer signPCActnSuite — SLH-DSA (real signer, not the test hel
     expect(signed.pq_sig).toBeUndefined();
     // byte-identical to the seam helper (deterministic SLH-DSA over the same canonical message)
     expect(signed).toEqual(signPCActnSlh(body, { alg: PURE, slhDsa }));
-    const r = await verifyPCActnCore(signed, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
+    const r = await verifyPCActnCore(signed, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true });
     expect(r.checks.leaf_signature).toBe('pass');
     const bad = { ...signed, sig: flip(signed.sig) };
-    expect((await verifyPCActnCore(bad, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(bad, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
   });
 
   it('hybrid ed25519+slh-dsa: both halves present, verifies, and requires BOTH', async () => {
@@ -345,12 +345,12 @@ describe('leaf signer signPCActnSuite — SLH-DSA (real signer, not the test hel
     expect(unb64u(signed.sig).length).toBe(ED25519_SIGNATURE_BYTES);
     expect(unb64u(pqSigOf(signed.pq_sig)).length).toBe(SLH_DSA_SHA2_128F_SIGNATURE_BYTES);
     expect(signed).toEqual(signPCActnSlh(body, { alg: HYBRID, slhDsa, edLeafSecret: agent.secretKey }));
-    expect((await verifyPCActnCore(signed, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('pass');
+    expect((await verifyPCActnCore(signed, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('pass');
     // corrupt either half ⇒ leaf fails (hybrid needs both)
     const badEd = { ...signed, sig: flip(signed.sig) };
     const badPq = { ...signed, pq_sig: flip(pqSigOf(signed.pq_sig)) };
-    expect((await verifyPCActnCore(badEd, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
-    expect((await verifyPCActnCore(badPq, { grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(badEd, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
+    expect((await verifyPCActnCore(badPq, { insecureSkipPlanRootCheck: true, grant: root, nowEpoch: NOW, audience: AUD, allowUnboundPq: true })).checks.leaf_signature).toBe('fail');
   });
 
   it('fails closed when slhDsa key material is missing', () => {

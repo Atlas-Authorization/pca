@@ -16,7 +16,7 @@
  * resource server.
  */
 
-import { type Agent, type PcaCall, bridgeToolCall, pcaHeaders } from '@atlasauth/pca';
+import { type Agent, type PcaCall, bridgeToolCall, pcaHeaders, recordInput, recordMessages, recordPrincipal, recordToolResult } from '@atlasauth/pca';
 
 /** The shape OpenAI chat completions return for a function tool call (v4/v5). */
 export interface OpenAIToolCall {
@@ -86,6 +86,8 @@ export async function dispatchToolCall(
   const result = handler ? await handler(args, pca) : undefined;
 
   const content = JSON.stringify(result ?? { pca: pca.encoded });
+  // the tool message re-enters the model's context: untrusted from here on (provenance by default)
+  recordToolResult(agent, name, content);
   return { role: 'tool', tool_call_id: call.id, content };
 }
 
@@ -111,4 +113,16 @@ export async function dispatchToolCalls(
   return out;
 }
 
-export { pcaHeaders, type PcaCall };
+/**
+ * Provenance by default: wrap `client.chat.completions.create` (or any call taking `{messages}`) so every model turn first records the
+ * conversation's new messages (`user` turns are the principal, `tool` turns untrusted). {@link dispatchToolCall} records every tool
+ * result and attaches the provenance bundle to each PCActn's headers.
+ */
+export function withPCACompletions<P extends { messages?: unknown[] }, R>(agent: Agent, create: (params: P, ...rest: unknown[]) => R): (params: P, ...rest: unknown[]) => R {
+  return (params: P, ...rest: unknown[]) => {
+    if (Array.isArray(params?.messages)) recordMessages(agent, params.messages);
+    return create(params, ...rest);
+  };
+}
+
+export { pcaHeaders, recordInput, recordMessages, recordPrincipal, type PcaCall };

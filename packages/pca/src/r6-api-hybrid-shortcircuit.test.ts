@@ -9,13 +9,12 @@ import {
   encodeKey,
   encodeMlDsaPublicKey,
   generateKeyPair,
-  issueLivenessBeacon,
   mlDsa65Keygen,
   mlDsa87Keygen,
   slhDsa128fKeygen,
   slhDsa256sKeygen,
-  verifyLivenessBeacon,
 } from './index';
+import { issueLivenessBeacon, verifyLivenessBeacon } from './ext/ledger';
 import * as pq from './pq';
 import { __setVerifiedCoreModeForTests, VERIFIED_CORE_OPT_IN_MODULES, verifiedCoreOptIn } from './verified-core-mode';
 
