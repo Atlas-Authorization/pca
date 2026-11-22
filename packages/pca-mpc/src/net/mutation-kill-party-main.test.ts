@@ -201,7 +201,7 @@ const V2 = [
   { allow: 1, t: 1, rQuant: 1 },
   { allow: 1, t: 2, rQuant: 0 },
 ] as const;
-const run2 = (o: Partial<LaunchOptions> = {}) => launchLocal({ n: 2, Q: 1, vectors: [...V2], mainJs, recvTimeoutMs: 20_000, killAfterMs: 90_000, ...o });
+const run2 = (o: Partial<LaunchOptions> = {}) => launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 2, Q: 1, vectors: [...V2], mainJs, recvTimeoutMs: 20_000, killAfterMs: 90_000, ...o });
 
 describe('dealer and parties (n = 2, Q = 1)', () => {
   it('honest run: both parties output the clear composition, the dealer reports its links to the parties only', async () => {

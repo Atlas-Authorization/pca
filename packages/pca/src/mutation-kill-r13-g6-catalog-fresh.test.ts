@@ -22,33 +22,32 @@ async function fresh() {
   return import('./catalog');
 }
 
-type Row = [string, string, string, number, string, Record<string, string>?];
-const TABLE: Row[] = [
-  ['stripe', 'charge', 'reversible', 0.9, 'Charge a customer (reversible via refund).', { amountField: 'amount' }],
-  ['stripe', 'refund', 'rate_limited', 0.9, 'Refund a charge (hard to undo; rate-limit).', { amountField: 'amount' }],
-  ['stripe', 'payout', 'irreversible', 0.9, 'Pay out funds to a bank account (irreversible).', { amountField: 'amount' }],
-  ['stripe', 'create_customer', 'reversible', 0.2, 'Create a customer record.'],
-  ['gmail', 'send', 'irreversible', 0.8, 'Send an email (cannot be unsent).'],
-  ['gmail', 'draft', 'reversible', 0.2, 'Create a draft (not sent).'],
-  ['gmail', 'delete', 'irreversible', 0.8, 'Permanently delete a message.'],
-  ['github', 'read', 'reversible', 0.05, 'Read repository contents.', { resource: '*' }],
-  ['github', 'create_pr', 'reversible', 0.2, 'Open a pull request.'],
-  ['github', 'comment', 'reversible', 0.2, 'Comment on an issue or PR.'],
-  ['github', 'merge_pr', 'rate_limited', 0.5, 'Merge a pull request.'],
-  ['github', 'delete_repo', 'irreversible', 0.8, 'Delete a repository (irreversible).'],
-  ['slack', 'post_message', 'rate_limited', 0.5, 'Post a message to a channel.'],
-  ['slack', 'read', 'reversible', 0.05, 'Read channel history.'],
-  ['calendar', 'create_event', 'reversible', 0.2, 'Create a calendar event.'],
-  ['calendar', 'delete_event', 'rate_limited', 0.5, 'Delete a calendar event.'],
-  ['files', 'read', 'reversible', 0.05, 'Read a file.', { resource: '*' }],
-  ['files', 'write', 'rate_limited', 0.5, 'Write/overwrite a file.'],
-  ['files', 'delete', 'irreversible', 0.8, 'Delete a file (irreversible).'],
-  ['http', 'get', 'reversible', 0.05, 'HTTP GET (read-only).', { resource: '*' }],
-  ['http', 'post', 'rate_limited', 0.5, 'HTTP POST (side-effecting).'],
+// The pinned built-in table. The rows are DERIVED from the reviewed action definitions (`@atlasauth/pca-actions`) and written by
+// its generator; this literal is the independent pin of what that derivation yields (class and blast are the effective values:
+// declared joined with the trait floors; a refund and a charge are irreversible; aliases and the trait closure ride along).
+const expected = [
+  { connector: "stripe", action: "charge", verb: "stripe.charge", reversibility: "irreversible", blastRadius: 0.9, amountField: "amount", description: "Charge a customer. Refundable in practice, but a charge is treated as final.", aliases: ["bill","charge_customer"], traits: ["pca.irreversible","pca.money_moving"] },
+  { connector: "stripe", action: "refund", verb: "stripe.refund", reversibility: "irreversible", blastRadius: 0.9, amountField: "amount", description: "Returns money for a charge to the customer.", aliases: ["issue_refund","refund","refund_charge","reimburse"], traits: ["pca.irreversible","pca.money_moving"] },
+  { connector: "stripe", action: "payout", verb: "stripe.payout", reversibility: "irreversible", blastRadius: 0.9, amountField: "amount", description: "Moves funds from a Stripe balance to a bank account.", aliases: ["pay_out","payout"], traits: ["pca.irreversible","pca.money_moving"] },
+  { connector: "stripe", action: "create_customer", verb: "stripe.create_customer", reversibility: "rate_limited", blastRadius: 0.2, description: "Creates a customer record.", traits: ["pca.pii_access"] },
+  { connector: "gmail", action: "send", verb: "gmail.send", reversibility: "irreversible", blastRadius: 0.8, description: "Sends an email to people outside your organisation.", aliases: ["send_email"], traits: ["pca.external_communication","pca.irreversible","pca.pii_access"] },
+  { connector: "gmail", action: "draft", verb: "gmail.draft", reversibility: "reversible", blastRadius: 0.2, description: "Saves an email draft without sending it.", traits: ["pca.pii_access"] },
+  { connector: "gmail", action: "delete", verb: "gmail.delete", reversibility: "irreversible", blastRadius: 0.8, description: "Permanently deletes a message.", traits: ["pca.destructive","pca.irreversible"] },
+  { connector: "github", action: "read", verb: "github.read", reversibility: "reversible", blastRadius: 0.05, description: "Reads files from a repository.", traits: [] },
+  { connector: "github", action: "create_pr", verb: "github.create_pr", reversibility: "irreversible", blastRadius: 0.2, description: "Opens a pull request, which is visible to everyone with access to the repository.", traits: ["pca.external_communication","pca.irreversible"] },
+  { connector: "github", action: "comment", verb: "github.comment", reversibility: "irreversible", blastRadius: 0.2, description: "Posts a comment, visible to everyone with access to the repository.", traits: ["pca.external_communication","pca.irreversible"] },
+  { connector: "github", action: "merge_pr", verb: "github.merge_pr", reversibility: "irreversible", blastRadius: 0.5, description: "Merges a pull request, which can trigger deploys and other downstream effects.", traits: ["pca.irreversible"] },
+  { connector: "github", action: "delete_repo", verb: "github.delete_repo", reversibility: "irreversible", blastRadius: 0.8, description: "Deletes a repository and everything in it.", traits: ["pca.destructive","pca.irreversible"] },
+  { connector: "slack", action: "post_message", verb: "slack.post_message", reversibility: "irreversible", blastRadius: 0.5, description: "Posts a message that members of the channel can read.", traits: ["pca.bulk","pca.external_communication","pca.irreversible"] },
+  { connector: "slack", action: "read", verb: "slack.read", reversibility: "reversible", blastRadius: 0.05, description: "Reads the message history of a channel.", traits: [] },
+  { connector: "calendar", action: "create_event", verb: "calendar.create_event", reversibility: "irreversible", blastRadius: 0.2, description: "Creates an event and sends invitations to its attendees.", traits: ["pca.external_communication","pca.irreversible","pca.pii_access"] },
+  { connector: "calendar", action: "delete_event", verb: "calendar.delete_event", reversibility: "rate_limited", blastRadius: 0.5, description: "Deletes a calendar event.", traits: ["pca.destructive"] },
+  { connector: "files", action: "read", verb: "files.read", reversibility: "reversible", blastRadius: 0.05, description: "Reads files.", traits: ["pca.bulk"] },
+  { connector: "files", action: "write", verb: "files.write", reversibility: "rate_limited", blastRadius: 0.5, description: "Writes or overwrites files.", traits: ["pca.bulk"] },
+  { connector: "files", action: "delete", verb: "files.delete", reversibility: "irreversible", blastRadius: 0.8, description: "Deletes files.", traits: ["pca.bulk","pca.destructive","pca.irreversible"] },
+  { connector: "http", action: "get", verb: "http.get", reversibility: "reversible", blastRadius: 0.05, description: "Fetches a URL.", traits: ["pca.bulk","pca.network_egress"] },
+  { connector: "http", action: "post", verb: "http.post", reversibility: "rate_limited", blastRadius: 0.5, description: "Posts a body to a URL.", traits: ["pca.bulk","pca.network_egress"] },
 ];
-const expected = TABLE.map(([connector, action, reversibility, blastRadius, description, extra]) => ({
-  connector, action, verb: `${connector}.${action}`, reversibility, blastRadius, description, ...(extra ?? {}),
-}));
 
 describe('catalog: built-in table (fresh module)', () => {
   it('BUILTIN_ACTIONS is exactly the documented table', async () => {

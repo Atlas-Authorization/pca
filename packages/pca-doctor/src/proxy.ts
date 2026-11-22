@@ -19,7 +19,7 @@ export function checkProxyConfig(cfg: DoctorConfig): CheckResult {
   if (n === undefined) return { id: 'proxy.config', status: 'skip', detail: 'TRUSTED_PROXY_COUNT not given (config proxy.trustedProxyCount or env TRUSTED_PROXY_COUNT)' };
   const header = p?.header ?? 'x-forwarded-for';
   const fail = (detail: string): CheckResult => ({ id: 'proxy.config', status: 'fail', detail, remediation: PROXY_REMEDIATION });
-  if (!Number.isInteger(n) || n < 0 || n > 16) return fail(`TRUSTED_PROXY_COUNT=${String(n)} is not an integer in 0..16`);
+  if (!Number.isInteger(n) || n < 0 || Object.is(n, -0) || n > 16) return fail(`TRUSTED_PROXY_COUNT=${String(n)} is not an integer in 0..16`);
   if (header === 'x-real-ip' && n === 0) return fail('TRUSTED_PROXY_HEADER=x-real-ip needs TRUSTED_PROXY_COUNT >= 1 (with 0 every forwarding header is ignored)');
   if (p?.hops === undefined) {
     return {

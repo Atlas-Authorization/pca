@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "outDir": "./dist", "types": ["node"], "paths": { "@atlasauth/pca-actions": ["./src/index.ts"] } }, "include": ["src/**/*", "test/**/*.ts"], "exclude": [] }

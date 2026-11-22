@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-rotate",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Key rotation + subtree revocation for PCA: rotate an agent holder key or a principal/root key by re-issuing the chain under new keys, and revoke-and-reissue a compromised delegation subtree, emitting revocation records.",
   "keywords": [
     "key rotation",
@@ -52,5 +52,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

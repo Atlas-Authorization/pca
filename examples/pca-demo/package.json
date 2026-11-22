@@ -1,0 +1,20 @@
+{
+  "name": "pca-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "One-command, zero-account Proof-Carrying Authority demo: a resource server, a FROST guardian and an agent play nine scripted outcomes (allow, deny, step-up, replay, tamper, budget, attenuation, receipts). Exits nonzero if any outcome deviates.",
+  "bin": { "pca-demo": "./run.mjs" },
+  "files": ["run.mjs", "story.mjs", "load.mjs", "README.md"],
+  "scripts": {
+    "demo": "node run.mjs",
+    "demo:step": "node run.mjs --step",
+    "demo:json": "node run.mjs --json",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@atlasauth/pca": "^0.5.0",
+    "@atlasauth/pca-fetch": "^0.5.0"
+  }
+}

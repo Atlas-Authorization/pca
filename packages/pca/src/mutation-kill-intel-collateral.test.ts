@@ -242,11 +242,11 @@ describe('verifyIntelTdxCollateral: signed documents', () => {
     // an unterminated object
     expect(await reasonOf(Q, withInfo(`{"tcbInfo":{"a":1`))).toBe('TCB info: tcbInfo not found / malformed');
   });
-  it('a duplicate key that replaces the signed object is not an object', async () => {
+  it('a later duplicate key cannot replace the signed object: the body is read from the signed bytes', async () => {
     const good = resign('tcbInfo', body());
     for (const dup of ['5', 'null', '[1]', '"s"']) {
       const doc = good.replace(/\}$/, `,"tcbInfo":${dup}}`);
-      expect(await reasonOf(Q, withInfo(doc)), dup).toBe('TCB info: tcbInfo is not an object');
+      expect(await reasonOf(Q, withInfo(doc)), dup).toBe('OK');
     }
   });
   it('freshness window is inclusive and strict about types', async () => {

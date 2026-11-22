@@ -1,0 +1,3 @@
+# generator output: each lane commits its own copy under test-data/ (built by the generators, never the source of truth)
+oracles/out/
+oracles-base/out/

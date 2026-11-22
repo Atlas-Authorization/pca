@@ -128,11 +128,21 @@ describe('PCA end-to-end loop (spec §20.1)', () => {
     expect(d1.releaseGuardianShare).toBe(true);
     expect(d1.requiredThreshold.t).toBe(1);
     expect(d1.r).toBeLessThanOrEqual(policy.theta1);
-    const v1 = await verifyPCActnCore(pc1, { grant: G, audience: 'e2e-rs', nowEpoch: now });
+    const v1 = await verifyPCActnCore(pc1, { insecureSkipPlanRootCheck: true, grant: G, audience: 'e2e-rs', nowEpoch: now });
     expect(v1.allow).toBe(true);
-    for (const k of ['cap_chain', 'plan_inclusion', 'leaf_signature', 'counter'])
+    for (const k of ['cap_chain', 'plan_inclusion', 'leaf_signature', 'counter_format'])
       expect(v1.checks[k]).toBe('pass');
     expect(v1.checks.plan_root_authorized).toBe('not-enforced');
+    // K5: given the roots the principal authorized, the core ENFORCES plan_root_authorized
+    const okRoot = await verifyPCActnCore(pc1, { insecureSkipPlanRootCheck: true, grant: G, audience: 'e2e-rs', nowEpoch: now, authorizedPlanRoots: [pc1.plan.root] });
+    expect(okRoot.allow).toBe(true);
+    expect(okRoot.checks.plan_root_authorized).toBe('pass');
+    for (const roots of [[], ['x' + pc1.plan.root]]) {
+      const noRoot = await verifyPCActnCore(pc1, { insecureSkipPlanRootCheck: true, grant: G, audience: 'e2e-rs', nowEpoch: now, authorizedPlanRoots: roots });
+      expect(noRoot.allow).toBe(false);
+      expect(noRoot.checks.plan_root_authorized).toBe('fail');
+      expect(noRoot.reason).toMatch(/plan_root_authorized: the plan root has not been authorized by the principal/);
+    }
     expect(v1.checks.threshold).toBe('not-enforced');
     const ledger = [pcactnDigest(pc1)];
     expect(merkleRoot(ledger)).toEqual(expect.any(String));
@@ -145,7 +155,7 @@ describe('PCA end-to-end loop (spec §20.1)', () => {
       params_digest: hashCanonical({}), reversibility_class: 'irreversible',
     };
     const rogue = emit(rogueNode, {}, 'n1');
-    const vr = await verifyPCActnCore(rogue, { grant: G, audience: 'e2e-rs', nowEpoch: now });
+    const vr = await verifyPCActnCore(rogue, { insecureSkipPlanRootCheck: true, grant: G, audience: 'e2e-rs', nowEpoch: now });
     expect(vr.allow).toBe(false);
     expect(vr.checks.plan_inclusion).toBe('fail');
     expect(vr.reason).toMatch(/plan_inclusion/);
@@ -160,7 +170,7 @@ describe('PCA end-to-end loop (spec §20.1)', () => {
       const d = ask(plan[i]!, p, routine);
       expect(d.admit).toBe(true);
       expect(d.requiredThreshold.t).toBe(1);
-      expect((await verifyPCActnCore(emit(plan[i]!, p), { grant: G, audience: 'e2e-rs', nowEpoch: now })).allow).toBe(true);
+      expect((await verifyPCActnCore(emit(plan[i]!, p), { insecureSkipPlanRootCheck: true, grant: G, audience: 'e2e-rs', nowEpoch: now })).allow).toBe(true);
       expect(d.budget.B).toBeLessThan(budget.B);
       budget = d.budget;
       seen.push(budget.B);

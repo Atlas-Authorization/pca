@@ -87,6 +87,20 @@ export function compareSnapshots(oldDir, newDir) {
   return { ok: reasons.length === 0, reasons };
 }
 
+// true when no file of the old snapshot differs in a single byte from the new one and the new one adds no file (ledgers aside, which
+// never reach a test): the oracle a baseline survivor ran against is exactly this run's
+export function sameSnapshots(oldDir, newDir, ledger) {
+  for (const scope of ['sdk', 'corpus']) {
+    const old = new Set(walk(path.join(oldDir, scope)));
+    for (const rel of old) {
+      const np = path.join(newDir, scope, rel);
+      if (!fs.existsSync(np) || !fs.readFileSync(path.join(oldDir, scope, rel)).equals(fs.readFileSync(np))) return false;
+    }
+    for (const rel of walk(path.join(newDir, scope))) if (!old.has(rel) && !(ledger && ledger.test(`${scope}/${rel}`))) return false;
+  }
+  return true;
+}
+
 export function toolHash(files, cfg) {
   return sha(JSON.stringify([cfg, files.map((f) => sha(fs.readFileSync(f)))]));
 }
@@ -96,10 +110,14 @@ export function toolHash(files, cfg) {
 //   killed: carried when its def and the file's non-def code are unchanged.
 //   uncompilable: carried only when the WHOLE production source is unchanged (another file may have made it compile).
 //   anything else (survivors, timeouts the tool does not count as detection, unknown): re-run.
-export function mayCarry(e, m, { killed, uncompilable }) {
+//   survived: statuses that stand only when the baseline run's tests + corpus were byte-identical to this run's (e.i, set by
+//   baseline.mjs) AND the whole production source is unchanged: the same inputs give the same verdict, so a re-push that changed
+//   nothing does not re-run the survivors. Any added test or corpus entry (it may kill one) sets e.i off and they re-run.
+export function mayCarry(e, m, { killed, uncompilable, survived = [] }) {
   if (!e || e.d !== m.def_hash || e.h !== m.shell_hash) return false;
   if (killed.includes(e.s)) return true;
-  return uncompilable.includes(e.s) && e.a === m.src_hash;
+  if (uncompilable.includes(e.s) && e.a === m.src_hash) return true;
+  return survived.includes(e.s) && e.i === 1 && e.a === m.src_hash;
 }
 
 export function loadPool(file) {

@@ -8,6 +8,13 @@ export PCA_MUTATION_RUN=1   # wall-clock budgets in a few tests widen on instrum
 K="$1"; N="$2"; OUT="$3"; mkdir -p "$OUT"
 node .github/scripts/ts-stryker-plan.mjs "$K" "$N" > "$OUT/plan-$K.txt"
 echo "shard $K/$N plan:"; awk '{print "  " $1 ": " NF-1 " file(s)"}' "$OUT/plan-$K.txt"
+# incremental fix round (ts-stryker-incremental.mjs): re-test only the files the incremental plan selects for this shard; the
+# complete report is rebuilt from the baseline report at the end (carry)
+if [ -n "${STRYKER_INC_PLAN:-}" ]; then
+  cp "$OUT/plan-$K.txt" "$OUT/plan-$K.full.txt"
+  node .github/scripts/ts-stryker-incremental.mjs filter "$K" "$STRYKER_INC_PLAN" "$OUT/plan-$K.full.txt" > "$OUT/plan-$K.txt"
+  echo "incremental: re-testing"; awk '{print "  " $1 ": " NF-1 " file(s)"}' "$OUT/plan-$K.txt"
+fi
 rc=0
 # pca-verified-core: the ext-* glue is covered by differential tests that import the sibling packages/pca SOURCE by a relative
 # path (../../pca/src/...), which a Stryker sandbox (two levels deeper) breaks: every ext-* mutant was NoCoverage. Those files run
@@ -91,6 +98,12 @@ while read -r pkg files; do
       for (const f of ins) { if(!fs.existsSync("/tmp/pca-audit-stryker/"+f+".json")) continue; const j=JSON.parse(fs.readFileSync("/tmp/pca-audit-stryker/"+f+".json","utf8")); if(!base) base=j; else Object.assign(base.files,j.files); }
       if (base) fs.writeFileSync("/tmp/pca-audit-stryker/"+out+".json", JSON.stringify(base));' "$name" "${parts[@]}"
     for g in "${parts[@]}"; do [ -f "/tmp/pca-audit-stryker/$g.json" ] || { echo "::error::no Stryker report for $g (dry run failed?)"; rc=1; }; done
+  elif [ "$pkg" = "pca-invariants" ]; then
+    # The property suite runs thousands of generated cases per property, and every mutant re-runs the covering properties:
+    # this package has a shard of its own (ts-stryker-plan.mjs ISOLATED), a reduced run count per property (the tests honour
+    # PCA_INVARIANTS_RUNS; the seeds are fixed, so a mutant the properties can see is still killed) and a longer mutant timeout.
+    # shellcheck disable=SC2086
+    PKG="$pkg" PCA_INVARIANTS_RUNS=120 TIMEOUT_MS=120000 CONCURRENCY=2 bash tools/pca-audit/stryker/run.sh "$name" $files
   else
     # shellcheck disable=SC2086
     PKG="$pkg" bash tools/pca-audit/stryker/run.sh "$name" $files
@@ -99,4 +112,7 @@ while read -r pkg files; do
   if [ -f "/tmp/pca-audit-stryker/$name.json" ]; then cp "/tmp/pca-audit-stryker/$name.json" "$OUT/$name.json"
   else echo "::error::no Stryker report for $pkg (dry run failed?)"; rc=1; fi
 done < "$OUT/plan-$K.txt"
+if [ -n "${STRYKER_INC_PLAN:-}" ]; then
+  node .github/scripts/ts-stryker-incremental.mjs carry "$K" "$STRYKER_INC_PLAN" "$OUT/plan-$K.full.txt" "${STRYKER_BASELINE_DIR:?}" "$OUT" || rc=1
+fi
 exit "$rc"

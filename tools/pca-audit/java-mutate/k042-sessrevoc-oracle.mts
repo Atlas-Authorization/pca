@@ -16,6 +16,7 @@
 //
 //   npx tsx tools/pca-audit/java-mutate/k042-sessrevoc-oracle.mts     (from the repo root; deterministic)
 // writes sdks/java-pca/test-data/k042-sessrevoc-cases.json
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import * as PCA from '../../../packages/pca/src/index.ts';
@@ -23,7 +24,7 @@ import * as PCA from '../../../packages/pca/src/index.ts';
 // tsx may load the sources as CommonJS (no package "type"): the namespace is then on .default
 const pca: any = (PCA as any).b64u ? PCA : (PCA as any).default;
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const seed = (l: string) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const mk = (l: string) => { const sk = seed(l); return { sk, pub: pca.b64u(pca.publicKeyOf(sk)) }; };
 const dg = (l: string) => pca.b64u(seed('k042sr/' + l));

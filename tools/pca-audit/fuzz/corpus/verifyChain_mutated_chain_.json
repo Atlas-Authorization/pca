@@ -1,0 +1,114 @@
+{
+ "target": "verifyChain (mutated chain)",
+ "seeds": [
+  {
+   "chain": [
+    {
+     "body_digest": "Mq55yeJUXpIeHOJFxah_QyYK3rdbeE7wLtpD6-d6LA8",
+     "caveats": [
+      {
+       "agent_binding": {},
+       "caveats": [
+        {
+         "at": 1791291600000,
+         "type": "expires"
+        },
+        {
+         "max": 2,
+         "type": "delegation_depth"
+        }
+       ],
+       "goal_commit": "_0UeU6o4Z-13MPqc5sH2WV_xnApAuaKGTdC2wkpRI1Q",
+       "predicates": [
+        {
+         "resource": "session:*",
+         "verb": "list_sessions"
+        },
+        {
+         "resource": "account:me",
+         "verb": "rotate_recovery_keys"
+        }
+       ],
+       "risk_policy": {
+        "bMax": 1,
+        "kappa": 1,
+        "lambda": 0.0005,
+        "rho": 0.5,
+        "theta1": 0.25,
+        "theta2": 0.6,
+        "weights": {
+         "alpha": 0.25,
+         "beta": 0.2,
+         "delta": 0.2,
+         "epsilon": 0.1,
+         "gamma": 0.2,
+         "zeta": 0.05
+        }
+       },
+       "type": "envelope"
+      }
+     ],
+     "holder": "VqNppVa-m_IC7fk5ChFsMdpovNTqXzmKMQchAgD2plc",
+     "id": "Mq55yeJUXpIeHOJFxah_QyYK3rdbeE7wLtpD6-d6LA8",
+     "issuer": "VqNppVa-m_IC7fk5ChFsMdpovNTqXzmKMQchAgD2plc",
+     "sig": "iwlErIQwvbrRmcr9L2uDMvSYg-emXdfw-VCbI_bX2qLFzhb3Zk--y3px6DV-TxTG2UcgTAPuuZSHdeMqPwBMBw"
+    },
+    {
+     "body_digest": "HmGdmGK2uWwqZZCTJqDVPgqz2wD6LxSj95ktgEL0ry4",
+     "caveats": [
+      {
+       "agent_binding": {},
+       "caveats": [
+        {
+         "at": 1791291600000,
+         "type": "expires"
+        },
+        {
+         "max": 2,
+         "type": "delegation_depth"
+        }
+       ],
+       "goal_commit": "_0UeU6o4Z-13MPqc5sH2WV_xnApAuaKGTdC2wkpRI1Q",
+       "predicates": [
+        {
+         "resource": "session:*",
+         "verb": "list_sessions"
+        },
+        {
+         "resource": "account:me",
+         "verb": "rotate_recovery_keys"
+        }
+       ],
+       "risk_policy": {
+        "bMax": 1,
+        "kappa": 1,
+        "lambda": 0.0005,
+        "rho": 0.5,
+        "theta1": 0.25,
+        "theta2": 0.6,
+        "weights": {
+         "alpha": 0.25,
+         "beta": 0.2,
+         "delta": 0.2,
+         "epsilon": 0.1,
+         "gamma": 0.2,
+         "zeta": 0.05
+        }
+       },
+       "type": "envelope"
+      },
+      {
+       "at": 1791288600000,
+       "type": "expires"
+      }
+     ],
+     "holder": "Mx7pALRKsKm4IE35dw5cf7A62OiHwTCFsHrZmnlkrqY",
+     "id": "HmGdmGK2uWwqZZCTJqDVPgqz2wD6LxSj95ktgEL0ry4",
+     "issuer": "VqNppVa-m_IC7fk5ChFsMdpovNTqXzmKMQchAgD2plc",
+     "parent": "Ti5KFeFon-mopRZdn6vGHXAa489MYqj8ElWT8escsjo",
+     "sig": "g6pV1mWKH_Hq7RYJHv2WufK4xJt_6TX9fBoICvKKRYLeilljA0EvOZzBnHxgjxFIqGw9uom_i-keSttoQ-SkBw"
+    }
+   ]
+  }
+ ]
+}

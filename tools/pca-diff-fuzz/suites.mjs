@@ -62,7 +62,7 @@ export function suitesOf(raw, context) {
 const onlyWireFalse = (r) => r && r.allow === false && r.checks && Object.keys(r.checks).length === 1 && r.checks.wire === false;
 
 // The PCActn checks that run before any Intent v2 stage, in pipeline order (scripts/pca-conformance-all.mjs CHECK_ORDER).
-const PRE_INTENT_ORDER = ['wire', 'version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const PRE_INTENT_ORDER = ['wire', 'version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 /** The first failed pre-intent check of a raw verdict, or null when every pre-intent check it reports passed. */
 const firstPreIntentFail = (r) => (r && r.checks ? PRE_INTENT_ORDER.find((k) => k in r.checks && r.checks[k] === false) ?? null : null);
 /**

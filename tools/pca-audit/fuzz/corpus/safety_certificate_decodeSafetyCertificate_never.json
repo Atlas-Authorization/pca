@@ -1,0 +1,8 @@
+{
+ "target": "safety-certificate decodeSafetyCertificate (never throws)",
+ "seeds": [
+  {
+   "text": "{\"v\":1,\"sig\":\"x\",\"guardian\":\"g\",\"params\":{}}"
+  }
+ ]
+}

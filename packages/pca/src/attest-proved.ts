@@ -62,8 +62,8 @@ function nonceAgeReason(issued: unknown, nowMs: number, skew: number, maxAge: nu
     if (r.is_AgeStale) return 'attestation nonce expired (stale quote)';
     return null;
   }
-  if (nowMs + skew < issued) return 'nonce issued in the future';
-  if (nowMs - issued > maxAge + skew) return 'attestation nonce expired (stale quote)';
+  if (!(nowMs + skew >= issued)) return 'nonce issued in the future';
+  if (!(nowMs - issued <= maxAge + skew)) return 'attestation nonce expired (stale quote)';
   return null;
 }
 
@@ -75,8 +75,8 @@ function windowDecision(nowMs: number, skew: number, iat: number, exp: number): 
     return r.is_WinMalformed ? 'malformed' : r.is_WinNotYet ? 'notyet' : r.is_WinExpired ? 'expired' : 'valid';
   }
   if (exp < iat) return 'malformed';
-  if (nowMs + skew < iat) return 'notyet';
-  if (nowMs - skew > exp) return 'expired';
+  if (!(nowMs + skew >= iat)) return 'notyet';
+  if (!(nowMs - skew <= exp)) return 'expired';
   return 'valid';
 }
 
@@ -263,7 +263,7 @@ export function createAttestationVerifierProved(opts: AttestationVerifierOpts): 
 const B64U_DIGEST = /^[A-Za-z0-9_-]{43}$/;
 const isRec = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 function parseHW(x: unknown): { version: number; digest: string } | undefined {
-  if (!isRec(x) || typeof x['version'] !== 'number' || !Number.isSafeInteger(x['version']) || typeof x['digest'] !== 'string' || !B64U_DIGEST.test(x['digest'])) return undefined;
+  if (!isRec(x) || typeof x['version'] !== 'number' || !Number.isSafeInteger(x['version']) || Object.is(x['version'], -0) || typeof x['digest'] !== 'string' || !B64U_DIGEST.test(x['digest'])) return undefined;
   return { version: x['version'], digest: x['digest'] };
 }
 
@@ -362,8 +362,8 @@ export function verifyAllowlistAnchoredProved(
       if (r.is_HeadFuture) return no('stale-head', 'tree head is timestamped in the future');
       if (r.is_HeadStale) return no('stale-head', `tree head is older than maxHeadAgeMs (${maxAge})`);
     } else {
-      if (head.timestamp > opts.nowMs + skew) return no('stale-head', 'tree head is timestamped in the future');
-      if (opts.nowMs - head.timestamp > maxAge) return no('stale-head', `tree head is older than maxHeadAgeMs (${maxAge})`);
+      if (!(head.timestamp <= opts.nowMs + skew)) return no('stale-head', 'tree head is timestamped in the future');
+      if (!(opts.nowMs - head.timestamp <= maxAge)) return no('stale-head', `tree head is older than maxHeadAgeMs (${maxAge})`);
     }
 
     const cached = opts.cachedHead;

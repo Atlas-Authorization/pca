@@ -132,12 +132,12 @@ describe('malformed and non-minimal encodings: exact rejection', () => {
     expect(ours(cert(exts))).toBe(reason);
   });
 
-  it('a BER-style cA (any non-zero byte) is read as TRUE by us, by OpenSSL and by pkijs alike: no parser disagrees on who is a CA', () => {
-    for (const byte of [0x01, 0x7f, 0xff]) {
-      const d = cert([bc(seq(tlv(0x01, Uint8Array.of(byte))))]);
-      const o = ours(d) as CertRoleInfo;
-      expect([byte, o.ca, viaNode(d)?.ca, viaPkijs(d)?.ca]).toEqual([byte, true, true, true]);
+  it('a BER-style cA (non-zero byte other than 0xff) is refused by us (DER only; OpenSSL and pkijs read it as TRUE, so refusing is the safe side); 0xff and 0x00 agree everywhere', () => {
+    for (const byte of [0x01, 0x7f]) {
+      expect(ours(cert([bc(seq(tlv(0x01, Uint8Array.of(byte))))]))).toBe('BasicConstraints cA is not a DER BOOLEAN');
     }
+    const d = cert([bc(seq(tlv(0x01, Uint8Array.of(0xff))))]);
+    expect([(ours(d) as CertRoleInfo).ca, viaNode(d)?.ca, viaPkijs(d)?.ca]).toEqual([true, true, true]);
     const explicitFalse = cert([bc(seq(tlv(0x01, Uint8Array.of(0x00))))]);
     expect([(ours(explicitFalse) as CertRoleInfo).ca, viaNode(explicitFalse)?.ca, viaPkijs(explicitFalse)?.ca]).toEqual([false, false, false]);
   });

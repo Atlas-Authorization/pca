@@ -1,0 +1,64 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "shopify",
+  "version": "0.5.0",
+  "ns": [
+    "shopify"
+  ],
+  "count": 116,
+  "root": "FTVRxOGo4xIjxkZWOcu2qo9CnBgWNcVNz0_XsMwLTJc",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 111,
+    "unreviewed": 5
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Hand written from Shopify public Admin API documentation (operation names only). The Admin GraphQL schema and documentation text are not redistributed.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/shopify.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "f791739b6c2f3761334d03ff137a6485d071be94986c7dc730668be43cdb19f7"
+  },
+  "shards": [
+    {
+      "file": "defs/000-shopify_access_token.jsonl",
+      "count": 116,
+      "bytes": 66270,
+      "sha256": "de1e261c8f00e7d94a7952eb45a77459acd8897c31524b5b5b5bdcf06e3adb9e",
+      "first": "shopify.access_token.revoke",
+      "last": "shopify.webhook.update"
+    }
+  ],
+  "stats": {
+    "total": 116,
+    "authored": 111,
+    "unreviewed": 5,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "delete": 19,
+      "privilege": 4,
+      "publish": 4,
+      "exec": 2,
+      "read": 46,
+      "create": 15,
+      "update": 29,
+      "export": 2,
+      "send": 4,
+      "sign": 1,
+      "pay": 4
+    }
+  }
+}

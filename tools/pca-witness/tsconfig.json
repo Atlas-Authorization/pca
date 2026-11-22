@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@atlasauth/pca": ["../../packages/pca/src/index.ts"],
+      "@atlasauth/pca/durable-state": ["../../packages/pca/src/durable-state.ts"],
+      "@atlasauth/pca/ext/*": ["../../packages/pca/src/ext/*.ts"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

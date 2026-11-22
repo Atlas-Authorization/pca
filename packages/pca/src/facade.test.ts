@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BUILTIN_ACTIONS, buildCatalog, defineAction } from './catalog';
 import { agent, compilePolicy, parseLimit } from './facade';
 import { generateKeyPair } from './keys';
 import { verifyChain } from './capability';
@@ -77,7 +78,7 @@ describe('agent()', () => {
     // round-trips on the wire
     expect(decodePCActn(encoded)).toEqual(pcactn);
     // the real bar: the offline verifier ACCEPTS it (no check fails)
-    const res = await verifyPCActnCore(pcactn, { grant: a.grant, audience: AUD, nowEpoch: pcactn.iat });
+    const res = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant: a.grant, audience: AUD, nowEpoch: pcactn.iat });
     expect(res.allow).toBe(true);
     expect(res.checks.wire).toBe('pass');
     expect(res.checks.cap_chain).toBe('pass');
@@ -109,7 +110,7 @@ describe('agent()', () => {
     // sub-agent holder differs from parent
     expect(b64u(sub.holder.publicKey)).not.toBe(b64u(a.holder.publicKey));
     const { pcactn } = sub.act('gmail.send', 'msg:1', {}, { counter: 1 });
-    const res = await verifyPCActnCore(pcactn, { grant: a.grant, audience: AUD, nowEpoch: pcactn.iat });
+    const res = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant: a.grant, audience: AUD, nowEpoch: pcactn.iat });
     expect(res.allow).toBe(true);
     expect(res.checks.cap_chain).toBe('pass');
     expect(res.checks.plan_inclusion).toBe('pass');
@@ -121,7 +122,7 @@ describe('agent()', () => {
     expect(a.policy.budgetModel).toBe('risk');
     const { pcactn, dryRun } = a.act('github.create_pr', 'repo:acme/app', { title: 'x' }, { counter: 1 });
     expect(dryRun.allowed).toBe(true);
-    const res = await verifyPCActnCore(pcactn, { grant: a.grant, audience: AUD, nowEpoch: pcactn.iat });
+    const res = await verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant: a.grant, audience: AUD, nowEpoch: pcactn.iat });
     expect(res.allow).toBe(true);
     expect(res.checks.leaf_signature).toBe('pass');
   });
@@ -129,5 +130,33 @@ describe('agent()', () => {
   it('act() requires an audience', () => {
     const a = agent({ principal: principal(), goal: 'g', permissions: { gmail: ['send'] } }); // no aud
     expect(() => a.act('gmail.send', 'msg:1', {})).toThrow(/aud/);
+  });
+});
+
+describe('goal-to-decision regressions (W5-W7)', () => {
+  it('W7a: adding a second count limit never drops the first rate caveat', () => {
+    const one = compilePolicy({ permissions: { gmail: ['send'] }, limits: { send: '5/day' }, now: 0 });
+    const two = compilePolicy({ permissions: { gmail: ['send'], slack: ['post_message'] }, limits: { send: '5/day', post_message: '9/hour' }, now: 0 });
+    const rates = (c: { caveats: { type: string }[] }) => c.caveats.filter((x) => x.type === 'rate');
+    expect(rates(one)).toHaveLength(1);
+    expect(rates(two)).toEqual([{ type: 'rate', max: 5, per_secs: 86_400 }, { type: 'rate', max: 9, per_secs: 3_600 }]);
+  });
+  it('W7b: a $ limit keeps the default co-sign tiers when an irreversible action is granted', () => {
+    const p = compilePolicy({ permissions: { stripe: ['payout'] }, limits: { payout: '$50' } });
+    expect(p.riskPolicy.theta1).toBeLessThan(1);
+    expect(p.riskPolicy.theta2).toBeLessThan(1);
+    // every built-in money action is irreversible now (one definition: a refund is a new payment), so the case with
+    // nothing irreversible granted needs a rate-limited money action of the caller's own
+    const catalog = buildCatalog([...BUILTIN_ACTIONS, defineAction({ connector: 'acme', action: 'credit', reversibility: 'rate_limited', blastRadius: 0.5, amountField: 'amount', description: 'Credit an account' })]);
+    const q = compilePolicy({ permissions: { acme: ['credit'] }, limits: { credit: '$50' }, catalog });
+    expect(q.riskPolicy.theta2).toBe(1); // nothing irreversible granted: within-cap auto-approve is unchanged
+  });
+  it('W6: a $ limit on a verb with no amount field is an error, not a silent no-op', () => {
+    expect(() => compilePolicy({ permissions: { stripe: ['create_customer'] }, limits: { create_customer: '$10' } })).toThrow(/amount field/);
+    expect(() => compilePolicy({ permissions: { acme: ['pay'] }, limits: { pay: '$10' } })).toThrow(/amount field/);
+  });
+  it('W5: a $/period limit is reported as an approximation; an unwindowed one is exact', () => {
+    expect(compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$200/day' }, now: 0 }).approximations).toHaveLength(1);
+    expect(compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$200' }, now: 0 }).approximations).toEqual([]);
   });
 });

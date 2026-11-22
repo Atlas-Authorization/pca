@@ -1,19 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  BondLedger,
-  InMemoryBondAccount,
-  InsuranceCapitalPool,
-  SETTLEMENT_LEAF_DOMAIN,
-  type BondCurve,
-  type SettlementRecord,
-  appendSettlement,
-  bondAmount,
-  DEFAULT_BOND_POLICY,
-  settlementCommit,
-  settlementRecordDigest,
-  verifySettlement,
-  verifySettlementCommit,
-} from './bond-settlement';
+import { InsuranceCapitalPool, SETTLEMENT_LEAF_DOMAIN, type BondCurve, type SettlementRecord, appendSettlement, bondAmount, DEFAULT_BOND_POLICY, settlementCommit, settlementRecordDigest, settlementWireCheck, verifySettlement, verifySettlementCommit } from './bond-settlement';
+import { BondLedger, InMemoryBondAccount } from './bond-ledger-testing';
 import {
   TransparencyLedger,
   signTreeHead,
@@ -36,6 +23,9 @@ describe('A3d: SettlementRecord.guardian_epoch', () => {
     expect(verifySettlement(rec, Gpub)).toBe(true);
     const tampered: SettlementRecord = { ...rec, guardian_epoch: 43 };
     expect(verifySettlement(tampered, Gpub)).toBe(false); // epoch is inside the signed body
+    const z = mkLedger(0).openBond({ claimId: 'c1', amount: 10, depositor: 'alice', exposure: 5 });
+    expect(settlementWireCheck(z, Gpub)).toBe('ok');
+    expect(settlementWireCheck({ ...z, guardian_epoch: -0 }, Gpub)).toBe('shape'); // strict profile: never -0 (the signature alone would pass)
   });
 
   it('is absent (byte-identical to pre-epoch) when the ledger has no epoch', () => {
@@ -183,5 +173,18 @@ describe('A3c: InsuranceCapitalPool', () => {
 
   it('rejects negative initial capital', () => {
     expect(() => new InsuranceCapitalPool(-1)).toThrow();
+  });
+});
+
+describe('the power curve is defined by exactly reproducible operations', () => {
+  const pol = (gamma: number) => ({ ...DEFAULT_BOND_POLICY, floor: 0, k: 1, curve: { kind: 'power', gamma } as BondCurve });
+  it('gamma in eighths: whole part by repeated multiplication, then the square roots', () => {
+    expect(bondAmount(pol(3), 5)).toBe(125);
+    expect(bondAmount(pol(1.5), 4)).toBe(8); // 4 * sqrt(4)
+    expect(bondAmount(pol(1.25), 16)).toBe(32); // 16 * sqrt(sqrt(16))
+    expect(bondAmount(pol(1.125), 256)).toBe(512); // 256 * sqrt(sqrt(sqrt(256)))
+  });
+  it('a gamma that is not a multiple of 1/8, or above 64, is refused', () => {
+    for (const g of [1.3, 1.0625, 64.125, 100]) expect(() => bondAmount(pol(g), 5), String(g)).toThrow(/multiple of 1\/8/);
   });
 });

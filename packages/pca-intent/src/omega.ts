@@ -1,12 +1,11 @@
 import {
-  DEFAULT_CATALOG,
   isGroupCondition,
   isLeafCondition,
-  type Catalog,
   type Condition,
   type Predicate,
-  type Reversibility,
 } from '@atlasauth/pca';
+import { DEFAULT_CATALOG, type Catalog, type Reversibility } from '@atlasauth/pca/ext/research';
+import { detExp, detLn } from './detmath';
 import { normalizePolicy, type PolicyInput } from './policy';
 import type { IntentSlots } from './slots';
 
@@ -279,7 +278,8 @@ function harmonic(n: number): number {
     return s;
   }
   const n2 = n * n;
-  return Math.log(n) + EULER_GAMMA + 1 / (2 * n) - 1 / (12 * n2) + 1 / (120 * n2 * n2) - 1 / (252 * n2 * n2 * n2);
+  // detLn, not Math.log: cell weights feed the routing probability, which must not depend on a platform's libm
+  return detLn(n) + EULER_GAMMA + 1 / (2 * n) - 1 / (12 * n2) + 1 / (120 * n2 * n2) - 1 / (252 * n2 * n2 * n2);
 }
 
 /** Σ_{x=a}^{b} w(x) for the dimension's law (0 for an empty interval). */
@@ -363,7 +363,7 @@ function quantileValue(d: NumDim, target: number): number {
       }
       if (!(d.dist === 'loguniform' && d.lo >= 0)) return Math.min(c.hi, c.lo + Math.floor(r));
       // Σ_{x=lo}^{X} 1/(x+1) ≈ ln((X+2)/(lo+1)) on a long cell: invert, clamp into the cell
-      const x = Math.floor((c.lo + 1) * Math.exp(r) - 1);
+      const x = Math.floor((c.lo + 1) * detExp(r) - 1);
       return Math.max(c.lo, Math.min(c.hi, x));
     }
     acc += w;

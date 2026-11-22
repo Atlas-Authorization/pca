@@ -12,12 +12,12 @@ import {
   buildPCActn,
   canonicalBytes,
   encodeKey,
-  frostTrustedDealerKeygen,
   generateKeyPair,
   mintGrant,
   mlDsa65Keygen,
   sign,
 } from '@atlasauth/pca';
+import { frostTrustedDealerKeygen } from '@atlasauth/pca/ext/frost';
 import {
   createHybridThresholdVerifier,
   foldHybridStepUp,

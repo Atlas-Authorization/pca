@@ -17,7 +17,7 @@
  * lacks a valid PCActn and fails server-side.
  */
 
-import { type Agent, type PcaCall, bridgeToolCall, pcaHeaders } from '@atlasauth/pca';
+import { type Agent, type PcaCall, bridgeToolCall, pcaHeaders, recordInput, recordMessages, recordPrincipal, recordToolResult } from '@atlasauth/pca';
 
 /** A Claude `tool_use` content block (what the model emits to call a tool). */
 export interface ToolUseBlock {
@@ -87,16 +87,22 @@ export async function handleToolUse(
   }
   try {
     const result = await handler(block.input, pca);
+    const content = JSON.stringify(result ?? { pca: pca.encoded });
+    // the tool_result re-enters Claude's context: untrusted from here on (provenance by default)
+    recordToolResult(agent, block.name, content);
     return {
       type: 'tool_result',
       tool_use_id: block.id,
-      content: JSON.stringify(result ?? { pca: pca.encoded }),
+      content,
     };
   } catch (err) {
+    const content = err instanceof Error ? err.message : String(err);
+    // a tool's error text reaches Claude too, and a tool can put anything in it
+    recordToolResult(agent, block.name, content);
     return {
       type: 'tool_result',
       tool_use_id: block.id,
-      content: err instanceof Error ? err.message : String(err),
+      content,
       is_error: true,
     };
   }
@@ -119,4 +125,16 @@ export function extractToolUses(content: Array<{ type: string; [k: string]: unkn
   return content.filter((b): b is ToolUseBlock & Record<string, unknown> => b.type === 'tool_use');
 }
 
-export { pcaHeaders, type PcaCall };
+/**
+ * Provenance by default: wrap `client.messages.create` (or any call taking `{messages}`) so every model turn first records the
+ * conversation's new messages (user text is the principal; `tool_result` blocks are untrusted). {@link handleToolUse} records every
+ * tool result and attaches the provenance bundle to each PCActn's headers.
+ */
+export function withPCAMessages<P extends { messages?: unknown[] }, R>(agent: Agent, create: (params: P, ...rest: unknown[]) => R): (params: P, ...rest: unknown[]) => R {
+  return (params: P, ...rest: unknown[]) => {
+    if (Array.isArray(params?.messages)) recordMessages(agent, params.messages);
+    return create(params, ...rest);
+  };
+}
+
+export { pcaHeaders, recordInput, recordMessages, recordPrincipal, type PcaCall };

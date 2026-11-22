@@ -1,0 +1,8 @@
+{
+ "target": "scitt checkStatement (mutated COSE_Sign1)",
+ "seeds": [
+  {
+   "b64": "0oRYJKMBJwN0YXBwbGljYXRpb24vcGNhK2pzb24PogFjaXNzAmJzMKBUeyJuIjowLCJ2ZXJiIjoieC55In1YQDDpMDvFQpCTX84iXiKqvFtNT2g1ONxrSo77DAWGOmQhlOq7HmrP90TRvrK/5oDbea/3BmLSFcSSoP+Kqf2BhgA="
+  }
+ ]
+}

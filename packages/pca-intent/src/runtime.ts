@@ -1,18 +1,14 @@
+import { hashCanonical, paramsDigest, type PCActn } from '@atlasauth/pca';
 import {
   actionDigest,
-  bondAmount,
-  DEFAULT_BOND_POLICY,
-  hashCanonical,
-  paramsDigest,
   semanticRiskContribution,
   verdictDigest,
   verifySemanticThreshold,
-  type BondPolicy,
   type Calibration,
   type JudgeVerdict,
-  type PCActn,
   type SemanticAttestationOpts,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
+import { bondAmount, DEFAULT_BOND_POLICY, type BondPolicy } from '@atlasauth/pca/ext/optimistic';
 import type { IntentLearner } from './learner';
 import { applyDivergence } from './map';
 import { cellOf, harmMax, harmOf, type Outcome, type VerbSpace } from './omega';
@@ -89,7 +85,8 @@ export function routeAction(l: IntentLearner, o: Outcome, opts: RouteOptions = {
   const theta2 = opts.theta2 ?? 0.5;
   const base = { p, inGrant, vetoed, reversibility: vs.reversibility, harm, risk };
   if (!inGrant) return { ...base, route: 'deny', judges: false, reason: vetoed ? 'the cell was vetoed by a runtime divergence' : 'outside the conservative grant (p_n < τ)' };
-  const judges = vs.reversibility === 'irreversible' || p < 1 - 1e-12 || risk >= theta2;
+  // fail closed: a NaN risk or threshold asks the judges (risk >= NaN is false)
+  const judges = vs.reversibility === 'irreversible' || !(p >= 1 - 1e-12) || !(risk < theta2);
   if (vs.reversibility === 'irreversible') return { ...base, route: 'jit-consent', judges, reason: 'irreversible: just-in-time consent on the rendered action' };
   if (judges) {
     return { ...base, route: 'optimistic', judges, bond: bondAmount(opts.bondPolicy ?? DEFAULT_BOND_POLICY, harm), reason: p < 1 - 1e-12 ? 'unconfirmed region (p_n < 1): bonded claim + judges' : 'risk ≥ θ₂: bonded claim + judges' };

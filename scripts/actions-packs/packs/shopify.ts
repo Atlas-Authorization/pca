@@ -1,0 +1,67 @@
+// shopify - Admin API: products, orders, customers, inventory, fulfilment, discounts, payments and store administration. Hand written from
+// Shopify's public Admin API documentation (operation names only); the Admin GraphQL schema is not redistributed.
+import { P, crud, def, handPack, type H } from '../lib/hand';
+
+const money = (extra = {}) => P.money(100_000_000_00, 'currency', 2, extra);
+const E = crud('shopify', [
+  { name: 'product', title: 'product', trash: false, fields: { title: P.str(255), body_html: P.opt(P.pub(500_000)), vendor: P.opt(P.str(255)), status: P.opt(P.enum(['active', 'draft', 'archived'])) } },
+  { name: 'collection', title: 'collection', fields: { title: P.str(255) } },
+  { name: 'customer', title: 'customer', pii: true, fields: { email: P.opt(P.email()), first_name: P.opt(P.str(255, { role: 'person.name', tags: ['pii'] })), last_name: P.opt(P.str(255, { role: 'person.name', tags: ['pii'] })), phone: P.opt(P.phone()) } },
+  { name: 'order', title: 'order', pii: true, ops: ['get', 'list', 'search', 'update'], fields: { note: P.opt(P.str(5000)), tags: P.opt(P.str(1000)) } },
+  { name: 'draft_order', title: 'draft order', pii: true, fields: { email: P.opt(P.email()), line_items: P.arr('string', 500) } },
+  { name: 'discount_code', title: 'discount code', fields: { code: P.str(255), percentage: P.opt(P.int(0, 100)) } },
+  { name: 'price_rule', title: 'price rule', fields: { title: P.str(255), value: P.int(0, 100_000_000) } },
+  { name: 'gift_card', title: 'gift card', fields: { initial_value: money(), currency: P.ccy(), recipient_email: P.opt(P.email()) }, ops: ['get', 'list', 'create', 'update'] },
+  { name: 'metafield', title: 'metafield', fields: { namespace: P.str(255), key: P.str(64), value: P.str(100_000) } },
+  { name: 'webhook', title: 'webhook subscription', fields: { topic: P.str(128), address: P.url() }, ops: ['get', 'list', 'create', 'update', 'delete'] },
+  { name: 'theme', title: 'theme', fields: { name: P.str(255), role: P.opt(P.str(32)) }, ops: ['get', 'list', 'create', 'update', 'delete'] },
+  { name: 'page', title: 'online store page', fields: { title: P.str(255), body_html: P.pub(500_000) } },
+  { name: 'blog_article', title: 'blog article', fields: { title: P.str(255), body_html: P.pub(500_000) } },
+  { name: 'redirect', title: 'URL redirect', fields: { path: P.str(1024), target: P.str(1024) } },
+  { name: 'location', title: 'location', ops: ['get', 'list'] },
+  { name: 'staff_member', title: 'staff member', pii: true, ops: ['get', 'list'] },
+]);
+const S: H[] = [
+  { verb: 'shopify.order.cancel', title: 'Cancel an order', description: 'Cancels an order; can refund and restock and notify the customer.', effects: ['update', 'pay'], rev: 'irreversible', idem: 'key', res: ['shopify.order', 'one'], params: { order: P.id('shopify.order'), refund: P.bool(), amount: money(), currency: P.ccy(), reason: P.opt(P.enum(['customer', 'inventory', 'fraud', 'declined', 'other'])) } },
+  { verb: 'shopify.order.close', title: 'Close an order', description: 'Archives a completed order.', effects: ['update'], rev: 'rate_limited', res: ['shopify.order', 'one'], params: { order: P.id('shopify.order') } },
+  { verb: 'shopify.order.refund', title: 'Refund an order', description: 'Returns money to the customer.', effects: ['pay'], rev: 'irreversible', idem: 'key', res: ['shopify.order', 'one'], params: { order: P.id('shopify.order'), amount: money(), currency: P.ccy(), note: P.opt(P.str(1000)) } },
+  { verb: 'shopify.order.capture_payment', title: 'Capture an authorised payment', description: 'Collects an authorised payment.', effects: ['pay'], rev: 'irreversible', idem: 'key', res: ['shopify.order', 'one'], params: { order: P.id('shopify.order'), amount: money(), currency: P.ccy() } },
+  { verb: 'shopify.order.mark_as_paid', title: 'Mark an order as paid', description: 'Records payment received outside the store.', effects: ['update'], rev: 'irreversible', res: ['shopify.order', 'one'], params: { order: P.id('shopify.order') } },
+  { verb: 'shopify.order.edit', title: 'Edit an order', description: 'Changes line items, which can change what the customer owes.', effects: ['update'], rev: 'rate_limited', res: ['shopify.order', 'one'], params: { order: P.id('shopify.order'), changes: P.obj() } },
+  { verb: 'shopify.order.send_invoice', title: 'Send an invoice', description: 'Emails an invoice to the customer.', effects: ['send'], rev: 'irreversible', res: ['shopify.order', 'one'], params: { order: P.id('shopify.order'), to: P.email({ role: 'contact.email' }), subject: P.opt(P.str(255)), message: P.opt(P.text(5000)) } },
+  { verb: 'shopify.draft_order.complete', title: 'Complete a draft order', description: 'Turns a draft into an order and can take payment.', effects: ['create', 'pay'], rev: 'irreversible', idem: 'key', res: ['shopify.draft_order', 'one'], params: { draft_order: P.id('shopify.draft_order'), amount: money(), currency: P.ccy() } },
+  { verb: 'shopify.fulfillment.create', title: 'Fulfil items', description: 'Marks items shipped and can email tracking to the customer.', effects: ['create', 'send'], rev: 'irreversible', res: ['shopify.fulfillment', 'set'], params: { order: P.id('shopify.order'), notify_customer: P.bool(), customer_email: P.email({ role: 'contact.email' }), tracking_number: P.opt(P.str(255)) } },
+  { verb: 'shopify.fulfillment.cancel', title: 'Cancel a fulfilment', description: 'Reverses a fulfilment that has not shipped.', effects: ['update'], rev: 'rate_limited', res: ['shopify.fulfillment', 'one'], params: { fulfillment: P.id('shopify.fulfillment') } },
+  { verb: 'shopify.inventory.adjust', title: 'Adjust inventory', description: 'Changes available stock.', effects: ['update'], rev: 'rate_limited', res: ['shopify.inventory_item', 'one'], params: { item: P.id('shopify.inventory_item'), location: P.str(32), delta: P.int(0, 1_000_000) } },
+  { verb: 'shopify.inventory.set', title: 'Set inventory level', description: 'Sets stock to an absolute number.', effects: ['update'], rev: 'rate_limited', res: ['shopify.inventory_item', 'one'], params: { item: P.id('shopify.inventory_item'), location: P.str(32), available: P.int(0, 1_000_000) } },
+  { verb: 'shopify.product.publish', title: 'Publish a product', description: 'Makes a product visible in sales channels.', effects: ['publish'], rev: 'irreversible', res: ['shopify.product', 'one'], params: { product: P.id('shopify.product'), channel: P.str(64) } },
+  { verb: 'shopify.product.bulk_update', title: 'Update many products', description: 'Applies a change to many products.', effects: ['update'], rev: 'rate_limited', res: ['shopify.product', 'set'], params: { ids: P.arr('string', 250), changes: P.obj() } },
+  { verb: 'shopify.product.set_price', title: 'Set a variant price', description: 'Changes what customers pay.', effects: ['update'], rev: 'rate_limited', res: ['shopify.product', 'one'], params: { variant: P.id('shopify.product'), price: P.int(0, 100_000_000_00, { role: 'money.amount', unit: { kind: 'money', ccy: { from: 'currency' }, exp: 2 }, provenance_min: 'tool' }), currency: P.ccy() } },
+  { verb: 'shopify.customer.send_invite', title: 'Send an account invite', description: 'Emails an account invitation.', effects: ['send'], rev: 'irreversible', res: ['shopify.customer', 'one'], params: { customer: P.id('shopify.customer'), to: P.email({ role: 'contact.email' }) } },
+  { verb: 'shopify.customer.erase', title: 'Erase customer data', description: 'Requests permanent erasure of a customer personal data.', effects: ['delete'], rev: 'irreversible', res: ['shopify.customer', 'one'], params: { customer: P.id('shopify.customer') } },
+  { verb: 'shopify.customer.merge', title: 'Merge customers', description: 'Merges two customers; cannot be undone.', effects: ['update', 'delete'], res: ['shopify.customer', 'one'], params: { customer: P.id('shopify.customer'), other: P.str(32) } },
+  { verb: 'shopify.customer.export', title: 'Export customers', description: 'Exports customer records.', effects: ['export'], traits: ['pca.pii_access'], res: ['shopify.export', 'one'], params: { export: P.id('shopify.export') } },
+  { verb: 'shopify.gift_card.disable', title: 'Disable a gift card', description: 'Disables a gift card, forfeiting its balance.', effects: ['update'], rev: 'irreversible', res: ['shopify.gift_card', 'one'], params: { gift_card: P.id('shopify.gift_card') } },
+  { verb: 'shopify.payout.list', title: 'List payouts', description: 'Payouts to the bank account.', effects: ['read'], traits: ['pca.financial_data_read'], res: ['shopify.payout', 'set'], params: { limit: P.limit(250) } },
+  { verb: 'shopify.balance.get', title: 'Read the balance', description: 'Shopify Payments balance.', effects: ['read'], traits: ['pca.financial_data_read'], res: ['shopify.balance', 'set'], params: {} },
+  { verb: 'shopify.dispute.submit_evidence', title: 'Submit dispute evidence', description: 'Submits evidence for a chargeback.', effects: ['update', 'sign'], rev: 'irreversible', res: ['shopify.dispute', 'one'], params: { dispute: P.id('shopify.dispute'), evidence: P.obj() } },
+  { verb: 'shopify.app.install_script_tag', title: 'Add a script to the storefront', description: 'Injects JavaScript into every storefront page.', effects: ['publish', 'exec'], rev: 'irreversible', res: ['shopify.script_tag', 'set'], params: { src: P.url() } },
+  { verb: 'shopify.theme.publish', title: 'Publish a theme', description: 'Makes a theme live.', effects: ['publish'], rev: 'irreversible', res: ['shopify.theme', 'one'], params: { theme: P.id('shopify.theme') } },
+  { verb: 'shopify.theme.update_asset', title: 'Edit a theme file', description: 'Changes theme code or templates, which run on the storefront.', effects: ['update', 'exec'], rev: 'rate_limited', res: ['shopify.theme', 'one'], params: { theme: P.id('shopify.theme'), key: P.str(255), value: P.code() } },
+  { verb: 'shopify.staff.invite', title: 'Invite a staff member', description: 'Adds staff with permissions.', effects: ['privilege', 'send'], rev: 'irreversible', res: ['shopify.staff_member', 'set'], params: { email: P.email({ role: 'contact.email' }), permissions: P.arr('string', 100) } },
+  { verb: 'shopify.staff.change_permissions', title: 'Change staff permissions', description: 'Changes what a staff member can do.', effects: ['privilege'], rev: 'rate_limited', res: ['shopify.staff_member', 'one'], params: { staff: P.id('shopify.staff_member'), permissions: P.arr('string', 100) } },
+  { verb: 'shopify.staff.deactivate', title: 'Deactivate a staff member', description: 'Removes staff access.', effects: ['privilege', 'delete'], res: ['shopify.staff_member', 'one'], params: { staff: P.id('shopify.staff_member') } },
+  { verb: 'shopify.access_token.revoke', title: 'Revoke an access token', description: 'Revokes an app access token.', effects: ['privilege'], rev: 'irreversible', traits: ['pca.credential_access'], res: ['shopify.access_token', 'one'], params: { token: P.secret() } },
+  { verb: 'shopify.shop.update_domain', title: 'Change the store domain', description: 'Changes the primary domain, which affects all traffic.', effects: ['update', 'publish'], rev: 'irreversible', res: ['shopify.shop', 'one'], params: { shop: P.id('shopify.shop'), domain: P.str(255) } },
+  { verb: 'shopify.bulk_operation.run_mutation', title: 'Run a bulk mutation', description: 'Runs a GraphQL mutation over a file of inputs.', effects: ['update', 'delete'], res: ['shopify.bulk_operation', 'set'], params: { mutation: P.str(100_000), input_file: P.path() } },
+  { verb: 'shopify.bulk_operation.run_query', title: 'Run a bulk query', description: 'Exports large result sets.', effects: ['export'], traits: ['pca.pii_access'], res: ['shopify.bulk_operation', 'one'], params: { operation: P.id('shopify.bulk_operation'), query: P.str(100_000, { role: 'query.search' }) } },
+  { verb: 'shopify.graphql.query', title: 'Run an Admin GraphQL query', description: 'Runs a read-only query.', effects: ['read'], traits: ['pca.pii_access'], res: ['shopify.shop', 'set'], params: { query: P.str(100_000, { role: 'query.search' }), variables: P.opt(P.obj()) } },
+];
+
+export default handPack({
+  name: 'shopify',
+  licence_notes: 'Hand written from Shopify public Admin API documentation (operation names only). The Admin GraphQL schema and documentation text are not redistributed.',
+  config_file: __filename,
+  sourceUri: 'in-repo:scripts/actions-packs/packs/shopify.ts',
+  defs: [...E, ...S].map(def),
+});

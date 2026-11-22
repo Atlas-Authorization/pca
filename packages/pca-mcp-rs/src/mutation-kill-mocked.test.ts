@@ -1,6 +1,6 @@
 /** Mutation-kill tests for pca-mcp-rs with the PCA core's verdict and threshold hook controlled, so each branch is reached in isolation. */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { authorizeRequest, verifyStepUp } from './index';
+import { admitRequest, verifyStepUp } from './index';
 
 const st = vi.hoisted(() => ({
   verdict: undefined as unknown,
@@ -32,7 +32,7 @@ const AUD = 'https://rs';
 const grant = { id: 'g1', issuer: 'iss' } as never;
 const mkP = (chain: unknown[] = [{ caveats: [] }]) => ({ grant_ref: 'g1', aud: AUD, cap_chain: chain }) as never;
 const run = (p: unknown, o: Record<string, unknown> = {}) =>
-  authorizeRequest({ headers: {}, body: { pcactn: p } }, { resource: AUD, authorizationServers: ['iss'], resolveGrant: () => grant, prmUrl: 'https://p', now: 123, ...o } as never);
+  admitRequest({ headers: {}, body: { pcactn: p } }, { resource: AUD, authorizationServers: ['iss'], resolveGrant: () => grant, prmUrl: 'https://p', now: 123, ...o } as never);
 
 beforeEach(() => {
   st.verdict = { allow: true, checks: { wire: 'pass' } };
@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 describe('core verdict mapping', () => {
-  const AUTHN = ['wire', 'version', 'audience', 'validity', 'cap_chain', 'leaf_signature', 'malformed', 'counter'];
+  const AUTHN = ['wire', 'version', 'audience', 'validity', 'cap_chain', 'leaf_signature', 'malformed', 'counter_format'];
   it('each authentication-class failure is a 401 invalid_token carrying the checks and the core reason', async () => {
     for (const c of AUTHN) {
       st.verdict = { allow: false, reason: `${c}: nope`, checks: { [c]: 'fail', other: 'pass' } };
@@ -53,7 +53,7 @@ describe('core verdict mapping', () => {
     }
   });
   it('a policy failure (or authentication checks that merely did not run) is a 403 forbidden with the checks', async () => {
-    const checks = { wire: 'pass', version: 'pass', audience: 'not-enforced', validity: 'pass', cap_chain: 'pass', leaf_signature: 'pass', malformed: 'pass', counter: 'not-enforced', plan_inclusion: 'fail' };
+    const checks = { wire: 'pass', version: 'pass', audience: 'not-enforced', validity: 'pass', cap_chain: 'pass', leaf_signature: 'pass', malformed: 'pass', counter_format: 'not-enforced', plan_inclusion: 'fail' };
     st.verdict = { allow: false, reason: 'plan_inclusion: no', checks };
     const d = await run(mkP());
     expect(d).toMatchObject({ ok: false, status: 403, error: 'forbidden', errorDescription: 'plan_inclusion: no', checks });
