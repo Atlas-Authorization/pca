@@ -1,0 +1,17 @@
+{
+ "target": "frost-net decodeCommitments",
+ "seeds": [
+  [
+   {
+    "identifier": 1,
+    "hiding": "TvTKJzdzTwz9keiNxrjFyO-FzqCpUeDGMFdt-OFMKXQ",
+    "binding": "FT14BmBiy9xCT-4mKFD_edboWaMS69wp28xOM8Ex-28"
+   },
+   {
+    "identifier": 2,
+    "hiding": "FT14BmBiy9xCT-4mKFD_edboWaMS69wp28xOM8Ex-28",
+    "binding": "xe9Tx255YV-NXxV6OjpTo2xu0FwnqOxWh-htjoW4pGU"
+   }
+  ]
+ ]
+}

@@ -9,7 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- compile the SDK source in place (read-only) so the SDK tree gets no obj/bin -->
-    <Compile Include="../../../../sdks/dotnet-pca/AtlasPca/*.cs" LinkBase="AtlasPca" />
+    <Compile Include="../../../../sdks/dotnet-pca/AtlasPca/**/*.cs" LinkBase="AtlasPca" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.1" />
   </ItemGroup>
 </Project>

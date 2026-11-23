@@ -1,19 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
-  PROBLEM_BASE,
-  actionSchemaKeyOf,
   agent,
   generateKeyPair,
   hashCanonical,
-  intentActionDigest,
+  memoryPcaStore,
   pcaHeaders,
   pcactnDigest,
-  verifyIntentRequired,
-  type ActionSchemaKey,
   type Capability,
   type PCActn,
-  type SignedIntentRequired,
 } from '@atlasauth/pca';
+import {
+  PROBLEM_BASE,
+  actionSchemaKeyOf,
+  intentActionDigest,
+  verifyIntentRequired,
+  type ActionSchemaKey,
+  type SignedIntentRequired,
+} from '@atlasauth/pca/ext/intent';
 import { buildKeyDirectory, jwkThumbprint, signRequest, signRequestWithProof } from '@atlasauth/pca-webbotauth';
 import { PROBLEM_INSUFFICIENT_TIER, siteGuard, type IntentPort, type SiteGuardOptions, type SiteRequest } from './index';
 
@@ -29,6 +32,8 @@ const siteKey = { kid: 'shop-2026', secret: site.secretKey };
 const siteKeys: ActionSchemaKey[] = [actionSchemaKeyOf('shop-2026', site.secretKey)];
 
 const a = agent({ principal: generateKeyPair(), goal: 'refunds', permissions: { stripe: ['refund'] }, limits: { refund: '$500/day' }, aud: AUD });
+// the user's own instruction is the agent's only context, so its calls pass the provenance gate (authorize's default)
+a.provenance?.principal('refund charge ch_1');
 const grant = a.grant as Capability;
 const act = (counter: number) => a.act('stripe.refund', 'charge:ch_1', { amount: 20, currency: 'usd' }, { counter });
 
@@ -41,6 +46,7 @@ const pca: NonNullable<SiteGuardOptions['pca']> = {
     planAuthorized: true,
   }),
   insecureAllowUnenforced: true, // full default-deny enforcement is requirePCA's own test suite
+  insecureAllowUnboundOperation: true, // operation binding has its own tests below
 };
 
 const lower = (h: Record<string, string>) => Object.fromEntries(Object.entries(h).map(([k, v]) => [k.toLowerCase(), v]));
@@ -67,7 +73,7 @@ function guardFor(tier: 0 | 1 | 2 | 3 | 4, extra: Partial<SiteGuardOptions> = {}
   });
 }
 
-const pcaReq = (p: { encoded: string }, url = URL_REFUND): SiteRequest => ({ method: 'POST', url, headers: lower(pcaHeaders(p.encoded)) });
+const pcaReq = (p: { encoded: string; provenance?: Parameters<typeof pcaHeaders>[1] }, url = URL_REFUND): SiteRequest => ({ method: 'POST', url, headers: lower(pcaHeaders(p.encoded, p.provenance)) });
 const admit: IntentPort = async () => ({ kind: 'admit' });
 
 describe('siteGuard construction (§5: configuration errors fail closed)', () => {
@@ -79,6 +85,26 @@ describe('siteGuard construction (§5: configuration errors fail closed)', () =>
     expect(() => siteGuard({ audience: AUD, verbOf: () => null, pca, intent: admit })).toThrow(/siteKey/);
     expect(() => siteGuard({ audience: AUD, verbOf: () => null, policy: { web_bot_auth: { accept: true } } })).toThrow(/jwks/);
     expect(() => siteGuard({ audience: AUD, verbOf: () => null, pca, policy: { tiers: { x: { tier: 2, rate: { max: 1, per_secs: 1 } } } } })).toThrow(/rateLimiter/);
+  });
+});
+
+describe('Tier 2 operation binding (0.5)', () => {
+  const policy = { tiers: { 'stripe.refund': { tier: 2 } } };
+  const verbOf = () => 'stripe.refund';
+  const bound: NonNullable<SiteGuardOptions['pca']> = { resolveGrant: pca.resolveGrant, context: pca.context, budgetStore: memoryPcaStore(), hooks: { revocation: async () => ({ enforced: true, ok: true }) }, plan: 'single-step' };
+  it('pca without operation is refused at construction', () => {
+    expect(() => siteGuard({ audience: AUD, verbOf, policy, pca: bound })).toThrow(/operation/);
+  });
+  it('the proof must be for the operation operation names', async () => {
+    const mk = (amount: number) => siteGuard({ audience: AUD, verbOf, policy, pca: bound, operation: (_r, verb) => ({ verb, resource: 'charge:ch_1', params: { amount, currency: 'usd' } }) });
+    expect(await mk(20)(pcaReq(act(1)))).toMatchObject({ allow: true, tier: 2 });
+    const d = await mk(2000)(pcaReq(act(2)));
+    expect(d.allow).toBe(false);
+    expect(d.verdict?.checks.operation).toBe('fail');
+  });
+  it('operation returning null denies', async () => {
+    const g = siteGuard({ audience: AUD, verbOf, policy, pca: bound, operation: () => null });
+    expect((await g(pcaReq(act(3)))).allow).toBe(false);
   });
 });
 
@@ -201,15 +227,15 @@ describe('Tier 3: intent-bound', () => {
     expect((await g(pcaReq(act(10)))).allow).toBe(false);
   });
   it('admitted, then JIT consent at the rule tier or above', async () => {
-    const rule = { jit: { reversible: 'typed', irreversible: 'device' } }; // stripe.refund is rate_limited -> the `reversible` entry
+    const rule = { jit: { reversible: 'typed', irreversible: 'device' } }; // stripe.refund is irreversible (catalog) -> the `irreversible` entry
     const low = guardFor(3, { intent: admit, jit: async () => ({ tier: 'tap' }) }, rule);
     const dl = await low(pcaReq(act(11)));
     expect(dl).toMatchObject({ allow: false, status: 403 });
     expect((dl.body as { type: string }).type).toBe(`${PROBLEM_BASE}intent-denied`);
-    expect(dl.headers['WWW-Authenticate']).toBe('PCA error="consent_required", tier="typed"');
+    expect(dl.headers['WWW-Authenticate']).toBe('PCA error="consent_required", tier="device"');
     const none = guardFor(3, { intent: admit }, rule);
     expect((await none(pcaReq(act(12)))).checks.jit).toBe('fail');
-    const ok = guardFor(3, { intent: admit, jit: async ({ minTier }) => ({ tier: minTier === 'typed' ? 'device' : 'tap' }) }, rule);
+    const ok = guardFor(3, { intent: admit, jit: async ({ minTier }) => ({ tier: minTier === 'device' ? 'device' : 'tap' }) }, rule);
     const d = await ok(pcaReq(act(13)));
     expect(d).toMatchObject({ allow: true, tier: 3, presentedTier: 3 });
   });

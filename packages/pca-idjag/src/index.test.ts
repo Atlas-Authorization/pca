@@ -3,7 +3,8 @@ import { SignJWT, generateKeyPair, type JWTPayload, type KeyLike } from 'jose';
 import { b64u, compactJwsAliases, generateKeyPair as generatePcaKeyPair, verifyChain, type KeyPair } from '@atlasauth/pca';
 import { isOidcSubjectCaveat } from '@atlasauth/pca-oidc';
 import {
-  verifyIdJag,
+  verifyIdJag as verifyIdJagReal,
+  type VerifyIdJagOptions,
   idJagToPcaPrincipal,
   idJagToCapability,
   readIdJagAuthority,
@@ -21,6 +22,10 @@ import {
   CLIENT_ASSERTION_TYPE_JWT_BEARER,
   type IdJagGrant,
 } from './index';
+
+// The package verifies in strict draft mode by default; most tests here exercise the loose checks (signature, audience,
+// actor, scope), so the explicit opt-out is pinned once. The strict-mode describe block passes its own options.
+const verifyIdJag = (jwt: string, opts: VerifyIdJagOptions) => verifyIdJagReal(jwt, { strictDraft: false, ...opts });
 
 const ISSUER = 'https://idp.example.com';
 const AUDIENCE = 'https://resource.example.com';
@@ -367,5 +372,48 @@ describe('canonical-spelling gate (re-encoded ID-JAG strings are rejected)', () 
     for (const a of compactJwsAliases(jwt)) {
       await expect(verifyIdJag(a.token, opts), a.name).rejects.toBeInstanceOf(IdJagVerificationError);
     }
+  });
+});
+
+describe('strictDraft (draft-04 section 3.1 shape)', () => {
+  const mint = async (payload: Record<string, unknown>, typ?: string): Promise<string> => {
+    const now = Math.floor(Date.now() / 1000);
+    return new SignJWT({ iss: ISSUER, sub: HUMAN, aud: AUDIENCE, iat: now, exp: now + 300, jti: 'j1', client_id: 'res-app', act: { sub: AGENT_ID }, scope: 'a', ...payload })
+      .setProtectedHeader({ alg: 'EdDSA', kid: KID, ...(typ !== undefined ? { typ } : {}) }).sign(signingKey);
+  };
+  const settle = (p: Promise<IdJagGrant>) => p.then(() => 'ok', (e: IdJagVerificationError) => `${e.code}: ${e.message}`);
+  const base = { issuer: ISSUER, audience: AUDIENCE, key: undefined as unknown as KeyLike };
+  const o = (extra: object = {}) => ({ ...base, key: publicKey, strictDraft: true, clientId: 'res-app', consumeJti: () => true, ...extra });
+  const TYP = 'oauth-id-jag+jwt';
+
+  it('accepts a conforming grant and consumes the jti once', async () => {
+    const seen: string[] = [];
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ clientId: 'res-app', consumeJti: (j: string) => { seen.push(j); return true; } })))).toBe('ok');
+    expect(seen).toEqual(['j1']);
+  });
+  it('refuses without consumeJti (config)', async () => {
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ consumeJti: undefined })))).toBe('config: verifyIdJag: strictDraft requires opts.consumeJti (single-use store)');
+  });
+  it('refuses wrong or missing typ', async () => {
+    expect(await settle(verifyIdJag(await mint({}), o()))).toBe('grant: ID-JAG header typ must be "oauth-id-jag+jwt"');
+    expect(await settle(verifyIdJag(await mint({}, 'JWT'), o()))).toBe('grant: ID-JAG header typ must be "oauth-id-jag+jwt"');
+  });
+  it('refuses missing or mismatched client_id', async () => {
+    expect(await settle(verifyIdJag(await mint({ client_id: undefined }, TYP), o()))).toBe('grant: ID-JAG is missing "client_id"');
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ clientId: 'other' })))).toBe('grant: ID-JAG client_id does not match the expected client');
+  });
+  it('refuses a missing jti, a replayed jti and a failing store', async () => {
+    expect(await settle(verifyIdJag(await mint({ jti: undefined }, TYP), o()))).toBe('grant: ID-JAG is missing "jti"');
+    const m = 'grant: ID-JAG jti was already used or the single-use store failed';
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ consumeJti: () => false })))).toBe(m);
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ consumeJti: () => { throw new Error('db'); } })))).toBe(m);
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ consumeJti: () => 'yes' as unknown as boolean })))).toBe(m);
+  });
+  it('refuses without clientId (config)', async () => {
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ clientId: undefined })))).toBe('config: verifyIdJag: strictDraft requires opts.clientId (the client authenticated at the token endpoint)');
+    expect(await settle(verifyIdJag(await mint({}, TYP), o({ clientId: '' })))).toBe('config: verifyIdJag: strictDraft requires opts.clientId (the client authenticated at the token endpoint)');
+  });
+  it('explicit strictDraft: false is the loose mode: no typ/client_id/jti needed', async () => {
+    expect(await settle(verifyIdJag(await mint({ client_id: undefined, jti: undefined }), { issuer: ISSUER, audience: AUDIENCE, key: publicKey, strictDraft: false }))).toBe('ok');
   });
 });

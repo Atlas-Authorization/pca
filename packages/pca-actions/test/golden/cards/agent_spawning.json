@@ -1,0 +1,30 @@
+{
+ "trait": "pca.agent_spawning",
+ "card": {
+  "verb": "golden.agent_spawning",
+  "title": "Do the agent spawning thing",
+  "text": "Do the agent spawning thing. This action starts another agent.",
+  "risk": "high",
+  "escalation": "auto",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [
+   "count_cap"
+  ],
+  "context": []
+ },
+ "closure": [
+  "pca.agent_spawning"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 0,
+  "caveats": [
+   "count_cap"
+  ],
+  "context": [],
+  "prules": []
+ }
+}

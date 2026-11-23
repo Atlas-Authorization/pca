@@ -49,7 +49,7 @@ async function main() {
   const rsVerify = (p: PCActn, params: Record<string, unknown>): Promise<PcaVerdict> => {
     const now = Date.now();
     const plan: PlanNode[] = [{ id: p.plan.node_id, verb: p.action.verb, resource: p.action.resource, params_digest: p.action.params_digest, reversibility_class: p.action.reversibility_class }];
-    return verifyPCActn(p, {
+    return verifyPCActn(p, { insecureSkipPlanRootCheck: true,
       grant: a.grant,
       audience: 'ins_acme',
       allowedSuites: ['ed25519'],

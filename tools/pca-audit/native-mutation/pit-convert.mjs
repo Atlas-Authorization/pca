@@ -3,33 +3,44 @@
 // native-check-equivalents.mjs ([{crate,file,mutant,line,occurrence,lineno,fn}], SURVIVED + NO_COVERAGE; `line` = the trimmed
 // source line, `occurrence` = which copy of that text in the file (the site key), `fn` = PIT's mutated method). Committed as
 // results/<java|kotlin>-survivors.json next to the compact results.
-//   node pit-convert.mjs <java-pca|kotlin-pca> <mutations.xml> <results.json> <survivors.json>
+//   node pit-convert.mjs <java-pca|kotlin-pca> <mutations.xml> <results.json> <survivors.json> [killed.json]
+// With killed.json the KILLED mutants are also keyed like survivors (same fields, status KILLED); a killed mutant whose site cannot be
+// keyed is skipped there (the stale-equivalent excuse then simply does not apply to it).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const [crate, xmlPath, outResults, outSurv] = process.argv.slice(2);
+const [crate, xmlPath, outResults, outSurv, outKilled] = process.argv.slice(2);
 if (!outSurv) { console.error('usage: pit-convert.mjs <crate> <mutations.xml> <results.json> <survivors.json>'); process.exit(2); }
 const xml = fs.readFileSync(xmlPath, 'utf8');
 const tag = (blk, t) => { const m = new RegExp(`<${t}>([\\s\\S]*?)</${t}>`).exec(blk); return m ? m[1] : ''; };
 const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 const srcRoot = crate === 'kotlin-pca' ? 'src/main/kotlin' : 'src';
+// Kotlin also ships framework modules and guard-common (a flat directory compiled into both of them)
+const dirOf = (pkg) => {
+  if (crate !== 'kotlin-pca') return `${srcRoot}/${pkg}`;
+  if (pkg === 'net/atlasauth/pca/guard') return 'guard-common';
+  for (const m of ['ktor', 'spring']) if (pkg === `net/atlasauth/pca/${m}`) return `pca-${m}/${srcRoot}/${pkg}`;
+  return `${srcRoot}/${pkg}`;
+};
 const lines = new Map();
 const srcLine = (rel, n) => {
   if (!lines.has(rel)) lines.set(rel, fs.readFileSync(path.join(root, 'sdks', crate, rel), 'utf8').split('\n'));
   return (lines.get(rel)[n - 1] ?? '').trim();
 };
-const results = [], surv = [];
+const results = [], surv = [], killed = [];
 for (const m of xml.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)) {
   const st = /status='([A-Z_]+)'/.exec(m[1])?.[1] ?? /status="([A-Z_]+)"/.exec(m[1])?.[1];
   const b = m[2];
   const file = tag(b, 'sourceFile'), cls = tag(b, 'mutatedClass'), line = Number(tag(b, 'lineNumber'));
   const mut = tag(b, 'mutator').split('.').pop(), desc = unesc(tag(b, 'description')), method = unesc(tag(b, 'mutatedMethod'));
   results.push({ st, file, method, line, mut, desc });
-  if (st !== 'SURVIVED' && st !== 'NO_COVERAGE') continue;
+  const wantK = Boolean(outKilled) && st === 'KILLED';
+  if (st !== 'SURVIVED' && st !== 'NO_COVERAGE' && !wantK) continue;
+  try {
   const outer = cls.replace(/\$.*$/, '');
   const pkg = outer.split('.').slice(0, -1).join('/');
-  let rel = `${srcRoot}/${pkg}/${file}`;
+  let rel = `${dirOf(pkg)}/${file}`;
   // Kotlin copies an object literal of an inline stdlib function (sortedBy -> compareBy's Comparator) into a synthetic class
   // <Outer>$<fn>$$inlined$<inlineFn>$<n> whose SourceFile is the STDLIB file (Comparisons.kt) and whose lines are that file's:
   // key such a mutant by the call site of <inlineFn> in <fn> of the outer class's own source file.
@@ -37,7 +48,7 @@ for (const m of xml.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)) {
   let inlinedAt = 0;
   if (!fs.existsSync(path.join(root, 'sdks', crate, rel))) {
     const base = outer.split('.').pop().replace(/Kt$/, '');
-    const own = `${srcRoot}/${pkg}/${base}.${crate === 'kotlin-pca' ? 'kt' : 'java'}`;
+    const own = `${dirOf(pkg)}/${base}.${crate === 'kotlin-pca' ? 'kt' : 'java'}`;
     if (!fs.existsSync(path.join(root, 'sdks', crate, own))) throw new Error(`${cls}: source ${file} is not in the tree and neither is ${own}`);
     rel = own;
     srcLine(rel, 1);
@@ -55,11 +66,25 @@ for (const m of xml.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)) {
     const name = method.replace(/\$.*$/, '');
     const all = lines.get(rel);
     at = all.findIndex((l) => new RegExp(`\\bfun ${name}\\(`).test(l)) + 1;
+    // line 0 = compiler-synthesised code with no line table entry: a constructor (<init>: key by the declaration of the mutated
+    // class) or a property accessor (getX / isX / setX: key by the declaration of property x)
+    const esc = (s) => s.replace(/[$.*+?^()[\]{}|\\]/g, '\\$&');
+    if (!at && name === '<init>') {
+      const simple = cls.split('.').pop().split('$').filter((s) => s && !/^\d+$/.test(s)).pop();
+      at = all.findIndex((l) => new RegExp(`\\b(class|object)\\s+${esc(simple)}\\b`).test(l)) + 1;
+    }
+    const acc = /^(?:get|set|is)([A-Z].*)$/.exec(name);
+    if (!at && acc) {
+      const prop = acc[1][0].toLowerCase() + acc[1].slice(1);
+      at = all.findIndex((l) => new RegExp(`\\b(val|var)\\s+(${esc(prop)}|${esc(name)})\\b`).test(l)) + 1;
+    }
     text = at ? all[at - 1].trim() : '';
   }
   const occurrence = lines.get(rel).slice(0, at).filter((l) => l.trim() === text).length;
-  surv.push({ crate, file: rel, mutant: `${mut}: ${desc}`, line: text, occurrence, lineno: at, fn: method, status: st });
+  (wantK ? killed : surv).push({ crate, file: rel, mutant: `${mut}: ${desc}`, line: text, occurrence, lineno: at, fn: method, status: st });
+  } catch (e) { if (!wantK) throw e; }
 }
+if (outKilled) fs.writeFileSync(outKilled, JSON.stringify(killed));
 fs.writeFileSync(outResults, JSON.stringify(results));
 fs.writeFileSync(outSurv, JSON.stringify(surv, null, 1));
 const c = {};

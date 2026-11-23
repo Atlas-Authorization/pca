@@ -1,5 +1,7 @@
 # @atlasauth/pca-revoke
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Realtime revocation and a mid-run kill-switch for Proof-Carrying Authority. The core verifier is a pull check: a captured PCActn stays acceptable until it expires or its budget drains. This package adds the active boundary, a live `RevocationRegistry` a resource server consults on every action. You can revoke a capability id, an agent holder key, a principal/issuer key, or a whole delegation subtree. `isRevoked` walks every hop of the PCActn's `cap_chain`, and `verifyWithRevocation` ANDs the core verify result with the revocation gate and fails closed. `ingestCaepEvent` turns OpenID Shared Signals / CAEP revocation events into registry entries.
 
 ## Install
@@ -12,9 +14,9 @@ npm i @atlasauth/pca-revoke @atlasauth/pca
 
 ```ts
 import { DEFAULT_REQUIRED_CHECKS, verifyPCActn } from '@atlasauth/pca';
-import { RevocationRegistry, isRevoked } from '@atlasauth/pca-revoke';
+import { RevocationRegistry, checkRevocation } from '@atlasauth/pca-revoke';
 
-const registry = new RevocationRegistry(); // in-memory by default; pass any RevocationStore
+const registry = new RevocationRegistry(); // in-memory by default; pass any RevocationStore (all store calls are async)
 
 // per action: the full server verifier decides, with the registry as its revocation hook.
 // `grant` is the one YOUR store holds for pcactn.grant_ref (never one the request carries).
@@ -23,8 +25,8 @@ const verdict = await verifyPCActn(pcactn, {
   audience: 'rs',
   allowedSuites: ['ed25519'],
   hooks: {
-    revocation: ({ pcactn }) => {
-      const r = isRevoked(pcactn, registry);
+    revocation: async ({ pcactn }) => {
+      const r = await checkRevocation(pcactn, registry);
       return { enforced: true, ok: !r.revoked, ...(r.reason ? { reason: r.reason } : {}) };
     },
   },
@@ -34,23 +36,44 @@ const verdict = await verifyPCActn(pcactn, {
 if (!verdict.allow) throw new Error(verdict.reasons.join('; '));
 
 // kill-switch: bites every in-flight action immediately
-registry.killAgent(agentHolderKey, { reason: 'runaway' });
-registry.killSubtree(midChainCapId);
-registry.revoke({ kind: 'issuer', value: principalKey });
-registry.revokeSubtree([rootCapId, midCapId]); // chain-prefix form
+await registry.killAgent(agentHolderKey, { reason: 'runaway' });
+await registry.killSubtree(midChainCapId);
+await registry.revoke({ kind: 'issuer', value: principalKey });
+await registry.revokeSubtree([rootCapId, midCapId]); // chain-prefix form
 ```
 
 A revocation may carry `notBefore` to schedule it for later; `unrevoke` removes one.
 
 ## API
 
-- `RevocationRegistry` (`revoke`, `revokeSubtree`, `unrevoke`, `killAgent`, `killSubtree`, `list`, `clear`), `InMemoryRevocationStore`, `RevocationStore` interface for custom persistence.
-- `isRevoked(pcactn, registry, { now? })`, `verifyWithRevocation(pcactn, coreResult, registry, { now? })` (ANDs a structural core result with the registry; the authorization decision itself belongs to `verifyPCActn` / `requirePCA`, as above).
+- `RevocationRegistry` (all methods return promises: `revoke`, `revokeSubtree`, `unrevoke`, `killAgent`, `killSubtree`, `list`, `clear`), `InMemoryRevocationStore`, `RevocationStore` interface for custom persistence.
+- `checkRevocation(pcactn, registry, { now? })`: the revocation check (async). It never throws, and a missing or malformed chain, a hop without an id, issuer or holder, a non-finite clock or a store that throws all come back as `revoked: true` with a reason starting `revocation check failed closed`. `verifyWithRevocation` uses it.
+- `FileRevocationStore` (`@atlasauth/pca-revoke/file`): a durable single-process store. Each change is written to a temporary file, flushed, then renamed over the real file. A file that is unreadable or not a valid entry list makes the constructor throw rather than start empty.
+- `revocationStoreCases(make, reopen?)` (`@atlasauth/pca-revoke/conformance`): contract cases to run against your own `RevocationStore`.
+- `verifyWithRevocation(pcactn, coreResult, registry, { now? })` (ANDs a structural core result with the registry; the authorization decision itself belongs to `verifyPCActn` / `requirePCA`, as above).
 - `ingestCaepEvent(event, registry)`, `CAEP_EVENT_TYPES`: bridge for grant-revoked, kill-switch and session-revoked events (see `@atlasauth/pca-signals`).
+
+## Fail-closed behaviour
+
+| Missing or invalid | Result |
+|---|---|
+| The action has no `cap_chain`, or a hop lacks an id, issuer or holder (`checkRevocation`, `verifyWithRevocation`) | denied, `revocation check failed closed: ...` |
+| The clock passed in is not a finite number | denied by `checkRevocation` |
+| `notBefore` or `revokedAt` is not a finite number, or a prefix element contains a comma | `revoke` throws and stores nothing |
+| The store throws during a check | denied by `checkRevocation`; the error text is not copied into the result |
+| The revocation file is corrupt or malformed | `FileRevocationStore` throws on construction |
+| A file write fails | the call throws and the in-memory copy is rolled back |
+
+## Limits
+
+- It is a registry and a gate, not a distribution system: a revocation reaches a resource server only as fast as you push it, and `FileRevocationStore` is single-process.
+- It does not verify the PCActn signature, expiry or budget; call it from the full server verifier.
+- `ingestCaepEvent` does not authenticate the event. Verify the signed event (see the signals package) before ingesting it; an event with no usable subject adds nothing.
+- A scheduled revocation (`notBefore`) is not in force before that time.
 
 ## Status
 
-Experimental. The registry is a local, mutable store: distributing revocations to every resource server (and persisting them) is up to you or a custom `RevocationStore`. Revocation is only as fast as your push channel.
+Production. The `RevocationStore` interface is asynchronous, so a networked store (Redis, a database) plugs in directly; `add` must be atomic and visible to every later `get`. `revocationStoreCases` checks that. The registry is a local, mutable store: distributing revocations to every resource server (and persisting them) is up to you or a custom `RevocationStore`. Revocation is only as fast as your push channel.
 
 ## License
 

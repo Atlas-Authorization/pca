@@ -1,0 +1,10 @@
+{
+ "target": "frost-net decodeCommitment",
+ "seeds": [
+  {
+   "identifier": 1,
+   "hiding": "TvTKJzdzTwz9keiNxrjFyO-FzqCpUeDGMFdt-OFMKXQ",
+   "binding": "FT14BmBiy9xCT-4mKFD_edboWaMS69wp28xOM8Ex-28"
+  }
+ ]
+}

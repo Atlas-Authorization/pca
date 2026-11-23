@@ -1,0 +1,103 @@
+name: PCA actions sync
+description: >-
+  Re-import the action sources named in pca.config.json (OpenAPI, MCP tools, GraphQL, gRPC, AsyncAPI, JSON Schema) and show
+  the semantic diff. In "check" mode it fails when a source changed, so a pull request reminds you to review; in "sync" mode it
+  rewrites the generated <source>.sync.yaml files (added and changed actions land unreviewed). With "publish" it also builds,
+  signs and publishes the pack to an Atlas instance's action registry, which refuses any widening a reviewer has not signed.
+author: Atlas
+branding:
+  icon: refresh-cw
+  color: purple
+
+inputs:
+  dir:
+    description: The actions project directory (holds pca.config.json).
+    required: false
+    default: actions
+  mode:
+    description: '"check" (fail when a source changed, write nothing) or "sync" (rewrite the generated files).'
+    required: false
+    default: check
+  source:
+    description: Sync only the source with this name (default every source).
+    required: false
+    default: ''
+  cli-version:
+    description: The @atlasauth/pca-cli version to run.
+    required: false
+    default: 0.5.0
+  node-version:
+    description: Node.js version.
+    required: false
+    default: '22'
+  publish:
+    description: When "true" (sync mode only), lint, test, build, sign and publish the pack after syncing.
+    required: false
+    default: 'false'
+  api-url:
+    description: The Atlas instance API URL (publish only).
+    required: false
+    default: ''
+  secret-key:
+    description: The instance secret key (sk_...). Always pass it from a secret (publish only).
+    required: false
+    default: ''
+  signing-kid:
+    description: The kid of the publisher key pinned on the instance (publish only).
+    required: false
+    default: ''
+  signing-key:
+    description: The base64url Ed25519 publisher secret. Always pass it from a secret (publish only).
+    required: false
+    default: ''
+
+outputs:
+  changed:
+    description: '"true" when a source changed.'
+    value: ${{ steps.sync.outputs.changed }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - id: sync
+      shell: bash
+      env:
+        PCA_DIR: ${{ inputs.dir }}
+        PCA_MODE: ${{ inputs.mode }}
+        PCA_SOURCE: ${{ inputs.source }}
+        PCA_CLI: '@atlasauth/pca-cli@${{ inputs.cli-version }}'
+      run: |
+        set -euo pipefail
+        case "$PCA_MODE" in check|sync) ;; *) echo "mode must be check or sync" >&2; exit 2 ;; esac
+        args=(actions sync "$PCA_DIR")
+        [ -n "$PCA_SOURCE" ] && args+=(--source "$PCA_SOURCE")
+        if [ "$PCA_MODE" = check ]; then
+          if npx --yes "$PCA_CLI" "${args[@]}" --check; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; exit 1; fi
+        else
+          before="$(git status --porcelain -- "$PCA_DIR" || true)"
+          npx --yes "$PCA_CLI" "${args[@]}"
+          after="$(git status --porcelain -- "$PCA_DIR" || true)"
+          if [ "$before" != "$after" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+        fi
+    - if: ${{ inputs.publish == 'true' && inputs.mode == 'sync' }}
+      shell: bash
+      env:
+        PCA_DIR: ${{ inputs.dir }}
+        PCA_CLI: '@atlasauth/pca-cli@${{ inputs.cli-version }}'
+        PCA_API: ${{ inputs.api-url }}
+        ATLAS_SECRET_KEY: ${{ inputs.secret-key }}
+        PCA_KID: ${{ inputs.signing-kid }}
+        PCA_KEY: ${{ inputs.signing-key }}
+      run: |
+        set -euo pipefail
+        for v in PCA_API ATLAS_SECRET_KEY PCA_KID PCA_KEY; do [ -n "${!v}" ] || { echo "publish needs api-url, secret-key, signing-kid and signing-key" >&2; exit 2; }; done
+        npx --yes "$PCA_CLI" actions lint "$PCA_DIR"
+        npx --yes "$PCA_CLI" actions test "$PCA_DIR"
+        npx --yes "$PCA_CLI" actions build "$PCA_DIR"
+        # the key goes through a private temp file, never the command line
+        keyfile="$(mktemp)"; trap 'rm -f "$keyfile"' EXIT; chmod 600 "$keyfile"; printf '%s' "$PCA_KEY" > "$keyfile"
+        npx --yes "$PCA_CLI" actions sign "$PCA_DIR" --kid "$PCA_KID" --key "@$keyfile"
+        npx --yes "$PCA_CLI" actions publish "$PCA_DIR" --api "$PCA_API"

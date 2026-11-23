@@ -323,7 +323,7 @@ function matchesType(expected: JsonSchemaType, v: unknown): boolean {
     case 'number':
       return typeof v === 'number' && Number.isFinite(v);
     case 'integer':
-      return typeof v === 'number' && Number.isInteger(v);
+      return typeof v === 'number' && Number.isInteger(v) && !Object.is(v, -0);
     case 'boolean':
       return typeof v === 'boolean';
     case 'null':

@@ -37,7 +37,7 @@ const vectorsPath = join(here, '..', 'conformance', 'vectors.json');
 
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 const KEYMAP = { chain: 'cap_chain' };
 
 // ---- deterministic key material ---------------------------------------------------------------
@@ -113,7 +113,7 @@ const vectors = [];
 async function add(name, requires, description, pcactn, { falseChecks = [], allowedSuites } = {}) {
   // pca-unsafe-root: allow generator mints every vector itself and asserts the verdict, no untrusted input
   const grant = pcactn.cap_chain[0]; // the chain root IS the grant (root per suite family, see rootFor)
-  const r = await pca.verifyPCActnCore(pcactn, { grant, nowEpoch: NOW, audience: AUD, ...(allowedSuites !== undefined ? { allowedSuites } : {}) });
+  const r = await pca.verifyPCActnCore(pcactn, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: AUD, ...(allowedSuites !== undefined ? { allowedSuites } : {}) });
   const c = r.checks;
   const expectChecks = { wire: c.wire === 'pass' };
   if (c.wire === 'pass') for (const k of CHECKS) expectChecks[k] = c[KEYMAP[k] ?? k] === 'pass';

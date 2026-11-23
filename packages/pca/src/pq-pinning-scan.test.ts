@@ -63,7 +63,7 @@ describe.skipIf(!HAVE)('scripts/check-pq-pinning.mjs', async () => {
   it('flags trustedRoot / grant lifted from cap_chain[0], the allowUnboundPq shorthand and variable form', () => {
     const j = planted({
       'packages/evil/src/a.ts': 'verifyChain(p.cap_chain, i, { trustedRoot: p.cap_chain[0] });\n',
-      'packages/evil/src/b.ts': 'verifyPCActnCore(p, { grant: p.cap_chain[0], audience: null });\n',
+      'packages/evil/src/b.ts': 'verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: p.cap_chain[0], audience: null });\n',
       'packages/evil/src/c.ts': 'const allowUnboundPq = true;\nverifyChain(c, undefined, { allowUnboundPq });\n',
       'packages/evil/src/d.ts': 'verifyChain(c, undefined, { allowUnboundPq: extra });\n',
       'packages/evil/src/e.ts': 'verifyChain(c, undefined, { trustedRoot: p.capChain.at(0) });\n',
@@ -77,7 +77,7 @@ describe.skipIf(!HAVE)('scripts/check-pq-pinning.mjs', async () => {
 
   it('accepts the safe forms: pqPins / grantFromArtifact next to a lifted grant, forwarded allowUnboundPq, comments', () => {
     const j = planted({
-      'packages/ok/src/a.ts': 'verifyPCActnCore(p, { grant: p.cap_chain[0], grantFromArtifact: true, pqPins });\n',
+      'packages/ok/src/a.ts': 'verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: p.cap_chain[0], grantFromArtifact: true, pqPins });\n',
       'packages/ok/src/b.ts': 'resolve({ allowUnboundPq: opts.allowUnboundPq, x: policy?.allowUnboundPq });\nf({ allowUnboundPq: false });\n',
       'packages/ok/src/c.ts': '/* trustedRoot: p.cap_chain[0] and allowUnboundPq: true */\n// grant: p.cap_chain[0]\nexport const x = 1;\n',
     });

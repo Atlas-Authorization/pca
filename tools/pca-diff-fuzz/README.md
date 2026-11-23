@@ -43,6 +43,12 @@ The corpus is a pure function of `--seed` (default 20261006) and `--bases`: mulb
   Verifier call: `verify(pcactn, grant, now, audience)`.
 * `kind = canon`: `{id, kind, raw}`: any JSON text; each implementation strict-parses, strict-canonicalizes and hashes it
   (parse/profile failure => `error`); this fuzzes the strict JSON profile + number form + canonical key order directly.
+* `kind = produce`: `{id, kind, raw}`: `raw` is JSON text `{op, args, keys, pq_keys?}`, one case of
+  `packages/pca/conformance/producer-vectors.json` or `producer-pq-vectors.json` (`keys`: name -> `{seed, public}` Ed25519;
+  `pq_keys`: name -> `{family, seed, public, sign_seed?}`). Run the language's own producer for `op` on `args` and answer
+  `{id, out}` with the artifact (the same JSON as the case's `expect`), or `{id, error}` when the producer refuses. An op the
+  language does not implement answers `{id, error: "unsupported_op: <op>"}`; a suite it does not sign answers an error that
+  contains `unsupported_suite`. Run by the producer layer of `scripts/pca-conformance-all.mjs`.
 
 ## What is generated (`gen/generate.ts`)
 

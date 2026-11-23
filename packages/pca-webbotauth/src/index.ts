@@ -50,6 +50,8 @@ import {
 export { PCA_HEADER } from '@atlasauth/pca';
 // RFC 9530 Content-Digest: cover `content-digest` in the signature to protect the request body.
 export * from './content-digest';
+export * from './directory-fetch';
+export * from './signed-directory';
 export type { KeyPair, PCActn } from '@atlasauth/pca';
 
 // --------------------------------------------------------------------------------------------------
@@ -223,11 +225,11 @@ export function memoryReplayCache(maxEntries = 100_000): ReplayCache {
   return {
     claim(key, expiresAtSec, nowSec) {
       if (seen.size >= maxEntries) {
-        for (const [k, exp] of seen) if (exp < nowSec) seen.delete(k);
+        for (const [k, exp] of seen) if (Number.isFinite(nowSec) && exp < nowSec) seen.delete(k);
         if (seen.size >= maxEntries) throw new Error('replay cache full');
       }
       const existing = seen.get(key);
-      if (existing !== undefined && existing >= nowSec) return false;
+      if (existing !== undefined && !(Number.isFinite(nowSec) && existing < nowSec)) return false;
       seen.set(key, expiresAtSec);
       return true;
     },
@@ -694,11 +696,17 @@ function xFromResolved(k: Uint8Array | Ed25519PublicJwk | null | undefined): str
   return null;
 }
 
-async function resolvePublicKeyX(keyid: string, opts: VerifyOptions): Promise<string | null> {
+async function resolvePublicKeyX(keyid: string, opts: VerifyOptions, now: number, skew: number): Promise<string | null> {
   if (opts.resolveKey) return xFromResolved(await opts.resolveKey(keyid));
   if (opts.jwks) {
     const match = opts.jwks.keys.find((j) => j.kid === keyid);
-    return match ? match.x : null;
+    if (!match) return null;
+    // A published validity window is enforced: a not-yet-valid or expired directory key resolves to nothing.
+    // A bound that is present but not a finite number cannot be checked, so the key resolves to nothing (fail closed).
+    for (const b of [match.nbf, match.exp]) if (b !== undefined && !(typeof b === 'number' && Number.isFinite(b))) return null;
+    if (match.nbf !== undefined && !(Number.isFinite(now) && Number.isFinite(skew) && now + skew >= match.nbf)) return null;
+    if (match.exp !== undefined && !(Number.isFinite(now) && Number.isFinite(skew) && now - skew <= match.exp)) return null;
+    return xFromResolved(match);
   }
   return null;
 }
@@ -758,11 +766,11 @@ export async function verifySignedRequest(req: VerifyRequestInput, opts: VerifyO
     const created = typeof chosen.params.created === 'number' ? chosen.params.created : undefined;
     const expires = typeof chosen.params.expires === 'number' ? chosen.params.expires : undefined;
     if (expires === undefined && opts.requireExpires !== false) return { valid: false, reason: 'missing expires parameter' };
-    if (expires !== undefined && now > expires + skew) return { valid: false, reason: 'signature has expired' };
-    if (created !== undefined && created > now + skew) {
+    if (expires !== undefined && !(Number.isFinite(now) && Number.isFinite(skew) && now <= expires + skew)) return { valid: false, reason: 'signature has expired' };
+    if (created !== undefined && !(Number.isFinite(now) && Number.isFinite(skew) && created <= now + skew)) {
       return { valid: false, reason: 'signature created-time is in the future' };
     }
-    if (opts.maxAgeSec !== undefined && created !== undefined && now - created > opts.maxAgeSec + skew) {
+    if (opts.maxAgeSec !== undefined && created !== undefined && !(Number.isFinite(opts.maxAgeSec) && now - created <= opts.maxAgeSec + skew)) {
       return { valid: false, reason: 'signature is older than maxAgeSec' };
     }
     const maxLifetime = opts.maxLifetimeSec ?? 300;
@@ -773,7 +781,7 @@ export async function verifySignedRequest(req: VerifyRequestInput, opts: VerifyO
 
     const keyid = typeof chosen.params.keyid === 'string' ? chosen.params.keyid : undefined;
     if (keyid === undefined) return { valid: false, reason: 'missing keyid parameter' };
-    const x = await resolvePublicKeyX(keyid, opts);
+    const x = await resolvePublicKeyX(keyid, opts, now, skew);
     if (x === null) return { valid: false, reason: `could not resolve key "${keyid}"` };
 
     const ctx = buildContext(req.method, req.url, headers);

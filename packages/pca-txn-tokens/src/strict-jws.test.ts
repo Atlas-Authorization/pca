@@ -1,6 +1,13 @@
 import { agent, compactJwsAliases, generateKeyPair } from '@atlasauth/pca';
 import { describe, expect, it } from 'vitest';
-import { fromTransactionToken, toTransactionToken } from './index';
+import { fromTransactionToken as fromTransactionTokenReal, toTransactionToken as toTransactionTokenReal } from './index';
+
+// The package defaults are draft-11 + a required replay store; these tests exercise the legacy profile
+// unless a test passes its own options, so the shared defaults are pinned here once.
+const fromTransactionToken: typeof fromTransactionTokenReal = (jwt, key, opts = {}) =>
+  fromTransactionTokenReal(jwt, key, { profile: 'legacy', replayCheck: 'unchecked', ...opts });
+const toTransactionToken: typeof toTransactionTokenReal = (args) => toTransactionTokenReal({ profile: 'legacy', ...args });
+
 
 describe('canonical-spelling gate (re-encoded Transaction Token strings are rejected)', () => {
   it('rejects every alias; the original passes', async () => {

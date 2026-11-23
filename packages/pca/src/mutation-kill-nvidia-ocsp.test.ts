@@ -518,6 +518,12 @@ describe('verifyNvidiaOcspResponse: freshness', () => {
     // skew only ever widens, never shifts into the past
     expect(await run({ thisUpdate: s - HOUR }, { producedAt: s - 5000 }, { clockSkewMs: 5000 })).toBe('OK');
   });
+  it('an unbounded clock or skew is refused at the thisUpdate check: infinity widens the window to any time', async () => {
+    const fresh = { thisUpdate: s - 1000 };
+    expect(await run(fresh)).toBe('OK');
+    expect(await run(fresh, {}, { clockSkewMs: Number.POSITIVE_INFINITY })).toBe('response thisUpdate is in the future'); // a finite clock, an infinite skew
+    expect(await run(fresh, {}, { nowMs: Number.POSITIVE_INFINITY })).toBe('response thisUpdate is in the future'); // an infinite clock, a finite skew
+  });
   it('nextUpdate sanity and staleness', async () => {
     expect(await run({ thisUpdate: s - 10 * 1000, nextUpdate: s })).toBe('OK'); // now == nextUpdate
     expect(await run({ thisUpdate: s - 10 * 1000, nextUpdate: s - 1000 })).toBe('response is stale (past nextUpdate)');

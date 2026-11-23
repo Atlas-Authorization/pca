@@ -351,3 +351,76 @@ describe('DSL extensions — boolean groupings (all_of / any_of / not)', () => {
     expect(isLeafCondition({ any_of: [] })).toBe(false);
   });
 });
+
+describe('limit-naming denial reasons (0.5, B6)', () => {
+  const pay = (params: Record<string, unknown>): ActionContext => ({ action: { verb: 'pay', resource: 'acct/1', params } });
+  const why = (preds: Predicate[], c: ActionContext) => evaluatePredicates(preds, c).reason;
+  const P = (where: Condition[], extra: Partial<Predicate> = {}): Predicate => ({ verb: 'pay', resource: 'acct/*', where, ...extra });
+  const F = (field: string, op: string, value?: unknown): Condition => ({ field: `action.params.${field}`, op, value }) as Condition;
+
+  it('names the first unmet limit in scope, with the executed verb and resource', () => {
+    expect(why([P([F('amount', 'lte', 500)])], pay({ amount: 5000 }))).toBe('amount <= 500 not satisfied for pay on acct/1');
+    expect(why([P([F('amount', 'lte', 500), F('currency', 'eq', 'usd')])], pay({ amount: 5, currency: 'eur' }))).toBe('currency == "usd" not satisfied for pay on acct/1');
+    expect(why([P([F('amount', 'lte', 500), F('currency', 'eq', 'usd')])], pay({ amount: 5000, currency: 'eur' }))).toBe('amount <= 500 not satisfied for pay on acct/1');
+  });
+
+  it('spells operators and operands deterministically', () => {
+    const t = (c: Condition, params: Record<string, unknown> = {}) => why([P([c])], pay(params));
+    const s = ' not satisfied for pay on acct/1';
+    expect(t(F('a', 'gt', 1))).toBe(`a > 1${s}`);
+    expect(t(F('a', 'gte', 1))).toBe(`a >= 1${s}`);
+    expect(t(F('a', 'lt', -2))).toBe(`a < -2${s}`);
+    expect(t(F('a', 'ne', true))).toBe(`a != true${s}`);
+    expect(t(F('a', 'eq', null))).toBe(`a == null${s}`);
+    expect(t(F('a', 'in', ['usd', 'eur', 3]))).toBe(`a in ["usd", "eur", 3]${s}`);
+    expect(t(F('a', 'nin', ['x']))).toBe(`a not in ["x"]${s}`);
+    expect(t(F('a', 'prefix', 'p/'))).toBe(`a starts with "p/"${s}`);
+    expect(t(F('a', 'like', 'x*'))).toBe(`a like "x*"${s}`);
+    expect(t(F('a', 'matches', '^x'))).toBe(`a matches "^x"${s}`);
+    expect(t(F('a', 'is_a', 'T'))).toBe(`a is a "T"${s}`);
+    expect(t(F('a', 'member_of', 'g'))).toBe(`a member of "g"${s}`);
+    expect(t({ field: 'action.params.a', op: 'constructor' } as unknown as Condition)).toBe(`a <condition>${s}`);
+    expect(t({ field: 'action.params.a', op: 'frobnicate', value: 1 } as unknown as Condition)).toBe(`a <condition>${s}`);
+    expect(t(F('a', 'exists'))).toBe(`a present${s}`);
+    expect(t(F('a', 'exists', false), { a: 1 })).toBe(`a absent${s}`);
+    expect(t({ field: 'action.params.a', op: 'eq', ref: 'env.cap' } as Condition)).toBe(`a == env.cap${s}`);
+    expect(t({ field: 'env.region', op: 'eq', value: 'eu' } as Condition)).toBe(`env.region == "eu"${s}`);
+  });
+
+  it('keeps values bounded: long or odd strings, floats, objects and big arrays are not spelled out', () => {
+    const s = ' not satisfied for pay on acct/1';
+    const t = (v: unknown) => why([P([F('a', 'eq', v)])], pay({}));
+    expect(t('x'.repeat(64))).toBe(`a == "${'x'.repeat(64)}"${s}`);
+    expect(t('x'.repeat(65))).toBe(`a == "..."${s}`);
+    expect(t('say "hi"')).toBe(`a == "..."${s}`);
+    expect(t('back\\slash')).toBe(`a == "..."${s}`);
+    expect(t('line\nbreak')).toBe(`a == "..."${s}`);
+    expect(t('emoji \u{1F600}')).toBe(`a == "..."${s}`);
+    expect(t(0.5)).toBe(`a == <number>${s}`);
+    expect(t(2 ** 53)).toBe(`a == <number>${s}`);
+    expect(t(Number.MAX_SAFE_INTEGER)).toBe(`a == 9007199254740991${s}`);
+    expect(t({ k: 1 })).toBe(`a == <value>${s}`);
+    expect(t([[1]])).toBe(`a == [<value>]${s}`);
+    expect(why([P([F('a', 'in', [1, 2, 3, 4, 5, 6, 7, 8])])], pay({}))).toBe(`a in [1, 2, 3, 4, 5, 6, 7, 8]${s}`);
+    expect(why([P([F('a', 'in', [1, 2, 3, 4, 5, 6, 7, 8, 9])])], pay({}))).toBe(`a in [...]${s}`);
+  });
+
+  it('descends into all_of and describes any_of / not groups', () => {
+    const s = ' not satisfied for pay on acct/1';
+    expect(why([P([{ all_of: [F('a', 'eq', 1), F('b', 'lte', 2)] }])], pay({ a: 1, b: 3 }))).toBe(`b <= 2${s}`);
+    expect(why([P([{ any_of: [F('a', 'eq', 1), F('b', 'lte', 2)] }])], pay({ a: 0, b: 3 }))).toBe(`any of (a == 1; b <= 2)${s}`);
+    expect(why([P([{ not: F('a', 'eq', 1) }])], pay({ a: 1 }))).toBe(`not (a == 1)${s}`);
+    expect(why([P([{ any_of: [{ all_of: [F('a', 'eq', 1)] }, F('b', 'eq', 2)] }])], pay({}))).toBe(`any of (all of (a == 1); b == 2)${s}`);
+    expect(why([P([{ any_of: [{ any_of: [{ not: F('a', 'eq', 1) }] }] }])], pay({ a: 1 }))).toBe(`any of (any of ((...)))${s}`);
+  });
+
+  it('keeps the plain wording when nothing is in scope, and uses the first predicate in scope', () => {
+    expect(why([P([F('amount', 'lte', 500)])], { action: { verb: 'refund', resource: 'acct/1', params: { amount: 9 } } })).toBe('no predicate permits refund on acct/1');
+    expect(why([P([F('amount', 'lte', 500)])], { action: { verb: 'pay', resource: 'other/1', params: { amount: 9999 } } })).toBe('no predicate permits pay on other/1');
+    expect(why([], pay({}))).toBe('envelope grants no predicates');
+    expect(why([{ verb: 'pay' }], { action: { verb: 'x', resource: 'y' } })).toBe('no predicate permits x on y');
+    expect(why([P([F('amount', 'lte', 1)]), P([F('amount', 'lte', 2)])], pay({ amount: 9 }))).toBe('amount <= 1 not satisfied for pay on acct/1');
+    // a predicate in scope whose where is not an array is skipped (fail closed, plain wording)
+    expect(why([{ verb: 'pay', where: 'x' as never }], pay({}))).toBe('no predicate permits pay on acct/1');
+  });
+});

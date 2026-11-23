@@ -16,8 +16,9 @@
 #       https://github.com/iden3/circom/releases  (e.g. circom-macos-amd64 runs on Apple Silicon via Rosetta)
 #   - snarkjs (installed as an optional dependency of @atlasauth/pca)
 #
-# Usage:  bash circuits/setup.sh
+# Usage:  PCA_DEV_SETUP=1 bash circuits/setup.sh   (DEV-ONLY single-party setup; see dev-only-guard.sh)
 set -euo pipefail
+source "$(dirname "$0")/dev-only-guard.sh"
 
 cd "$(dirname "$0")/.."                     # packages/pca
 CIRCOM="${CIRCOM:-circom}"

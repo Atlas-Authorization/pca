@@ -25,7 +25,7 @@ describe('launchLocal kill timers', () => {
     const realSet = globalThis.setTimeout;
     const created: unknown[] = [];
     const setSpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void, ms?: number, ...a: unknown[]) => {
-      const h = realSet(fn, ms, ...a);
+      const h = realSet(fn, ms, ...(a as []));
       if (ms === T(KILL_AFTER)) created.push(h);
       return h;
     }) as typeof setTimeout);

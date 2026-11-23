@@ -8,6 +8,7 @@
 //   3. ambiguity: an entry whose text occurs twice in the file and has no occurrence is an error, even in the static check
 //   4. both sites ledgered: OK, and still OK after unrelated lines are inserted above (line numbers are hints only)
 //   5. multiplicity: the same mutant reported twice on one line needs multiplicity 2
+//   6. (TS) a shard over a line range does not call entries outside its mutated lines stale; case 2 keeps staleness inside them
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -96,6 +97,10 @@ expect('ts 4b: line churn above the sites -> still ok',
   ts('t4b', { source: tsShift, ledger: [T(1, { lineno: 2 }), T(2, { lineno: 5 })], mutants: [M(5), M(8)] }), 0, 'drifted', '2 survivors all listed');
 expect('ts 5: same mutant twice on one line needs multiplicity',
   ts('t5', { ledger: [T(1), T(2)], mutants: [M(2), M(2), M(5)] }), 1, 'multiplicity: 2 identical');
+expect('ts 6: a line-range shard (only line 2 mutated) does not call the entry for line 5 stale',
+  ts('t6', { ledger: [T(1), T(2)], mutants: [M(2)] }), 0, '1 survivors all listed');
+expect('ts 6b: the same for a shard over line 5 only and the entry for line 2',
+  ts('t6b', { ledger: [T(1), T(2)], mutants: [M(5)] }), 0, '1 survivors all listed');
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`${passed} passed, ${failed} failed`);

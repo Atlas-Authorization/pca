@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { actionSchemaKeyOf, generateKeyPair, signActionSchema, verifyActionSchema } from '@atlasauth/pca';
+import { generateKeyPair } from '@atlasauth/pca';
+import { actionSchemaKeyOf, signActionSchema, verifyActionSchema, type McpToolLike } from '@atlasauth/pca/ext/intent';
 import { applySchemaDecisions, conformToolCall, draftActionSchemaFromMcp, verbOfTool } from './schema';
 
-const TOOLS = [
+const TOOLS: McpToolLike[] = [
   {
     name: 'book_flight',
     inputSchema: { type: 'object', properties: { total: { type: 'integer', minimum: 0 }, offer_id: { type: 'string' } }, required: ['total', 'offer_id'] },

@@ -5,26 +5,8 @@
  * "who actually got credited" calls observed through a recording BondAccount.
  */
 import { describe, expect, it, vi } from 'vitest';
-import {
-  BondLedger,
-  COMPENSATION_POOL_ACCOUNT,
-  ESCROW_ACCOUNT,
-  InMemoryBondAccount,
-  InsuranceCapitalPool,
-  bondAmount,
-  computeSlashSplit,
-  disputeEvidenceDigest,
-  quantizeUp,
-  revocationEvidenceDigest,
-  settlementCommit,
-  settlementEvidenceDigest,
-  toMicros,
-  verifySettlement,
-  verifySettlementCommit,
-  type BondAccount,
-  type BondPolicy,
-  type SettlementRecord,
-} from './bond-settlement';
+import { COMPENSATION_POOL_ACCOUNT, ESCROW_ACCOUNT, InsuranceCapitalPool, bondAmount, computeSlashSplit, disputeEvidenceDigest, quantizeUp, revocationEvidenceDigest, settlementCommit, settlementEvidenceDigest, toMicros, verifySettlement, verifySettlementCommit, type BondAccount, type BondPolicy, type SettlementRecord } from './bond-settlement';
+import { BondLedger, InMemoryBondAccount } from './bond-ledger-testing';
 import { b64u, canonicalBytesLenient, hashCanonicalLenient, utf8 } from './hash';
 import { encodeKey, generateKeyPair, sign } from './keys';
 import { mintGrant } from './envelope';

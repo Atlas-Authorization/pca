@@ -220,9 +220,13 @@ export function verifyJudgeVerdict(
   if (typeof v.judgeMeasurement !== 'string') return false;
   if (typeof v.sig !== 'string') return false;
   if (resolveSigAlg(v.alg) === null) return false; // unknown suite => fail-closed
-  const msg = semanticJudgeMessage(statementOf(v));
-  // Suite-agile (ed25519 == verifyB64u(judge, msg, sig)); hybrid requires BOTH; pure ml-dsa under pq_pk.
-  return verifyPinnedSuite(v.alg, v.judge, v.pq_pk, msg, { sig: v.sig, pq_sig: v.pq_sig }, pin);
+  try {
+    const msg = semanticJudgeMessage(statementOf(v));
+    // Suite-agile (ed25519 == verifyB64u(judge, msg, sig)); hybrid requires BOTH; pure ml-dsa under pq_pk.
+    return verifyPinnedSuite(v.alg, v.judge, v.pq_pk, msg, { sig: v.sig, pq_sig: v.pq_sig }, pin);
+  } catch {
+    return false; // e.g. a post-quantum verdict with no pq_pk: refused, never thrown
+  }
 }
 
 // ---- attested-judge binding (bind judgeMeasurement to a measured TEE) -------------------------

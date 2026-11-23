@@ -1,5 +1,7 @@
 # @atlasauth/pca-fhe
 
+> Maturity: **hardened** (hardened, awaiting independent audit). The engineering is done and evidenced by tests, differential checks and a mutation gate; it awaits an independent review of the BFV parameter choices, the fixed-point encoding and the signed-claim layer. It is never production until that review is done, and its API may still change. See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Homomorphic evaluation of PCA's risk gate. PCA admits a machine-only action while the trust budget covers its cost (`kappa * r <= B`, where `r` is a weighted sum of six normalized risk inputs). This package runs that exact functional over encrypted risk inputs using BFV from Microsoft SEAL (via `node-seal`): the evaluator computes the weighted risk and the admission slack without ever seeing the plaintext inputs, and only the key holder decrypts the verdict.
 
 ## Install
@@ -67,9 +69,23 @@ What this buys: integrity and origin of the input ciphertext. It does not hide a
 
 Breaking (unreleased): `evalEncryptedRiskClaim` is removed and `encryptedRiskClaim` now requires `signerSecretKey` and `context` and returns a `SignedRiskClaim`. The low-level `encryptRiskInputs` / `evalRiskGate` primitives remain unsigned.
 
+## Where it fits, and what happens when something is missing
+
+Use it when the party that evaluates the risk gate must not see the agent's risk inputs, for example a shared or third-party gate service in front of several tenants. The principal (key holder) generates keys and pins its signer; the agent encrypts and signs the claim; the gate service calls `evalSignedRiskClaim` and returns the encrypted verdict; the key holder decrypts it and feeds the admit decision into its own authorisation step (a PCA verifier or `requirePCA`) as one input. If the verifier is local and the inputs are not sensitive, evaluate the gate in the clear instead.
+
+| Missing or wrong | Result |
+|---|---|
+| Signature absent, not by a pinned signer, or over another context, binding or policy | `{ ok: false, reason }`, nothing evaluated |
+| Nonce already seen, or the guard is full | `{ ok: false, reason }`, nonce not burned by a refused claim |
+| Ciphertext altered after signing | signature refusal |
+| Malformed or truncated key or ciphertext blob, wrong blob kind | typed error before it reaches the WASM module |
+| Out-of-range, NaN, fractional or mistyped input or policy value | refused before any key is parsed |
+| Secret key for a different public key | decryption throws rather than returning a verdict |
+| Policy with all-zero scaled weights | evaluates to an encryption of zero |
+
 ## Status
 
-Experimental and unaudited. What the test suite now establishes, and what it does not:
+Hardened, awaiting independent audit. What the test suite now establishes, and what it does not:
 
 **Validated**
 

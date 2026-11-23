@@ -161,6 +161,7 @@ describe('parseFrame', () => {
     for (const ty of ['hello', 'msg', 'abort'] as const) expect(parseFrame(body(frame({ ty })))).toEqual(frame({ ty }));
     expect(parseFrame(body(frame({ seq: Number.MAX_SAFE_INTEGER, d: { x: [1] } })))).toMatchObject({ seq: Number.MAX_SAFE_INTEGER });
     expect(parseFrame(body(frame({ seq: 0, sid: '', rd: '' })))).not.toBeNull();
+    expect(parseFrame(Buffer.from(JSON.stringify(frame({ seq: 424242 })).replace('424242', '-0')))).toBeNull(); // -0 is not a wire integer
   });
   it('rejects non-JSON, non-objects and null (without throwing)', () => {
     expect(parseFrame(Buffer.from('{nope'))).toBeNull();
