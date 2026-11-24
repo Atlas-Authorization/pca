@@ -27,7 +27,7 @@ CONSTANTS Verbs, Atoms, MaxLen, MaxDepth, Bug
 
 Paths      == UNION {[1..k -> Atoms] : k \in 0..MaxLen}        \* resource patterns (prefixes); <<>> = everything
 Resources  == UNION {[1..k -> Atoms] : k \in 1..MaxLen}
-Scopes     == SUBSET Verbs \ {{}}                              \* a verb_in set; Verbs itself plays 'any'
+Scopes     == (SUBSET Verbs) \ {{}}                            \* a verb_in set; Verbs itself plays 'any'
 Caveats    == [scope : Scopes, pat : Paths]
 
 IsPrefix(p, r) == Len(p) <= Len(r) /\ SubSeq(r, 1, Len(p)) = p

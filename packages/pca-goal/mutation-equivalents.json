@@ -1,0 +1,27 @@
+{
+ "about": "Surviving Stryker mutants of packages/pca-goal justified as equivalent, one entry per mutation site (same format and checker as tools/pca-audit/mutation-equivalents.json; checked with --package=pca-goal --ledger=this file). Every mutant of the audited files that is not listed here is killed by a test.",
+ "equivalents": [
+  {
+   "package": "pca-goal",
+   "file": "src/selectors.ts",
+   "mutator": "ObjectLiteral",
+   "original": "{ k: 's' }",
+   "replacement": "{}",
+   "line": "const dummy: Ty = { k: 's' };",
+   "occurrence": 1,
+   "lineno": 394,
+   "reason": "`dummy` is a local that is only passed to `void dummy`; it is never read, returned or stored, so emptying its object literal cannot be observed."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/selectors.ts",
+   "mutator": "StringLiteral",
+   "original": "'s'",
+   "replacement": "\"\"",
+   "line": "const dummy: Ty = { k: 's' };",
+   "occurrence": 1,
+   "lineno": 394,
+   "reason": "`dummy` is a local that is only passed to `void dummy`; it is never read, returned or stored, so no input can observe its content."
+  }
+ ]
+}

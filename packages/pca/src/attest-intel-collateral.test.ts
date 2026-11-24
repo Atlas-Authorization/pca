@@ -96,6 +96,22 @@ describe('attest-intel-collateral: fail-closed negatives', () => {
     expect(r.reason).toMatch(/signature does not verify/);
   });
 
+  it('refuses a later duplicate member (JSON.parse would keep the last; only the first is signed)', async () => {
+    const c = realCollateral();
+    const dup = (text: string, name: string) => {
+      const body = JSON.stringify(JSON.parse(text)[name]).replaceAll('UpToDate', 'Revoked');
+      const t = text.replace(',"signature":', `,"${name}":${body},"signature":`);
+      expect(t).not.toBe(text);
+      return t;
+    };
+    const honest = await run(c);
+    expect(honest.ok).toBe(true);
+    const unsigned = dup(c.tcbInfoJson as string, 'tcbInfo');
+    expect(JSON.parse(unsigned).tcbInfo).not.toEqual(JSON.parse(c.tcbInfoJson as string).tcbInfo);
+    expect(await run({ ...c, tcbInfoJson: unsigned })).toEqual({ ok: false, reason: 'TCB info: tcbInfo document is not valid JSON' });
+    expect(await run({ ...c, qeIdentityJson: dup(c.qeIdentityJson as string, 'enclaveIdentity') })).toEqual({ ok: false, reason: 'QE identity: enclaveIdentity document is not valid JSON' });
+  });
+
   it('rejects a tampered signature', async () => {
     const c = realCollateral();
     const t = (c.tcbInfoJson as string).replace(/"signature":"(.)/, (_m, d: string) => `"signature":"${d === '0' ? '1' : '0'}`);

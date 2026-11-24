@@ -1,15 +1,13 @@
 import {
-  type BondedClaim,
   type Capability,
   type CapabilityChain,
-  type OpenOptimisticOpts,
   type PCActn,
   type PlanNode,
   buildPCActn,
-  openOptimistic,
   paramsDigest,
 } from '@atlasauth/pca';
-import { CHARGE_REVERSIBILITY_CLASS, CHARGE_VERB, type Charge } from './authorize';
+import { type BondedClaim, type OpenOptimisticOpts, openOptimistic } from '@atlasauth/pca/ext/optimistic';
+import { CHARGE_REVERSIBILITY_CLASS, CHARGE_VERB, isMinorUnits, type Charge } from './authorize';
 import type { PaymentMandate } from './mandate';
 
 /**
@@ -68,6 +66,7 @@ export function chargeToPCActn(
   charge: Charge,
   opts: ChargePCActnOpts,
 ): { pcactn: PCActn; node: PlanNode } {
+  if (!isMinorUnits(charge.amount)) throw new Error('chargeToPCActn: amount must be a non-negative integer in minor units');
   const nodeId = opts.nodeId ?? `charge:${charge.merchant}:${opts.counter}`;
   const node = chargePlanNode(mandate, charge, nodeId);
   const X = mandate.terms.perTransactionCap;

@@ -1,0 +1,57 @@
+{
+  "@context": {
+    "@protected": true,
+    "AgentPassportCredential": {
+      "@id": "https://atlasauth.net/credentials/agent-passport/v1#AgentPassportCredential",
+      "@context": {
+        "@protected": true,
+        "id": "@id",
+        "type": "@type",
+        "passport_id": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#passportId",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "model_id": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#modelId",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "operator": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#operator",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "hardware_rooted": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#hardwareRooted",
+          "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+        },
+        "weights_measured": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#weightsMeasured",
+          "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+        },
+        "issued_at": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#issuedAt",
+          "@type": "http://www.w3.org/2001/XMLSchema#integer"
+        },
+        "weights_digest": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#weightsDigest",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "system_prompt_digest": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#systemPromptDigest",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "tool_manifest_digest": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#toolManifestDigest",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "runtime_measurement": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#runtimeMeasurement",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "_sd": {
+          "@id": "https://atlasauth.net/credentials/agent-passport/v1#selectiveDisclosureDigest",
+          "@container": "@set"
+        }
+      }
+    }
+  }
+}

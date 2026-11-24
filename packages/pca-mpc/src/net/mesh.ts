@@ -152,6 +152,9 @@ export class Mesh {
     this.clock = cfg.clock ?? wallClock;
     this.recvTimeoutMs = cfg.recvTimeoutMs ?? 20_000;
     this.connectTimeoutMs = cfg.connectTimeoutMs ?? 30_000;
+    for (const ms of [this.recvTimeoutMs, this.connectTimeoutMs]) {
+      if (!(Number.isFinite(ms) && ms >= 0)) throw new RangeError('mesh: timeouts must be finite numbers >= 0');
+    }
     if (cfg.tamper && cfg.unsafeTestHooks !== true) {
       throw new Error('mesh: the tamper test hook requires unsafeTestHooks: true (test-only)');
     }
@@ -220,7 +223,7 @@ export class Mesh {
       if (this.failure) throw this.failure;
       const missing = this.peers.filter((i) => !this.links.get(i)!.helloSeen);
       if (missing.length === 0) return;
-      if (this.clock.now() > deadline) {
+      if (!(this.clock.now() <= deadline)) { // a NaN clock or deadline is past, never "not yet"
         const e = new NetAbort('timeout', missing[0]!, this.selfId, `connect: no authenticated link from ${missing.join(',')}`);
         this.fail(e);
         throw e;
@@ -334,7 +337,7 @@ export class Mesh {
         const claimedKind = typeof d?.kind === 'string' && ABORT_KINDS.has(d.kind) ? (d.kind as AbortKind) : undefined;
         const maxId = Math.max(...this.cfg.nodes.map((x) => x.id));
         const claimedBlame =
-          typeof d?.blamed === 'number' && Number.isInteger(d.blamed) && d.blamed >= 0 && d.blamed <= maxId ? d.blamed : null;
+          typeof d?.blamed === 'number' && Number.isInteger(d.blamed) && !Object.is(d.blamed, -0) && d.blamed >= 0 && d.blamed <= maxId ? d.blamed : null;
         const detail = typeof d?.detail === 'string' ? sanitize(d.detail, 120) : '';
         const claim =
           new NetAbort(
@@ -436,6 +439,7 @@ export class Mesh {
 
   /** Receive the next message from `from`, which must belong to `round`. Times out; never hangs. */
   async recv(from: number, round: string, timeoutMs = this.recvTimeoutMs): Promise<unknown> {
+    if (!(Number.isFinite(timeoutMs) && timeoutMs >= 0)) throw new RangeError('mesh: recv timeout must be a finite number >= 0');
     const l = this.links.get(from);
     if (!l) throw new Error(`mesh: no link to ${from}`);
     const deadline = this.clock.now() + timeoutMs;
@@ -466,7 +470,7 @@ export class Mesh {
         throw e;
       }
       const left = deadline - this.clock.now();
-      if (left <= 0) {
+      if (!(left > 0)) {
         const e = new NetAbort('timeout', from, this.selfId, `no '${round}' message from ${from} within ${timeoutMs}ms (deadline ${timeoutMs}ms; a silent peer is blamed on this local observation only)`, undefined, undefined, { deadlineMs: timeoutMs });
         this.fail(e);
         throw e;

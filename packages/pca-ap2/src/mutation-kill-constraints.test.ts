@@ -151,8 +151,10 @@ describe('budget', () => {
   const ctx = (totalAmount: number): { context: MandateContext } => ({ context: { totalAmount, totalUses: 0 } });
   it('currency, exponent, context', () => {
     expect(one(b(100, 'EUR'), closed(), ctx(0))).toEqual(['budget currency mismatch: expected EUR, got USD']);
-    expect(one(b(100, 'JPY'), closed({ payment_amount: { amount: 1, currency: 'JPY' } }), ctx(0))).toEqual(['budget in JPY is unsupported: budget.max is converted with a fixed x100 factor']);
-    expect(one(b(100, 'KWD'), closed({ payment_amount: { amount: 1, currency: 'KWD' } }), ctx(0))).toEqual(['budget in KWD is unsupported: budget.max is converted with a fixed x100 factor']);
+    // every currency is read the way the official SDK reads it: int(max * 100) minor units
+    expect(one(b(100, 'JPY'), closed({ payment_amount: { amount: 1, currency: 'JPY' } }), ctx(0))).toEqual([]);
+    expect(one(b(1, 'JPY'), closed({ payment_amount: { amount: 101, currency: 'JPY' } }), ctx(0))).toEqual(['cumulative spend 101 exceeds budget 100 (past spend 0)']);
+    expect(one(b(100, 'KWD'), closed({ payment_amount: { amount: 10_001, currency: 'KWD' } }), ctx(0))).toEqual(['cumulative spend 10001 exceeds budget 10000 (past spend 0)']);
     expect(one(b(100))).toEqual(['mandate context is required to evaluate a budget']);
   });
   it('cumulative spend boundary (spend == budget is fine)', () => {
@@ -312,7 +314,7 @@ describe('projectCheckout', () => {
       expect(msg(base({ line_items: [li(), bad] })), JSON.stringify(bad)).toBe('checkout_jwt payload: line_items[1] is malformed');
     }
     const itemMsg = 'checkout_jwt payload: line_items[0].item needs id, title and integer minor-unit price';
-    for (const item of [{ title: 't', price: 1 }, { id: 5, title: 't', price: 1 }, { id: 'a', price: 1 }, { id: 'a', title: 5, price: 1 }, { id: 'a', title: 't' }, { id: 'a', title: 't', price: 1.5 }, { id: 'a', title: 't', price: -1 }, { id: 'a', title: 't', price: '1' }, { id: 'a', title: 't', price: 2 ** 53 }]) {
+    for (const item of [{ title: 't', price: 1 }, { id: 5, title: 't', price: 1 }, { id: 'a', price: 1 }, { id: 'a', title: 5, price: 1 }, { id: 'a', title: 't' }, { id: 'a', title: 't', price: 1.5 }, { id: 'a', title: 't', price: -1 }, { id: 'a', title: 't', price: '1' }, { id: 'a', title: 't', price: 2 ** 53 }, { id: 'a', title: 't', price: -0 }]) {
       expect(msg(base({ line_items: [li({ item })] })), JSON.stringify(item)).toBe(itemMsg);
     }
     const qMsg = 'checkout_jwt payload: line_items[0].quantity must be a positive integer';
@@ -320,7 +322,7 @@ describe('projectCheckout', () => {
     expect(projectCheckout(base({ line_items: [li({ quantity: 1 })] })).line_items[0]?.quantity).toBe(1);
   });
   it('totals and merchant', () => {
-    for (const t of [5, null, [], { amount: 1 }, { type: 5, amount: 1 }, { type: 'total' }, { type: 'total', amount: 1.5 }, { type: 'total', amount: '1' }]) {
+    for (const t of [5, null, [], { amount: 1 }, { type: 5, amount: 1 }, { type: 'total' }, { type: 'total', amount: 1.5 }, { type: 'total', amount: '1' }, { type: 'total', amount: -0 }]) {
       expect(msg(base({ totals: [{ type: 'subtotal', amount: 1 }, t] })), JSON.stringify(t)).toBe('checkout_jwt payload: totals[1] is malformed');
     }
     expect(projectCheckout(base({ totals: [{ type: 'discount', amount: -5 }] })).totals).toEqual([{ type: 'discount', amount: -5 }]);

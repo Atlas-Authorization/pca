@@ -1,0 +1,14 @@
+{
+ "target": "frost decodeSafePoint",
+ "seeds": [
+  {
+   "b64": "yPTP1+ycgeFsdxRKTRzg3KAzlmHfMTzOuSAxE0aPtgg="
+  },
+  {
+   "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  {
+   "b64": "//////////////////////////////////////////8="
+  }
+ ]
+}

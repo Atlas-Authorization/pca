@@ -6,13 +6,14 @@
 // Kotlin-specific boundary cases below.
 //   K/tsx/run.sh tools/pca-audit/kotlin-mutate/killFacts-oracle-gen.mjs [out.json]
 // Deterministic: keys are seeded, signatures are Ed25519 (deterministic).
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 const pca = await import(new URL('../../../packages/pca/src/index.ts', import.meta.url).href);
 
-const OUT = process.argv[2] ?? new URL('../../../sdks/kotlin-pca/test-data/killFacts.json', import.meta.url).pathname;
+const OUT = process.argv[2] ?? fileURLToPath(new URL('../../../sdks/kotlin-pca/test-data/killFacts.json', import.meta.url));
 
 // ---- run the Go oracle into a temp file (it writes process.argv[2])
 const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'killfacts-')), 'killD.json');

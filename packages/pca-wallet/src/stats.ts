@@ -18,7 +18,8 @@ export function lnGamma(x: number): number {
   return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(a);
 }
 
-function betacf(a: number, b: number, x: number): number {
+/** The continued fraction of I_x(a, b) (modified Lentz; a zero denominator is replaced by 1e-300, never divided by). */
+export function betacf(a: number, b: number, x: number): number {
   const TINY = 1e-300;
   const qab = a + b;
   const qap = a + 1;
@@ -84,6 +85,16 @@ export function betaQuantile(q: number, a: number, b: number): number {
  */
 export function clopperPearsonUpper(k: number, n: number, delta: number): number {
   return exactClopperPearsonUpper(k, n, delta);
+}
+
+/**
+ * The upper bound q such that the Beta(a, b) posterior puts mass delta above it, for POSITIVE INTEGER a and b, exactly: I_x(a, b) = P[Bin(a + b - 1, x) >= a],
+ * so the quantile at level 1 - delta is the Clopper-Pearson inversion with k = a - 1 successes in n = a + b - 1 trials (integer arithmetic, rounded
+ * outward to 2^-44; see `@atlasauth/pca-intent`). The freeze and admission decisions compare this value, so it must not depend on a platform's libm.
+ */
+export function betaUpperExact(delta: number, a: number, b: number): number {
+  if (!(Number.isInteger(a) && a >= 1 && Number.isInteger(b) && b >= 1)) throw new RangeError('betaUpperExact: a and b must be positive integers');
+  return exactClopperPearsonUpper(a - 1, a + b - 1, delta);
 }
 
 /** Binary entropy in bits. */

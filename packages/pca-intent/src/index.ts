@@ -1,5 +1,5 @@
 /**
- * @atlasauth/pca-intent: the PCA Intent Layer prototype (docs/specs/pca-intent-layer.md).
+ * @atlasauth/pca-intent: the PCA Intent Layer.
  *
  * Intent as a measurable object: a typed outcome space Ω derived from the grant/caveat vocabulary, an exact
  * Bayesian / version-space learner over grant hypotheses (boxes, unions of boxes, decision lists; agnostic

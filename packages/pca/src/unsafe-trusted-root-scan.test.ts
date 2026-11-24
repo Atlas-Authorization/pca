@@ -34,7 +34,7 @@ describe.skipIf(!HAVE)('scripts/check-unsafe-trusted-root.mjs', async () => {
   it('flags the original express-rs template shape (PCA-Grant header -> grant)', () => {
     const v = plant({
       'packages/create-pca-app/templates/express-rs/src/server.ts':
-        "const grantHeader = req.header('PCA-Grant');\nconst grant = JSON.parse(Buffer.from(grantHeader, 'base64url').toString('utf8'));\nawait verifyPCActnCore(decodePCActn(encoded), { grant, audience: AUDIENCE });\n",
+        "const grantHeader = req.header('PCA-Grant');\nconst grant = JSON.parse(Buffer.from(grantHeader, 'base64url').toString('utf8'));\nawait verifyPCActnCore(decodePCActn(encoded), { insecureSkipPlanRootCheck: true, grant, audience: AUDIENCE });\n",
     });
     expect(v.join('\n')).toMatch(/express-rs\/src\/server\.ts:1: grant-from-request/);
     expect(v.join('\n')).toMatch(/server\.ts:2: grant-from-header-var/);
@@ -43,7 +43,7 @@ describe.skipIf(!HAVE)('scripts/check-unsafe-trusted-root.mjs', async () => {
   it('flags trustedRoot / grant derived from cap_chain[0] in TS, Python, Ruby, Java, Go, Rust, docs and html', () => {
     const v = plant({
       'examples/a/src/a.ts': 'verifyChain(p.cap_chain, iss, { trustedRoot: p.cap_chain[0] });\n',
-      'examples/a/src/b.ts': 'await verifyPCActnCore(p, { grant: p.cap_chain[0], audience });\n',
+      'examples/a/src/b.ts': 'await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: p.cap_chain[0], audience });\n',
       'examples/a/src/c.ts': 'const grant = req.body.pcactn.cap_chain[0];\n',
       'examples/a/src/d.ts': 'verifyChain(c, i, { trustedRoot: pcactn.capChain.at(0) });\n',
       'examples/p/a.py': 'ok = verify_chain(chain, iss, trusted_root=pcactn["cap_chain"][0])\n',
@@ -51,9 +51,9 @@ describe.skipIf(!HAVE)('scripts/check-unsafe-trusted-root.mjs', async () => {
       'examples/j/A.java': 'Pca.verifyChain(chain, iss, TrustedRoot = pcactn.capChain[0]);\n',
       'examples/g/a.go': 'grant := p.CapChain[0]\n',
       'examples/rs/a.rs': 'let trusted_root = p.cap_chain[0].clone();\n',
-      'docs/guide.md': 'Use it like:\n\n```ts\nconst r = await verifyPCActnCore(p, { grant: p.cap_chain[0] });\n```\n',
+      'docs/guide.md': 'Use it like:\n\n```ts\nconst r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: p.cap_chain[0] });\n```\n',
       'tools/pca-playground/page.html': '<script>P.verifyChain(c, i, {trustedRoot: art.cap_chain[0]})</script>\n',
-      'samples/s/x.js': 'verifyPCActnCore(a, { grant: req.headers["x-grant"] ? JSON.parse(req.headers.grant) : null, grant: request.body.grant });\n',
+      'samples/s/x.js': 'verifyPCActnCore(a, { insecureSkipPlanRootCheck: true, grant: req.headers["x-grant"] ? JSON.parse(req.headers.grant) : null, grant: request.body.grant });\n',
     });
     const j = v.join('\n');
     for (const f of ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'a.py', 'a.rb', 'A.java', 'a.go', 'a.rs', 'guide.md', 'page.html', 'x.js']) expect(j, f).toContain(f + ':');
@@ -61,11 +61,11 @@ describe.skipIf(!HAVE)('scripts/check-unsafe-trusted-root.mjs', async () => {
 
   it('flags grantFromArtifact without pqPins and the allowUnboundPq shorthand, but not with pqPins', () => {
     const v = plant({
-      'examples/a/bad.ts': 'verifyPCActnCore(p, { grant: g, grantFromArtifact: true });\n',
+      'examples/a/bad.ts': 'verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: g, grantFromArtifact: true });\n',
       'examples/a/bad2.ts': 'const policy = { allowUnboundPq };\n',
       'examples/a/bad3.ts': 'const policy = { allowUnboundPq: true };\n',
       // R6-CORE-04: a teaching surface authorizes with the full verifier, never verifyPCActnCore (that is now its own finding)
-      'examples/a/ok.ts': 'verifyPCActn(p, { grant: g, grantFromArtifact: true, pqPins: PINS });\n',
+      'examples/a/ok.ts': 'verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: g, grantFromArtifact: true, pqPins: PINS });\n',
     });
     const j = v.join('\n');
     expect(j).toMatch(/bad\.ts:1: grant-from-artifact-no-pins/);
@@ -80,7 +80,7 @@ describe.skipIf(!HAVE)('scripts/check-unsafe-trusted-root.mjs', async () => {
       'examples/a/marked.ts': '// pca-unsafe-root: allow counter-example shown to demonstrate the attack\nconst x = { trustedRoot: p.cap_chain[0] };\n',
       'examples/a/badmark.ts': '// pca-unsafe-root: allow ok\nconst x = { trustedRoot: p.cap_chain[0] };\n',
       'examples/a/comment.ts': '// do not write trustedRoot: p.cap_chain[0]\n/** grant: p.cap_chain[0] */\nconst y = 1;\n',
-      'examples/a/safe.ts': 'verifyPCActn(p, { grant: store.get(p.grant_ref), pqPins, allowedSuites: ["ed25519"] });\n',
+      'examples/a/safe.ts': 'verifyPCActn(p, { insecureSkipPlanRootCheck: true, grant: store.get(p.grant_ref), pqPins, allowedSuites: ["ed25519"] });\n',
       'examples/a/x.test.ts': 'const x = { trustedRoot: p.cap_chain[0] };\n',
     });
     const j = v.join('\n');

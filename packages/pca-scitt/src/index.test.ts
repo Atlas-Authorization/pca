@@ -1,4 +1,4 @@
-import { generateKeyPairSync } from 'node:crypto';
+import { type KeyObject, generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { agent, generateKeyPair, type PCActn } from '@atlasauth/pca';
 import {
@@ -10,18 +10,19 @@ import {
   HDR_VDS,
   HDR_VDS_PROOFS,
   PROOF_TYPE_INCLUSION,
-  TransparencyService,
+  
   VDS_RFC9162_SHA256,
   decode,
   decodeInclusionProof,
   encode,
-  registerStatement,
+  
   signStatement,
   statementLeaf,
   statementPayload,
   verifyReceipt,
   verifyStatement,
 } from './index';
+import { TransparencyService, registerStatement } from './testing';
 
 const AUD = 'ins_scitt_test';
 
@@ -252,6 +253,19 @@ describe('fail-closed', () => {
   it('requires at least one anchor (no treeRoot and no verificationKey => false)', () => {
     const { statement, receipt, issuer } = setup();
     expect(verifyReceipt(receipt, statement, { statementKey: issuer.publicKey })).toBe(false);
+  });
+
+  it('a present but null / empty key is refused, never skipped', () => {
+    const { ts, statement, receipt, root, issuer } = setup();
+    for (const bad of [null, '', 0, false] as unknown as KeyObject[]) {
+      expect(verifyReceipt(receipt, statement, { verificationKey: bad }), String(bad)).toBe(false);
+      expect(verifyReceipt(receipt, statement, { treeRoot: root, verificationKey: bad }), String(bad)).toBe(false);
+      expect(verifyReceipt(receipt, statement, { treeRoot: root, statementKey: bad }), String(bad)).toBe(false);
+      expect(verifyReceipt(receipt, statement, { verificationKey: ts.publicKey, statementKey: bad }), String(bad)).toBe(false);
+    }
+    // the legitimate anchors still pass
+    expect(verifyReceipt(receipt, statement, { verificationKey: ts.publicKey })).toBe(true);
+    expect(verifyReceipt(receipt, statement, { treeRoot: root, statementKey: issuer.publicKey })).toBe(true);
   });
 
   it('decodeInclusionProof rejects a path length inconsistent with (index,size)', () => {

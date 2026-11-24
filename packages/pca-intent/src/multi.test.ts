@@ -193,5 +193,9 @@ describe('question cards (M4 UX components)', () => {
       }
       expect(parseCardAnswer(card, { answer: 'partly', path: AMT, upTo: slot.hi }).ok).toBe(false);
     }
+    // -0 is never an answer value (strict profile)
+    const c0 = { ...card, partial: card.partial.map((s) => (s.path === AMT ? { ...s, lo: 0, hi: 10 } : s)) } as typeof card;
+    expect(parseCardAnswer(c0, { answer: 'partly', path: AMT, upTo: 0 }).ok).toBe(true);
+    expect(parseCardAnswer(c0, { answer: 'partly', path: AMT, upTo: -0 }).ok).toBe(false);
   });
 });

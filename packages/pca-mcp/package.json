@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-mcp",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Model Context Protocol adapter for Proof-Carrying Authority: wrap an MCP tool handler so every call emits a PCActn (and attaches the proof) before the handler runs.",
   "keywords": [
     "mcp",
@@ -47,6 +47,7 @@
     }
   },
   "devDependencies": {
+    "@atlasauth/pca-actions": "workspace:*",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
@@ -60,5 +61,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production"
   }
 }

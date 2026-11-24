@@ -192,6 +192,11 @@ const same = (a: unknown, b: unknown, what: string): void => {
   expect(b, what).toEqual(a);
 };
 
+// 0.5 (B6): production names the unmet `where` limit ("<limit> not satisfied for V on R"); the verified kernel only says
+// "no predicate permits V on R". The verdict is what is proved; the wording is compared in the plain form.
+const plain = (r: string | undefined) => (r === undefined ? r : r.replace(/^.*? not satisfied for (.+)$/s, 'no predicate permits $1'));
+const plainJson = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === 'string' ? plain(x) : x));
+
 describe('PolicyVm differential: condition evaluator (random + exhaustive)', () => {
   it('resolvePath agrees on every path of random contexts, plus junk paths', () => {
     const r = new R(SEED * 7 + 1);
@@ -331,7 +336,7 @@ describe('PolicyVm differential: predicates', () => {
       const list: any = r.b(0.97) ? Array.from({ length: r.i(4) }, () => predicate(r, ctx, ps)) : r.p([null, 5, {}, 'x']);
       const a = prod.evaluatePredicates(list, ctx);
       const b = vm.evaluatePredicates(list, ctx);
-      if (a.allowed !== b.allowed || a.reason !== b.reason || a.matched !== b.matched) throw new Error(`evaluatePredicates differs\nprod=${JSON.stringify(a)}\nverified=${JSON.stringify(b)}\nlist=${JSON.stringify(list)}\nctx=${JSON.stringify(ctx)}`);
+      if (a.allowed !== b.allowed || plain(a.reason) !== plain(b.reason) || a.matched !== b.matched) throw new Error(`evaluatePredicates differs\nprod=${JSON.stringify(a)}\nverified=${JSON.stringify(b)}\nlist=${JSON.stringify(list)}\nctx=${JSON.stringify(ctx)}`);
       if (a.allowed) allowed++;
       else denied++;
       if (Array.isArray(list)) for (const p of list) expect(vm.predicateMatches(p, ctx)).toBe(prod.predicateMatches(p, ctx));
@@ -615,7 +620,7 @@ describe('PolicyVm differential: decide() with the verified kernels', () => {
       const input = gen(r);
       const a = decide(input);
       const b = decideVerified(input, vm);
-      if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`decide differs\nprod=${JSON.stringify(a)}\nverified=${JSON.stringify(b)}\ninput=${JSON.stringify(input)}`);
+      if (plainJson(a) !== plainJson(b)) throw new Error(`decide differs\nprod=${JSON.stringify(a)}\nverified=${JSON.stringify(b)}\ninput=${JSON.stringify(input)}`);
       if (a.releaseGuardianShare) kinds.release++;
       else kinds.denied++;
       if (a.admit) kinds.admit++;

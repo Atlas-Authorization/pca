@@ -2708,6 +2708,8 @@ module FastP {
   }
 
   // ---- the canonical printer ----
+  // a prefix one longer is the prefix plus the next element (proved on its own: inside a large loop body the extensionality step is not reliable)
+  lemma TakeSnoc<T>(s: seq<T>, i: int) requires 0 <= i < |s| ensures s[..i + 1] == s[..i] + [s[i]] {}
   lemma PrintElemsSnoc(a: seq<J>, y: J)
     ensures PrintElems(a + [y]) == (if |a| == 0 then Print(y) else PrintElems(a) + [44] + Print(y))
     decreases |a|
@@ -2924,6 +2926,7 @@ module FastP {
     var q: N := 0;
     while q < len
       invariant q <= len && n2 as int <= b2.Length <= LIMIT as int && (b2 == buf || fresh(b2))
+      invariant |ne| == |ja| == len as int
       invariant W(b2[..n2]) == base + PrintElems(ne[..q])
       invariant forall w :: 0 <= w < q as int ==> Valid(ja[w], d as int + 1)
       decreases len - q
@@ -2945,7 +2948,8 @@ module FastP {
       s, b2, n2 := PrintM(a[q], d + 1, b2, n2);
       if s.Bad? { assert !ValidElems(ja, d as int + 1) by { assert !Valid(ja[q], d as int + 1); } return Bad, b2, n2; }
       if s.Exh? { return Exh, b2, n2; }
-      assert ne[..q + 1] == ne[..q] + [ne[q]];
+      assert q as int < |ne|;
+      TakeSnoc(ne, q as int);
       PrintElemsSnoc(ne[..q], ne[q]);
       q := q + 1;
     }

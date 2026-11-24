@@ -3,11 +3,18 @@ import { importJWK } from 'jose';
 import { agent, generateKeyPair, type Agent } from '@atlasauth/pca';
 import {
   actDepth,
-  fromTransactionToken,
+  fromTransactionToken as fromTransactionTokenReal,
   subActChain,
-  toTransactionToken,
+  toTransactionToken as toTransactionTokenReal,
   type TxnAction,
 } from './index';
+
+// The package defaults are draft-11 + a required replay store; these tests exercise the legacy profile
+// unless a test passes its own options, so the shared defaults are pinned here once.
+const fromTransactionToken: typeof fromTransactionTokenReal = (jwt, key, opts = {}) =>
+  fromTransactionTokenReal(jwt, key, { profile: 'legacy', replayCheck: 'unchecked', ...opts });
+const toTransactionToken: typeof toTransactionTokenReal = (args) => toTransactionTokenReal({ profile: 'legacy', ...args });
+
 
 /** A 3-hop chain: principal -> holder0 (root grant) -> holder1 (sub) -> holder2 (sub). */
 function threeHopAgent(): Agent {

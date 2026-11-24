@@ -1,17 +1,15 @@
 import {
   b64u,
   canonicalBytesStrict,
-  cellCoordsError,
   decodeB64uStrict,
   hashCanonical,
-  intentActionDigest,
   paramsDigest,
   publicKeyOf,
   sign,
   utf8,
   verifyB64u,
-  type Friction,
 } from '@atlasauth/pca';
+import { cellCoordsError, intentActionDigest, type Friction } from '@atlasauth/pca/ext/intent';
 
 /**
  * WIRE FORMATS OF THE TRUSTED QUESTION CHANNEL (Intent Layer v2, docs/specs/pca-intent-layer-v2.md §3.3, §3.4, §4 M5/M6, §8).
@@ -99,7 +97,7 @@ export function actionValuesOf(a: PcaAction): ActionValues {
 
 export const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const isB64u32 = (v: unknown): v is string => decodeB64uStrict(v, 32) !== null;
-const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v);
+const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0);
 const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
 function domainMessage(domain: string, body: unknown): Uint8Array {
@@ -264,7 +262,8 @@ export function verifyIntentAnswer(a: unknown, principals?: readonly string[]): 
     const bad = answerShapeError(a);
     if (bad) return { ok: false, reason: bad };
     const ans = a as unknown as SignedIntentAnswer;
-    if (principals && !principals.includes(ans.signer)) return { ok: false, reason: 'signer is not a principal of the session' };
+    // A non-array (e.g. a string, whose includes() is a substring match) restricts to nobody.
+    if (principals !== undefined && (!Array.isArray(principals) || !principals.includes(ans.signer))) return { ok: false, reason: 'signer is not a principal of the session' };
     if (typeof ans.sig !== 'string' || !verifyB64u(ans.signer, domainMessage(INTENT_ANSWER_SIG_DOMAIN, answerBody(ans)), ans.sig)) return { ok: false, reason: 'bad signature' };
     return { ok: true };
   } catch (e) {

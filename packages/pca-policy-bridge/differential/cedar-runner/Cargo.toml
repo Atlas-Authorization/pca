@@ -1,0 +1,11 @@
+[package]
+name = "cedar-runner"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+cedar-policy = "=4.2.2"
+serde_json = "1"
+
+[workspace]

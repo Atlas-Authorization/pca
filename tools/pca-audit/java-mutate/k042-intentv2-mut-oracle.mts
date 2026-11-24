@@ -8,11 +8,12 @@
 //
 //   npx tsx tools/pca-audit/java-mutate/k042-intentv2-mut-oracle.mts      (deterministic; needs k042-intentv2-cases.json.gz)
 // writes sdks/java-pca/test-data/k042-intentv2-mut.json.gz
+import { fileURLToPath } from 'node:url';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync, gzipSync } from 'node:zlib';
 const pcaMod: any = await import(new URL('../../../packages/pca/src/index.ts', import.meta.url).href);
 const pca: any = pcaMod.decideIntentV2 ? pcaMod : pcaMod.default;
-const ROOT = new URL('../../../', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const base: any[] = JSON.parse(gunzipSync(readFileSync(ROOT + 'sdks/java-pca/test-data/k042-intentv2-cases.json.gz')).toString('utf8')).cases;
 
 function ser(v: any): string {

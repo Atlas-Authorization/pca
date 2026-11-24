@@ -57,7 +57,7 @@ const FQ_BN = 218882428718392752222464057452572750886963111572978236626890378946
 
 describe('isCanonicalGroth16Envelope: every structural branch', () => {
   for (const [curve, sample, fr] of [['bn254', bn, FR.bn254], ['bls12-381', bls, FR.bls]] as const) {
-    const g = (f: (e: Env) => void): Env => {
+    const g = (f: (e: any) => void): Env => {
       const c = clone(sample);
       f(c);
       return c;
@@ -248,6 +248,7 @@ describe('quantizers: exact codes and refusals', () => {
     bad({ n: 2 ** 64 }, 'policyvm quantize: paramScalar is not a uint64');
     bad({ n: -1 }, 'policyvm quantize: paramScalar must be a non-negative integer');
     bad({ n: 1.5 }, 'policyvm quantize: paramScalar must be a non-negative integer');
+    bad({ n: -0 }, 'policyvm quantize: paramScalar must be a non-negative integer');
     bad({ n: Number.NaN }, 'policyvm quantize: paramScalar must be a non-negative integer');
     for (const v of ['12a', 'a12', '', '-1', '1 2', true, ['12'], { a: 1 }]) bad({ n: v }, 'policyvm quantize: paramScalar is not a non-negative integer');
   });

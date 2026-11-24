@@ -348,14 +348,14 @@ describe('Taint: attacker-controlled label kinds are own-property lookups; compu
     it('inherited-key label from the registry: gate FAILS at maxTaint 0 (used to pass with NaN taint)', async () => {
       const { grant, p } = build();
       const ctx = { registry: { lookup: () => ({ kind: 'constructor' }) as any } };
-      const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', enforce: { taint: { ctx, maxTaint: 0 } } });
+      const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', enforce: { taint: { ctx, maxTaint: 0 } } });
       expect(r.checks.taint_gate).toBe('fail');
       expect(r.allow).toBe(false);
     });
     it('control: a genuinely trusted ref still passes at maxTaint 0', async () => {
       const { grant, p } = build();
       const registry = new InMemoryTrustedInputRegistry().recordTrusted('ref-x');
-      const r = await verifyPCActnCore(p, { grant, nowEpoch: NOW, audience: 'rs-1', enforce: { taint: { ctx: { registry }, maxTaint: 0 } } });
+      const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant, nowEpoch: NOW, audience: 'rs-1', enforce: { taint: { ctx: { registry }, maxTaint: 0 } } });
       expect(r.checks.taint_gate).toBe('pass');
     });
   });

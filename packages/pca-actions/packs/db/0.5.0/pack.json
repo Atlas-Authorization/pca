@@ -1,0 +1,66 @@
+{
+  "v": 1,
+  "kind": "pca-action-pack",
+  "name": "db",
+  "version": "0.5.0",
+  "ns": [
+    "mongo",
+    "mysql",
+    "pg",
+    "redis",
+    "sqlite"
+  ],
+  "count": 171,
+  "root": "llcGeoAbdv9kOJlLV9536nyUYNhT0MfAFj7xrwuXWDk",
+  "traits_digest": "W2xe4TXZKavAeEpzGVYC8pp-ZhOxDv-_3TF76MveweM",
+  "tables_digest": "I7nxRoiVhU18WNY_EaUqegG7KeBYtfP8gMmibsfXJtU",
+  "review": {
+    "authored": 171,
+    "unreviewed": 0
+  },
+  "stability": "experimental",
+  "redistribution": "ours",
+  "licence_notes": "Written in-house from the public documentation of PostgreSQL, MySQL, SQLite, MongoDB and Redis, describing classes of operation; no vendor text or schema is carried.",
+  "sources": [
+    {
+      "id": "table",
+      "kind": "table",
+      "uri": "in-repo:scripts/actions-packs/packs/db.ts",
+      "spec_digest": "sha256:",
+      "licence": "MIT (in-house)",
+      "licence_url": ""
+    }
+  ],
+  "generated_by": {
+    "generator": "actions-packs/1",
+    "rules_digest": "74ee03ea4465e5ab4deaceec6b137100deadc6dfbcea157115897c9d5b43eb43"
+  },
+  "shards": [
+    {
+      "file": "defs/000-mongo_aggregate.jsonl",
+      "count": 171,
+      "bytes": 86037,
+      "sha256": "eb8d186dc31b6d3e4b10667210059439bc810886928abf890a4bee56c15d7ac0",
+      "first": "mongo.aggregate",
+      "last": "sqlite.vacuum"
+    }
+  ],
+  "stats": {
+    "total": 171,
+    "authored": 171,
+    "unreviewed": 0,
+    "skipped": {},
+    "dropped_params": 0,
+    "by_effect": {
+      "read": 38,
+      "update": 50,
+      "create": 34,
+      "privilege": 22,
+      "delete": 55,
+      "export": 10,
+      "exec": 13,
+      "provision": 3,
+      "send": 1
+    }
+  }
+}

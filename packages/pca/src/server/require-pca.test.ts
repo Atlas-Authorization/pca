@@ -4,8 +4,10 @@ import { issueLivenessBeacon, beaconRef } from '../beacons';
 import { encodeKey, generateKeyPair } from '../keys';
 import { encodePCActn } from '../pcactn';
 import { signRevocationEpoch, RevocationSet, type RevocationEpoch } from '../revocation';
-import { defaultExtract, memoryPcaStore, requirePCA } from './require-pca';
+import { defaultExtract, memoryPcaStore, requirePCA as requirePCA05 } from './require-pca';
 import { AUD, NOW, setup } from './fixture.test-util';
+const requirePCA = (o: Parameters<typeof requirePCA05>[0]): ReturnType<typeof requirePCA05> => requirePCA05({ insecureAllowUnboundOperation: true, multiInstance: false, ...o }); // unbound and single-instance on purpose: these tests are not about operation binding or store scope (see breaking-05.test.ts)
+
 
 const b64u = (s: string) => Buffer.from(s).toString('base64url');
 
@@ -79,7 +81,29 @@ describe('requirePCA', () => {
     expect((await g({ headers: {}, body: { pcactn: a } })).ok).toBe(true);
     const again = await g({ headers: {}, body: { pcactn: a } });
     expect(again.ok).toBe(false);
-    if (!again.ok) expect(again.verdict.checks.counter).toBe('fail');
+    if (!again.ok) expect(again.verdict.checks.replay).toBe('fail');
+  });
+
+  describe('check names (0.5, B6): counter_format is stateless, replay is stateful', () => {
+    const req = () => ({ headers: {}, body: { pcactn: s.mk(s.plan[0]!, { counter: 1 }) } });
+    it('reports counter_format from the core and replay from the state layer; the old name is not emitted', async () => {
+      const g = guard();
+      const first = await g(req());
+      expect(first.ok && first.verdict.checks).toMatchObject({ counter_format: 'pass', replay: 'pass' });
+      expect(first.ok && 'counter' in first.verdict.checks).toBe(false);
+      const again = await g(req());
+      expect(!again.ok && [again.verdict.checks.counter_format, again.verdict.checks.replay, again.verdict.reasons.at(-1)]).toEqual(['pass', 'fail', 'replay: 1 is not greater than last seen 1 (replay)']);
+    });
+    it('without a store replay is not-enforced and the default list denies, naming replay', async () => {
+      const r = await guard({ budgetStore: undefined })(req());
+      expect(!r.ok && [r.verdict.checks.counter_format, r.verdict.checks.replay]).toEqual(['pass', 'fail']);
+      expect(!r.ok && r.verdict.reasons.join(' ')).toMatch(/replay: required check is not-enforced/);
+    });
+    it('the old `counter` entry of a require list is an alias of replay', async () => {
+      const noStore = { budgetStore: undefined, require: ['counter'] };
+      expect((await guard(noStore)(req())).ok).toBe(false);
+      expect((await guard({ require: ['counter'] })(req())).ok).toBe(true);
+    });
   });
 
   describe('default-deny enforcement profile (audit P0-4)', () => {
@@ -89,11 +113,11 @@ describe('requirePCA', () => {
     it('allows only when counter, revocation and plan_root_authorized are all ENFORCED', async () => {
       const r = await guard()(req());
       expect(r.ok).toBe(true);
-      if (r.ok) expect(r.verdict.checks).toMatchObject({ counter: 'pass', revocation: 'pass', plan_root_authorized: 'pass' });
+      if (r.ok) expect(r.verdict.checks).toMatchObject({ counter_format: 'pass', replay: 'pass', revocation: 'pass', plan_root_authorized: 'pass' });
     });
 
     it.each([
-      ['counter', { budgetStore: undefined }],
+      ['replay', { budgetStore: undefined }],
       ['revocation', { hooks: {} }],
       ['plan_root_authorized', { context: () => ({ plan: s.plan, risk: s.lowRisk }) }],
     ])('a required-but-not-enforced %s check DENIES (403)', async (check, extra) => {

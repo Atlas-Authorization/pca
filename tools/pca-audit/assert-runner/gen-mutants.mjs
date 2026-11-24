@@ -3,12 +3,13 @@
 // Generates the mutants Stryker would generate for ONE source file, with Stryker's own instrumenter (exact locations and
 // replacement code). Optional --backlog/--tag keeps only the sites listed in a merge-log style backlog
 // ("... <tag>:<line>:<col> (#n) <Mutator> '<orig>' -> '<repl>'", replacements may be truncated: matched by prefix).
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i < 0 ? d : process.argv[i + 1]; };
 const pkgDir = path.resolve(arg('pkg-dir', '.')); const src = arg('src'); const out = arg('out', 'mutants.jsonl');
 const backlog = arg('backlog'); const tag = arg('tag'); const lines = arg('lines');
-const instr = process.env.STRYKER_INSTRUMENTER ?? path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'node_modules/@stryker-mutator/instrumenter/dist/src/index.js');
+const instr = process.env.STRYKER_INSTRUMENTER ?? path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'node_modules/@stryker-mutator/instrumenter/dist/src/index.js');
 if (!src) { console.error('usage: gen-mutants.mjs --pkg-dir <dir> --src <src/x.ts> [--backlog all.txt --tag pca/src/x.ts] [--lines 100-200] --out m.jsonl'); process.exit(2); }
 const { Instrumenter } = await import(instr);
 const content = fs.readFileSync(path.join(pkgDir, src), 'utf8');

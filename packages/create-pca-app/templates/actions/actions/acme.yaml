@@ -1,0 +1,21 @@
+# Actions for acme. Everything not written here is defaulted: run `npm run explain` to see the result.
+ns: acme
+since: 0.1.0
+actions:
+  - verb: acme.invoice.send
+    title: Send an invoice
+    description: Emails an existing invoice to the customer.
+    effects: [send]
+    resource: acme.invoice:inv_*       # {type: acme.invoice, id: {prefix: inv_, class: alnum, len: [8, 32]}, scope: one}
+    params:
+      invoice: id:acme.invoice
+      to: email                         # role contact.email, format email, tag pii
+      note: message(500)                # free text that leaves the organisation
+    # idempotency_key is added for you (send is not safe to repeat); reversibility defaults to irreversible
+    examples:
+      - params: {invoice: inv_12345678, to: a@b.com, note: hi, idempotency_key: k_12345678}
+        under:
+          allow: {trait: external_communication, where: {to.domain: [b.com]}, caveats: [rate_cap, resource_scope], context: [fresh_revocation]}
+        expect: allow
+      - params: {invoice: inv_12345678, to: a@evil.com, note: hi, idempotency_key: k_12345678}
+        expect: escalate
