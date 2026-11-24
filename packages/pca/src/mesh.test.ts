@@ -364,7 +364,8 @@ describe('mesh: witness verifies REAL RFC 9162 consistency between successive he
     const h = buildMeshExample().heads.A.head;
     expect(checkHeadAdvance(h, { ...h, domain: 'other' })).toMatch(/different domain/);
     expect(checkHeadAdvance(h, { ...h, size: 5, root: 'x' }, { oldSize: 2, newSize: 5, path: [1 as never] })).toMatch(/consistency proof required/);
-    expect(checkHeadAdvance(h, { ...h, size: 5, root: 'x' }, { oldSize: 2, newSize: 5, path: ['AAAA'] })).toMatch(/not consistent/);
+    expect(checkHeadAdvance(h, { ...h, size: 5, root: 'x' }, { oldSize: 2, newSize: 5, path: ['AAAA'] })).toMatch(/not consistent/);    // strict profile: -0 is never a wire integer
+    expect(checkHeadAdvance({ ...h, rev_size: 0 }, { ...h, rev_size: -0 })).toBe('malformed head');
   });
 });
 

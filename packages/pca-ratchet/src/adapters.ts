@@ -23,7 +23,7 @@ export function counterToLeafIndex(counter: number, depth: number): number {
   if (!Number.isInteger(depth) || depth < 1 || depth > MAX_RATCHET_DEPTH) {
     throw new RatchetError('invalid_depth', `depth must be an integer in [1, ${MAX_RATCHET_DEPTH}]`);
   }
-  if (!Number.isSafeInteger(counter) || counter < 0) {
+  if (!Number.isSafeInteger(counter) || counter < 0 || Object.is(counter, -0)) {
     throw new RatchetError('leaf_out_of_range', 'counter must be a non-negative safe integer');
   }
   if (counter >= 2 ** depth) {
@@ -34,7 +34,7 @@ export function counterToLeafIndex(counter: number, depth: number): number {
 
 /** Inverse of {@link counterToLeafIndex}: a leaf index is the spend-once counter it realizes. */
 export function leafIndexToCounter(leafIndex: number): number {
-  if (!Number.isSafeInteger(leafIndex) || leafIndex < 0) {
+  if (!Number.isSafeInteger(leafIndex) || leafIndex < 0 || Object.is(leafIndex, -0)) {
     throw new RatchetError('leaf_out_of_range', 'leafIndex must be a non-negative safe integer');
   }
   return leafIndex;

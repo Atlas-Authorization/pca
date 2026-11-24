@@ -294,7 +294,7 @@ export function notarizeResponse(
   if (!Number.isSafeInteger(response.status)) throw new TypeError('notarizeResponse: response.status must be an integer');
 
   const bare =
-    typeof response.body === 'string' && typeof opts.textChunkSize === 'number' && opts.textChunkSize > 0
+    typeof response.body === 'string' && typeof opts.textChunkSize === 'number' && opts.textChunkSize >= 1
       ? chunkString(response.body, Math.floor(opts.textChunkSize))
       : flattenValue(response.body, []);
 
@@ -364,7 +364,9 @@ function validSession(s: unknown): s is NotarySession {
     typeof r.url === 'string' &&
     typeof r.requestHeadersDigest === 'string' &&
     Number.isSafeInteger(r.responseStatus) &&
+    !Object.is(r.responseStatus, -0) &&
     Number.isSafeInteger(r.observedAt) &&
+    !Object.is(r.observedAt, -0) &&
     validCommit(r.responseBodyCommit)
   );
 }
@@ -510,6 +512,43 @@ export interface AttestedFactEvidence {
 export interface AttestedFactEvaluation {
   ok: boolean;
   reason?: string;
+  /**
+   * Present on `ok: true`. The fact is exactly as trustworthy as the notary: this is NOT a trustless (MPC-TLS / zkTLS)
+   * proof, and a colluding or compromised notary can attest anything.
+   */
+  trust?: 'notary-trusted';
+}
+
+/** One notary signing key and the window / status under which it is trusted. */
+export interface NotaryKeyEntry {
+  /** Public key (b64u). */
+  key: string;
+  /** Attestations observed before this instant (epoch ms) are refused. */
+  notBefore?: number;
+  /** Attestations observed at or after this instant (epoch ms) are refused (rotation: the old key's end). */
+  notAfter?: number;
+  /** A revoked key is refused whatever the observation time (a compromised notary can backdate). */
+  revoked?: boolean;
+}
+/** The keys a relying party currently trusts to notarize. A key not listed is refused. */
+export type NotaryKeyring = readonly NotaryKeyEntry[];
+
+/** True iff `key` is listed in `ring`, not revoked, and `observedAt` lies in its [notBefore, notAfter) window. */
+export function notaryKeyUsable(ring: NotaryKeyring, key: string, observedAt: number): boolean {
+  if (!Array.isArray(ring) || !Number.isSafeInteger(observedAt)) return false;
+  const entries = ring.filter((e) => e && e.key === key);
+  if (entries.length === 0) return false;
+  return entries.every((e) => e.revoked !== true) && entries.some((e) => (e.notBefore === undefined || observedAt >= e.notBefore) && (e.notAfter === undefined || observedAt < e.notAfter));
+}
+
+/** Optional freshness and key-status policy for {@link evaluateAttestedFactCaveat}. */
+export interface AttestedFactPolicy {
+  /** Clock (epoch ms) for `maxAgeMs`. Default `Date.now()`. */
+  now?: number;
+  /** Refuse an attestation observed more than this long ago, or in the future. Off unless set. */
+  maxAgeMs?: number;
+  /** Trusted notary keys with windows and revocation; when set the signer must be usable in it. */
+  keyring?: NotaryKeyring;
 }
 
 /**
@@ -522,7 +561,7 @@ export interface AttestedFactEvaluation {
  *   5. the disclosed `value` canonically equals the caveat's `equals`;
  *   6. (if `bindToPcActn`) the fact is two-way-bound to the supplied PCActn.
  */
-export function evaluateAttestedFactCaveat(caveat: AttestedFactCaveat, evidence: AttestedFactEvidence): AttestedFactEvaluation {
+export function evaluateAttestedFactCaveat(caveat: AttestedFactCaveat, evidence: AttestedFactEvidence, policy: AttestedFactPolicy = {}): AttestedFactEvaluation {
   try {
     if (caveat === null || typeof caveat !== 'object' || caveat.type !== ATTESTED_FACT_CAVEAT) {
       return { ok: false, reason: 'not an attested_fact caveat' };
@@ -533,6 +572,16 @@ export function evaluateAttestedFactCaveat(caveat: AttestedFactCaveat, evidence:
     const { attestation, disclosure, pcActn } = evidence;
     if (!verifyNotaryAttestation(attestation, { notaryKey: caveat.notary })) {
       return { ok: false, reason: 'notary attestation does not verify (fail closed)' };
+    }
+    if (policy.keyring !== undefined && !notaryKeyUsable(policy.keyring, attestation.notary, attestation.session.observedAt)) {
+      return { ok: false, reason: 'notary key is not trusted for this observation time (unlisted, revoked or out of window)' };
+    }
+    if (policy.maxAgeMs !== undefined) {
+      const now = policy.now ?? Date.now();
+      const age = now - attestation.session.observedAt;
+      if (!Number.isFinite(policy.maxAgeMs) || !Number.isFinite(now) || age < 0 || age > policy.maxAgeMs) {
+        return { ok: false, reason: 'attestation is stale or from the future' };
+      }
     }
     if (caveat.url !== undefined && attestation.session.url !== caveat.url) {
       return { ok: false, reason: 'attested session URL does not match the caveat' };
@@ -550,7 +599,7 @@ export function evaluateAttestedFactCaveat(caveat: AttestedFactCaveat, evidence:
       if (!pcActn) return { ok: false, reason: 'caveat requires PCActn binding but no PCActn was supplied' };
       if (!factMatchesPcActn(attestation, pcActn)) return { ok: false, reason: 'fact is not bound to this PCActn' };
     }
-    return { ok: true };
+    return { ok: true, trust: 'notary-trusted' };
   } catch (e) {
     return { ok: false, reason: `attested_fact evaluation error (fail closed): ${e instanceof Error ? e.message : 'unknown'}` };
   }

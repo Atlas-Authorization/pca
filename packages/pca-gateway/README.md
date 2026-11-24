@@ -1,5 +1,7 @@
 # @atlasauth/pca-gateway
 
+> Maturity: **production** (supported for production use). See [maturity tiers](https://github.com/Atlas-Authorization/pca/blob/main/docs/maturity.md).
+
 Drop-in, **code-free** Proof-Carrying Authority enforcement at the gateway / service mesh — the
 language-agnostic choke point in front of every MCP server / agent service. Add it to your gateway and
 every inbound request is proof-carrying-verified with **zero application changes**: the request only
@@ -26,12 +28,18 @@ gateway:
 3. verifies the proof offline with `verifyPCActnCore` (chain, plan inclusion, signature, counter
    well-formedness, validity window, and audience bound to **this** gateway),
 4. checks the verified proof carries the route's required verb (and optional resource),
-5. returns an allow / deny **Decision** mapped onto the gateway's own contract.
+5. in full-policy mode (the default, see below), evaluates the grant's limits and caveats against the
+   request's real params, checks revocation and spends the proof's replay counter,
+6. returns an allow / deny **Decision** mapped onto the gateway's own contract.
 
 **Deny-by-default** everywhere: no proof, an undecodable proof, a wrong-audience proof, an
 insufficient-capability proof, and (by default) an unmapped route are all rejected.
 
 ## Usage
+
+`policy` is required (since 0.5). The default is full-policy mode, described next; the explicit alternative is
+[signature-only mode](#signature-only-mode). A gateway built without a `policy` throws, and `authorize` denies every
+request.
 
 ```ts
 import { authorize, createGateway, type GatewayOptions } from '@atlasauth/pca-gateway';
@@ -43,15 +51,94 @@ const options: GatewayOptions = {
     { method: 'POST', path: '/payouts/*', capability: { verb: 'stripe.payout', resource: 'acct:acme' } },
   ],
   resolveGrant: async (grantRef) => grants.get(grantRef), // root Capability the chain must descend from
+  authorizedPlanRoots: knownPlanRoots,        // plan roots the principal authorized (plan_root_authorized, default-deny in every mode)
   unmatchedRoute: 'deny',                     // 'deny' (default) | 'allow' | 'require-proof'
+  policy: { mode: 'full', params: 'body', state, isRevoked }, // see Full-policy mode below
 };
 
 const gateway = createGateway(options);
-const decision = await gateway({ method: 'POST', path: '/refunds', headers: req.headers });
+const decision = await gateway({ method: 'POST', path: '/refunds', headers: req.headers, body });
 // { allow, status, code, reason, headers, verdict?, pcactn?, matched? }
 ```
 
 `authorize(req, opts)` is the one-shot form; `createGateway(opts)` builds a reusable authorizer.
+
+## Full-policy mode (the default)
+
+In signature-only mode the gateway proves that a proof is genuine and bound to the request, but the agent signs only
+the request binding, so the grant's limits are never read: a validly signed $400 refund under a $100 grant is
+forwarded. With `policy: { mode: 'full', ... }` the agent signs the request's **real params** (the JSON body) with
+the request binding inside them, and the gateway runs the full verifier: the grant's predicates, limits and
+caveats, revocation (required) and the replay counter and trust budget (required store).
+
+```ts
+import { memoryPcaStore, pcaHeaders } from '@atlasauth/pca';
+import { createGateway, bindParams, requestBinding, type GatewayOptions } from '@atlasauth/pca-gateway';
+
+const options: GatewayOptions = {
+  audience: 'ins_acme',
+  routes: [{ method: 'POST', path: '/refunds/*', capability: { verb: 'stripe.refund' } }],
+  resolveGrant: async (grantRef) => grants.get(grantRef),
+  authorizedPlanRoots,                                // required in full mode too, or the explicit insecureSkipPlanRootCheck
+  policy: {
+    mode: 'full',
+    params: 'body',                                   // or (req) => params built from the request
+    state: memoryPcaStore(),                          // replay counters and trust budgets; share it across instances (Redis, your DB)
+    isRevoked: (grant) => revokedGrants.has(grant.id),
+  },
+};
+const gateway = createGateway(options);               // throws if a required component is missing
+
+// Agent side: sign the body you send, plus the binding of the request it goes on.
+const body = { charge: 'ch_1', amount: 20 };
+const binding = requestBinding({ method: 'POST', path: '/refunds/ch_1', query: '', headers: {} }, { body: false });
+const { encoded } = pcaAgent.act('stripe.refund', 'charge:ch_1', bindParams(body, binding));
+
+const decision = await gateway({
+  method: 'POST',
+  path: '/refunds/ch_1',
+  headers: { 'pca-action': pcaHeaders(encoded)['PCA-Action'] },
+  body: JSON.stringify(body),
+});
+// allow: true. A $400 body under a $100 grant: 403 proof-rejected ("policy: amount <= 100 not satisfied for ...").
+// The same proof again: 403 replayed-proof. A revoked grant: 403 proof-rejected. Another body: 403 request-mismatch.
+```
+
+- `state`, `isRevoked` and `params` are required, as is a known `mode`. With one missing (or no `policy` at all),
+  `createGateway` throws and `authorize` denies every request (`403 proof-rejected`); the gateway never falls back to
+  signature-only.
+- `params: 'body'` reads `GatewayRequest.body` (strict JSON, must be an object, must not carry a `binding`
+  member). The Envoy adapters pass the body when Envoy forwards it (`with_request_body`, HTTP: the check
+  request's `body`; gRPC: `attributes.request.http.body`); the Cloudflare Worker adapter reads it from
+  `request.clone()`. A Lambda REQUEST authorizer never receives the body, so there use a `params` function
+  (for example from the query string); with `'body'` every request is denied.
+- The signed params are `bindParams(params, binding)`: the params plus the request binding (method, path,
+  query, and the authority with `bindRequest: { authority: true }`) as a `binding` member. With
+  `bindRequest: false` the agent signs the params alone. The body hash is bound only with
+  `bindRequest: { body: true }` (the params already carry the body).
+- Optional: `isPlanAuthorized`, `risk` (server-side risk inputs; by default `params.amount` is priced against the
+  grant's risk policy), `require`, `allowedSuites`, `pqPins`. `hooks` (except `revocation`, which comes from
+  `isRevoked`) and the clock are the gateway's own.
+- The decision carries the full verdict as `policyVerdict`.
+- `replayGuard` still works in full mode, but the replay counter in `state` already makes each proof single-use.
+
+## Signature-only mode
+
+`policy: { mode: 'signature-only' }` is the explicit way to ask for the 0.4 behaviour: the proof and its request
+binding are verified, the grant's limits are not evaluated, and the signed params carry only the request binding. Since
+0.5 it needs a `replayGuard` (each proof single-use) and a `hooks.revocation` check; `requireChecks` defaults to
+`['revocation']` in this mode, so pass `requireChecks: []` to waive it. Without them `createGateway` throws.
+
+```ts
+createGateway({
+  audience: 'ins_acme',
+  routes,
+  resolveGrant,
+  policy: { mode: 'signature-only' },
+  replayGuard: memoryReplayGuard(),            // shared across instances in production
+  hooks: { revocation: myRevocationChecker },
+});
+```
 
 ## Adapters
 
@@ -120,7 +207,7 @@ http_filters:
 
 ### Binding the proof to the request, limits and revocation
 
-By default a verified proof is a **bearer for the matched route**: a proof minted for `refund charge:ch_1` is accepted on every path the rule matches (`/refunds/*`), and the grant's own limits and revocation are not evaluated (the core reports `revocation`, `plan_root_authorized` as `not-enforced`). Treat the default gateway as a *structural pre-filter*; the resource server's `requirePCA` is the authority. Three opt-ins close this at the gateway:
+This section describes signature-only mode (`policy: { mode: 'signature-only' }`). In it a verified proof is a **bearer for the matched route**: a proof minted for `refund charge:ch_1` is accepted on every path the rule matches (`/refunds/*`), and the grant's own limits and revocation are not evaluated (the core reports `revocation`, `plan_root_authorized` as `not-enforced`). Treat the default gateway as a *structural pre-filter*; the resource server's `requirePCA` is the authority. Three opt-ins close this at the gateway:
 
 - Request binding is ON by default (breaking, R2-11). `bindRequest` (default `{}`) requires `action.params_digest == paramsDigest(requestBinding(req, opts))`. The agent mints the action with `requestBinding({ method, path, query, ... })` as its params (`{ v: 2, method, path, query }`, where `query` is the raw query string with pairs sorted (a repeated parameter name, a `;` separator or a malformed percent escape in a name makes the request unbindable: `403 request-mismatch`, because upstream parsers disagree on first-wins vs last-wins, R3-07); the adapters fill `GatewayRequest.query` for you; Lambda REST v1 rebuilds it from `queryStringParameters`). The proof then works only for that method, path and query string, plus the body SHA-256 whenever the request carries one (`GatewayRequest.bodySha256`; the adapters do not read bodies; `body: false` opts out, `body: true` makes a missing hash a deny) and the authority when `authority: true`. Otherwise `403 request-mismatch`. Pass `bindRequest: false` to opt out explicitly: the proof is then a bearer for the matched route. The params slot carries the binding, so params-dependent grant limits cannot be read here; use `checkProof`.
 - `hooks` / `enforce` are forwarded to `verifyPCActnCore` (revocation, attestation, freshness, taint), and `requireChecks: ['revocation']` makes a check that is merely `not-enforced` a deny (`403 proof-rejected`).
@@ -151,9 +238,46 @@ export const handler = lambdaAuthorizer(options);        // IAM Allow/Deny polic
 export const simple  = lambdaSimpleAuthorizer(options);  // { isAuthorized } (enableSimpleResponses: true)
 ```
 
+## Fail-closed behaviour
+
+| Missing or invalid | Result |
+|---|---|
+| `policy` not supplied | `createGateway` throws; `authorize` denies every request (`403 proof-rejected`); never falls back to signature-only |
+| Full mode without `state`, `isRevoked` or `params`, or an unknown `mode` | `createGateway` throws; `authorize` denies every request (`403 proof-rejected`) |
+| Signature-only mode without `replayGuard` | `createGateway` throws |
+| Signature-only mode without a `hooks.revocation` check (and `requireChecks` not waived) | `createGateway` throws |
+| No `PCA-Action` header | `401 no-proof` with a `WWW-Authenticate` challenge |
+| Undecodable proof | `401 invalid-proof` |
+| `grant_ref` that `resolveGrant` cannot resolve | `401 unknown-grant` |
+| Signature, chain, plan inclusion or validity window fails | `401 verify-failed` |
+| Proof minted for another audience | `403 wrong-audience` |
+| Route not in the route map | `403 unmapped-route` (default `unmatchedRoute: 'deny'`); `'allow'` forwards without a proof; `'require-proof'` needs a valid proof of any verb |
+| Proof carries a different verb or resource than the route requires | `403 insufficient-capability` |
+| Proof not bound to this request (method, path, query, authority, body) | `403 request-mismatch`, and the proof is not spent |
+| Query string that cannot be bound (repeated name, `;`, malformed escape) | `403 request-mismatch` |
+| Full mode: body missing, not a JSON object, not strict JSON, or carrying a `binding` member | `403 request-mismatch` |
+| Full mode: grant limit or caveat not satisfied, revoked grant | `403 proof-rejected` |
+| A required check (`requireChecks`) that is only `not-enforced` | `403 proof-rejected` |
+| `checkProof` returns false or throws | Denied |
+| Replayed proof (full mode counter, or `replayGuard`) | `403 replayed-proof` |
+| `replayGuard` throws or is full | `503 replay-guard-unavailable` |
+| Ambiguous path (dot segments, `//`, `;`, backslash, control or percent-encoded `.` `/` `\`) under `pathPolicy: 'strict'` | `400 invalid-path`, before route matching |
+| Envoy gRPC `CheckRequest` with no HTTP attributes | Denied |
+| Inbound `x-pca-*` header that the Worker adapter cannot remove | `400 forged-pca-header`; nothing is forwarded |
+| `resolveGrant` throws | The check call fails with an error; the gateway does not allow it, and Envoy denies it while `failure_mode_allow` is `false` |
+
+## Limits
+
+- Signature-only mode is a structural pre-filter: it does not read the grant's limits, keep a trust budget or confirm the plan root was authorized. Use full-policy mode, and keep `requirePCA` at the resource server as the backstop.
+- Replay protection is only as shared and durable as the `state` store or `replayGuard` you pass; `memoryReplayGuard` is per process.
+- Route matching is exact. A trailing slash or a different case is a different path, and `unmatchedRoute: 'allow'` forwards it without a proof.
+- A request the gateway is never asked about (a path outside your mesh policy, a cached authorizer result, an Envoy retry with the same proof) is outside its control; see the notes above.
+- Lambda REQUEST authorizers never receive a body, so full mode needs a `params` function there.
+- The cloud-hosted API Gateway service, TLS between Envoy and the check service, load behaviour and Istio's gRPC provider are not validated.
+
 ## Status
 
-Experimental. Each adapter wraps the fail-closed `verifyPCActnCore`, which is stateless: the gateway does not keep a replay counter, check revocation, enforce a trust budget or confirm the plan root was authorized. A captured proof can be replayed until it expires unless you set `replayGuard` (single use). For those checks, enforce at the resource server with `requirePCA` from `@atlasauth/pca` (or one of the framework packages such as `@atlasauth/pca-express`), which also remains the backstop if the gateway is bypassed. The cryptography is unaudited.
+Production. In full-policy mode (`policy: { mode: 'full' }`, the default) the gateway evaluates the grant's limits and caveats, requires a revocation check and keeps a replay counter and trust budget in the store you supply. In signature-only mode each adapter wraps the fail-closed `verifyPCActnCore`, which is stateless: the gateway does not keep a replay counter, check revocation, enforce a trust budget or confirm the plan root was authorized, and a captured proof can be replayed until it expires unless you set `replayGuard` (single use). For those checks, enforce at the resource server with `requirePCA` from `@atlasauth/pca` (or one of the framework packages such as `@atlasauth/pca-express`), which also remains the backstop if the gateway is bypassed.
 
 What has been checked against real runtimes and published shapes:
 

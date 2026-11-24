@@ -334,7 +334,7 @@ export class Mesh {
         const claimedKind = typeof d?.kind === 'string' && ABORT_KINDS.has(d.kind) ? (d.kind as AbortKind) : undefined;
         const maxId = Math.max(...this.cfg.nodes.map((x) => x.id));
         const claimedBlame =
-          typeof d?.blamed === 'number' && Number.isInteger(d.blamed) && d.blamed >= 0 && d.blamed <= maxId ? d.blamed : null;
+          typeof d?.blamed === 'number' && Number.isInteger(d.blamed) && !Object.is(d.blamed, -0) && d.blamed >= 0 && d.blamed <= maxId ? d.blamed : null;
         const detail = typeof d?.detail === 'string' ? sanitize(d.detail, 120) : '';
         const claim =
           new NetAbort(

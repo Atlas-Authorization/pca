@@ -16,13 +16,19 @@
  * dry-run is a convenience fast-fail, not a grant.
  */
 
-import { type Agent, type PcaCall, PcaDenied, bridgeToolCall, guard, pcaHeaders } from '@atlasauth/pca';
+import { type Agent, type PcaCall, PcaDenied, bridgeToolCall, guard, pcaHeaders, recordInput, recordMessages, recordPrincipal } from '@atlasauth/pca';
 
 /** Minimal structural shape of an MCP tool result (`server.tool` / `registerTool` handler return). */
 export interface McpToolResult {
   content: Array<{ type: string; [k: string]: unknown }>;
   isError?: boolean;
   [k: string]: unknown;
+}
+
+/** The tool error `withPCA` returns when the local dry-run denies a call (a text content item and `isError: true`). */
+export interface PcaDeniedToolResult extends McpToolResult {
+  content: Array<{ type: 'text'; text: string }>;
+  isError: true;
 }
 
 /** An MCP tool handler: `(args, extra?) => result`, as registered via `server.tool` / `registerTool`. */
@@ -50,13 +56,13 @@ export interface GuardToolSpec<ARGS> {
  * On a local fast-fail (`PcaDenied`), returns an MCP error result (`{ isError: true }`) rather than
  * throwing — MCP handlers signal tool errors in-band via `isError` so the model can see them.
  */
-export function withPCA<ARGS extends Record<string, unknown>>(
+export function withPCA<ARGS extends Record<string, unknown>, R extends McpToolResult = McpToolResult>(
   agent: Agent,
   spec: GuardToolSpec<ARGS>,
-  handler: McpToolHandler<ARGS>,
-): McpToolHandler<ARGS> {
-  return async (args: ARGS, extra?: unknown): Promise<McpToolResult> => {
-    const run = guard<ARGS, McpToolResult>(
+  handler: (args: ARGS, extra?: unknown) => Promise<R> | R,
+): (args: ARGS, extra?: unknown) => Promise<R | PcaDeniedToolResult> {
+  return async (args: ARGS, extra?: unknown): Promise<R | PcaDeniedToolResult> => {
+    const run = guard<ARGS, R>(
       agent,
       {
         verb: spec.verb,
@@ -90,7 +96,16 @@ export function guardToolResult(pca: PcaCall, result: McpToolResult): McpToolRes
   return { ...result, _meta: { ...prevMeta, 'x-pca-action': pca.encoded } };
 }
 
-export { bridgeToolCall, pcaHeaders, type PcaCall };
+/**
+ * Provenance: every result a {@link withPCA} handler returns is recorded as UNTRUSTED tool output in the agent's chain (the core
+ * `guard` does it); the host records the principal's turns with `recordMessages` / `recordInput` (re-exported here).
+ */
+export { bridgeToolCall, pcaHeaders, recordInput, recordMessages, recordPrincipal, type PcaCall };
 
 // Intent Layer v2: MCP tools -> the site's signed action schema, and the closed-world check of a tool call.
 export * from './schema';
+
+// The agent's per-call proof fetch for MCP client transports.
+export * from './fetch';
+export * from './auth-client';
+export * from './auth-client-conformance';

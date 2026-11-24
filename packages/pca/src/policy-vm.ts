@@ -3,6 +3,7 @@ import { verifiedCoreOptIn } from './verified-core-mode';
 import { safeRegexFullMatch } from './safe-regex';
 import { type Capability, type CapabilityChain, verifyChain } from './capability';
 import type { PCActn } from './pcactn';
+import { evaluateK1, isK1Caveat, type BoundCaveat, type K1Input } from './caveat-lang';
 import type { PlanNode } from './merkle';
 import { ENVELOPE_CAVEAT, readEnvelope } from './envelope';
 import { chargeRegex, withRegexBudget } from './regex-budget';
@@ -11,6 +12,7 @@ import {
   evaluateCaveats,
   evaluatePredicates,
   isSafeRegexSource,
+  namedUnmetLimitReason,
   type ActionContext,
   type Predicate,
   type CaveatContext,
@@ -87,6 +89,13 @@ export interface DecideInput {
    * thus never be laundered through `decide()` by an SDK that forgot to verify first.
    */
   chainVerified?: boolean;
+  /**
+   * Caveat language v2 (K1): the verifier's pins, the discharges and narrow block presented with the action, the SPIFFE ID of
+   * the presenting workload and the holder's history. `needs_discharge`, `sealed`, `max_uses`, `derive` and `spiffe_bound`
+   * caveats are evaluated from this (without it they are unsatisfied: fail closed). `max_uses` is spent afterwards, by
+   * `reserveMaxUses(store, decision.k1Bound, now)`, once everything else allowed.
+   */
+  k1?: K1Input;
 }
 
 export interface PolicyDecision {
@@ -102,6 +111,8 @@ export interface PolicyDecision {
   reasons: string[];
   /** Budget after leak (and debit if the action was auto-admitted AND released). */
   budget: TrustBudget;
+  /** The caveats `decide` evaluated through the caveat language (present only when the chain carries one): spend their `max_uses` after allowing. */
+  k1Bound?: BoundCaveat[];
 }
 
 /**
@@ -234,7 +245,14 @@ function provedOr<T>(proved: () => T, ts: () => T): T {
   return ts();
 }
 function predicatesStep(predicates: Predicate[], action: ActionContext): { allowed: boolean; reason?: string } {
-  return provedOr(() => vmOf().evaluatePredicates(predicates, action), () => evaluatePredicates(predicates, action));
+  return provedOr(
+    () => {
+      const r = vmOf().evaluatePredicates(predicates, action);
+      // the proved kernel decides; its denial wording is the plain one, so name the unmet limit as the hand-written path does (B6)
+      return !r.allowed && r.reason?.startsWith('no predicate permits') ? { ...r, reason: namedUnmetLimitReason(predicates, action) ?? r.reason } : r;
+    },
+    () => evaluatePredicates(predicates, action),
+  );
 }
 function caveatsStep(caveats: Capability['caveats'], cctx: CaveatContext, action: ActionContext): { ok: boolean; failed: string[] } {
   return provedOr(() => vmOf().evaluateCaveats(caveats, agentCaveatContext(cctx, action), 'agent'), () => evaluateAgentCaveats(caveats, cctx, action));
@@ -301,11 +319,21 @@ function decideInner(input: DecideInput): PolicyDecision {
     // enforced exactly like the caveats delegation hops append (attenuation applies from the root). Only the envelope
     // caveat that `readEnvelope` reads is excluded (its predicates and inner caveats are evaluated above); a second
     // `envelope` caveat, or any type this evaluator does not implement, is unsatisfied (fail closed).
-    const rcv = caveatsStep(rootCaveatsStep(grant), cctx, action);
+    // K1: the caveat-language types need the chain position, the discharges or a store, so they are taken out of the lists the
+    // stock evaluators see and evaluated by `evaluateK1` (a verifier without K1 refuses the chain: unknown type = unsatisfied).
+    const noK1 = <T>(cs: T): T => (Array.isArray(cs) ? (cs.filter((c) => !isK1Caveat(c)) as unknown as T) : cs);
+    const leafCaveats = (chain !== undefined && Array.isArray(chain) && chain.length > 0 ? chain[chain.length - 1] : grant)?.caveats;
+    const useK1 = (Array.isArray(leafCaveats) && leafCaveats.some(isK1Caveat)) || input.k1?.narrow !== undefined;
+    const k1 = useK1 ? evaluateK1(grant, chain, input.k1, { now, action: action.action }) : undefined;
+    const rcv = caveatsStep(noK1(rootCaveatsStep(grant)), cctx, action);
     if (!rcv.ok) reasons.push(`root caveat(s) not satisfied: ${rcv.failed.join(', ')}`);
     const cv = { ok: ecv.ok && rcv.ok };
-    const dcv = caveatsStep(extra, cctx, action);
+    const dcv = caveatsStep([...noK1(extra), ...(k1?.plain ?? [])], cctx, action);
     if (!dcv.ok) reasons.push(`delegated caveat(s) not satisfied: ${dcv.failed.join(', ')}`);
+    if (k1 && !k1.ok) {
+      dcv.ok = false;
+      reasons.push(...k1.reasons.map((r, i) => `caveat language: ${k1.failed[i]}: ${r}`));
+    }
 
     // 3. risk
     const leaked = leak(budget, now, pol.lambda);
@@ -359,6 +387,7 @@ function decideInner(input: DecideInput): PolicyDecision {
       needStepUp: dec.needStepUp,
       reasons,
       budget: outBudget,
+      ...(k1 !== undefined ? { k1Bound: k1.bound } : {}),
     };
   } catch (e) {
     return denied(`policy evaluation error (fail closed): ${e instanceof Error ? e.message : 'unknown'}`, fallbackBudget);

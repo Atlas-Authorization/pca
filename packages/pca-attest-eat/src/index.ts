@@ -63,9 +63,9 @@ import {
   verify as nodeVerify,
   type KeyObject,
 } from 'node:crypto';
+import { assertCanonicalCompactJws } from '@atlasauth/pca';
 import {
   AMD_MILAN_ARK_SPKI_SHA384,
-  assertCanonicalCompactJws,
   attestAmdSnp,
   type MeasuredIdentity,
   type ParsedSevSnpReport,
@@ -74,7 +74,7 @@ import {
   splitPemCertificates,
   toHex,
   verifyGenuineSevSnpReport,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/attestation';
 
 // Re-export the reused PCA types so consumers of this package do not reach into @atlasauth/pca for them.
 export type { MeasuredIdentity, ParsedSevSnpReport };
@@ -800,6 +800,10 @@ export interface FreshnessOptions {
  */
 export function verifyFreshness(eat: EatClaims, opts: FreshnessOptions): CheckResult {
   const now = typeof opts.now === 'number' && Number.isFinite(opts.now) ? opts.now : Date.now();
+  // A NaN / Infinity / non-number skew makes both window comparisons false (a stale token would pass): refuse it.
+  if (opts.clockSkewMs !== undefined && !Number.isFinite(opts.clockSkewMs)) {
+    return { ok: false, reason: 'invalid clockSkewMs (must be a finite number)' };
+  }
   const skew = Math.max(0, opts.clockSkewMs ?? 0);
   if (typeof opts.expectedNonce !== 'string' || opts.expectedNonce.length === 0) {
     return { ok: false, reason: 'no expected (server-issued) nonce supplied (fail closed)' };
@@ -975,7 +979,7 @@ function packTcb(v: TcbVersion): bigint | null {
     return null; // unknown / non-numeric format — fail closed (GCP firmware drift lesson)
   }
   const comp = (x: number | undefined): bigint | null =>
-    x === undefined ? 0n : Number.isInteger(x) && x >= 0 && x <= 255 ? BigInt(x) : null;
+    x === undefined ? 0n : Number.isInteger(x) && x >= 0 && !Object.is(x, -0) && x <= 255 ? BigInt(x) : null;
   const bl = comp(v.bootloader);
   const tee = comp(v.tee);
   const snp = comp(v.snp);
@@ -1420,3 +1424,6 @@ export async function verifyFreshAttestedEAT(eat: string, opts: VerifyFreshAttes
 // quantum break of the classical root. ADDITIVE — no existing export's behaviour changes.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 export * from './pqcosign';
+export * from './admission';
+export * from './sigstore';
+export * from './provenance';

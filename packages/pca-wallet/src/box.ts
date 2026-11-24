@@ -60,7 +60,7 @@ export function resolveCoords(omega: Omega, verb: string, coords: CellCoords): B
     if (d.kind === 'num') {
       if (!(c.length === 2 && typeof c[0] === 'number' && typeof c[1] === 'number')) return { ok: false, reason: `dimension ${d.path} is numeric: expected an index range` };
       const [lo, hi] = c as [number, number];
-      if (!(Number.isInteger(lo) && Number.isInteger(hi) && lo >= 0 && lo <= hi && hi < numCells(d).length)) return { ok: false, reason: `index range of ${d.path} is out of range` };
+      if (!(Number.isInteger(lo) && Number.isInteger(hi) && !Object.is(lo, -0) && !Object.is(hi, -0) && lo >= 0 && lo <= hi && hi < numCells(d).length)) return { ok: false, reason: `index range of ${d.path} is out of range` };
       const ids: number[] = [];
       for (let i = lo; i <= hi; i++) ids.push(i);
       box.push(ids);

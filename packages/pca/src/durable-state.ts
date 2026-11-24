@@ -226,7 +226,7 @@ const FENCE_ENTRY = /^state\.fence\.(\d+)-([0-9a-f]+)$/;
 function parseFence(f: unknown, where: string): DurableFence {
   const x = f as Record<string, unknown>;
   if (
-    typeof f !== 'object' || f === null || !Number.isSafeInteger(x['gen']) || (x['gen'] as number) < 1 || !Number.isSafeInteger(x['seq']) || (x['seq'] as number) < 0 ||
+    typeof f !== 'object' || f === null || !Number.isSafeInteger(x['gen']) || (x['gen'] as number) < 1 || !Number.isSafeInteger(x['seq']) || (x['seq'] as number) < 0 || Object.is(x['seq'], -0) ||
     typeof x['h'] !== 'string' || !/^[0-9a-f]{64}$/.test(x['h'])
   ) {
     throw new DurableStateError('corrupt', `${where} has an invalid entry`);
@@ -649,7 +649,7 @@ export async function openDurableState(opts: DurableStateOptions): Promise<Durab
       throw new DurableStateError('corrupt', 'state.head is not valid JSON');
     }
     const r = o as Record<string, unknown>;
-    if (typeof o !== 'object' || o === null || !Number.isSafeInteger(r['seq']) || (r['seq'] as number) < 0 || typeof r['h'] !== 'string' || !HEX64.test(r['h']) || (r['gen'] !== undefined && !isGen(r['gen']))) {
+    if (typeof o !== 'object' || o === null || !Number.isSafeInteger(r['seq']) || (r['seq'] as number) < 0 || Object.is(r['seq'], -0) || typeof r['h'] !== 'string' || !HEX64.test(r['h']) || (r['gen'] !== undefined && !isGen(r['gen']))) {
       throw new DurableStateError('corrupt', 'state.head has an invalid shape');
     }
     const head: Head = { seq: r['seq'] as number, h: r['h'], ...(r['gen'] !== undefined ? { gen: r['gen'] as number } : {}) };
@@ -690,7 +690,7 @@ export async function openDurableState(opts: DurableStateOptions): Promise<Durab
       const r = o as Record<string, unknown>;
       if (
         typeof o !== 'object' || o === null || !Number.isSafeInteger(r['seq']) || typeof r['prev'] !== 'string' || !HEX64.test(r['prev']) ||
-        (r['op'] !== 'set' && r['op'] !== 'checkpoint') || typeof r['payload'] !== 'string' || !Number.isSafeInteger(r['ts']) || typeof r['h'] !== 'string' || !HEX64.test(r['h']) ||
+        (r['op'] !== 'set' && r['op'] !== 'checkpoint') || typeof r['payload'] !== 'string' || !Number.isSafeInteger(r['ts']) || Object.is(r['ts'], -0) || typeof r['h'] !== 'string' || !HEX64.test(r['h']) ||
         (r['gen'] !== undefined && !isGen(r['gen']))
       ) {
         throw new DurableStateError('corrupt', `journal line ${i + 1} has an invalid shape`);

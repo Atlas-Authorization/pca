@@ -1,6 +1,8 @@
 # Changelog: @atlasauth/pca-mpc
 
-## Unreleased
+## 0.5.1
+
+First 0.5 release. 0.5.0 was never published; its changes, below, ship in 0.5.1.
 
 ### Fixed
 

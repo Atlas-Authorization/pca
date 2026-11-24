@@ -303,6 +303,13 @@ describe('3. semantic firewall (nested tool-arg schemas)', () => {
     expect(validateArgSchema({ props: { a: nest } })).toMatch(/deep/);
     expect(validateArgSchema({ props: {}, evil: 1 })).toMatch(/unknown/);
     expect(validateArgSchema(null)).toMatch(/object/);
+    expect(validateArgSchema({ props: { a: { type: 'array', items: { type: 'string' }, minItems: -0 } } })).toMatch(/minItems/); // strict profile: never -0
+    expect(validateArgSchema({ props: { a: { type: 'string', maxLength: -0 } } })).toMatch(/maxLength/);
+    expect(validateArgSchema({ props: { a: { type: 'integer', enum: [-0] } } })).toMatch(/enum/);
+    expect(validateArgSchema({ props: { a: { type: 'integer', enum: [0] } } })).toBeNull();
+    const ic = toolSchemaCaveat('t', { props: { n: { type: 'integer' } } });
+    expect(evaluateToolSchema(ic, { tool: 't', args: { n: 0 }, toolSignature: 't' }).ok).toBe(true);
+    expect(evaluateToolSchema(ic, { tool: 't', args: { n: -0 }, toolSignature: 't' })).toMatchObject({ ok: false, reason: expect.stringMatching(/wrong type/) });
     // hand-crafted invalid schema inside a caveat is rejected at evaluation too
     const forged = { ...cav, schema: { props: { a: { type: 'wat' } } } } as unknown as ToolSchemaCaveat;
     expect(evaluateToolSchema(forged, call({})).ok).toBe(false);
@@ -618,6 +625,9 @@ describe('5. authority lease', () => {
     expect(g({ hard_expires_at: NaN })).toThrow();
     expect(g({ max_renewals: -1 })).toThrow();
     expect(g({ max_renewals: 1.5 })).toThrow();
+    expect(g({ max_renewals: -0 })).toThrow();
+    for (const k of ['renewals', 'last_seq', 'max_renewals'] as const) expect(leaseState({ ...base(), [k]: -0 }, 2_000)).toMatchObject({ live: false, reason: 'malformed lease' });
+    expect(leaseState({ ...base(), renewals: 0, last_seq: 0, max_renewals: 0 }, 2_000).live).toBe(true);
     expect(g({ cap_id: '' })).toThrow();
   });
   it('deterministic', () => {

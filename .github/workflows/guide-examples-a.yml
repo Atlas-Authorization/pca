@@ -1,0 +1,43 @@
+name: Guide examples A
+
+# The runnable companions of four guides (caveat language, workflow authorization, read-side authorization, agent
+# blueprints): examples/pca-guides-a. Each script prints its outcomes and exits non-zero if one differs from the guide.
+on:
+  push:
+    branches: [main, 'ci/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  examples:
+    name: pca-guides-a (typecheck and run each script)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install
+        run: pnpm install --frozen-lockfile --filter=pca-guides-a...
+      - name: Build the packages the examples import
+        run: pnpm --filter pca-guides-a^... run build
+      - name: Typecheck
+        run: pnpm --filter pca-guides-a run typecheck
+      - name: Caveat language
+        run: pnpm --filter pca-guides-a run caveats
+      - name: Workflow authorization
+        run: pnpm --filter pca-guides-a run workflow
+      - name: Read-side authorization
+        run: pnpm --filter pca-guides-a run readside
+      - name: Agent blueprints
+        run: pnpm --filter pca-guides-a run blueprint

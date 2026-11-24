@@ -4,8 +4,10 @@ import { mintGrant } from './envelope';
 import { encodeKey, generateKeyPair } from './keys';
 import { buildPCActn, thresholdMessage } from './pcactn';
 import { DEFAULT_RISK_POLICY } from './risk';
-import { verifyPCActn } from './server/verify';
+import { verifyPCActn as verifyPCActn05 } from './server/verify';
 import { assembleThreshold, createThresholdVerifier, signShare } from './threshold';
+const verifyPCActn = (p: Parameters<typeof verifyPCActn05>[0], o: Parameters<typeof verifyPCActn05>[1]): ReturnType<typeof verifyPCActn05> => verifyPCActn05(p, 'require' in o ? o : Object.create(o, { require: { value: [], enumerable: true } })); // report-only: these tests are not about the 0.5 default required checks (see breaking-05.test.ts)
+
 
 /**
  * F-1 regression (docs/pca/security/proofs/02-threshold-hybrid.md A.3): the required threshold t is decided by
@@ -40,7 +42,7 @@ describe('F-1: the server, not the agent, decides t', () => {
 
   it('claimed r=0 with server t=3 and a hook pinned to t=3 -> deny (agent alone is 2 short)', async () => {
     const { grant, signerSet, mk, ctx } = fixture();
-    const v = await verifyPCActn(mk(0), { grant, audience: 'x', now: NOW, hooks: { threshold: createThresholdVerifier({ signerSet, t: 3 }) }, context: ctx });
+    const v = await verifyPCActn(mk(0), { insecureSkipPlanRootCheck: true, grant, audience: 'x', now: NOW, hooks: { threshold: createThresholdVerifier({ signerSet, t: 3 }) }, context: ctx });
     expect(v.requiredThreshold.t).toBe(3);
     expect(v.allow).toBe(false);
     expect(v.checks.threshold).toBe('fail');
@@ -48,7 +50,7 @@ describe('F-1: the server, not the agent, decides t', () => {
 
   it('a hook configured BELOW the server-derived t is rejected even though it reports pass', async () => {
     const { grant, signerSet, mk, ctx } = fixture();
-    const v = await verifyPCActn(mk(0), { grant, audience: 'x', now: NOW, hooks: { threshold: createThresholdVerifier({ signerSet, t: 1 }) }, context: ctx });
+    const v = await verifyPCActn(mk(0), { insecureSkipPlanRootCheck: true, grant, audience: 'x', now: NOW, hooks: { threshold: createThresholdVerifier({ signerSet, t: 1 }) }, context: ctx });
     expect(v.requiredThreshold.t).toBe(3);
     expect(v.allow).toBe(false);
     expect(v.checks.threshold).toBe('fail');
@@ -57,7 +59,7 @@ describe('F-1: the server, not the agent, decides t', () => {
 
   it('a custom hook that does not attest the t it enforced is rejected when the server needs t>1', async () => {
     const { grant, mk, ctx } = fixture();
-    const v = await verifyPCActn(mk(0), { grant, audience: 'x', now: NOW, hooks: { threshold: () => ({ enforced: true, ok: true }) }, context: ctx });
+    const v = await verifyPCActn(mk(0), { insecureSkipPlanRootCheck: true, grant, audience: 'x', now: NOW, hooks: { threshold: () => ({ enforced: true, ok: true }) }, context: ctx });
     expect(v.allow).toBe(false);
     expect(v.checks.threshold).toBe('fail');
   });
@@ -68,7 +70,7 @@ describe('F-1: the server, not the agent, decides t', () => {
     const msg = thresholdMessage(base);
     const bind = { signerSet, t: 3 };
     const full = { ...base, threshold: assembleThreshold([signShare('guardian', G.secretKey, msg, bind), signShare('principal', P.secretKey, msg, bind)]) };
-    const v = await verifyPCActn(full, { grant, audience: 'x', now: NOW, hooks: { threshold: createThresholdVerifier({ signerSet, t: 3 }) }, context: ctx });
+    const v = await verifyPCActn(full, { insecureSkipPlanRootCheck: true, grant, audience: 'x', now: NOW, hooks: { threshold: createThresholdVerifier({ signerSet, t: 3 }) }, context: ctx });
     expect(v.allow, v.reasons.join('|')).toBe(true);
     expect(v.checks.threshold).toBe('pass');
   });

@@ -221,7 +221,7 @@ export class InMemoryReplayStore implements ReplayStore, CounterStore {
   prune(nowMs: number): number {
     let n = 0;
     for (const [k, until] of this.seen) {
-      if (until < nowMs) {
+      if (Number.isFinite(nowMs) && until < nowMs) {
         this.seen.delete(k);
         n += 1;
       }
@@ -234,7 +234,7 @@ export class InMemoryReplayStore implements ReplayStore, CounterStore {
       return Promise.reject(new RangeError('consumeOnce: invalid key or retention horizon'));
     }
     const until = this.seen.get(key);
-    if (until !== undefined && until >= nowMs) return Promise.resolve(false);
+    if (until !== undefined && !(Number.isFinite(nowMs) && until < nowMs)) return Promise.resolve(false);
     if (until === undefined && this.seen.size >= this.maxEntries) {
       this.prune(nowMs);
       if (this.seen.size >= this.maxEntries) return Promise.reject(new Error('replay store full of live entries'));

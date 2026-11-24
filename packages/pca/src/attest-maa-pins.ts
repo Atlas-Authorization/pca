@@ -128,8 +128,8 @@ export function loadBuiltinMaaPins(opts: { nowMs: number; source?: BuiltinMaaPin
       memo.set(key, r);
     }
     if (!r.ok) return r;
-    if (opts.nowMs < r.notBefore) return { ok: false, reason: 'built-in pins are not yet valid (clock behind the release)' };
-    if (opts.nowMs > r.expiresAt) return { ok: false, reason: 'built-in pins expired; update the package or pass explicit initialPins' };
+    if (!(Number.isFinite(opts.nowMs) && opts.nowMs >= r.notBefore)) return { ok: false, reason: 'built-in pins are not yet valid (clock behind the release)' };
+    if (!(Number.isFinite(opts.nowMs) && opts.nowMs <= r.expiresAt)) return { ok: false, reason: 'built-in pins expired; update the package or pass explicit initialPins' };
     return r.value;
   } catch (e) {
     return { ok: false, reason: e instanceof Error ? e.message : 'built-in pins error' };

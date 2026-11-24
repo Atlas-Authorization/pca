@@ -1,0 +1,2229 @@
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; event(Accept(c, h, g, e, n, m)) ==> (event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))) failed:
+  Found Accept(vpk, h, g_2, e_2, n_3, m) at 268
+  but could not prove event(GuestQuoted(h, g, e, n, m)) nor event(ChipBroken(c))
+Proof of forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; inj-event(Accept(c, h, g, e, n, m)) ==> (inj-event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))) failed:
+  Found Accept(vpk, h, g_2, e_2, n_3, m) at 268
+  but could not prove inj-event(GuestQuoted(h, g, e, n, m)) nor event(ChipBroken(c))
+Proof of forall n: nonce_t, x: act_t, h: hpkey, c: pkey; event(AcceptAct(c, h, x, n)) ==> (event(GuestSigned(h, x, n)) || event(ChipBroken(c))) failed:
+  Found AcceptAct(vpk, h, x_2, n_3) at 284
+  but could not prove event(GuestSigned(h, x, n)) nor event(ChipBroken(c))
+Trying equivalence uf_cma(sign) with rr... Failed.
+Doing remove assignments of binder pkRoot... Done.
+Doing remove assignments of binder skRoot... Done.
+Trying equivalence uf_cma(sign) with rr... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Done.
+Doing expand... Applied collision r_1 <-R keyseed; forall Y: pkey; return((pkgen(r_1) = Y)) <=(Psigncoll)=> return(false) if Y independent-of r_1 with r_1 -> rc[i2_4], Y -> pkgen2(rr) Probability: Psigncoll * NC
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rc inside simplify... At 35, returned message vpkC depends on rc.
+No change
+Doing global dependency analysis on rc inside simplify... At 35, returned message vpkC depends on rc.
+No change
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Trying equivalence uf_cma_corrupt(sign) with rc... Failed.
+Doing remove assignments of binder vpkC... Done.
+Doing remove assignments of binder vskC... Done.
+Trying equivalence uf_cma_corrupt(sign) with rc... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Applied collision k_1 <-R hashkey; forall x1, y1: bind_t; return((hash(k_1, x1) = hash(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+No change.
+Doing expand... Applied collision k_1 <-R hashkey; forall x1, y1: bind_t; return((hash(k_1, x1) = hash(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rc inside simplify... At 28, returned message pkgen2(rc) depends on rc.
+No change
+Doing global dependency analysis on n_3 inside simplify... At 213, returned message n_3 depends on n_3.
+No change
+Doing global dependency analysis on hs inside simplify... At 64, returned message hpk depends on hs.
+No change
+Applied collision k_1 <-R hashkey; forall x1, y1: bind_t; return((hash(k_1, x1) = hash(k_1, y1))) <=(Phash(time))=> return((x1 = y1)) with k_1 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Doing global dependency analysis on rc inside simplify... At 28, returned message pkgen2(rc) depends on rc.
+No change
+Doing global dependency analysis on n_3 inside simplify... At 213, returned message n_3 depends on n_3.
+No change
+Doing global dependency analysis on hs inside simplify... At 64, returned message hpk depends on hs.
+No change
+Run simplify 2 time(s). Maximum reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... Done.
+Doing merge branches... No change.
+Proof of forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; event(Accept(c, h, g, e, n, m)) ==> (event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))) failed:
+  Found Accept(vpk, h, g_2, e_2, n_3, m) at 471
+  but could not prove event(GuestQuoted(h, g, e, n, m)) nor event(ChipBroken(c))
+Proof of forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; inj-event(Accept(c, h, g, e, n, m)) ==> (inj-event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))) failed:
+  Found Accept(vpk, h, g_2, e_2, n_3, m) at 471
+  but could not prove inj-event(GuestQuoted(h, g, e, n, m)) nor event(ChipBroken(c))
+Proof of forall n: nonce_t, x: act_t, h: hpkey, c: pkey; event(AcceptAct(c, h, x, n)) ==> (event(GuestSigned(h, x, n)) || event(ChipBroken(c))) failed:
+  Found AcceptAct(vpk, h, x_2, n_3) at 406
+  but could not prove event(GuestSigned(h, x, n)) nor event(ChipBroken(c))
+Trying equivalence uf_cma(hsign)... Failed.
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder hpk... Done.
+Doing remove assignments of binder hsk... Done.
+Trying equivalence uf_cma(hsign) with hs... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rc inside simplify... At 28, returned message pkgen2(rc) depends on rc.
+No change
+Doing global dependency analysis on n_3 inside simplify... At 210, returned message n_3 depends on n_3.
+No change
+Doing global dependency analysis on hs inside simplify... At 56, returned message pkgen2_1(hs) depends on hs.
+No change
+Doing global dependency analysis on rc inside simplify... At 28, returned message pkgen2(rc) depends on rc.
+No change
+Doing global dependency analysis on n_3 inside simplify... At 210, returned message n_3 depends on n_3.
+No change
+Doing global dependency analysis on hs inside simplify... At 56, returned message pkgen2_1(hs) depends on hs.
+No change
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; event(Accept(c, h, g, e, n, m)) ==> (event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))) failed:
+  Found Accept(vpk, h, g_2, e_2, n_3, m) at 606
+  but could not prove event(GuestQuoted(h, g, e, n, m)) nor event(ChipBroken(c))
+Proof of forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; inj-event(Accept(c, h, g, e, n, m)) ==> (inj-event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))) failed:
+  Found Accept(vpk, h, g_2, e_2, n_3, m) at 606
+  but could not prove inj-event(GuestQuoted(h, g, e, n, m)) nor event(ChipBroken(c))
+Proof of forall n: nonce_t, x: act_t, h: hpkey, c: pkey; event(AcceptAct(c, h, x, n)) ==> (event(GuestSigned(h, x, n)) || event(ChipBroken(c))) failed:
+  Found AcceptAct(vpk, h, x_2, n_3) at 669
+  but could not prove event(GuestSigned(h, x, n)) nor event(ChipBroken(c))
+Trying equivalence uf_cma(hsign)... Failed:
+At 56, term pkgen2_1(hs) could not be discharged
+Trying equivalence uf_cma(sign)... Failed.
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     pkRoot: pkey <- pkgen(rr);
+     skRoot: skey <- skgen(rr);
+     return(pkRoot);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       event Certified(cidC, vpkC);
+       return(vpkC, (m_4: message <- mkcert(cidC, vpkC); r_4 <-R sign_seed; sign_r(m_4, skRoot, r_4)))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       mg: meas_t <- good(im_1);
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         return((m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1))); sk_3: skey <- vskC[jc_6]; r_5 <-R sign_seed; sign_r(m_5, sk_3, r_5)))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       return((m_6: message <- mkrep(good(zz), rd); sk_4: skey <- vskC[jc_7]; r_6 <-R sign_seed; sign_r(m_6, sk_4, r_6)))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       if check(mkcert(cid_4, vpk), pkRoot, csig) then
+       let good(im_2: img_t) = m in
+       if check(mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3))), vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+yields
+
+Game 2 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     pkRoot: pkey <- pkgen(rr);
+     skRoot: skey <- skgen(rr);
+     return(pkRoot);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, sign_r(m_4, skRoot, r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       mg: meas_t <- good(im_1);
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         sk_3: skey <- vskC[jc_6];
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, sk_3, r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       sk_4: skey <- vskC[jc_7];
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, sk_4, r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       if check(mkcert(cid_4, vpk), pkRoot, csig) then
+       let good(im_2: img_t) = m in
+       if check(mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3))), vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on sk_4 (definition removed, all usages removed)
+  - Remove assignments on sk_3 (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     pkRoot: pkey <- pkgen(rr);
+     skRoot: skey <- skgen(rr);
+     return(pkRoot);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, sign_r(m_4, skRoot, r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       mg: meas_t <- good(im_1);
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       if check(mkcert(cid_4, vpk), pkRoot, csig) then
+       let good(im_2: img_t) = m in
+       if check(mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3))), vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying move all binders
+  - Move assignment to mg
+yields
+
+Game 4 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     pkRoot: pkey <- pkgen(rr);
+     skRoot: skey <- skgen(rr);
+     return(pkRoot);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, sign_r(m_4, skRoot, r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       if check(mkcert(cid_4, vpk), pkRoot, csig) then
+       let good(im_2: img_t) = m in
+       if check(mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3))), vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying remove assignments of binder pkRoot
+  - Remove assignments on pkRoot (definition removed, all usages removed)
+yields
+
+Game 5 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     skRoot: skey <- skgen(rr);
+     return(pkgen(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, sign_r(m_4, skRoot, r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       if check(mkcert(cid_4, vpk), pkgen(rr), csig) then
+       let good(im_2: img_t) = m in
+       if check(mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3))), vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying remove assignments of binder skRoot
+  - Remove assignments on skRoot (definition removed, all usages removed)
+yields
+
+Game 6 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, sign_r(m_4, skgen(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       if check(mkcert(cid_4, vpk), pkgen(rr), csig) then
+       let good(im_2: img_t) = m in
+       if check(mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3))), vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rr [probability Psign(time_1, NC, maxlength(game 6: m_4))]
+  - Equivalence uf_cma(sign) with variables: r_4 -> r2, rr -> r_2
+yields
+
+Game 7 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, (x_3: message <- m_4; sign_r2(x_3, skgen2(rr), r_4)))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       if (m1: message <- mkcert(cid_4, vpk); si1: signature <- csig; find u_1 = ri_1 <= NC suchthat defined(x_3[ri_1]) && (m1 = x_3[ri_1]) && check2(m1, pkgen2(rr), si1) then true else false) then
+       let good(im_2: img_t) = m in
+       if (m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3))); y: pkey <- vpk; si: signature <- rsig; {274}find u = ri <= NC suchthat defined(x_3[ri]) && {276}((y = pkgen2(rr)) && (m_7 = x_3[ri]) && check2(m_7, y, si)) then true else if y = pkgen2(rr) then false else check(m_7, y, si)) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying simplify (non-expanded game)
+  - Simplification pass
+    - Replaced ((y = pkgen2(rr)) && (m_7 = x_3[ri]) && check2(m_7, y, si)) with false at 276
+    - Remove branch 1 in find at 274
+    - Find at 274 removed (else branch kept if any)
+yields
+
+Game 8 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, (x_3: message <- m_4; sign_r2(x_3, skgen2(rr), r_4)))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+{222}  if (m1: message <- mkcert(cid_4, vpk); si1: signature <- csig; find u_1 = ri_1 <= NC suchthat defined(x_3[ri_1]) && (m1 = x_3[ri_1]) && check2(m1, pkgen2(rr), si1) then true else false) then
+       let good(im_2: img_t) = m in
+       if (m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3))); y: pkey <- vpk; si: signature <- rsig; {274}if y = pkgen2(rr) then false else check(m_7, y, si)) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying expand [probability NC * Psigncoll]
+  - Expand if/find/let
+    - Test at 222 always false
+    - Test at 222 always true
+    - Transformed find at 274 into a test
+    - Test at 274 always false
+yields
+
+Game 9 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       x_3: message <- m_4;
+       return(vpkC, sign_r2(x_3, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       si1: signature <- csig;
+       find u_1 = ri_1 <= NC suchthat defined(x_3[ri_1]) && (m1 = x_3[ri_1]) && check2(m1, pkgen2(rr), si1) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       y: pkey <- vpk;
+       si: signature <- rsig;
+       if check(m_7, y, si) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on si1 (definition removed, all usages removed)
+  - Remove assignments on y (definition removed, all usages removed)
+  - Remove assignments on si (definition removed, all usages removed)
+  - Remove assignments on x_3 (definition removed, all usages removed)
+yields
+
+Game 10 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+{225}  find u_1 = ri_1 <= NC suchthat defined(m_4[ri_1], r_4[ri_1]) && {228}((m1 = m_4[ri_1]) && check2(m1, pkgen2(rr), csig)) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       if check(m_7, vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Replaced ((m1 = m_4[ri_1]) && check2(m1, pkgen2(rr), csig)) with ((cid_4 = cidC[ri_1]) && (vpk = vpkC[ri_1]) && check2(m1, pkgen2(rr), csig)) at 228
+    - Replaced defined condition m_4[ri_1], r_4[ri_1] with vpkC[ri_1], cidC[ri_1] in find at 225
+yields
+
+Game 11 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vpkC: pkey <- pkgen(rc);
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, vpkC);
+       r_4 <-R sign_seed;
+       return(vpkC, sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], vpkC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(vpkC[jc_8]);
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(vpkC[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = vpkC[ri_1]) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       if check(m_7, vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying remove assignments of binder vpkC
+  - Remove assignments on vpkC (definition removed, all usages removed)
+yields
+
+Game 12 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       vskC: skey <- skgen(rc);
+       m_4: message <- mkcert(cidC, pkgen(rc));
+       r_4 <-R sign_seed;
+       return(pkgen(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(cidC[jc], vskC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, vskC[jc_6], r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(cidC[jc_2], vskC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, vskC[jc_7], r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       if check(m_7, vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying remove assignments of binder vskC
+  - Remove assignments on vskC (definition removed, all usages removed)
+yields
+
+Game 13 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen(rc));
+       r_4 <-R sign_seed;
+       return(pkgen(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r(m_5, skgen(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r(m_6, skgen(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       if check(m_7, vpk, rsig) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying equivalence uf_cma_corrupt(sign) with rc [probability NC * Psign(time_2, NR + #cQ, max(maxlength(game 13: m_6), maxlength(game 13: m_5)))]
+  - Equivalence uf_cma_corrupt(sign) with variables: r_6 -> r2, r_5 -> r2, rc -> r_2
+yields
+
+Game 14 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return((x_4: message <- m_5; sign_r2(x_4, skgen2(rc[jc_6]), r_5)))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return((x_5: message <- m_6; sign_r2(x_5, skgen2(rc[jc_7]), r_6)))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       return((corrupt: bool <- cst_bool; rc[jc_8]))
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+{269}  if (m1_1: message <- m_7; si1_1: signature <- rsig; find u_2 = ri_3 <= NB suchthat defined(corrupt[ri_3], jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then check2(m1_1, pkgen2(rc[u_1]), si1_1) else find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(x_4[ri_5, ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (m1_1 = x_4[ri_5, ri_6]) && check2(m1_1, pkgen2(rc[u_1]), si1_1) then true orfind u_3 = ri_4 <= NR suchthat defined(x_5[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (m1_1 = x_5[ri_4]) && check2(m1_1, pkgen2(rc[u_1]), si1_1) then true else false) then
+       if hcheck(mkact(x_2, n_3), h, asig) then
+       event Accept(vpk, h, g_2, e_2, n_3, m);
+       event AcceptAct(vpk, h, x_2, n_3);
+       return()
+     ))
+
+
+Applying expand [probability Phash(time_3)]
+  - Expand if/find/let
+    - Test at 269 always false
+    - Test at 269 always true
+    - Test at 269 always true
+yields
+
+Game 15 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         x_4: message <- m_5;
+         return(sign_r2(x_4, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       x_5: message <- m_6;
+       return(sign_r2(x_5, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       corrupt: bool <- cst_bool;
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       m1_1: message <- m_7;
+       si1_1: signature <- rsig;
+       find u_2 = ri_3 <= NB suchthat defined(corrupt[ri_3], jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m1_1, pkgen2(rc[u_1]), si1_1) then
+         if hcheck(mkact(x_2, n_3), h, asig) then
+         event Accept(vpk, h, g_2, e_2, n_3, m);
+         event AcceptAct(vpk, h, x_2, n_3);
+         return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(x_4[ri_5, ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (m1_1 = x_4[ri_5, ri_6]) && check2(m1_1, pkgen2(rc[u_1]), si1_1) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(x_5[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (m1_1 = x_5[ri_4]) && check2(m1_1, pkgen2(rc[u_1]), si1_1) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on m1_1 (definition removed, all usages removed)
+  - Remove assignments on si1_1 (definition removed, all usages removed)
+  - Remove assignments on x_5 (definition removed, all usages removed)
+  - Remove assignments on x_4 (definition removed, all usages removed)
+yields
+
+Game 16 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       corrupt: bool <- cst_bool;
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+{263}  find u_2 = ri_3 <= NB suchthat defined(corrupt[ri_3], jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         if hcheck(mkact(x_2, n_3), h, asig) then
+         event Accept(vpk, h, g_2, e_2, n_3, m);
+         event AcceptAct(vpk, h, x_2, n_3);
+         return()
+       )
+       else
+{324}    find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(m_5[ri_5, ri_6], r_5[ri_5, ri_6], jc_6[ri_6]) && {330}((jc_6[ri_6] = u_1) && (m_7 = m_5[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig)) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(m_6[ri_4], r_6[ri_4], jc_7[ri_4]) && {397}((jc_7[ri_4] = u_1) && (m_7 = m_6[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig)) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+     ))
+
+
+Applying simplify [probability Phash(time_4)]
+  - Simplification pass
+    - Replaced ((jc_7[ri_4] = u_1) && (m_7 = m_6[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig)) with ((jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig)) at 397
+    - Replaced defined condition m_6[ri_4], r_6[ri_4], jc_7[ri_4] with rd[ri_4], zz[ri_4], jc_7[ri_4] in find at 324
+    - Replaced ((jc_6[ri_6] = u_1) && (m_7 = m_5[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig)) with ((jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (bind(h, g_2, e_2, n_3) = bind(hpk[ri_6], g_1[ri_5, ri_6], e_1[ri_5, ri_6], n_1[ri_5, ri_6])) && check2(m_7, pkgen2(rc[u_1]), rsig)) at 330
+    - Replaced defined condition m_5[ri_5, ri_6], r_5[ri_5, ri_6], jc_6[ri_6] with n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], hpk[ri_6], im_1[ri_6], jc_6[ri_6] in find at 324
+    - Replaced defined condition corrupt[ri_3], jc_8[ri_3] with jc_8[ri_3] in find at 263
+yields
+
+Game 17 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       corrupt: bool <- cst_bool;
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         if hcheck(mkact(x_2, n_3), h, asig) then
+         event Accept(vpk, h, g_2, e_2, n_3, m);
+         event AcceptAct(vpk, h, x_2, n_3);
+         return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], hpk[ri_6], im_1[ri_6], jc_6[ri_6]) && {333}((jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (bind(h, g_2, e_2, n_3) = bind(hpk[ri_6], g_1[ri_5, ri_6], e_1[ri_5, ri_6], n_1[ri_5, ri_6])) && check2(m_7, pkgen2(rc[u_1]), rsig)) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Replaced ((jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (bind(h, g_2, e_2, n_3) = bind(hpk[ri_6], g_1[ri_5, ri_6], e_1[ri_5, ri_6], n_1[ri_5, ri_6])) && check2(m_7, pkgen2(rc[u_1]), rsig)) with ((jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = hpk[ri_6]) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig)) at 333
+yields
+
+Game 18 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       corrupt: bool <- cst_bool;
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         if hcheck(mkact(x_2, n_3), h, asig) then
+         event Accept(vpk, h, g_2, e_2, n_3, m);
+         event AcceptAct(vpk, h, x_2, n_3);
+         return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], hpk[ri_6], im_1[ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = hpk[ri_6]) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+     ))
+
+
+Applying SA rename new without array accesses and remove assignments of findcond
+  - Remove assignments on corrupt (definition removed, all usages removed)
+yields
+
+Game 19 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hpk: hpkey <- hpkgen(hs);
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpk);
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpk, g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpk, g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpk, x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         if hcheck(mkact(x_2, n_3), h, asig) then
+         event Accept(vpk, h, g_2, e_2, n_3, m);
+         event AcceptAct(vpk, h, x_2, n_3);
+         return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], hpk[ri_6], im_1[ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = hpk[ri_6]) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+     ))
+
+
+Applying remove assignments of binder hpk
+  - Remove assignments on hpk (definition removed, all usages removed)
+yields
+
+Game 20 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       hsk: hskey <- hskgen(hs);
+       mg: meas_t <- good(im_1);
+       return(hpkgen(hs));
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpkgen(hs), g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpkgen(hs), g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpkgen(hs), x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hsk))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         if hcheck(mkact(x_2, n_3), h, asig) then
+         event Accept(vpk, h, g_2, e_2, n_3, m);
+         event AcceptAct(vpk, h, x_2, n_3);
+         return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(hs[ri_6], n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], im_1[ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = hpkgen(hs[ri_6])) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+     ))
+
+
+Applying remove assignments of binder hsk
+  - Remove assignments on hsk (definition removed, all usages removed)
+yields
+
+Game 21 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       mg: meas_t <- good(im_1);
+       return(hpkgen(hs));
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(hpkgen(hs), g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(hpkgen(hs), g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(hpkgen(hs), x_1, n_2);
+         return(hsign(mkact(x_1, n_2), hskgen(hs)))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         if hcheck(mkact(x_2, n_3), h, asig) then
+         event Accept(vpk, h, g_2, e_2, n_3, m);
+         event AcceptAct(vpk, h, x_2, n_3);
+         return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(hs[ri_6], n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], im_1[ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = hpkgen(hs[ri_6])) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           if hcheck(mkact(x_2, n_3), h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+     ))
+
+
+Applying equivalence uf_cma(hsign) with hs [probability NL * PsignH(time_5, NA, length(mkact, maxlength(game 21: x_1)))]
+  - Equivalence uf_cma(hsign) with variables: hs -> r_2
+yields
+
+Game 22 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       mg: meas_t <- good(im_1);
+       return(pkgen2_1(hs));
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(pkgen2_1(hs), g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(pkgen2_1(hs), g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(pkgen2_1(hs), x_1, n_2);
+         return((x_6: hmessage <- mkact(x_1, n_2); sign2(x_6, skgen2_1(hs))))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+{276}    if (m_9: hmessage <- mkact(x_2, n_3); y_2: hpkey <- h; si_2: hsignature <- asig; find u_10 = ri_12 <= NA, u_11 = ri_13 <= NL suchthat defined(x_6[ri_12, ri_13], hs[ri_13]) && (y_2 = pkgen2_1(hs[ri_13])) && (m_9 = x_6[ri_12, ri_13]) && check2_1(m_9, y_2, si_2) then true else find u_12 = ri_14 <= NL suchthat defined(hs[ri_14]) && (y_2 = pkgen2_1(hs[ri_14])) then false else hcheck(m_9, y_2, si_2)) then
+         event Accept(vpk, h, g_2, e_2, n_3, m);
+         event AcceptAct(vpk, h, x_2, n_3);
+         return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(hs[ri_6], n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], im_1[ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = pkgen2_1(hs[ri_6])) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+{422}      if (m1_2: hmessage <- mkact(x_2, n_3); si1_2: hsignature <- asig; find u_6 = ri_7 <= NA suchthat defined(x_6[ri_7, u_5]) && (m1_2 = x_6[ri_7, u_5]) && check2_1(m1_2, pkgen2_1(hs[u_5]), si1_2) then true else false) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+{525}      if (m_8: hmessage <- mkact(x_2, n_3); y_1: hpkey <- h; si_1: hsignature <- asig; find u_7 = ri_9 <= NA, u_8 = ri_10 <= NL suchthat defined(x_6[ri_9, ri_10], hs[ri_10]) && (y_1 = pkgen2_1(hs[ri_10])) && (m_8 = x_6[ri_9, ri_10]) && check2_1(m_8, y_1, si_1) then true else find u_9 = ri_11 <= NL suchthat defined(hs[ri_11]) && (y_1 = pkgen2_1(hs[ri_11])) then false else hcheck(m_8, y_1, si_1)) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+    - Test at 525 always false
+    - Test at 525 always true
+    - Test at 422 always false
+    - Test at 422 always true
+    - Test at 276 always false
+    - Test at 276 always true
+yields
+
+Game 23 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       mg: meas_t <- good(im_1);
+       return(pkgen2_1(hs));
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(pkgen2_1(hs), g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(pkgen2_1(hs), g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(pkgen2_1(hs), x_1, n_2);
+         x_6: hmessage <- mkact(x_1, n_2);
+         return(sign2(x_6, skgen2_1(hs)))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         m_9: hmessage <- mkact(x_2, n_3);
+         y_2: hpkey <- h;
+         si_2: hsignature <- asig;
+         find u_10 = ri_12 <= NA, u_11 = ri_13 <= NL suchthat defined(x_6[ri_12, ri_13], hs[ri_13]) && (y_2 = pkgen2_1(hs[ri_13])) && (m_9 = x_6[ri_12, ri_13]) && check2_1(m_9, y_2, si_2) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         else
+           find u_12 = ri_14 <= NL suchthat defined(hs[ri_14]) && (y_2 = pkgen2_1(hs[ri_14])) then
+             yield
+           else
+             if hcheck(m_9, y_2, si_2) then
+             event Accept(vpk, h, g_2, e_2, n_3, m);
+             event AcceptAct(vpk, h, x_2, n_3);
+             return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(hs[ri_6], n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], im_1[ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = pkgen2_1(hs[ri_6])) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           m1_2: hmessage <- mkact(x_2, n_3);
+           si1_2: hsignature <- asig;
+           find u_6 = ri_7 <= NA suchthat defined(x_6[ri_7, u_5]) && (m1_2 = x_6[ri_7, u_5]) && check2_1(m1_2, pkgen2_1(hs[u_5]), si1_2) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           m_8: hmessage <- mkact(x_2, n_3);
+           y_1: hpkey <- h;
+           si_1: hsignature <- asig;
+           find u_7 = ri_9 <= NA, u_8 = ri_10 <= NL suchthat defined(x_6[ri_9, ri_10], hs[ri_10]) && (y_1 = pkgen2_1(hs[ri_10])) && (m_8 = x_6[ri_9, ri_10]) && check2_1(m_8, y_1, si_1) then
+             event Accept(vpk, h, g_2, e_2, n_3, m);
+             event AcceptAct(vpk, h, x_2, n_3);
+             return()
+           else
+             find u_9 = ri_11 <= NL suchthat defined(hs[ri_11]) && (y_1 = pkgen2_1(hs[ri_11])) then
+               yield
+             else
+               if hcheck(m_8, y_1, si_1) then
+               event Accept(vpk, h, g_2, e_2, n_3, m);
+               event AcceptAct(vpk, h, x_2, n_3);
+               return()
+         )
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on si1_2 (definition removed, all usages removed)
+  - Remove assignments on y_1 (definition removed, all usages removed)
+  - Remove assignments on si_1 (definition removed, all usages removed)
+  - Remove assignments on y_2 (definition removed, all usages removed)
+  - Remove assignments on si_2 (definition removed, all usages removed)
+yields
+
+Game 24 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       mg: meas_t <- good(im_1);
+       return(pkgen2_1(hs));
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(pkgen2_1(hs), g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(pkgen2_1(hs), g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(pkgen2_1(hs), x_1, n_2);
+         x_6: hmessage <- mkact(x_1, n_2);
+         return(sign2(x_6, skgen2_1(hs)))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         m_9: hmessage <- mkact(x_2, n_3);
+{283}    find u_10 = ri_12 <= NA, u_11 = ri_13 <= NL suchthat defined(x_6[ri_12, ri_13], hs[ri_13]) && {287}((h = pkgen2_1(hs[ri_13])) && (m_9 = x_6[ri_12, ri_13]) && check2_1(m_9, h, asig)) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         else
+           find u_12 = ri_14 <= NL suchthat defined(hs[ri_14]) && (h = pkgen2_1(hs[ri_14])) then
+             yield
+           else
+             if hcheck(m_9, h, asig) then
+             event Accept(vpk, h, g_2, e_2, n_3, m);
+             event AcceptAct(vpk, h, x_2, n_3);
+             return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(hs[ri_6], n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], im_1[ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = pkgen2_1(hs[ri_6])) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           m1_2: hmessage <- mkact(x_2, n_3);
+{453}      find u_6 = ri_7 <= NA suchthat defined(x_6[ri_7, u_5]) && {457}((m1_2 = x_6[ri_7, u_5]) && check2_1(m1_2, pkgen2_1(hs[u_5]), asig)) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           m_8: hmessage <- mkact(x_2, n_3);
+{551}      find u_7 = ri_9 <= NA, u_8 = ri_10 <= NL suchthat defined(x_6[ri_9, ri_10], hs[ri_10]) && {555}((h = pkgen2_1(hs[ri_10])) && (m_8 = x_6[ri_9, ri_10]) && check2_1(m_8, h, asig)) then
+             event Accept(vpk, h, g_2, e_2, n_3, m);
+             event AcceptAct(vpk, h, x_2, n_3);
+             return()
+           else
+             find u_9 = ri_11 <= NL suchthat defined(hs[ri_11]) && (h = pkgen2_1(hs[ri_11])) then
+               yield
+             else
+               if hcheck(m_8, h, asig) then
+               event Accept(vpk, h, g_2, e_2, n_3, m);
+               event AcceptAct(vpk, h, x_2, n_3);
+               return()
+         )
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Replaced ((h = pkgen2_1(hs[ri_10])) && (m_8 = x_6[ri_9, ri_10]) && check2_1(m_8, h, asig)) with ((h = pkgen2_1(hs[ri_10])) && (x_2 = x_1[ri_9, ri_10]) && (n_3 = n_2[ri_9, ri_10]) && check2_1(m_8, h, asig)) at 555
+    - Replaced defined condition x_6[ri_9, ri_10], hs[ri_10] with n_2[ri_9, ri_10], x_1[ri_9, ri_10], hs[ri_10] in find at 551
+    - Replaced ((m1_2 = x_6[ri_7, u_5]) && check2_1(m1_2, pkgen2_1(hs[u_5]), asig)) with ((x_2 = x_1[ri_7, u_5]) && (n_3 = n_2[ri_7, u_5]) && check2_1(m1_2, pkgen2_1(hs[u_5]), asig)) at 457
+    - Replaced defined condition x_6[ri_7, u_5] with n_2[ri_7, u_5], x_1[ri_7, u_5] in find at 453
+    - Replaced ((h = pkgen2_1(hs[ri_13])) && (m_9 = x_6[ri_12, ri_13]) && check2_1(m_9, h, asig)) with ((h = pkgen2_1(hs[ri_13])) && (x_2 = x_1[ri_12, ri_13]) && (n_3 = n_2[ri_12, ri_13]) && check2_1(m_9, h, asig)) at 287
+    - Replaced defined condition x_6[ri_12, ri_13], hs[ri_13] with n_2[ri_12, ri_13], x_1[ri_12, ri_13], hs[ri_13] in find at 283
+yields
+
+Game 25 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rr <-R keyseed;
+     return(pkgen2(rr));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iC <= NC do
+       cC(cidC: chipid_t) :=
+       rc <-R keyseed;
+       m_4: message <- mkcert(cidC, pkgen2(rc));
+       r_4 <-R sign_seed;
+       return(pkgen2(rc), sign_r2(m_4, skgen2(rr), r_4))
+     ) | (
+       foreach iL <= NL do
+       cL(cid_1: chipid_t, im_1: img_t) :=
+       find jc_6 = jc <= NC suchthat defined(rc[jc], cidC[jc]) && (cid_1 = cidC[jc]) then
+       hs <-R hkeyseed;
+       mg: meas_t <- good(im_1);
+       return(pkgen2_1(hs));
+       ((
+         foreach iQ <= NQ do
+         cQ(g_1: grant_t, e_1: epoch_t, n_1: nonce_t) :=
+         event GuestQuoted(pkgen2_1(hs), g_1, e_1, n_1, mg);
+         m_5: message <- mkrep(mg, hash(hk_1, bind(pkgen2_1(hs), g_1, e_1, n_1)));
+         r_5 <-R sign_seed;
+         return(sign_r2(m_5, skgen2(rc[jc_6]), r_5))
+       ) | (
+         foreach iA <= NA do
+         cA(x_1: act_t, n_2: nonce_t) :=
+         event GuestSigned(pkgen2_1(hs), x_1, n_2);
+         x_6: hmessage <- mkact(x_1, n_2);
+         return(sign2(x_6, skgen2_1(hs)))
+       ))
+     ) | (
+       foreach iR <= NR do
+       cR(cid_2: chipid_t, zz: img_t, rd: rd_t) :=
+       find jc_7 = jc_2 <= NC suchthat defined(rc[jc_2], cidC[jc_2]) && (cid_2 = cidC[jc_2]) then
+       m_6: message <- mkrep(good(zz), rd);
+       r_6 <-R sign_seed;
+       return(sign_r2(m_6, skgen2(rc[jc_7]), r_6))
+     ) | (
+       foreach iB <= NB do
+       cB(cid_3: chipid_t) :=
+       find jc_8 = jc_4 <= NC suchthat defined(cidC[jc_4], rc[jc_4]) && (cid_3 = cidC[jc_4]) then
+       event ChipBroken(pkgen2(rc[jc_8]));
+       return(rc[jc_8])
+     ) | (
+       foreach iV <= NV do
+       cV0(h: hpkey, g_2: grant_t, e_2: epoch_t) :=
+       n_3 <-R nonce_t;
+       return(n_3);
+       cV2(cid_4: chipid_t, vpk: pkey, csig: signature, m: meas_t, rsig: signature, x_2: act_t, asig: hsignature) :=
+       m1: message <- mkcert(cid_4, vpk);
+       find u_1 = ri_1 <= NC suchthat defined(rc[ri_1], cidC[ri_1]) && (cid_4 = cidC[ri_1]) && (vpk = pkgen2(rc[ri_1])) && check2(m1, pkgen2(rr), csig) then
+       let good(im_2: img_t) = m in
+       m_7: message <- mkrep(m, hash(hk_1, bind(h, g_2, e_2, n_3)));
+       find u_2 = ri_3 <= NB suchthat defined(jc_8[ri_3]) && (u_1 = jc_8[ri_3]) then
+       (
+         if check2(m_7, pkgen2(rc[u_1]), rsig) then
+         m_9: hmessage <- mkact(x_2, n_3);
+         find u_10 = ri_12 <= NA, u_11 = ri_13 <= NL suchthat defined(n_2[ri_12, ri_13], x_1[ri_12, ri_13], hs[ri_13]) && (h = pkgen2_1(hs[ri_13])) && (x_2 = x_1[ri_12, ri_13]) && (n_3 = n_2[ri_12, ri_13]) && check2_1(m_9, h, asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         else
+           find u_12 = ri_14 <= NL suchthat defined(hs[ri_14]) && (h = pkgen2_1(hs[ri_14])) then
+             yield
+           else
+             if hcheck(m_9, h, asig) then
+             event Accept(vpk, h, g_2, e_2, n_3, m);
+             event AcceptAct(vpk, h, x_2, n_3);
+             return()
+       )
+       else
+         find u_4 = ri_5 <= NQ, u_5 = ri_6 <= NL suchthat defined(hs[ri_6], n_1[ri_5, ri_6], e_1[ri_5, ri_6], g_1[ri_5, ri_6], im_1[ri_6], jc_6[ri_6]) && (jc_6[ri_6] = u_1) && (im_2 = im_1[ri_6]) && (h = pkgen2_1(hs[ri_6])) && (g_2 = g_1[ri_5, ri_6]) && (e_2 = e_1[ri_5, ri_6]) && (n_3 = n_1[ri_5, ri_6]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           m1_2: hmessage <- mkact(x_2, n_3);
+           find u_6 = ri_7 <= NA suchthat defined(n_2[ri_7, u_5], x_1[ri_7, u_5]) && (x_2 = x_1[ri_7, u_5]) && (n_3 = n_2[ri_7, u_5]) && check2_1(m1_2, pkgen2_1(hs[u_5]), asig) then
+           event Accept(vpk, h, g_2, e_2, n_3, m);
+           event AcceptAct(vpk, h, x_2, n_3);
+           return()
+         )
+         orfind u_3 = ri_4 <= NR suchthat defined(rd[ri_4], zz[ri_4], jc_7[ri_4]) && (jc_7[ri_4] = u_1) && (im_2 = zz[ri_4]) && (hash(hk_1, bind(h, g_2, e_2, n_3)) = rd[ri_4]) && check2(m_7, pkgen2(rc[u_1]), rsig) then
+         (
+           m_8: hmessage <- mkact(x_2, n_3);
+           find u_7 = ri_9 <= NA, u_8 = ri_10 <= NL suchthat defined(n_2[ri_9, ri_10], x_1[ri_9, ri_10], hs[ri_10]) && (h = pkgen2_1(hs[ri_10])) && (x_2 = x_1[ri_9, ri_10]) && (n_3 = n_2[ri_9, ri_10]) && check2_1(m_8, h, asig) then
+             event Accept(vpk, h, g_2, e_2, n_3, m);
+             event AcceptAct(vpk, h, x_2, n_3);
+             return()
+           else
+             find u_9 = ri_11 <= NL suchthat defined(hs[ri_11]) && (h = pkgen2_1(hs[ri_11])) then
+               yield
+             else
+               if hcheck(m_8, h, asig) then
+               event Accept(vpk, h, g_2, e_2, n_3, m);
+               event AcceptAct(vpk, h, x_2, n_3);
+               return()
+         )
+     ))
+
+RESULT time_1 = NC * time(pkgen) + NC * time(skgen) + NC * time(mkcert, maxlength(game 6: cidC)) + NL * NC * time(= chipid_t, maxlength(game 6: cid_1), maxlength(game 6: cidC)) + NL * time(hpkgen) + NL * time(hskgen) + NL * time(good, maxlength(game 6: im_1)) + #cQ * time(([1,NQ], [1,NL])) + #cQ * time(mkrep, maxlength(game 6: mg)) + #cQ * time(hash, length(bind, maxlength(game 6: g_1), maxlength(game 6: e_1))) + #cQ * time(bind, maxlength(game 6: g_1), maxlength(game 6: e_1)) + #cQ * time(sign_r, maxlength(game 6: m_5)) + #cA * time(([1,NA], [1,NL])) + #cA * time(hsign, length(mkact, maxlength(game 6: x_1))) + #cA * time(mkact, maxlength(game 6: x_1)) + NR * NC * time(= chipid_t, maxlength(game 6: cid_2), maxlength(game 6: cidC)) + NR * time(mkrep, length(good, maxlength(game 6: zz))) + NR * time(good, maxlength(game 6: zz)) + NR * time(sign_r, maxlength(game 6: m_6)) + NB * NC * time(= chipid_t, maxlength(game 6: cid_3), maxlength(game 6: cidC)) + NB * time(([1,NB])) + NV * time(mkcert, maxlength(game 6: cid_4)) + NV * time(let good, maxlength(game 6: im_2)) + NV * time(mkrep, maxlength(game 6: m)) + NV * time(hash, length(bind, maxlength(game 6: g_2), maxlength(game 6: e_2))) + NV * time(bind, maxlength(game 6: g_2), maxlength(game 6: e_2)) + NV * time(hcheck, length(mkact, maxlength(game 6: x_2)), maxlength(game 6: asig)) + NV * time(mkact, maxlength(game 6: x_2)) + 2 * NV * time(([1,NV])) + time + (2 * NV - 1) * time(check, max(length(mkcert, maxlength(game 6: cid_4)), length(mkrep, maxlength(game 6: m))), max(maxlength(game 6: csig), maxlength(game 6: rsig)))
+RESULT time_2 = NC * time(mkcert, maxlength(game 13: cidC)) + NC * time(sign_r, maxlength(game 13: m_4)) + NL * NC * time(= chipid_t, maxlength(game 13: cid_1), maxlength(game 13: cidC)) + NL * time(hpkgen) + NL * time(hskgen) + NL * time(good, maxlength(game 13: im_1)) + #cQ * time(([1,NQ], [1,NL])) + #cQ * time(mkrep, maxlength(game 13: mg)) + #cQ * time(hash, length(bind, maxlength(game 13: g_1), maxlength(game 13: e_1))) + #cQ * time(bind, maxlength(game 13: g_1), maxlength(game 13: e_1)) + #cA * time(([1,NA], [1,NL])) + #cA * time(hsign, length(mkact, maxlength(game 13: x_1))) + #cA * time(mkact, maxlength(game 13: x_1)) + NR * NC * time(= chipid_t, maxlength(game 13: cid_2), maxlength(game 13: cidC)) + NR * time(mkrep, length(good, maxlength(game 13: zz))) + NR * time(good, maxlength(game 13: zz)) + NB * NC * time(= chipid_t, maxlength(game 13: cid_3), maxlength(game 13: cidC)) + NB * time(([1,NB])) + NV * time(mkcert, maxlength(game 13: cid_4)) + NV * NC * time(= chipid_t, maxlength(game 13: cid_4), maxlength(game 13: cidC)) + (NV * NC + NC) * time(pkgen) + NV * NC * time(check, maxlength(game 13: m1), maxlength(game 13: csig)) + NV * time(let good, maxlength(game 13: im_2)) + NV * time(mkrep, maxlength(game 13: m)) + NV * time(hash, length(bind, maxlength(game 13: g_2), maxlength(game 13: e_2))) + NV * time(bind, maxlength(game 13: g_2), maxlength(game 13: e_2)) + NV * time(hcheck, length(mkact, maxlength(game 13: x_2)), maxlength(game 13: asig)) + NV * time(mkact, maxlength(game 13: x_2)) + 2 * NV * time(([1,NV])) + time + (NC * NV - 1) * time(check, maxlength(game 13: m_7), maxlength(game 13: rsig)) + (NC * NR + NC * #cQ - NR - #cQ) * time(sign_r, max(maxlength(game 13: m_6), maxlength(game 13: m_5))) + (2 * NC - 1) * time(skgen)
+RESULT time_3 = time + time(game 14) = time + (1 + 2 * NC + NB + 2 * NV * NC + NV * #cQ + NV * NR + NV) * time(pkgen) + NC * time(mkcert, maxlength(game 14: cidC)) + NC * time(sign_r, maxlength(game 14: m_4)) + (NC + #cQ + NR) * time(skgen) + NL * NC * time(= chipid_t, maxlength(game 14: cid_1), maxlength(game 14: cidC)) + NL * time(hpkgen) + NL * time(hskgen) + NL * time(good, maxlength(game 14: im_1)) + #cQ * time(([1,NQ], [1,NL])) + #cQ * time(mkrep, maxlength(game 14: mg)) + #cQ * time(hash, length(bind, maxlength(game 14: g_1), maxlength(game 14: e_1))) + #cQ * time(bind, maxlength(game 14: g_1), maxlength(game 14: e_1)) + #cQ * time(sign_r, maxlength(game 14: x_4)) + #cA * time(([1,NA], [1,NL])) + #cA * time(hsign, length(mkact, maxlength(game 14: x_1))) + #cA * time(mkact, maxlength(game 14: x_1)) + NR * NC * time(= chipid_t, maxlength(game 14: cid_2), maxlength(game 14: cidC)) + NR * time(mkrep, length(good, maxlength(game 14: zz))) + NR * time(good, maxlength(game 14: zz)) + NR * time(sign_r, maxlength(game 14: x_5)) + NB * NC * time(= chipid_t, maxlength(game 14: cid_3), maxlength(game 14: cidC)) + NB * time(([1,NB])) + NV * time(mkcert, maxlength(game 14: cid_4)) + NV * NC * time(= chipid_t, maxlength(game 14: cid_4), maxlength(game 14: cidC)) + NV * NC * time(check, maxlength(game 14: m1), maxlength(game 14: csig)) + NV * time(let good, maxlength(game 14: im_2)) + NV * time(mkrep, maxlength(game 14: m)) + NV * time(hash, length(bind, maxlength(game 14: g_2), maxlength(game 14: e_2))) + NV * time(bind, maxlength(game 14: g_2), maxlength(game 14: e_2)) + NV * #cQ * time(= message, maxlength(game 14: m1_1), maxlength(game 14: x_4)) + (NV * #cQ + NV * NR + NV) * time(check, maxlength(game 14: m1_1), maxlength(game 14: si1_1)) + NV * NR * time(= message, maxlength(game 14: m1_1), maxlength(game 14: x_5)) + NV * time(hcheck, length(mkact, maxlength(game 14: x_2)), maxlength(game 14: asig)) + NV * time(mkact, maxlength(game 14: x_2)) + 2 * NV * time(([1,NV]))
+RESULT time_4 = time + time(game 16) = time + (1 + 2 * NC + NB + 2 * NV * NC + NV + NV * NQ * NL + NV * NR) * time(pkgen) + NC * time(mkcert, maxlength(game 16: cidC)) + NC * time(sign_r, maxlength(game 16: m_4)) + (NC + #cQ + NR) * time(skgen) + NL * NC * time(= chipid_t, maxlength(game 16: cid_1), maxlength(game 16: cidC)) + NL * time(hpkgen) + NL * time(hskgen) + NL * time(good, maxlength(game 16: im_1)) + #cQ * time(([1,NQ], [1,NL])) + #cQ * time(mkrep, maxlength(game 16: mg)) + #cQ * time(hash, length(bind, maxlength(game 16: g_1), maxlength(game 16: e_1))) + #cQ * time(bind, maxlength(game 16: g_1), maxlength(game 16: e_1)) + #cQ * time(sign_r, maxlength(game 16: m_5)) + #cA * time(([1,NA], [1,NL])) + #cA * time(hsign, length(mkact, maxlength(game 16: x_1))) + #cA * time(mkact, maxlength(game 16: x_1)) + NR * NC * time(= chipid_t, maxlength(game 16: cid_2), maxlength(game 16: cidC)) + NR * time(mkrep, length(good, maxlength(game 16: zz))) + NR * time(good, maxlength(game 16: zz)) + NR * time(sign_r, maxlength(game 16: m_6)) + NB * NC * time(= chipid_t, maxlength(game 16: cid_3), maxlength(game 16: cidC)) + NB * time(([1,NB])) + NV * time(mkcert, maxlength(game 16: cid_4)) + NV * NC * time(= chipid_t, maxlength(game 16: cid_4), maxlength(game 16: cidC)) + NV * NC * time(check, maxlength(game 16: m1), maxlength(game 16: csig)) + NV * time(let good, maxlength(game 16: im_2)) + NV * time(mkrep, maxlength(game 16: m)) + NV * time(hash, length(bind, maxlength(game 16: g_2), maxlength(game 16: e_2))) + NV * time(bind, maxlength(game 16: g_2), maxlength(game 16: e_2)) + (NV + NV * NQ * NL + NV * NR) * time(check, maxlength(game 16: m_7), maxlength(game 16: rsig)) + NV * NQ * NL * time(= message, maxlength(game 16: m_7), maxlength(game 16: m_5)) + NV * NR * time(= message, maxlength(game 16: m_7), maxlength(game 16: m_6)) + NV * time(hcheck, length(mkact, maxlength(game 16: x_2)), maxlength(game 16: asig)) + NV * time(mkact, maxlength(game 16: x_2)) + 2 * NV * time(([1,NV]))
+RESULT time_5 = (1 + 2 * NC + NB + 2 * NV * NC + NV + NV * #cQ + NV * NR) * time(pkgen) + NC * time(mkcert, maxlength(game 21: cidC)) + NC * time(sign_r, maxlength(game 21: m_4)) + (NC + #cQ + NR) * time(skgen) + NL * NC * time(= chipid_t, maxlength(game 21: cid_1), maxlength(game 21: cidC)) + NL * time(good, maxlength(game 21: im_1)) + #cQ * time(([1,NQ], [1,NL])) + #cQ * time(mkrep, maxlength(game 21: mg)) + #cQ * time(hash, length(bind, maxlength(game 21: g_1), maxlength(game 21: e_1))) + #cQ * time(bind, maxlength(game 21: g_1), maxlength(game 21: e_1)) + #cQ * time(sign_r, maxlength(game 21: m_5)) + #cA * time(([1,NA], [1,NL])) + #cA * time(mkact, maxlength(game 21: x_1)) + NR * NC * time(= chipid_t, maxlength(game 21: cid_2), maxlength(game 21: cidC)) + NR * time(mkrep, length(good, maxlength(game 21: zz))) + NR * time(good, maxlength(game 21: zz)) + NR * time(sign_r, maxlength(game 21: m_6)) + NB * NC * time(= chipid_t, maxlength(game 21: cid_3), maxlength(game 21: cidC)) + NB * time(([1,NB])) + NV * time(mkcert, maxlength(game 21: cid_4)) + NV * NC * time(= chipid_t, maxlength(game 21: cid_4), maxlength(game 21: cidC)) + NV * NC * time(check, maxlength(game 21: m1), maxlength(game 21: csig)) + NV * time(let good, maxlength(game 21: im_2)) + NV * time(mkrep, maxlength(game 21: m)) + (NV + NV * NR) * time(hash, length(bind, maxlength(game 21: g_2), maxlength(game 21: e_2))) + (NV + NV * NR) * time(bind, maxlength(game 21: g_2), maxlength(game 21: e_2)) + (NV + NV * #cQ + NV * NR) * time(check, maxlength(game 21: m_7), maxlength(game 21: rsig)) + NV * #cQ * time(= img_t, maxlength(game 21: im_2), maxlength(game 21: im_1)) + NV * #cQ * time(= grant_t, maxlength(game 21: g_2), maxlength(game 21: g_1)) + NV * #cQ * time(= epoch_t, maxlength(game 21: e_2), maxlength(game 21: e_1)) + NV * NR * time(= img_t, maxlength(game 21: im_2), maxlength(game 21: zz)) + NV * time(mkact, maxlength(game 21: x_2)) + 2 * NV * time(([1,NV])) + time + (NV + NL * NV - 1) * time(hcheck, length(mkact, maxlength(game 21: x_2)), maxlength(game 21: asig)) + (NL * NA - NA) * time(hsign, length(mkact, maxlength(game 21: x_1))) + (NL - 1) * time(hskgen) + (NL - 1) * time(hpkgen)
+RESULT Could not prove forall n: nonce_t, x: act_t, h: hpkey, c: pkey; event(AcceptAct(c, h, x, n)) ==> (event(GuestSigned(h, x, n)) || event(ChipBroken(c))); forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; inj-event(Accept(c, h, g, e, n, m)) ==> (inj-event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))); forall m: meas_t, n: nonce_t, e: epoch_t, g: grant_t, h: hpkey, c: pkey; event(Accept(c, h, g, e, n, m)) ==> (event(GuestQuoted(h, g, e, n, m)) || event(ChipBroken(c))).

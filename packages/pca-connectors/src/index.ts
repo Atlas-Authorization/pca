@@ -22,6 +22,9 @@ export {
   UnknownProviderError,
   validateManifest,
   assertManifest,
+  manifestDigest,
+  RESERVED_AUTHORIZE_PARAMS,
+  RESERVED_TOKEN_PARAMS,
 } from './manifest';
 
 export {
@@ -31,6 +34,7 @@ export {
   registerProvider,
   getProvider,
   listProviders,
+  catalogDigest,
 } from './registry';
 
 export {
@@ -68,7 +72,6 @@ export {
   type VaultHttpRequest,
   type VaultHttpResponse,
   TokenVault,
-  InMemoryConnectionStore,
   oauthScopeCaveat,
   grantedOAuthScopes,
   NotAuthorizedError,

@@ -3,7 +3,8 @@
  * report_data binding injectivity (exhaustive small-scope: attestationBinding(a) == attestationBinding(b) iff a == b).
  *   tsx att.ts exh   |   tsx att.ts rand <count> <seed>
  */
-import { createDevAttestor, mintGrant, verifyAttestation, attestationBindingB64u, DEFAULT_RISK_POLICY, type AttestationDocument } from '../../../packages/pca/src/index';
+import { mintGrant, DEFAULT_RISK_POLICY } from '../../../packages/pca/src/index';
+import { createDevAttestor, verifyAttestation, attestationBindingB64u, type AttestationDocument } from '../../../packages/pca/src/ext/attestation';
 import { attestModel, type AttIn, type AttStage } from './model';
 import { keyOf } from './real';
 import { NOW, rng } from './spec';

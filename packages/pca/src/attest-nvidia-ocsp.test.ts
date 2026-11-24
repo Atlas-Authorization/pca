@@ -118,6 +118,9 @@ describe('real NVIDIA OCSP responder (captured 2026-10-08)', () => {
     expect(stale).toEqual({ ok: false, reason: 'response is stale (past nextUpdate)' });
     const early = await verifyNvidiaOcspResponse(realResp(2), { ...base(2), nowMs: NOW - 3600 * 1000 });
     expect(early.ok).toBe(false);
+    // an unbounded clock skew would admit any future time
+    const unbounded = await verifyNvidiaOcspResponse(realResp(2), { ...base(2), nowMs: NOW - 3600 * 1000, clockSkewMs: Number.POSITIVE_INFINITY });
+    expect(unbounded).toMatchObject({ ok: false, reason: expect.stringMatching(/in the future/) });
     const aged = await verifyNvidiaOcspResponse(realResp(2), { ...base(2), maxAgeMs: 10_000 });
     expect(aged).toEqual({ ok: false, reason: 'response is older than the maximum accepted age' });
   });
@@ -302,6 +305,11 @@ describe('synthetic P-384 PKI (labelled: not NVIDIA)', () => {
   const v = (der: Uint8Array, extra: Partial<Parameters<typeof verifyNvidiaOcspResponse>[1]> = {}) =>
     verifyNvidiaOcspResponse(der, { cert: leaf.cert, issuer: ica.cert, chain: synth, nowMs: NOW, ...extra });
 
+  it('a delegated response that embeds no certificate is refused for that reason (no embedded responder certificate)', async () => {
+    const r = await v(await mkResponse({ cert: leaf.cert, issuer: ica.cert, signer: delegated, status: 'good' }));
+    expect(r).toEqual({ ok: false, reason: 'no embedded responder certificate verifies the response' });
+  });
+
   it('direct response signed by the issuing CA key (byName and byKey), GOOD', async () => {
     for (const by of ['name', 'key'] as const) {
       const r = await v(await mkResponse({ cert: leaf.cert, issuer: ica.cert, signer: ica, status: 'good', by }));
@@ -384,5 +392,34 @@ describe('synthetic P-384 PKI (labelled: not NVIDIA)', () => {
     const rb = await mkResponse({ cert: ica.cert, issuer: root.cert, signer: rootResp, embed: [rootResp.cert], status: 'revoked', reason: 5 });
     const d = await checkNvidiaChainOcsp(synth, [a, rb], NOW, { requireGood: [0] });
     expect(d.ok).toBe(false);
+  });
+});
+
+describe('malleated encodings are refused (kill tests)', () => {
+  it('a flipped byte inside the embedded responder certificate (its issuer DN SET length) is refused, not normalised by a re-encoding', async () => {
+    const good = realResp(2);
+    expect((await verifyNvidiaOcspResponse(good, base(2))).ok).toBe(true);
+    const bad = Uint8Array.from(good);
+    bad[500]! ^= 1;
+    expect((await verifyNvidiaOcspResponse(bad, base(2))).ok).toBe(false);
+  });
+  it('an unknown CertID hash is refused when building a request (no empty OID)', async () => {
+    await expect(buildNvidiaOcspRequest(chain[0]!, chain[1]!, { hash: 'md5' as never })).rejects.toThrow(/unsupported CertID hash/);
+  });
+});
+
+// A response signed by the issuing CA itself carries no responder certificate, so the clock reaches the freshness checks
+// directly (a delegated responder's validity window would already refuse a NaN clock). NaN compared false against every
+// bound, so the old `thisUpdate > now + skew`, `producedAt > now + skew` and `now > nextUpdate` all passed it.
+describe('a non-finite clock never accepts an OCSP response (synthetic P-384 PKI)', () => {
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])('nowMs of %s is refused', async (nowMs) => {
+    const root = await mkIdent('SYN Root', undefined, { ca: true });
+    const ica = await mkIdent('SYN ICA', root, { ca: true });
+    const leaf = await mkIdent('SYN Leaf', ica);
+    const synth = [leaf.cert, ica.cert, root.cert];
+    const der = await mkResponse({ cert: leaf.cert, issuer: ica.cert, signer: ica, status: 'good' });
+    const opts = { cert: leaf.cert, issuer: ica.cert, chain: synth, nowMs };
+    expect((await verifyNvidiaOcspResponse(der, { ...opts, nowMs: NOW })).ok).toBe(true);
+    expect((await verifyNvidiaOcspResponse(der, opts)).ok).toBe(false);
   });
 });

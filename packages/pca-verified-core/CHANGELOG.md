@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.4.2 (unreleased)
+## 0.5.1
+
+First 0.5 release. 0.5.0 was never published; its changes, below, ship in 0.5.1. (The notes below were written for 0.4.2, which was also never published.)
 
 `Wire.dfy` gains compiled fast paths, each proved equal to the specification functions: `Fast.AcceptsU` (== `Json.ParseTop(t).Some?`, `Api.ParseAcceptsUSpec`) and `FastP.CanonU` (== `Json.CanonText`, `Api.CanonicalOfValueU`). They work on native 16-bit units and indices and are linear (one scan; one salted duplicate-key table per document; a merge sort of each object's keys), so `wireAcceptsText` and `wireCanonicalizeStrict` no longer allocate a BigNumber per code unit, no longer copy their accumulator per character or per member, and no longer exhaust the stack on wide arrays / objects. Measured (12-core Windows box): strictParse gate on a 1 MiB string 1.9 s -> about 35 ms, 100,000 escapes 126 s -> 9 ms; canonicalizeStrict of a 5,000-key object 809 s -> 14 ms, of a 20,000-character string 25 s -> under 5 ms. Re-proved: Wire.dfy 2,108 verified, 0 errors.
 

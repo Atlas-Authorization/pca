@@ -1,4 +1,6 @@
+import { setAssuranceLabel } from './assurance';
 import { snapshotConfig } from './config-snapshot';
+import { assertOptionalStringList } from './policy-lists';
 /**
  * L0 HARDWARE backend — Intel TDX, REAL DCAP quote → `HardwareAttestationVerifier`.
  *
@@ -104,11 +106,19 @@ export function checkAzureRuntimeDataBinding(reportData: Uint8Array, runtimeData
 }
 
 /** Build a `HardwareAttestationVerifier` for genuine Intel TDX DCAP quotes. Fails closed. */
+/** Assurance label (0.5): `hardware` (rooted in the vendor's hardware chain). See `assurance.ts`. */
 export function createIntelDcapVerifier(opts: IntelDcapVerifierOptions): HardwareAttestationVerifier {
+  return setAssuranceLabel(createIntelDcapVerifierUnlabelled(opts), { level: 'hardware', vendor: 'intel-dcap' });
+}
+
+function createIntelDcapVerifierUnlabelled(opts: IntelDcapVerifierOptions): HardwareAttestationVerifier {
   opts = snapshotConfig(opts); // freeze the configuration: later edits by the caller must not change what this verifier enforces
 
   if (opts?.binding !== 'report-data' && opts?.binding !== 'azure-runtime-data') throw new TypeError("createIntelDcapVerifier: binding must be 'report-data' or 'azure-runtime-data'");
   if (!Array.isArray(opts.policy?.mrtds) || opts.policy.mrtds.length === 0) throw new TypeError('createIntelDcapVerifier: policy.mrtds must be a NON-EMPTY allowlist (accept-all is not permitted)');
+  for (const k of ['fmspcs', 'rtmrs'] as const) assertOptionalStringList('createIntelDcapVerifier', k, opts.policy[k]);
+  const pc: unknown = opts.policy.collateral;
+  if (pc !== undefined && pc !== null && (typeof pc !== 'object' || Array.isArray(pc))) throw new TypeError('createIntelDcapVerifier: policy.collateral must be an object');
   const mrtds = opts.policy.mrtds.map((m) => m.toLowerCase());
   if (mrtds.some((m) => !HEX.test(m) || m.length !== 96)) throw new TypeError('createIntelDcapVerifier: every MRTD must be 96 hex chars (48 bytes)');
   for (const [name, list] of [['mrSeams', opts.policy.mrSeams], ['mrSignerSeams', opts.policy.mrSignerSeams]] as const) {

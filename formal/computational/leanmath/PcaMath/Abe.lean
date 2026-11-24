@@ -1,7 +1,7 @@
 import Mathlib
 
 /-!
-# ABE-A / ABE-4: Shamir access trees (BSW07 / `packages/pca-abe`)
+# ABE-A / ABE-4: Shamir access trees (the access structure of `packages/pca-abe`; FAME's span program is this sharing)
 
 A tree has threshold gates and leaves (attribute positions).  `Ach T σ f` says that the leaf-share assignment
 `f` is a possible output of the Shamir sharing of the secret `σ` along `T` (every gate with threshold `t`

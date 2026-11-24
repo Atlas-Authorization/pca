@@ -12,7 +12,7 @@ C="${1:?component (Wire|Merkle|Taint|Attest|PolicyVm|Regex)}"; MODE="${2:-build}
 SRC="$HERE/$C.dfy"; [ -f "$SRC" ] || { echo "no $SRC" >&2; exit 2; }
 LC="$(echo "$C" | tr 'A-Z' 'a-z')"
 GEN="$ROOT/packages/pca-verified-core/generated"
-FLAGS="--allow-warnings --verification-time-limit ${TL:-120} --resource-limit 0 ${EXTRA:-}"
+FLAGS="--allow-warnings --verification-time-limit ${TL:-120} --resource-limit 0 --verify-included-files ${EXTRA:-}"
 if grep -nE '^[^/]*(\bassume\b|\{:axiom\}|\{:extern|\bextern\b|\{:verify +false)' "$SRC"; then echo "FORBIDDEN: assume/axiom/extern/verify-false in $SRC" >&2; exit 1; fi
 MODS="$(grep -oE '^module +[A-Za-z0-9_]+' "$SRC" | awk '{print $2}' | paste -sd, - | sed 's/,/, /g')"
 if [ "$MODE" = "--verify-only" ]; then

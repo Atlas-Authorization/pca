@@ -94,9 +94,10 @@ describe('escalateThreshold', () => {
 });
 
 describe('leak / ageSinceTouch / subBudget', () => {
-  it('leak never leaks when either time is non-finite, and drops a bad lambda', () => {
-    expect(settle(() => leak({ B: 1, tau: NaN }, 1000, 1))).toEqual({ ok: true, value: { B: 1, tau: NaN, asOf: NaN } });
-    expect(settle(() => leak({ B: 1, tau: 0 }, NaN, 1))).toEqual({ ok: true, value: { B: 1, tau: 0, asOf: 0 } });
+  it('leak fails closed (depleted) when either time is non-finite, and drops a bad lambda', () => {
+    expect(settle(() => leak({ B: 1, tau: NaN }, 1000, 1))).toEqual({ ok: true, value: { B: 0, tau: NaN } });
+    expect(settle(() => leak({ B: 1, tau: 0 }, NaN, 1))).toEqual({ ok: true, value: { B: 0, tau: 0 } })
+    expect(settle(() => leak({ B: 1, asOf: NaN } as never, 1000, 1))).toEqual({ ok: true, value: { B: 0 } });
     expect(settle(() => leak({ B: 0.5, tau: 0 }, 1000, -1))).toEqual({ ok: true, value: { B: 0.5, tau: 0, asOf: 1000 } });
     expect(settle(() => leak({ B: 0.5, tau: 0 }, 1000, Infinity))).toEqual({ ok: true, value: { B: 0.5, tau: 0, asOf: 1000 } });
     expect(settle(() => leak({ B: 0.5, tau: 0 }, 1000, 0.1))).toEqual({ ok: true, value: { B: 0.4, tau: 0, asOf: 1000 } });

@@ -1,3 +1,4 @@
+import { type ThresholdScheme, isAwaitingAuditScheme, setAssuranceLabel } from './assurance';
 import { snapshotConfig } from './config-snapshot';
 import { decideThreshold, type ThresholdReason } from '@atlasauth/pca-verified-core';
 import { b64u, canonicalBytes, compareUtf8, decodeB64uStrict, sha256, utf8 } from './hash';
@@ -144,7 +145,7 @@ function concat(...parts: Uint8Array[]): Uint8Array {
  * signerSetHash‖t-bound bytes — role `'agent'` — EXACTLY like guardian / principal. Previously the agent
  * share signed the bare `thresholdMessage`, relying only on the implicit one-key-one-role binding; that bare
  * form is NO LONGER accepted by {@link verifyThreshold} (a bare agent share is rejected). This is a clean
- * break on the threshold wire (PCA is Preview; all SDKs regenerate from the conformance corpus).
+ * break on the threshold wire (PCA is awaiting audit; all SDKs regenerate from the conformance corpus).
  *
  * The one thing that stays bare is the PCActn LEAF SIGNATURE `p.sig` itself: it signs `thresholdMessage`
  * directly because it predates knowing the signer set (the leaf-signed body is unchanged, and the
@@ -427,6 +428,12 @@ export interface ThresholdVerifierOpts {
   requiredT?: (ctx: VerifyContext) => number;
   /** LEGACY: accept an agent-leaf PQ key not committed by `holder_pq` nor registered in the signer set (F-2). Default false. */
   allowUnboundPq?: boolean;
+  /**
+   * Assurance label (0.5): how the co-signers' keys are held. `multisig` (default): independent keys, one share each.
+   * Declare `frost` / `frost_dkg` / `mpc` when a signer-set key is a FROST group key or an MPC key: a FROST aggregate
+   * verifies like an ordinary Ed25519 signature, so only the server can say so. Those schemes are reported as awaiting audit.
+   */
+  scheme?: Exclude<ThresholdScheme, 'unknown'>;
 }
 
 /**
@@ -451,6 +458,11 @@ export function createThresholdVerifier(opts: ThresholdVerifierOpts): ThresholdV
     );
   }
   const resolveT = opts.requiredT ?? (() => opts.t as number);
+  const scheme = opts.scheme ?? 'multisig';
+  return setAssuranceLabel(thresholdHook(opts, resolveT), { level: scheme, ...(isAwaitingAuditScheme(scheme) ? { awaiting_audit: true } : {}) });
+}
+
+function thresholdHook(opts: ThresholdVerifierOpts, resolveT: (ctx: VerifyContext) => number): ThresholdVerifier {
   return (ctx: VerifyContext) => {
     const p: PCActn = ctx.pcactn;
     const message = thresholdMessage(p);

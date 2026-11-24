@@ -1,0 +1,14 @@
+{
+  "id": "ipi_2",
+  "object": "issuing.transaction",
+  "type": "capture",
+  "amount": -450,
+  "currency": "usd",
+  "authorization": "iauth_1",
+  "card": "ic_card_1",
+  "merchant_data": {
+    "category_code": "5734",
+    "network_id": "1234567890",
+    "name": "STRIPE"
+  }
+}

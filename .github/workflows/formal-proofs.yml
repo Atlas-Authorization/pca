@@ -53,9 +53,9 @@ jobs:
       - name: Tools (tla2tools 1.8.0, Apalache from TOOLCHAIN.lock)
         run: |
           . ./TOOLCHAIN.lock
-          curl -fsSL -o "$HOME/tla2tools.jar" https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$HOME/tla2tools.jar" https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
           mkdir -p "$HOME/apalache"
-          curl -fsSL "https://github.com/apalache-mc/apalache/releases/download/v${APALACHE_VERSION}/apalache-${APALACHE_VERSION}.tgz" | tar xz -C "$HOME/apalache" --strip-components=1
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "https://github.com/apalache-mc/apalache/releases/download/v${APALACHE_VERSION}/apalache-${APALACHE_VERSION}.tgz" | tar xz -C "$HOME/apalache" --strip-components=1
           echo "$HOME/apalache/bin" >> "$GITHUB_PATH"
       - name: Model-check every model (expected-fail configs must produce their counterexample)
         run: bash .github/scripts/formal-tla.sh "$RUNNER_TEMP/tla"
@@ -121,7 +121,7 @@ jobs:
         run: |
           . ./TOOLCHAIN.lock
           rustup toolchain install "$VERUS_RUSTC" --profile minimal
-          curl -fsSL -o "$RUNNER_TEMP/verus.zip" "https://github.com/verus-lang/verus/releases/download/release/${VERUS_RELEASE}/verus-${VERUS_RELEASE}-x86-linux.zip"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/verus.zip" "https://github.com/verus-lang/verus/releases/download/release/${VERUS_RELEASE}/verus-${VERUS_RELEASE}-x86-linux.zip"
           unzip -q "$RUNNER_TEMP/verus.zip" -d "$HOME/verus"
           echo "$(dirname "$(find "$HOME/verus" -type f -name verus | head -1)")" >> "$GITHUB_PATH"
       - name: Verify every fragment; every negative control (*_controls.rs) must be rejected
@@ -182,6 +182,8 @@ jobs:
         with:
           node-version: 24
       - uses: pnpm/action-setup@v4
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install (the diverse-compilation case generator + SBOM inputs)
         run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-verified-core...
       - name: Install the hash-pinned Dafny

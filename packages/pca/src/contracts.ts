@@ -235,11 +235,13 @@ export function validateClause(cl: unknown, seen: Set<string>, depth: number): s
 }
 
 /** Count clauses (including nested). */
-function countClauses(cls: Clause[]): number {
+function countClauses(cls: Clause[], depth = 1): number {
+  // bounded recursion: an absurdly deep nest is "too many" at once (validateClause then reports the depth), never a stack overflow
+  if (depth > MAX_CLAUSE_DEPTH + 1) return MAX_CLAUSES + 1;
   let n = 0;
   for (const cl of cls) {
     n += 1;
-    if (isObj(cl) && cl.kind === 'and' && Array.isArray((cl as AndClause).clauses)) n += countClauses((cl as AndClause).clauses);
+    if (isObj(cl) && cl.kind === 'and' && Array.isArray((cl as AndClause).clauses)) n += countClauses((cl as AndClause).clauses, depth + 1);
   }
   return n;
 }

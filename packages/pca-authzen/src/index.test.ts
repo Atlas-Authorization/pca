@@ -41,6 +41,9 @@ function gmailAgent(): Agent {
 function pdpFor(a: Agent, risk?: PdpDecisionContext['risk']) {
   return authzenPdp({
     audience: AUD,
+    insecureSkipPlanRootCheck: true,
+    requireProof: false,
+    requireAuthorizer: false,
     resolve: (): PdpDecisionContext => ({
       grant: a.grant,
       chain: a.chain,
@@ -183,6 +186,9 @@ describe('COAZ profile — MCP-tool authorization (tool → required capability 
     const a = stripeAgent();
     const pdp = authzenPdp({
       audience: AUD,
+      insecureSkipPlanRootCheck: true,
+      requireProof: false,
+      requireAuthorizer: false,
       toolCapability: (name) => (name === 'issue_refund' ? 'stripe.refund' : name),
       resolve: (): PdpDecisionContext => ({ grant: a.grant, chain: a.chain, policy: a.policy, budget: a.budget }),
     });

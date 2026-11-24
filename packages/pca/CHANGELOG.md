@@ -2,11 +2,37 @@
 
 See the full release notes in [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
 
-## 0.4.3 (2026-10-27)
+## 0.5.1
 
-Security (0.4.3): the hardware attestation verifiers (AMD SEV-SNP, Intel DCAP / TDX, Azure Attestation, Google Confidential Space) now refuse evidence with a second encoding: a SEV-SNP report must be exactly 1184 bytes with zero reserved signature bytes; DCAP quotes may carry only zero bytes after the signature data; Intel PCK chains reject unrecognised critical extensions; the X.509 reader rejects trailing bytes, non-minimal DER lengths and keyUsage with more than 7 unused bits; MAA and Confidential Space tokens must be canonical base64url. Previously accepted malleable evidence is now rejected. See docs/pca/CHANGELOG.md.
+First 0.5 release. 0.5.0 was never published; its changes, below, ship in 0.5.1.
 
-## 0.4.2 (2026-10-25)
+Security (defect in the unpublished 0.5.0 code): `leak` (the trust-budget decay) treated a clock or budget stamp that is not a finite number as "no time passed", so a NaN `asOf` on a budget with no `tau` kept the full budget and `authorizeChargeCore` could admit a charge. It now returns a depleted budget, so a human step-up is required. This is a fail-open on a non-finite clock; upgrade to 0.5.1.
+
+Security (defect in the unpublished 0.5.0 code): non-finite clock, skew or amount inputs are refused across the reference packages (previously some comparisons admitted NaN). A NaN or infinite (plus or minus) clock, skew, timestamp, budget, amount, limit, ttl, quota or depth made an expiry, not-before, freshness, window, replay-hold or cap check compare false and pass; each refusal now reads as the negation of its positive condition. Affected: `@atlasauth/pca`, `pca-acp`, `pca-agentcard`, `pca-ap2`, `pca-attest-eat`, `pca-ciba`, `pca-dpop`, `pca-explain`, `pca-gnap`, `pca-goal`, `pca-grants`, `pca-intent`, `pca-payments`, `pca-sdjwt`, `pca-signals`, `pca-store-conformance`, `pca-vc` and `pca-webbotauth` (all under `@atlasauth/`). The native SDKs are not affected.
+
+Security (defect in the unpublished 0.5.0 code, PHP, Python and Ruby SDKs): a clock or pinned revision that is not a finite number was read as zero or skipped. The lease registry dropped every revocation on a NaN or infinite clock (the pruning comparison was false for all of them), the plan registry passed an approval expiry on a non-finite clock (PHP cast it to 0; Python and Ruby passed it for negative infinity), and the PHP policy-bundle verifier skipped its rollback check for a pinned last revision that was not a finite number. All three now refuse or keep the revocation. The other native SDKs use integer clocks and are unaffected.
+
+Security (defect in the unpublished 0.5.0 code, malleability only): the NVIDIA OCSP verifier re-encoded the embedded delegated-responder certificate, which normalised a DER-malleated copy (a flipped length byte) of an authentic response into the genuine certificate and accepted it. It now reads the certificate bytes from the response itself and the strict DER parse refuses the copy. No forged response is accepted. `ocspRequest` also throws on an unsupported CertID hash instead of emitting an empty OID.
+
+See the 0.5.0 advisory in the PCA docs. `@atlasauth/pca-payments` inherits the budget fix (it has no changelog of its own). Every package in the family is republished at 0.5.1.
+
+### Changes since 0.4.3
+
+Security (0.5, PQ pins): a classical (Ed25519) grant naming an issuer that has a `pqPins` entry is refused by `verifyPCActn`, `requirePCA`, `authorize` and `verifyPCActnCore` (`pq_pin: the grant issuer is pinned to a post-quantum key; a classical grant is refused`); 0.4.2 and 0.4.3 let it pass, so the pin did not stop an attacker holding the issuer's classical key. Issuers without a pin are unchanged.
+
+### Hardening (0.5)
+
+- `unmetAssurance` (and the same function in every native verifier) refuses a requirement it does not understand instead of ignoring it: an unknown key (`assurance: unknown requirement <key> (fail closed)`) or an unknown `attestation`, `zk`, `signature` or `threshold` value (`assurance: unknown <key> requirement <JSON value> (fail closed)`). Before, an unknown `zk` such as `groth16`, a `signature` other than `pq`, or a misspelled key left the policy looser than written. Known values behave as before.
+- RSA public keys are usable only with a modulus of 512 to 16384 bits and an odd exponent of at least 3 and at most 32 bits, at every RSA verify (Intel TDX / SEV-SNP / NVIDIA chains and OCSP, MAA, Confidential Space, Sigstore). OpenSSL accepted e = 1, even exponents, 256-bit moduli and huge moduli. Denial texts are unchanged.
+- Certificate extension OIDs longer than 256 content bytes (`extension OID is too long`) or with an arc of more than 64 base-128 groups (`extension OID has an oversized arc`) are refused before any big-integer work.
+- A Sigstore bundle with more than 8 RFC 3161 timestamps is refused (`tsa: too many RFC 3161 timestamps (<n>, at most 8)`).
+- BasicConstraints `cA` must be a DER BOOLEAN (0x00 or 0xFF); other non-zero bytes were read as TRUE and are now refused (`BasicConstraints cA is not a DER BOOLEAN`).
+
+Security (0.5, NVIDIA collateral): by default every chain certificate that names a CRL distribution point must be covered by a verified CRL from its issuer; previously any one fresh CRL satisfied the check. New option `requireCrlFor` (`'cdp'` default, `'all'`, or chain indices).
+
+Fix (0.5, NVIDIA OCSP, TS + Go + Rust): the strict "every ASN.1 time is well formed" check no longer looks inside OCTET STRING or BIT STRING contents. asn1js auto-parses those bytes, so a response whose issuer-name hash, key hash, nonce or signature happened to read as a malformed time was refused ("malformed (out-of-range) ASN.1 time"); a CA whose key hash has that shape (about 4 in 65,536) had every valid response refused. Times in the response structure itself are still checked strictly. Java, Kotlin, .NET, PHP, Python, Ruby and Swift already behaved this way.
+
+Added (caveat language v2, track K1): `needs_discharge` third-party caveats with pinned, hop- or action-bound signed discharges, `sealed`, the holder-signed per-action `narrow` block, `max_uses` over the replay store, the bounded `derive` check and `spiffe_bound`; `evaluateK1`, `verifyDischarge`, `verifyNarrow`, `reserveMaxUses`; `k1` input on `decide`, `verifyPCActn`, `requirePCA` (+ `usesStore`). Vectors `conformance/caveat-lang-vectors.json`. Chains that carry one of these types without K1 input are refused, as unknown types always were.
 
 Security (0.4.2, r13 mutation review): `verifyAttestation` and `createAttestationVerifier` accepted an attestation when the verifier clock was not a finite number (`nowMs` NaN / Infinity / a string, or an `opts.now` hook returning one): every validity-window and nonce-age comparison came out false, which read as "within the window" and "fresh" (fail open). A non-finite clock is now refused (`verifier clock is not a finite time (fail closed)`). The verified-core twin already refused it.
 

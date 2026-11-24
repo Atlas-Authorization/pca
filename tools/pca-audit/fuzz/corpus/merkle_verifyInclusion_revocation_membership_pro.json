@@ -1,0 +1,81 @@
+{
+ "target": "merkle verifyInclusion / revocation membership proofs",
+ "seeds": [
+  {
+   "root": "cIkNcAg1ed3QDWdUHA0H7uO-FnqdjpD7pb1hVPrVsto",
+   "leaf": {
+    "x": "c"
+   },
+   "proof": {
+    "index": 2,
+    "size": 5,
+    "path": [
+     {
+      "side": "R",
+      "hash": "WeJ8WO-weN7tj-fs-PjvgWY0uiVVbjgrJMDW4of7mTE"
+     },
+     {
+      "side": "L",
+      "hash": "6Lr19n3pKaJ05K9RzF_7Z6d1vKTAW57eaj6rIeCoKUg"
+     },
+     {
+      "side": "R",
+      "hash": "Pqf9LF3Ft6y9VC4QflXIwLQzVKvXubuOeM_gLMzj0tM"
+     }
+    ]
+   },
+   "setRoot": "oo8v2QKoATuS31EzRSGTaOO9GKCGXBTU1l22NQ5ZF_0",
+   "mem": {
+    "index": 1,
+    "size": 3,
+    "path": [
+     {
+      "side": "L",
+      "hash": "hVQdzLkGlG7XBxgiqb5PhqbCUic6indz4dB1IZtw1MQ"
+     },
+     {
+      "side": "R",
+      "hash": "4XyZlIfeLjY5usr7BsvxjbWAu0Wh_L-oSIlO96mP-pQ"
+     }
+    ]
+   },
+   "non": {
+    "size": 3,
+    "lo": {
+     "id": "id-a",
+     "proof": {
+      "index": 0,
+      "size": 3,
+      "path": [
+       {
+        "side": "R",
+        "hash": "rJloGXmdL3gj_qwHFrJwzKWzDZGapKhKJ-n03WKOyaY"
+       },
+       {
+        "side": "R",
+        "hash": "4XyZlIfeLjY5usr7BsvxjbWAu0Wh_L-oSIlO96mP-pQ"
+       }
+      ]
+     }
+    },
+    "hi": {
+     "id": "id-c",
+     "proof": {
+      "index": 1,
+      "size": 3,
+      "path": [
+       {
+        "side": "L",
+        "hash": "hVQdzLkGlG7XBxgiqb5PhqbCUic6indz4dB1IZtw1MQ"
+       },
+       {
+        "side": "R",
+        "hash": "4XyZlIfeLjY5usr7BsvxjbWAu0Wh_L-oSIlO96mP-pQ"
+       }
+      ]
+     }
+    }
+   }
+  }
+ ]
+}

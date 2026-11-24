@@ -166,8 +166,8 @@ describe('verifyA2APaymentMandate on hostile PCActn / mandate shapes', () => {
   it('the params amount and currency must be OWN properties of the committed params (an inherited value is not committed)', async () => {
     const p = mk();
     const m = mandateFor(p);
-    const withParams = (params: unknown) => ({ ...OPTS, context: { ...FULL.context, params } });
-    const noAmount = 'the PCActn params carry no numeric amount to bind the mandate amount to';
+    const withParams = (params: Record<string, unknown> | undefined) => ({ ...OPTS, context: { ...FULL.context, params } });
+    const noAmount = 'the PCActn params carry no integer minor-unit amount to bind the mandate amount to';
     const noCurrency = 'the PCActn params carry no currency to bind the mandate currency to';
     expect((await verifyA2APaymentMandate(m, p, withParams(Object.create({ amount: 5, currency: 'USD' })))).reason).toBe(noAmount);
     expect((await verifyA2APaymentMandate(m, p, withParams(Object.assign(Object.create({ currency: 'USD' }), { amount: 5 })))).reason).toBe(noCurrency);

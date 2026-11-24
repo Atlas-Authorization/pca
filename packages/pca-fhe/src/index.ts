@@ -348,7 +348,7 @@ function requirePolicyDim(policy: FheRiskPolicy): void {
   if (!(Number.isInteger(policy.scale) && policy.scale > 0)) throw new Error('policy.scale must be a positive integer');
   const ints = [...(policy.weightsScaled ?? []), ...(policy.kappaWeightsScaled ?? []), policy.budgetScaled];
   for (const v of ints) {
-    if (!(Number.isInteger(v) && Math.abs(v) < SIGNED_BOUND)) {
+    if (!(Number.isInteger(v) && !Object.is(v, -0) && Math.abs(v) < SIGNED_BOUND)) {
       throw new Error('policy coefficients must be integers with |value| < SIGNED_BOUND');
     }
   }

@@ -57,7 +57,7 @@ describe('agent-native constants (fresh module)', () => {
     const holder = encodeKey(k.publicKey);
     const r = settle(() => m.signCaution({ action_digest: 'ad', caution: 0.5, reason: 'ood', holder }, k.secretKey));
     expect(r.ok).toBe(true);
-    const { sig, ...body } = (r as { value: { sig: string } & Record<string, unknown> }).value;
+    const { sig, ...body } = (r as unknown as { value: { sig: string } & Record<string, unknown> }).value;
     expect(body).toEqual({ action_digest: 'ad', caution: 0.5, holder, reason: 'ood' });
     expect(verifyB64u(holder, canonicalBytes({ d: 'atlas-pca/caution/v1', b: body }), sig)).toBe(true);
   });
