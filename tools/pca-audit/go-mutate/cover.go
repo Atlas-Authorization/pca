@@ -43,6 +43,12 @@ func coverageSelect(abs, tmp, tags string, par int, muts []*Mut, durOf map[strin
 	cc := exec.Command("go", append(cargs, ".")...)
 	cc.Dir = abs
 	if out, err := cc.CombinedOutput(); err != nil { return nil, 0, fmt.Errorf("coverage build failed:\n%s", out) }
+	// a package without test files builds no binary: no test executes any mutant (all survive, as with any uncovered code)
+	if _, serr := os.Stat(bin); os.IsNotExist(serr) {
+		none := map[*Mut][]string{}
+		for _, m := range muts { none[m] = []string{} }
+		return none, full, nil
+	}
 	lc := exec.Command(bin, "-test.list", ".")
 	lc.Dir = abs
 	lo, err := lc.Output()

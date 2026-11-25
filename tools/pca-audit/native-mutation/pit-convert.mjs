@@ -18,14 +18,14 @@ const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quo
 const srcRoot = crate === 'kotlin-pca' ? 'src/main/kotlin' : 'src';
 // Kotlin also ships framework modules and guard-common (a flat directory compiled into both of them)
 const dirOf = (pkg, file) => {
-  if (crate !== 'kotlin-pca') return `${srcRoot}/${pkg}`;
-  if (pkg === 'net/atlasauth/pca/guard') return 'guard-common';
-  for (const m of ['ktor', 'spring']) if (pkg === `net/atlasauth/pca/${m}`) return `pca-${m}/${srcRoot}/${pkg}`;
+  if (crate === 'kotlin-pca' && pkg === 'net/atlasauth/pca/guard') return 'guard-common';
+  if (crate === 'kotlin-pca') for (const m of ['ktor', 'spring']) if (pkg === `net/atlasauth/pca/${m}`) return `pca-${m}/${srcRoot}/${pkg}`;
   // Java opt-in adapters (adapters/<name>/src/main/java) keep their own packages; the core wins when it has the package too
   if (crate === 'java-pca' && !fs.existsSync(path.join(root, 'sdks', crate, srcRoot, pkg, file))) {
     const ad = path.join(root, 'sdks', crate, 'adapters');
     for (const a of fs.existsSync(ad) ? fs.readdirSync(ad).sort() : []) if (fs.existsSync(path.join(ad, a, 'src/main/java', pkg, file))) return `adapters/${a}/src/main/java/${pkg}`;
   }
+  if (crate !== 'kotlin-pca') return `${srcRoot}/${pkg}`;
   // Kotlin opt-in modules (pca-<name>/src/main/kotlin, own pom): the core wins when it has the file too
   if (crate === 'kotlin-pca' && !fs.existsSync(path.join(root, 'sdks', crate, srcRoot, pkg, file))) {
     const sdk = path.join(root, 'sdks', crate);
