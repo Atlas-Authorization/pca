@@ -21,7 +21,6 @@ import (
 	"context"
 	"time"
 	"sync"
-	"syscall"
 )
 
 type Mut struct {
@@ -481,7 +480,7 @@ func main() {
 				cmd.Env = append(os.Environ(), "GOTMPDIR="+wt)
 				// non-coverage mode: the heavy oracle tests run only when they cover the mutated file (k042RequireCovers)
 				if !cov { cmd.Env = append(cmd.Env, "GOMUT_FILE="+m.File) }
-				cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+				setProcessGroup(cmd)
 				ob := &capOutput{}
 				cmd.Stdout, cmd.Stderr = ob, ob
 				cmd.Start()
@@ -493,7 +492,7 @@ func main() {
 				case err = <-done:
 				case <-ctx.Done():
 					timedOut = true
-					syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+					killProcessGroup(cmd)
 					err = <-done
 				}
 				o := []byte(ob.String())

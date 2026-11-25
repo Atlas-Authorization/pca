@@ -3,6 +3,12 @@
 //   node mutate.mjs list  <file.swift>...                      list mutants (id, line, op, original => replacement)
 //   node mutate.mjs torun <pool.json|-> --every=N --offset=K <file.swift>...   how many of a slice's mutants a --carry run still has to run
 //   node mutate.mjs run   <workers> <budget-minutes> <out.json> <file.swift>... [--only=ids] [--every=N --offset=K: contiguous slice K of N]
+//        slicing: --weighted = the N slices are contiguous but equal in estimated COST (mutants x the test set each faces, see staticCost), not equal in
+//        mutant count; --range=LO-HI = mutant indices LO..HI-1 of the whole list. `torun` and `run` take the same flags, so a count check agrees.
+//        --oracle-out=<dir>: run no mutant; build once, verify the unmutated oracle of every group, write <dir>/oracle.json (tree hash, per-group
+//        duration and time limit) and mark the worker copies (<tmp>/swiftmut/wN) restorable. --oracle-in=<dir>: reuse that oracle.json (the groups are not
+//        verified again) and the worker copies restored from the baseline job's tarball (no copy, no warm build), only when its tree hash equals this
+//        tree's; otherwise the slice verifies and builds itself, with a warning.
 // Each worker owns a private copy of sdks/swift-pca under $TMPDIR/swiftmut/wN, applies one mutant, runs the oracle
 // (swift test: existing unit tests + core conformance + the FULL adversarial corpus via PCA_CONFORMANCE_ADV) under nice,
 // and records KILLED / SURVIVED / NONVIABLE (compile error) / TIMEOUT / TRAP / RUNERR. A mutant is KILLED iff a test assertion failed;
@@ -12,6 +18,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { sha, normText, mayCarry, loadPool } from '../mut-carry/lib.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -33,6 +40,56 @@ function maskLine(l) { // blank out string literals and // comments so operators
   }
   return out;
 }
+
+// ---- shared slicing + cost model ----
+const targetOfFile = (file) => file.includes('/AtlasPCASQLite/') ? 'AtlasPCASQLiteTests' : file.includes('/AtlasPCAStepUp/') ? 'AtlasPCAStepUpTests' : 'AtlasPCAVerifyTests';
+// What a baseline oracle proves: the unmutated sources, tests and manifest of this exact tree (and the test flags) pass. The shard recomputes this and
+// refuses an oracle of another tree.
+function treeHash() {
+  const h = createHash('sha256');
+  const walkFiles = (d, out) => { for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) { const q = path.join(d, e.name); if (e.isDirectory()) walkFiles(q, out); else out.push(q); } return out; };
+  for (const f of [...walkFiles(path.join(pkg, 'Sources'), []), ...walkFiles(path.join(pkg, 'Tests'), []), path.join(pkg, 'Package.swift'), path.join(pkg, 'README.md')]) {
+    if (fs.existsSync(f)) h.update(path.relative(pkg, f) + '\0').update(fs.readFileSync(f)).update('\0');
+  }
+  h.update(`${process.env.SWIFT_TEST_FLAGS ?? ''}\0${process.env.SWIFTMUT_FILTER ?? ''}\0${process.env.SWIFTMUT_APPLE ?? ''}\0${process.platform}`);
+  return h.digest('hex');
+}
+// Static cost of ONE mutant of `file`, in units of "one run of the test classes named after the file". Every mutant pays that fail-fast run (plus the
+// incremental rebuild, 1 unit); a mutant those classes do not kill faces the WHOLE target suite, whose size relative to them is R (test source bytes,
+// capped). p is the share of mutants assumed to get that far: small when named classes exist (they kill most), large when none exist (the whole suite
+// is the only oracle). The constants are a model, not a measurement: they only have to rank files so hot regions get smaller slices.
+const COST = { build: 1, pNamed: 0.12, pUnnamed: 0.4, rCap: 120, minBytes: 20000 };
+const costMemo = new Map(), suiteBytes = new Map();
+function staticCost(file) {
+  if (costMemo.has(file)) return costMemo.get(file);
+  const t = targetOfFile(file), dir = path.join(pkg, 'Tests', t);
+  if (!suiteBytes.has(t)) {
+    const fl = []; let total = 0;
+    for (const f of fs.existsSync(dir) ? fs.readdirSync(dir).filter((x) => x.endsWith('.swift')) : []) {
+      const src = fs.readFileSync(path.join(dir, f), 'utf8'); total += src.length;
+      fl.push({ size: src.length, classes: [...src.matchAll(/\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*XCTestCase\b/g)].map((m) => m[1]) });
+    }
+    suiteBytes.set(t, { total, files: fl });
+  }
+  const { total, files } = suiteBytes.get(t);
+  const stem = path.basename(file, '.swift');
+  const named = files.filter((f) => f.classes.some((c) => c.includes(stem)));
+  const p1 = named.reduce((a, f) => a + f.size, 0);
+  const R = Math.min(COST.rCap, Math.max(1, total / Math.max(p1, COST.minBytes)));
+  const c = COST.build + 1 + (named.length ? COST.pNamed : COST.pUnnamed) * R;
+  costMemo.set(file, c);
+  return c;
+}
+// the slice of `all` (mutants in plan order, each carrying .file) that flag set `flags` selects; contiguous, every mutant in exactly one of the N slices
+function sliceMutants(all, every, offset, flags) {
+  const range = flags.find((f) => f.startsWith('--range='));
+  if (range) { const [lo, hi] = range.slice(8).split('-').map(Number); return all.slice(lo, hi); }
+  if (!flags.includes('--weighted')) { const n = all.length; return all.slice(Math.floor(offset * n / every), Math.floor((offset + 1) * n / every)); }
+  const w = all.map((m) => staticCost(m.file)), total = w.reduce((a, b) => a + b, 0);
+  const out = []; let before = 0;
+  all.forEach((m, i) => { const mid = (before + w[i] / 2) / total * every; before += w[i]; if (Math.floor(mid) === offset) out.push(m); });
+  return out;
+}
 const RULES = [
   [/ == /g, ' != '], [/ != /g, ' == '], [/ <= /g, ' < '], [/ >= /g, ' > '], [/ < /g, ' <= '], [/ > /g, ' >= '],
   [/ && /g, ' || '], [/ \|\| /g, ' && '], [/ \+ /g, ' - '], [/ - /g, ' + '], [/ \* /g, ' / '], [/ & /g, ' | '], [/ \| /g, ' & '], [/ \^ /g, ' | '],
@@ -41,26 +98,36 @@ const RULES = [
 // The 0-based lines of a source that a Linux build does not compile: the inactive branches of every #if / #elseif / #else. A
 // condition outside the known set throws (it must be classified here, never silently guessed).
 const LINUX_CAN_IMPORT = { FoundationNetworking: true, Glibc: true, Crypto: true, CSQLite3: true,
-  Security: false, CryptoKit: false, SQLite3: false, Darwin: false, LocalAuthentication: false };
-function linuxCond(c, file, ln) {
+  Security: false, CryptoKit: false, SQLite3: false, Darwin: false, LocalAuthentication: false,
+  // the opt-in LWE-OT module (MpcNet's #if): no Linux or apple-leg shard builds it (the macOS module job does, unfiltered); plan-check counts it as live
+  AtlasPCALweOt: true };
+// The same for the macOS leg (Xcode 26: Swift 6.2): what macOS compiles. A line neither platform compiles (the iOS / tvOS / watchOS stub
+// of an `#if os(macOS) || os(Linux)`) is mutated by no runner of this workflow; plan-check lists those lines.
+const MAC_CAN_IMPORT = { FoundationNetworking: false, Glibc: false, Crypto: false, CSQLite3: false, AtlasPCALweOt: true,
+  Security: true, CryptoKit: true, SQLite3: true, Darwin: true, LocalAuthentication: true };
+function platCond(c, file, ln, os, canImport, compilerOk) {
   const t = c.trim();
-  if (t.includes('||')) return t.split('||').some((p) => linuxCond(p, file, ln));
-  if (t.includes('&&')) return t.split('&&').every((p) => linuxCond(p, file, ln));
-  if (t.startsWith('!')) return !linuxCond(t.slice(1), file, ln);
+  const rec = (x) => platCond(x, file, ln, os, canImport, compilerOk);
+  if (t.includes('||')) return t.split('||').some(rec);
+  if (t.includes('&&')) return t.split('&&').every(rec);
+  if (t.startsWith('!')) return !rec(t.slice(1));
   let m;
-  if ((m = /^os\((\w+)\)$/.exec(t))) return m[1] === 'Linux';
-  if ((m = /^canImport\((\w+)\)$/.exec(t)) && m[1] in LINUX_CAN_IMPORT) return LINUX_CAN_IMPORT[m[1]];
-  throw new Error(`${file}:${ln + 1}: unclassified compile condition '${t}' (add it to linuxCond)`);
+  if ((m = /^os\((\w+)\)$/.exec(t))) return m[1] === os;
+  if ((m = /^canImport\((\w+)\)$/.exec(t)) && m[1] in canImport) return canImport[m[1]];
+  if (/^compiler\(>=\s*[\d.]+\)$/.test(t)) return compilerOk(t);
+  throw new Error(`${file}:${ln + 1}: unclassified compile condition '${t}' (add it to platCond)`);
 }
-function linuxDead(file, src) {
+const linuxCond = (c, file, ln) => platCond(c, file, ln, 'Linux', LINUX_CAN_IMPORT, () => true);
+const macCond = (c, file, ln) => platCond(c, file, ln, 'macOS', MAC_CAN_IMPORT, () => true);
+function linuxDead(file, src, cond = linuxCond) {
   const dead = new Set();
   const stack = []; // {active: this branch compiles, taken: an earlier branch of the block compiled, outer: the enclosing block compiles}
   src.forEach((l, i) => {
     const t = l.trim();
     let m;
     const live = stack.length ? stack[stack.length - 1].active : true;
-    if ((m = /^#if\s+(.+)$/.exec(t))) { const c = live && linuxCond(m[1], file, i); stack.push({ active: c, taken: c, outer: live }); return; }
-    if ((m = /^#elseif\s+(.+)$/.exec(t))) { const f = stack[stack.length - 1]; const c = f.outer && !f.taken && linuxCond(m[1], file, i); f.active = c; f.taken ||= c; return; }
+    if ((m = /^#if\s+(.+)$/.exec(t))) { const c = live && cond(m[1], file, i); stack.push({ active: c, taken: c, outer: live }); return; }
+    if ((m = /^#elseif\s+(.+)$/.exec(t))) { const f = stack[stack.length - 1]; const c = f.outer && !f.taken && cond(m[1], file, i); f.active = c; f.taken ||= c; return; }
     if (t === '#else') { const f = stack[stack.length - 1]; f.active = f.outer && !f.taken; f.taken = true; return; }
     if (t === '#endif') { stack.pop(); return; }
     if (!live) dead.add(i);
@@ -84,6 +151,7 @@ function hasTopComma(c) {
   for (const ch of c) { if (ch === '(' || ch === '[') depth++; else if (ch === ')' || ch === ']') depth--; else if (ch === ',' && depth === 0) return true; }
   return false;
 }
+let UNREACHED = null; // plan-check collects the lines no runner compiles here
 function mutantsFor(file) {
   const src = fs.readFileSync(file, 'utf8').split('\n');
   const out = [];
@@ -94,7 +162,13 @@ function mutantsFor(file) {
   const dead = new Set();
   if (process.platform === 'linux' || process.env.SWIFTMUT_APPLE === '1') {
     const notLinux = linuxDead(file, src);
-    if (process.env.SWIFTMUT_APPLE === '1') { src.forEach((_, i) => { if (!notLinux.has(i)) dead.add(i); }); }
+    if (process.env.SWIFTMUT_APPLE === '1') {
+      const notMac = linuxDead(file, src, macCond);
+      src.forEach((raw, i) => {
+        if (!notLinux.has(i)) dead.add(i);
+        else if (notMac.has(i)) { dead.add(i); if (raw.trim() && !/^\s*(\/\/|#)/.test(raw) && UNREACHED) UNREACHED.push(`${path.relative(pkg, file)}:${i + 1}`); }
+      });
+    }
     else for (const i of notLinux) dead.add(i);
   }
   src.forEach((raw, ln) => {
@@ -235,6 +309,7 @@ if (cmd === 'plan-check') { // every source file must yield mutants on some plat
   const files = fs.readdirSync(path.join(pkg, 'Sources'), { recursive: true }).map(String).filter((f) => f.endsWith('.swift')).sort().map((f) => `Sources/${f}`);
   const count = (f, apple) => { const was = process.env.SWIFTMUT_APPLE; if (apple) process.env.SWIFTMUT_APPLE = '1'; else delete process.env.SWIFTMUT_APPLE; const n = mutantsFor(path.join(pkg, f)).length; if (was === undefined) delete process.env.SWIFTMUT_APPLE; else process.env.SWIFTMUT_APPLE = was; return n; };
   let bad = 0, total = 0;
+  UNREACHED = [];
   for (const f of files) {
     const n = count(f, false) + (process.platform === 'linux' ? count(f, true) : 0); total += n;
     const r = named.get(f); named.delete(f);
@@ -242,6 +317,7 @@ if (cmd === 'plan-check') { // every source file must yield mutants on some plat
     if (n > 0 && r) { console.error(`::error::${f} is named as no-logic but yields ${n} mutants: stale entry`); bad++; }
   }
   for (const f of named.keys()) { console.error(`::error::mutation-no-logic.json names ${f}, which is not a source file`); bad++; }
+  if (UNREACHED.length) console.log(`::notice::${new Set(UNREACHED).size} line(s) compiled by no build of this workflow (Linux, macOS; the iOS/tvOS/watchOS stub of an #if os(macOS) || os(Linux), or the no-liblweot branch) are not mutated: ${[...new Set(UNREACHED)].join(' ')}`);
   console.log(`plan-check: ${files.length} files, ${total} mutants, ${bad} problem(s)`);
   process.exit(bad ? 1 : 0);
 }
@@ -273,8 +349,8 @@ if (cmd === 'torun') {
   if (!pool) { console.log('unreadable pool'); process.exit(1); }
   const srcHash = sha(files.map((f) => f + '\0' + fs.readFileSync(path.join(pkg, f), 'utf8')).join('\0'));
   let all = [];
-  for (const f of files) { const ms = mutantsFor(path.join(pkg, f)); annotate(path.join(pkg, f), ms, srcHash); all.push(...ms); }
-  { const n = all.length, lo = Math.floor(offset * n / every), hi = Math.floor((offset + 1) * n / every); all = all.slice(lo, hi); }
+  for (const f of files) { const ms = mutantsFor(path.join(pkg, f)); annotate(path.join(pkg, f), ms, srcHash); ms.forEach((m) => all.push({ file: f, ...m })); }
+  all = sliceMutants(all, every, offset, flags);
   console.log(all.filter((m) => { const e = pool[m.key]; return !(e && e.d === m.def_hash && e.h === m.shell_hash && mayCarry(e, m, { killed: ['KILLED'], uncompilable: ['NONVIABLE'], survived: ['SURVIVED'] })); }).length);
   process.exit(0);
 }
@@ -319,6 +395,15 @@ if (cmd === 'run') {
   const every = +(flags.find((f) => f.startsWith('--every='))?.slice(8) ?? 1), offset = +(flags.find((f) => f.startsWith('--offset='))?.slice(9) ?? 0);
   const tmp = path.join(process.env.TMPDIR || os.tmpdir(), 'swiftmut');
   fs.mkdirSync(tmp, { recursive: true });
+  const flagVal = (n) => flags.find((f) => f.startsWith(`--${n}=`))?.slice(n.length + 3);
+  const oracleOut = flagVal('oracle-out'), oracleInDir = flagVal('oracle-in');
+  const tree = treeHash();
+  // the baseline job's oracle, accepted only for this exact tree (a stale one would vouch for sources it never ran)
+  let oracleIn = null;
+  if (oracleInDir) {
+    try { const o = JSON.parse(fs.readFileSync(path.join(oracleInDir, 'oracle.json'), 'utf8')); if (o.tree === tree) oracleIn = o; else console.error(`::warning::baseline oracle is for tree ${String(o.tree).slice(0, 12)}, this tree is ${tree.slice(0, 12)}: verifying the groups here`); }
+    catch (e) { console.error(`::warning::no usable baseline oracle (${e.message}): verifying the groups here`); }
+  }
   const advPath = path.join(tmp, 'adv.json');
   if (!fs.existsSync(advPath)) {
     const z = await import('node:zlib');
@@ -329,7 +414,7 @@ if (cmd === 'run') {
   for (const f of files) { const ms = mutantsFor(path.join(pkg, f)); annotate(path.join(pkg, f), ms, srcHash); ms.forEach((m, i) => all.push({ file: f, idx: i, ...m })); }
   // contiguous slices (not round-robin): a shard then spans a file or two, so it verifies one or two oracle groups on the
   // unmutated sources instead of all ~40 (each a 2-3 min suite run). The workflow's count check uses the same formula.
-  { const n = all.length, lo = Math.floor(offset * n / every), hi = Math.floor((offset + 1) * n / every); all = all.slice(lo, hi); }
+  all = sliceMutants(all, every, offset, flags);
   // --retry=a.json,b.json: only the mutants that SURVIVED in earlier result files (matched by file + source text + op +
   // replacement, so line shifts from edits elsewhere in the file do not matter)
   const retry = flags.find((f) => f.startsWith('--retry='))?.slice(8);
@@ -365,7 +450,7 @@ if (cmd === 'run') {
   const t0 = Date.now();
   const save = () => fs.writeFileSync(outFile, JSON.stringify(results, null, 1));
   const MAX_RSS = (+process.env.SWIFTMUT_MAX_RSS_MB || 4096) * 1048576; // per worker (process group)
-  const targetOf = (file) => file.includes('/AtlasPCASQLite/') ? 'AtlasPCASQLiteTests' : file.includes('/AtlasPCAStepUp/') ? 'AtlasPCAStepUpTests' : 'AtlasPCAVerifyTests';
+  const targetOf = targetOfFile;
   // fail-fast phase: the test classes named after the mutated file (e.g. Actions.swift -> ActionsVectorTests, BaseActionsOracleTests).
   // Each passes on the unmutated sources (the full suite is green), so a failure there is the mutant's doing: KILLED without
   // paying for the rest of the suite. A mutant they do not kill still faces the WHOLE suite (phase 2), so no survivor is lost.
@@ -412,8 +497,10 @@ if (cmd === 'run') {
   // an unparsed requireCovers argument: every file is its own group (still correct, only slower)
   const groupOf = (file) => coverTokens.opaque ? file : `${targetOf(file)}|${coverTokens.toks.filter((t) => file.includes(t)).join(',')}`;
   const groups = new Map(); // group -> Promise<limit ms>
+  const groupInfo = new Map(); // group -> { ms: the unmutated duration, limit }
   const verifyGroup = (w, file) => {
     const g = groupOf(file);
+    if (!groups.has(g) && oracleIn?.groups[g]) { groupInfo.set(g, oracleIn.groups[g]); groups.set(g, Promise.resolve(oracleIn.groups[g].limit)); }
     if (!groups.has(g)) groups.set(g, (async () => {
       const r = await exec(w, file, process.env.SWIFTMUT_FILTER || targetOf(file), false, 3_600_000);
       if (r.timedOut || r.memKilled || r.compileErr || r.code !== 0 || r.sig !== '[]') {
@@ -422,6 +509,7 @@ if (cmd === 'run') {
       }
       const lim = Math.max(DEFAULT_LIMIT, 2 * r.ms + 120_000); // margin for a slow runner; a timeout is then re-judged at twice this
       console.error(`group [${g}]: unmutated ${Math.round(r.ms / 1000)} s, limit ${Math.round(lim / 1000)} s`);
+      groupInfo.set(g, { ms: r.ms, limit: lim });
       return lim;
     })());
     return groups.get(g);
@@ -554,6 +642,10 @@ if (cmd === 'run') {
   const wk = async (w) => {
     const wroot = path.join(tmp, `w${w}`);
     const dir = path.join(wroot, 'sdks/swift-pca');
+    // restored from the baseline job (same tree, same absolute paths, mtimes kept): its build products stay valid, so no copy and no warm build
+    const restored = oracleIn && fs.existsSync(path.join(wroot, '.oracle-ok'));
+    if (restored) console.error(`worker ${w}: baseline build restored`);
+    if (!restored) {
     fs.rmSync(path.join(dir, 'Sources'), { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
     fs.mkdirSync(path.join(wroot, 'tools'), { recursive: true });
@@ -562,6 +654,11 @@ if (cmd === 'run') {
     for (const d of ['Sources', 'Tests', 'test-data', 'Package.swift', 'README.md']) spawnSync('cp', ['-R', path.join(pkg, d), dir]);
     // warm build
     spawnSync('nice', ['-n', '19', 'swift', 'build', '--build-tests', ...(process.env.SWIFT_TEST_FLAGS ? process.env.SWIFT_TEST_FLAGS.split(/\s+/) : []), '--scratch-path', path.join(dir, '.b')], { cwd: dir, stdio: 'ignore' });
+    }
+    if (oracleOut) { // baseline job: verify every oracle group (one representative file each), run no mutant
+      while (oracleFiles.length) await verifyGroup(w, oracleFiles.shift());
+      return;
+    }
     // no separate baseline: runOne verifies each oracle group on the unmutated copy before judging its first mutant
     while (queue.length && Date.now() - t0 < budget) {
       const m = queue.shift();
@@ -570,8 +667,17 @@ if (cmd === 'run') {
       if (results.length % 5 === 0) save();
     }
   };
+  // baseline job: the first file of every distinct oracle group
+  const oracleFiles = oracleOut ? [...new Map(files.map((f) => [groupOf(f), f])).values()] : [];
   // nothing to run (everything carried): no worker copies, no warm build, no group verification
-  await Promise.all(Array.from({ length: Math.min(workers, queue.length) }, (_, w) => wk(w)));
+  await Promise.all(Array.from({ length: oracleOut ? workers : Math.min(workers, queue.length) }, (_, w) => wk(w)));
+  if (oracleOut) {
+    fs.mkdirSync(oracleOut, { recursive: true });
+    fs.writeFileSync(path.join(oracleOut, 'oracle.json'), JSON.stringify({ tree, groups: Object.fromEntries(groupInfo) }, null, 1));
+    for (let w = 0; w < workers; w++) fs.writeFileSync(path.join(tmp, `w${w}`, '.oracle-ok'), tree);
+    console.error(`oracle: ${groupInfo.size} group(s) verified on tree ${tree.slice(0, 12)}`);
+    process.exit(0);
+  }
   save();
   const by = {};
   for (const r of results) by[r.status] = (by[r.status] || 0) + 1;
