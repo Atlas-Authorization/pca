@@ -1,0 +1,13 @@
+[package]
+name = "pca-wasmtime-host"
+version = "0.1.0"
+edition = "2021"
+description = "Reference host for @atlasauth/pca-sandbox: runs a WebAssembly component (canonical ABI) whose only import is pca:act/invoke, with instruction fuel."
+license = "MIT"
+publish = false
+
+[dependencies]
+wasmtime = { version = "30", default-features = true, features = ["component-model"] }
+serde_json = "1"
+
+[workspace]

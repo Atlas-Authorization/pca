@@ -12,7 +12,7 @@ import { safeParse } from './safejson';
 const [inp, outp] = process.argv.slice(2);
 const lines = readFileSync(inp!, 'utf8').split('\n').filter(Boolean);
 const out: string[] = [];
-const CK = [['version', 'version'], ['audience', 'audience'], ['validity', 'validity'], ['chain', 'cap_chain'], ['grant_ref_bound', 'grant_ref_bound'], ['plan_inclusion', 'plan_inclusion'], ['leaf_signature', 'leaf_signature'], ['counter', 'counter']] as const;
+const CK = [['version', 'version'], ['audience', 'audience'], ['validity', 'validity'], ['chain', 'cap_chain'], ['grant_ref_bound', 'grant_ref_bound'], ['plan_inclusion', 'plan_inclusion'], ['leaf_signature', 'leaf_signature'], ['counter_format', 'counter_format']] as const;
 async function main() {
   for (const line of lines) {
     const c = JSON.parse(line);

@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { autonomyBoundOf, forecast, recommendPolicy } from './budget-forecast';
 import { compilePolicy } from './facade';
+import { RATE_LIMITED_REFUND_CATALOG as catalog } from './rate-limited-refund.test-util';
 
 describe('forecast', () => {
   it('drains the dollar budget and flags the first forced co-sign', () => {
     // $100/day refund budget: κ=100, bMax=100. Each $40 refund costs 40.
-    const policy = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$100/day' }, now: 0 });
+    const policy = compilePolicy({ permissions: { stripe: ['refund'] }, limits: { refund: '$100/day' }, now: 0, catalog });
     const f = forecast(policy, [
       { verb: 'stripe.refund', resource: 'c:1', params: { amount: 40, currency: 'usd' }, at: 1 },
       { verb: 'stripe.refund', resource: 'c:2', params: { amount: 40, currency: 'usd' }, at: 2 },
       { verb: 'stripe.refund', resource: 'c:3', params: { amount: 40, currency: 'usd' }, at: 3 }, // budget can't cover
-    ]);
+    ], { catalog });
     expect(f.steps[0]!.outcome).toBe('auto');
     expect(f.steps[2]!.outcome).toBe('step_up');
     expect(f.firstStepUpAt).toBe(2);

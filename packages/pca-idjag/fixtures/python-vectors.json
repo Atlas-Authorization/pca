@@ -1,0 +1,106 @@
+{
+  "generator": "crosscheck/crosscheck.py (hand-assembled JWS, pyca/cryptography Ed25519; key seed = SHA-256 of a fixed label)",
+  "issuer": "https://idp.example.com",
+  "audience": "https://resource.example.com",
+  "clientId": "resource-app-client",
+  "publicKey": "9OeyuKN2HUMmmctAFOB25TafwFEcG2ve8BKGg2OOzc0",
+  "vectors": [
+    {
+      "name": "conforming grant",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In19.mO5-F61lMHtVxmzQSLmMJuU4Dt9a0zc0_J6w9AzzWini0IIDlnn8m2oUqpeyt2XxywNYt23zEOeSiupDzR3lDQ",
+      "expect": "ok",
+      "grant": {
+        "iss": "https://idp.example.com",
+        "sub": "user-123",
+        "agent": "agent-app-7",
+        "audience": "https://resource.example.com",
+        "scopes": [
+          "calendar.read",
+          "mail.send"
+        ],
+        "iat": 1700000000,
+        "exp": 4102444800,
+        "jti": "jag-py-0001"
+      }
+    },
+    {
+      "name": "payload edited after signing",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImFkbWluIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In19.mO5-F61lMHtVxmzQSLmMJuU4Dt9a0zc0_J6w9AzzWini0IIDlnn8m2oUqpeyt2XxywNYt23zEOeSiupDzR3lDQ",
+      "expect": "refuse",
+      "code": "signature"
+    },
+    {
+      "name": "plain JWT typ",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImlkamFnLXB5LTEifQ.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In19.wamxMkyaLitdI60186ljnTWgWd0qVhT0INu_IqrBpufwphWtCf0vLbeM_CzbKazWZnty2GI2U9c4lC-q_7kiCw",
+      "expect": "refuse",
+      "code": "grant"
+    },
+    {
+      "name": "no typ",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImsifQ.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In19.abcSGpLxU51e5ELBFlTf7HDYgrSpYBaTJsU1Oek_yarAlq5I5403Fae8kd6fN6_WCb_TzSXZdvj7vyLy0tJKBA",
+      "expect": "refuse",
+      "code": "grant"
+    },
+    {
+      "name": "two audiences",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjpbImh0dHBzOi8vcmVzb3VyY2UuZXhhbXBsZS5jb20iLCJodHRwczovL290aGVyLmV4YW1wbGUuY29tIl0sImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In0sImF6cCI6InJlc291cmNlLWFwcC1jbGllbnQifQ.y01W70fgnyMO-4thpJMAqW8AJiyl-SciBSP5GfgFdvyeEjy4gZz8iDTdSnGBANasq4xWdsCXWGs6cjP0yLtTAA",
+      "expect": "refuse"
+    },
+    {
+      "name": "other audience",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9vdGhlci5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In19.tUd3Fv_4cU2mQvBuCZuZYGX5Q9a3NDesaxJriwf_bEZtDz1EfEGod-hY2UAPE95oBadGKfcCJ7fEAKg9f6L2Dw",
+      "expect": "refuse"
+    },
+    {
+      "name": "missing act",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIn0.T-x2eJS3UP4oGOfI39WMbIZkb16ETQXcpLoyUFURfnyhyEJuSC28uBL_EjOqfkS8s2_1MOCHKobhFowZVP5NAA",
+      "expect": "refuse",
+      "code": "actor"
+    },
+    {
+      "name": "missing scope",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJhY3QiOnsic3ViIjoiYWdlbnQtYXBwLTcifX0.0pwU3p_dpe3FpIlxlQ4JmVXyeiibYmavJtG5luDiNCeg2Lt6G3vGbVFiqZxA2Njt_7-kw2Ump9HuF0d3zOilCg",
+      "expect": "refuse",
+      "code": "scope"
+    },
+    {
+      "name": "missing client_id",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImp0aSI6ImphZy1weS0wMDAxIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjQxMDI0NDQ4MDAsInNjb3BlIjoiY2FsZW5kYXIucmVhZCBtYWlsLnNlbmQiLCJhY3QiOnsic3ViIjoiYWdlbnQtYXBwLTcifX0.UnzvLmnY7DC1pR_Vokqzh-p76pPSHC2rFmDaU7Ei-YyLTv-VAP_0_LfOtopbxdeELagsdXb8TxPd7YZLEUHTDg",
+      "expect": "refuse",
+      "code": "grant"
+    },
+    {
+      "name": "other client_id",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InNvbWVvbmUtZWxzZSIsImp0aSI6ImphZy1weS0wMDAxIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjQxMDI0NDQ4MDAsInNjb3BlIjoiY2FsZW5kYXIucmVhZCBtYWlsLnNlbmQiLCJhY3QiOnsic3ViIjoiYWdlbnQtYXBwLTcifX0.D7ZFZsiLyAJfsPHmqup0AxoMmEWQm4jlWdo_tboWcu37h4OxjezN10TKhf2_YEAmzWrZGyNyALH5I8MucSAoCg",
+      "expect": "refuse",
+      "code": "grant"
+    },
+    {
+      "name": "missing jti",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwic2NvcGUiOiJjYWxlbmRhci5yZWFkIG1haWwuc2VuZCIsImFjdCI6eyJzdWIiOiJhZ2VudC1hcHAtNyJ9fQ.jciozA6AFJR-Ocln_-eLnNedal8KJXlbHPBT_8Ws-8Brd9YUBymvlJSjto5z49R2HhhvjE9ewg8i_nfU6RCWAw",
+      "expect": "refuse",
+      "code": "grant"
+    },
+    {
+      "name": "expired",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNzAwMDAwMTAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In19.sAM7CaAFcDuxE1mbyPhNePPVEng2RhvIEgfkYH2o95FKAY3QX6sxwIbKqvan25FNdlQZHz8p6L3PhdGsXhikBg",
+      "expect": "refuse"
+    },
+    {
+      "name": "other issuer",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2V2aWwuZXhhbXBsZS5jb20iLCJzdWIiOiJ1c2VyLTEyMyIsImF1ZCI6Imh0dHBzOi8vcmVzb3VyY2UuZXhhbXBsZS5jb20iLCJjbGllbnRfaWQiOiJyZXNvdXJjZS1hcHAtY2xpZW50IiwianRpIjoiamFnLXB5LTAwMDEiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwic2NvcGUiOiJjYWxlbmRhci5yZWFkIG1haWwuc2VuZCIsImFjdCI6eyJzdWIiOiJhZ2VudC1hcHAtNyJ9fQ.GrqTe14ZRHH1hncJi4hW1T9ltunNbi8WKo0J79sF88wI0GZwH6dFMseE6UkT17yiIvMQibLkBNUGkmtj7E8lDA",
+      "expect": "refuse"
+    },
+    {
+      "name": "alg none, no signature",
+      "token": "eyJhbGciOiJub25lIiwidHlwIjoib2F1dGgtaWQtamFnK2p3dCJ9.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In19.",
+      "expect": "refuse"
+    },
+    {
+      "name": "signed by another key",
+      "token": "eyJhbGciOiJFZERTQSIsInR5cCI6Im9hdXRoLWlkLWphZytqd3QiLCJraWQiOiJpZGphZy1weS0xIn0.eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjoiaHR0cHM6Ly9yZXNvdXJjZS5leGFtcGxlLmNvbSIsImNsaWVudF9pZCI6InJlc291cmNlLWFwcC1jbGllbnQiLCJqdGkiOiJqYWctcHktMDAwMSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwLCJzY29wZSI6ImNhbGVuZGFyLnJlYWQgbWFpbC5zZW5kIiwiYWN0Ijp7InN1YiI6ImFnZW50LWFwcC03In19.P487Ry6OtmZWjYr4F4X4m9c38EGISImrataqAhvEX02M4LsbBH3mfcdHivH1poPJGXYN6BW3IAlXK-H85uyhDQ",
+      "expect": "refuse",
+      "code": "signature"
+    }
+  ]
+}

@@ -2,6 +2,8 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 import { DEFAULT_SEED, attenuationMonotonicityProperty } from './properties';
 
+const R = (n: number): number => (process.env.PCA_INVARIANTS_RUNS ? Math.min(n, Number(process.env.PCA_INVARIANTS_RUNS)) : n); // fewer cases under mutation testing
+
 const SEED = DEFAULT_SEED;
 
 describe('PCA invariant 1: attenuation monotonicity', () => {
@@ -9,6 +11,6 @@ describe('PCA invariant 1: attenuation monotonicity', () => {
     // Verifies: chain verifies; caveats are an append-only prefix extension at every hop;
     // budget_alloc limits are monotone non-increasing; and for every probe point the per-hop
     // "allowed" verdict never goes false -> true down the chain (leaf authority ⊆ ancestors').
-    fc.assert(attenuationMonotonicityProperty(), { numRuns: 1000, seed: SEED });
+    fc.assert(attenuationMonotonicityProperty(), { numRuns: R(1000), seed: SEED });
   });
 });

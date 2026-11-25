@@ -232,7 +232,7 @@ function decideOfferSetInner(input: Parameters<typeof decideOfferSet>[0]): Offer
   if (os.site !== aud) return { ok: false, reason: 'offers: the offer set was issued for another audience' };
   if (os.session !== session) return { ok: false, reason: 'offers: the offer set is bound to another session' };
   if (!isClock(now) || !isSafeInt(skewMs)) return { ok: false, reason: 'offers: no usable clock (now must be a safe integer): the offer set counts as stale' };
-  if (os.issued_at > now + skewMs) return { ok: false, reason: 'offers: the offer set is issued in the future' };
+  if (!(os.issued_at <= now + skewMs)) return { ok: false, reason: 'offers: the offer set is issued in the future' };
   if (now - os.issued_at > policy.max_age_ms) return { ok: false, reason: 'offers: the offer set is stale' };
   if (os.complete !== true) return { ok: false, reason: 'offers: the offer set is not declared complete' };
   if (!queryCovers(os.query, policy.filter.query)) return { ok: false, reason: 'offers: the search was narrowed beyond the intent filter (coverage)' };

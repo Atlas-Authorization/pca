@@ -14,6 +14,7 @@ import {
   reachable,
   subsumes,
   tightenInterval,
+  validatePolicyAgainstSchema,
   type AnalyzerOptions,
   type Caveat,
   type Condition,
@@ -22,6 +23,7 @@ import {
   type Predicate,
   type PolicyInput,
   type RiskPolicy,
+  type ValidateOptions,
 } from './deps';
 import { isLeafCondition } from '@atlasauth/pca';
 import type { NormalizedPolicy } from './normalize';
@@ -368,4 +370,12 @@ export function ruleMissingSafetyFloor(
     );
   }
   return out;
+}
+
+// ---- schema-mismatch ------------------------------------------------------------------------------
+
+/** The policy compared with the action schema it is written for (see `validatePolicyAgainstSchema`). */
+export function ruleSchemaMismatch(policy: NormalizedPolicy, schema: Parameters<typeof validatePolicyAgainstSchema>[1], options?: ValidateOptions): Finding[] {
+  const r = validatePolicyAgainstSchema({ predicates: policy.predicates, caveats: policy.caveats }, schema, options);
+  return r.findings.map((f) => ({ rule: 'schema-mismatch' as const, severity: f.severity, message: `${f.code}: ${f.message}`, where: f.where }));
 }

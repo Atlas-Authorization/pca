@@ -27,7 +27,7 @@ const V = [
 
 describe('launchLocal: the dealer is never given a party input', () => {
   it('a surplus vector past the n parties does not reach the dealer config', async () => {
-    const r = await launchLocal({ n: 2, vectors: [...V], mainJs: echoJs });
+    const r = await launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 2, vectors: [...V], mainJs: echoJs });
     const cfgs = r.outputs.map((o) => o.json as NodeConfig);
     expect(cfgs.map((c) => c.role)).toEqual(['party', 'party', 'dealer']);
     expect(cfgs[0]!.input).toEqual(V[0]);

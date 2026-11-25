@@ -12,7 +12,7 @@ L0 answers: **is the process acting actually the workload the grant names?** The
 | Mode | What it proves | Status |
 |---|---|---|
 | **Software** | "A key the resource server trusts vouched for these measurements." Measurements are self-asserted by the signer, not rooted in hardware. | Implemented. Suitable for dev, CI and the sanctioned attested-VM equivalent. |
-| **Hardware** | A TEE report, rooted in the vendor's certificate chain, measured the loaded workload. | **Implemented** as `HardwareAttestationVerifier`s: AMD SEV-SNP (`createAmdSnpVerifier`), Intel TDX DCAP quotes (`createIntelDcapVerifier`), Azure Attestation tokens (`createAzureMaaVerifier`), Google Confidential Space tokens (`createGcpConfidentialSpaceVerifier`), NVIDIA confidential-computing GPU evidence (`createNvidiaSpdmVerifier`), and N-of-M corroboration across independent roots (`createMultiRootVerifier`). Tested on evidence captured from real confidential VMs and GPUs (`packages/pca/fixtures/real-*`, `testdata/sevsnp-real`). |
+| **Hardware** | A TEE report, rooted in the vendor's certificate chain, measured the loaded workload. | **Implemented** as `HardwareAttestationVerifier`s: AMD SEV-SNP (`createAmdSnpVerifier`), Intel TDX DCAP quotes (`createIntelDcapVerifier`), Azure Attestation tokens (`createAzureMaaVerifier`), Google Confidential Space tokens (`createGcpConfidentialSpaceVerifier`), NVIDIA confidential-computing GPU evidence (`createNvidiaSpdmVerifier`), and N-of-M corroboration across independent roots (`createMultiRootVerifier`). Tested on evidence captured from real confidential VMs and GPUs. |
 
 ## The attestation document
 
@@ -65,6 +65,45 @@ const hook = createAttestationVerifier({
 });
 ```
 
+## Quick start: software attestation
+
+Software attestation is in the production tier. It proves that a key your server trusts vouched for the measurements; it never proves silicon, and the verdict is labelled `software`.
+
+```ts
+import { createDevAttestor, createAttestationVerifier, attestationRegistry } from '@atlasauth/pca/ext/attestation';
+
+const attestor = createDevAttestor(attestorSecret);                       // the workload's signing service
+const doc = attestor.attest({ model_id: 'm1', weights_digest: 'w1', runtime_measurement: 'r1', operator: 'acme', nonce, issued_at: now, expires_at: now + 300_000 });
+
+const hook = createAttestationVerifier({
+  trustedAttestorKeys: [attestor.publicKey],
+  resolveDocument: attestationRegistry([doc]),
+  clockSkewMs: 5_000,
+});
+// pass it as hooks.attestation to verifyPCActn / requirePCA; set agent_binding on the grant to pin model, operator, runtime
+```
+
+To pin the measurements with a signed, rollback-proof list, publish a signed allowlist manifest and anchor it in a transparency log (`verifyAllowlistManifest`, `anchorAllowlistHead`, `verifyAllowlistAnchored`). To bind identity to a post-quantum software root, use `createPqSoftwareAttestor` and `createPqSoftwareVerifier`.
+
+## Failure modes (software path)
+
+Each row names something missing, stale or wrong. None is a pass.
+
+| If this is missing, stale or wrong | Result |
+|---|---|
+| No document for the action | Rejected (`no attestation document`) |
+| `mode` is not `software` for a software verifier | Rejected |
+| The attestor key is not in `trustedAttestorKeys`, or the signature does not verify | Rejected |
+| The document is outside `[issued_at - skew, expires_at + skew]` | Rejected as stale or not yet valid |
+| The document's `nonce` is not the PCActn's `quote_digest`, or was already consumed | Rejected |
+| The identity does not satisfy `agent_binding` (model, runtime, operator, weights) | Rejected with the field named |
+| `require_hardware` or `require_measured_weights` is set | Rejected: a software document is never hardware-measured |
+| A signed allowlist: bad signature, older version than the last seen, expired, unknown algorithm | Rejected with a typed code |
+| An anchored allowlist: no proof, a head from another log, a stale head, a shrunk or forked log, an old version | `missing-proof`, `bad-head`, `stale-head`, `log-rollback`, `split-view`, `anchored-rollback` and the other anchor codes |
+| A certificate with trailing bytes, a duplicate or unrecognised critical extension, or the wrong CA role | The chain is refused |
+
+**Limits.** Measurements are self-asserted by the signer. The allowlist anchor needs at least one honest independent witness or a cached head to defeat a log operator who is also the attacker. Weights are only as trustworthy as whoever produced the document.
+
 ## The hardware seam
 
 ```ts
@@ -81,6 +120,6 @@ There is also a standardization gap: no cross-vendor standard attests a model's 
 
 ## Hosted behavior
 
-The attestation check is enforced for an action only when the instance has at least one trusted attestor key **and** the action presents an attestation (a document in the request body, or a declared `quote_digest`). Otherwise it stays `not-enforced`. Manage trusted keys with `GET`/`PUT /v1/pca/attestors` ([API reference](../reference/api.md)).
+The attestation check is enforced for an action when the instance has at least one trusted attestor key **and** the action presents an attestation (a document in the request body, or a declared `quote_digest`), and **always** when the grant's `agent_binding` is non-empty: then a missing, unbound or untrusted attestation denies, whether or not the instance trusts any attestor key. Otherwise it stays `not-enforced`. The expected binding (holder, grant, epoch, nonce) is derived on the server from a nonce it issued, and each nonce is consumed once, in the same transaction that admits the action. The hosted surface verifies software attestors (and, when configured, an allowlisted orchestration harness); it does not run the hardware verifiers above, so a grant that sets `require_hardware` is refused there. Manage trusted keys with `GET`/`PUT /v1/pca/attestors` ([API reference](../reference/api.md)).
 
 Next: [Ledger and revocation](./ledger-and-revocation.md).

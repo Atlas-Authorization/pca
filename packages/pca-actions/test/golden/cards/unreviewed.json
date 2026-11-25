@@ -1,0 +1,36 @@
+{
+ "trait": "pca.unreviewed",
+ "card": {
+  "verb": "golden.unreviewed",
+  "title": "Do the unreviewed thing",
+  "text": "Do the unreviewed thing. This action has not been reviewed yet.",
+  "risk": "critical",
+  "escalation": "cosign",
+  "reversibility": "irreversible",
+  "blast_ppm": 1000000,
+  "needs": [
+   "approval_ref",
+   "resource_scope"
+  ],
+  "context": [
+   "dry_run_first"
+  ]
+ },
+ "closure": [
+  "pca.unreviewed"
+ ],
+ "floor": {
+  "risk": 3,
+  "rev": "irreversible",
+  "blast_ppm": 1000000,
+  "esc": 2,
+  "caveats": [
+   "approval_ref",
+   "resource_scope"
+  ],
+  "context": [
+   "dry_run_first"
+  ],
+  "prules": []
+ }
+}

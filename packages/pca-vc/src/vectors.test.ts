@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
-import { issuePassport } from '@atlasauth/pca';
+import { issuePassport } from '@atlasauth/pca/ext/attestation';
 import {
   base58btcDecode,
   base58btcEncode,

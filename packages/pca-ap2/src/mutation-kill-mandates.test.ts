@@ -82,6 +82,7 @@ describe('minor units', () => {
     expect(fromMinorUnits(12345, 'CLF')).toBe(1.2345);
     expect(fromMinorUnits(Number.MAX_SAFE_INTEGER, 'JPY')).toBe(Number.MAX_SAFE_INTEGER);
     for (const m of [-1, 1.5, Number.NaN, 2 ** 53, '5' as never]) expect(msg(() => fromMinorUnits(m, 'USD')), String(m)).toBe(`minor-unit amount must be a non-negative safe integer, got ${String(m)}`);
+    expect(msg(() => fromMinorUnits(-0, 'USD'))).toBe('minor-unit amount must be a non-negative safe integer, got 0');
     expect(msg(() => fromMinorUnits(1, 'xx'))).toMatch(/^currency must be/);
   });
 });
@@ -109,6 +110,8 @@ describe('open payment mandate: envelope', () => {
       expect(openPaymentMandateProblems(openPay({ exp: t })), String(t)).toEqual(['exp: must be an integer epoch-seconds']);
     }
     expect(openPaymentMandateProblems(openPay({ iat: 1.5, exp: -2 }))).toEqual(['iat: must be an integer epoch-seconds', 'exp: must be an integer epoch-seconds']);
+    expect(openPaymentMandateProblems(openPay({ iat: -0, exp: -0 }))).toEqual(['iat: must be an integer epoch-seconds', 'exp: must be an integer epoch-seconds']);
+    expect(openPaymentMandateProblems(openPay({ payment_amount: { amount: -0, currency: 'USD' } }))).toEqual(['payment_amount.amount: must be a non-negative integer (minor units)']);
     for (const c of [undefined, null, 'x', [], {}, { jwk: 'x' }, { jwk: null }, { jwk: [] }]) {
       expect(openPaymentMandateProblems(openPay({ cnf: c })), JSON.stringify(c)).toEqual(['cnf: must be { jwk }']);
     }

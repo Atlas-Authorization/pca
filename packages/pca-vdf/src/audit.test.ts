@@ -308,7 +308,8 @@ describe('bounded fuzzing of every verify / parse entry (no exception, no hang, 
         const t0 = performance.now();
         const r = vdfVerifyDetailed(x, y, pi, t, N);
         expect(performance.now() - t0).toBeLessThan(1000);
-        if (r.ok) expect(x % N === X % N && y === good.y && pi === good.pi && t === T).toBe(true);
+        // t = 0 is a valid trivial statement (y = x): the step floor lives in the timelock layer (steps >= 1)
+        if (r.ok) expect((x % N === X % N && y === good.y && pi === good.pi && t === T) || (t === 0 && y === ((x % N) + N) % N)).toBe(true);
         return true;
       }),
       fuzzOpts,

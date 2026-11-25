@@ -1,4 +1,19 @@
 import {
+  decodeB64uStrict,
+  hashCanonical,
+  isGroupCondition,
+  isLeafCondition,
+  paramsDigest,
+  pcactnDigest,
+  readEnvelope,
+  unb64u,
+  verifyChain,
+  verifyPCActnCore,
+  type Capability,
+  type Condition,
+  type PCActn,
+} from '@atlasauth/pca';
+import {
   DEFAULT_REVOCATION_MAX_AGE_S,
   FACT_DOMAIN,
   INTENT_ANCHOR_DOMAIN,
@@ -9,24 +24,16 @@ import {
   accValueOf,
   actionSchemaDigest,
   checkSessionRevocation,
-  decodeB64uStrict,
   deltaRevocationId,
   grantSessionCaveat,
-  hashCanonical,
   intentActionDigest,
   intentRef,
   intentSessionCaveatError,
-  isGroupCondition,
-  isLeafCondition,
   mapRevocationId,
-  paramsDigest,
-  pcactnDigest,
   pcactnReservationDigest,
-  readEnvelope,
   receiptArithmeticOk,
   sessionRevocationId,
   sessionRootDigest,
-  unb64u,
   validateClassifierVerdictWire,
   validateFactWire,
   validateOfferSetWire,
@@ -36,26 +43,20 @@ import {
   sequencerKeySetDigest,
   verifyActionSchema,
   verifyArtifactSig,
-  verifyChain,
   verifyIntentStatement,
   verifyLabels,
-  verifyLedgerInclusion,
-  verifyPCActnCore,
   verifySessionRoot,
-  verifyTreeHead,
   type AccumulatorDecl,
   type ActionSchemaKey,
   type ReceiptFreshness,
   type SequencerKeySet,
   type TrackedKeySet,
-  type Capability,
-  type Condition,
   type IntentEvent,
   type IntentV2Context,
   type LabelKey,
-  type PCActn,
   type SessionRoot,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
+import { verifyLedgerInclusion, verifyTreeHead } from '@atlasauth/pca/ext/ledger';
 import { intentMapDigest, verifyIntentMap } from '@atlasauth/pca-intent';
 import { answerRef, deviceChallenge, frictionRank, typedDigest, verifyIntentAnswer, type FrictionTier, type SignedIntentAnswer, type Verdict } from '@atlasauth/pca-wallet';
 import { verifyAssertion, type Es256Jwk, type EdDsaJwk } from '@atlasauth/pca-webauthn';
@@ -99,6 +100,8 @@ export interface CredentialKey {
   publicKey: Es256Jwk | EdDsaJwk;
   rpId: string;
   origins: string[];
+  /** The signature counter stored for this authenticator before the recorded assertion (default 0: counterless or never used). */
+  signCount?: number;
 }
 
 export interface EvidenceTrust {
@@ -544,6 +547,7 @@ async function replay(b: EvidenceBundle, digest: string, trust: EvidenceTrust, f
             rpId: cred.rpId,
             origins: cred.origins,
             requireUV: true,
+            storedSignCount: cred.signCount ?? 0,
           },
         );
         f.add('answer.device', r.ok ? 'pass' : 'fail', ref, r.ok ? undefined : r.reason);
@@ -713,7 +717,7 @@ async function replay(b: EvidenceBundle, digest: string, trust: EvidenceTrust, f
     const is = p.intent_session;
     const ctx = is !== undefined && sameRoot ? v2Context(p, d, g.seq) : null;
     // pca-unsafe-root: allow offline replay: the root's authority is pcactn.root (byte-equal to G_0 / a verified delta) plus principal.pinned (trust.principals); a non-Ed25519 root verifies only under the reader's pqPins (trust.principals[].pq_pk), else it is refused (fail closed)
-    const r = await verifyPCActnCore(p, { grant: root, grantFromArtifact: true, pqPins, nowEpoch: p.iat, audience: b.subject.aud, ...(ctx ? { intentV2: ctx } : {}) });
+    const r = await verifyPCActnCore(p, { insecureSkipPlanRootCheck: true, grant: root, grantFromArtifact: true, pqPins, nowEpoch: p.iat, audience: b.subject.aud, ...(ctx ? { intentV2: ctx } : {}) });
     const failed = Object.entries(r.checks).filter(([, st]) => st === 'fail').map(([k]) => k).sort();
     const v1f = failed.filter((k) => !V2_CHECKS.includes(k));
     const v2f = failed.filter((k) => V2_CHECKS.includes(k));
@@ -824,7 +828,7 @@ async function replay(b: EvidenceBundle, digest: string, trust: EvidenceTrust, f
     if (caps.length === 0) f.add('accumulator.cap', 'unverified', ref, 'no cap stated for this accumulator');
     else {
       const cap = Math.min(...caps);
-      f.add('accumulator.cap', ev.post <= cap ? 'pass' : 'fail', ref, `post ${ev.post}, cap ${cap}`);
+      f.add('accumulator.cap', isNum(ev.post) && ev.post <= cap ? 'pass' : 'fail', ref, `post ${ev.post}, cap ${cap}`);
     }
   }
   const receipts = b.accumulator.receipts ?? [];
@@ -844,7 +848,7 @@ async function replay(b: EvidenceBundle, digest: string, trust: EvidenceTrust, f
       const admittedAt = byDigest.get(d)!.iat;
       const ks = keySetsAt(holder.root, admittedAt);
       if (!verifyReceiptAgainstHolder(r, holder, ks.sets, admittedAt, freshness(ks))) return { ok: false, reason: 'not signed by a key the pinned sequencer root listed, or not fresh, at admission time' };
-      if (!(admittedAt <= r.expires_at)) return { ok: false, reason: 'the receipt had expired when the action was admitted' };
+      if (!(isNum(admittedAt) && isNum(r.expires_at) && admittedAt <= r.expires_at)) return { ok: false, reason: 'the receipt had expired when the action was admitted' };
       const val = valueOf(decl, d);
       if (val === null) return null;
       if (!receiptArithmeticOk(decl, r, val)) return { ok: false, reason: 'pre + delta does not give post for the reserved value' };

@@ -1,0 +1,1160 @@
+Doing expand get, insert and prove unique annotations... Done.
+Doing simplify (non-expanded game)... No change.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall w: window_t, p: pkey, k: kid_t; event(AcceptEntry(k, p, w)) ==> event(EntrySigned(k, p, w)) failed:
+  Found AcceptEntry(kid_3, spk, w_2) at 204
+  but could not prove event(EntrySigned(k, p, w))
+Proof of forall r: rest_t, k: kid_t, u: aud_t, x: act_t, q: seq_t, a: accid_t, s: sid_t, p: pkey; event(AcceptR(p, s, a, q, x, u, k, r)) ==> (event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p))) failed:
+  Found AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2) at 222
+  but could not prove event(Issued(p, s, a, q, x, u, k, r)) nor event(CorruptKey(p))
+Proof of forall r: rest_t, k: kid_t, u: aud_t, x: act_t, q: seq_t, a: accid_t, s: sid_t, p: pkey; inj-event(AcceptR(p, s, a, q, x, u, k, r)) ==> (inj-event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p))) failed:
+  Found AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2) at 222
+  but could not prove inj-event(Issued(p, s, a, q, x, u, k, r)) nor event(CorruptKey(p))
+Applied collision k_2 <-R hashkey; forall x1, y1: act_t; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Proved query forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') up to probability Phash(time + time(game [not shown yet]))
+Trying equivalence uf_cma(sign) with rkR... Failed.
+Doing remove assignments of binder pkR... Done.
+Doing remove assignments of binder skR... Done.
+Trying equivalence uf_cma(sign) with rkR... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Done.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rkR inside simplify... At 5, returned message pkgen2(rkR) depends on rkR.
+No change
+Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... Done.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Trying equivalence uf_cma_corrupt(sign) with rk... Failed.
+Doing remove assignments of binder pk... Done.
+Doing remove assignments of binder sk... Done.
+Trying equivalence uf_cma_corrupt(sign) with rk... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Applied collision k_2 <-R hashkey; forall x1, y1: act_t; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+No change.
+Doing expand... Applied collision k_2 <-R hashkey; forall x1, y1: act_t; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rkR inside simplify... At 5, returned message pkgen2(rkR) depends on rkR.
+No change
+Doing global dependency analysis on rk inside simplify... At 32, returned message pkgen2(rk) depends on rk.
+No change
+Applied collision k_2 <-R hashkey; forall x1, y1: act_t; return((hash(k_2, x1) = hash(k_2, y1))) <=(Phash(time))=> return((x1 = y1)) with k_2 -> hk_1 Probability: Phash(time + time(game [not shown yet]))
+Doing global dependency analysis on rkR inside simplify... At 5, returned message pkgen2(rkR) depends on rkR.
+No change
+Doing global dependency analysis on rk inside simplify... At 32, returned message pkgen2(rk) depends on rk.
+No change
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall w: window_t, p: pkey, k: kid_t; event(AcceptEntry(k, p, w)) ==> event(EntrySigned(k, p, w)) failed:
+  Found AcceptEntry(kid_3, spk, w_2) at 233
+  but could not prove event(EntrySigned(k, p, w))
+Proof of forall r: rest_t, k: kid_t, u: aud_t, x: act_t, q: seq_t, a: accid_t, s: sid_t, p: pkey; event(AcceptR(p, s, a, q, x, u, k, r)) ==> (event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p))) failed:
+  Found AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2) at 456
+  but could not prove event(Issued(p, s, a, q, x, u, k, r)) nor event(CorruptKey(p))
+Proof of forall r: rest_t, k: kid_t, u: aud_t, x: act_t, q: seq_t, a: accid_t, s: sid_t, p: pkey; inj-event(AcceptR(p, s, a, q, x, u, k, r)) ==> (inj-event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p))) failed:
+  Found AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2) at 456
+  but could not prove inj-event(Issued(p, s, a, q, x, u, k, r)) nor event(CorruptKey(p))
+Trying equivalence uf_cma(sign)... Failed.
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     pkR: pkey <- pkgen(rkR);
+     skR: skey <- skgen(rkR);
+     return(pkR);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       return(sign(mkother(o), skR))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         return(sign(mkentry(kid_1, pk, w_1), skR))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if true then
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       if check(mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2), spk, rsig) then
+       get accepted(=s_2, =a_2, =q_2) in
+         yield
+       else
+         insert accepted(s_2, a_2, q_2);
+         event AcceptEntry(kid_3, spk, w_2);
+         event AcceptD(d, x_2);
+         event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+         return()
+     ))
+
+
+Applying expand get, insert and prove unique annotations
+  - Expand get/insert for table accepted
+yields
+
+Game 2 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     pkR: pkey <- pkgen(rkR);
+     skR: skey <- skgen(rkR);
+     return(pkR);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       return(sign(mkother(o), skR))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         return(sign(mkentry(kid_1, pk, w_1), skR))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+{146}  if true then
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       if check(mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2), spk, rsig) then
+       find u_3 = u_4 <= NV suchthat defined(accepted_1[u_4], accepted_2[u_4], accepted_3[u_4]) && (accepted_1[u_4] = s_2) && (accepted_2[u_4] = a_2) && (accepted_3[u_4] = q_2) then
+         yield
+       else
+         accepted_1: sid_t <- s_2;
+         accepted_2: accid_t <- a_2;
+         accepted_3: seq_t <- q_2;
+         event AcceptEntry(kid_3, spk, w_2);
+         event AcceptD(d, x_2);
+         event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+         return()
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+    - Test at 146 always true
+yields
+
+Game 3 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     pkR: pkey <- pkgen(rkR);
+     skR: skey <- skgen(rkR);
+     return(pkR);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       return(sign(mkother(o), skR))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         return(sign(mkentry(kid_1, pk, w_1), skR))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       if check(mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2), spk, rsig) then
+       find u_3 = u_4 <= NV suchthat defined(accepted_1[u_4], accepted_2[u_4], accepted_3[u_4]) && (accepted_1[u_4] = s_2) && (accepted_2[u_4] = a_2) && (accepted_3[u_4] = q_2) then
+         yield
+       else
+         accepted_1: sid_t <- s_2;
+         accepted_2: accid_t <- a_2;
+         accepted_3: seq_t <- q_2;
+         event AcceptEntry(kid_3, spk, w_2);
+         event AcceptD(d, x_2);
+         event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+         return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on accepted_1 (definition point kept, all usages removed)
+  - Remove assignments on accepted_2 (definition removed, all usages removed)
+  - Remove assignments on accepted_3 (definition removed, all usages removed)
+yields
+
+Game 4 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     pkR: pkey <- pkgen(rkR);
+     skR: skey <- skgen(rkR);
+     return(pkR);
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       return(sign(mkother(o), skR))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         return(sign(mkentry(kid_1, pk, w_1), skR))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       if check(mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2), spk, rsig) then
+       find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+         yield
+       else
+         accepted_1: sid_t <- cst_sid_t;
+         event AcceptEntry(kid_3, spk, w_2);
+         event AcceptD(d, x_2);
+         event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+         return()
+     ))
+
+
+Proved forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') in game 4 up to probability Phash(time_1)
+
+Applying remove assignments of binder pkR
+  - Remove assignments on pkR (definition removed, all usages removed)
+yields
+
+Game 5 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     skR: skey <- skgen(rkR);
+     return(pkgen(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       return(sign(mkother(o), skR))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         return(sign(mkentry(kid_1, pk, w_1), skR))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       if check(mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2), spk, rsig) then
+       find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+         yield
+       else
+         accepted_1: sid_t <- cst_sid_t;
+         event AcceptEntry(kid_3, spk, w_2);
+         event AcceptD(d, x_2);
+         event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+         return()
+     ))
+
+
+Applying remove assignments of binder skR
+  - Remove assignments on skR (definition removed, all usages removed)
+yields
+
+Game 6 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       return(sign(mkother(o), skgen(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         return(sign(mkentry(kid_1, pk, w_1), skgen(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       if check(mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2), spk, rsig) then
+       find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+         yield
+       else
+         accepted_1: sid_t <- cst_sid_t;
+         event AcceptEntry(kid_3, spk, w_2);
+         event AcceptD(d, x_2);
+         event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+         return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rkR [probability Psign(time_2, #cE + NO, max(length(mkentry, maxlength(game 6: kid_1), maxlength(game 6: w_1)), length(mkother, maxlength(game 6: o))))]
+  - Equivalence uf_cma(sign) with variables: rkR -> r_1
+yields
+
+Game 7 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       return((x_3: message <- mkother(o); sign2(x_3, skgen2(rkR))))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         return((x_4: message <- mkentry(kid_1, pk, w_1); sign2(x_4, skgen2(rkR))))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       if (m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2); y: pkey <- spk; si: signature <- rsig; {184}find u_7 = ri_2 <= NO suchthat defined(x_3[ri_2]) && {186}((y = pkgen2(rkR)) && (m = x_3[ri_2]) && check2(m, y, si)) then true orfind u_5 = ri <= NE, u_6 = ri_1 <= NK suchthat defined(x_4[ri, ri_1]) && {208}((y = pkgen2(rkR)) && (m = x_4[ri, ri_1]) && check2(m, y, si)) then true else if y = pkgen2(rkR) then false else check(m, y, si)) then
+       find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+         yield
+       else
+         accepted_1: sid_t <- cst_sid_t;
+         event AcceptEntry(kid_3, spk, w_2);
+         event AcceptD(d, x_2);
+         event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+         return()
+     ))
+
+
+Applying simplify (non-expanded game)
+  - Simplification pass
+    - Replaced ((y = pkgen2(rkR)) && (m = x_4[ri, ri_1]) && check2(m, y, si)) with false at 208
+    - Remove branch 2 in find at 184
+    - Replaced ((y = pkgen2(rkR)) && (m = x_3[ri_2]) && check2(m, y, si)) with false at 186
+    - Remove branch 1 in find at 184
+    - Find at 184 removed (else branch kept if any)
+yields
+
+Game 8 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       return((x_3: message <- mkother(o); sign2(x_3, skgen2(rkR))))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         return((x_4: message <- mkentry(kid_1, pk, w_1); sign2(x_4, skgen2(rkR))))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+{161}  if (m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2); y: pkey <- spk; si: signature <- rsig; {184}if y = pkgen2(rkR) then false else check(m, y, si)) then
+       find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+         yield
+       else
+         accepted_1: sid_t <- cst_sid_t;
+         event AcceptEntry(kid_3, spk, w_2);
+         event AcceptD(d, x_2);
+         event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+         return()
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+    - Transformed find at 184 into a test
+    - Test at 161 always false
+yields
+
+Game 9 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         x_4: message <- mkentry(kid_1, pk, w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+       y: pkey <- spk;
+       si: signature <- rsig;
+       if y = pkgen2(rkR) then
+         yield
+       else
+         if check(m, y, si) then
+         find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+           yield
+         else
+           accepted_1: sid_t <- cst_sid_t;
+           event AcceptEntry(kid_3, spk, w_2);
+           event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+           return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on y (definition removed, all usages removed)
+  - Remove assignments on si (definition removed, all usages removed)
+yields
+
+Game 10 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         x_4: message <- mkentry(kid_1, pk, w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       d: digest <- hash(hk_1, x_2);
+       m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+       if spk = pkgen2(rkR) then
+         yield
+       else
+         if check(m, spk, rsig) then
+         find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+           yield
+         else
+           accepted_1: sid_t <- cst_sid_t;
+           event AcceptEntry(kid_3, spk, w_2);
+           event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+           return()
+     ))
+
+
+Applying move all binders
+  - Move assignment to m
+  - Move assignment to d
+yields
+
+Game 11 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       pk: pkey <- pkgen(rk);
+       sk: skey <- skgen(rk);
+       return(pk);
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pk, w_1);
+         x_4: message <- mkentry(kid_1, pk, w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pk, s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pk);
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       if spk = pkgen2(rkR) then
+         yield
+       else
+         d: digest <- hash(hk_1, x_2);
+         m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+         if check(m, spk, rsig) then
+         find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+           yield
+         else
+           accepted_1: sid_t <- cst_sid_t;
+           event AcceptEntry(kid_3, spk, w_2);
+           event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+           return()
+     ))
+
+
+Applying remove assignments of binder pk
+  - Remove assignments on pk (definition removed, all usages removed)
+yields
+
+Game 12 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       sk: skey <- skgen(rk);
+       return(pkgen(rk));
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pkgen(rk), w_1);
+         x_4: message <- mkentry(kid_1, pkgen(rk), w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pkgen(rk), s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), sk))
+       ) | (
+         cC() :=
+         event CorruptKey(pkgen(rk));
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       if spk = pkgen2(rkR) then
+         yield
+       else
+         d: digest <- hash(hk_1, x_2);
+         m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+         if check(m, spk, rsig) then
+         find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+           yield
+         else
+           accepted_1: sid_t <- cst_sid_t;
+           event AcceptEntry(kid_3, spk, w_2);
+           event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+           return()
+     ))
+
+
+Applying remove assignments of binder sk
+  - Remove assignments on sk (definition removed, all usages removed)
+yields
+
+Game 13 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       return(pkgen(rk));
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pkgen(rk), w_1);
+         x_4: message <- mkentry(kid_1, pkgen(rk), w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pkgen(rk), s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return(sign(mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1), skgen(rk)))
+       ) | (
+         cC() :=
+         event CorruptKey(pkgen(rk));
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       if spk = pkgen2(rkR) then
+         yield
+       else
+         d: digest <- hash(hk_1, x_2);
+         m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+         if check(m, spk, rsig) then
+         find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+           yield
+         else
+           accepted_1: sid_t <- cst_sid_t;
+           event AcceptEntry(kid_3, spk, w_2);
+           event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+           return()
+     ))
+
+
+Applying equivalence uf_cma_corrupt(sign) with rk [probability NK * Psign(time_3, NR, length(mkrcpt, maxlength(game 13: s_1), maxlength(game 13: a_1), maxlength(game 13: q_1), maxlength(game 13: u_1), maxlength(game 13: kid_2), maxlength(game 13: r_1)))]
+  - Equivalence uf_cma_corrupt(sign) with variables: rk -> r_1
+yields
+
+Game 14 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       return(pkgen2(rk));
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pkgen2(rk), w_1);
+         x_4: message <- mkentry(kid_1, pkgen2(rk), w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pkgen2(rk), s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         return((x_5: message <- mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1); sign2(x_5, skgen2(rk))))
+       ) | (
+         cC() :=
+         event CorruptKey(pkgen2(rk));
+         return((corrupt: bool <- cst_bool; rk))
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       if spk = pkgen2(rkR) then
+         yield
+       else
+         d: digest <- hash(hk_1, x_2);
+         m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+{188}    if (m_1: message <- m; y_1: pkey <- spk; si_1: signature <- rsig; find u_8 = ri_3 <= NK suchthat defined(rk[ri_3], corrupt[ri_3]) && (y_1 = pkgen2(rk[ri_3])) then check2(m_1, y_1, si_1) else find u_9 = ri_4 <= NR, u_10 = ri_5 <= NK suchthat defined(x_5[ri_4, ri_5], rk[ri_5]) && (y_1 = pkgen2(rk[ri_5])) && (m_1 = x_5[ri_4, ri_5]) && check2(m_1, y_1, si_1) then true else find u_11 = ri_6 <= NK suchthat defined(rk[ri_6]) && (y_1 = pkgen2(rk[ri_6])) then false else check(m_1, y_1, si_1)) then
+         find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+           yield
+         else
+           accepted_1: sid_t <- cst_sid_t;
+           event AcceptEntry(kid_3, spk, w_2);
+           event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+           return()
+     ))
+
+
+Applying expand [probability Phash(time_4)]
+  - Expand if/find/let
+    - Test at 188 always false
+    - Test at 188 always true
+yields
+
+Game 15 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       return(pkgen2(rk));
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pkgen2(rk), w_1);
+         x_4: message <- mkentry(kid_1, pkgen2(rk), w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pkgen2(rk), s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         x_5: message <- mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1);
+         return(sign2(x_5, skgen2(rk)))
+       ) | (
+         cC() :=
+         event CorruptKey(pkgen2(rk));
+         corrupt: bool <- cst_bool;
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       if spk = pkgen2(rkR) then
+         yield
+       else
+         d: digest <- hash(hk_1, x_2);
+         m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+         m_1: message <- m;
+         y_1: pkey <- spk;
+         si_1: signature <- rsig;
+         find u_8 = ri_3 <= NK suchthat defined(rk[ri_3], corrupt[ri_3]) && (y_1 = pkgen2(rk[ri_3])) then
+         (
+           if check2(m_1, y_1, si_1) then
+           find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+             yield
+           else
+             accepted_1: sid_t <- cst_sid_t;
+             event AcceptEntry(kid_3, spk, w_2);
+             event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+             return()
+         )
+         else
+           find u_9 = ri_4 <= NR, u_10 = ri_5 <= NK suchthat defined(x_5[ri_4, ri_5], rk[ri_5]) && (y_1 = pkgen2(rk[ri_5])) && (m_1 = x_5[ri_4, ri_5]) && check2(m_1, y_1, si_1) then
+             find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+               yield
+             else
+               accepted_1: sid_t <- cst_sid_t;
+               event AcceptEntry(kid_3, spk, w_2);
+               event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+               return()
+           else
+             find u_11 = ri_6 <= NK suchthat defined(rk[ri_6]) && (y_1 = pkgen2(rk[ri_6])) then
+               yield
+             else
+               if check(m_1, y_1, si_1) then
+               find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+                 yield
+               else
+                 accepted_1: sid_t <- cst_sid_t;
+                 event AcceptEntry(kid_3, spk, w_2);
+                 event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+                 return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on m_1 (definition removed, all usages removed)
+  - Remove assignments on y_1 (definition removed, all usages removed)
+  - Remove assignments on si_1 (definition removed, all usages removed)
+yields
+
+Game 16 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       return(pkgen2(rk));
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pkgen2(rk), w_1);
+         x_4: message <- mkentry(kid_1, pkgen2(rk), w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pkgen2(rk), s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         x_5: message <- mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1);
+         return(sign2(x_5, skgen2(rk)))
+       ) | (
+         cC() :=
+         event CorruptKey(pkgen2(rk));
+         corrupt: bool <- cst_bool;
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       if spk = pkgen2(rkR) then
+         yield
+       else
+         d: digest <- hash(hk_1, x_2);
+         m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+         find u_8 = ri_3 <= NK suchthat defined(rk[ri_3], corrupt[ri_3]) && (spk = pkgen2(rk[ri_3])) then
+         (
+           if check2(m, spk, rsig) then
+           find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+             yield
+           else
+             accepted_1: sid_t <- cst_sid_t;
+             event AcceptEntry(kid_3, spk, w_2);
+             event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+             return()
+         )
+         else
+{266}      find u_9 = ri_4 <= NR, u_10 = ri_5 <= NK suchthat defined(x_5[ri_4, ri_5], rk[ri_5]) && {270}((spk = pkgen2(rk[ri_5])) && (m = x_5[ri_4, ri_5]) && check2(m, spk, rsig)) then
+             find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+               yield
+             else
+               accepted_1: sid_t <- cst_sid_t;
+               event AcceptEntry(kid_3, spk, w_2);
+               event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+               return()
+           else
+             find u_11 = ri_6 <= NK suchthat defined(rk[ri_6]) && (spk = pkgen2(rk[ri_6])) then
+               yield
+             else
+               if check(m, spk, rsig) then
+               find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+                 yield
+               else
+                 accepted_1: sid_t <- cst_sid_t;
+                 event AcceptEntry(kid_3, spk, w_2);
+                 event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+                 return()
+     ))
+
+
+Applying simplify [probability Phash(time_5)]
+  - Simplification pass
+    - Replaced ((spk = pkgen2(rk[ri_5])) && (m = x_5[ri_4, ri_5]) && check2(m, spk, rsig)) with ((spk = pkgen2(rk[ri_5])) && (s_2 = s_1[ri_4, ri_5]) && (a_2 = a_1[ri_4, ri_5]) && (q_2 = q_1[ri_4, ri_5]) && (x_2 = x_1[ri_4, ri_5]) && (u_2 = u_1[ri_4, ri_5]) && (kid_3 = kid_2[ri_4, ri_5]) && (r_2 = r_1[ri_4, ri_5]) && check2(m, spk, rsig)) at 270
+    - Replaced defined condition x_5[ri_4, ri_5], rk[ri_5] with r_1[ri_4, ri_5], kid_2[ri_4, ri_5], u_1[ri_4, ri_5], x_1[ri_4, ri_5], q_1[ri_4, ri_5], a_1[ri_4, ri_5], s_1[ri_4, ri_5], rk[ri_5] in find at 266
+yields
+
+Game 17 is
+     c0() :=
+     hk_1 <-R hashkey;
+     rkR <-R keyseed;
+     return(pkgen2(rkR));
+     ((
+       ch1() :=
+       return(hk_1)
+     ) | (
+       foreach iO <= NO do
+       cRo(o: other_t) :=
+       x_3: message <- mkother(o);
+       return(sign2(x_3, skgen2(rkR)))
+     ) | (
+       foreach iK <= NK do
+       cK() :=
+       rk <-R keyseed;
+       return(pkgen2(rk));
+       ((
+         foreach iE <= NE do
+         cE(kid_1: kid_t, w_1: window_t) :=
+         event EntrySigned(kid_1, pkgen2(rk), w_1);
+         x_4: message <- mkentry(kid_1, pkgen2(rk), w_1);
+         return(sign2(x_4, skgen2(rkR)))
+       ) | (
+         foreach iI <= NR do
+         cI(s_1: sid_t, a_1: accid_t, q_1: seq_t, x_1: act_t, u_1: aud_t, kid_2: kid_t, r_1: rest_t) :=
+         event Issued(pkgen2(rk), s_1, a_1, q_1, x_1, u_1, kid_2, r_1);
+         x_5: message <- mkrcpt(s_1, a_1, q_1, hash(hk_1, x_1), u_1, kid_2, r_1);
+         return(sign2(x_5, skgen2(rk)))
+       ) | (
+         cC() :=
+         event CorruptKey(pkgen2(rk));
+         corrupt: bool <- cst_bool;
+         return(rk)
+       ))
+     ) | (
+       foreach iV <= NV do
+       cV(s_2: sid_t, a_2: accid_t, u_2: aud_t, x_2: act_t, q_2: seq_t, kid_3: kid_t, r_2: rest_t, spk: pkey, rsig: signature, w_2: window_t, esig: signature) :=
+       if inwin(r_2, w_2) then
+       if spk = pkgen2(rkR) then
+         yield
+       else
+         d: digest <- hash(hk_1, x_2);
+         m: message <- mkrcpt(s_2, a_2, q_2, d, u_2, kid_3, r_2);
+         find u_8 = ri_3 <= NK suchthat defined(rk[ri_3], corrupt[ri_3]) && (spk = pkgen2(rk[ri_3])) then
+         (
+           if check2(m, spk, rsig) then
+           find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+             yield
+           else
+             accepted_1: sid_t <- cst_sid_t;
+             event AcceptEntry(kid_3, spk, w_2);
+             event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+             return()
+         )
+         else
+           find u_9 = ri_4 <= NR, u_10 = ri_5 <= NK suchthat defined(r_1[ri_4, ri_5], kid_2[ri_4, ri_5], u_1[ri_4, ri_5], x_1[ri_4, ri_5], q_1[ri_4, ri_5], a_1[ri_4, ri_5], s_1[ri_4, ri_5], rk[ri_5]) && (spk = pkgen2(rk[ri_5])) && (s_2 = s_1[ri_4, ri_5]) && (a_2 = a_1[ri_4, ri_5]) && (q_2 = q_1[ri_4, ri_5]) && (x_2 = x_1[ri_4, ri_5]) && (u_2 = u_1[ri_4, ri_5]) && (kid_3 = kid_2[ri_4, ri_5]) && (r_2 = r_1[ri_4, ri_5]) && check2(m, spk, rsig) then
+             find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+               yield
+             else
+               accepted_1: sid_t <- cst_sid_t;
+               event AcceptEntry(kid_3, spk, w_2);
+               event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+               return()
+           else
+             find u_11 = ri_6 <= NK suchthat defined(rk[ri_6]) && (spk = pkgen2(rk[ri_6])) then
+               yield
+             else
+               if check(m, spk, rsig) then
+               find u_3 = u_4 <= NV suchthat defined(s_2[u_4], a_2[u_4], q_2[u_4], accepted_1[u_4]) && (s_2[u_4] = s_2) && (a_2[u_4] = a_2) && (q_2[u_4] = q_2) then
+                 yield
+               else
+                 accepted_1: sid_t <- cst_sid_t;
+                 event AcceptEntry(kid_3, spk, w_2);
+                 event AcceptR(spk, s_2, a_2, q_2, x_2, u_2, kid_3, r_2);
+                 return()
+     ))
+
+Adv[Game 1: forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x')] <= Adv[Game 4: forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x')]
+Adv[Game 4: forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x')] <= Phash(time_1)
+RESULT Proved forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') up to probability Phash(time_1)
+RESULT time_1 = time + time(game 4) = time + (1 + NK) * time(pkgen) + (1 + NK) * time(skgen) + NO * time(sign, length(mkother, maxlength(game 4: o))) + NO * time(mkother, maxlength(game 4: o)) + #cE * time(([1,NE], [1,NK])) + #cE * time(sign, length(mkentry, maxlength(game 4: kid_1), maxlength(game 4: w_1))) + #cE * time(mkentry, maxlength(game 4: kid_1), maxlength(game 4: w_1)) + #cI * time(([1,NR], [1,NK])) + #cI * time(sign, length(mkrcpt, maxlength(game 4: s_1), maxlength(game 4: a_1), maxlength(game 4: q_1), maxlength(game 4: u_1), maxlength(game 4: kid_2), maxlength(game 4: r_1))) + #cI * time(mkrcpt, maxlength(game 4: s_1), maxlength(game 4: a_1), maxlength(game 4: q_1), maxlength(game 4: u_1), maxlength(game 4: kid_2), maxlength(game 4: r_1)) + #cI * time(hash, maxlength(game 4: x_1)) + NK * time(([1,NK])) + NV * time(inwin, maxlength(game 4: r_2), maxlength(game 4: w_2)) + NV * time(hash, maxlength(game 4: x_2)) + NV * time(check, length(mkrcpt, maxlength(game 4: s_2), maxlength(game 4: a_2), maxlength(game 4: q_2), maxlength(game 4: u_2), maxlength(game 4: kid_3), maxlength(game 4: r_2)), maxlength(game 4: rsig)) + NV * time(mkrcpt, maxlength(game 4: s_2), maxlength(game 4: a_2), maxlength(game 4: q_2), maxlength(game 4: u_2), maxlength(game 4: kid_3), maxlength(game 4: r_2)) + NV^2 * time(= sid_t, maxlength(game 4: s_2), maxlength(game 4: s_2)) + NV^2 * time(= accid_t, maxlength(game 4: a_2), maxlength(game 4: a_2)) + NV^2 * time(= seq_t, maxlength(game 4: q_2), maxlength(game 4: q_2)) + 3 * NV * time(([1,NV]))
+RESULT time_2 = NO * time(mkother, maxlength(game 6: o)) + NK * time(pkgen) + NK * time(skgen) + #cE * time(([1,NE], [1,NK])) + #cE * time(mkentry, maxlength(game 6: kid_1), maxlength(game 6: w_1)) + #cI * time(([1,NR], [1,NK])) + #cI * time(sign, length(mkrcpt, maxlength(game 6: s_1), maxlength(game 6: a_1), maxlength(game 6: q_1), maxlength(game 6: u_1), maxlength(game 6: kid_2), maxlength(game 6: r_1))) + #cI * time(mkrcpt, maxlength(game 6: s_1), maxlength(game 6: a_1), maxlength(game 6: q_1), maxlength(game 6: u_1), maxlength(game 6: kid_2), maxlength(game 6: r_1)) + #cI * time(hash, maxlength(game 6: x_1)) + NK * time(([1,NK])) + NV * time(inwin, maxlength(game 6: r_2), maxlength(game 6: w_2)) + NV * time(hash, maxlength(game 6: x_2)) + NV * time(mkrcpt, maxlength(game 6: s_2), maxlength(game 6: a_2), maxlength(game 6: q_2), maxlength(game 6: u_2), maxlength(game 6: kid_3), maxlength(game 6: r_2)) + NV^2 * time(= sid_t, maxlength(game 6: s_2), maxlength(game 6: s_2)) + NV^2 * time(= accid_t, maxlength(game 6: a_2), maxlength(game 6: a_2)) + NV^2 * time(= seq_t, maxlength(game 6: q_2), maxlength(game 6: q_2)) + 3 * NV * time(([1,NV])) + time + (NV - 1) * time(check, length(mkrcpt, maxlength(game 6: s_2), maxlength(game 6: a_2), maxlength(game 6: q_2), maxlength(game 6: u_2), maxlength(game 6: kid_3), maxlength(game 6: r_2)), maxlength(game 6: rsig))
+RESULT time_3 = NO * time(mkother, maxlength(game 13: o)) + NO * time(sign, maxlength(game 13: x_3)) + (NO + #cE + NK - 1) * time(skgen) + #cE * time(([1,NE], [1,NK])) + #cE * time(mkentry, maxlength(game 13: kid_1), maxlength(game 13: w_1)) + #cE * time(sign, maxlength(game 13: x_4)) + #cI * time(([1,NR], [1,NK])) + #cI * time(mkrcpt, maxlength(game 13: s_1), maxlength(game 13: a_1), maxlength(game 13: q_1), maxlength(game 13: u_1), maxlength(game 13: kid_2), maxlength(game 13: r_1)) + #cI * time(hash, maxlength(game 13: x_1)) + NK * time(([1,NK])) + NV * time(inwin, maxlength(game 13: r_2), maxlength(game 13: w_2)) + (NV + NK) * time(pkgen) + NV * time(hash, maxlength(game 13: x_2)) + NV * time(mkrcpt, maxlength(game 13: s_2), maxlength(game 13: a_2), maxlength(game 13: q_2), maxlength(game 13: u_2), maxlength(game 13: kid_3), maxlength(game 13: r_2)) + NV^2 * time(= sid_t, maxlength(game 13: s_2), maxlength(game 13: s_2)) + NV^2 * time(= accid_t, maxlength(game 13: a_2), maxlength(game 13: a_2)) + NV^2 * time(= seq_t, maxlength(game 13: q_2), maxlength(game 13: q_2)) + 2 * NV * time(([1,NV])) + time + (NV - 1) * time(check, maxlength(game 13: m), maxlength(game 13: rsig)) + (NK * NR - NR) * time(sign, length(mkrcpt, maxlength(game 13: s_1), maxlength(game 13: a_1), maxlength(game 13: q_1), maxlength(game 13: u_1), maxlength(game 13: kid_2), maxlength(game 13: r_1)))
+RESULT time_4 = time + time(game 14) = time + (1 + 2 * #cE + #cI + 2 * NK + NV + 2 * NV * NK + NV * #cI) * time(pkgen) + NO * time(mkother, maxlength(game 14: o)) + NO * time(sign, maxlength(game 14: x_3)) + (NO + #cE + #cI) * time(skgen) + #cE * time(([1,NE], [1,NK])) + #cE * time(mkentry, maxlength(game 14: kid_1), maxlength(game 14: w_1)) + #cE * time(sign, maxlength(game 14: x_4)) + #cI * time(([1,NR], [1,NK])) + #cI * time(sign, maxlength(game 14: x_5)) + #cI * time(mkrcpt, maxlength(game 14: s_1), maxlength(game 14: a_1), maxlength(game 14: q_1), maxlength(game 14: u_1), maxlength(game 14: kid_2), maxlength(game 14: r_1)) + #cI * time(hash, maxlength(game 14: x_1)) + NK * time(([1,NK])) + NV * time(inwin, maxlength(game 14: r_2), maxlength(game 14: w_2)) + NV * time(hash, maxlength(game 14: x_2)) + NV * time(mkrcpt, maxlength(game 14: s_2), maxlength(game 14: a_2), maxlength(game 14: q_2), maxlength(game 14: u_2), maxlength(game 14: kid_3), maxlength(game 14: r_2)) + NV * #cI * time(= message, maxlength(game 14: m_1), maxlength(game 14: x_5)) + (NV * #cI + NV) * time(check, maxlength(game 14: m_1), maxlength(game 14: si_1)) + NV^2 * time(= sid_t, maxlength(game 14: s_2), maxlength(game 14: s_2)) + NV^2 * time(= accid_t, maxlength(game 14: a_2), maxlength(game 14: a_2)) + NV^2 * time(= seq_t, maxlength(game 14: q_2), maxlength(game 14: q_2)) + 2 * NV * time(([1,NV]))
+RESULT time_5 = time + time(game 16) = time + (1 + 2 * #cE + #cI + 2 * NK + NV + NV * NR * NK + 2 * NV * NK) * time(pkgen) + NO * time(mkother, maxlength(game 16: o)) + NO * time(sign, maxlength(game 16: x_3)) + (NO + #cE + #cI) * time(skgen) + #cE * time(([1,NE], [1,NK])) + #cE * time(mkentry, maxlength(game 16: kid_1), maxlength(game 16: w_1)) + #cE * time(sign, maxlength(game 16: x_4)) + #cI * time(([1,NR], [1,NK])) + #cI * time(mkrcpt, maxlength(game 16: s_1), maxlength(game 16: a_1), maxlength(game 16: q_1), maxlength(game 16: u_1), maxlength(game 16: kid_2), maxlength(game 16: r_1)) + #cI * time(hash, maxlength(game 16: x_1)) + #cI * time(sign, maxlength(game 16: x_5)) + NK * time(([1,NK])) + NV * time(inwin, maxlength(game 16: r_2), maxlength(game 16: w_2)) + NV * time(hash, maxlength(game 16: x_2)) + NV * time(mkrcpt, maxlength(game 16: s_2), maxlength(game 16: a_2), maxlength(game 16: q_2), maxlength(game 16: u_2), maxlength(game 16: kid_3), maxlength(game 16: r_2)) + NV * NR * NK * time(= message, maxlength(game 16: m), maxlength(game 16: x_5)) + (NV * NR * NK + NV) * time(check, maxlength(game 16: m), maxlength(game 16: rsig)) + NV^2 * time(= sid_t, maxlength(game 16: s_2), maxlength(game 16: s_2)) + NV^2 * time(= accid_t, maxlength(game 16: a_2), maxlength(game 16: a_2)) + NV^2 * time(= seq_t, maxlength(game 16: q_2), maxlength(game 16: q_2)) + 2 * NV * time(([1,NV]))
+RESULT Could not prove forall r: rest_t, k: kid_t, u: aud_t, x: act_t, q: seq_t, a: accid_t, s: sid_t, p: pkey; inj-event(AcceptR(p, s, a, q, x, u, k, r)) ==> (inj-event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p))); forall r: rest_t, k: kid_t, u: aud_t, x: act_t, q: seq_t, a: accid_t, s: sid_t, p: pkey; event(AcceptR(p, s, a, q, x, u, k, r)) ==> (event(Issued(p, s, a, q, x, u, k, r)) || event(CorruptKey(p))); forall w: window_t, p: pkey, k: kid_t; event(AcceptEntry(k, p, w)) ==> event(EntrySigned(k, p, w)).

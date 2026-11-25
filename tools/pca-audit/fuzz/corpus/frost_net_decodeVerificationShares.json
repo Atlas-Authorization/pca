@@ -1,0 +1,19 @@
+{
+ "target": "frost-net decodeVerificationShares",
+ "seeds": [
+  [
+   {
+    "identifier": 1,
+    "publicKey": "TvTKJzdzTwz9keiNxrjFyO-FzqCpUeDGMFdt-OFMKXQ"
+   },
+   {
+    "identifier": 2,
+    "publicKey": "FT14BmBiy9xCT-4mKFD_edboWaMS69wp28xOM8Ex-28"
+   },
+   {
+    "identifier": 3,
+    "publicKey": "xe9Tx255YV-NXxV6OjpTo2xu0FwnqOxWh-htjoW4pGU"
+   }
+  ]
+ ]
+}

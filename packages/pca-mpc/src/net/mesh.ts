@@ -75,6 +75,8 @@ export interface MeshConfig {
   listenHost?: string;
   connectTimeoutMs?: number;
   recvTimeoutMs?: number;
+  /** Most time one dial attempt may spend before its TLS handshake completes (default 10 s); further bounded by the remaining connect deadline. A stalled attempt is destroyed and retried. */
+  handshakeTimeoutMs?: number;
   /**
    * TEST HOOK: a (malicious) sender rewriting its own outgoing frames. Refused unless `unsafeTestHooks` is
    * also `true`; the production entry point (`party-main`) only sets that from an explicit test environment.
@@ -139,6 +141,8 @@ export class Mesh {
   private readonly clock: MeshClock;
   private readonly recvTimeoutMs: number;
   private readonly connectTimeoutMs: number;
+  private readonly handshakeTimeoutMs: number;
+  private listening: Promise<number> | null = null;
   /** Non-fatal observations (e.g. a TLS client rejected at the door) for evidence logs. */
   readonly events: string[] = [];
   /** Observations beyond `MAX_MESH_EVENTS` that were counted but not stored. */
@@ -152,6 +156,10 @@ export class Mesh {
     this.clock = cfg.clock ?? wallClock;
     this.recvTimeoutMs = cfg.recvTimeoutMs ?? 20_000;
     this.connectTimeoutMs = cfg.connectTimeoutMs ?? 30_000;
+    this.handshakeTimeoutMs = cfg.handshakeTimeoutMs ?? 10_000;
+    for (const ms of [this.recvTimeoutMs, this.connectTimeoutMs, this.handshakeTimeoutMs]) {
+      if (!(Number.isFinite(ms) && ms >= 0)) throw new RangeError('mesh: timeouts must be finite numbers >= 0');
+    }
     if (cfg.tamper && cfg.unsafeTestHooks !== true) {
       throw new Error('mesh: the tamper test hook requires unsafeTestHooks: true (test-only)');
     }
@@ -188,8 +196,16 @@ export class Mesh {
 
   // ------------------------------------------------------------------ connect
 
-  /** Listen, dial every lower-numbered link target, and wait until all links are authenticated. */
-  async connect(): Promise<void> {
+  /**
+   * Bind this node's listener (port 0 asks the OS for one) and return the port actually bound. Idempotent. The bound port is
+   * written back to this node's address, so a node never advertises a port it does not hold.
+   */
+  listen(): Promise<number> {
+    this.listening ??= this.bind();
+    return this.listening;
+  }
+
+  private async bind(): Promise<number> {
     const self = this.cfg.nodes.find((n) => n.id === this.selfId);
     if (!self) throw new Error('mesh: self not in nodes');
     const others = this.cfg.nodes.filter((n) => n.id !== this.selfId);
@@ -210,6 +226,21 @@ export class Mesh {
       this.server!.once('error', rej);
       this.server!.listen(self.port, this.cfg.listenHost ?? '0.0.0.0', () => res());
     });
+    const addr = this.server.address();
+    if (addr && typeof addr === 'object') self.port = addr.port;
+    return self.port;
+  }
+
+  /** Record the real port a peer bound (a launcher that bound first learns it only after the peer reports it). */
+  setPeerPort(id: number, port: number): void {
+    const n = this.cfg.nodes.find((x) => x.id === id);
+    if (!n || id === this.selfId) throw new Error(`mesh: unknown peer ${id}`);
+    n.port = port;
+  }
+
+  /** Listen (if not yet), dial every lower-numbered link target, and wait until all links are authenticated. */
+  async connect(): Promise<void> {
+    await this.listen();
 
     const deadline = this.clock.now() + this.connectTimeoutMs;
     for (const id of this.peers) {
@@ -220,7 +251,7 @@ export class Mesh {
       if (this.failure) throw this.failure;
       const missing = this.peers.filter((i) => !this.links.get(i)!.helloSeen);
       if (missing.length === 0) return;
-      if (this.clock.now() > deadline) {
+      if (!(this.clock.now() <= deadline)) { // a NaN clock or deadline is past, never "not yet"
         const e = new NetAbort('timeout', missing[0]!, this.selfId, `connect: no authenticated link from ${missing.join(',')}`);
         this.fail(e);
         throw e;
@@ -244,23 +275,43 @@ export class Mesh {
           checkServerIdentity: () => undefined,
         });
         let settled = false;
+        let t: unknown = null;
+        const done = (v: boolean): void => {
+          if (t !== null) this.clock.clearTimer(t);
+          t = null;
+          resolve(v);
+        };
+        // an attempt whose TCP connect succeeds but whose handshake never completes is destroyed at its own deadline and retried
+        const budget = Math.max(1, Math.min(this.handshakeTimeoutMs, deadline - this.clock.now()));
+        t = this.clock.setTimer(() => {
+          if (!settled) {
+            settled = true;
+            sock.destroy();
+            done(false);
+          }
+        }, budget);
         sock.once('secureConnect', () => {
+          if (settled) return;
           settled = true;
           const fp = sock.getPeerCertificate().fingerprint256;
           if (!sock.authorized || this.pinned.get(fp) !== id) {
             sock.destroy();
             this.fail(new NetAbort('identity', id, this.selfId, `dial: peer certificate is not the pinned identity of node ${id}`));
-            return resolve(true);
+            return done(true);
           }
           this.attach(id, sock);
-          resolve(true);
+          done(true);
         });
-        sock.once('error', () => {
+        const lost = (): void => {
           if (!settled) {
+            settled = true;
             sock.destroy();
-            resolve(false);
+            done(false);
           }
-        });
+        };
+        sock.once('error', lost);
+        sock.once('close', lost);
+        sock.once('timeout', lost);
       });
       if (ok) return;
       await new Promise<void>((r) => setTimeout(r, 150)); // retry pacing, not a decision: real time
@@ -334,7 +385,7 @@ export class Mesh {
         const claimedKind = typeof d?.kind === 'string' && ABORT_KINDS.has(d.kind) ? (d.kind as AbortKind) : undefined;
         const maxId = Math.max(...this.cfg.nodes.map((x) => x.id));
         const claimedBlame =
-          typeof d?.blamed === 'number' && Number.isInteger(d.blamed) && d.blamed >= 0 && d.blamed <= maxId ? d.blamed : null;
+          typeof d?.blamed === 'number' && Number.isInteger(d.blamed) && !Object.is(d.blamed, -0) && d.blamed >= 0 && d.blamed <= maxId ? d.blamed : null;
         const detail = typeof d?.detail === 'string' ? sanitize(d.detail, 120) : '';
         const claim =
           new NetAbort(
@@ -436,6 +487,7 @@ export class Mesh {
 
   /** Receive the next message from `from`, which must belong to `round`. Times out; never hangs. */
   async recv(from: number, round: string, timeoutMs = this.recvTimeoutMs): Promise<unknown> {
+    if (!(Number.isFinite(timeoutMs) && timeoutMs >= 0)) throw new RangeError('mesh: recv timeout must be a finite number >= 0');
     const l = this.links.get(from);
     if (!l) throw new Error(`mesh: no link to ${from}`);
     const deadline = this.clock.now() + timeoutMs;
@@ -466,7 +518,7 @@ export class Mesh {
         throw e;
       }
       const left = deadline - this.clock.now();
-      if (left <= 0) {
+      if (!(left > 0)) {
         const e = new NetAbort('timeout', from, this.selfId, `no '${round}' message from ${from} within ${timeoutMs}ms (deadline ${timeoutMs}ms; a silent peer is blamed on this local observation only)`, undefined, undefined, { deadlineMs: timeoutMs });
         this.fail(e);
         throw e;

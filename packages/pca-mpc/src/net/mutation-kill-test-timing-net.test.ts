@@ -32,7 +32,7 @@ vi.mock('node:net', async (orig) => {
   };
 });
 import * as net from 'node:net';
-import { T, reservePorts, until, waitListening } from './test-timing';
+import { T, until, waitListening } from './test-timing';
 
 afterEach(() => {
   netHook.connects.length = 0;
@@ -42,11 +42,6 @@ afterEach(() => {
 });
 
 describe('loopback defaults', () => {
-  it('reservePorts listens on 127.0.0.1 (ephemeral port 0)', async () => {
-    const ports = await reservePorts(2);
-    expect(ports.length).toBe(2);
-    expect(netHook.listens.map((a) => a.slice(0, 2))).toEqual([[0, '127.0.0.1'], [0, '127.0.0.1']]);
-  });
   it('waitListening connects to 127.0.0.1 by default', async () => {
     const srv = net.createServer();
     await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
@@ -54,13 +49,6 @@ describe('loopback defaults', () => {
     expect(await waitListening(port)).toBe(true);
     expect(netHook.connects.some((a) => JSON.stringify(a[0]) === JSON.stringify({ port, host: '127.0.0.1' }))).toBe(true);
     srv.close();
-  });
-});
-
-describe('reservePorts listen failure', () => {
-  it('rejects with the listen error', async () => {
-    netHook.failListen = true;
-    await expect(reservePorts(1)).rejects.toThrow('EACCES: scripted listen failure');
   });
 });
 

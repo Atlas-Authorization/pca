@@ -4,15 +4,19 @@ import { describe, expect, it } from 'vitest';
 import { type PCActn, buildPCActn, encodeKey, generateKeyPair as pcaGenerateKeyPair, mintRoot } from '@atlasauth/pca';
 import {
   DpopVerificationError,
-  assertPcaDpop,
+  assertPcaDpop as assertPcaDpopRaw,
   athFor,
   bindPcaToDpop,
   createDpopProof,
   jwkThumbprint,
   leafHolderJwk,
   mtlsCnf,
-  verifyDpopProof,
+  verifyDpopProof as verifyDpopProofRaw,
 } from './index';
+
+// 0.5: a replay store is required by default; these suites mostly exercise other checks, so they opt out explicitly.
+const verifyDpopProof: typeof verifyDpopProofRaw = (p, o) => verifyDpopProofRaw(p, { requireReplayStore: false, ...o });
+const assertPcaDpop: typeof assertPcaDpopRaw = (p, d, o) => assertPcaDpopRaw(p, d, { requireReplayStore: false, ...o });
 
 const URL1 = 'https://api.atlasauth.net/v1/pca/exec?token=abc#frag';
 const METHOD = 'POST';
@@ -81,6 +85,28 @@ describe('DPoP verification failures', () => {
     const future = Math.floor(Date.now() / 1000) + 1000;
     const proof = await createDpopProof({ method: METHOD, url: URL1, privateKey: privateJwk, publicJwk, iat: future });
     await expect(verifyDpopProof(proof, { method: METHOD, url: URL1, maxAgeSec: 300 })).rejects.toMatchObject({ code: 'iat_future' });
+  });
+
+  it('an absent maxAgeSec means the 300 s default, not "no limit"', async () => {
+    const { privateJwk, publicJwk } = await joseKeyMaterial('ES256');
+    const now = 1_800_000_000;
+    const at = (iat: number) => createDpopProof({ method: METHOD, url: URL1, privateKey: privateJwk, publicJwk, iat });
+    await expect(verifyDpopProof(await at(now - 1000), { method: METHOD, url: URL1, nowSec: now })).rejects.toMatchObject({ code: 'iat_stale' });
+    await expect(verifyDpopProof(await at(now - 301), { method: METHOD, url: URL1, nowSec: now })).rejects.toMatchObject({ code: 'iat_stale' });
+    await expect(verifyDpopProof(await at(now - 300), { method: METHOD, url: URL1, nowSec: now })).resolves.toBeDefined();
+    await expect(verifyDpopProof(await at(now), { method: METHOD, url: URL1, maxAgeSec: 0, nowSec: now })).resolves.toBeDefined();
+  });
+
+  it.each([NaN, Infinity, -Infinity, -1, '300' as unknown as number])('a maxAgeSec of %s is refused', async (maxAgeSec) => {
+    const { privateJwk, publicJwk } = await joseKeyMaterial('ES256');
+    const proof = await createDpopProof({ method: METHOD, url: URL1, privateKey: privateJwk, publicJwk });
+    await expect(verifyDpopProof(proof, { method: METHOD, url: URL1, maxAgeSec })).rejects.toMatchObject({ code: 'max_age', message: 'maxAgeSec must be a finite, non-negative number of seconds' });
+  });
+
+  it.each([NaN, Infinity, '1000' as unknown as number])('a nowSec of %s is refused', async (nowSec) => {
+    const { privateJwk, publicJwk } = await joseKeyMaterial('ES256');
+    const proof = await createDpopProof({ method: METHOD, url: URL1, privateKey: privateJwk, publicJwk, iat: 1000 });
+    await expect(verifyDpopProof(proof, { method: METHOD, url: URL1, maxAgeSec: 300, nowSec })).rejects.toMatchObject({ code: 'now', message: 'nowSec must be a finite number' });
   });
 
   it('rejects a wrong-key signature (header jwk swapped for a different key)', async () => {

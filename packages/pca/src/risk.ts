@@ -144,9 +144,12 @@ export function cost(r: number, kappa: number): number {
 /** Passive leak dB/dt = −λ since the last update. Idempotent for repeated calls at the same `now`. */
 export function leak(b: TrustBudget, now: number, lambda: number): TrustBudget {
   const from = b.asOf ?? b.tau;
-  const dt = Number.isFinite(now) && Number.isFinite(from) ? Math.max(0, now - from) : 0;
+  // A clock or a budget stamp that is not a finite number cannot say how long the budget has been decaying: fail closed (depleted,
+  // so a human step-up is required), never "no time has passed" (NaN comparisons are false, which used to keep the full budget).
+  if (!Number.isFinite(now) || !Number.isFinite(from)) return { B: 0, tau: b.tau, asOf: b.asOf };
+  const dt = Math.max(0, now - from);
   const B = Math.max(0, b.B - nz(lambda) * (dt / 1000));
-  return { B, tau: b.tau, asOf: Number.isFinite(now) ? Math.max(now, from) : from };
+  return { B, tau: b.tau, asOf: Math.max(now, from) };
 }
 
 /** B ← max(0, B − cost). Callers must check B >= cost first (admit() does). */
@@ -193,7 +196,7 @@ export interface Admission {
 export function admit(r: number, b: TrustBudget, p: RiskPolicy): Admission {
   const { t } = requiredThreshold(r, p);
   const c = cost(r, p.kappa);
-  if (t < 3 && !(b.B >= c)) return { admit: false, needStepUp: true, t: 3, metered: false };
+  if (t < 3 && !(Number.isFinite(b.B) && b.B >= c)) return { admit: false, needStepUp: true, t: 3, metered: false };
   if (t === 1) return { admit: true, needStepUp: false, t: 1, metered: true };
   if (t === 2) return { admit: false, needStepUp: true, t: 2, metered: true };
   return { admit: false, needStepUp: true, t: 3, metered: false };
@@ -219,7 +222,7 @@ export type SubBudgetResult = { ok: true; sub: TrustBudget } | { ok: false; reas
 /** Allocate a sub-agent budget B_sub = alloc, guarded by 0 <= alloc <= parent.B (parent remaining). */
 export function subBudget(parent: TrustBudget, alloc: number): SubBudgetResult {
   if (!Number.isFinite(alloc) || alloc < 0) return { ok: false, reason: 'allocation must be finite and >= 0' };
-  if (alloc > parent.B) return { ok: false, reason: 'allocation exceeds parent remaining budget' };
+  if (!(Number.isFinite(parent.B) && alloc <= parent.B)) return { ok: false, reason: 'allocation exceeds parent remaining budget' };
   return { ok: true, sub: { B: alloc, tau: parent.tau, asOf: parent.asOf ?? parent.tau } };
 }
 
@@ -234,8 +237,8 @@ export type ConsolidatedResult =
  */
 export function debitConsolidated(parent: TrustBudget, sub: TrustBudget, c: number): ConsolidatedResult {
   const x = nz(c);
-  if (sub.B < x) return { ok: false, reason: 'sub-agent budget insufficient' };
-  if (parent.B < x) return { ok: false, reason: 'parent budget insufficient' };
+  if (!(Number.isFinite(sub.B) && sub.B >= x)) return { ok: false, reason: 'sub-agent budget insufficient' };
+  if (!(Number.isFinite(parent.B) && parent.B >= x)) return { ok: false, reason: 'parent budget insufficient' };
   return { ok: true, parent: debit(parent, x), sub: debit(sub, x) };
 }
 
@@ -252,7 +255,7 @@ export type ConsolidatedPathResult = { ok: true; nodes: TrustBudget[] } | { ok: 
 export function debitConsolidatedPath(path: TrustBudget[], c: number): ConsolidatedPathResult {
   const x = nz(c);
   for (let i = 0; i < path.length; i++) {
-    if (!(path[i]!.B >= x)) return { ok: false, reason: `budget node at depth ${i} insufficient (need ${x}, have ${path[i]!.B})` };
+    if (!(Number.isFinite(path[i]!.B) && path[i]!.B >= x)) return { ok: false, reason: `budget node at depth ${i} insufficient (need ${x}, have ${path[i]!.B})` };
   }
   return { ok: true, nodes: path.map((b) => debit(b, x)) };
 }

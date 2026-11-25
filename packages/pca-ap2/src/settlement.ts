@@ -31,7 +31,7 @@ export interface SettlementContext {
  */
 export function toAtomicUnits(amount: Amount, decimals: number): string {
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 18) throw new RangeError(`x402: decimals must be an integer in 0..18, got ${String(decimals)}`);
-  if (!Number.isSafeInteger(amount.amount) || amount.amount < 0) throw new RangeError(`x402: amount ${String(amount.amount)} cannot be expressed in atomic units with ${decimals} decimals`);
+  if (!Number.isSafeInteger(amount.amount) || amount.amount < 0 || Object.is(amount.amount, -0)) throw new RangeError(`x402: amount ${String(amount.amount)} cannot be expressed in atomic units with ${decimals} decimals`);
   const exp = currencyExponent(amount.currency);
   const minor = BigInt(amount.amount);
   if (decimals >= exp) return String(minor * 10n ** BigInt(decimals - exp));

@@ -6,7 +6,7 @@ import * as tls from 'node:tls';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { generateIdentity, readPem } from './certs';
 import { MAX_MESH_EVENTS, Mesh, type MeshConfig, type NodeAddr, type TamperEvent } from './mesh';
-import { ManualClock, T, reservePorts, until, waitListening } from './test-timing';
+import { ManualClock, T, listeningPort, until } from './test-timing';
 import { FrameSplitter, MAX_FRAME_BYTES, NetAbort, WIRE_VERSION, encodeFrame, parseFrame, type Frame } from './wire';
 
 let dir: string;
@@ -39,8 +39,7 @@ const tick = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 const SID = 's';
 async function nodes3(): Promise<NodeAddr[]> {
-  const ports = await reservePorts(3);
-  return ids.map((x, i) => ({ id: i, host: '127.0.0.1', port: ports[i]!, certPem: x.cert }));
+  return ids.map((x, i) => ({ id: i, host: '127.0.0.1', port: 0, certPem: x.cert })); // each mesh binds port 0 and writes its real port back
 }
 
 /** A scripted raw peer that dials `mesh` (node 0) as node `as` and records every frame the mesh sends it. */
@@ -98,7 +97,7 @@ async function withPeer(cfg: Partial<MeshConfig> = {}, opts: { hello?: boolean; 
     clock, connectTimeoutMs: T(30_000), recvTimeoutMs: T(10_000), ...cfg,
   });
   const connected = mesh.connect().catch((e) => e);
-  await waitListening(nodes[0]!.port);
+  await listeningPort(nodes[0]!);
   const peer = await dialRaw(nodes, 1, opts.hello !== false);
   const peer2 = (opts.linkTo ?? [1]).includes(2) ? await dialRaw(nodes, 2, opts.hello !== false) : null;
   if (opts.hello !== false) await connected;
@@ -151,7 +150,7 @@ describe('connect', () => {
     const m = new Mesh({ selfId: 0, nodes, linkTo: [1, 2], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1', clock, connectTimeoutMs: 1000 });
     let outcome: unknown = 'pending';
     const p = m.connect().then(() => (outcome = 'ok'), (e) => (outcome = e));
-    await waitListening(nodes[0]!.port);
+    await listeningPort(nodes[0]!);
     clock.advance(1000);
     await polled(clock); // three connect polls see now === deadline
     expect(outcome).toBe('pending'); // now === deadline: not yet expired
@@ -170,7 +169,7 @@ describe('connect', () => {
     const m = new Mesh({ selfId: 0, nodes, linkTo: [1], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1', clock });
     let outcome: unknown = 'pending';
     const p = m.connect().then(() => (outcome = 'ok'), (e) => (outcome = e));
-    await waitListening(nodes[0]!.port);
+    await listeningPort(nodes[0]!);
     clock.advance(30_000);
     await polled(clock);
     expect(outcome).toBe('pending');
@@ -182,7 +181,7 @@ describe('connect', () => {
     const nodes = await nodes3();
     const a = new Mesh({ selfId: 0, nodes, linkTo: [1], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1', connectTimeoutMs: 500 });
     const pa = a.connect().catch((e) => e);
-    await waitListening(nodes[0]!.port);
+    await listeningPort(nodes[0]!);
     const b = new Mesh({ selfId: 0, nodes, linkTo: [1], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1', connectTimeoutMs: 500 });
     await expect(b.connect()).rejects.toThrow(/EADDRINUSE/);
     a.fail(new NetAbort('local', null, 0, 'x'));
@@ -206,7 +205,7 @@ describe('connect', () => {
     const nodes = await nodes3();
     const m = new Mesh({ selfId: 1, nodes, linkTo: [0], keyPem: ids[1]!.key, certPem: ids[1]!.cert, sessionId: SID, listenHost: '127.0.0.1', connectTimeoutMs: 300 });
     const c = m.connect().catch((e) => e);
-    await waitListening(nodes[1]!.port);
+    await listeningPort(nodes[1]!);
     const s = tls.connect({ host: '127.0.0.1', port: nodes[1]!.port, key: ids[0]!.key, cert: ids[0]!.cert, ca: [nodes[1]!.certPem], checkServerIdentity: () => undefined });
     s.on('error', () => undefined);
     await until(() => m.events.some((e) => e.startsWith('rejected incoming connection')), 'lower-id rejection');
@@ -325,15 +324,16 @@ describe('two real meshes', () => {
 
 describe('dialing', () => {
   it('a server whose certificate is not the pinned identity of the node dialed is an identity abort', async () => {
-    const [pa, pb] = await reservePorts(2);
     // nodes 0 and 2 share one certificate; the pin table maps that fingerprint to node 2, so dialing node 0 must be refused
     const nodes: NodeAddr[] = [
-      { id: 0, host: '127.0.0.1', port: pa!, certPem: ids[0]!.cert },
-      { id: 1, host: '127.0.0.1', port: pb!, certPem: ids[1]!.cert },
-      { id: 2, host: '127.0.0.1', port: pa!, certPem: ids[0]!.cert },
+      { id: 0, host: '127.0.0.1', port: 0, certPem: ids[0]!.cert },
+      { id: 1, host: '127.0.0.1', port: 0, certPem: ids[1]!.cert },
+      { id: 2, host: '127.0.0.1', port: 0, certPem: ids[0]!.cert },
     ];
     const srv = tls.createServer({ key: ids[0]!.key, cert: ids[0]!.cert, ca: [ids[1]!.cert], requestCert: true, rejectUnauthorized: true, minVersion: 'TLSv1.3' }, (s) => s.on('error', () => undefined));
-    await new Promise<void>((r) => srv.listen(pa, '127.0.0.1', () => r()));
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
+    const pa = (srv.address() as net.AddressInfo).port;
+    for (const x of nodes) if (x.id !== 1) x.port = pa;
     const m = new Mesh({ selfId: 1, nodes, linkTo: [0], keyPem: ids[1]!.key, certPem: ids[1]!.cert, sessionId: SID, listenHost: '127.0.0.1', connectTimeoutMs: T(10_000) });
     const e = (await m.connect().catch((x) => x)) as NetAbort;
     expect(e.kind).toBe('identity');
@@ -346,7 +346,7 @@ describe('dialing', () => {
     const nodes = await nodes3();
     const m1 = new Mesh({ selfId: 1, nodes, linkTo: [0], keyPem: ids[1]!.key, certPem: ids[1]!.cert, sessionId: SID, listenHost: '127.0.0.1', connectTimeoutMs: T(30_000) });
     const c1 = m1.connect();
-    await waitListening(nodes[1]!.port); // m1 is up and dialing a node that is not there yet
+    await listeningPort(nodes[1]!); // m1 is up and dialing a node that is not there yet
     const m0 = new Mesh({ selfId: 0, nodes, linkTo: [1], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1', connectTimeoutMs: T(30_000) });
     await Promise.all([m0.connect(), c1]);
     m0.fail(new NetAbort('local', null, 0, 'x'));
@@ -464,6 +464,17 @@ describe('abort frames from a peer', () => {
       fx.done();
     }
   }, T(60_000));
+  it('an accusation of -0 is not an integer (strict profile)', async () => {
+    const fx = await withPeer();
+    const b = Buffer.from(JSON.stringify({ v: WIRE_VERSION, ty: 'abort', sid: SID, seq: fx.peer.seq(), rd: 'abort', d: { kind: 'local', blamed: 424242, detail: 'd' } }).replace('424242', '-0'));
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(b.length, 0);
+    fx.peer.write(Buffer.concat([len, b]));
+    const e = (await fx.mesh.recv(1, 'x').catch((x) => x)) as NetAbort;
+    expect(e.kind).toBe('peer-abort');
+    expect(e.claimedBlame).toBeNull();
+    fx.done();
+  }, T(20_000));
   it('unknown kinds and non-string kinds are ignored; known kinds are kept', async () => {
     for (const [kind, want] of [['mac-check', 'mac-check'], ['version', 'version'], ['made-up', undefined], [5, undefined], [undefined, undefined]] as const) {
       const { fx, e } = await recvAbort({ kind, blamed: 0, detail: 'd' });
@@ -569,6 +580,16 @@ describe('recv', () => {
     const e = out as NetAbort;
     expect([e.kind, e.blamed, e.reporter, e.deadlineMs]).toEqual(['timeout', 1, 0, 5000]);
     expect(e.message).toContain("no 'x' message from 1 within 5000ms (deadline 5000ms; a silent peer is blamed on this local observation only)");
+    fx.done();
+  }, T(20_000));
+  it('a non-finite receive timeout is refused and a non-finite clock times the receive out, never an endless wait', async () => {
+    const fx = await withPeer();
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      await expect(fx.mesh.recv(1, 'x', bad)).rejects.toThrow('mesh: recv timeout must be a finite number >= 0');
+    }
+    vi.spyOn(fx.clock, 'now').mockReturnValue(Number.NaN); // NaN <= 0 is false: the old receive armed a timer and waited forever
+    const e = (await fx.mesh.recv(1, 'x', 5000).catch((x) => x)) as NetAbort;
+    expect(e.kind).toBe('timeout');
     fx.done();
   }, T(20_000));
   it('uses the configured recvTimeoutMs by default (and 20 s when unset)', async () => {
@@ -777,7 +798,7 @@ describe('TLS policy and door-keeping', () => {
     const nodes = await nodes3();
     const m = new Mesh({ selfId: 0, nodes, linkTo: [1], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, clock: new ManualClock(), connectTimeoutMs: 100000 });
     const c = m.connect().catch((e) => e);
-    await waitListening(nodes[0]!.port);
+    await listeningPort(nodes[0]!);
     expect(((m as unknown as { server: net.Server }).server.address() as net.AddressInfo).address).toBe('0.0.0.0');
     m.fail(new NetAbort('local', null, 0, 'x'));
     await c;
@@ -808,7 +829,7 @@ describe('dial / connect corner cases', () => {
     const m = new Mesh({ selfId: 0, nodes, linkTo: [0], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1', clock, connectTimeoutMs: 1000 });
     let out: unknown = 'pending';
     const p = m.connect().then(() => (out = 'ok'), (e) => (out = e));
-    await waitListening(nodes[0]!.port);
+    await listeningPort(nodes[0]!);
     clock.advance(1001);
     await p;
     expect(m.events.filter((e) => !e.startsWith('tlsClientError'))).toEqual([]);
@@ -839,17 +860,17 @@ describe('dial / connect corner cases', () => {
     m1.fail(new NetAbort('local', null, 1, 'x'));
   }, T(30_000));
   it('a failed mesh stops dialing; dial retries are paced', async () => {
-    const [pa, pb] = await reservePorts(2);
     let attempts = 0;
     const srv = net.createServer((raw) => {
       attempts++;
       raw.on('error', () => undefined);
       raw.destroy();
     });
-    await new Promise<void>((r) => srv.listen(pa, '127.0.0.1', () => r()));
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
+    const pa = (srv.address() as net.AddressInfo).port;
     const nodes: NodeAddr[] = [
-      { id: 0, host: '127.0.0.1', port: pa!, certPem: ids[0]!.cert },
-      { id: 1, host: '127.0.0.1', port: pb!, certPem: ids[1]!.cert },
+      { id: 0, host: '127.0.0.1', port: pa, certPem: ids[0]!.cert },
+      { id: 1, host: '127.0.0.1', port: 0, certPem: ids[1]!.cert },
     ];
     const m = new Mesh({ selfId: 1, nodes, linkTo: [0], keyPem: ids[1]!.key, certPem: ids[1]!.cert, sessionId: SID, listenHost: '127.0.0.1', connectTimeoutMs: 100000, clock: new ManualClock() });
     const c = m.connect().catch((e) => e);
@@ -861,11 +882,10 @@ describe('dial / connect corner cases', () => {
     srv.close();
   }, T(30_000));
   it('an identity failure closes the client socket it dialed', async () => {
-    const [pa, pb] = await reservePorts(2);
     const nodes: NodeAddr[] = [
-      { id: 0, host: '127.0.0.1', port: pa!, certPem: ids[0]!.cert },
-      { id: 1, host: '127.0.0.1', port: pb!, certPem: ids[1]!.cert },
-      { id: 2, host: '127.0.0.1', port: pa!, certPem: ids[0]!.cert },
+      { id: 0, host: '127.0.0.1', port: 0, certPem: ids[0]!.cert },
+      { id: 1, host: '127.0.0.1', port: 0, certPem: ids[1]!.cert },
+      { id: 2, host: '127.0.0.1', port: 0, certPem: ids[0]!.cert },
     ];
     let serverSideClosed = false;
     const srv = tls.createServer({ key: ids[0]!.key, cert: ids[0]!.cert, ca: [ids[1]!.cert], requestCert: true, rejectUnauthorized: true, minVersion: 'TLSv1.3' }, (s) => s.on('error', () => undefined));
@@ -874,7 +894,9 @@ describe('dial / connect corner cases', () => {
       raw.on('close', () => (serverSideClosed = true));
     });
     srv.on('tlsClientError', () => undefined);
-    await new Promise<void>((r) => srv.listen(pa, '127.0.0.1', () => r()));
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
+    const pa = (srv.address() as net.AddressInfo).port;
+    for (const x of nodes) if (x.id !== 1) x.port = pa;
     const m = new Mesh({ selfId: 1, nodes, linkTo: [0], keyPem: ids[1]!.key, certPem: ids[1]!.cert, sessionId: SID, listenHost: '127.0.0.1', connectTimeoutMs: T(10_000) });
     const e = (await m.connect().catch((x) => x)) as NetAbort;
     expect(e.kind).toBe('identity');
@@ -1044,7 +1066,7 @@ describe('failure bookkeeping', () => {
     const nodes = await nodes3();
     const mesh = new Mesh({ selfId: 0, nodes, linkTo: [1], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1', clock: new ManualClock(), connectTimeoutMs: 100000 });
     const c = mesh.connect().catch((e) => e);
-    await waitListening(nodes[0]!.port);
+    await listeningPort(nodes[0]!);
     const raw = net.connect(nodes[0]!.port, '127.0.0.1');
     await new Promise<void>((r) => raw.once('connect', () => r()));
     const t = tls.connect({ socket: raw, key: ids[1]!.key, cert: ids[1]!.cert, ca: [nodes[0]!.certPem], checkServerIdentity: () => undefined });

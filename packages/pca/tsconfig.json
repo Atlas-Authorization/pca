@@ -2,7 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    // The typecheck covers the tests, which use import.meta and newer string methods; the build config resets these.
+    "module": "ES2022",
+    "lib": ["ES2024"]
   },
   "include": ["src/**/*"],
   "exclude": []

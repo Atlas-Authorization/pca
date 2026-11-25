@@ -1,0 +1,329 @@
+# Hand-labeled operations. Columns (tab separated): kind, name, "METHOD /path" (openapi) or "-", params (name:type[:format] comma separated), labels (comma separated, "-" for none), description.
+# Labels name what the operation can DO, judged from the operation's real semantics by a person, NOT from the suggestion rules.
+# money=money_moving destr=destructive comm=external_communication priv=privilege_change exp=data_export exec=code_execution cred=credential_access bulk=bulk pii=pii_access pub=public_exposure pers=persistence infra=infra_mutation cost=cost_incurring legal=legal_binding imp=impersonation egress=network_egress fin=financial_data_read reg=regulated_data sched=scheduled spawn=agent_spawning
+openapi	CreateRefund	POST /v1/refunds	charge:string,amount:integer	money	Refund a previously charged payment
+openapi	CreateCharge	POST /v1/charges	amount:integer,currency:string,source:string	money	Charge a card
+openapi	CreatePayout	POST /v1/payouts	amount:integer,currency:string	money	Send funds to a bank account
+openapi	CreateTransfer	POST /v1/transfers	amount:integer,destination:string	money	Move funds between accounts
+openapi	CapturePaymentIntent	POST /v1/payment_intents/{id}/capture	id:string	money	Capture authorised funds
+openapi	CancelPaymentIntent	POST /v1/payment_intents/{id}/cancel	id:string	destr	Cancel a payment intent
+openapi	RetrieveBalance	GET /v1/balance	-	fin	Current account balance
+openapi	ListBalanceTransactions	GET /v1/balance_transactions	limit:integer	fin	List balance transactions
+openapi	ListCustomers	GET /v1/customers	limit:integer	pii	List customers
+openapi	RetrieveCustomer	GET /v1/customers/{id}	id:string	pii	Fetch one customer
+openapi	CreateCustomer	POST /v1/customers	email:string,name:string,phone:string	pii	Create a customer record
+openapi	DeleteCustomer	DELETE /v1/customers/{id}	id:string	destr,pii	Delete a customer
+openapi	UpdateSubscription	POST /v1/subscriptions/{id}	id:string,plan:string	cost	Change a plan
+openapi	CancelSubscription	DELETE /v1/subscriptions/{id}	id:string	destr	Cancel a subscription
+openapi	CreateInvoice	POST /v1/invoices	customer:string	-	Create a draft invoice
+openapi	PayInvoice	POST /v1/invoices/{id}/pay	id:string	money	Pay an invoice
+openapi	SendInvoice	POST /v1/invoices/{id}/send	id:string	comm	Email an invoice to the customer
+openapi	VoidInvoice	POST /v1/invoices/{id}/void	id:string	destr	Void an invoice
+openapi	CreateApiKey	POST /v1/api_keys	name:string	cred	Mint an API key
+openapi	RollApiKey	POST /v1/api_keys/{id}/roll	id:string	cred	Rotate a key
+openapi	ListWebhookEndpoints	GET /v1/webhook_endpoints	-	-	List webhook endpoints
+openapi	CreateWebhookEndpoint	POST /v1/webhook_endpoints	url:string,events:array	egress	Register an outbound webhook
+openapi	DeleteWebhookEndpoint	DELETE /v1/webhook_endpoints/{id}	id:string	destr	Remove a webhook
+openapi	CreateReportRun	POST /v1/reporting/report_runs	report_type:string	exp,fin	Generate a financial report
+openapi	CreateFile	POST /v1/files	purpose:string	-	Upload a file
+openapi	ReposCreate	POST /repos	name:string,private:boolean	pub	Create a repository
+openapi	ReposDelete	DELETE /repos/{owner}/{repo}	owner:string,repo:string	destr	Delete a repository
+openapi	ReposTransfer	POST /repos/{owner}/{repo}/transfer	new_owner:string	priv	Transfer repository ownership
+openapi	ReposAddCollaborator	PUT /repos/{owner}/{repo}/collaborators/{username}	permission:string	priv	Invite a collaborator
+openapi	ReposRemoveCollaborator	DELETE /repos/{owner}/{repo}/collaborators/{username}	username:string	priv,destr	Remove a collaborator
+openapi	ReposListCollaborators	GET /repos/{owner}/{repo}/collaborators	-	pii	List collaborators
+openapi	IssuesCreate	POST /repos/{owner}/{repo}/issues	title:string,body:string	comm,pub	Open an issue
+openapi	IssuesCreateComment	POST /repos/{owner}/{repo}/issues/{n}/comments	body:string	comm,pub	Comment on an issue
+openapi	IssuesList	GET /repos/{owner}/{repo}/issues	state:string	-	List issues
+openapi	PullsMerge	PUT /repos/{owner}/{repo}/pulls/{n}/merge	merge_method:string	exec,pub	Merge a pull request (triggers deploys)
+openapi	GitCreateRef	POST /repos/{owner}/{repo}/git/refs	ref:string,sha:string	-	Create a branch
+openapi	GitDeleteRef	DELETE /repos/{owner}/{repo}/git/refs/{ref}	ref:string	destr	Delete a branch
+openapi	ActionsCreateWorkflowDispatch	POST /repos/{owner}/{repo}/actions/workflows/{id}/dispatches	ref:string,inputs:string	exec,cost	Trigger a workflow run
+openapi	ActionsDeleteRepoSecret	DELETE /repos/{owner}/{repo}/actions/secrets/{name}	name:string	cred,destr	Delete an Actions secret
+openapi	ActionsCreateOrUpdateRepoSecret	PUT /repos/{owner}/{repo}/actions/secrets/{name}	encrypted_value:string	cred	Set an Actions secret
+openapi	ReposCreateDeployKey	POST /repos/{owner}/{repo}/keys	title:string,key:string	cred,priv,pers	Add a deploy key
+openapi	ReposCreateWebhook	POST /repos/{owner}/{repo}/hooks	url:string	egress,pers	Create a repository webhook
+openapi	ReposDownloadTarball	GET /repos/{owner}/{repo}/tarball/{ref}	ref:string	exp	Download repository contents
+openapi	OrgsRemoveMember	DELETE /orgs/{org}/members/{username}	username:string	priv,destr	Remove an organisation member
+openapi	OrgsSetMembership	PUT /orgs/{org}/memberships/{username}	role:string	priv	Set a membership role
+openapi	UsersGetAuthenticated	GET /user	-	pii	Current user profile
+openapi	UsersListEmails	GET /user/emails	-	pii	List the user's email addresses
+openapi	UsersDeleteEmail	DELETE /user/emails	emails:array	destr,pii	Delete email addresses
+openapi	ChatPostMessage	POST /chat.postMessage	channel:string,text:string	comm	Post a message to a channel
+openapi	ChatDelete	POST /chat.delete	channel:string,ts:string	destr	Delete a message
+openapi	ChatPostEphemeral	POST /chat.postEphemeral	channel:string,user:string,text:string	comm	Send an ephemeral message
+openapi	ConversationsInvite	POST /conversations.invite	channel:string,users:string	priv,comm	Invite users to a channel
+openapi	ConversationsArchive	POST /conversations.archive	channel:string	destr	Archive a channel
+openapi	ConversationsHistory	GET /conversations.history	channel:string	pii	Read channel history
+openapi	UsersLookupByEmail	GET /users.lookupByEmail	email:string:email	pii	Find a user by email
+openapi	FilesUpload	POST /files.upload	channels:string,content:string	comm,exp	Upload and share a file
+openapi	AuthRevoke	POST /auth.revoke	test:boolean	cred,destr	Revoke the token
+openapi	AdminUsersRemove	POST /admin.users.remove	team_id:string,user_id:string	priv,destr	Remove a user from a workspace
+openapi	AdminUsersSetAdmin	POST /admin.users.setAdmin	user_id:string	priv	Make a user an admin
+openapi	GmailSend	POST /gmail/v1/users/{userId}/messages/send	raw:string	comm	Send an email
+openapi	GmailDraftsCreate	POST /gmail/v1/users/{userId}/drafts	message:string	-	Create a draft
+openapi	GmailMessagesList	GET /gmail/v1/users/{userId}/messages	q:string	pii	Search the mailbox
+openapi	GmailMessagesDelete	DELETE /gmail/v1/users/{userId}/messages/{id}	id:string	destr	Permanently delete a message
+openapi	GmailSettingsForwardingCreate	POST /gmail/v1/users/{userId}/settings/forwardingAddresses	forwardingEmail:string:email	priv,comm,pers	Add a forwarding address
+openapi	DriveFilesList	GET /drive/v3/files	q:string	-	List files
+openapi	DriveFilesDelete	DELETE /drive/v3/files/{fileId}	fileId:string	destr	Delete a file
+openapi	DrivePermissionsCreate	POST /drive/v3/files/{fileId}/permissions	role:string,emailAddress:string:email,type:string	priv,comm,pii	Share a file
+openapi	DriveFilesExport	GET /drive/v3/files/{fileId}/export	mimeType:string	exp	Export a document
+openapi	CalendarEventsInsert	POST /calendar/v3/calendars/{calendarId}/events	summary:string,attendees:array	comm	Create an event and invite attendees
+openapi	CalendarEventsDelete	DELETE /calendar/v3/calendars/{calendarId}/events/{eventId}	eventId:string	destr,comm	Delete an event
+openapi	CalendarEventsList	GET /calendar/v3/calendars/{calendarId}/events	timeMin:string	pii	List events
+openapi	TwilioMessagesCreate	POST /2010-04-01/Accounts/{sid}/Messages.json	To:string,Body:string	comm,cost	Send an SMS
+openapi	TwilioCallsCreate	POST /2010-04-01/Accounts/{sid}/Calls.json	To:string,Url:string	comm,cost,egress	Place a phone call
+openapi	TwilioAccountsUpdate	POST /2010-04-01/Accounts/{sid}.json	Status:string	destr	Close or suspend an account
+openapi	SendgridMailSend	POST /v3/mail/send	personalizations:array	comm	Send email
+openapi	SendgridSuppressionDelete	DELETE /v3/asm/suppressions/global/{email}	email:string:email	destr	Remove a suppression
+openapi	JiraCreateIssue	POST /rest/api/3/issue	summary:string	-	Create a Jira issue
+openapi	JiraDeleteIssue	DELETE /rest/api/3/issue/{id}	id:string	destr	Delete an issue
+openapi	JiraAssignIssue	PUT /rest/api/3/issue/{id}/assignee	accountId:string	comm	Assign an issue
+openapi	JiraAddUserToGroup	POST /rest/api/3/group/user	groupId:string,accountId:string	priv	Add a user to a group
+openapi	JiraCreatePermissionScheme	POST /rest/api/3/permissionscheme	name:string	priv	Create a permission scheme
+openapi	SalesforceQuery	GET /services/data/v59.0/query	q:string	pii	Run a SOQL query
+openapi	SalesforceContactsCreate	POST /services/data/v59.0/sobjects/Contact	Email:string,LastName:string	pii	Create a contact
+openapi	SalesforceContactsDelete	DELETE /services/data/v59.0/sobjects/Contact/{id}	id:string	destr,pii	Delete a contact
+openapi	SalesforceBulkIngest	POST /services/data/v59.0/jobs/ingest	object:string,operation:string	bulk	Start a bulk load job
+openapi	SalesforceApexExecute	GET /services/data/v59.0/tooling/executeAnonymous	anonymousBody:string	exec	Run anonymous Apex
+openapi	HubspotContactsBatchArchive	POST /crm/v3/objects/contacts/batch/archive	inputs:array	destr,bulk,pii	Archive many contacts
+openapi	HubspotEmailsSend	POST /marketing/v3/emails/send	emailId:integer	comm	Send a marketing email
+openapi	ShopifyOrdersCancel	POST /admin/api/orders/{id}/cancel	id:string	destr,money	Cancel an order (refunds)
+openapi	ShopifyRefundsCreate	POST /admin/api/orders/{id}/refunds	amount:integer,currency:string	money	Refund an order
+openapi	ShopifyProductsDelete	DELETE /admin/api/products/{id}	id:string	destr	Delete a product
+openapi	ShopifyCustomersList	GET /admin/api/customers	limit:integer	pii	List customers
+openapi	ShopifyThemesPublish	PUT /admin/api/themes/{id}	role:string	pub	Make a theme live
+openapi	AwsRunInstances	POST /ec2/RunInstances	ImageId:string,InstanceType:string,MinCount:integer	infra,cost,exec	Launch EC2 instances
+openapi	AwsTerminateInstances	POST /ec2/TerminateInstances	InstanceIds:array	infra,destr	Terminate instances
+openapi	AwsDescribeInstances	POST /ec2/DescribeInstances	Filters:array	-	Describe instances
+openapi	AwsAuthorizeSecurityGroupIngress	POST /ec2/AuthorizeSecurityGroupIngress	GroupId:string,CidrIp:string	infra,priv,egress	Open a firewall port
+openapi	AwsCreateAccessKey	POST /iam/CreateAccessKey	UserName:string	cred,priv	Create an IAM access key
+openapi	AwsAttachUserPolicy	POST /iam/AttachUserPolicy	UserName:string,PolicyArn:string	priv	Attach an IAM policy
+openapi	AwsDeleteUser	POST /iam/DeleteUser	UserName:string	priv,destr	Delete an IAM user
+openapi	AwsS3PutBucketPolicy	PUT /s3/{bucket}/policy	Policy:string	priv,pub	Set a bucket policy
+openapi	AwsS3DeleteBucket	DELETE /s3/{bucket}	bucket:string	destr	Delete a bucket
+openapi	AwsS3GetObject	GET /s3/{bucket}/{key}	key:string	-	Read an object
+openapi	AwsS3PutBucketAcl	PUT /s3/{bucket}/acl	ACL:string	priv,pub	Set bucket ACL
+openapi	AwsLambdaInvoke	POST /lambda/functions/{name}/invocations	Payload:string	exec	Invoke a function
+openapi	AwsLambdaCreateFunction	POST /lambda/functions	Code:string,Runtime:string	exec,infra,pers	Create a function
+openapi	AwsSecretsGetSecretValue	POST /secretsmanager/GetSecretValue	SecretId:string	cred	Read a secret
+openapi	AwsSnsPublish	POST /sns/Publish	TopicArn:string,Message:string	comm	Publish to a topic
+openapi	AwsSesSendEmail	POST /ses/SendEmail	Destination:string	comm	Send email through SES
+openapi	AwsRdsDeleteDbInstance	POST /rds/DeleteDBInstance	DBInstanceIdentifier:string	destr,infra	Delete a database
+openapi	AwsEventsPutRule	POST /events/PutRule	ScheduleExpression:string	sched,pers	Create a scheduled rule
+openapi	AwsCostExplorerGetCost	POST /ce/GetCostAndUsage	TimePeriod:string	fin	Read billing data
+openapi	K8sCreateNamespacedPod	POST /api/v1/namespaces/{ns}/pods	body:string	exec,infra,cost	Create a pod
+openapi	K8sDeleteNamespace	DELETE /api/v1/namespaces/{name}	name:string	destr,infra,bulk	Delete a namespace
+openapi	K8sReadNamespacedSecret	GET /api/v1/namespaces/{ns}/secrets/{name}	name:string	cred	Read a secret
+openapi	K8sCreateClusterRoleBinding	POST /apis/rbac.authorization.k8s.io/v1/clusterrolebindings	body:string	priv	Bind a cluster role
+openapi	K8sPodExec	POST /api/v1/namespaces/{ns}/pods/{name}/exec	command:string	exec	Run a command in a pod
+openapi	K8sPatchDeploymentScale	PATCH /apis/apps/v1/namespaces/{ns}/deployments/{name}/scale	replicas:integer	infra,cost	Scale a deployment
+openapi	K8sListNamespacedPod	GET /api/v1/namespaces/{ns}/pods	-	-	List pods
+openapi	GraphMailSend	POST /v1.0/me/sendMail	message:string	comm	Send mail as the user
+openapi	GraphListUsers	GET /v1.0/users	-	pii	List directory users
+openapi	GraphDeleteUser	DELETE /v1.0/users/{id}	id:string	destr,priv	Delete a directory user
+openapi	GraphAddMember	POST /v1.0/groups/{id}/members/$ref	odata_id:string	priv	Add a group member
+openapi	GraphAssignLicense	POST /v1.0/users/{id}/assignLicense	addLicenses:array	cost,priv	Assign a licence
+openapi	GraphWipeManagedDevice	POST /v1.0/deviceManagement/managedDevices/{id}/wipe	id:string	destr	Wipe a device
+openapi	GraphTeamsChatMessages	POST /v1.0/chats/{id}/messages	body:string	comm	Post a Teams message
+openapi	GraphDriveItemDelete	DELETE /v1.0/drive/items/{id}	id:string	destr	Delete a drive item
+openapi	DockerContainerCreate	POST /containers/create	Image:string,Cmd:array	exec,infra	Create a container
+openapi	DockerContainerExec	POST /containers/{id}/exec	Cmd:array	exec	Exec in a container
+openapi	DockerImagePrune	POST /images/prune	filters:string	destr,bulk	Remove unused images
+openapi	TerraformApply	POST /runs/{id}/actions/apply	comment:string	infra,exec,cost	Apply a run
+openapi	SentryIssuesDelete	DELETE /projects/{org}/{proj}/issues/	id:array	destr,bulk	Remove issues
+openapi	DatadogMonitorsMute	POST /api/v1/monitor/{id}/mute	scope:string	-	Mute a monitor
+openapi	PagerdutyIncidentCreate	POST /incidents	title:string	comm	Page on-call
+openapi	NotionPagesCreate	POST /v1/pages	parent:string	-	Create a page
+openapi	NotionPagesPublish	POST /v1/pages/{id}/publish	id:string	pub	Publish to the web
+openapi	AsanaTasksDelete	DELETE /tasks/{gid}	gid:string	destr	Delete a task
+openapi	AsanaProjectsShare	POST /projects/{gid}/addMembers	members:array	priv	Add project members
+openapi	DocusignEnvelopesSend	POST /envelopes	templateId:string,recipients:array	legal,comm	Send an envelope for signature
+openapi	DocusignEnvelopesVoid	PUT /envelopes/{id}	status:string	destr,legal	Void an envelope
+openapi	PlaidItemPublicTokenExchange	POST /item/public_token/exchange	public_token:string	cred,fin	Exchange a Plaid token
+openapi	PlaidTransactionsGet	POST /transactions/get	access_token:string	fin,pii	Read transactions
+openapi	PlaidPaymentInitiate	POST /payment_initiation/payment/create	amount:integer	money	Initiate a payment
+openapi	WisePayoutCreate	POST /v1/wise/transfers	targetAccount:string,quote:string	money	Create a transfer
+openapi	CoinbaseWithdraw	POST /accounts/{id}/withdrawals	amount:integer,currency:string	money	Withdraw crypto
+openapi	CoinbaseListAccounts	GET /accounts	-	fin	List wallets
+openapi	LinearIssueDelete	DELETE /issues/{id}	id:string	destr	Delete a Linear issue
+openapi	ZoomMeetingsCreate	POST /users/{id}/meetings	topic:string	comm	Schedule a meeting
+openapi	ZoomRecordingsDelete	DELETE /meetings/{id}/recordings	id:string	destr	Delete recordings
+openapi	ZoomRecordingsDownload	GET /meetings/{id}/recordings	id:string	exp	List recording download links
+openapi	OktaUsersDeactivate	POST /api/v1/users/{id}/lifecycle/deactivate	id:string	destr,priv	Deactivate a user
+openapi	OktaGroupsAddUser	PUT /api/v1/groups/{gid}/users/{uid}	uid:string	priv	Add user to group
+openapi	OktaFactorsReset	POST /api/v1/users/{id}/lifecycle/reset_factors	id:string	cred,priv	Reset MFA factors
+openapi	OktaImpersonate	POST /api/v1/sessions	userId:string	imp,cred	Create a session as a user
+openapi	CloudflareDnsRecordsCreate	POST /zones/{id}/dns_records	type:string,content:string	infra	Add a DNS record
+openapi	CloudflarePurgeCache	POST /zones/{id}/purge_cache	purge_everything:boolean	infra,bulk	Purge the cache
+openapi	CloudflareZoneDelete	DELETE /zones/{id}	id:string	destr,infra	Delete a zone
+openapi	VercelDeploymentsCreate	POST /v13/deployments	name:string	exec,pub,cost	Deploy a project
+openapi	VercelEnvDelete	DELETE /v9/projects/{id}/env/{envId}	envId:string	destr,cred	Delete an env var
+openapi	SnowflakeStatementsExecute	POST /api/v2/statements	statement:string	exec	Execute SQL
+openapi	BigqueryJobsInsert	POST /projects/{p}/jobs	query:string	exec,cost	Run a query job
+openapi	BigqueryTabledataList	GET /projects/{p}/datasets/{d}/tables/{t}/data	-	pii	Read table rows
+openapi	BigqueryTablesDelete	DELETE /projects/{p}/datasets/{d}/tables/{t}	t:string	destr	Drop a table
+openapi	ElasticsearchDeleteByQuery	POST /{index}/_delete_by_query	query:string	destr,bulk	Delete documents by query
+openapi	ElasticsearchSearch	POST /{index}/_search	query:string	-	Search an index
+openapi	MongoAtlasClusterDelete	DELETE /groups/{g}/clusters/{name}	name:string	destr,infra	Delete a cluster
+openapi	MongoAtlasDbUserCreate	POST /groups/{g}/databaseUsers	username:string,password:string	priv,cred	Create a database user
+openapi	OpenaiChatCompletions	POST /v1/chat/completions	messages:array	cost,egress	Run a model completion
+openapi	OpenaiFineTuneCreate	POST /v1/fine_tuning/jobs	training_file:string	cost	Start a fine-tune
+openapi	OpenaiFilesDelete	DELETE /v1/files/{id}	id:string	destr	Delete a file
+openapi	AgentsSpawn	POST /v1/agents	task:string	spawn,cost	Start a sub-agent
+openapi	AgentsDelegateTask	POST /v1/agents/{id}/tasks	task:string	spawn	Delegate a task to an agent
+openapi	SignupCreateAccount	POST /v1/signup	email:string:email,password:string	cred,pii	Create an account
+openapi	PasswordReset	POST /v1/password/reset	email:string:email	comm,cred	Send a password reset link
+openapi	SessionsList	GET /v1/sessions	-	pii	List active sessions
+openapi	SessionsRevokeAll	DELETE /v1/sessions	-	destr,bulk,cred	Sign out everywhere
+openapi	AuditLogsExport	POST /v1/audit_logs/export	from:string	exp	Export audit logs
+openapi	ConsentRecordCreate	POST /v1/consents	policy:string	legal	Record consent
+openapi	ContractsSign	POST /v1/contracts/{id}/sign	id:string	legal	Sign a contract
+openapi	TermsAccept	POST /v1/terms/accept	version:string	legal	Accept terms
+openapi	HealthPatientsList	GET /fhir/Patient	-	reg,pii	List patients
+openapi	HealthObservationCreate	POST /fhir/Observation	value:string	reg	Record an observation
+openapi	HealthPrescriptionSend	POST /fhir/MedicationRequest	medication:string	reg,comm	Send a prescription
+openapi	SearchProducts	GET /v1/products/search	q:string	-	Search products
+openapi	GetWeather	GET /v1/weather	city:string	-	Weather forecast
+openapi	ListCountries	GET /v1/countries	-	-	List countries
+openapi	GetStatus	GET /v1/status	-	-	Service status
+openapi	TranslateText	POST /v1/translate	text:string	egress	Translate text
+openapi	ConvertCurrency	GET /v1/convert	amount:integer,from:string,to:string	-	Convert an amount (quote only)
+openapi	GetInvoicePaymentStatus	GET /v1/invoices/{id}/payment_status	id:string	fin	Payment status of an invoice
+openapi	ListPaymentMethods	GET /v1/payment_methods	customer:string	fin,pii	List saved payment methods
+openapi	GetPayoutSchedule	GET /v1/payout_schedule	-	fin	When payouts happen
+openapi	GetRefundPolicy	GET /v1/policies/refund	-	-	Read the refund policy
+openapi	GetTokenInfo	GET /v1/tokeninfo	-	cred	Introspect a token
+openapi	ListSecretsMetadata	GET /v1/secrets	-	cred	List secret names
+openapi	GetMessageCount	GET /v1/messages/count	-	-	Count of messages
+openapi	SendFeedback	POST /v1/feedback	text:string	comm	Send feedback to the vendor
+openapi	NotifyTeam	POST /v1/notify	team:string,text:string	comm	Notify a team
+openapi	RunQuery	POST /v1/query	sql:string	exec	Run SQL
+openapi	RunReport	POST /v1/reports/run	report_id:string	exp	Run a saved report
+openapi	BuildImage	POST /v1/builds	repo:string	exec,cost	Build a container image
+openapi	DeployService	POST /v1/services/{id}/deploy	version:string	exec,infra,pub	Deploy a service
+openapi	RollbackDeployment	POST /v1/deployments/{id}/rollback	id:string	infra	Roll back a deployment
+openapi	ScheduleJob	POST /v1/jobs	cron:string,command:string	sched,pers,exec	Schedule a recurring job
+openapi	BackupDatabase	POST /v1/databases/{id}/backup	id:string	exp	Back up a database
+openapi	RestoreDatabase	POST /v1/databases/{id}/restore	id:string	destr,infra	Restore (overwrites) a database
+openapi	PurgeOldRecords	POST /v1/maintenance/purge	older_than:string	destr,bulk	Purge old records
+openapi	ArchiveProject	POST /v1/projects/{id}/archive	id:string	-	Archive a project (reversible)
+openapi	ImpersonateUser	POST /v1/admin/impersonate	user_id:string	imp,priv,cred	Act as another user
+openapi	SudoElevate	POST /v1/sudo	reason:string	priv	Elevate privileges
+openapi	GrantAccess	POST /v1/access/grants	subject:string,resource:string	priv	Grant access
+openapi	RevokeAccess	DELETE /v1/access/grants/{id}	id:string	priv,destr	Revoke access
+openapi	ShareDocument	POST /v1/documents/{id}/share	email:string:email	priv,comm,pii	Share a document
+openapi	PublishPost	POST /v1/posts/{id}/publish	id:string	pub	Publish a post
+openapi	TweetStatus	POST /1.1/statuses/update	status:string	pub,comm	Post a tweet
+openapi	MakeRepoPublic	PATCH /v1/repos/{id}	visibility:string	pub	Change visibility
+openapi	GetPublicProfile	GET /v1/users/{id}/public	id:string	-	Read a public profile
+mcp	read_file	-	path:string	-	Read a file from disk
+mcp	write_file	-	path:string,content:string	-	Write a file
+mcp	delete_file	-	path:string	destr	Remove a file
+mcp	run_command	-	command:string	exec	Run a shell command
+mcp	execute_sql	-	sql:string	exec	Run a SQL statement
+mcp	send_email	-	to:string,subject:string,body:string	comm	Send an email
+mcp	create_issue	-	title:string	comm,pub	Create an issue
+mcp	search_web	-	query:string	egress	Search the web
+mcp	fetch_url	-	url:string	egress	Fetch a URL
+mcp	get_weather	-	city:string	-	Weather
+mcp	transfer_funds	-	amount:integer,currency:string,to:string	money	Move money
+mcp	list_customers	-	-	pii	List customers
+mcp	delete_database	-	name:string	destr,infra	Drop a database
+mcp	git_push	-	branch:string	pub,exec	Push commits
+mcp	post_slack_message	-	channel:string,text:string	comm	Post to Slack
+mcp	create_calendar_event	-	title:string,attendees:array	comm	Create an event
+mcp	read_secret	-	name:string	cred	Read a secret
+mcp	take_screenshot	-	-	-	Capture the screen
+mcp	click	-	x:integer,y:integer	-	Click at a coordinate
+mcp	type_text	-	text:string	-	Type text
+mcp	list_directory	-	path:string	-	List a directory
+mcp	query_knowledge_base	-	q:string	-	Search the knowledge base
+mcp	add_numbers	-	a:integer,b:integer	-	Add two numbers
+mcp	summarize	-	text:string	-	Summarize text
+mcp	book_flight	-	flight:string,passenger:string	money,legal,pii,cost	Book and pay for a flight
+mcp	cancel_booking	-	booking:string	destr,money	Cancel a booking (refund)
+mcp	check_in	-	booking:string	-	Check in
+mcp	spawn_agent	-	task:string	spawn	Start a sub-agent
+mcp	get_user_email	-	user:string	pii	Look up a user's email
+mcp	enable_webhook	-	url:string	egress,pers	Register a webhook
+graphql	user	-	id:string	pii	Fetch a user
+graphql	users	-	first:integer	pii	List users
+graphql	repository	-	owner:string,name:string	-	Fetch a repository
+graphql	createIssue	-	input:string	comm,pub	Create an issue
+graphql	deleteRepository	-	id:string	destr	Delete a repository
+graphql	addStar	-	starrableId:string	-	Star a repo
+graphql	mergePullRequest	-	pullRequestId:string	exec,pub	Merge a PR
+graphql	transferRepository	-	repositoryId:string,newOwner:string	priv	Transfer ownership
+graphql	createPayment	-	amount:integer,currency:string	money	Make a payment
+graphql	sendMessage	-	channel:string,text:string	comm	Send a message
+graphql	removeMember	-	userId:string	priv,destr	Remove a member
+graphql	generateApiToken	-	name:string	cred	Mint a token
+graphql	exportData	-	format:string	exp	Export all data
+graphql	products	-	first:integer	-	List products
+graphql	order	-	id:string	pii	Fetch an order
+graphql	cancelOrder	-	id:string	destr,money	Cancel an order
+graphql	runPipeline	-	id:string	exec,cost	Run a CI pipeline
+grpc	Payments/Refund	-	payment_id:string,amount:integer	money	Refund a payment
+grpc	Payments/GetBalance	-	account:string	fin	Balance
+grpc	Users/DeleteUser	-	user_id:string	destr	Delete a user
+grpc	Users/GetUser	-	user_id:string	pii	Get a user
+grpc	Mail/SendEmail	-	to:string,subject:string	comm	Send email
+grpc	Admin/GrantRole	-	user_id:string,role:string	priv	Grant a role
+grpc	Jobs/RunJob	-	job_id:string	exec	Run a job
+grpc	Storage/ExportBucket	-	bucket:string	exp	Export a bucket
+grpc	Secrets/GetSecret	-	name:string	cred	Fetch a secret
+grpc	Health/Check	-	-	-	Health check
+grpc	Metrics/ListMetrics	-	-	-	List metrics
+grpc	Events/StreamEvents	-	topic:string	bulk	Stream events
+asyncapi	userSignedUp	user/signedup	email:string	comm	Publish a signup event
+asyncapi	orderPlaced	orders/placed	order_id:string	comm	Publish an order event
+asyncapi	paymentCaptured	payments/captured	payment_id:string	money,comm	Publish a capture command
+asyncapi	deployRequested	deploys/requested	service:string	exec,comm	Request a deploy
+asyncapi	sensorReading	sensors/reading	value:integer	comm	Publish a sensor reading
+openapi	StripeCreatePaymentLink	POST /v1/payment_links	line_items:array	pub,money	Create a shareable payment link
+openapi	StripeUpdateAccount	POST /v1/accounts/{id}	id:string,business_profile:string	-	Update connected account details
+openapi	StripeCreateTopup	POST /v1/topups	amount:integer,currency:string	money	Top up the balance
+openapi	StripeListDisputes	GET /v1/disputes	limit:integer	fin	List disputes
+openapi	StripeCloseDispute	POST /v1/disputes/{id}/close	id:string	money	Accept a dispute and lose funds
+openapi	GithubCreateRelease	POST /repos/{o}/{r}/releases	tag_name:string	pub,exec	Create a release (triggers publishing workflows)
+openapi	GithubUpdateBranchProtection	PUT /repos/{o}/{r}/branches/{b}/protection	required_reviews:integer	priv	Change merge rules
+openapi	GithubListDeployments	GET /repos/{o}/{r}/deployments	-	-	List deployments
+openapi	GithubCreateDeployment	POST /repos/{o}/{r}/deployments	ref:string	exec,infra	Start a deployment
+openapi	SlackCreateChannel	POST /conversations.create	name:string,is_private:boolean	pub	Create a channel
+openapi	SlackSetTopic	POST /conversations.setTopic	channel:string,topic:string	comm	Change a channel topic everyone sees
+openapi	SlackRemindersAdd	POST /reminders.add	text:string,time:string	sched,comm	Schedule a reminder
+openapi	SlackUsergroupsUpdate	POST /usergroups.users.update	usergroup:string,users:string	priv	Change user group members
+openapi	GoogleSheetsValuesGet	GET /v4/spreadsheets/{id}/values/{range}	range:string	-	Read a range
+openapi	GoogleSheetsValuesClear	POST /v4/spreadsheets/{id}/values/{range}:clear	range:string	destr	Clear a range
+openapi	GoogleFormsPublish	POST /v1/forms/{id}:setPublishSettings	id:string	pub	Publish a form
+openapi	CalendarWatch	POST /calendar/v3/calendars/{id}/events/watch	address:string	egress,pers	Register push notifications
+openapi	SchedulerCreateJob	POST /v1/projects/{p}/jobs	schedule:string,uri:string	sched,pers,egress	Create a cron job that calls a URL
+openapi	SchedulerPauseJob	POST /v1/jobs/{id}:pause	id:string	-	Pause a job
+openapi	SchedulerDeleteJob	DELETE /v1/jobs/{id}	id:string	destr	Delete a job
+openapi	BankListAccounts	GET /v1/accounts	-	fin,pii	List bank accounts
+openapi	BankGetStatement	GET /v1/accounts/{id}/statement	month:string	fin	Download a statement
+openapi	BankCreateStandingOrder	POST /v1/standing_orders	amount:integer,payee:string,interval:string	money,sched,pers	Set up a recurring payment
+openapi	BankCancelStandingOrder	DELETE /v1/standing_orders/{id}	id:string	destr	Cancel a recurring payment
+openapi	PayrollRunPayroll	POST /v1/payroll/runs	period:string	money,pii	Pay all employees
+openapi	PayrollListPayslips	GET /v1/payslips	employee:string	fin,pii	List payslips
+openapi	CmsSetPageVisibility	PATCH /v1/pages/{id}	visibility:string	pub	Change a page's visibility
+openapi	CmsListDrafts	GET /v1/drafts	-	-	List drafts
+openapi	StorageSetObjectAcl	PUT /v1/buckets/{b}/objects/{o}/acl	entity:string,role:string	priv,pub	Grant read to everyone
+openapi	CiTriggerPipeline	POST /v1/pipelines/{id}/trigger	branch:string	exec,cost	Start a pipeline run
+openapi	CiCancelPipeline	POST /v1/pipelines/{id}/cancel	id:string	-	Cancel a run
+openapi	CiCreateSchedule	POST /v1/pipeline_schedules	cron:string	sched,exec,pers	Run a pipeline nightly
+mcp	create_payment_link	-	amount:integer,currency:string	pub,money	Create a link anyone can pay
+mcp	schedule_task	-	cron:string,command:string	sched,exec,pers	Run a command on a schedule
+mcp	get_account_balance	-	account:string	fin	Balance
+mcp	publish_page	-	slug:string	pub	Publish a page
+mcp	set_file_permissions	-	path:string,mode:string	priv	chmod
+mcp	post_tweet	-	text:string	pub,comm	Post publicly
+mcp	create_cron	-	expr:string,url:string	sched,pers,egress	Cron that calls a URL
+mcp	list_invoices	-	customer:string	fin	List invoices
+graphql	publishPost	-	id:string	pub	Publish a post
+graphql	scheduleJob	-	cron:string	sched,pers	Schedule a job
+graphql	invoices	-	first:integer	fin	List invoices
+graphql	grantRole	-	userId:string,role:string	priv	Grant a role
+graphql	triggerBuild	-	repo:string	exec,cost	Start a build

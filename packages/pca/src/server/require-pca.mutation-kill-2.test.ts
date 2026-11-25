@@ -9,7 +9,9 @@ import { encodeKey, generateKeyPair } from '../keys';
 import { mintRoot } from '../capability';
 import { buildPCActn } from '../pcactn';
 import { encodeMlDsaPublicKey, mlDsa65Keygen } from '../pq';
-import { requirePCA } from './require-pca';
+import { requirePCA as requirePCA05 } from './require-pca';
+const requirePCA = (o: Parameters<typeof requirePCA05>[0]): ReturnType<typeof requirePCA05> => requirePCA05({ insecureAllowUnboundOperation: true, multiInstance: false, ...o }); // unbound and single-instance on purpose: these tests are not about operation binding or store scope (see breaking-05.test.ts)
+
 
 const AUD = 'rs-mk2';
 const NOW = Date.UTC(2026, 9, 11, 12, 0, 0);

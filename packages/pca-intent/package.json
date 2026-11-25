@@ -1,11 +1,37 @@
 {
   "name": "@atlasauth/pca-intent",
-  "version": "0.4.3",
-  "private": true,
-  "description": "PCA Intent Layer prototype: intent as a measurable object. Outcome space from the grant vocabulary, version-space / Bayesian elicitation with maximal-disagreement boundary-witness questions, residual-risk and fidelity estimates, conservative grant synthesis, content-addressed Intent Maps, signed intent statements and a deterministic grant renderer.",
+  "version": "0.5.0",
+  "description": "PCA Intent Layer: intent as a measurable object. Outcome space from the grant vocabulary, version-space / Bayesian elicitation with maximal-disagreement boundary-witness questions, residual-risk and fidelity estimates, conservative grant synthesis, content-addressed Intent Maps, signed intent statements and a deterministic grant renderer.",
   "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-intent"
+  },
+  "keywords": [
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "ai agents"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -22,5 +48,12 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

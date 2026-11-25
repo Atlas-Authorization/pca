@@ -180,7 +180,7 @@ function hasControlChar(s: string): boolean {
   return false;
 }
 function isEpoch(x: unknown): x is number {
-  return typeof x === 'number' && Number.isSafeInteger(x) && x >= 0;
+  return typeof x === 'number' && Number.isSafeInteger(x) && x >= 0 && !Object.is(x, -0);
 }
 
 /** Validate a value for its kind. Returns an error string or null. */
@@ -274,7 +274,7 @@ export function verifyAllowlistManifest(manifest: unknown, opts: VerifyAllowlist
     if (!Object.prototype.hasOwnProperty.call(opts.issuerKeys, issuer)) return fail('unknown-issuer', `issuer '${issuer}' is not registered`);
     const reg = opts.issuerKeys[issuer]!;
     if (reg.alg !== alg) return fail('alg-mismatch', `issuer is registered for '${reg.alg}', manifest claims '${alg}'`);
-    if (reg.notAfter !== undefined && opts.nowMs > reg.notAfter) return fail('issuer-expired', 'issuer key is past its notAfter');
+    if (reg.notAfter !== undefined && !(opts.nowMs <= reg.notAfter)) return fail('issuer-expired', 'issuer key is past its notAfter');
     if (!verifyWithSuite(alg, registeredSuiteKeys(alg, reg.keys), signedBytes(body), { sig, ...(pqSig !== undefined ? { pq_sig: pqSig } : {}) })) {
       return fail('bad-signature', 'signature does not verify under the registered issuer key');
     }
@@ -431,7 +431,7 @@ export function projectAllowlist(verified: Extract<VerifyAllowlistResult, { ok: 
   for (const e of verified.body.entries) {
     if (e.revoked === true) continue;
     if (denied.has(`${e.kind}\u0000${e.value}`)) continue;
-    if (e.notAfter !== undefined && opts.nowMs > e.notAfter) {
+    if (e.notAfter !== undefined && !(Number.isFinite(opts.nowMs) && opts.nowMs <= e.notAfter)) {
       out.expired.push({ kind: e.kind, value: e.value, label: e.label });
       continue;
     }

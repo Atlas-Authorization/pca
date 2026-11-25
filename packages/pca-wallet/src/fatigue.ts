@@ -91,6 +91,7 @@ export class SlidingWindowCounter {
     if (!(Number.isInteger(windowMs) && windowMs > 0)) throw new Error('SlidingWindowCounter: windowMs must be a positive integer');
   }
   private prune(now: number): void {
+    if (!Number.isFinite(now)) return; // an infinite clock must never forget a recorded event
     while (this.times.length > 0 && this.times[0]! <= now - this.windowMs) this.times.shift();
   }
   count(now: number): number {
@@ -101,7 +102,8 @@ export class SlidingWindowCounter {
   tryAdd(now: number, cap: number): boolean {
     this.prune(now);
     if (this.times.length >= cap) return false;
-    if (this.times.length > 0 && now < this.times[this.times.length - 1]!) throw new Error('SlidingWindowCounter: time went backwards');
+    if (this.times.length > 0 && !(now >= this.times[this.times.length - 1]!)) throw new Error('SlidingWindowCounter: time went backwards');
+    if (!Number.isFinite(now)) return false;
     this.times.push(now);
     return true;
   }

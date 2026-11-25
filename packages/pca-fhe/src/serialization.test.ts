@@ -255,7 +255,11 @@ describe('serialization and tamper behaviour', () => {
       for (const frac of [0.0, 0.5, 0.9]) {
         const pos = Math.min(raw.length - 1, Math.floor(raw.length * frac) + 20);
         const mutated = Buffer.from(raw);
-        mutated[pos] = (mutated[pos] ?? 0) ^ 0x40;
+        // Invert a whole run of bytes, not one bit: a single flipped bit in the low bytes of a coefficient is
+        // smaller than the decryption noise budget and legitimately decrypts to the true verdict (which bytes are
+        // low depends on the random ciphertext, so the old single-bit test failed on some runs). Eight words'
+        // worth of inverted coefficients cannot decrypt to the true verdict.
+        for (let k = pos; k < Math.min(mutated.length, pos + 64); k++) mutated[k] = (mutated[k] ?? 0) ^ 0xff;
         let verdictMatches = false;
         let threw = false;
         try {

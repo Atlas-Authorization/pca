@@ -62,3 +62,9 @@ describe('buildPaymentMandate → PCA Root Intent Grant', () => {
     expect(() => buildPaymentMandate({ ...base, perTransactionCap: 0 })).toThrow(/perTransactionCap/);
   });
 });
+
+describe('negative zero is refused, not signed', () => {
+  it.each(['autoApproveThreshold', 'replenishPerCosign'] as const)('%s = -0 throws', (k) => {
+    expect(() => buildPaymentMandate({ ...base, [k]: -0 })).toThrow(/negative zero/);
+  });
+});

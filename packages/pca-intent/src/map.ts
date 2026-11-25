@@ -1,5 +1,7 @@
-import { hashCanonical, intentMapDigest as coreIntentMapDigest, type Caveat, type Predicate } from '@atlasauth/pca';
+import { hashCanonical, type Caveat, type Predicate } from '@atlasauth/pca';
+import { intentMapDigest as coreIntentMapDigest } from '@atlasauth/pca/ext/intent';
 import { IntentLearner, hypothesisClassName, type HypothesisClassName, type HypothesisClassSpec, type LearnerOptions, type Observation, type Strategy } from './learner';
+import { detExp, detLn } from './detmath';
 import type { CatValue, Dim, Omega, Outcome } from './omega';
 import type { PolicyInput } from './policy';
 import type { Region } from './region';
@@ -18,7 +20,7 @@ import type { Region } from './region';
  * All probabilities and metrics are integers in parts-per-million (ppm) so the digest is language-portable.
  */
 
-export { INTENT_MAP_DOMAIN } from '@atlasauth/pca';
+export { INTENT_MAP_DOMAIN } from '@atlasauth/pca/ext/intent';
 const PPM = 1_000_000;
 const ppm = (x: number) => Math.round(x * PPM);
 
@@ -119,6 +121,12 @@ export function omegaToJSON(o: Omega): OmegaJSON {
   };
 }
 
+/** A categorical dimension holds one of its values: with none it can hold nothing, so it is refused (never read as an empty list). */
+function catValues(d: { path: string; values?: CatValue[] }): CatValue[] {
+  if (!Array.isArray(d.values) || d.values.length === 0) throw new Error(`omegaFromJSON: categorical dimension '${d.path}' has no values`);
+  return d.values.map((x) => ({ ...x }));
+}
+
 export function omegaFromJSON(j: OmegaJSON): Omega {
   const tot = j.verbs.reduce((s, v) => s + v.w, 0);
   return {
@@ -128,7 +136,7 @@ export function omegaFromJSON(j: OmegaJSON): Omega {
       verb: v.verb,
       reversibility: v.reversibility as Omega['verbs'][number]['reversibility'],
       weight: v.w / tot,
-      dims: v.dims.map((d): Dim => (d.kind === 'num' ? { kind: 'num', path: d.path, lo: d.lo!, hi: d.hi!, cuts: [...(d.cuts ?? [])], dist: d.dist ?? 'uniform' } : { kind: 'cat', path: d.path, values: (d.values ?? []).map((x) => ({ ...x })) })),
+      dims: v.dims.map((d): Dim => (d.kind === 'num' ? { kind: 'num', path: d.path, lo: d.lo!, hi: d.hi!, cuts: [...(d.cuts ?? [])], dist: d.dist ?? 'uniform' } : { kind: 'cat', path: d.path, values: catValues(d) })),
     })),
   };
 }
@@ -193,7 +201,7 @@ function priorMixOf(pm: NonNullable<MapLearnerOptions['priorMix']>): NonNullable
     const q = qz(c.q);
     if (!(q >= 0 && q <= 1) || !Number.isSafeInteger(c.cell) || c.cell < 0) throw new Error('pca-intent: priorMix cells need q in [0, 1] and a cell index >= 0');
     const list = byVerb.get(c.verb) ?? [];
-    list.push({ cell: c.cell, lq: Math.log(q), lnq: Math.log(1 - q) });
+    list.push({ cell: c.cell, lq: detLn(q), lnq: detLn(1 - q) }); // detLn / detExp: the weights are recomputed and compared by verifiers
     byVerb.set(c.verb, list);
   }
   return {
@@ -201,7 +209,7 @@ function priorMixOf(pm: NonNullable<MapLearnerOptions['priorMix']>): NonNullable
     weight: (vs, contains) => {
       let lw = 0;
       for (const t of byVerb.get(vs.verb) ?? []) lw += contains(t.cell) ? t.lq : t.lnq;
-      return Math.exp(lw);
+      return detExp(lw);
     },
   };
 }
@@ -338,12 +346,13 @@ export function verifyIntentMap(m: IntentMap): { ok: boolean; problems: string[]
     else
       r.cells.forEach((c, i) => {
         const x = m.cells[i]!;
-        if (c.verb !== x.verb || c.in_grant !== x.in_grant || Math.abs(c.p_ppm - x.p_ppm) > 2) problems.push(`cell ${i} differs`);
+        // a missing or non-numeric claim is a mismatch (NaN compares false, so the closeness test is written to fail closed)
+        if (c.verb !== x.verb || c.in_grant !== x.in_grant || typeof x.p_ppm !== 'number' || !(Math.abs(c.p_ppm - x.p_ppm) <= 2)) problems.push(`cell ${i} differs`);
       });
     for (const k of Object.keys(r.metrics) as (keyof IntentMapMetrics)[]) {
       const a = r.metrics[k];
       const b = m.metrics[k];
-      if (a === null || b === null ? a !== b : Math.abs(a - b) > 2) problems.push(`metric ${k} differs (${String(b)} claimed, ${String(a)} replayed)`);
+      if (a === null || b === null ? a !== b : typeof b !== 'number' || !(Math.abs(a - b) <= 2)) problems.push(`metric ${k} differs (${String(b)} claimed, ${String(a)} replayed)`);
     }
   } catch (e) {
     problems.push(`replay failed: ${(e as Error).message}`);

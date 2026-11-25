@@ -19,7 +19,7 @@ SPECS=(
   "pca-oprf|src/mutation-kill-sites.test.ts|src/oprf.ts:429-429"
   "pca-pq-threshold|src/mutation-kill-sites.test.ts|src/index.ts:343-343"
   "pca-ciba|src/mutation-kill-sites.test.ts|src/client.ts:288-288"
-  "pca-abe|src/mutation-kill-attrs.test.ts|src/bls.ts:190-190"
+  "pca-abe|src/mutation-kill-attrs.test.ts|src/bls.ts:203-203"
 )
 fail=0
 echo "=== step 1: vitest"
