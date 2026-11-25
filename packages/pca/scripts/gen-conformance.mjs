@@ -54,7 +54,7 @@ const resign = (p, secret) => {
 
 const NOW = 1_800_000_000_000; // fixed verification time for every vector (epoch ms)
 const AUD = 'rs-conformance';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 const KEYMAP = { chain: 'cap_chain' };
 
 const vectors = [];
@@ -71,7 +71,7 @@ async function add(name, description, grant, plan, pcactn, { falseChecks = [], n
   }
   let r;
   if (wireErr) r = { allow: false, checks: { wire: 'fail' } };
-  else r = await pca.verifyPCActnCore(obj, { grant, nowEpoch: now, audience: aud });
+  else r = await pca.verifyPCActnCore(obj, { insecureSkipPlanRootCheck: true, grant, nowEpoch: now, audience: aud });
   const c = r.checks;
   const expectChecks = {};
   if (c.wire === 'fail') expectChecks.wire = false;
@@ -118,7 +118,7 @@ await add('wrong-key-leaf-signature', 'Signed by a key that is not the leaf hold
 }
 {
   const p = build(); p.counter = -1;
-  await add('invalid-counter', 'Negative counter (re-signed): counter check fails.', root, planNodes, resign(p, agent.secretKey), { falseChecks: ['counter'] });
+  await add('invalid-counter', 'Negative counter (re-signed): counter check fails.', root, planNodes, resign(p, agent.secretKey), { falseChecks: ['counter_format'] });
 }
 {
   const p = build(); p.plan.inclusion_proof.path[0].hash = p.plan.inclusion_proof.path[1].hash;
@@ -403,7 +403,7 @@ for (const e of primitives.b64u) { const got = pca.decodeB64uStrict(e.input, e.l
 }
 
 const limits = { max_chain_hops: 16, max_json_depth: 32, max_json_chars: 1 << 20, max_artifact_bytes: 524288, max_caveats_per_hop: 256, max_caveats_per_chain: 1024, max_decimal_digits: 15, min_decimal_magnitude: 1e-6, max_lifetime_ms: 3_600_000, max_skew_ms: 60_000 };
-const checkOrder = ['wire', 'version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const checkOrder = ['wire', 'version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 writeFileSync(join(outDir, 'keys.json'), JSON.stringify(keys, null, 2) + '\n');
 writeCore({ format: 2, ver: 2, sig_domain: 'atlas-pca/actn/v2\\0', cap_domain: 'atlas-pca/cap/v1\\0', share_domain: 'atlas-pca/share/<role>\\0', check_order: checkOrder, limits, primitives, vectors });
 console.log(`wrote ${vectors.length} vectors`);

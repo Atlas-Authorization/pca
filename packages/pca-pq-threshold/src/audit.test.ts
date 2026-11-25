@@ -9,20 +9,19 @@ import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import {
   DEFAULT_RISK_POLICY,
-  type FrostParticipantShare,
   type PCActn,
   type PlanNode,
   attenuate,
   b64u,
   buildPCActn,
   encodeKey,
-  frostTrustedDealerKeygen,
   generateKeyPair,
   mintGrant,
   mlDsa65Keygen,
   mlDsa65Sign,
   thresholdMessage,
 } from '@atlasauth/pca';
+import { type FrostParticipantShare, frostTrustedDealerKeygen, pqQuorumRepresentative } from '@atlasauth/pca/ext/frost';
 import {
   MAX_PQ_SIGNER_ENTRIES,
   createHybridThresholdVerifier,
@@ -90,9 +89,9 @@ describe('action binding and quorum accounting', () => {
     expect(dup.pq.count).toBe(1);
     expect(dup.ok).toBe(false);
     const outsider = mlDsa65Keygen(seed(99));
-    const forged = { pk: b64u(outsider.publicKey), sig: b64u(mlDsa65Sign(outsider.secretKey, thresholdMessage(actionA))) };
+    const forged = { pk: b64u(outsider.publicKey), sig: b64u(mlDsa65Sign(outsider.secretKey, pqQuorumRepresentative(thresholdMessage(actionA)))) };
     expect(verifyHybridThreshold(actionA, withPq([good0, forged]), opts).pq.count).toBe(1);
-    const otherAction = { pk: good1.pk, sig: b64u(mlDsa65Sign(pq[1]!.secretKey, thresholdMessage(actionB))) };
+    const otherAction = { pk: good1.pk, sig: b64u(mlDsa65Sign(pq[1]!.secretKey, pqQuorumRepresentative(thresholdMessage(actionB)))) };
     expect(verifyHybridThreshold(actionA, withPq([good0, otherAction]), opts).pq.count).toBe(1);
     expect(verifyHybridThreshold(actionA, withPq([good0, { pk: good1.pk, sig: good0.sig }]), opts).pq.count).toBe(1);
   });
@@ -183,10 +182,12 @@ describe('step-up folding: the two halves cannot be mixed across actions', () =>
 
 describe('work bound', () => {
   it('a block stuffed with thousands of invalid co-signatures is processed in bounded time (entries beyond the cap are ignored)', () => {
-    const stuffed = Array.from({ length: 5000 }, () => ({ pk: good0.pk, sig: good1.sig }));
-    const t0 = performance.now();
-    const v = verifyHybridThreshold(actionA, withPq(stuffed), opts);
-    expect(performance.now() - t0).toBeLessThan(5000);
+    // bounded = the same work as a block of exactly the cap size (entries beyond the cap are never verified); relative, so a loaded runner does not fail it
+    const block = (n: number) => Array.from({ length: n }, () => ({ pk: good0.pk, sig: good1.sig }));
+    const timed = (n: number) => { const t0 = performance.now(); const r = verifyHybridThreshold(actionA, withPq(block(n)), opts); return { ms: performance.now() - t0, r }; };
+    const capped = timed(MAX_PQ_SIGNER_ENTRIES);
+    const { ms, r: v } = timed(5000);
+    expect(ms).toBeLessThan(capped.ms * 3 + 1000);
     expect(v.ok).toBe(false);
     expect(MAX_PQ_SIGNER_ENTRIES).toBeGreaterThanOrEqual(pq.length);
   });

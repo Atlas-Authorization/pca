@@ -143,7 +143,9 @@ describe('instrumentGuard with a tracer', () => {
 
     await expect(wrapped({})).rejects.toBe(boom);
     const span = tracer.spans[0]!;
-    expect(span.call.exceptions).toEqual([boom]);
+    expect(span.call.exceptions).toHaveLength(1);
+    expect((span.call.exceptions[0] as Error).message).toBe('verifier exploded');
+    expect((span.call.exceptions[0] as Error).name).toBe('Error');
     expect(span.call.status).toEqual({ code: 2, message: 'verifier exploded' });
     expect(span.call.ended).toBe(true);
   });

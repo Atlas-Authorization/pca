@@ -1,0 +1,26 @@
+{
+ "trait": "pca.regulated_data",
+ "card": {
+  "verb": "golden.regulated_data",
+  "title": "Do the regulated data thing",
+  "text": "Do the regulated data thing. This action handles regulated data.",
+  "risk": "high",
+  "escalation": "confirm",
+  "reversibility": "reversible",
+  "blast_ppm": 50000,
+  "needs": [],
+  "context": []
+ },
+ "closure": [
+  "pca.regulated_data"
+ ],
+ "floor": {
+  "risk": 2,
+  "rev": "reversible",
+  "blast_ppm": 0,
+  "esc": 1,
+  "caveats": [],
+  "context": [],
+  "prules": []
+ }
+}

@@ -14,6 +14,7 @@ const payment = (over: Partial<PaymentMandateClaims> = {}): PaymentMandateClaims
 describe('toAtomicUnits boundaries', () => {
   it('accepts zero amount', () => expect(toAtomicUnits({ amount: 0, currency: 'USD' }, 6)).toBe('0'));
   it('rejects negative, accepts 0', () => expect(() => toAtomicUnits({ amount: -1, currency: 'USD' }, 6)).toThrow(RangeError));
+  it('rejects -0 (strict profile)', () => expect(() => toAtomicUnits({ amount: -0, currency: 'USD' }, 6)).toThrow(RangeError));
   it('decimals equal to the exponent is a plain pass-through', () => {
     expect(toAtomicUnits({ amount: 1234, currency: 'USD' }, 2)).toBe('1234');
     expect(toAtomicUnits({ amount: 1234, currency: 'JPY' }, 0)).toBe('1234');

@@ -1,0 +1,277 @@
+name: MPC mixed-language mesh
+
+# The real interop test of the networked MPC driver: party programs of DIFFERENT languages run ONE mutual-TLS 1.3 mesh, each node its own
+# OS process started from the same JSON config the TypeScript reference's party-main reads. A mesh passes only when every node exits ok,
+# every party's composed decision equals the reference's cleartext composition, and all parties report one transcript digest (any
+# disagreement on a single broadcast, signature, pin or frame aborts the run). Dealer meshes and no-dealer (OT offline phase) meshes. Every native language
+# (TypeScript, Go, Rust, Java, Kotlin, Python, Ruby, PHP, Swift, .NET) runs in at least one mixed mesh.
+# Native repos are checked out at the SAME ref as this run (a ci/** branch, a tag, or main), as in the cross-language gate.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+    inputs:
+      native_ref:
+        description: 'Ref of the native repos (default: the ref of this run)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NATIVE_REF: ${{ inputs.native_ref || github.ref_name }}
+  BC_VERSION: '1.80'
+  LAZYSODIUM_VERSION: '5.2.0'
+  JNA_VERSION: '5.17.0'
+  ICU4J_VERSION: '78.3'
+  OPENSSL_VERSION: 3.5.9
+
+jobs:
+  # the Swift party program is built in its own job (OpenSSL 3.5 for ML-KEM, swift-crypto/liboqs patch on Linux, libsodium) and handed over as an artifact
+  swift-party:
+    name: build the Swift party program
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      ATLAS_PCA_MPC: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native repo pca-swift at ${{ env.NATIVE_REF }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://github.com/${{ github.repository_owner }}/pca-swift.git"
+          for i in $(seq 1 40); do
+            git ls-remote --exit-code "$url" "refs/heads/$NATIVE_REF" "refs/tags/$NATIVE_REF" >/dev/null 2>&1 && break
+            [ "$i" = 40 ] && { echo "::error::pca-swift has no ref '$NATIVE_REF'"; exit 1; }
+            echo "waiting for pca-swift@$NATIVE_REF ($i/40)"; sleep 30
+          done
+          mkdir -p sdks
+          git clone -q --depth 1 --branch "$NATIVE_REF" "$url" sdks/swift-pca
+          echo "pca-swift @ $(git -C sdks/swift-pca rev-parse HEAD)"
+      - name: OpenSSL (cached)
+        id: ossl
+        uses: actions/cache@v4
+        with:
+          path: ~/openssl35
+          key: openssl-${{ env.OPENSSL_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+      - name: Build tools and libsodium
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential perl pkg-config libsodium-dev libsqlite3-dev libxml2 libcurl4-openssl-dev libncurses-dev
+      - name: Build OpenSSL at the pinned release
+        if: steps.ossl.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VERSION/openssl-$OPENSSL_VERSION.tar.gz" | tar xz -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/openssl-$OPENSSL_VERSION"
+          ./config --prefix="$HOME/openssl35" --libdir=lib shared no-tests > /dev/null
+          make -j4 > /dev/null
+          make install_sw > /dev/null
+      - name: libcrypto through pkg-config
+        run: |
+          echo "PKG_CONFIG_PATH=$HOME/openssl35/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$HOME/openssl35/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+          test "$(PKG_CONFIG_PATH=$HOME/openssl35/lib/pkgconfig pkg-config --modversion libcrypto)" = "$OPENSSL_VERSION"
+      - name: Linux toolchain (Swift, swift-crypto for CryptoKit, liboqs ML-DSA)
+        run: |
+          bash tools/pca-audit/swift-mutate/linux-prep.sh sdks/swift-pca
+          echo "$HOME/swift/usr/bin" >> "$GITHUB_PATH"
+      - name: Build pca-mpc-party
+        working-directory: sdks/swift-pca
+        run: swift build -c release --product pca-mpc-party --static-swift-stdlib
+      - name: Package the party program with the OpenSSL libraries it loads
+        run: |
+          out="$RUNNER_TEMP/swift-party"; mkdir -p "$out/lib"
+          cp sdks/swift-pca/.build/release/pca-mpc-party "$out/"
+          cp -a "$HOME"/openssl35/lib/libcrypto.so* "$out/lib/"
+          ldd "$out/pca-mpc-party" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: swift-party
+          path: ${{ runner.temp }}/swift-party
+          retention-days: 3
+
+  mesh:
+    name: mixed-language meshes
+    needs: swift-party
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native repos at ${{ env.NATIVE_REF }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/native" sdks
+          for r in go rust java python ruby php kotlin dotnet; do
+            url="https://github.com/${{ github.repository_owner }}/pca-$r.git"
+            # the release-candidate push lands the flagship first: wait up to 20 min for each native repo's ref
+            for i in $(seq 1 40); do
+              git ls-remote --exit-code "$url" "refs/heads/$NATIVE_REF" "refs/tags/$NATIVE_REF" >/dev/null 2>&1 && break
+              [ "$i" = 40 ] && { echo "::error::pca-$r has no ref '$NATIVE_REF'"; exit 1; }
+              echo "waiting for pca-$r@$NATIVE_REF ($i/40)"; sleep 30
+            done
+            git clone -q --depth 1 --branch "$NATIVE_REF" "$url" "$RUNNER_TEMP/native/pca-$r"
+            echo "pca-$r @ $(git -C "$RUNNER_TEMP/native/pca-$r" rev-parse HEAD)"
+          done
+          for r in go java python ruby php kotlin dotnet; do cp -R "$RUNNER_TEMP/native/pca-$r" "sdks/$r-pca"; done
+          cp -R "$RUNNER_TEMP/native/pca-rust/crates/atlas-pca" sdks/rust-pca
+          # the crate's path dependencies are its sibling crates in the lane workspace (../pca-mpc-lwe-ot-wasm, ...): keep them next to it
+          for c in "$RUNNER_TEMP"/native/pca-rust/crates/*/; do n="$(basename "$c")"; [ "$n" = atlas-pca ] || cp -R "$c" "sdks/$n"; done
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: sdks/go-pca/go.mod
+          cache: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '23'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sodium, json, mbstring, intl, ffi, openssl, gmp
+          ini-values: ffi.enable=true
+          coverage: none
+          tools: composer
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: swift-party
+          path: ${{ runner.temp }}/swift-party
+      - name: Build the TypeScript reference party program
+        run: |
+          pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca-mpc...
+          pnpm -r --filter=@atlasauth/pca-mpc... run build
+          test -f packages/pca-mpc/dist/net/party-main.js
+      - name: Build the Go party program
+        working-directory: sdks/go-pca
+        run: go build -o "$RUNNER_TEMP/bin/pca-mpc-party-go" ./cmd/pca-mpc-party
+      - name: Build the Rust party program
+        run: |
+          cargo build --release --manifest-path sdks/rust-pca/Cargo.toml --features mpc-net-driver --bin pca-mpc-party
+          mkdir -p "$RUNNER_TEMP/bin" && cp sdks/rust-pca/target/release/pca-mpc-party "$RUNNER_TEMP/bin/pca-mpc-party-rust"
+      - name: Build the Java party program
+        shell: bash
+        run: |
+          set -euo pipefail
+          lib="$RUNNER_TEMP/javalib"; mkdir -p "$lib"
+          m=https://repo1.maven.org/maven2
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$lib/bcprov.jar" "$m/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$lib/lazysodium.jar" "$m/com/goterl/lazysodium-java/${LAZYSODIUM_VERSION}/lazysodium-java-${LAZYSODIUM_VERSION}.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$lib/jna.jar" "$m/net/java/dev/jna/jna/${JNA_VERSION}/jna-${JNA_VERSION}.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$lib/icu4j.jar" "$m/com/ibm/icu/icu4j/${ICU4J_VERSION}/icu4j-${ICU4J_VERSION}.jar"
+          # lazysodium-java's runtime dependencies (its pom): the logger API and the resource loader it extracts libsodium with
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$lib/slf4j-api.jar" "$m/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$lib/resource-loader.jar" "$m/com/goterl/resource-loader/2.1.0/resource-loader-2.1.0.jar"
+          cp="$lib/bcprov.jar:$lib/lazysodium.jar:$lib/jna.jar:$lib/icu4j.jar:$lib/slf4j-api.jar:$lib/resource-loader.jar"
+          javac -proc:none -cp "$cp" -sourcepath sdks/java-pca/src -d "$RUNNER_TEMP/java-classes" sdks/java-pca/src/net/atlasauth/pca/mpc/net/PartyMain.java
+          echo "PCA_MESH_JAVA_CP=$RUNNER_TEMP/java-classes:$cp" >> "$GITHUB_ENV"
+      - name: Build the Kotlin party program
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -q -f sdks/kotlin-pca/pom.xml -DskipTests compile dependency:build-classpath -Dmdep.outputFile="$RUNNER_TEMP/kotlin-cp.txt"
+          echo "PCA_MESH_KOTLIN_CP=$PWD/sdks/kotlin-pca/target/classes:$(cat "$RUNNER_TEMP/kotlin-cp.txt")" >> "$GITHUB_ENV"
+      - name: Build the .NET party program
+        run: dotnet build sdks/dotnet-pca/AtlasPca.MpcParty/AtlasPca.MpcParty.csproj -c Release -o "$RUNNER_TEMP/dotnet-party"
+      - name: Python, Ruby and PHP party program dependencies
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq libsodium-dev
+          python -m pip install pysodium cryptography
+          gem install ffi --no-document
+          composer install --no-interaction --no-progress --working-dir=sdks/php-pca
+          chmod +x "$RUNNER_TEMP/swift-party/pca-mpc-party"
+      - name: Base-OT lattice library and the lwe-capable Go and Rust party programs
+        shell: bash
+        run: |
+          set -euo pipefail
+          crate="$PWD/packages/pca-mpc-lwe-ot-wasm/crate"
+          lib="$RUNNER_TEMP/lweot"; mkdir -p "$lib"
+          cargo build --locked --release --features capi --manifest-path "$crate/Cargo.toml"
+          cp "$(find "$crate/target/release" -maxdepth 1 -name 'libpca_mpc_lwe_ot_wasm.so' | head -1)" "$lib/liblweot.so"
+          # Go: the party program of the separate cgo module (liblweot registered into the core's ot roles)
+          (cd sdks/go-pca/lweotkit/party && cp ../../go.sum go.sum && go mod tidy && CGO_ENABLED=1 CGO_LDFLAGS="-L$lib" go build -o "$RUNNER_TEMP/bin/pca-mpc-party-go-lwe" .)
+          # Rust: the same crate with the mpc-net-lwe feature (the endemic lattice core is linked in)
+          cargo build --release --manifest-path sdks/rust-pca/Cargo.toml --features mpc-net-lwe --bin pca-mpc-party --target-dir "$RUNNER_TEMP/rust-lwe-target"
+          cp "$RUNNER_TEMP/rust-lwe-target/release/pca-mpc-party" "$RUNNER_TEMP/bin/pca-mpc-party-rust-lwe"
+          {
+            echo "PCA_MESH_LWEOT_DIR=$lib"
+            echo "PCA_MESH_GO_LWE=$RUNNER_TEMP/bin/pca-mpc-party-go-lwe"
+            echo "PCA_MESH_RUST_LWE=$RUNNER_TEMP/bin/pca-mpc-party-rust-lwe"
+          } >> "$GITHUB_ENV"
+      - name: Party programs
+        run: |
+          {
+            echo "PCA_MESH_TS_MAIN=$PWD/packages/pca-mpc/dist/net/party-main.js"
+            echo "PCA_MESH_GO=$RUNNER_TEMP/bin/pca-mpc-party-go"
+            echo "PCA_MESH_RUST=$RUNNER_TEMP/bin/pca-mpc-party-rust"
+            echo "PCA_MESH_PY_ROOT=$PWD/sdks/python-pca"
+            echo "PCA_MESH_RUBY_ROOT=$PWD/sdks/ruby-pca"
+            echo "PCA_MESH_PHP_ROOT=$PWD/sdks/php-pca"
+            echo "PCA_MESH_SWIFT=$RUNNER_TEMP/swift-party/pca-mpc-party"
+            echo "PCA_MESH_SWIFT_LIB=$RUNNER_TEMP/swift-party/lib"
+            echo "PCA_MESH_DOTNET=$RUNNER_TEMP/dotnet-party/pca-mpc-party.dll"
+            echo "PCA_MESH_REF_DIST=$PWD/packages/pca-mpc/dist"
+          } >> "$GITHUB_ENV"
+      # trusted-dealer meshes (the dealer sees every share: explicit opt-in in every config; test-only mode)
+      - name: "Mesh A: dealer (Java), parties TypeScript + Go + Rust"
+        run: node .github/scripts/mpc-mesh.mjs --name A --offline trusted-dealer --dealer java --parties ts,go,rust --q 4 --timeout-s 600
+      - name: "Mesh B: dealer (Go), parties Java + Python + TypeScript"
+        if: always()
+        run: node .github/scripts/mpc-mesh.mjs --name B --offline trusted-dealer --dealer go --parties java,python,ts --q 4 --timeout-s 900
+      - name: "Mesh C: dealer (TypeScript), parties Rust + Python + Go"
+        if: always()
+        run: node .github/scripts/mpc-mesh.mjs --name C --offline trusted-dealer --dealer ts --parties rust,python,go --q 4 --timeout-s 900
+      # no-dealer meshes: the OT offline phase (base OTs, KOS extension, Gilboa multiplication, signed gadget seeds, forensics) across languages
+      - name: "Mesh D: no dealer, parties TypeScript + Go + Rust"
+        if: always()
+        run: node .github/scripts/mpc-mesh.mjs --name D --offline no-dealer --parties ts,go,rust --q 2 --timeout-s 1800
+      - name: "Mesh E: no dealer, parties Java + Rust + TypeScript"
+        if: always()
+        run: node .github/scripts/mpc-mesh.mjs --name E --offline no-dealer --parties java,rust,ts --q 2 --timeout-s 2400
+      # every remaining language in a mixed dealer mesh: Ruby + PHP + TypeScript, Kotlin + Swift + Go, .NET + Python + Rust
+      - name: "Mesh F: dealer (Rust), parties Ruby + PHP + TypeScript"
+        if: always()
+        run: node .github/scripts/mpc-mesh.mjs --name F --offline trusted-dealer --dealer rust --parties ruby,php,ts --q 4 --timeout-s 1800
+      - name: "Mesh G: dealer (Java), parties Kotlin + Swift + Go"
+        if: always()
+        run: node .github/scripts/mpc-mesh.mjs --name G --offline trusted-dealer --dealer java --parties kotlin,swift,go --q 4 --timeout-s 1200
+      - name: "Mesh H: dealer (Python), parties .NET + Python + Rust"
+        if: always()
+        run: node .github/scripts/mpc-mesh.mjs --name H --offline trusted-dealer --dealer python --parties dotnet,python,rust --q 4 --timeout-s 1200
+      # Python in a no-dealer mesh (the pure-Python OT offline phase is the slowest party program: long timeout)
+      - name: "Mesh I: no dealer, parties Python + TypeScript + Rust"
+        if: always()
+        timeout-minutes: 120
+        run: node .github/scripts/mpc-mesh.mjs --name I --offline no-dealer --parties python,ts,rust --q 2 --timeout-s 6000
+      # the post-quantum endemic base OT across languages: ot-sender / ot-receiver pairs, every pairing of TypeScript, Rust and Go in both directions
+      - name: "Mesh J: lwe base OT, TypeScript sender + Rust receiver, then Rust sender + Go receiver, then Go sender + TypeScript receiver"
+        if: always()
+        run: |
+          rc=0
+          node .github/scripts/mpc-mesh.mjs --name J1 --ot lwe --parties ts,rust --count 16 --timeout-s 600 || rc=1
+          node .github/scripts/mpc-mesh.mjs --name J2 --ot lwe --parties rust,go --count 16 --timeout-s 600 || rc=1
+          node .github/scripts/mpc-mesh.mjs --name J3 --ot lwe --parties go,ts --count 16 --timeout-s 600 || rc=1
+          node .github/scripts/mpc-mesh.mjs --name J4 --ot lwe --parties go,rust --count 16 --timeout-s 600 || rc=1
+          node .github/scripts/mpc-mesh.mjs --name J5 --ot lwe --parties ts,go --count 16 --timeout-s 600 || rc=1
+          node .github/scripts/mpc-mesh.mjs --name J6 --ot lwe --parties rust,ts --count 16 --timeout-s 600 || rc=1
+          node .github/scripts/mpc-mesh.mjs --name J7 --ot lwe --parties dotnet,rust --count 16 --timeout-s 600 || rc=1
+          node .github/scripts/mpc-mesh.mjs --name J8 --ot lwe --parties go,dotnet --count 16 --timeout-s 600 || rc=1
+          exit $rc

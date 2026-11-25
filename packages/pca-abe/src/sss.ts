@@ -57,7 +57,7 @@ export function recoverSecret(shares: Share[]): bigint | null {
 
 /**
  * Lagrange coefficients `L_i(0) = prod_{j != i} x_j / (x_j - x_i)` for the evaluation points `xs`. The same
- * coefficients interpolate "in the exponent" (the pairing-based DecryptNode of Bethencourt-Sahai-Waters).
+ * coefficients interpolate "in the exponent" (the reconstruction weights of the FAME decryption).
  * Null (fail-closed) on an empty set, a zero point, or points that coincide as field elements.
  */
 export function lagrangeAtZero(xs: readonly bigint[]): bigint[] | null {

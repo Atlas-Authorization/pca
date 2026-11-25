@@ -61,6 +61,11 @@ describe('PCA wire schemas', () => {
     expect(res.errors.some((e) => e.includes('(root)'))).toBe(true);
   });
 
+  it('an integer is never -0 (strict profile)', () => {
+    expect(validate({ type: 'integer' }, 0).valid).toBe(true);
+    expect(validate({ type: 'integer' }, -0).valid).toBe(false);
+  });
+
   it('exposes all three schemas in ALL_SCHEMAS', () => {
     expect(Object.keys(ALL_SCHEMAS).sort()).toEqual(['Capability', 'PCActn', 'PcaDiscoveryDocument']);
   });

@@ -13,9 +13,9 @@ import { join, relative, resolve } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { composeClear } from '../compose';
 import { generateIdentity } from './certs';
-import { launchLocal, launchOtLocal, type LaunchOptions } from './launch-local';
+import { launchLocal, launchNodes, launchOtLocal, type LaunchOptions } from './launch-local';
 import type { NodeConfig } from './party-main';
-import { T, reservePorts } from './test-timing';
+import { T } from './test-timing';
 
 const pkg = resolve(__dirname, '../..');
 const underStryker = (): boolean => (globalThis as { __stryker__?: unknown }).__stryker__ !== undefined;
@@ -89,10 +89,9 @@ function runMain(args: string[], env: Record<string, string | undefined> = {}): 
 async function soloCfg(over: Partial<NodeConfig> = {}): Promise<string> {
   const d = mkdtempSync(join(work, 'solo-'));
   const id = generateIdentity(join(d, 'n0'), 'n0');
-  const [port] = await reservePorts(1);
   const cfg: NodeConfig = {
     role: 'party', id: 0, n: 1, Q: 2, offline: 'no-dealer', sessionId: 'solo', input: { allow: 1, t: 2, rQuant: 1 }, listenHost: '127.0.0.1',
-    nodes: [{ id: 0, host: '127.0.0.1', port: port!, certPath: id.certPath }], keyPath: id.keyPath, certPath: id.certPath, ...over,
+    nodes: [{ id: 0, host: '127.0.0.1', port: 0, certPath: id.certPath }], keyPath: id.keyPath, certPath: id.certPath, ...over,
   };
   const p = join(d, 'cfg.json');
   writeFileSync(p, JSON.stringify(cfg));
@@ -177,10 +176,9 @@ describe('a lone party', () => {
     const d = mkdtempSync(join(work, 'ct-'));
     const a = generateIdentity(join(d, 'a'), 'a');
     const b = generateIdentity(join(d, 'b'), 'b');
-    const ports = await reservePorts(2);
     const cfg: NodeConfig = {
       role: 'party', id: 0, n: 2, Q: 1, offline: 'no-dealer', sessionId: 's', input: { allow: 1, t: 1, rQuant: 0 }, listenHost: '127.0.0.1',
-      nodes: [{ id: 0, host: '127.0.0.1', port: ports[0]!, certPath: a.certPath }, { id: 1, host: '127.0.0.1', port: ports[1]!, certPath: b.certPath }],
+      nodes: [{ id: 0, host: '127.0.0.1', port: 0, certPath: a.certPath }, { id: 1, host: '127.0.0.1', port: 0, certPath: b.certPath }],
       keyPath: a.keyPath, certPath: a.certPath, connectTimeoutMs: 1500,
     };
     const p = join(d, 'cfg.json');
@@ -201,7 +199,7 @@ const V2 = [
   { allow: 1, t: 1, rQuant: 1 },
   { allow: 1, t: 2, rQuant: 0 },
 ] as const;
-const run2 = (o: Partial<LaunchOptions> = {}) => launchLocal({ n: 2, Q: 1, vectors: [...V2], mainJs, recvTimeoutMs: 20_000, killAfterMs: 90_000, ...o });
+const run2 = (o: Partial<LaunchOptions> = {}) => launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 2, Q: 1, vectors: [...V2], mainJs, recvTimeoutMs: 20_000, killAfterMs: 90_000, ...o });
 
 describe('dealer and parties (n = 2, Q = 1)', () => {
   it('honest run: both parties output the clear composition, the dealer reports its links to the parties only', async () => {
@@ -263,15 +261,14 @@ describe('OT roles', () => {
   it('without an ot section the roles default to 128 EC transfers', async () => {
     const d = mkdtempSync(join(work, 'ot-'));
     const ids = [0, 1].map((i) => generateIdentity(join(d, `n${i}`), `n${i}`));
-    const ports = await reservePorts(2);
-    const nodes = ids.map((x, j) => ({ id: j, host: '127.0.0.1', port: ports[j]!, certPath: x.certPath }));
+    const nodes = ids.map((x, j) => ({ id: j, host: '127.0.0.1', port: 0, certPath: x.certPath }));
     const paths = [0, 1].map((id) => {
-      const cfg: NodeConfig = { role: id === 0 ? 'ot-sender' : 'ot-receiver', id, n: 2, sessionId: 'ot', listenHost: '127.0.0.1', nodes, keyPath: ids[id]!.keyPath, certPath: ids[id]!.certPath };
+      const cfg: NodeConfig = { role: id === 0 ? 'ot-sender' : 'ot-receiver', id, n: 2, sessionId: 'ot', listenHost: '127.0.0.1', bindFirst: true, nodes, keyPath: ids[id]!.keyPath, certPath: ids[id]!.certPath };
       const p = join(d, `cfg${id}.json`);
       writeFileSync(p, JSON.stringify(cfg));
       return p;
     });
-    const [a, b] = await Promise.all(paths.map((p) => runMain([p])));
+    const [a, b] = await launchNodes(paths.map((cfgPath, id) => ({ id, role: id === 0 ? ('dealer' as const) : ('party' as const), cfgPath, ports: (rep) => Object.fromEntries(rep) })), mainJs, {});
     expect(a!.json.result).toMatchObject({ kind: 'ec', count: 128, matched: true, role: 'sender' });
     expect(b!.json.result).toMatchObject({ kind: 'ec', count: 128, matched: true, role: 'receiver' });
   });

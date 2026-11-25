@@ -22,7 +22,7 @@ import type {
   PaymentConstraint,
   PaymentMandateClaims,
 } from './mandates';
-import { currencyExponent } from './mandates';
+import { FREQUENCIES } from './mandates';
 import { isObject, type JsonObject } from './sdjwt';
 
 /** Usage state a verifier tracks for an open mandate (budget and recurrence need it). */
@@ -121,14 +121,24 @@ export interface PaymentCheckOptions {
   now: number;
 }
 
+/** A usage context with a NaN, negative or fractional counter would make the cap comparisons fail open: refuse it. */
+function contextProblem(c: MandateContext): string | undefined {
+  const ok = (n: unknown) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 && !Object.is(n, -0);
+  if (!ok(c.totalAmount) || !ok(c.totalUses) || (c.lastUsedDate !== undefined && !ok(c.lastUsedDate))) {
+    return 'mandate context must carry non-negative integer totalAmount, totalUses and lastUsedDate';
+  }
+  return undefined;
+}
+
 function evaluatePayment(c: PaymentConstraint, closed: PaymentMandateClaims, o: PaymentCheckOptions): string[] {
   const amt = closed.payment_amount;
   switch (c.type) {
     case 'payment.amount_range': {
       const v: string[] = [];
       if (amt.currency !== c.currency) v.push(`currency mismatch: expected ${c.currency}, got ${amt.currency}`);
-      if (c.min !== undefined && amt.amount < c.min) v.push(`amount ${amt.amount} below minimum ${c.min}`);
-      if (amt.amount > c.max) v.push(`amount ${amt.amount} exceeds maximum ${c.max}`);
+      if (!Number.isFinite(amt.amount)) v.push(`amount ${String(amt.amount)} is not finite`);
+      if (c.min !== undefined && !(amt.amount >= c.min)) v.push(`amount ${amt.amount} below minimum ${c.min}`);
+      if (!(amt.amount <= c.max)) v.push(`amount ${amt.amount} exceeds maximum ${c.max}`);
       return v;
     }
     case 'payment.allowed_payees':
@@ -146,37 +156,45 @@ function evaluatePayment(c: PaymentConstraint, closed: PaymentMandateClaims, o: 
     }
     case 'payment.budget': {
       if (amt.currency !== c.currency) return [`budget currency mismatch: expected ${c.currency}, got ${amt.currency}`];
-      // The official SDK converts the budget with `int(max * 100)`; any other exponent would be read differently by it.
-      if (currencyExponent(c.currency) !== 2) return [`budget in ${c.currency} is unsupported: budget.max is converted with a fixed x100 factor`];
+      // The official SDK converts the budget with `int(max * 100)` for every currency; this check reads it the same way, and
+      // the issuing side (`ap2BudgetMax`) chooses `max` so that this reading is never above the PCA cap.
       if (!o.context) return ['mandate context is required to evaluate a budget'];
+      const bad = contextProblem(o.context);
+      if (bad) return [bad];
       const scaled = c.max * 100;
       const maxMinor = Math.round(scaled);
-      if (Math.abs(scaled - maxMinor) > 1e-6) return ['budget.max is not a whole number of minor units'];
+      if (!(Math.abs(scaled - maxMinor) <= 1e-6)) return ['budget.max is not a whole number of minor units'];
       const spend = o.context.totalAmount + amt.amount;
-      return spend > maxMinor ? [`cumulative spend ${spend} exceeds budget ${maxMinor} (past spend ${o.context.totalAmount})`] : [];
+      return !(Number.isFinite(spend) && spend <= maxMinor) ? [`cumulative spend ${spend} exceeds budget ${maxMinor} (past spend ${o.context.totalAmount})`] : [];
     }
     case 'payment.agent_recurrence': {
       const v: string[] = [];
+      // strict: an unknown frequency is a violation whether or not a last-used date exists
+      if (!(FREQUENCIES as readonly string[]).includes(c.frequency)) return ['unknown recurrence frequency'];
+      if (o.context) {
+        const bad = contextProblem(o.context);
+        if (bad) return [bad];
+      }
       if (c.max_occurrences !== undefined) {
         if (!o.context) return ['mandate context is required to evaluate recurrence limits'];
-        if (o.context.totalUses >= c.max_occurrences) v.push(`maximum occurrences exceeded: ${o.context.totalUses} >= ${c.max_occurrences}`);
+        if (!(o.context.totalUses < c.max_occurrences)) v.push(`maximum occurrences exceeded: ${o.context.totalUses} >= ${c.max_occurrences}`);
       }
       if (c.frequency !== 'ON_DEMAND') {
         if (!o.context) return ['mandate context is required to evaluate recurrence frequency'];
         const last = o.context.lastUsedDate;
-        if (last !== undefined && last * 1000 >= periodStart(o.now * 1000, c.frequency)) v.push(`already used in the current ${c.frequency} period`);
+        if (last !== undefined && !(last * 1000 < periodStart(o.now * 1000, c.frequency))) v.push(`already used in the current ${c.frequency} period`);
       }
       return v;
     }
     case 'payment.execution_date': {
       const at = closed.execution_date !== undefined ? parseInstant(closed.execution_date) : o.now * 1000;
-      if (at === undefined) return [`execution_date ${String(closed.execution_date)} is not a valid instant`];
+      if (at === undefined || !Number.isFinite(at)) return [`execution_date ${String(closed.execution_date)} is not a valid instant`];
       const v: string[] = [];
       for (const [key, bound, before] of [['not_before', c.not_before, true], ['not_after', c.not_after, false]] as const) {
         if (bound === undefined) continue;
         const b = parseInstant(bound);
         if (b === undefined) v.push(`${key} ${bound} is not a valid instant`);
-        else if (before ? at < b : at > b) v.push(`execution date is ${before ? 'before' : 'after'} the allowed window (${key} ${bound})`);
+        else if (before ? !(at >= b) : !(at <= b)) v.push(`execution date is ${before ? 'before' : 'after'} the allowed window (${key} ${bound})`);
       }
       return v;
     }
@@ -228,12 +246,12 @@ export function projectCheckout(payload: JsonObject): UcpCheckout {
   const line_items = (payload.line_items as unknown[]).map((li, i) => {
     if (!isObject(li) || typeof li.id !== 'string' || !isObject(li.item)) return bad(`line_items[${i}] is malformed`);
     const item = li.item as JsonObject;
-    if (typeof item.id !== 'string' || typeof item.title !== 'string' || !Number.isSafeInteger(item.price) || (item.price as number) < 0) bad(`line_items[${i}].item needs id, title and integer minor-unit price`);
+    if (typeof item.id !== 'string' || typeof item.title !== 'string' || !Number.isSafeInteger(item.price) || (item.price as number) < 0 || Object.is(item.price, -0)) bad(`line_items[${i}].item needs id, title and integer minor-unit price`);
     if (!Number.isSafeInteger(li.quantity) || (li.quantity as number) < 1) bad(`line_items[${i}].quantity must be a positive integer`);
     return { id: li.id, item: { id: item.id as string, title: item.title as string, price: item.price as number }, quantity: li.quantity as number };
   });
   const totals = (payload.totals as unknown[]).map((t, i) => {
-    if (!isObject(t) || typeof t.type !== 'string' || !Number.isSafeInteger(t.amount)) return bad(`totals[${i}] is malformed`);
+    if (!isObject(t) || typeof t.type !== 'string' || !Number.isSafeInteger(t.amount) || Object.is(t.amount, -0)) return bad(`totals[${i}] is malformed`);
     return { type: t.type as string, amount: t.amount as number };
   });
   let merchant: Merchant | undefined;

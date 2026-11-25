@@ -4,7 +4,9 @@ import { allAsn1TimesWellFormed } from './attest-nvidia-ocsp';
 
 class UTC { constructor(public valueBlock: { valueHexView: Uint8Array; value?: unknown }) {} }
 class GEN extends UTC {} // asn1js: GeneralizedTime extends UTCTime
-const asn1 = { UTCTime: UTC, GeneralizedTime: GEN } as never;
+class OCT { constructor(public valueBlock: { value?: unknown }) {} }
+class BIT { constructor(public valueBlock: { value?: unknown }) {} }
+const asn1 = { UTCTime: UTC, GeneralizedTime: GEN, OctetString: OCT, BitString: BIT } as never;
 const t = (Cls: typeof UTC, text: string) => new Cls({ valueHexView: Buffer.from(text, 'latin1') });
 const gen = (s: string) => allAsn1TimesWellFormed(t(GEN, s), asn1);
 const utc = (s: string) => allAsn1TimesWellFormed(t(UTC, s), asn1);
@@ -53,5 +55,12 @@ describe('traversal', () => {
     expect(allAsn1TimesWellFormed(wrap(wrap(wrap(t(GEN, '20240230000000Z')))), asn1)).toBe(false);
     expect(allAsn1TimesWellFormed(wrap(t(GEN, '20240230000000Z'), t(GEN, '20240101000000Z')), asn1)).toBe(false);
     expect(allAsn1TimesWellFormed({ valueBlock: { value: 'not-an-array' } }, asn1)).toBe(true);
+  });
+  it('OCTET and BIT STRING contents are opaque: a hash that auto-parses as a bad time does not refuse (each kind on its own)', () => {
+    const bad = t(GEN, '20241301000000Z');
+    expect(allAsn1TimesWellFormed(wrap(new OCT({ value: [bad] })), asn1)).toBe(true);
+    expect(allAsn1TimesWellFormed(wrap(new BIT({ value: [bad] })), asn1)).toBe(true);
+    expect(allAsn1TimesWellFormed(wrap(new OCT({ value: [wrap(bad)] })), asn1)).toBe(true);
+    expect(allAsn1TimesWellFormed(wrap(new OCT({ value: [] }), bad), asn1)).toBe(false); // a structural sibling is still checked
   });
 });

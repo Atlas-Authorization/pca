@@ -3,11 +3,26 @@ import { BUILTIN_ACTIONS, DEFAULT_CATALOG, buildCatalog, defineAction } from './
 
 describe('catalog', () => {
   it('resolves built-in actions by verb and connector', () => {
-    expect(DEFAULT_CATALOG.get('stripe.refund')?.reversibility).toBe('rate_limited');
+    // one definition: a refund is a new payment, not an undo, so the catalog and the Goal IR ontology agree on irreversible
+    expect(DEFAULT_CATALOG.get('stripe.refund')?.reversibility).toBe('irreversible');
+    expect(DEFAULT_CATALOG.get('stripe.charge')?.reversibility).toBe('irreversible');
+    expect(DEFAULT_CATALOG.get('slack.post_message')?.reversibility).toBe('irreversible');
     expect(DEFAULT_CATALOG.get('gmail.send')?.reversibility).toBe('irreversible');
     expect(DEFAULT_CATALOG.get('stripe.refund')?.amountField).toBe('amount');
     expect(DEFAULT_CATALOG.forConnector('github').length).toBeGreaterThan(1);
     expect(DEFAULT_CATALOG.get('nope.nope')).toBeUndefined();
+  });
+
+  it('resolves an alias of exactly one action of the connector, never a guess', () => {
+    expect(DEFAULT_CATALOG.resolve?.('stripe', 'issue_refund')?.verb).toBe('stripe.refund');
+    expect(DEFAULT_CATALOG.resolve?.('stripe', 'refund')?.verb).toBe('stripe.refund');
+    expect(DEFAULT_CATALOG.resolve?.('gmail', 'send_email')?.verb).toBe('gmail.send');
+    expect(DEFAULT_CATALOG.resolve?.('gmail', 'issue_refund')).toBeUndefined();
+    const twice = buildCatalog([
+      defineAction({ connector: 'x', action: 'a', reversibility: 'reversible', blastRadius: 0.1, description: '', aliases: ['same'] }),
+      defineAction({ connector: 'x', action: 'b', reversibility: 'reversible', blastRadius: 0.1, description: '', aliases: ['same'] }),
+    ]);
+    expect(twice.resolve?.('x', 'same')).toBeUndefined();
   });
 
   it('every built-in has a well-formed blast radius and known reversibility', () => {

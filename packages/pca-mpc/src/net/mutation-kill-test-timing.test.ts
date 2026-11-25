@@ -1,6 +1,6 @@
 import * as net from 'node:net';
 import { describe, expect, it, vi } from 'vitest';
-import { ManualClock, T, TIMEOUT_SCALE, reservePorts, until, waitListening } from './test-timing';
+import { ManualClock, T, TIMEOUT_SCALE, until, waitListening } from './test-timing';
 
 describe('T / TIMEOUT_SCALE', () => {
   it('scales and rounds up; scale defaults to a positive finite number', () => {
@@ -55,37 +55,15 @@ describe('until', () => {
   });
 });
 
-describe('reservePorts / waitListening', () => {
-  it('returns the requested number of distinct, free loopback ports', async () => {
-    const ports = await reservePorts(4);
-    expect(ports.length).toBe(4);
-    expect(new Set(ports).size).toBe(4);
-    for (const p of ports) {
-      expect(Number.isInteger(p)).toBe(true);
-      expect(p).toBeGreaterThan(0);
-      await new Promise<void>((res, rej) => {
-        const s = net.createServer();
-        s.once('error', rej);
-        s.listen(p, '127.0.0.1', () => s.close(() => res()));
-      });
-    }
-    expect(await reservePorts(0)).toEqual([]);
-  });
-  it('waitListening resolves true once something accepts, and rejects otherwise', async () => {
-    const [p] = await reservePorts(1);
-    const pending = waitListening(p!, '127.0.0.1', 5000);
-    await new Promise((r) => setTimeout(r, 120));
+describe('waitListening', () => {
+  it('resolves true once something accepts, and rejects when nothing does', async () => {
     const srv = net.createServer();
-    await new Promise<void>((r) => srv.listen(p!, '127.0.0.1', () => r()));
-    expect(await pending).toBe(true);
-    srv.close();
-    const [q] = await reservePorts(1);
-    await expect(waitListening(q!, '127.0.0.1', 300)).rejects.toThrow();
-    const [r] = await reservePorts(1);
-    const srv2 = net.createServer();
-    await new Promise<void>((res) => srv2.listen(r!, '127.0.0.1', () => res()));
-    expect(await waitListening(r!)).toBe(true); // default host is loopback
-    srv2.close();
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
+    const p = (srv.address() as net.AddressInfo).port;
+    expect(await waitListening(p, '127.0.0.1', 5000)).toBe(true);
+    expect(await waitListening(p)).toBe(true); // default host is loopback
+    await new Promise<void>((r) => srv.close(() => r()));
+    await expect(waitListening(p, '127.0.0.1', 300)).rejects.toThrow();
   });
 });
 

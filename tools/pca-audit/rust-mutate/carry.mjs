@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Targeted-mode driver for cargo-mutants (pca-rust mutation workflow; scheme: ../mut-carry).
-//   node carry.mjs files   --pkg=<crate>                                     -> stdout: every source file holding a mutant (repo-relative)
+//   node carry.mjs files   --pkg=<crate> [--exclude=<glob>]                  -> stdout: every source file holding a mutant (repo-relative)
 //   node carry.mjs run     --pkg=<crate> --shard=<k0> --of=<N> --out=<dir> [--carry=<pool.json>] [--dry] [-- <extra cargo-mutants args>]
 // `run` lists the shard's mutants (cargo-mutants' own `--shard k/N`), decides per mutant whether an earlier result stands, runs
 // cargo-mutants on ONLY the rest (a name filter, verified against `--list` before running), and writes <dir>/mutants.out/
@@ -8,7 +8,8 @@
 // <dir>/results.json (the next run's baseline). With no pool every mutant runs, exactly as before.
 // A result is carried when the mutant's function (cargo-mutants' span) and the file's code outside every mutated function are
 // unchanged (comments / blank lines aside; doc comments count: they are doctests) and it was `caught`; `unviable` is carried only
-// when the whole production source is unchanged. `missed` and `timeout` results always run again.
+// when the whole production source is unchanged. `missed` is carried only when the baseline's tests + corpus were byte-identical to
+// this run's and the whole production source is unchanged (see mut-carry/lib.mjs mayCarry); `timeout` results always run again.
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -20,10 +21,12 @@ const dd = argv.indexOf('--');
 const mine = dd < 0 ? argv.slice(1) : argv.slice(1, dd), extra = dd < 0 ? [] : argv.slice(dd + 1);
 const opt = (n) => mine.find((a) => a.startsWith(`--${n}=`))?.slice(n.length + 3);
 const pkg = opt('pkg');
-const base = ['mutants', '-p', pkg, '--all-features', '--no-shuffle'];
+// --exclude=<glob>[,<glob>]: cargo-mutants --exclude (a proof crate's fixture / demo binaries)
+const excl = (opt('exclude') || '').split(',').filter(Boolean).flatMap((g) => ['--exclude', g]);
+const base = ['mutants', '-p', pkg, '--all-features', '--no-shuffle', ...excl];
 
 function list(shard) {
-  const r = spawnSync('cargo', [...base, '--list', '--json', ...(shard ? ['--shard', shard] : [])], { encoding: 'utf8', maxBuffer: 1 << 29 });
+  const r = spawnSync('cargo', [...base, '--list', '--json', ...(shard ? ['--shard', shard, '--sharding', 'round-robin'] : [])], { encoding: 'utf8', maxBuffer: 1 << 29 });
   if (r.status !== 0) { console.error(r.stderr); throw new Error('cargo mutants --list failed'); }
   return JSON.parse(r.stdout);
 }
@@ -69,7 +72,7 @@ for (const m of shard) {
   if (!pool) toRun.push(m);
   else if (!e) { unseen++; toRun.push(m); }
   else if (e.d !== id.def_hash || e.h !== id.shell_hash) { changed++; toRun.push(m); }
-  else if (mayCarry(e, id, { killed: ['caught'], uncompilable: ['unviable'] })) status.set(m.name, { s: e.s, carried: true });
+  else if (mayCarry(e, id, { killed: ['caught'], uncompilable: ['unviable'], survived: ['missed'] })) status.set(m.name, { s: e.s, carried: true });
   else { nonkill++; toRun.push(m); }
 }
 if (pool) console.error(`carry: ${shard.length - toRun.length} result(s) carried, ${toRun.length} to run (${unseen} unseen, ${changed} function/file changed, ${nonkill} earlier missed/timeout or unviable under changed sources)`);
@@ -92,7 +95,7 @@ if (toRun.length) {
     if (JSON.stringify(got) !== JSON.stringify(want)) { console.error(`the name filter selects ${got.length} mutant(s), expected ${want.length} (selection plus the StructField quirk): refusing to guess`); process.exit(1); }
   }
   if (mine.includes('--dry')) { console.error(`dry run: the filter selects exactly the ${toRun.length} mutant(s) to run`); process.exit(0); }
-  const args = [...base, ...(pool ? filt : ['--shard', `${k0}/${of}`]), ...extra, '--output', cmOut];
+  const args = [...base, ...(pool ? filt : ['--shard', `${k0}/${of}`, '--sharding', 'round-robin']), ...extra, '--output', cmOut];
   // CARRY_ULIMIT_KB: address-space cap for the mutants' processes only (a runaway allocation must die alone); not for this driver
   const kb = process.env.CARRY_ULIMIT_KB;
   rc = (kb ? spawnSync('bash', ['-c', `ulimit -v ${Number(kb)}; exec "$@"`, 'bash', 'cargo', ...args], { stdio: 'inherit' }) : spawnSync('cargo', args, { stdio: 'inherit' })).status ?? 1;

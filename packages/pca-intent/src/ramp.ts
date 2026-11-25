@@ -1,4 +1,5 @@
-import { verifyIntentObservation, type IntentVerifyOptions, type SignedIntentObservation } from '@atlasauth/pca';
+import { verifyIntentObservation, type IntentVerifyOptions, type SignedIntentObservation } from '@atlasauth/pca/ext/intent';
+import { detLn } from './detmath';
 import type { IntentLearner } from './learner';
 import type { MapLearnerOptions } from './map';
 import type { Omega, Outcome } from './omega';
@@ -63,14 +64,14 @@ export class DriftDetector {
   constructor(o: DriftOptions = {}) {
     this.rho0 = o.rho0 ?? 0.02;
     this.rho1 = o.rho1 ?? 0.25;
-    this.h = o.h ?? Math.log(100);
+    this.h = o.h ?? detLn(100); // detLn, not Math.log: the drift decision (S > h) must not depend on a platform's libm
     if (!(this.rho0 > 0 && this.rho0 < this.rho1 && this.rho1 < 1)) throw new Error('DriftDetector: need 0 < rho0 < rho1 < 1');
     if (!(this.h > 0)) throw new Error('DriftDetector: h must be positive');
   }
 
   /** Feed one signal about an action that was inside the grant: diverged = true for a negative signal. */
   update(diverged: boolean): DriftState {
-    const inc = diverged ? Math.log(this.rho1 / this.rho0) : Math.log((1 - this.rho1) / (1 - this.rho0));
+    const inc = diverged ? detLn(this.rho1 / this.rho0) : detLn((1 - this.rho1) / (1 - this.rho0));
     const statistic = Math.max(0, this.s.statistic + inc);
     this.s = { statistic, alarm: this.s.alarm || statistic >= this.h, informative: this.s.informative + 1, divergences: this.s.divergences + (diverged ? 1 : 0) };
     return this.state;

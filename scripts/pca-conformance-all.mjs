@@ -16,6 +16,10 @@
 //     --write-matrix    refresh packages/pca-conformance/adversarial/MATRIX.md from this run
 //     --strict          also fail on error-vs-clean-reject (soft) differences
 //     --no-minimize     do not minimise/commit fuzz disagreements
+//     --policy-required a,b   make the policy layer's policy_decision results of these languages gating (default: none;
+//                       the native SDKs' policy_decision results are report-only, the TypeScript reference always gates)
+//     --no-producer     skip the producer layer (the signing vectors run through every driver's `produce` kind)
+// Results are reported PER LAYER (packages/pca/conformance/LAYERS.md); the policy_decision and stateful vectors run too.
 // Toolchains that are not installed are reported SKIPPED (never passed). TypeScript is the reference/oracle.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -25,6 +29,7 @@ import { join, dirname, delimiter } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import { LEGACY_SUITES, REGISTERED_SUITES, SUITES_QUERY, judgeSuite, manifestOf } from '../tools/pca-diff-fuzz/suites.mjs';
+import { LAYER_IDS, layerOfGateItem } from '../packages/pca/scripts/conformance-layers.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ADV = join(ROOT, 'packages/pca-conformance/adversarial');
@@ -41,6 +46,7 @@ const OUT = opt('--out', process.env.PCA_CONF_OUT ?? join(tmpdir(), 'pca-conform
 const WANT = (opt('--langs', '') || '').split(',').filter(Boolean);
 const REQUIRE = (opt('--require', '') || '').split(',').filter(Boolean);
 const STRICT = flag('--strict');
+const POLICY_REQUIRED = (opt('--policy-required', '') || '').split(',').filter(Boolean);
 const WORK = join(OUT, 'work');
 rmSync(WORK, { recursive: true, force: true });
 mkdirSync(WORK, { recursive: true });
@@ -49,7 +55,7 @@ process.env.PATH = [join(homedir(), '.cargo/bin'), '/usr/local/bin', process.env
 const log = (...a) => console.log(...a);
 const run = (cmd, args, o = {}) => spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 28, ...o });
 const have = (cmd, args = ['--version']) => { const r = run(cmd, args, { timeout: 20000 }); return !r.error && r.status === 0; };
-const CHECK_ORDER = ['wire', 'version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter', 'intent'];
+const CHECK_ORDER = ['wire', 'version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format', 'intent'];
 
 // ------------------------------------------------------------------ implementations
 /** @type {{name:string, prep:()=>string|null, cmd:(i:string,o:string)=>string[]}[]} */
@@ -60,8 +66,8 @@ impl('go', () => {
   if (!have('go', ['version'])) return 'go not installed';
   // `-tags less`: the LESS suites through cgo and the patched reference C (sdks/pca-less-c); without cgo the build is pure Go
   // and its manifest leaves LESS out (refused as unsupported_suite).
-  const r = run('go', ['build', '-tags', 'less', '-o', join(OUT, 'go-driver'), '.'], { cwd: join(DRV, 'go') });
-  return r.status === 0 ? null : 'go build failed: ' + (r.stderr || '').slice(0, 300);
+  const r = run('go', ['build', '-mod=mod', '-tags', 'less', '-o', join(OUT, 'go-driver'), '.'], { cwd: join(DRV, 'go') });
+  return r.status === 0 ? null : 'go build failed: ' + (r.stderr || '').slice(-600);
 }, (i, o) => [join(OUT, 'go-driver'), i, o]);
 // LESS: the patched reference C (sdks/pca-less-c) as the shared library libatlas_less, built once and named in
 // ATLAS_PCA_LIBLESS for every FFI backend (Python ctypes, Ruby Fiddle, PHP FFI, .NET P/Invoke, Java / Kotlin FFM). Without a C
@@ -80,9 +86,15 @@ impl('python', () => {
   lessLib();
   return null;
 }, (i, o) => ['python3', '-I', join(DRV, 'python/driver.py'), i, o]);
-impl('ruby', () => { if (!have('ruby', ['-v'])) return 'ruby not installed'; lessLib(); return null; }, (i, o) => ['ruby', join(DRV, 'ruby/driver.rb'), i, o]);
+// Ruby's openssl extension gets ML-DSA only from an OpenSSL >= 3.5 libcrypto: use the CI/box install for the Ruby driver alone when present
+// (otherwise the ML-DSA session-root vectors adv1563-1569 fail the suite-capability judge, see the PHP note below).
+const OSSL35_LIB = '/opt/openssl35/lib';
+impl('ruby', () => { if (!have('ruby', ['-v'])) return 'ruby not installed'; lessLib(); return null; }, (i, o) => [...(existsSync(join(OSSL35_LIB, 'libcrypto.so.3')) && !process.env.LD_LIBRARY_PATH ? ['env', `LD_LIBRARY_PATH=${OSSL35_LIB}`] : []), 'ruby', join(DRV, 'ruby/driver.rb'), i, o]);
 impl('php', () => {
   if (!have('php', ['-v'])) return 'php not installed';
+  // PHP reaches ML-DSA only through an OpenSSL >= 3.5 libcrypto (ATLAS_PCA_LIBCRYPTO). Without one it correctly declares ed25519 only, and the
+  // ML-DSA session-root vectors (adv1563-1569) then fail the suite-capability judge: point the driver at the CI/box install when it exists.
+  if (!process.env.ATLAS_PCA_LIBCRYPTO && existsSync('/opt/openssl35/lib/libcrypto.so.3')) process.env.ATLAS_PCA_LIBCRYPTO = '/opt/openssl35/lib/libcrypto.so.3';
   lessLib();
   return run('php', ['-r', 'exit(extension_loaded("sodium")?0:1);']).status === 0 ? null : 'php sodium extension missing';
 }, (i, o) => ['php', join(DRV, 'php/driver.php'), i, o]);
@@ -90,7 +102,7 @@ impl('dotnet', () => {
   if (!have('dotnet', ['--version'])) return 'dotnet not installed';
   lessLib();
   const r = run('dotnet', ['build', '-c', 'Release', '-o', join(OUT, 'dotnet-bin'), '-v', 'q', '--nologo'], { cwd: join(DRV, 'dotnet'), timeout: 600000 });
-  return r.status === 0 ? null : 'dotnet build failed: ' + ((r.stdout || '') + (r.stderr || '')).slice(0, 300);
+  return r.status === 0 ? null : 'dotnet build failed: ' + ((r.stdout || '') + (r.stderr || '')).split('\n').filter((l) => /error/.test(l)).slice(0, 6).join(' | ').slice(0, 1200);
 }, (i, o) => ['dotnet', join(OUT, 'dotnet-bin/Driver.dll'), i, o]);
 impl('rust', () => {
   if (!have('cargo', ['--version'])) return 'cargo not installed';
@@ -103,6 +115,22 @@ impl('rust', () => {
 if (flag('--selftest-faults')) {
   const code = "import sys,json,time,os\nfor l in open(sys.argv[1]):\n c=json.loads(l)\n if c['id']=='adv0010': time.sleep(600)\n if c['id']=='adv0020': os._exit(139)\n open(sys.argv[2],'a').write(json.dumps({'id':c['id'],'error':'x'})+'\\n')";
   impl('selftest', () => null, (i, o) => ['python3', '-c', code, i, o]);
+}
+/** The java-pca top-level sources plus the transitive closure of the sub-packages they name (fndsa, jose, ...), leaving out the framework-bound ones nothing imports. */
+function javaSources(root) {
+  const base = join(root, 'sdks/java-pca/src/net/atlasauth/pca');
+  const jv = (d) => readdirSync(d).filter((f) => f.endsWith('.java')).map((f) => join(d, f));
+  const srcs = jv(base), seen = new Set();
+  for (let i = 0; i < srcs.length; i++) {
+    for (const m of readFileSync(srcs[i], 'utf8').matchAll(/net\.atlasauth\.pca\.([a-z0-9]+(?:\.[a-z0-9]+)*)\.[A-Za-z*]/g)) {
+      const rel = m[1].split('.');
+      for (let k = 1; k <= rel.length; k++) {
+        const key = rel.slice(0, k).join('.'), pd = join(base, ...rel.slice(0, k));
+        if (!seen.has(key) && existsSync(pd)) { seen.add(key); srcs.push(...jv(pd)); }
+      }
+    }
+  }
+  return srcs;
 }
 const JAVA = findJava();
 function findJava() {
@@ -125,16 +153,19 @@ function findBc() {
   return jars[0] ?? null;
 }
 const BC = JAVA ? findBc() : null;
+// PCA_EXTRA_CP: further jars the Java / Kotlin SDKs import (lazysodium, jna, icu4j, ...), path-delimited
+const withExtra = (cp) => (cp && process.env.PCA_EXTRA_CP ? cp + delimiter + process.env.PCA_EXTRA_CP : cp);
+const JCP = withExtra(BC);
 impl('java', () => {
   if (!JAVA) return 'no working JDK (javac)';
   lessLib();
   if (!BC) return 'bcprov-jdk18on jar not found (set PCA_BC_JAR)';
   const d = join(OUT, 'java-classes');
   mkdirSync(d, { recursive: true });
-  const srcs = readdirSync(join(ROOT, 'sdks/java-pca/src/net/atlasauth/pca')).filter((f) => f.endsWith('.java')).map((f) => join(ROOT, 'sdks/java-pca/src/net/atlasauth/pca', f));
-  const r = run(JAVA.javac, ['-cp', BC, '-d', d, ...srcs, join(DRV, 'java/Driver.java')]);
-  return r.status === 0 ? null : 'javac failed: ' + (r.stderr || '').slice(0, 300);
-}, (i, o) => [JAVA.java, '-Xss4m', '--enable-native-access=ALL-UNNAMED', '-cp', `${join(OUT, 'java-classes')}${delimiter}${BC}`, 'Driver', i, o]);
+  const srcs = javaSources(ROOT);
+  const r = run(JAVA.javac, ['-cp', JCP, '-d', d, ...srcs, join(DRV, 'java/Driver.java')]);
+  return r.status === 0 ? null : 'javac failed: ' + (r.stderr || '').slice(0, 1500);
+}, (i, o) => [JAVA.java, '-Xss4m', '--enable-native-access=ALL-UNNAMED', '-cp', `${join(OUT, 'java-classes')}${delimiter}${JCP}`, 'Driver', i, o]);
 let KOTLIN_TC = null;
 impl('kotlin', () => {
   const tc = kotlinToolchain();
@@ -449,10 +480,10 @@ function nativeSuites() {
     const d = join(OUT, 'java-native');
     mkdirSync(d, { recursive: true });
     const javaDir = join(ROOT, 'sdks/java-pca');
-    const srcs = readdirSync(join(javaDir, 'src/net/atlasauth/pca')).filter((f) => f.endsWith('.java')).map((f) => join(javaDir, 'src/net/atlasauth/pca', f));
-    const c = run(JAVA.javac, ['-cp', BC, '-d', d, ...srcs, join(javaDir, 'ConformanceTest.java')]);
+    const srcs = javaSources(ROOT);
+    const c = run(JAVA.javac, ['-cp', JCP, '-d', d, ...srcs, join(javaDir, 'ConformanceTest.java')]);
     if (c.status !== 0) out.push({ name: 'java', status: 'FAIL', note: 'javac: ' + (c.stderr || '').slice(0, 150) });
-    else { const r = run(JAVA.java, ['--enable-native-access=ALL-UNNAMED', '-cp', `${d}${delimiter}${BC}`, 'ConformanceTest'], { cwd: javaDir, timeout: 600000 }); const t = (r.stdout || '') + (r.stderr || ''); out.push({ name: 'java', status: r.status === 0 ? 'PASS' : 'FAIL', note: (t.match(/(OK[^\n]*|assertions[^\n]*)/)?.[0] ?? '').slice(0, 110) }); }
+    else { const r = run(JAVA.java, ['--enable-native-access=ALL-UNNAMED', '-cp', `${d}${delimiter}${JCP}`, 'ConformanceTest'], { cwd: javaDir, timeout: 600000 }); const t = (r.stdout || '') + (r.stderr || ''); out.push({ name: 'java', status: r.status === 0 ? 'PASS' : 'FAIL', note: (t.match(/(OK[^\n]*|assertions[^\n]*)/)?.[0] ?? '').slice(0, 110) }); }
   } else out.push({ name: 'java', status: 'SKIPPED', note: JAVA ? 'bcprov jar not found (PCA_BC_JAR)' : 'no working JDK' });
   // The full adversarial set (vectors-adversarial.json.gz) is also fed to the Kotlin and Swift runners (core + full), via an
   // uncompressed temp copy named in PCA_CONFORMANCE_ADV; the language mirrors only ever see the curated core.
@@ -502,7 +533,7 @@ function swiftLinuxTree() {
  *  Gradle distribution (PCA_KOTLIN_LIB overrides the lib dir), its stdlib and BouncyCastle. {skip} when something is missing. */
 function kotlinToolchain() {
   if (!JAVA) return { skip: 'no working JDK' };
-  const bc = BC ?? process.env.PCA_BC_JAR;
+  const bc = withExtra(BC ?? process.env.PCA_BC_JAR);
   if (!bc) return { skip: 'bcprov jar not found (PCA_BC_JAR)' };
   let lib = process.env.PCA_KOTLIN_LIB;
   if (!lib) {
@@ -527,9 +558,17 @@ function kotlinToolchain() {
 function kotlinCompile(tc, dir, extra) {
   rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
   const vd = join(ROOT, 'sdks/kotlin-pca/src/main/kotlin/net/atlasauth/pca/verifier');
-  const srcs = [...readdirSync(vd).filter((f) => f.endsWith('.kt')).map((f) => join(vd, f)), ...extra];
+  const kt = (d) => readdirSync(d).filter((f) => f.endsWith('.kt')).map((f) => join(d, f));
+  // the verifier reaches into sibling packages (jose, compliance, research, ...): take the transitive closure of the packages it names
+  const srcs = [...kt(vd), ...extra], seen = new Set(['verifier']);
+  for (let i = 0; i < srcs.length; i++) {
+    for (const m of readFileSync(srcs[i], 'utf8').matchAll(/net\.atlasauth\.pca\.([a-z0-9]+)\./g)) {
+      const pd = join(ROOT, 'sdks/kotlin-pca/src/main/kotlin/net/atlasauth/pca', m[1]);
+      if (!seen.has(m[1]) && existsSync(pd)) { seen.add(m[1]); srcs.push(...kt(pd)); }
+    }
+  }
   const c = run(JAVA.java, ['-cp', tc.compilerCp, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect', '-cp', `${tc.stdlib}${delimiter}${tc.bc}`, '-d', dir, ...srcs], { timeout: 900000 });
-  return c.status === 0 ? null : 'kotlinc: ' + ((c.stdout || '') + (c.stderr || '')).slice(-200).replace(/\s+/g, ' ');
+  return c.status === 0 ? null : 'kotlinc: ' + ((c.stdout || '') + (c.stderr || '')).split('\n').filter((l) => /error:/.test(l)).slice(0, 8).join(' | ').slice(0, 1500);
 }
 
 /** Kotlin verifier: compile src/main + the test ConformanceRunner, run its main(). */
@@ -608,6 +647,192 @@ function timingCheck(dos, active) {
   for (const x of out.suspect) log('  NOTE ' + x);
   log(`  loadavg start ${out.loadavgAtStart.map((x) => x.toFixed(1)).join('/')} end ${out.loadavgAtEnd.map((x) => x.toFixed(1)).join('/')} on ${out.cpus} cpus`);
   return out;
+}
+
+// ------------------------------------------------------------------ layers (packages/pca/conformance/LAYERS.md)
+// Every compared vector is tagged with one layer (wire / proof / capability / policy / stateful / extension / integration) and every
+// language gets a result PER LAYER. The policy layer's policy_decision vectors and the stateful sequences are run here too:
+// the TypeScript reference must reproduce them; the native SDKs' policy_decision results are REPORT-ONLY (they do not fail
+// the gate) unless the language is named in --policy-required, and no native SDK runs sequences yet. The extension layer
+// (optimistic-vectors.json, ledger-vectors.json) is reproduced by each language's own suite (TypeScript, Go, Python, Rust), not by this gate.
+const TS_REF = (i, o) => [TSX, join(ADV, 'ref-driver.ts'), i, o];
+const stableJson = (v) => (Array.isArray(v) ? '[' + v.map(stableJson).join(',') + ']' : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + stableJson(v[k])).join(',') + '}' : JSON.stringify(v));
+const sameJson = (a, b) => stableJson(a) === stableJson(b);
+
+/** Per layer x language tallies of the corpus comparison (rows), by the layer of each vector's reference verdict. */
+function corpusLayers(rows, langs, tsRes) {
+  const out = Object.fromEntries(LAYER_IDS.map((L) => [L, { vectors: 0, langs: Object.fromEntries(langs.map((l) => [l, { agree: 0, gated: 0, waived: 0, soft: 0, bad: 0 }])) }]));
+  for (const r of rows) {
+    const L = layerOfGateItem(r.c.kind, tsRes.get(r.c.id));
+    const o = out[L];
+    o.vectors++;
+    const waived = knownMap.has(`${r.c.category}/${r.c.name}`);
+    for (const l of langs) {
+      const t = o.langs[l], v = r.verdicts[l], ts = r.verdicts.ts;
+      if (l === 'ts') { if (v.cls === 'FAULT' || (!waived && r.types.some((x) => x === 'INTENT' || x === 'REF-DRIFT'))) t.bad++; else t.agree++; continue; }
+      if (v.tag.startsWith('U(')) { if (v.tag.endsWith('!')) t.bad++; else t.gated++; continue; }
+      if (v.full === ts.full) t.agree++;
+      else if (waived) t.waived++;
+      else if (!STRICT && v.cls === 'ERR' && !ts.allow) t.soft++;
+      else t.bad++;
+    }
+  }
+  return out;
+}
+
+/** policy-vectors.json through every driver (kind `policy`, raw = {grant, chain, context}). */
+function policyLayer(active) {
+  const f = join(ROOT, 'packages/pca/conformance/policy-vectors.json');
+  if (!existsSync(f)) return null;
+  const vecs = JSON.parse(readFileSync(f, 'utf8')).policy_decision;
+  const items = vecs.map((v, i) => ({ id: `pol-${String(i).padStart(4, '0')}`, kind: 'policy', raw: JSON.stringify({ grant: v.grant, chain: v.chain, context: v.context }) }));
+  const judge = (r, v) => {
+    const cell = { caveats: 'unsupported', decision: 'unsupported' };
+    if (!r || r.marker) return { caveats: 'fail', decision: 'fail', why: r?.marker ?? 'MISSING' };
+    if (typeof r.error === 'string' && r.error.startsWith('exception')) return { caveats: 'fail', decision: 'fail', why: r.error };
+    // a driver without the kind answers it as something else (a canon result, a parse error): unsupported, never a pass
+    if (typeof r.allow === 'boolean' && Array.isArray(r.failed)) cell.caveats = sameJson({ allow: r.allow, failed: r.failed }, v.expect.caveats) ? 'pass' : 'fail';
+    if (r.decision !== undefined) cell.decision = sameJson(r.decision, v.expect.decision) ? 'pass' : 'fail';
+    return cell;
+  };
+  const out = { vectors: vecs.length, langs: {} };
+  for (const im of [{ name: 'ts', cmd: TS_REF }, ...active]) {
+    const res = resolve(im.cmd, items, im.name);
+    const t = { caveats: { pass: 0, fail: 0, unsupported: 0 }, decision: { pass: 0, fail: 0, unsupported: 0 }, failing: [] };
+    items.forEach((it, i) => {
+      const j = judge(res.get(it.id), vecs[i]);
+      t.caveats[j.caveats]++; t.decision[j.decision]++;
+      if (j.caveats === 'fail' || j.decision === 'fail') t.failing.push(vecs[i].name + (j.why ? ` (${j.why})` : ''));
+    });
+    out.langs[im.name] = t;
+  }
+  return out;
+}
+
+/**
+ * Producer layer: every case of producer-vectors.json (Ed25519, exact in all languages) and producer-pq-vectors.json (exact in
+ * the languages its `exact` lists) goes to every driver as kind `produce` (raw = {op, args, keys, pq_keys?}; answer {out} or
+ * {error}). (a) The output must equal `expect` (a refusal case only needs an error; parse_limit / compile_policy also the
+ * message). (b) Every post-quantum PCActn a native produced goes back as a `verify` item to the reference and to every other
+ * driver that declares its suite, and must be accepted. A required language (--require) fails on any mismatch, missing answer
+ * or unsupported op it was expected to reproduce.
+ */
+function producerLayer(active, declaredSet) {
+  const conf = join(ROOT, 'packages/pca/conformance');
+  const files = [['producer-vectors.json', 'v1'], ['producer-pq-vectors.json', 'pq']].filter(([f]) => existsSync(join(conf, f)));
+  if (!files.length) return null;
+  const ALL = ['go', 'python', 'rust', 'java', 'kotlin', 'dotnet', 'php', 'ruby', 'swift'];
+  const items = [];
+  for (const [f, tag] of files) {
+    const d = JSON.parse(readFileSync(join(conf, f), 'utf8'));
+    const keys = d.keys ?? d.ed_keys;
+    d.cases.forEach((c, i) => items.push({ id: `prod-${tag}-${String(i).padStart(3, '0')}`, kind: 'produce', raw: JSON.stringify({ op: c.op, args: c.args, keys, ...(d.pq_keys ? { pq_keys: d.pq_keys } : {}) }), c, exact: c.exact ?? ALL }));
+  }
+  const dropTm = (op, v) => (op === 'act' && v && typeof v === 'object' ? (({ threshold_message: _t, ...r }) => r)(v) : v);
+  const judge = (it, r) => {
+    if (!r || r.marker) return { cell: 'fail', why: r?.marker ?? 'MISSING' };
+    const want = it.c.expect;
+    if (r.out === undefined && typeof r.error !== 'string') return { cell: 'unsupported' }; // a driver without the kind
+    if (typeof r.error === 'string' && (r.error.startsWith('unsupported_op') || r.error.includes('unsupported_suite'))) return { cell: 'unsupported', why: r.error };
+    if (want.error !== undefined && Object.keys(want).length === 1) {
+      if (typeof r.error !== 'string') return { cell: 'fail', why: 'signed what the reference refuses' };
+      if ((it.c.op === 'parse_limit' || it.c.op === 'compile_policy') && r.error !== want.error) return { cell: 'fail', why: `error text: ${r.error}` };
+      return { cell: 'pass' };
+    }
+    if (typeof r.error === 'string') return { cell: 'fail', why: r.error.slice(0, 120) };
+    return sameJson(dropTm(it.c.op, r.out), dropTm(it.c.op, want)) ? { cell: 'pass' } : { cell: 'fail', why: 'output differs from expect' };
+  };
+  // small slices: SLH-DSA-256s signing takes seconds per signature in the reference
+  const resolveSliced = (cmd, its, name) => { const m = new Map(); for (let i = 0; i < its.length; i += 8) for (const [k, v] of resolve(cmd, its.slice(i, i + 8), name)) m.set(k, v); return m; };
+  const out = { vectors: items.length, langs: {}, crossVerify: { items: 0, langs: {} } };
+  const pqActs = [];
+  for (const im of [{ name: 'ts', cmd: TS_REF }, ...active]) {
+    const res = resolveSliced(im.cmd, items, im.name);
+    const t = { pass: 0, fail: 0, unsupported: 0, notCompared: 0, failing: [] };
+    for (const it of items) {
+      const r = res.get(it.id);
+      if (im.name !== 'ts' && it.c.op === 'sign_pcactn_suite' && r?.out?.pcactn?.alg !== undefined && !sameJson(r.out, it.c.expect)) pqActs.push({ from: im.name, alg: r.out.pcactn.alg, pcactn: r.out.pcactn });
+      if (im.name !== 'ts' && !it.exact.includes(im.name)) { t.notCompared++; continue; }
+      const j = judge(it, r);
+      t[j.cell]++;
+      if (j.cell !== 'pass') t.failing.push(`${it.c.name}${j.why ? ` (${j.why})` : ''}`);
+    }
+    out.langs[im.name] = t;
+  }
+  // (b) natives -> everyone: the PQ PCActns that are not byte-identical to the reference (hedged signers, other languages)
+  const vItems = pqActs.map((x, i) => ({ id: `prodv-${String(i).padStart(4, '0')}`, kind: 'verify', raw: JSON.stringify(x.pcactn), grant: JSON.stringify(x.pcactn.cap_chain[0]), now: x.pcactn.iat + 1000, aud: x.pcactn.aud, x }));
+  out.crossVerify.items = vItems.length;
+  if (vItems.length) {
+    for (const im of [{ name: 'ts', cmd: TS_REF }, ...active]) {
+      const res = resolveSliced(im.cmd, vItems, im.name);
+      const t = { accept: 0, refuse: 0, gated: 0, failing: [] };
+      for (const v of vItems) {
+        if (im.name !== 'ts' && !declaredSet[im.name]?.has(v.x.alg)) { t.gated++; continue; }
+        if (res.get(v.id)?.allow === true) t.accept++;
+        else { t.refuse++; t.failing.push(`${v.x.from} ${v.x.alg}`); }
+      }
+      out.crossVerify.langs[im.name] = t;
+    }
+  }
+  return out;
+}
+
+/** stateful-vectors.json through the TypeScript reference (kind `stateful`); no native driver runs sequences yet. */
+function statefulLayer() {
+  const f = join(ROOT, 'packages/pca/conformance/stateful-vectors.json');
+  if (!existsSync(f)) return null;
+  const seqs = JSON.parse(readFileSync(f, 'utf8')).stateful;
+  const items = seqs.map((s, i) => ({ id: `st-${String(i).padStart(3, '0')}`, kind: 'stateful', raw: JSON.stringify(s) }));
+  const res = resolve(TS_REF, items, 'ts');
+  const t = { sequences: seqs.length, steps: 0, pass: 0, fail: 0, failing: [] };
+  items.forEach((it, i) => {
+    const want = seqs[i].steps.map((x) => (x.op === 'present' ? x.expect : null));
+    const got = res.get(it.id)?.steps;
+    want.forEach((w, k) => {
+      if (w === null) return;
+      t.steps++;
+      if (Array.isArray(got) && sameJson(got[k], w)) t.pass++;
+      else { t.fail++; t.failing.push(`${seqs[i].name} step ${k}`); }
+    });
+  });
+  return t;
+}
+
+/** The per-layer table (one row per layer / section, one column per language) and the failures it implies. */
+function layerTable(corpus, pol, st, langs, policyRequired) {
+  const fails = [];
+  const cellOf = (t) => {
+    const n = t.agree + t.gated + t.waived + t.soft + t.bad;
+    if (!n) return '-';
+    const extra = [t.gated && `${t.gated} gated`, t.waived && `${t.waived} waived`, t.soft && `${t.soft} err`].filter(Boolean).join(', ');
+    return `${t.bad ? '**FAIL**' : 'PASS'} ${t.agree}/${n}${extra ? ` (${extra})` : ''}`;
+  };
+  const rows = [];
+  for (const L of LAYER_IDS) {
+    const o = corpus[L];
+    if (L === 'policy' || o.vectors) rows.push(`| ${L} (corpus) | required | ${o.vectors} | ${langs.map((l) => cellOf(o.langs[l])).join(' | ')} |`);
+    if (L === 'policy' && pol) {
+      for (const part of ['caveats', 'decision']) {
+        const cells = langs.map((l) => {
+          const t = pol.langs[l]?.[part];
+          if (!t) return '-';
+          const req = l === 'ts' || policyRequired.includes(l);
+          const ok = t.fail === 0 && t.unsupported === 0;
+          if (req && !ok) fails.push(`policy layer (${part}): ${l} ${t.pass}/${pol.vectors} pass, ${t.fail} fail, ${t.unsupported} unsupported${l === 'ts' ? ' (the TypeScript reference must reproduce every vector)' : ' (--policy-required)'}`);
+          if (t.unsupported === pol.vectors) return 'unsupported';
+          return `${ok ? 'PASS' : req ? '**FAIL**' : 'report'} ${t.pass}/${pol.vectors}${t.fail ? ` (${t.fail} fail)` : ''}${t.unsupported ? ` (${t.unsupported} unsupported)` : ''}`;
+        });
+        rows.push(`| policy_decision ${part} | ${langs.filter((l) => l !== 'ts' && !policyRequired.includes(l)).length ? 'TS required, natives report-only' : 'required'} | ${pol.vectors} | ${cells.join(' | ')} |`);
+      }
+    }
+    if (L === 'stateful' && st) {
+      if (st.fail) fails.push(`stateful layer: the TypeScript reference reproduces ${st.pass}/${st.steps} steps (${st.failing.slice(0, 5).join('; ')})`);
+      rows.push(`| stateful (${st.sequences} sequences) | TS required | ${st.steps} steps | ${langs.map((l) => (l === 'ts' ? `${st.fail ? '**FAIL**' : 'PASS'} ${st.pass}/${st.steps}` : 'not run')).join(' | ')} |`);
+    }
+    if (L === 'integration') rows.push(`| integration | none | 0 | ${langs.map(() => '-').join(' | ')} |`);
+  }
+  const table = `| layer / section | gate | vectors | ${langs.join(' | ')} |\n|---|---|---|${langs.map(() => '---').join('|')}|\n${rows.join('\n')}`;
+  return { table, fails };
 }
 
 // ------------------------------------------------------------------ main
@@ -717,6 +942,27 @@ async function main() {
   if (dos.length) timingChecks = timingCheck(dos, active);
   const slow = timingChecks ? timingChecks.failures : [];
 
+  // layers: the corpus comparison per layer, then the policy_decision and stateful sections
+  const corpusL = corpusLayers(rows, langs, tsRes);
+  const pol = policyLayer(active);
+  const st = statefulLayer();
+  const layerT = layerTable(corpusL, pol, st, langs, POLICY_REQUIRED);
+  const prod = flag('--no-producer') ? null : producerLayer(active, declaredSet);
+  if (prod) {
+    const req = (l) => l === 'ts' || REQUIRE.includes(l);
+    const cell = (l) => { const t = prod.langs[l]; if (!t) return '-'; const n = t.pass + t.fail + t.unsupported; return `${t.fail || t.unsupported ? (req(l) ? '**FAIL**' : 'report') : 'PASS'} ${t.pass}/${n}${t.unsupported ? ` (${t.unsupported} unsupported)` : ''}`; };
+    const vcell = (l) => { const t = prod.crossVerify.langs[l]; return t ? `${t.refuse ? (req(l) ? '**FAIL**' : 'report') : 'PASS'} ${t.accept}/${t.accept + t.refuse}${t.gated ? ` (${t.gated} gated)` : ''}` : '-'; };
+    layerT.table += `\n| producer (exact outputs) | ${langs.filter((l) => !req(l)).length ? 'TS + --require gating' : 'required'} | ${prod.vectors} | ${langs.map(cell).join(' | ')} |`;
+    layerT.table += `\n| producer (native PQ output verified) | ${langs.filter((l) => !req(l)).length ? 'TS + --require gating' : 'required'} | ${prod.crossVerify.items} | ${langs.map(vcell).join(' | ')} |`;
+    for (const l of langs) {
+      if (!req(l)) continue;
+      const t = prod.langs[l];
+      if (t && (t.fail || t.unsupported)) layerT.fails.push(`producer layer: ${l} ${t.pass}/${t.pass + t.fail + t.unsupported} exact (${t.failing.slice(0, 5).join('; ')})`);
+      const v = prod.crossVerify.langs[l];
+      if (v?.refuse) layerT.fails.push(`producer layer: ${l} refused ${v.refuse} native post-quantum PCActn(s) (${v.failing.slice(0, 5).join('; ')})`);
+    }
+  }
+
   // reports
   const cats = [...new Set(all.map((c) => c.category))];
   const header = `| category | vectors | ${langs.map((l) => l).join(' | ')} |\n|---|---|${langs.map(() => '---').join('|')}|`;
@@ -727,10 +973,10 @@ async function main() {
   });
   const summaryTable = [header, ...catLines].join('\n');
   const matrixRows = rows.filter((r) => r.c.category !== 'fuzz' && r.c.category !== 'sweep').map((r) => `| ${r.c.id} | ${r.c.category} | ${r.c.name.replace(/\|/g, '\\|')} | ${r.c.intent} | ${langs.map((l) => r.verdicts[l].tag).join(' | ')} | ${r.types.join(',')} |`);
-  const matrix = `# PCA adversarial conformance matrix\n\nGenerated by \`scripts/pca-conformance-all.mjs\`. Cell: \`A\` = accept, \`R:<check>\` = reject with first failing check (reason class), \`ERR\` = driver raised instead of returning a verdict, \`HANG\`/\`CRASH\` = fault. \`U(<suite>)\` = the language does not declare that suite and refused it as required (\`U(...)!\` = it did not: finding SUITE-CAPABILITY); such cells are not compared with the reference. Languages in this run: ${langs.join(', ')}. Skipped: ${Object.entries(status).filter(([, s]) => s !== 'ran').map(([n, s]) => `${n} (${s})`).join('; ') || 'none'}.\n\n## Per-category agreement with the TS reference (full verdict incl. check map)\n\n${summaryTable}\n\n## Every vector\n\n| id | category | name | intent | ${langs.join(' | ')} | findings |\n|---|---|---|---|${langs.map(() => '---').join('|')}|---|\n${matrixRows.join('\n')}\n`;
+  const matrix = `# PCA adversarial conformance matrix\n\nGenerated by \`scripts/pca-conformance-all.mjs\`. Cell: \`A\` = accept, \`R:<check>\` = reject with first failing check (reason class), \`ERR\` = driver raised instead of returning a verdict, \`HANG\`/\`CRASH\` = fault. \`U(<suite>)\` = the language does not declare that suite and refused it as required (\`U(...)!\` = it did not: finding SUITE-CAPABILITY); such cells are not compared with the reference. Languages in this run: ${langs.join(', ')}. Skipped: ${Object.entries(status).filter(([, s]) => s !== 'ran').map(([n, s]) => `${n} (${s})`).join('; ') || 'none'}.\n\n## Per-layer results (packages/pca/conformance/LAYERS.md)\n\nA cell is \`PASS agree/compared\` (gated = not compared because the language does not declare the suite; waived = known-differences.json; err = driver error vs a clean reject). policy_decision: \`caveats\` is the caveat projection every native SDK implements, \`decision\` the whole policy decision; both report-only for the native SDKs${POLICY_REQUIRED.length ? ' except ' + POLICY_REQUIRED.join(', ') : ''} (\`report\` = not gating). Conformance is claimed per layer only.\n\n${layerT.table}\n\n## Per-category agreement with the TS reference (full verdict incl. check map)\n\n${summaryTable}\n\n## Every vector\n\n| id | category | name | intent | ${langs.join(' | ')} | findings |\n|---|---|---|---|${langs.map(() => '---').join('|')}|---|\n${matrixRows.join('\n')}\n`;
   writeFileSync(join(OUT, 'MATRIX.md'), matrix);
   if (flag('--write-matrix')) writeFileSync(join(ADV, 'MATRIX.md'), matrix);
-  writeFileSync(join(OUT, 'report.json'), JSON.stringify({ langs, status, suites, timing, timingChecks, counts: { adversarial: adv.length, regressions: regs.length, sweep: sweep.length, fuzz: fuzz.length }, byFinding, problems: problems.map((p) => ({ id: p.c.id, name: `${p.c.category}/${p.c.name}`, types: p.types, verdicts: Object.fromEntries(langs.map((l) => [l, p.verdicts[l].tag])) })), waived: waived.map((p) => ({ name: `${p.c.category}/${p.c.name}`, types: p.types, reason: p.reason })), newRegressions: newRegs }, null, 1));
+  writeFileSync(join(OUT, 'report.json'), JSON.stringify({ langs, status, suites, timing, timingChecks, counts: { adversarial: adv.length, regressions: regs.length, sweep: sweep.length, fuzz: fuzz.length }, layers: { corpus: corpusL, policy: pol, stateful: st, producer: prod, policyRequired: POLICY_REQUIRED }, byFinding, problems: problems.map((p) => ({ id: p.c.id, name: `${p.c.category}/${p.c.name}`, types: p.types, verdicts: Object.fromEntries(langs.map((l) => [l, p.verdicts[l].tag])) })), waived: waived.map((p) => ({ name: `${p.c.category}/${p.c.name}`, types: p.types, reason: p.reason })), newRegressions: newRegs }, null, 1));
 
   // native suites
   let native = [];
@@ -738,6 +984,8 @@ async function main() {
 
   // output
   log('\n' + summaryTable);
+  log('\nPER-LAYER RESULTS (conformance is claimed per layer; policy_decision is report-only for the native SDKs' + (POLICY_REQUIRED.length ? ` except ${POLICY_REQUIRED.join(', ')}` : '') + '):\n' + layerT.table);
+  for (const l of langs) { const f = pol?.langs[l]?.failing ?? []; if (l !== 'ts' && f.length) log(`  policy_decision ${l}: ${f.length} differ, e.g. ${f.slice(0, 4).join(', ')}`); }
   const dis = [...problems, ...findings];
   if (dis.length) {
     log(`\nDISAGREEMENTS / FINDINGS (${dis.length}):`);
@@ -750,6 +998,7 @@ async function main() {
   const skipped = Object.entries(status).filter(([, s]) => s !== 'ran' && s !== 'not selected');
   const fails = [];
   if (gen.drift) fails.push('adversarial manifest drifted from a fresh regeneration (re-run gen-adversarial.ts and commit)');
+  fails.push(...layerT.fails);
   if (problems.length) fails.push(`${problems.length} unwaived disagreement(s)/fault(s)/finding(s): ${Object.entries(byFinding).map(([k, v]) => `${k}=${v}`).join(' ')}`);
   const timingFails = slow.map((x) => `TIMING (not a verdict disagreement): ${x.lang} overran on ALL ${x.attempts.length} attempts on ${x.vector}: ${x.attempts.map((t) => t.ms + (t.timedOut ? 'ms TIMEOUT' : 'ms')).join(', ')} (baseline median ${x.base} ms, limit ${x.limitMs} ms)`);
   for (const n of native) if (n.status === 'FAIL') fails.push(`native suite failed: ${n.name}`);

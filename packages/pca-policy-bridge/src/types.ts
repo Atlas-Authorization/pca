@@ -23,7 +23,7 @@ import { evaluatePredicates } from '@atlasauth/pca';
  * When `denies` is empty, `predicates` is the whole story and drops directly into an envelope.
  */
 
-export type PolicySource = 'cedar' | 'rego' | 'openfga';
+export type PolicySource = 'cedar' | 'rego' | 'openfga' | 'cel';
 
 export interface TranslationReport {
   source: PolicySource;

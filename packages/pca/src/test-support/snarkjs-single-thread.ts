@@ -20,7 +20,7 @@ export async function useSingleThreadSnarkCurvesInWorkerThreads(): Promise<void>
   // Load snarkjs first: its ffjavascript module clears the two globals when it is first evaluated.
   const spec: string = 'snarkjs';
   await import(spec);
-  const fromSnarkjs = createRequire(createRequire(import.meta.url).resolve(spec));
+  const fromSnarkjs = createRequire(createRequire(__filename).resolve(spec));
   const ff = fromSnarkjs('ffjavascript') as { buildBn128(single: boolean): Promise<unknown>; buildBls12381(single: boolean): Promise<unknown> };
   const g = globalThis as { curve_bn128?: unknown; curve_bls12381?: unknown };
   g.curve_bn128 = await ff.buildBn128(true);

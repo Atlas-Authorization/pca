@@ -254,7 +254,10 @@ export function calibrateSteps(opts: {
   let y = 2n % N;
   const t0 = clock();
   for (let i = 0; i < sample; i += 1) y = (y * y) % N;
-  const elapsedMs = Math.max(clock() - t0, Number.EPSILON);
+  const t1 = clock();
+  // A non-finite reading gives NaN steps (or 1 step from an infinite elapsed time): never a floor.
+  if (!Number.isFinite(t0) || !Number.isFinite(t1)) throw new RangeError('calibrateSteps: the clock must return finite times');
+  const elapsedMs = Math.max(t1 - t0, Number.EPSILON);
   // Keep the optimiser from eliminating the loop.
   if (y === -1n) throw new Error('unreachable');
 

@@ -9,7 +9,7 @@ import * as tls from 'node:tls';
 import { describe, expect, it } from 'vitest';
 import { generateIdentity, readPem } from './certs';
 import { Mesh } from './mesh';
-import { T, waitListening, reservePorts } from './test-timing';
+import { T } from './test-timing';
 import { ABORT_KINDS, NetAbort, WIRE_VERSION, encodeFrame, peekVersion, versionMismatch } from './wire';
 import { otTweakDomain } from '../otx';
 import { createHash } from 'node:crypto';
@@ -18,17 +18,16 @@ async function oldPeerHello(v: number, raw?: Record<string, unknown>): Promise<{
   const dir = mkdtempSync(join(tmpdir(), 'pca-mpc-ver-'));
   const a = generateIdentity(join(dir, 'a'), 'a');
   const b = generateIdentity(join(dir, 'b'), 'b');
-  const [pa, pb] = (await reservePorts(2)) as [number, number];
   const nodes = [
-    { id: 0, host: '127.0.0.1', port: pa, certPem: readPem(a.certPath) },
-    { id: 1, host: '127.0.0.1', port: pb, certPem: readPem(b.certPath) },
+    { id: 0, host: '127.0.0.1', port: 0, certPem: readPem(a.certPath) },
+    { id: 1, host: '127.0.0.1', port: 0, certPem: readPem(b.certPath) },
   ];
   const mesh = new Mesh({
     selfId: 0, nodes, linkTo: [1], keyPem: readPem(a.keyPath), certPem: readPem(a.certPath),
     sessionId: 's', listenHost: '127.0.0.1', connectTimeoutMs: T(30_000), recvTimeoutMs: T(10_000),
   });
+  const pa = await mesh.listen(); // bound first: the port is the one held
   const connected = mesh.connect().catch((x) => x);
-  await waitListening(pa);
   const sock = tls.connect({ host: '127.0.0.1', port: pa, key: readPem(b.keyPath), cert: readPem(b.certPath), ca: [nodes[0]!.certPem], checkServerIdentity: () => undefined });
   sock.on('error', () => undefined);
   await new Promise<void>((r) => sock.once('secureConnect', () => r()));
@@ -70,6 +69,9 @@ describe('R5-G1 wire version', () => {
     expect(versionMismatch(h({ v: 3, x: 'junk' }))).toBeNull();
     expect(versionMismatch(h({ v: 1 }))).toBeNull();
     expect(versionMismatch(h({ v: 3, ...ok, ty: 'bogus' }))).toBeNull();
+    // the lexeme -0 is not an integer (strict profile): a -0 version is malformed, never a version abort
+    expect(versionMismatch(Buffer.from(JSON.stringify({ v: 424242, ...ok }).replace('424242', '-0')))).toBeNull();
+    expect(peekVersion(Buffer.from('{"v":-0}'))).toBeNull();
     expect(versionMismatch(h({ v: 3, ...ok, seq: -1 }))).toBeNull();
     expect(versionMismatch(h({ v: 3, ...ok, extra: 1 }))).toBeNull();
     expect(versionMismatch(h({ v: 1.5, ...ok }))).toBeNull();

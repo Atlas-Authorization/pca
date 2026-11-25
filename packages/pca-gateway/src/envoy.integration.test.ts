@@ -18,8 +18,8 @@ import {
 } from './index';
 import {
   bootstrap,
-  freePort,
   rawRequest,
+  startDeadService,
   startEnvoy,
   startHttpCheckService,
   startUpstream,
@@ -30,6 +30,9 @@ import {
   type RecordedRequest,
 } from '../test-support/envoy-harness';
 import { startGrpcCheckServer, type GrpcCheckServer } from '../test-support/envoy-grpc-server';
+
+/** Signature-only on purpose (0.5: an explicit mode): these tests are about routing, adapters and binding; full mode is in full-policy.test.ts. */
+const SIG_ONLY = { insecureSkipPlanRootCheck: true, policy: { mode: 'signature-only' as const }, replayGuard: { claim: async () => true }, requireChecks: [] as string[] };
 
 const BIN = process.env.PCA_ENVOY_BIN;
 const AUD = 'ins_acme';
@@ -61,6 +64,7 @@ const gwBase: GatewayOptions = {
     { method: 'POST', path: '/payouts', capability: { verb: 'stripe.payout' } },
   ],
   resolveGrant: async (ref) => grants.get(ref) ?? null,
+  ...SIG_ONLY,
 };
 /** Strict: unmapped routes denied, single-use proofs. */
 const gwStrict = (): GatewayOptions => ({ ...gwBase, replayGuard: memoryReplayGuard() });
@@ -72,6 +76,7 @@ const d = BIN ? describe : describe.skip;
 d('real Envoy ext_authz (HTTP service + gRPC)', () => {
   let envoy: EnvoyProcess;
   let upstream: Recorder<RecordedRequest>;
+  let deadService: { port: number; close(): Promise<void> };
   let httpStrict: Recorder<RecordedRequest>;
   let httpPublic: Recorder<RecordedRequest>;
   let httpPublicNoPolicy: Recorder<RecordedRequest>;
@@ -87,8 +92,9 @@ d('real Envoy ext_authz (HTTP service + gRPC)', () => {
     httpPublicNoPolicy = await startHttpCheckService(envoyExtAuthz(gwPublic({ pathPolicy: 'off' })));
     grpcStrict = await startGrpcCheckServer(envoyGrpcExtAuthz(gwStrict()));
     grpcPublic = await startGrpcCheckServer(envoyGrpcExtAuthz(gwPublic()));
-    const dead = await freePort(); // nothing listens here
-    const specs: Array<Omit<ListenerSpec, 'port'>> = [
+    deadService = await startDeadService(); // a check service that is down: it holds its port and resets every connection
+    const dead = deadService.port;
+    const specs: ListenerSpec[] = [
       { name: 'h', mode: 'http', authzPort: httpStrict.port },
       { name: 'hq', mode: 'http', authzPort: httpStrict.port, pathPrefix: '/pca-check' },
       { name: 'hb', mode: 'http', authzPort: httpStrict.port, withBody: { maxRequestBytes: 1024, allowPartialMessage: true } },
@@ -103,21 +109,16 @@ d('real Envoy ext_authz (HTTP service + gRPC)', () => {
       { name: 'gpub', mode: 'grpc', authzPort: grpcPublic.port },
       { name: 'gdead', mode: 'grpc', authzPort: dead },
     ];
-    const listeners: ListenerSpec[] = [];
-    for (const s of specs) {
-      const port = await freePort();
-      P[s.name] = port;
-      listeners.push({ ...s, port });
-    }
-    const adminPort = await freePort();
-    envoy = await startEnvoy(BIN as string, bootstrap({ adminPort, upstreamPort: upstream.port, listeners }), adminPort);
+    envoy = await startEnvoy(BIN as string, bootstrap({ upstreamPort: upstream.port, listeners: specs }));
+    Object.assign(P, envoy.listenerPorts);
+    const adminPort = envoy.adminPort;
     const ver = await rawRequest({ port: adminPort, path: '/server_info' });
     version = (JSON.parse(ver.body) as { version: string }).version;
   }, 60_000);
 
   afterAll(async () => {
     await envoy?.stop();
-    await Promise.all([upstream?.close(), httpStrict?.close(), httpPublic?.close(), httpPublicNoPolicy?.close(), grpcStrict?.close(), grpcPublic?.close()]);
+    await Promise.all([deadService?.close(), upstream?.close(), httpStrict?.close(), httpPublic?.close(), httpPublicNoPolicy?.close(), grpcStrict?.close(), grpcPublic?.close()]);
     const dir = process.env.PCA_ENVOY_CAPTURE;
     if (dir) {
       mkdirSync(dir, { recursive: true });

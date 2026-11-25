@@ -1,0 +1,24 @@
+{
+ "target": "frost-dkg dkgVerifyShare",
+ "seeds": [
+  {
+   "share": {
+    "from": 2,
+    "share": "JncHcoRihM128ZQ0whaP3SDleRsmiAVNSI28H_FzyQg",
+    "sig": "bIb-jXHq3WjoONc8q2aFv5a7O0vpOGcEcdlpSQf5L-FitezfFTqyQp8Skerqx7LvDBw4mcYEpdzgS7VzGNMbDw"
+   },
+   "pkg": {
+    "identifier": 2,
+    "sessionId": "ZnV6ei1ka2ctc2Vzc2lvbi0wMTIzNDU2Nzg5YWJjZGVm",
+    "coefficientCommitments": [
+     "pIX_wArb19hcjqFBv248IqeLWrla6JFdvHMxpyOn94k",
+     "bRbkFcG_8CEG0t_2bGun-VL__jyIQdTDgiP0BhxOUO0"
+    ],
+    "proofOfKnowledge": {
+     "R": "eS-ycf5lkej0ixR8_p_YnJ05CU5IRCdOGQTYg5lMSRg",
+     "mu": "h8N14f4kXQSwMemVwVkftRA1Hcaqf3NypXRCOfx6rAM"
+    }
+   }
+  }
+ ]
+}

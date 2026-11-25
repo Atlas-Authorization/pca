@@ -22,6 +22,11 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 fn-dsa = "0.4.0"
 
+# Host C ABI (libfndsa): std build, caller-owned buffers, no global state. See include/pca_fndsa.h.
+[features]
+default = []
+capi = []
+
 # A small, dependency-free WASM: no std, no allocator, no imports — all I/O is through fixed static
 # buffers in linear memory, so the module instantiates with an empty import object (mirrors
 # @atlasauth/pca-mpc-wasm / @atlasauth/pca-mpc-lwe-ot-wasm).

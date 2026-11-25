@@ -17,7 +17,7 @@ vi.mock('node:tls', async (orig) => {
 
 import { generateIdentity, readPem } from './certs';
 import { Mesh, type NodeAddr } from './mesh';
-import { ManualClock, reservePorts, until } from './test-timing';
+import { ManualClock, until } from './test-timing';
 import { NetAbort, WIRE_VERSION, encodeFrame } from './wire';
 
 let dir: string;
@@ -89,8 +89,7 @@ const frame = (ty: 'hello' | 'msg', seq: number, rd: string, d: unknown): Buffer
 
 describe('TLS client errors are recorded capped at 120 characters', () => {
   it('a long error message is cut to its first 120 characters', async () => {
-    const [p] = await reservePorts(1);
-    const m = new Mesh({ selfId: 0, nodes: [{ id: 0, host: '127.0.0.1', port: p!, certPem: ids[0]!.cert }], linkTo: [], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1' });
+    const m = new Mesh({ selfId: 0, nodes: [{ id: 0, host: '127.0.0.1', port: 0, certPem: ids[0]!.cert }], linkTo: [], keyPem: ids[0]!.key, certPem: ids[0]!.cert, sessionId: SID, listenHost: '127.0.0.1' });
     await m.connect();
     const long = 'E'.repeat(119) + 'XYZ' + 'F'.repeat(200);
     priv(m).server!.emit('tlsClientError', new Error(long));

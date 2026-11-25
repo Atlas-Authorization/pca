@@ -5,7 +5,7 @@
 import { generateKeyPairSync, sign as nodeSign, type KeyObject } from 'node:crypto';
 import { SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
-import type { AgentPassport } from '@atlasauth/pca';
+import type { AgentPassport } from '@atlasauth/pca/ext/attestation';
 import {
   AGENT_PASSPORT_CONTEXT,
   AGENT_PASSPORT_VC_TYPE,
@@ -174,7 +174,7 @@ describe('verifyPassportVC', () => {
   const vc0 = { '@context': [VC_CONTEXT, AGENT_PASSPORT_CONTEXT], type: ['VerifiableCredential', AGENT_PASSPORT_VC_TYPE], credentialSubject: cs0 };
   async function craft(over: { vc?: unknown; payload?: Record<string, unknown>; header?: Record<string, unknown>; discs?: string[]; key?: KeyObject; cs?: Record<string, unknown>; vcOver?: Record<string, unknown> } = {}) {
     const vc = 'vc' in over ? over.vc : { ...vc0, ...(over.vcOver ?? {}), credentialSubject: over.cs ?? cs0 };
-    const payload: Record<string, unknown> = { iss: 'did:key:zISS', ...(vc === undefined ? {} : { vc }), ...(over.payload ?? {}) };
+    const payload: Record<string, unknown> = { iss: 'did:key:zISS', sub: (over.cs ?? cs0).id, ...(vc === undefined ? {} : { vc }), ...(over.payload ?? {}) };
     const jwt = await new SignJWT(payload).setProtectedHeader({ alg: 'EdDSA', typ: 'vc+sd-jwt', ...(over.header ?? {}) } as never).sign(over.key ?? kp.privateKey);
     return [jwt, ...(over.discs ?? [])].map((p) => `${p}~`).join('');
   }
@@ -203,10 +203,12 @@ describe('verifyPassportVC', () => {
     for (const vc of [undefined, 'x', 5, null, ['a']]) expect(await err(verify(await craft({ vc })))).toBe('pca-vc: missing vc claim');
     const ctxMsg = `pca-vc: @context must begin with ${VC_CONTEXT}`;
     for (const ctx of ['x', [], ['https://other'], [AGENT_PASSPORT_CONTEXT, VC_CONTEXT], undefined]) expect(await err(verify(await craft({ vcOver: { '@context': ctx } })))).toBe(ctxMsg);
+    const exactMsg = `pca-vc: @context must be exactly [${VC_CONTEXT}, ${AGENT_PASSPORT_CONTEXT}]`;
+    for (const ctx of [[VC_CONTEXT], [VC_CONTEXT, 'https://other.example/ctx'], [VC_CONTEXT, AGENT_PASSPORT_CONTEXT, 'https://other.example/ctx']]) expect(await err(verify(await craft({ vcOver: { '@context': ctx } })))).toBe(exactMsg);
     const typeMsg = `pca-vc: type must include VerifiableCredential and ${AGENT_PASSPORT_VC_TYPE}`;
     for (const type of ['VerifiableCredential', [], ['VerifiableCredential'], [AGENT_PASSPORT_VC_TYPE], undefined, 5]) expect(await err(verify(await craft({ vcOver: { type } })))).toBe(typeMsg);
     await verify(await craft({ vcOver: { type: ['Other', AGENT_PASSPORT_VC_TYPE, 'VerifiableCredential'] } }));
-    await verify(await craft({ vcOver: { '@context': [VC_CONTEXT] } }));
+    await verify(await craft({ vcOver: { '@context': [VC_CONTEXT, AGENT_PASSPORT_CONTEXT] } }));
     for (const cs of [undefined, 'x', 5, null, ['a']]) expect(await err(verify(await craft({ vc: { ...vc0, credentialSubject: cs } })))).toBe('pca-vc: missing credentialSubject');
     expect(await err(verify(await craft({ cs: { ...cs0, _sd_alg: 'sha-256' } })))).toBe('pca-vc: _sd_alg must be a top-level claim');
     expect(await err(verify(await craft({ payload: { _sd_alg: 'sha-512' } })))).toBe('pca-vc: unsupported _sd_alg (require sha-256)');

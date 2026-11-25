@@ -73,7 +73,9 @@ export async function checkClock(cfg: DoctorConfig, deps: { fetch: FetchLike; no
   const unc = dep.uncertaintyMs + ref.uncertaintyMs;
   const lower = Math.abs(skew) - unc;
   const upper = Math.abs(skew) + unc;
-  const status = lower > max ? 'fail' : Math.abs(skew) > warnAt || upper > max ? 'warn' : 'pass';
+  // A skew, uncertainty or threshold that is not a number (NaN, an infinite clock reading) can show nothing: fail, never pass.
+  const measurable = Number.isFinite(lower) && Number.isFinite(upper) && !Number.isNaN(max) && !Number.isNaN(warnAt);
+  const status = !measurable ? 'fail' : lower > max ? 'fail' : Math.abs(skew) > warnAt || upper > max ? 'warn' : 'pass';
   const detail =
     `deployment clock ${s(skew)} relative to ${refName}${refNote} (+-${(unc / 1000).toFixed(1)} s: Date has 1 s resolution, plus round trips); ` +
     `fail beyond ${max / 1000} s, warn above ${warnAt / 1000} s. The Date header is written by whatever answers the request (a CDN or proxy may set it).`;

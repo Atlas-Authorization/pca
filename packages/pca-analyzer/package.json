@@ -1,7 +1,7 @@
 {
   "name": "@atlasauth/pca-analyzer",
-  "version": "0.4.3",
-  "description": "Static authority analyzer for Proof-Carrying Authority: a sound, bounded decision procedure over PCA's predicate/caveat policy (reachability, vacuity/totality, delegation-safety subsumption, disjointness, equivalence, and declared-intent conformance) with counterexamples.",
+  "version": "0.5.0",
+  "description": "Static authority analyzer for Proof-Carrying Authority: a sound, bounded decision procedure over PCA's predicate/caveat policy (reachability, totality, subsumption, equivalence, intent conformance) plus analysis and authoring tools built on it: maximum exposure, escalation surface, semantic diff, residual policies and capability discovery, SQL data filters, least-privilege proposals, policy coverage, minimal-change repairs, schema validation and a policy test runner. Counterexamples are always re-checked by the real evaluator.",
   "keywords": [
     "static analysis",
     "policy analysis",
@@ -9,7 +9,11 @@
     "agent authorization",
     "proof-carrying authority",
     "pca",
-    "ai agents"
+    "ai agents",
+    "maximum exposure",
+    "residual policies",
+    "least privilege",
+    "policy coverage"
   ],
   "license": "MIT",
   "homepage": "https://github.com/Atlas-Authorization/pca#readme",
@@ -39,6 +43,7 @@
     "@atlasauth/pca": "workspace:*"
   },
   "devDependencies": {
+    "fast-check": "^3.23.1",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
@@ -52,5 +57,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pca": {
+    "maturity": "production",
+    "pending_ci": true
   }
 }

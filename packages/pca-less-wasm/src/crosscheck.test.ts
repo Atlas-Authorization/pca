@@ -55,7 +55,8 @@ function wasmGen(p: Pair): { pk: Uint8Array; sk: Uint8Array; sm: Uint8Array } {
 }
 
 d('wasm vs native upstream reference', () => {
-  for (const [variant, n] of [['O2', N], ['O3llvm', N], ['O0asan', N_ASAN]] as const) {
+  const only = process.env.LESS_VARIANTS?.split(',');
+  for (const [variant, n] of ([['O2', N], ['O3llvm', N], ['O0asan', N_ASAN]] as const).filter(([v]) => !only || only.includes(v))) {
     it(`${variant}: keygen+sign byte-identical to wasm on ${n} random (seed,msg); wasm opens native sigs; native opens wasm sigs`, () => {
       expect(existsSync(bin(variant))).toBe(true);
       const ps = pairs(n);

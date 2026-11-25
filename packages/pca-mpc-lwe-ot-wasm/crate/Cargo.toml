@@ -32,9 +32,16 @@ sha3 = { version = "0.10.8", default-features = false }
 # `hoststd` is used ONLY to run the native KAT tests on the host (`cargo test --features hoststd`),
 # where the std-less `pqc_kyber` cdylib cannot link under the unwinding test profile. The WASM build
 # never enables it, so the shipped artifact stays no_std.
+# RustCrypto ML-KEM (FIPS 203), host builds only: K-PKE.KeyGen(d) exactly as FIPS 203 Algorithm 13 derives it, the key derivation the TypeScript
+# reference takes from @noble/post-quantum. pqc_kyber's hazmat surface starts below G(d) (it hashes the seed without the FIPS 203 `k` byte), so it
+# cannot express that derivation; the wasm build never enables this.
+ml-kem = { version = "0.2", default-features = false, features = ["deterministic"], optional = true }
+
 [features]
 default = []
-hoststd = ["pqc_kyber/std"]
+hoststd = ["pqc_kyber/std", "dep:ml-kem"]
+# Host C ABI (liblweot): std build, caller-owned buffers, no global state. See pca_lwe_ot.h.
+capi = ["hoststd"]
 
 # A small, dependency-free WASM: no std, no allocator, no imports — all I/O is through fixed static
 # buffers in linear memory, so the module instantiates with an empty import object (mirrors

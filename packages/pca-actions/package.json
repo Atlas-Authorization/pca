@@ -1,0 +1,63 @@
+{
+  "name": "@atlasauth/pca-actions",
+  "version": "0.5.0",
+  "description": "One ActionDef, derived authorization: a language-neutral, canonically digested definition of an action, a trait algebra that can only add restrictions, and the pure derivations (signed schema, operation binding, risk, predicates, ontology terms, policy card, escalation).",
+  "license": "MIT",
+  "homepage": "https://github.com/Atlas-Authorization/pca#readme",
+  "bugs": {
+    "url": "https://github.com/Atlas-Authorization/pca/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atlas-Authorization/pca.git",
+    "directory": "packages/pca-actions"
+  },
+  "keywords": [
+    "agent authorization",
+    "proof-carrying authority",
+    "pca",
+    "actions",
+    "policy",
+    "ai agents"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@atlasauth/pca": "workspace:*",
+    "@atlasauth/pca-intent": "workspace:*",
+    "@atlasauth/pca-scitt": "workspace:*",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "fast-check": "^3.23.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pca": {
+    "maturity": "production", "pending_ci": true
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

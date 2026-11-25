@@ -109,7 +109,7 @@ export type SetResult = { ok: true; set: QuorumSet } | { ok: false; reason: 'bad
 
 type Rec = Record<string, unknown>;
 const isRec = (x: unknown): x is Rec => typeof x === 'object' && x !== null && !Array.isArray(x);
-const isEpoch = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
+const isEpoch = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 && !Object.is(n, -0);
 
 function isHashBased(alg: SigAlg): boolean {
   const s = SIG_SUITES[alg];
@@ -281,7 +281,7 @@ export function verifyQuorum(input: VerifyQuorumInput): QuorumVerdict {
     for (const raw of p.sigs) {
       if (!isRec(raw) || typeof raw.sig !== 'string') return { ok: false, reason: 'malformed' };
       const i = raw.i;
-      if (typeof i !== 'number' || !Number.isSafeInteger(i) || i < 0 || i >= set.signers.length) return { ok: false, reason: 'unknown-signer' };
+      if (typeof i !== 'number' || !Number.isSafeInteger(i) || i < 0 || Object.is(i, -0) || i >= set.signers.length) return { ok: false, reason: 'unknown-signer' };
       if (seen.has(i)) return { ok: false, reason: 'duplicate-signer', detail: i };
       seen.add(i);
       const e = set.signers[i]!;

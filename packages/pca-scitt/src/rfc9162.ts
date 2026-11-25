@@ -68,7 +68,7 @@ function equal(a: Uint8Array, b: Uint8Array): boolean {
  * Returns null when the (index, size, path length) combination is invalid.
  */
 export function rootFromInclusionPath(leaf: Uint8Array, index: number, size: number, path: readonly Uint8Array[]): Uint8Array | null {
-  if (!Number.isSafeInteger(index) || !Number.isSafeInteger(size) || index < 0 || size < 1 || index >= size) return null;
+  if (!Number.isSafeInteger(index) || !Number.isSafeInteger(size) || index < 0 || Object.is(index, -0) || size < 1 || index >= size) return null;
   if (leaf.length !== 32 || path.some((p) => p.length !== 32)) return null;
   let fn = BigInt(index);
   let sn = BigInt(size) - 1n;

@@ -1,5 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  // Typecheck covers the tests; the BUILD must not emit them into dist.
+  // Typecheck covers the tests (which import sibling sources); the BUILD must not emit them into dist.
+  "compilerOptions": { "rootDir": "./src" },
   "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }

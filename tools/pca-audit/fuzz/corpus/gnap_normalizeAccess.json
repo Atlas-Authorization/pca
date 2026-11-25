@@ -1,0 +1,19 @@
+{
+ "target": "gnap normalizeAccess",
+ "seeds": [
+  {
+   "v": [
+    {
+     "type": "payments",
+     "actions": [
+      "read"
+     ],
+     "locations": [
+      "https://a.example/"
+     ]
+    },
+    "plain-ref"
+   ]
+  }
+ ]
+}

@@ -11,7 +11,7 @@
 import * as net from 'node:net';
 import type { MeshClock } from './mesh';
 
-export { T, TIMEOUT_SCALE, reservePorts } from './launch-support';
+export { T, TIMEOUT_SCALE } from './launch-support';
 import { T } from './launch-support';
 
 /** Poll `cond` until it is truthy (resolving its value) or `ms` (scaled) elapse (rejecting with `what`). */
@@ -40,6 +40,13 @@ export function waitListening(port: number, host = '127.0.0.1', ms = 30_000): Pr
     `port ${port} to accept connections`,
     ms,
   ) as Promise<true>;
+}
+
+/** Wait for the mesh that owns `node` to bind (it writes the real port back), then until it accepts; returns that port. */
+export async function listeningPort(node: { port: number }, ms = 30_000): Promise<number> {
+  await until(() => node.port !== 0, 'the node to bind its port', ms);
+  await waitListening(node.port, '127.0.0.1', ms);
+  return node.port;
 }
 
 /** A virtual clock: time moves only when the test says so. Timers fire in order of due time during `advance`. */

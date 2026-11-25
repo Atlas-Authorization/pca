@@ -1,0 +1,132 @@
+name: Goal kernel native extractions
+
+# The proved goal kernel (formal/dafny/Goal.dfy, the same sources as packages/pca-verified-core/generated/pca_goal.js) translated
+# with the pinned Dafny (formal/dafny/TOOLCHAIN.lock, hash-checked before unpacking) to Java, C#, Go and Python by
+# formal/dafny/build-native.sh, into the native SDKs (sdks/<lang>-pca, the native repositories at the same ref):
+#  - drift: the extraction committed in each SDK must be byte-identical to a fresh translation (fails otherwise; the fresh
+#    translation is uploaded as the artifact `goal-kernel-native` to commit);
+#  - replay: each SDK's kernel wrapper runs on the fresh translation against the kernel tape corpus
+#    (the goal-kernel corpus in test-data) and the goal conformance vectors, with PCA_GOAL_KERNEL_REQUIRE=1 (a missing kernel FAILS).
+# The proofs of these sources run in verified-core.yml (`build-ext.sh Goal --check`).
+# Runs on every ci/** branch, ci/build-** included (the heavy workflows skip those; this one must not: it is how the extraction
+# gets produced), so it is deliberately not in any skip list.
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['*']
+  workflow_dispatch:
+    inputs:
+      native_ref:
+        description: "ref of the native repositories (default: this ref)"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NATIVE_REF: ${{ inputs.native_ref || github.ref_name }}
+  PCA_GOAL_KERNEL_REQUIRE: '1'
+
+jobs:
+  extract:
+    name: translate (java, cs, go, py) + drift + native replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DAFNY_DIR: ${{ github.workspace }}/../dafny
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native SDKs at ${{ env.NATIVE_REF }} (already present in the monorepo layout)
+        run: |
+          set -euo pipefail
+          for r in go python dotnet java; do
+            [ -d "sdks/$r-pca" ] && continue
+            url="https://github.com/${{ github.repository_owner }}/pca-$r.git"
+            for i in $(seq 1 40); do
+              git ls-remote --exit-code "$url" "refs/heads/$NATIVE_REF" "refs/tags/$NATIVE_REF" >/dev/null 2>&1 && break
+              [ "$i" = 40 ] && { echo "::error::pca-$r has no ref '$NATIVE_REF' (push the native repos at the same ref)"; exit 1; }
+              echo "waiting for pca-$r@$NATIVE_REF ($i/40)"; sleep 30
+            done
+            mkdir -p sdks && git clone -q --depth 1 --branch "$NATIVE_REF" "$url" "sdks/$r-pca"
+            echo "pca-$r @ $(git -C "sdks/$r-pca" rev-parse HEAD)"
+          done
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: sdks/go-pca/go.mod
+          cache: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pinned Dafny (hash-verified)
+        run: |
+          sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq unzip libicu-dev >/dev/null
+          bash formal/dafny/verify-toolchain.sh --install --dir "$DAFNY_DIR"
+          echo "$DAFNY_DIR" >> "$GITHUB_PATH"
+      - name: Committed extractions == fresh translation
+        id: drift
+        continue-on-error: true
+        run: bash formal/dafny/build-native.sh --check
+      - name: Fresh translation into the SDKs (what the replay steps below run)
+        run: bash formal/dafny/build-native.sh
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: goal-kernel-native
+          path: |
+            sdks/java-pca/src/dafny-goal
+            sdks/dotnet-pca/AtlasPca/GoalKernel/Generated
+            sdks/go-pca/goalkernel/internal/gen
+            sdks/python-pca/atlas_pca/goal_kernel_gen
+      - name: Python replay
+        if: ${{ !cancelled() }}
+        working-directory: sdks/python-pca
+        run: |
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -e . pytest
+          python -m pytest -q test_ref_goal_kernel.py
+      - name: Go replay
+        if: ${{ !cancelled() }}
+        working-directory: sdks/go-pca
+        run: go test -count=1 -tags pcagoalkernel ./goalkernel/
+      - name: Java replay
+        if: ${{ !cancelled() }}
+        working-directory: sdks/java-pca
+        run: mvn -B -ntp -q test -Dtest=GoalKernelTest -Dsurefire.failIfNoSpecifiedTests=false
+      - name: .NET replay
+        if: ${{ !cancelled() }}
+        working-directory: sdks/dotnet-pca
+        run: dotnet test AtlasPca.Corpus.Tests -c Release --filter "FullyQualifiedName~GoalKernelTests"
+      - name: How to commit the extraction (job summary)
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "### Goal kernel extraction (drift: ${{ steps.drift.outcome }})"
+            echo
+            echo "The fresh translation is the artifact **goal-kernel-native**. To commit it (when drift is \`failure\`):"
+            echo
+            echo '1. Download the artifact (run page, Artifacts, goal-kernel-native) and unzip it inside sdks/ (the archive paths start at java-pca/, dotnet-pca/, go-pca/, python-pca/).'
+            echo '2. Copy each directory over its SDK, keeping the hand-written README.md in each:'
+            echo '   - sdks/java-pca/src/dafny-goal'
+            echo '   - sdks/dotnet-pca/AtlasPca/GoalKernel/Generated'
+            echo '   - sdks/go-pca/goalkernel/internal/gen'
+            echo '   - sdks/python-pca/atlas_pca/goal_kernel_gen'
+            echo '3. Commit them (explicit paths) and push; this workflow then passes the drift check and the replay jobs run on the committed files.'
+            echo
+            echo 'The Go replay needs the files committed before the SDK CI runs them with the pcagoalkernel tag (pca-go ci.yml does this on its own once they exist).'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Drift verdict (commit the `goal-kernel-native` artifact into the SDKs when this fails)
+        if: ${{ !cancelled() && steps.drift.outcome == 'failure' }}
+        run: |
+          echo "::error::the extracted goal kernel committed in the SDKs differs from a fresh translation (see the drift step)"
+          exit 1

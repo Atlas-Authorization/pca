@@ -9,12 +9,13 @@
 //
 //   npx tsx tools/pca-audit/java-mutate/k042-actionschema-oracle.mts     (from the repo root)
 // writes sdks/java-pca/test-data/k042-actionschema.json. Deterministic except the ML-DSA signature bytes (hedged signing).
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import * as pcaNs from '../../../packages/pca/src/index.ts';
 const pca: any = (pcaNs as any).actionSchemaShapeError ? pcaNs : (pcaNs as any).default; // CJS interop under tsx
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const seed = (l: string) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${l}`).digest());
 const clone = (x: any) => JSON.parse(JSON.stringify(x));
 const s = (n: number, ch = 'a') => ch.repeat(n);
@@ -50,7 +51,7 @@ addShape('not object array', []);
 addShape('not object null', null);
 addShape('unknown member', withDoc((d) => { d.zz = 'x'; }));
 addShape('unknown member first', R('{"zz":1,' + JSON.stringify(BASE).slice(1)));
-addShape('v 2', withDoc((d) => { d.v = 2; }));
+addShape('v 3', withDoc((d) => { d.v = 3; }));
 addShape('v 1.0', R(JSON.stringify(BASE).replace('"v":1', '"v":1.0')));
 addShape('v string', withDoc((d) => { d.v = '1'; }));
 addShape('v missing', withDoc((d) => { delete d.v; }));

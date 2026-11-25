@@ -77,6 +77,7 @@ interface XmlNode {
   nodeType: number;
   nodeName: string;
   localName?: string;
+  prefix?: string | null;
   namespaceURI?: string | null;
   textContent?: string | null;
   attributes?: ArrayLike<{ name: string; value: string; localName?: string; namespaceURI?: string | null }>;
@@ -134,6 +135,49 @@ function pemOfDerB64(b64: string): string {
   return `-----BEGIN CERTIFICATE-----\n${body.match(/.{1,64}/g)?.join('\n') ?? ''}\n-----END CERTIFICATE-----`;
 }
 
+const MAX_XML_DEPTH = 64;
+/**
+ * Linear pre-scan: element nesting deeper than 64 is refused before any parser (or signature work) sees the document.
+ * Comments, CDATA, processing instructions and DOCTYPE are skipped with indexOf (never a backtracking regex). A start tag
+ * ends at its first '>' outside quotes; an unterminated construct ends the scan (the parser then rejects the document).
+ */
+function xmlTooDeep(xml: string): boolean {
+  let depth = 0;
+  let i = xml.indexOf('<');
+  while (i >= 0) {
+    let end: number; // index of the construct's last character, -1 when it never ends
+    const upTo = (marker: string, from: number): number => {
+      const at = xml.indexOf(marker, from);
+      return at < 0 ? -1 : at + marker.length - 1;
+    };
+    if (xml.startsWith('<!--', i)) end = upTo('-->', i + 4);
+    else if (xml.startsWith('<![CDATA[', i)) end = upTo(']]>', i + 9);
+    else if (xml.startsWith('<?', i)) end = upTo('?>', i + 2);
+    else if (xml.startsWith('<!', i)) end = upTo('>', i + 2);
+    else {
+      let q = '';
+      end = -1;
+      for (let k = i + 1; k < xml.length; k++) {
+        const c = xml[k]!;
+        if (q) {
+          if (c === q) q = '';
+        } else if (c === '"' || c === "'") q = c;
+        else if (c === '>') {
+          end = k;
+          break;
+        }
+      }
+      if (end >= 0) {
+        if (xml[i + 1] === '/') depth--;
+        else if (xml[end - 1] !== '/' && ++depth > MAX_XML_DEPTH) return true;
+      }
+    }
+    if (end < 0) return false;
+    i = xml.indexOf('<', end + 1);
+  }
+  return false;
+}
+
 /**
  * Verify a RIM document (XML text) and return its golden measurements. Async only because the canonicalization
  * library is imported lazily. Fails closed with a reason on any deviation.
@@ -143,6 +187,7 @@ export async function verifyNvidiaRim(xml: string, opts: { rimRootSpkiSha256: st
   try {
     if (typeof xml !== 'string' || xml.length === 0 || xml.length > 4_000_000) return fail('RIM: empty or oversized document');
     if (!Array.isArray(opts.rimRootSpkiSha256) || opts.rimRootSpkiSha256.length === 0) return fail('RIM: no pinned RIM root configured');
+    if (xmlTooDeep(xml)) return fail('RIM: verification error (fail closed): XML nesting is too deep');
     let xc: typeof import('xml-crypto');
     let xd: typeof import('@xmldom/xmldom');
     try {
@@ -196,7 +241,10 @@ export async function verifyNvidiaRim(xml: string, opts: { rimRootSpkiSha256: st
 
     // SignedInfo is canonicalized IN CONTEXT (before the enveloped Signature is removed)
     const c14n = new xc.C14nCanonicalization();
-    const siCanon = c14n.process(si as never, { ancestorNamespaces: ancestorNamespaces(si) } as never);
+    // xml-crypto already writes the in-scope default namespace of an UNPREFIXED element itself; passing the '' ancestor entry too
+    // would emit `xmlns` twice (C14N 1.1 emits it once), so a genuinely signed unprefixed SignedInfo would fail.
+    const anc = ancestorNamespaces(si).filter((a) => !(a.prefix === '' && !si.prefix));
+    const siCanon = c14n.process(si as never, { ancestorNamespaces: anc } as never);
     const sigRaw = Buffer.from(sigValueB64, 'base64');
     if (sigRaw.length !== 96) return fail('RIM: SignatureValue is not a 96-byte P-384 signature');
     if (!cryptoVerify('sha384', Buffer.from(siCanon, 'utf8'), { key: chain.leaf.publicKey, dsaEncoding: 'ieee-p1363' }, sigRaw)) {
@@ -331,7 +379,13 @@ export type RevocationResult = { ok: true; verifiedCrls: number } | { ok: false;
  * fresh; no chain certificate (other than the self-signed root) may appear on a CRL issued by its issuer;
  * `requireIssuers` demands that a verified CRL issued by a chain cert whose subject contains each string exists.
  */
-export function checkNvidiaChainRevocation(chain: X509Certificate[], crls: Uint8Array[], nowMs: number, requireIssuers: string[] = []): RevocationResult {
+export function checkNvidiaChainRevocation(
+  chain: X509Certificate[],
+  crls: Uint8Array[],
+  nowMs: number,
+  requireIssuers: string[] = [],
+  requireFor: NvidiaRequireCrlFor | 'none' = 'cdp',
+): RevocationResult {
   if (crls.length === 0) return { ok: false, reason: 'no CRLs supplied' };
   const now = new Date(nowMs);
   const covered = new Set<number>();
@@ -363,7 +417,30 @@ export function checkNvidiaChainRevocation(chain: X509Certificate[], crls: Uint8
   for (const need of requireIssuers) {
     if (![...covered].some((i) => chain[i]!.subject.includes(need))) return { ok: false, reason: `no verified CRL issued by a certificate matching '${need}'` };
   }
+  // coverage: every required non-root certificate needs a verified CRL from its own issuer (index i + 1)
+  const last = chain.length - 1;
+  const required: number[] = [];
+  if (Array.isArray(requireFor)) {
+    for (const i of requireFor) {
+      if (!Number.isInteger(i) || i < 0 || i >= last) return { ok: false, reason: `requireCrlFor index ${i} is not a non-root chain certificate` };
+      required.push(i);
+    }
+  } else if (requireFor !== 'none') {
+    for (let i = 0; i < last; i++) if (requireFor === 'all' || hasCrlDistributionPoint(chain[i]!)) required.push(i);
+  }
+  for (const i of required) {
+    if (!covered.has(i + 1)) return { ok: false, reason: `no verified CRL from the issuer of chain certificate '${chain[i]!.subject.replace(/\n/g, ', ')}'` };
+  }
   return { ok: true, verifiedCrls: crls.length };
+}
+
+/** Which non-root chain certificates must be covered by a verified CRL from their issuer: those naming a CDP (default), all, or listed indices. */
+export type NvidiaRequireCrlFor = 'cdp' | 'all' | number[];
+
+const CDP_OID_DER = Buffer.from('0603551d1f', 'hex'); // OID 2.5.29.31 (cRLDistributionPoints)
+// shortcut: a byte scan of the DER, so a coincidental match only makes the check stricter (demands a CRL), never looser.
+function hasCrlDistributionPoint(cert: X509Certificate): boolean {
+  return cert.raw.includes(CDP_OID_DER);
 }
 
 // ── glue: a postVerify hook for createNvidiaSpdmVerifier ────────────────────────────────────────
@@ -390,6 +467,11 @@ export interface NvidiaCollateralOptions {
   requireCrls?: boolean;
   /** Issuer subject substrings that must have a verified CRL (default: none beyond `requireCrls`). */
   requireCrlIssuers?: string[];
+  /**
+   * Which non-root chain certificates need a verified CRL from their issuer when CRLs are required: `cdp` (default: every
+   * certificate that names a CRL distribution point), `all`, or explicit chain indices (0 = leaf). Supplied CRLs are always enforced.
+   */
+  requireCrlFor?: NvidiaRequireCrlFor;
   /** Firmware version floor / deny list, enforced on the versions the GPU itself reports (signed). */
   firmware?: NvidiaFirmwarePolicy;
 }
@@ -421,16 +503,24 @@ function cmpVersion(a: number[], b: number[]): number {
 
 /** Validate a firmware policy at construction (throws on malformed versions) and return the checker. */
 function compileFirmwarePolicy(fw: NvidiaFirmwarePolicy | undefined): (ids: NvidiaRimIds) => string | undefined {
-  if (!fw) return () => undefined;
+  if (fw === undefined || fw === null) return () => undefined;
+  if (typeof fw !== 'object' || Array.isArray(fw)) throw new TypeError('nvidiaCollateralHook: firmware must be an object');
+  const strList = (v: unknown, what: string): string[] => {
+    if (v === undefined || v === null) return [];
+    if (!Array.isArray(v)) throw new TypeError(`nvidiaCollateralHook: malformed ${what} entry '${String(v)}'`);
+    return v as string[]; // entries are validated one by one by need()
+  };
   const need = (v: string, radix: 10 | 16, what: string): number[] => {
     const p = parseVersion(v, radix);
     if (!p) throw new TypeError(`nvidiaCollateralHook: malformed ${what} '${v}'`);
     return p;
   };
+  // a present non-empty minimum must be a string (a number or object would otherwise be skipped silently)
+  for (const k of ['minDriverVersion', 'minVbiosVersion'] as const) if (fw[k] && typeof fw[k] !== 'string') throw new TypeError(`nvidiaCollateralHook: malformed ${k} '${String(fw[k])}'`);
   const minD = fw.minDriverVersion ? need(fw.minDriverVersion, 10, 'minDriverVersion') : undefined;
   const minV = fw.minVbiosVersion ? need(fw.minVbiosVersion, 16, 'minVbiosVersion') : undefined;
-  const denyD = (fw.denyDriverVersions ?? []).map((v) => need(v, 10, 'denyDriverVersions entry'));
-  const denyV = (fw.denyVbiosVersions ?? []).map((v) => need(v, 16, 'denyVbiosVersions entry'));
+  const denyD = strList(fw.denyDriverVersions, 'denyDriverVersions').map((v) => need(v, 10, 'denyDriverVersions entry'));
+  const denyV = strList(fw.denyVbiosVersions, 'denyVbiosVersions').map((v) => need(v, 16, 'denyVbiosVersions entry'));
   return (ids) => {
     const d = parseVersion(ids.driverVersion, 10);
     const v = parseVersion(ids.vbiosVersion, 16);
@@ -448,6 +538,11 @@ function compileFirmwarePolicy(fw: NvidiaFirmwarePolicy | undefined): (ids: Nvid
 export function nvidiaCollateralHook(opts: NvidiaCollateralOptions): (ctx: NvidiaSpdmPostVerifyContext) => Promise<string | undefined> {
   if (!Array.isArray(opts?.rimRootSpkiSha256) || opts.rimRootSpkiSha256.length === 0) throw new TypeError('nvidiaCollateralHook: rimRootSpkiSha256 must pin at least one root');
   const firmwareCheck = compileFirmwarePolicy(opts.firmware);
+  if (opts.requireCrlIssuers !== undefined && opts.requireCrlIssuers !== null && (!Array.isArray(opts.requireCrlIssuers) || opts.requireCrlIssuers.some((x) => typeof x !== 'string'))) {
+    throw new TypeError('nvidiaCollateralHook: requireCrlIssuers must list only strings');
+  }
+  const rcf = opts.requireCrlFor ?? 'cdp';
+  if (rcf !== 'cdp' && rcf !== 'all' && !(Array.isArray(rcf) && rcf.every((i) => Number.isInteger(i) && i >= 0))) throw new TypeError(`nvidiaCollateralHook: malformed requireCrlFor '${String(rcf)}'`);
   return async (ctx) => {
     const ids = nvidiaRimIdsForReport(ctx.report);
     if (!ids) return 'GPU report does not carry the opaque fields needed to name its RIMs';
@@ -478,7 +573,7 @@ export function nvidiaCollateralHook(opts: NvidiaCollateralOptions): (ctx: Nvidi
     const mode = opts.revocation ?? (opts.requireCrls === false ? undefined : 'crl');
     const crls = bundle.crls ?? [];
     if (crls.length > 0 || mode === 'crl' || mode === 'both') {
-      const rev = checkNvidiaChainRevocation(ctx.chain, crls, ctx.nowMs, opts.requireCrlIssuers);
+      const rev = checkNvidiaChainRevocation(ctx.chain, crls, ctx.nowMs, opts.requireCrlIssuers, mode === 'crl' || mode === 'both' ? rcf : 'none');
       if (!rev.ok) return `revocation: ${rev.reason}`;
     }
     const ocspResponses = bundle.ocsp ?? [];

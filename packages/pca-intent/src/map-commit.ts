@@ -1,4 +1,5 @@
-import { commitMap, hashCanonical, type CommittedMap, type MapDim, type MapMetricsLeaf } from '@atlasauth/pca';
+import { hashCanonical } from '@atlasauth/pca';
+import { commitMap, type CommittedMap, type MapDim, type MapMetricsLeaf } from '@atlasauth/pca/ext/intent';
 import type { IntentMap } from './map';
 
 /**
@@ -28,7 +29,7 @@ export function commitIntentMap(m: IntentMap, secret: Uint8Array): CommittedMap 
   for (const v of m.omega.verbs) {
     const counts = v.dims.map((d) => (d.kind === 'num' ? numCellCount(d.lo!, d.hi!, d.cuts ?? []) : (d.values ?? []).length));
     const total = counts.reduce((a, b) => a * b, 1);
-    const slots: ({ cell: number[]; p_ppm: number; in_grant: boolean } | undefined)[] = new Array(total);
+    const slots: ({ cell: number[]; p_ppm: number; in_grant: boolean } | undefined)[] = Array.from({ length: total }, () => undefined); // not new Array(): some() skips holes
     for (const c of m.cells) {
       if (c.verb !== v.verb) continue;
       if (c.cell.length !== counts.length) throw new Error(`commitIntentMap: cell of ${v.verb} has the wrong arity`);

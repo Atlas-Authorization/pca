@@ -1,0 +1,3 @@
+RESULT Proved forall x', x: act_t, d: digest; event(AcceptD(d, x)) && event(AcceptD(d, x')) ==> (x = x') up to probability Phash2(time_1)
+RESULT Could not prove forall e: eps_t, c: commit_t, s: sid_t, x: act_t; event(Accept(x, s, c, e)) ==> exists r: salt_t, m: map_t; (event(Committed(s, m, r, c)) && event(GuestRan(m, r, x, s, e))).
+rc=0 secs=0

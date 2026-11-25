@@ -6,7 +6,6 @@
 import * as net from 'node:net';
 import { describe, expect, it } from 'vitest';
 import { FaultProxy } from './faults';
-import { freePort } from './launch-local';
 import { until } from './test-timing';
 
 describe('FaultProxy delay: a sender close waits for the delayed bytes', () => {
@@ -33,10 +32,10 @@ describe('FaultProxy delay: a sender close waits for the delayed bytes', () => {
     });
     await new Promise<void>((r) => target.listen(0, '127.0.0.1', () => r()));
     const tport = (target.address() as net.AddressInfo).port;
-    const proxy = new FaultProxy(await freePort(), { host: '127.0.0.1', port: tport }, { kind: 'delay', dir: 'c2s', afterBytes: 0, ms: 300 });
+    const proxy = new FaultProxy(0, { host: '127.0.0.1', port: tport }, { kind: 'delay', dir: 'c2s', afterBytes: 0, ms: 300 });
     await proxy.listen();
     try {
-      const client = net.connect(proxy.listenPort, '127.0.0.1');
+      const client = net.connect(proxy.port, '127.0.0.1');
       client.on('error', () => undefined);
       await new Promise<void>((r) => client.once('connect', () => r()));
       client.write('a');

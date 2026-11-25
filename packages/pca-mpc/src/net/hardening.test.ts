@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import * as tls from 'node:tls';
 import { describe, expect, it } from 'vitest';
-import { ManualClock, T, until, waitListening, reservePorts } from './test-timing';
+import { ManualClock, T, until } from './test-timing';
 import { generateIdentity, readPem } from './certs';
 import { MAX_MESH_EVENTS, Mesh } from './mesh';
 import { FrameSplitter, MAX_FRAME_BYTES, NetAbort, WIRE_VERSION, encodeFrame, type Frame } from './wire';
@@ -19,18 +19,17 @@ async function rawPeer(opts: { meshCfg?: Partial<ConstructorParameters<typeof Me
   const a = generateIdentity(join(dir, 'a'), 'a');
   const b = generateIdentity(join(dir, 'b'), 'b');
   const c = generateIdentity(join(dir, 'c'), 'c');
-  const [pa, pb, pc] = (await reservePorts(3)) as [number, number, number];
   const nodes = [
-    { id: 0, host: '127.0.0.1', port: pa, certPem: readPem(a.certPath) },
-    { id: 1, host: '127.0.0.1', port: pb, certPem: readPem(b.certPath) },
-    { id: 2, host: '127.0.0.1', port: pc, certPem: readPem(c.certPath) },
+    { id: 0, host: '127.0.0.1', port: 0, certPem: readPem(a.certPath) },
+    { id: 1, host: '127.0.0.1', port: 0, certPem: readPem(b.certPath) },
+    { id: 2, host: '127.0.0.1', port: 0, certPem: readPem(c.certPath) },
   ];
   const mesh = new Mesh({
     selfId: 0, nodes, linkTo: [1], keyPem: readPem(a.keyPath), certPem: readPem(a.certPath),
     sessionId: 's', listenHost: '127.0.0.1', connectTimeoutMs: T(30_000), recvTimeoutMs: T(10_000), ...opts.meshCfg,
   });
+  const pa = await mesh.listen(); // bound first: the port is the one held
   const connected = mesh.connect().catch((e) => e);
-  await waitListening(pa);
   const sock = tls.connect({ host: '127.0.0.1', port: pa, key: readPem(b.keyPath), cert: readPem(b.certPath), ca: [nodes[0]!.certPem], checkServerIdentity: () => undefined });
   sock.on('error', () => undefined);
   let seq = 0;
@@ -104,14 +103,13 @@ describe('framing is linear and bounded', () => {
       const a = generateIdentity(join(dir, 'a'), 'a');
       const b = generateIdentity(join(dir, 'b'), 'b');
       const evil = generateIdentity(join(dir, 'e'), 'e');
-      const [pa, pb2] = (await reservePorts(2)) as [number, number];
       const nodes = [
-        { id: 0, host: '127.0.0.1', port: pa, certPem: readPem(a.certPath) },
-        { id: 1, host: '127.0.0.1', port: pb2, certPem: readPem(b.certPath) },
+        { id: 0, host: '127.0.0.1', port: 0, certPem: readPem(a.certPath) },
+        { id: 1, host: '127.0.0.1', port: 0, certPem: readPem(b.certPath) },
       ];
       const m = new Mesh({ selfId: 0, nodes, keyPem: readPem(a.keyPath), certPem: readPem(a.certPath), sessionId: 's', listenHost: '127.0.0.1', connectTimeoutMs: T(30_000) });
+      const pa = await m.listen();
       const c = m.connect().catch((e) => e);
-      await waitListening(pa);
       const n = MAX_MESH_EVENTS * 3;
       await Promise.all(
         Array.from({ length: n }, () => new Promise<void>((r) => {

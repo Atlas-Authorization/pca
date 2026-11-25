@@ -87,7 +87,7 @@ Remaining assumptions, stated: termination of the rejection-sampling loops is no
 
 | Corpus | Result |
 |---|---|
-| `vectors.json` core (290 vectors at the time of the run; the current core has 374) | 216 agree, **0 disagree**, 74 skipped (their expected verdict needs a post-quantum signature check: ML-DSA/SLH-DSA and hybrids; the reference does not implement them, exactly as the Rust verifier skips registered-but-unwired suites) |
+| `vectors.json` core (290 vectors at the time of the run; the current core has 676) | 216 agree, **0 disagree**, 74 skipped (their expected verdict needs a post-quantum signature check: ML-DSA/SLH-DSA and hybrids; the reference does not implement them, exactly as the Rust verifier skips registered-but-unwired suites) |
 | `vectors-adversarial.json.gz` (4209 parser-differential vectors at the time of the run; the current set has 4,358) | 4209 agree, **0 disagree** |
 | primitives: canonical 23, json_parse 125, b64u 81, Merkle proofs 15 | all agree |
 
@@ -95,7 +95,7 @@ Remaining assumptions, stated: termination of the rejection-sampling loops is no
 
 ## Run status (updated 2026-10-11, evening)
 
-Scope labels as above. Heavy runs were on the cloud farm (8 vCPU / 31 GB boxes, and one 128 GB box for the abandoned monolithic LESS runs), latterly as capped queue jobs (`cloud-box tooling/q`, owner `implverif`). Raw outputs: `tools/pca-implverif/results/`.
+Scope labels as above. Heavy runs were on the cloud farm (8 vCPU / 31 GB boxes, and one 128 GB box for the abandoned monolithic LESS runs), latterly as capped batch jobs. Raw outputs: `tools/pca-implverif/results/`.
 
 ### Concluded
 
