@@ -63,7 +63,23 @@ The `0x00`/`0x01` prefixes make a leaf indistinguishable from an internal node (
 
 ## Plan authorization
 
-Verifier checks `plan_inclusion` (the leaf opens to the root) and `plan_root_authorized` (the root is one the principal side accepted). In `verifyPCActn`, `plan_root_authorized` passes when the resource server supplies its own copy of the plan and its Merkle root equals `plan.root`; otherwise it is `not-enforced` (and `verifyPCActnCore` alone, with no resource-server plan, always reports `not-enforced`: the agent supplies its own plan, so inclusion proves nothing about authorization; pass `require: ['plan_root_authorized']`, or use `requirePCA`, which demands it by default). On the hosted surface, a plan root must be a committed plan of the grant. In the current release plans are auto-authorized on commit; principal or policy-agent authorization of the root is not yet implemented (see [Trust model](../security/trust-model.md)).
+Verifier checks `plan_inclusion` (the leaf opens to the root) and `plan_root_authorized` (the root is one the principal side accepted). In `verifyPCActn`, `plan_root_authorized` passes only when the resource server supplies its own copy of the plan (`context.plan`), its Merkle root equals `plan.root`, and the server asserts that the principal authorized that root (`context.planAuthorized: true`). A plan whose root does not match, or `planAuthorized: false`, fails the check; with no plan or no `planAuthorized` it is `not-enforced` (and `verifyPCActnCore` alone, with no resource-server plan, always reports `not-enforced`: the agent supplies its own plan, so inclusion proves nothing about authorization; pass `require: ['plan_root_authorized']`, or use `requirePCA`, which demands it by default). On the hosted surface, a plan root must be a committed **and authorized** plan of the grant, or the action is denied on `plan_root_authorized`. Committing is not authorizing: the committer (the grant's holder or its principal) signs the plan root, and the principal then authorizes that root with a signature from the grant's principal key. A grant can opt out of the second step only in its signed envelope, with `plan_policy: "agent_commit"`; the plan is then authorized when committed, and the server takes each action's reversibility class from its own verb catalog instead of from the agent-committed plan node. See [API reference](../reference/api.md#plans) and [Trust model](../security/trust-model.md).
+
+## Plan lifecycle (self-hosted verifiers)
+
+A self-hosted resource server can keep its plans in a plan registry (`createPlanRegistry` from `@atlasauth/pca`) instead of computing `planAuthorized` itself. The registry gives each plan an explicit state:
+
+| State | Reached by | Executable? |
+|---|---|---|
+| `draft` | `draft(grantRef, nodes)`: the root is computed from the nodes | no |
+| `validated` | `validate`: unique node ids, a verb and a resource per node, known reversibility classes, then your own `validator` | no |
+| `committed` | `commit`: the root is fixed | no: committing is not authorizing |
+| `authorized` | `authorize(grantRef, root, { by, expiresAt? })`, called after you have verified the principal's consent | yes, while the approval has not expired |
+| `revoked` | `revoke` from any other state | never again |
+
+The transitions only go in this order, and a refused transition names the current state. Whether a plan is executable is decided when an action uses it, not stored. The plan must be `authorized`, its approval unexpired, and its stored nodes must still hash to the root. Right before execution, `check(grantRef, root, { nodeId, operation })` also requires that the node exists and that the operation's verb, resource and params are the ones the principal approved. Changed params are refused.
+
+Pass the registry to `authorize({ plans })`. For an action whose plan root is registered, the verifier gets the stored plan, and `planAuthorized` is true only if the plan is executable now. A denial names the state, for example `plan_state: plan ... is committed but not authorized by the principal`, or `plan_state: plan ...: the principal's approval expired at ...`. An unregistered root is denied, unless `plan: 'single-step'` is set: a one-step action is then limited by the grant alone. For `authorizeExecution`, `authorizeToolCall` and the agent-framework guards, pass `registry.isPlanAuthorized` as their `isPlanAuthorized` option. With `createExecutor`, the plan state is checked again immediately before an irreversible side effect, so a plan revoked between the decision and the execution stops it. Nothing on the wire changes: the registry only decides what the verifier is told about the plan.
 
 ## Plans and risk
 

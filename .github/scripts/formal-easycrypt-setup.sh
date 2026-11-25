@@ -7,12 +7,12 @@ sudo apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq opam build-essential m4 pkg-config libgmp-dev zlib1g-dev unzip >/dev/null
 mkdir -p "$HOME/smt"
 if [ ! -x "$HOME/smt/z3" ]; then
-  curl -fsSL -o /tmp/z3.zip "https://github.com/Z3Prover/z3/releases/download/z3-${Z3_EASYCRYPT_VERSION}/z3-${Z3_EASYCRYPT_VERSION}-x64-glibc-2.31.zip"
+  curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o /tmp/z3.zip "https://github.com/Z3Prover/z3/releases/download/z3-${Z3_EASYCRYPT_VERSION}/z3-${Z3_EASYCRYPT_VERSION}-x64-glibc-2.31.zip"
   unzip -q -o /tmp/z3.zip -d /tmp/z3 && cp /tmp/z3/*/bin/z3 "$HOME/smt/z3"
 fi
 if [ ! -x "$HOME/smt/cvc5" ]; then
-  curl -fsSL -o "$HOME/smt/cvc5" "https://github.com/cvc5/cvc5/releases/download/cvc5-${CVC5_VERSION}/cvc5-Linux" \
-    || { curl -fsSL -o /tmp/cvc5.zip "https://github.com/cvc5/cvc5/releases/download/cvc5-${CVC5_VERSION}/cvc5-Linux-static.zip" \
+  curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$HOME/smt/cvc5" "https://github.com/cvc5/cvc5/releases/download/cvc5-${CVC5_VERSION}/cvc5-Linux" \
+    || { curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o /tmp/cvc5.zip "https://github.com/cvc5/cvc5/releases/download/cvc5-${CVC5_VERSION}/cvc5-Linux-static.zip" \
          && unzip -q -o /tmp/cvc5.zip -d /tmp/cvc5 && cp /tmp/cvc5/*/bin/cvc5 "$HOME/smt/cvc5"; }
   chmod +x "$HOME/smt/cvc5"
 fi

@@ -97,6 +97,7 @@ describe('typed confirmation and partial answers', () => {
     const c = card();
     const a = base().action!;
     expect(expectedTyped(c, a)).toBe('77800');
+    expect(expectedTyped(c, { ...a, values: { ...a.values, 'action.params.total': -0 } })).toBeNull(); // -0 is not a wire integer
     for (const t of ['778', '778.00', '$778', ' 778.0 ', 'USD 778']) expect(normalizeTyped(t, 'number', USD['action.params.total'])).toBe('77800');
     expect(normalizeTyped('778.001', 'number', USD['action.params.total'])).toBeNull();
     expect(normalizeTyped('seven', 'number', USD['action.params.total'])).toBeNull();
@@ -110,6 +111,10 @@ describe('typed confirmation and partial answers', () => {
     expect(partialError(c, { path: 'action.params.total', from: 40001 })).not.toBeNull();
     expect(partialError(c, { path: 'action.params.total', except: [90000] })).not.toBeNull();
     expect(partialError(c, { path: 'action.params.payee', upTo: 1 })).not.toBeNull();
+    const c0 = { ...c, partial: c.partial.map((s) => (s.path === 'action.params.total' ? { ...s, lo: 0 } : s)) } as typeof c;
+    expect(partialError(c0, { path: 'action.params.total', upTo: 0 })).toBeNull();
+    expect(partialError(c0, { path: 'action.params.total', upTo: -0 })).not.toBeNull();
+    expect(partialError(c0, { path: 'action.params.total', except: [-0] })).not.toBeNull();
   });
   it('formats numbers without locale data', () => {
     expect(formatNumber(123456789, { kind: 'money', currency: 'USD', exponent: 2 })).toBe('$1,234,567.89');

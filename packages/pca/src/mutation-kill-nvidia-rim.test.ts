@@ -356,7 +356,7 @@ describe('checkNvidiaChainRevocation', () => {
   it('requires CRLs; passes with the issuer CRLs and reports how many verified', () => {
     expect(checkNvidiaChainRevocation(chain, [], NOW2)).toEqual({ ok: false, reason: 'no CRLs supplied' });
     expect(checkNvidiaChainRevocation(chain, sc.crls, NOW2)).toEqual({ ok: true, verifiedCrls: 2 });
-    expect(checkNvidiaChainRevocation(chain, [sc.crls[0]!], NOW2)).toEqual({ ok: true, verifiedCrls: 1 });
+    expect(checkNvidiaChainRevocation(chain, [sc.crls[0]!], NOW2, [], 'none')).toEqual({ ok: true, verifiedCrls: 1 });
   });
   it('a CRL that verifies under no chain certificate is rejected with its index and the most informative reason', () => {
     const foreign = forgeNvidiaCrl(sc.device, 2, { signer: sc.device.keys[0]! });
@@ -381,12 +381,12 @@ describe('checkNvidiaChainRevocation', () => {
     const midRevoked = forgeNvidiaCrl(sc.device, 2, { revoked: [serial(1)] });
     expect(checkNvidiaChainRevocation(chain, [midRevoked], NOW2).ok).toBe(false);
     // cert 0 on the CRL of issuer 2 (not its issuer) is not a revocation of cert 0
-    expect(checkNvidiaChainRevocation(chain, [forgeNvidiaCrl(sc.device, 2, { revoked: [serial(0)] })], NOW2).ok).toBe(true);
+    expect(checkNvidiaChainRevocation(chain, [forgeNvidiaCrl(sc.device, 2, { revoked: [serial(0)] })], NOW2, [], 'none').ok).toBe(true);
     // the root's CRL covers certificates directly issued by the root
     const last = chain.length - 1;
     expect(checkNvidiaChainRevocation(chain, [forgeNvidiaCrl(sc.device, last, { revoked: [serial(last - 1)] })], NOW2).ok).toBe(false);
     // a CRL issued by the leaf itself (index 0) verifies and revokes nothing in the chain
-    expect(checkNvidiaChainRevocation(chain, [forgeNvidiaCrl(sc.device, 0)], NOW2)).toEqual({ ok: true, verifiedCrls: 1 });
+    expect(checkNvidiaChainRevocation(chain, [forgeNvidiaCrl(sc.device, 0)], NOW2, [], 'none')).toEqual({ ok: true, verifiedCrls: 1 });
   });
   it('requireIssuers: a verified CRL issued by a certificate whose subject contains each string', () => {
     expect(checkNvidiaChainRevocation(chain, sc.crls, NOW2, ['NVIDIA Device Identity CA']).ok).toBe(true);

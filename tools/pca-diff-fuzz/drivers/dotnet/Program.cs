@@ -34,7 +34,7 @@ foreach (var line in lines)
                 : root.TryGetProperty("intent_policy", out var ipEl) ? IntentPolicy.FromJson(Pca.ParseJson(ipEl.GetRawText())) : null;
             // Intent Layer v2: optional verifier state `intent_v2` (a JSON object, the vectors' context.intent_v2)
             var intentV2 = root.TryGetProperty("intent_v2", out var v2El) ? IntentV2Context.FromJson(Pca.ParseJson(v2El.GetRawText())) : null;
-            var g = Pca.VerifyRaw(raw, grant, root.GetProperty("now").GetInt64(), root.GetProperty("aud").GetString()!, allowed, intentPolicy, intentV2);
+            var g = Pca.VerifyRaw(raw, grant, root.GetProperty("now").GetInt64(), root.GetProperty("aud").GetString()!, allowed, intentPolicy, intentV2, null, PlanRootPolicy.Skip);
             r["allow"] = g.Allow;
             r["checks"] = g.Checks.ToDictionary(kv => kv.Key, kv => kv.Value);
             if (g.Reason.Contains(Pq.UnsupportedSuite)) r["unsupported_suite"] = g.Reason;
@@ -54,6 +54,34 @@ foreach (var line in lines)
             r["allow"] = cqOk;
             r["checks"] = new Dictionary<string, bool> { ["chain"] = cqOk };
             if (cqWhy != null && cqWhy.Contains(Pq.UnsupportedSuite)) r["unsupported_suite"] = cqWhy;
+        }
+        else if (kind == "policy")
+        {
+            // Policy layer (packages/pca/conformance/LAYERS.md): raw = JSON text {grant, chain, context}; answers the caveat projection
+            // Pca.EvaluateAgentCaveats(PolicyCaveats(grant, chain), context, {action}, toolCall) as {allow, failed}: the agent-native
+            // evaluator (predicates + tool_schema); the tool call is the signed verb + params (the reference's toolCallOf)
+            var pv = (Dictionary<string, object?>)Pca.ParseJson(raw)!;
+            var pctx = pv.GetValueOrDefault("context") as Dictionary<string, object?>;
+            var pact = pctx?.GetValueOrDefault("action");
+            var pam = pact as Dictionary<string, object?>;
+            var pr = Pca.EvaluateAgentCaveats(Caveats.PolicyCaveats(pv.GetValueOrDefault("grant"), pv.GetValueOrDefault("chain")), pctx,
+                new Dictionary<string, object?> { ["action"] = pact },
+                new ToolCall(pam?.GetValueOrDefault("verb") as string ?? "", pam?.GetValueOrDefault("params") as Dictionary<string, object?> ?? new Dictionary<string, object?>()));
+            r["allow"] = pr.Ok;
+            r["failed"] = pr.Failed.ToList();
+        }
+        else if (kind == "produce")
+        {
+            // Producer layer: raw = JSON text {op, args, keys, pq_keys?} of one producer vector case; answers {out} or {error} with the
+            // SDK's own refusal text (unsupported_op / unsupported_suite for what it does not produce).
+            var pd = (Dictionary<string, object?>)Pca.ParseJson(raw)!;
+            try
+            {
+                var res = ProducerVectors.Produce((string)pd["op"]!, (Dictionary<string, object?>)pd["args"]!, (Dictionary<string, object?>)pd["keys"]!,
+                    pd.GetValueOrDefault("pq_keys") as Dictionary<string, object?>);
+                r["out"] = JsonDocument.Parse(Pca.Canonicalize(res)).RootElement.Clone();
+            }
+            catch (Exception e) { r["error"] = e.Message; }
         }
         else if (kind.StartsWith("intent_", StringComparison.Ordinal))
         {

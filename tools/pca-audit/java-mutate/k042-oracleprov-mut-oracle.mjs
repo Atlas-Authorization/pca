@@ -4,10 +4,11 @@
 // deleted, or given an unknown sibling, and the TS reference result is recomputed. Same case formats as the base corpora.
 //   npx tsx tools/pca-audit/java-mutate/k042-oracleprov-mut-oracle.mjs    (deterministic; run from the repo root)
 // writes sdks/java-pca/test-data/k042-oracleprov-mut.json.gz  { oracleprov: [...cases], predjs: { ctx, tri, preds } }
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 const P = await import(new URL('../../../packages/pca/src/index.ts', import.meta.url).href);
-const ROOT = new URL('../../../', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const base = JSON.parse(zlib.gunzipSync(fs.readFileSync(ROOT + 'sdks/java-pca/test-data/k042-oracleprov.json.gz')).toString('utf8')).cases;
 const pj = JSON.parse(fs.readFileSync(ROOT + 'sdks/java-pca/test-data/k042-predjs.json', 'utf8'));
 

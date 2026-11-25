@@ -1,4 +1,5 @@
-import { type SignedTreeHead, b64u, canonicalBytes, unb64u, utf8 } from '@atlasauth/pca';
+import { b64u, canonicalBytes, unb64u, utf8 } from '@atlasauth/pca';
+import { type SignedTreeHead } from '@atlasauth/pca/ext/ledger';
 import { type RegisteredKey, aggregate, fastAggregateVerify, publicKeyOf, sign, verify } from './bls';
 import { BLS_SUITE } from './chain';
 

@@ -38,7 +38,10 @@ const V3: DecisionVector[] = [
   { allow: 1, t: 2, rQuant: 55 },
   { allow: 1, t: 1, rQuant: 30 },
 ];
-const run = (o: Partial<LaunchOptions>) => launchLocal({ n: 3, vectors: V3, mainJs, Q: 64, ...o });
+// capMs sits safely under every test's vitest timeout (60 s), so a hang fails with each node's stage, events and output
+// instead of a bare timeout; raising it would defeat that.
+const CAP = T(45_000);
+const run = (o: Partial<LaunchOptions>) => launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: 3, vectors: V3, mainJs, Q: 64, capMs: CAP, ...o });
 const parties = (outs: NodeOutput[]) => outs.filter((o) => o.role === 'party');
 
 /** Every honest party aborts with no output; at least one names `culprit` first-hand; none names anyone else. */
@@ -100,10 +103,12 @@ describe('(6) each party in turn is the cheater and is named', () => {
 
   it('two-party run: the cheater is named too', async () => {
     const r = await launchLocal({
+offline: 'trusted-dealer', insecureTrustedDealer: true,
       n: 2,
       vectors: V3.slice(0, 2),
       mainJs,
       Q: 64,
+      capMs: CAP,
       overrides: { 0: { behavior: { kind: 'open-lie', round: 'mul0' } } },
     });
     expectIdentified(r.outputs, 0);

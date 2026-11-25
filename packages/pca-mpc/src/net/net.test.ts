@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import * as tls from 'node:tls';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { T, until, waitListening, reservePorts } from './test-timing';
+import { T, until } from './test-timing';
 import { composeClear } from '../compose';
 import type { DecisionVector } from '../party';
 import { composeSecureMalicious } from '../spdz-runner';
@@ -44,7 +44,7 @@ const V3: DecisionVector[] = [
 ];
 
 const run = (o: Partial<LaunchOptions> & { vectors?: DecisionVector[] }) =>
-  launchLocal({ n: (o.vectors ?? V3).length, vectors: V3, mainJs, ...o });
+  launchLocal({ offline: 'trusted-dealer', insecureTrustedDealer: true, n: (o.vectors ?? V3).length, vectors: V3, mainJs, ...o });
 
 const parties = (outs: NodeOutput[]) => outs.filter((o) => o.role === 'party');
 
@@ -99,14 +99,13 @@ describe('TLS identity (pinned self-signed certs)', () => {
       const a = generateIdentity(join(dir, 'a'), 'a');
       const b = generateIdentity(join(dir, 'b'), 'b');
       const evil = generateIdentity(join(dir, 'evil'), 'evil');
-      const [pa, pb] = (await reservePorts(2)) as [number, number];
       const nodes = [
-        { id: 0, host: '127.0.0.1', port: pa, certPem: readPem(a.certPath) },
-        { id: 1, host: '127.0.0.1', port: pb, certPem: readPem(b.certPath) },
+        { id: 0, host: '127.0.0.1', port: 0, certPem: readPem(a.certPath) },
+        { id: 1, host: '127.0.0.1', port: 0, certPem: readPem(b.certPath) },
       ];
       const m0 = new Mesh({ selfId: 0, nodes, keyPem: readPem(a.keyPath), certPem: readPem(a.certPath), sessionId: 's', listenHost: '127.0.0.1', connectTimeoutMs: 2500 });
+      const pa = await m0.listen();
       const wait0 = m0.connect().catch((e) => e);
-      await waitListening(pa);
       // (1) impostor client with an unpinned cert: handshake must fail.
       const failed = await new Promise<boolean>((res) => {
         const s = tls.connect({ host: '127.0.0.1', port: pa, key: readPem(evil.keyPath), cert: readPem(evil.certPath), rejectUnauthorized: false });
@@ -118,8 +117,8 @@ describe('TLS identity (pinned self-signed certs)', () => {
       expect(m0.events.some((e) => e.includes('tlsClientError') || e.includes('rejected incoming'))).toBe(true);
       // (2) node 1 dials an impostor server squatting on node 0's address: must never authenticate.
       const imp = tls.createServer({ key: readPem(evil.keyPath), cert: readPem(evil.certPath) }, (s) => s.on('error', () => undefined));
-      const [pimp] = (await reservePorts(1)) as [number];
-      await new Promise<void>((r) => imp.listen(pimp, '127.0.0.1', () => r()));
+      await new Promise<void>((r) => imp.listen(0, '127.0.0.1', () => r()));
+      const pimp = (imp.address() as { port: number }).port;
       const m1 = new Mesh({
         selfId: 1,
         nodes: [{ ...nodes[0]!, port: pimp }, nodes[1]!],
@@ -146,7 +145,7 @@ describe('honest multi-process runs == in-process runs', () => {
     const r = await run({ Q: 100 });
     const ps = parties(r.outputs);
     expect(ps.every((p) => p.json?.ok === true && p.exitCode === 0)).toBe(true);
-    const inproc = composeSecureMalicious(V3, { Q: 100 });
+    const inproc = composeSecureMalicious(V3, { insecureTrustedDealer: true, Q: 100 });
     for (const p of ps) {
       expect(p.json.result.composed).toEqual(inproc.composed);
       expect(p.json.result.composed).toEqual(composeClear(V3));
@@ -291,7 +290,7 @@ describe('a forged abort frame is only a claim (party 1 accuses an honest party)
       const id = generateIdentity(join(dir, 'n0'), 'n0');
       const cfg = {
         role: 'party', id: 0, n: 1, sessionId: 's', input: { allow: 1, t: 1, rQuant: 1 },
-        nodes: [{ id: 0, host: '127.0.0.1', port: (await reservePorts(1))[0]!, certPath: id.certPath }],
+        nodes: [{ id: 0, host: '127.0.0.1', port: 0, certPath: id.certPath }],
         keyPath: id.keyPath, certPath: id.certPath, behavior: { kind: 'crash', round: 'prep' },
       };
       const p = join(dir, 'cfg.json');

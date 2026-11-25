@@ -10,7 +10,7 @@ import * as tls from 'node:tls';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { generateIdentity, readPem } from './certs';
 import { Mesh, type MeshConfig, type NodeAddr } from './mesh';
-import { ManualClock, T, reservePorts, until, waitListening } from './test-timing';
+import { ManualClock, T, listeningPort, until } from './test-timing';
 import { FrameSplitter, NetAbort, WIRE_VERSION, encodeFrame, parseFrame, type Frame } from './wire';
 
 let dir: string;
@@ -28,8 +28,7 @@ afterEach(() => {
 });
 const SID = 's';
 async function nodes3(): Promise<NodeAddr[]> {
-  const ports = await reservePorts(3);
-  return ids.map((x, i) => ({ id: i, host: '127.0.0.1', port: ports[i]!, certPem: x.cert }));
+  return ids.map((x, i) => ({ id: i, host: '127.0.0.1', port: 0, certPem: x.cert })); // each mesh binds port 0 and writes its real port back
 }
 
 /** A scripted raw peer that dials `mesh` (node 0) as node `as` and records every frame the mesh sends it. */
@@ -87,7 +86,7 @@ async function withPeer(cfg: Partial<MeshConfig> = {}, opts: { hello?: boolean; 
     clock, connectTimeoutMs: T(30_000), recvTimeoutMs: T(10_000), ...cfg,
   });
   const connected = mesh.connect().catch((e) => e);
-  await waitListening(nodes[0]!.port);
+  await listeningPort(nodes[0]!);
   const peer = await dialRaw(nodes, 1, opts.hello !== false);
   const peer2 = (opts.linkTo ?? [1]).includes(2) ? await dialRaw(nodes, 2, opts.hello !== false) : null;
   if (opts.hello !== false) await connected;

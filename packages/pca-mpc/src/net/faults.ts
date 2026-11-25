@@ -134,6 +134,12 @@ export class FaultProxy {
     });
   }
 
+  /** The port actually bound (the OS-chosen one when constructed with port 0). */
+  get port(): number {
+    const a = this.server.address();
+    return a && typeof a === 'object' ? a.port : this.listenPort;
+  }
+
   close(): void {
     this.server.close();
   }

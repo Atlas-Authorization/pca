@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { b64u } from '@atlasauth/pca';
 import {
   CborTag,
-  TransparencyService,
+  
   buildReceipt,
   checkStatement,
   decode,
@@ -20,6 +20,7 @@ import {
   type CborKey,
   type CborValue,
 } from './index';
+import { TransparencyService } from './testing';
 import { leafHash, treeHash } from './rfc9162';
 
 const hex = (u: Uint8Array) => Buffer.from(u).toString('hex');
@@ -67,7 +68,7 @@ describe('CBOR encoder (RFC 8949 deterministic)', () => {
     expect(hex(encode(M(['b', 1], ['a', 2])))).toBe('a2616102616201');
   });
   it('rejects what it cannot encode deterministically', () => {
-    for (const n of [1.5, NaN, Infinity, -0.5, 2 ** 53, -(2 ** 53)]) expect(thrown(() => encode(n)).message).toBe('cbor: only safe-integer numbers are supported');
+    for (const n of [1.5, NaN, Infinity, -0.5, -0, 2 ** 53, -(2 ** 53)]) expect(thrown(() => encode(n)).message).toBe('cbor: only safe-integer numbers are supported');
     expect(thrown(() => encode('a\ud800b')).message).toBe('cbor: text string contains a lone surrogate');
     expect(thrown(() => encode('\udc00')).message).toBe('cbor: text string contains a lone surrogate');
     expect(thrown(() => encode('a\ud800')).message).toBe('cbor: text string contains a lone surrogate');

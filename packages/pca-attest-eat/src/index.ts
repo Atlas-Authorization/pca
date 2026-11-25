@@ -54,6 +54,7 @@
  * References: RFC 9711 (EAT), RFC 9334 (RATS Architecture), RFC 7800 (`cnf` PoP), RFC 8446 §7.5 / RFC 5705
  * (TLS exporter), draft-mihalcea-seat-use-cases (IETF SEAT), RA-TLS.
  */
+import { parseNoDuplicates } from '@atlasauth/pca';
 import {
   createHash,
   generateKeyPairSync,
@@ -63,9 +64,9 @@ import {
   verify as nodeVerify,
   type KeyObject,
 } from 'node:crypto';
+import { assertCanonicalCompactJws } from '@atlasauth/pca';
 import {
   AMD_MILAN_ARK_SPKI_SHA384,
-  assertCanonicalCompactJws,
   attestAmdSnp,
   type MeasuredIdentity,
   type ParsedSevSnpReport,
@@ -74,7 +75,7 @@ import {
   splitPemCertificates,
   toHex,
   verifyGenuineSevSnpReport,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/attestation';
 
 // Re-export the reused PCA types so consumers of this package do not reach into @atlasauth/pca for them.
 export type { MeasuredIdentity, ParsedSevSnpReport };
@@ -723,7 +724,7 @@ export function verifyEAT(eat: string, verifyKey: VerifyKey, opts: VerifyEatOpti
 
   let header: unknown;
   try {
-    header = JSON.parse(b64uDecode(h).toString('utf8'));
+    header = parseNoDuplicates(b64uDecode(h).toString('utf8'));
   } catch {
     throw new Error('EAT invalid: header is not valid JSON');
   }
@@ -739,7 +740,7 @@ export function verifyEAT(eat: string, verifyKey: VerifyKey, opts: VerifyEatOpti
 
   let payload: unknown;
   try {
-    payload = JSON.parse(b64uDecode(p).toString('utf8'));
+    payload = parseNoDuplicates(b64uDecode(p).toString('utf8'));
   } catch {
     throw new Error('EAT invalid: payload is not valid JSON');
   }
@@ -800,6 +801,10 @@ export interface FreshnessOptions {
  */
 export function verifyFreshness(eat: EatClaims, opts: FreshnessOptions): CheckResult {
   const now = typeof opts.now === 'number' && Number.isFinite(opts.now) ? opts.now : Date.now();
+  // A NaN / Infinity / non-number skew makes both window comparisons false (a stale token would pass): refuse it.
+  if (opts.clockSkewMs !== undefined && !Number.isFinite(opts.clockSkewMs)) {
+    return { ok: false, reason: 'invalid clockSkewMs (must be a finite number)' };
+  }
   const skew = Math.max(0, opts.clockSkewMs ?? 0);
   if (typeof opts.expectedNonce !== 'string' || opts.expectedNonce.length === 0) {
     return { ok: false, reason: 'no expected (server-issued) nonce supplied (fail closed)' };
@@ -817,8 +822,8 @@ export function verifyFreshness(eat: EatClaims, opts: FreshnessOptions): CheckRe
     return { ok: false, reason: 'invalid maxAgeMs' };
   }
   const iatMs = eat.iat * 1000;
-  if (iatMs - skew > now) return { ok: false, reason: 'EAT iat is in the future' };
-  if (now - iatMs > opts.maxAgeMs + skew) return { ok: false, reason: 'EAT is stale (iat older than maxAgeMs) — expired/replayed attestation' };
+  if (!(iatMs - skew <= now)) return { ok: false, reason: 'EAT iat is in the future' };
+  if (!(now - iatMs <= opts.maxAgeMs + skew)) return { ok: false, reason: 'EAT is stale (iat older than maxAgeMs) — expired/replayed attestation' };
   return { ok: true };
 }
 
@@ -974,8 +979,9 @@ function packTcb(v: TcbVersion): bigint | null {
     }
     return null; // unknown / non-numeric format — fail closed (GCP firmware drift lesson)
   }
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return null; // true / [] / null are not a TCB version
   const comp = (x: number | undefined): bigint | null =>
-    x === undefined ? 0n : Number.isInteger(x) && x >= 0 && x <= 255 ? BigInt(x) : null;
+    x === undefined ? 0n : Number.isInteger(x) && x >= 0 && !Object.is(x, -0) && x <= 255 ? BigInt(x) : null;
   const bl = comp(v.bootloader);
   const tee = comp(v.tee);
   const snp = comp(v.snp);
@@ -1007,7 +1013,8 @@ function weightsMeasurement(eat: EatClaims): string | undefined {
 
 /** True/false if debug status is known, else null (unknown => caller fails closed). */
 function isDebugDisabled(eat: EatClaims): boolean | null {
-  if (eat.dbgstat !== undefined) return eat.dbgstat !== 'enabled';
+  // A present dbgstat that is not an RFC 9711 value (hand-built claims) is unknown, never 'disabled'.
+  if (eat.dbgstat !== undefined) return parseDbgstat(eat.dbgstat) === undefined ? null : eat.dbgstat !== 'enabled';
   if (eat.sevsnp && typeof eat.sevsnp.debug === 'boolean') return eat.sevsnp.debug === false;
   return null;
 }
@@ -1420,3 +1427,6 @@ export async function verifyFreshAttestedEAT(eat: string, opts: VerifyFreshAttes
 // quantum break of the classical root. ADDITIVE — no existing export's behaviour changes.
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 export * from './pqcosign';
+export * from './admission';
+export * from './sigstore';
+export * from './provenance';

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** pca-doctor: check a live PCA deployment's assumptions. Exit 1 on any fail (and on warn with --strict), 2 on usage errors. */
 import { CHECK_GROUPS, configFromEnv, formatResults, loadConfigFile, mergeConfig, runDoctor, verdictOf, type CheckGroup } from './doctor';
+import { scrubText } from './scrub';
 import type { DoctorConfig } from './types';
 
 export const USAGE = `pca-doctor [--url <deployment>] [options]
@@ -75,7 +76,11 @@ export function parseDoctorArgs(argv: readonly string[]): DoctorArgs {
         f.proxy = { ...f.proxy, trustedProxyCount: num(k, next()) };
         break;
       case '--proxy-header':
-        f.proxy = { ...f.proxy, header: next() as never };
+        {
+          const h = (next() ?? '').toLowerCase();
+          if (!['x-forwarded-for', 'forwarded', 'x-real-ip'].includes(h)) throw new Error('--proxy-header must be x-forwarded-for, forwarded or x-real-ip');
+          f.proxy = { ...f.proxy, header: h as never };
+        }
         break;
       case '--proxy-hops':
         f.proxy = { ...f.proxy, hops: num(k, next()) };
@@ -127,7 +132,7 @@ export async function main(
     }
     cfg = mergeConfig(a.config ? await loadConfigFile(a.config) : {}, configFromEnv(env), a.flags);
   } catch (e) {
-    printErr(`${(e as Error).message}\n\n${USAGE}`);
+    printErr(`${scrubText((e as Error).message)}\n\n${USAGE}`);
     return 2;
   }
   const results = await runDoctor(cfg, a.only);

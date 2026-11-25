@@ -1,0 +1,58 @@
+name: Precheck
+
+# Compile-only gate, TypeScript: tsc --noEmit over every package with the test-inclusive config.
+# Runs only on pre/** pushes (and by hand): it builds and typechecks everything, tests included, and runs no test.
+# Push pre/<version> first and the full ci/** run only when this is green.
+on:
+  push:
+    branches: ['pre/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  precheck:
+    name: typecheck every package (tests included)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
+      - name: Install (lockfile pinned)
+        run: pnpm install --frozen-lockfile --filter=. --filter='@atlasauth/pca*...' --filter=create-pca-app... --filter=pca-quickstart... --filter=pca-a2a... --filter=pca-attacks... --filter=pca-delegation... --filter=pca-goal... --filter=pca-guides-a... --filter=pca-guides-b... --filter=pca-payments...
+      # cross-package imports resolve through dist/, so the workspace is built first (tsc over the build configs)
+      - name: Build every package
+        id: c0
+        continue-on-error: true
+        run: pnpm -r --filter='@atlasauth/pca*' --filter=create-pca-app --if-present run build
+      # tsconfig.json is the test-inclusive config (the build config excludes tests): a type error in a test file fails here
+      - name: tsc --noEmit with the test-inclusive config, every package
+        id: c1
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          fail=0
+          check() { d="$1"; out=$(cd "$d" && npx --no-install tsc --noEmit -p tsconfig.json 2>&1) || { echo "--- $d"; echo "$out"; return 1; }; }
+          export -f check
+          ls -d packages/pca*/ packages/create-pca-app/ examples/pca-*/ 2>/dev/null | sed 's:/$::' | while read -r d; do [ -f "$d/tsconfig.json" ] && echo "$d"; done > "$RUNNER_TEMP/pkgs.txt"
+          wc -l < "$RUNNER_TEMP/pkgs.txt"
+          xargs -P 4 -I{} bash -c 'check {}' < "$RUNNER_TEMP/pkgs.txt" || fail=1
+          exit $fail
+      # every check above runs even when an earlier one failed; this step makes the job red when any did
+      - name: Summary
+        if: ${{ always() && (steps.c0.outcome == 'failure' || steps.c1.outcome == 'failure') }}
+        run: |
+          echo "::error::one or more compile checks failed; each failing step above has the details"
+          exit 1

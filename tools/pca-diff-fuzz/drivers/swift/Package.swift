@@ -8,7 +8,7 @@ import PackageDescription
 //   swift build -c release -Xswiftc -enable-testing
 let package = Package(
     name: "PCADriver",
-    platforms: [.macOS(.v12)],
+    platforms: [.macOS(.v13)],
     dependencies: [.package(path: "../../../../sdks/swift-pca")],
     targets: [
         .executableTarget(name: "pcadriver", dependencies: [.product(name: "AtlasPCAVerify", package: "swift-pca")], path: "Sources/pcadriver"),

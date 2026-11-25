@@ -1,5 +1,5 @@
 import { cellCount, type Omega, type VerbSpace } from '@atlasauth/pca-intent';
-import { betaQuantile, clopperPearsonUpper } from './stats';
+import { betaUpperExact, clopperPearsonUpper } from './stats';
 
 /**
  * ATTENTION CANARIES (§2.5, §3.4 item 5). A canary is a question about a cell whose label the system already knows:
@@ -55,8 +55,8 @@ export function estimateNoise(n: NoiseCounts, deltaC = 0.05): NoiseEstimate {
   return {
     etaPos: ap / (ap + bp),
     etaNeg: an / (an + bn),
-    etaPosUpper: betaQuantile(1 - deltaC, ap, bp),
-    etaNegUpper: betaQuantile(1 - deltaC, an, bn),
+    etaPosUpper: betaUpperExact(deltaC, ap, bp),
+    etaNegUpper: betaUpperExact(deltaC, an, bn),
     etaPosCP: knownNo === 0 ? 1 : clopperPearsonUpper(n.falseYes, knownNo, deltaC),
     etaNegCP: knownYes === 0 ? 1 : clopperPearsonUpper(n.falseNo, knownYes, deltaC),
     asked: knownNo + knownYes,

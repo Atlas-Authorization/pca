@@ -1,111 +1,72 @@
 #!/usr/bin/env bash
 # Runs ON a cloud box inside a PRIVATE copy of the repo (root = repo copy). Never touches the Mac working tree.
 #   bash tools/pca-audit/swift-mutate/linux-prep.sh [sdks/swift-pca]
-# 1. Installs a Linux Swift toolchain once to $HOME/swift (SWV, default 6.0.3; an existing install is reused).
-# 2. Builds liboqs (pinned tag OQS_TAG, ML-DSA-65 and ML-DSA-87 only, static, no OpenSSL) once per box into
-#    $HOME/.cache/liboqs-$OQS_TAG-mldsa (flock-guarded: concurrent jobs on one box wait for the first build).
-# 3. Patches the COPY of sdks/swift-pca so it builds on Linux:
-#    - CryptoKit -> swift-crypto (`import Crypto`, Sources AND Tests; the test target gets the Crypto product), the iOS-only
-#      AtlasPCAStepUp target removed;
-#    - a C target COQS (shim over liboqs' OQS_SIG_ml_dsa_65_verify / OQS_SIG_ml_dsa_87_verify) and MLDSA.swift's Linux branch
-#      calls it for both levels. liboqs >= 0.12 implements FIPS 204 final; its plain verify is pure ML-DSA with the EMPTY context
-#      string, the same semantics as the macOS CryptoKit path (MLDSA65/MLDSA87.PublicKey.isValidSignature(_:for:)) and the TS
-#      reference (@noble/post-quantum ml_dsa65 / ml_dsa87 verify without ctx). Raw FIPS 204 encodings (no ASN.1): ML-DSA-65
-#      pk 1952 / sig 3309 bytes, ML-DSA-87 pk 2592 / sig 4627 bytes, as on macOS.
-#    So the post-quantum vectors (ML-DSA-65 / -87, their hybrids and the nested hybrid, on every signed surface) are really RUN
-#    on Linux, and `PCASuites.supported` (the runtime capability manifest) lists them there.
+# 1. Installs a Linux Swift toolchain once to $HOME/swift (SWV, default 6.2, the package needs tools 6.2; an existing install is reused).
+# 2. Patches the COPY of sdks/swift-pca so it builds on Linux:
+#    - CryptoKit -> swift-crypto (`import Crypto`, Sources AND Tests; the test targets get the Crypto product). AtlasPCAStepUp
+#      stays: its only CryptoKit use is Curve25519 (swift-crypto has it), the Keychain store is `#if canImport(Security)` and
+#      URLSession comes from FoundationNetworking, so it builds and its tests run on Linux (it is mutated like the verifier).
+#    ML-DSA needs no patch: the package vendors it (the CMLDSA C target), so the post-quantum vectors (ML-DSA-65 / -87, their hybrids and the nested
+#    hybrid, on every signed surface) run on Linux and `PCASuites.supported` (the runtime capability manifest) lists them there.
 set -euo pipefail
-ORIG="$PWD"; SWV="${SWV:-6.0.3}"; PLAT=ubuntu24.04; OQS_TAG="${OQS_TAG:-0.14.0}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ORIG="$PWD"; SWV="${SWV:-6.2}"; PLAT=ubuntu24.04
+# LINUX_PREP_PATCH_ONLY=1: only the source patch below (the mutation shards decide from it whether they need the toolchain at all)
 mkdir -p "$HOME/.cache"
+if [ "${LINUX_PREP_PATCH_ONLY:-0}" != 1 ]; then
 if [ ! -x "$HOME/swift/usr/bin/swift" ]; then
   exec 8>"$HOME/.cache/swift-install.lock"; flock 8
   if [ ! -x "$HOME/swift/usr/bin/swift" ]; then
     T=$(mktemp -d); mkdir -p "$HOME/swift"
-    curl -fsSL -o "$T/swift.tgz" "https://download.swift.org/swift-$SWV-release/${PLAT//./}/swift-$SWV-RELEASE/swift-$SWV-RELEASE-$PLAT.tar.gz"
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$T/swift.tgz" "https://download.swift.org/swift-$SWV-release/${PLAT//./}/swift-$SWV-RELEASE/swift-$SWV-RELEASE-$PLAT.tar.gz"
     tar -xzf "$T/swift.tgz" -C "$HOME/swift" --strip-components=1 && rm -rf "$T"
   fi
   exec 8>&-
 fi
 export PATH="$HOME/swift/usr/bin:$PATH"
 swift --version
-
-OQS="$HOME/.cache/liboqs-$OQS_TAG-mldsa"
-if [ ! -f "$OQS/lib/liboqs.a" ]; then
-  exec 9>"$HOME/.cache/liboqs.lock"; flock 9
-  if [ ! -f "$OQS/lib/liboqs.a" ]; then
-    command -v cmake >/dev/null || sudo -n apt-get install -y -qq cmake >/dev/null
-    T=$(mktemp -d)
-    git clone -q --depth 1 --branch "$OQS_TAG" https://github.com/open-quantum-safe/liboqs.git "$T/src"
-    cmake -S "$T/src" -B "$T/b" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OQS" -DBUILD_SHARED_LIBS=OFF \
-      -DOQS_MINIMAL_BUILD="SIG_ml_dsa_65;SIG_ml_dsa_87" -DOQS_USE_OPENSSL=OFF -DOQS_BUILD_ONLY_LIB=ON -DOQS_DIST_BUILD=ON \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON >/dev/null
-    cmake --build "$T/b" -j"$(nproc)" >/dev/null && cmake --install "$T/b" >/dev/null
-    rm -rf "$T"
-  fi
-  exec 9>&-
 fi
-test -f "$OQS/lib/liboqs.a" && test -f "$OQS/include/oqs/oqs.h"
 
 P="${1:-sdks/swift-pca}"; cd "$ORIG/$P"
-rm -rf Sources/AtlasPCAStepUp Tests/AtlasPCAStepUpTests
-grep -rl "import CryptoKit" Sources Tests | xargs -r sed -i 's/^import CryptoKit$/import Crypto/'
-mkdir -p Sources/COQS/include
-cat > Sources/COQS/include/coqs_shim.h <<'H'
-#include <stddef.h>
-#include <stdint.h>
-/* 1 iff sig is a valid ML-DSA-<level> (FIPS 204, empty context) signature on msg under pk; level 65 or 87, exact lengths. */
-int atlas_mldsa_verify(int level, const uint8_t *msg, size_t msg_len, const uint8_t *sig, size_t sig_len, const uint8_t *pk, size_t pk_len);
-H
-cat > Sources/COQS/coqs_shim.c <<'C'
-#include "coqs_shim.h"
-#include <oqs/oqs.h>
-int atlas_mldsa_verify(int level, const uint8_t *msg, size_t msg_len, const uint8_t *sig, size_t sig_len, const uint8_t *pk, size_t pk_len) {
-  static const uint8_t empty = 0;
-  const uint8_t *m = msg_len ? msg : &empty;
-  if (sig == NULL || pk == NULL) return 0;
-  if (level == 65) {
-    if (sig_len != OQS_SIG_ml_dsa_65_length_signature || pk_len != OQS_SIG_ml_dsa_65_length_public_key) return 0;
-    return OQS_SIG_ml_dsa_65_verify(m, msg_len, sig, sig_len, pk) == OQS_SUCCESS;
-  }
-  if (level == 87) {
-    if (sig_len != OQS_SIG_ml_dsa_87_length_signature || pk_len != OQS_SIG_ml_dsa_87_length_public_key) return 0;
-    return OQS_SIG_ml_dsa_87_verify(m, msg_len, sig, sig_len, pk) == OQS_SUCCESS;
-  }
-  return 0;
-}
-C
-OQS="$OQS" python3 - <<'PY'
+# || true: a second pass (the patch-only step ran before) finds no CryptoKit import left, and grep then exits 1
+{ grep -rl "import CryptoKit" Sources Tests || true; } | xargs -r sed -i 's/^import CryptoKit$/import Crypto/'
+python3 - <<'PY'
 import os
-oqs = os.environ['OQS']
 s = open('Package.swift').read()
-if 'swift-crypto' not in s:
-    s = ''.join(l for l in s.splitlines(True) if 'AtlasPCAStepUp' not in l)
-    s = s.replace('    targets: [', '    dependencies: [.package(url: "https://github.com/apple/swift-crypto.git", from: "3.0.0")],\n    targets: [', 1)
-    s = s.replace('.target(name: "AtlasPCAVerify", path: "Sources/AtlasPCAVerify")',
-                  '.target(name: "COQS", path: "Sources/COQS", cSettings: [.unsafeFlags(["-I%s/include"])], linkerSettings: [.unsafeFlags(["-L%s/lib", "-loqs"])]),\n'
-                  '        .target(name: "AtlasPCAVerify", dependencies: [.product(name: "Crypto", package: "swift-crypto"), "COQS"], path: "Sources/AtlasPCAVerify")' % (oqs, oqs))
-    assert '"COQS"' in s, 'Package.swift: AtlasPCAVerify target not found'
-    # the tests sign their own fixtures (Curve25519) via `#if canImport(CryptoKit) ... #else import Crypto`
-    t_old = '.testTarget(name: "AtlasPCAVerifyTests", dependencies: ["AtlasPCAVerify"]'
-    assert s.count(t_old) == 1, 'Package.swift: AtlasPCAVerifyTests target not found'
-    s = s.replace(t_old, '.testTarget(name: "AtlasPCAVerifyTests", dependencies: ["AtlasPCAVerify", .product(name: "Crypto", package: "swift-crypto")]', 1)
+# the patch is appended to the manifest, so it holds whatever targets the manifest declares: every Swift target (sources and tests) gets
+# swift-crypto's Crypto product (the sources import Crypto after the sed above).
+# Which directories hold Swift is decided HERE, not when the manifest is evaluated: a consumer's resolver evaluates the manifest of a tagged
+# dependency from the repository object store (its file path is /Package.swift), where a directory scan finds nothing, so the Crypto
+# product would be left off every target and swift-crypto would resolve as unused, then be missing once the checkout is evaluated.
+if 'atlasLinuxPrep' not in s:
+    dirs = []
+    for top in ('Sources', 'Tests'):
+        for name in sorted(os.listdir(top)):
+            d = os.path.join(top, name)
+            if os.path.isdir(d) and any(f.endswith('.swift') for _, _, fs in os.walk(d) for f in fs):
+                dirs.append(d)
+    lit = ', '.join('"%s"' % d for d in dirs)
+    s += """
+// atlasLinuxPrep: Linux copy of the package (CryptoKit -> swift-crypto)
+package.dependencies.append(.package(url: "https://github.com/apple/swift-crypto.git", from: "4.0.0"))
+let atlasSwiftDirs: Set<String> = [%s]
+for t in package.targets where (t.type == .regular || t.type == .executable || t.type == .test) {
+    if atlasSwiftDirs.contains(t.path ?? ((t.type == .test ? "Tests/" : "Sources/") + t.name)) {
+        t.dependencies.append(.product(name: "Crypto", package: "swift-crypto"))
+    }
+}
+""" % lit
     open('Package.swift', 'w').write(s)
-p = 'Sources/AtlasPCAVerify/MLDSA.swift'
-m = open(p).read()
-if 'COQS' not in m:
-    m = m.replace('import Foundation\n', 'import Foundation\nimport COQS\n', 1)
-    # the level-dispatching verify(_:publicKey:message:signature:): its length guard, then the CryptoKit branch
-    old = '        guard pk.count == pkLen, sig.count == sigLen else { return false }\n'
-    assert m.count(old) == 1, 'MLDSA.swift: length guard of verify(_ level:) not found'
-    m = m.replace(old, old +
-        '        #if os(Linux)\n'
-        '        let lv: Int32 = level == .mlDsa65 ? 65 : 87\n'
-        '        return msg.withUnsafeBufferPointer { mb in sig.withUnsafeBufferPointer { sb in pk.withUnsafeBufferPointer { pb in\n'
-        '            atlas_mldsa_verify(lv, mb.baseAddress, mb.count, sb.baseAddress, sb.count, pb.baseAddress, pb.count) == 1 } } }\n'
-        '        #else\n', 1)
-    old2 = '        return false\n    }\n\n    static func verify(publicKey'
-    assert m.count(old2) == 1, 'MLDSA.swift: tail of verify(_ level:) not found'
-    m = m.replace(old2, '        return false\n        #endif\n    }\n\n    static func verify(publicKey', 1)
-    open(p, 'w').write(m)
 PY
-swift build --build-tests -c debug 2>&1 | tail -15
+[ "${LINUX_PREP_PATCH_ONLY:-0}" = 1 ] && exit 0
+# keep the whole log: the last 15 lines hide a compile error behind the warnings printed after it
+swift build --build-tests -c debug > "$HOME/swift-prep-build.log" 2>&1 && rc=0 || rc=$?
+tail -15 "$HOME/swift-prep-build.log"
+if [ "$rc" -ne 0 ]; then
+  echo "::group::compile errors"
+  # compiler errors only (the doc comments mentioning "error:" print as warnings); || true: head closing the pipe must not mask the build status
+  { grep -E ": error:" -B2 -A8 "$HOME/swift-prep-build.log" | head -400; } || true
+  echo "::endgroup::"
+  exit "$rc"
+fi
+# every later step of this job has ML-DSA (the vendored CMLDSA target): a replay that would skip for want of it fails instead (Tests/AtlasPCAVerifyTests/PqRequirement.swift)
+[ -z "${GITHUB_ENV:-}" ] || echo "PCA_REQUIRE_PQ=1" >> "$GITHUB_ENV"

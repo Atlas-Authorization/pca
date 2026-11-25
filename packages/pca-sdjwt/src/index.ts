@@ -55,6 +55,7 @@
  *    this package is the generic single-proof SD-JWT those mandates can be carried as.
  */
 
+import { parseNoDuplicates } from '@atlasauth/pca';
 import { createHash, createPrivateKey, createPublicKey, randomBytes } from 'node:crypto';
 import {
   SignJWT,
@@ -67,7 +68,8 @@ import {
   type KeyLike,
 } from 'jose';
 import type { PCActn } from '@atlasauth/pca';
-import { assertCanonicalCompactJws, decodeCanonicalJsonSegment } from '@atlasauth/pca';
+import { assertCanonicalCompactJws, decodeCanonicalJsonSegment, verifyPCActnCore } from '@atlasauth/pca';
+import type { VerifyResult as CoreVerifyResult } from '@atlasauth/pca';
 
 // ===================================================================================================
 // Constants
@@ -267,7 +269,8 @@ export async function issuePcaSdJwt(pcActn: PCActn, options: IssueOptions): Prom
 
   const disclosableSet: ReadonlySet<string> = new Set(options.disclosable ?? PCA_CAPABILITY_CLAIMS);
 
-  const payload: JWTPayload = { iss, sub, aud: pcActn.aud, iat, exp, [CLEAR_DISCRIMINATOR]: pcActn.ver, _sd_alg: SD_ALG };
+  // iat_ms / exp_ms carry the exact signed epoch-ms values so verifyRecovered can rebuild the byte-identical PCActn.
+  const payload: JWTPayload = { iss, sub, aud: pcActn.aud, iat, exp, [CLEAR_DISCRIMINATOR]: pcActn.ver, iat_ms: pcActn.iat, exp_ms: pcActn.exp, _sd_alg: SD_ALG };
   const disclosures: Disclosure[] = [];
   const sd: string[] = [];
 
@@ -408,7 +411,7 @@ export async function present(sdjwt: string, selectClaims: readonly string[], op
   };
   let payload: unknown;
   try {
-    payload = JSON.parse(Buffer.from(parsed.jwt.split('.')[1] ?? '', 'base64url').toString('utf8'));
+    payload = parseNoDuplicates(Buffer.from(parsed.jwt.split('.')[1] ?? '', 'base64url').toString('utf8'));
   } catch {
     throw new Error('pca-sdjwt: issuer JWT payload is not valid base64url JSON');
   }
@@ -615,6 +618,10 @@ function processDisclosures(
  */
 export async function verifyPcaSdJwt(sdjwt: string, options: VerifyOptions): Promise<VerifyResult> {
   try {
+    // a non-finite clock, tolerance or window would slip past the date checks (every comparison with NaN is false, and -Infinity is "before" every expiry)
+    if ([options.now, options.clockToleranceSec, options.kbMaxAgeSec].some((n) => n !== undefined && !Number.isFinite(n))) return { ok: false, reason: 'now, clockToleranceSec and kbMaxAgeSec must be finite' };
+    // `new Date(now)` is an invalid Date beyond +-8.64e15 ms, which jose reads as no clock at all: an unrepresentable time is refused like a non-finite one
+    if (options.now !== undefined && !(Math.abs(options.now) <= 8.64e15)) return { ok: false, reason: 'now is not a representable time' };
     const parsed = parseSdJwt(sdjwt);
     const algorithms = options.algorithms ?? [DEFAULT_SIGNING_ALG];
 
@@ -690,8 +697,9 @@ export async function verifyPcaSdJwt(sdjwt: string, options: VerifyOptions): Pro
       if (typeof kb.payload.iat !== 'number') return { ok: false, reason: 'KB-JWT iat is required' };
       if (options.kbMaxAgeSec !== undefined) {
         const nowSec = Math.floor((options.now ?? Date.now()) / 1000);
-        if (nowSec - kb.payload.iat > options.kbMaxAgeSec) return { ok: false, reason: 'KB-JWT is older than the accepted window' };
-        if (kb.payload.iat - nowSec > (options.clockToleranceSec ?? 0)) return { ok: false, reason: 'KB-JWT iat is in the future' };
+        if (!Number.isFinite(kb.payload.iat)) return { ok: false, reason: 'KB-JWT iat is not a finite number' };
+        if (!(nowSec - kb.payload.iat <= options.kbMaxAgeSec)) return { ok: false, reason: 'KB-JWT is older than the accepted window' };
+        if (!(kb.payload.iat - nowSec <= (options.clockToleranceSec ?? 0))) return { ok: false, reason: 'KB-JWT iat is in the future' };
       }
       if (typeof kb.payload.aud !== 'string' && !Array.isArray(kb.payload.aud)) return { ok: false, reason: 'KB-JWT aud is required' };
       if (kb.payload.sd_hash !== sha256b64u(parsed.presentationHead)) {
@@ -716,5 +724,39 @@ export async function verifyPcaSdJwt(sdjwt: string, options: VerifyOptions): Pro
     return { ok: true, payload, processed: processedPayload, protectedHeader, disclosed, claims, keyBinding };
   } catch (e) {
     return { ok: false, reason: (e as Error).message };
+  }
+}
+
+/**
+ * Re-verify a verified SD-JWT with PCA Core. `verifyPcaSdJwt` only proves the JWT layer; the embedded chain, plan and
+ * `sig` are checked here by rebuilding the PCActn from the recovered claims and running `verifyPCActnCore`.
+ * FAIL-CLOSED: a withheld required claim (`cap_chain`, `sig`, `action`, ...), missing or inconsistent `iat_ms`/`exp_ms`,
+ * or an `iss`/`sub` that disagrees with the chain returns `allow: false`. Pass the verifier's OWN stored `grant`,
+ * and its `audience` (omitted audience fails closed in Core).
+ */
+export async function verifyRecovered(
+  res: Extract<VerifyResult, { ok: true }>,
+  coreOpts: Parameters<typeof verifyPCActnCore>[1],
+): Promise<CoreVerifyResult> {
+  const deny = (reason: string): CoreVerifyResult => ({ allow: false, checks: {}, reason });
+  const c = res.claims;
+  const p = res.processed;
+  const { iat_ms, exp_ms, ...rest } = c;
+  if (typeof iat_ms !== 'number' || typeof exp_ms !== 'number') return deny('pca-sdjwt: iat_ms/exp_ms missing; cannot rebuild the PCActn');
+  if (Math.floor(iat_ms / 1000) !== p.iat) return deny('pca-sdjwt: iat_ms disagrees with iat');
+  if (Math.max(Math.ceil(exp_ms / 1000), Math.floor(iat_ms / 1000) + 1) !== p.exp) return deny('pca-sdjwt: exp_ms disagrees with exp');
+  for (const k of ['action', 'cap_chain', 'plan', 'sig', 'grant_ref', 'counter'] as const) {
+    if (rest[k] === undefined) return deny(`pca-sdjwt: required claim '${k}' was not disclosed`);
+  }
+  if (typeof p.aud !== 'string') return deny('pca-sdjwt: aud must be a string');
+  const chain = rest.cap_chain;
+  if (!Array.isArray(chain) || chain.length === 0) return deny('pca-sdjwt: cap_chain is empty');
+  if (p.iss !== (chain[0] as { issuer?: unknown }).issuer) return deny('pca-sdjwt: iss does not match the chain root issuer');
+  if (p.sub !== (chain[chain.length - 1] as { holder?: unknown }).holder) return deny('pca-sdjwt: sub does not match the chain leaf holder');
+  const pcActn = { ...rest, ver: p.ver, aud: p.aud, iat: iat_ms, exp: exp_ms } as unknown as PCActn;
+  try {
+    return await verifyPCActnCore(pcActn, coreOpts);
+  } catch (e) {
+    return deny(`pca-sdjwt: core verification threw: ${(e as Error).message}`);
   }
 }

@@ -11,15 +11,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { EnvoyHttpCheckRequest, EnvoyHttpCheckResponse } from '../src/index';
 
-export async function freePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const s = createNetServer();
-    s.once('error', reject);
-    s.listen(0, '127.0.0.1', () => {
-      const p = (s.address() as AddressInfo).port;
-      s.close(() => resolve(p));
-    });
-  });
+/**
+ * A check service that is down as Envoy sees it: it holds a real port and resets every connection. Nothing ever probes a port and releases it,
+ * so no other process can take it between the advertisement and the dial.
+ */
+export async function startDeadService(): Promise<{ port: number; close(): Promise<void> }> {
+  const server = createNetServer((sock) => sock.destroy());
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
+  return { port: (server.address() as AddressInfo).port, close: () => new Promise((r) => server.close(() => r())) };
 }
 
 export interface RecordedRequest {
@@ -83,7 +82,6 @@ export async function startHttpCheckService(
 
 export interface ListenerSpec {
   name: string;
-  port: number;
   /** `http` | `grpc`; which ext_authz transport the listener uses. */
   mode: 'http' | 'grpc';
   /** Port of the check service this listener calls. */
@@ -125,9 +123,8 @@ function extAuthzConfig(l: ListenerSpec): Record<string, unknown> {
   return base;
 }
 
-/** Build an Envoy bootstrap (JSON is valid YAML) with one listener per spec. */
+/** Build an Envoy bootstrap (JSON is valid YAML) with one listener per spec. Envoy binds the admin and every listener on port 0; {@link startEnvoy} reads the real ports back. */
 export function bootstrap(opts: {
-  adminPort: number;
   upstreamPort: number;
   listeners: ListenerSpec[];
 }): Record<string, unknown> {
@@ -156,11 +153,11 @@ export function bootstrap(opts: {
     ...opts.listeners.map((l) => cluster(`authz_${l.mode}_${l.name}`, l.authzPort, l.mode === 'grpc')),
   ];
   return {
-    admin: { address: { socket_address: { address: '127.0.0.1', port_value: opts.adminPort } } },
+    admin: { address: { socket_address: { address: '127.0.0.1', port_value: 0 } } },
     static_resources: {
       listeners: opts.listeners.map((l) => ({
         name: l.name,
-        address: { socket_address: { address: '127.0.0.1', port_value: l.port } },
+        address: { socket_address: { address: '127.0.0.1', port_value: 0 } },
         filter_chains: [
           {
             filters: [
@@ -191,14 +188,21 @@ export function bootstrap(opts: {
 
 export interface EnvoyProcess {
   child: ChildProcess;
+  /** The admin port Envoy really bound. */
+  adminPort: number;
+  /** Each listener's name to the port Envoy really bound. */
+  listenerPorts: Record<string, number>;
   log: () => string;
   stop(): Promise<void>;
 }
 
-export async function startEnvoy(bin: string, config: Record<string, unknown>, adminPort: number): Promise<EnvoyProcess> {
+export async function startEnvoy(bin: string, bootstrapConfig: Record<string, unknown>): Promise<EnvoyProcess> {
   const dir = mkdtempSync(join(tmpdir(), 'pca-envoy-'));
   const cfg = join(dir, 'envoy.json');
   const logFile = join(dir, 'envoy.log');
+  const addrFile = join(dir, 'admin.addr');
+  // Envoy writes `host:port` here once it has bound the admin on port 0
+  const config = { ...bootstrapConfig, admin: { ...(bootstrapConfig.admin as Record<string, unknown>), address_path: addrFile } };
   writeFileSync(cfg, JSON.stringify(config, null, 2));
   const child = spawn(bin, ['--config-path', cfg, '--disable-hot-restart', '--log-level', 'warn', '--log-path', logFile, '--concurrency', '1'], {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -207,19 +211,27 @@ export async function startEnvoy(bin: string, config: Record<string, unknown>, a
   child.stderr?.on('data', (c: Buffer) => (stderr += c.toString()));
   child.stdout?.on('data', (c: Buffer) => (stderr += c.toString()));
   const deadline = Date.now() + 30_000;
+  let adminPort = 0;
   for (;;) {
     if (child.exitCode !== null) throw new Error(`envoy exited ${child.exitCode}: ${stderr}`);
     try {
-      const r = await rawRequest({ port: adminPort, path: '/ready' });
-      if (r.status === 200) break;
+      if (!adminPort) adminPort = Number(readFileSync(addrFile, 'utf8').trim().split(':').pop());
+      const r = adminPort ? await rawRequest({ port: adminPort, path: '/ready' }) : null;
+      if (r?.status === 200) break;
     } catch {
       /* not up yet */
     }
     if (Date.now() > deadline) throw new Error(`envoy not ready: ${stderr}`);
     await new Promise((r) => setTimeout(r, 100));
   }
+  const status = JSON.parse((await rawRequest({ port: adminPort, path: '/listeners?format=json' })).body) as {
+    listener_statuses: Array<{ name: string; local_address: { socket_address: { port_value: number } } }>;
+  };
+  const listenerPorts = Object.fromEntries(status.listener_statuses.map((l) => [l.name, l.local_address.socket_address.port_value]));
   return {
     child,
+    adminPort,
+    listenerPorts,
     log: () => {
       try {
         return readFileSync(logFile, 'utf8') + stderr;

@@ -297,6 +297,17 @@ describe('verifyFreshness', () => {
     for (const m of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) expect(f(claims(), { maxAgeMs: m }), String(m)).toEqual({ ok: false, reason: 'invalid maxAgeMs' });
     expect(f(claims(), { maxAgeMs: 1 }).ok).toBe(false);
   });
+  it('a non-finite or non-number clock skew is refused, never read as "no window"', () => {
+    const bad = { ok: false, reason: 'invalid clockSkewMs (must be a finite number)' };
+    for (const s of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, '5', null, {}]) {
+      expect(f(claims(), { now: 1_000_000 + 10_000_000, clockSkewMs: s }), String(s)).toEqual(bad); // stale token
+      expect(f(claims(), { now: 1_000_000 - 10_000_000, clockSkewMs: s }), String(s)).toEqual(bad); // future token
+      expect(f(claims(), { clockSkewMs: s }), String(s)).toEqual(bad); // even a fresh one
+    }
+    expect(f(claims(), { clockSkewMs: 0 })).toEqual({ ok: true });
+    expect(f(claims(), { clockSkewMs: -5 })).toEqual({ ok: true }); // a negative skew is clamped to 0
+    expect(f(claims(), { now: 1_000_000 + 10_001, clockSkewMs: -5 })).toEqual({ ok: false, reason: 'EAT is stale (iat older than maxAgeMs) — expired/replayed attestation' });
+  });
   it('future and stale boundaries with and without skew', () => {
     const iatMs = 1_000_000;
     expect(f(claims(), { now: iatMs })).toEqual({ ok: true });
@@ -472,7 +483,7 @@ describe('appraise', () => {
     expect(ap(tcb('0'), rv(0)).tier).toBe('affirming');
     expect(ap(tcb(0), rv('0')).tier).toBe('affirming');
     const unknownMin = { tier: 'rejected', trustworthy: false, reasons: ['reference minTcb is not a comparable TCB version'] };
-    for (const t of [-1, Number.NaN, Number.POSITIVE_INFINITY, 'abc', '1.5', '-1', '', '0x10', { snp: 256 }, { tee: -1 }, { bootloader: 1.5 }, { microcode: 300 }]) {
+    for (const t of [-1, Number.NaN, Number.POSITIVE_INFINITY, 'abc', '1.5', '-1', '', '0x10', { snp: 256 }, { tee: -1 }, { bootloader: 1.5 }, { microcode: 300 }, true, false, null, [], [1]]) {
       expect(ap(tcb('100'), rv(t)), JSON.stringify(t)).toEqual(unknownMin);
     }
     const unknownEv = { tier: 'rejected', trustworthy: false, reasons: ['evidence TCB version is absent or an unknown format — failing closed (see 2025-10-27 GCP firmware drift)'] };
@@ -528,6 +539,11 @@ describe('appraise', () => {
     expect(ap(claims({ sevsnp: { version: 3, measurement: M } }), rv)).toEqual(unknown);
     expect(ap(claims({ sevsnp: undefined }), rv)).toEqual(unknown);
     expect(ap(claims({ sevsnp: { version: 3, measurement: M, debug: 0 as never } }), rv)).toEqual(unknown);
+    // a present dbgstat that is not an RFC 9711 value is unknown (hand-built claims), even next to sevsnp.debug === false
+    for (const d of [null, 'nope', 0, true]) {
+      expect(ap(claims({ dbgstat: d as never, sevsnp: undefined }), rv), String(d)).toEqual(unknown);
+      expect(ap(claims({ dbgstat: d as never, sevsnp: { version: 3, measurement: M, debug: false } }), rv), String(d)).toEqual(unknown);
+    }
     expect(ap(claims({ dbgstat: 'enabled' }), { requireDebugDisabled: false, models: ['gpt'] }).tier).toBe('affirming');
   });
   it('reason accumulation and the final tier', () => {

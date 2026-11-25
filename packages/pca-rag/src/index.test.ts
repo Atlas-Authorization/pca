@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createProvenanceRecorder } from '@atlasauth/pca';
 import type { Capability, Predicate } from '@atlasauth/pca';
 import {
   aclsFromMetadata,
@@ -180,6 +181,13 @@ describe('retriever wrappers filter results before they reach the model', () => 
     const out = await guarded.retrieve('anything');
     expect(out.map((d) => d.id)).toEqual(['readme', 'spec']);
     expect(guarded.lastDecision()?.droppedIds).toEqual(['secret', 'orphan']);
+  });
+
+  it('records every admitted document as untrusted retrieval content (provenance by default); dropped ones never reach the model', async () => {
+    const recorder = createProvenanceRecorder({ mediator: 'm', kid: 'k1' });
+    const guarded = withPcaFilter({ retrieve: () => docs }, 'user:alice', fgaPolicy, { recorder });
+    await guarded.retrieve('anything');
+    expect(recorder.receipts().map((r) => `${r.origin}:${r.source}`)).toEqual(['retrieval:readme', 'retrieval:spec']);
   });
 
   it('LangChain-shaped retriever (ACL in document metadata)', async () => {

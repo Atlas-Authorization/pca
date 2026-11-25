@@ -22,7 +22,6 @@
  */
 
 import {
-  type ParticipantId,
   b64u,
   canonicalBytes,
   decodeB64uStrict,
@@ -32,6 +31,7 @@ import {
   utf8,
   verify,
 } from '@atlasauth/pca';
+import { type ParticipantId } from '@atlasauth/pca/ext/frost';
 
 export const GROUP_DESCRIPTOR_VERSION = 1 as const;
 export const GROUP_SUITE = 'frost-ed25519' as const;

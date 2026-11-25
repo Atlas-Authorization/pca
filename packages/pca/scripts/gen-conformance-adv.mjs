@@ -28,7 +28,7 @@ import { checkAdversarial, cloneJson, CORE_PATH, readCore, serializeCorpus, writ
 
 const NOW = 1_800_000_000_000;
 const AUD = 'rs-conformance';
-const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter'];
+const CHECKS = ['version', 'audience', 'validity', 'chain', 'grant_ref_bound', 'plan_inclusion', 'leaf_signature', 'counter_format'];
 const KEYMAP = { chain: 'cap_chain' };
 
 const seed = (label) => new Uint8Array(createHash('sha256').update(`atlas-pca-conformance/${label}`).digest());
@@ -660,7 +660,7 @@ for (const [family, name, description, text, grant, o] of jobs) {
   let checks;
   if (werr) checks = { wire: false };
   else {
-    const r = await pca.verifyPCActnCore(obj, { grant, nowEpoch: now, audience: aud });
+    const r = await pca.verifyPCActnCore(obj, { insecureSkipPlanRootCheck: true, grant, nowEpoch: now, audience: aud });
     checks = r.checks.wire === 'fail' ? { wire: false } : Object.fromEntries([['wire', true], ...CHECKS.map((k) => [k, r.checks[KEYMAP[k] ?? k] === 'pass'])]);
   }
   const allow = Object.values(checks).every(Boolean);

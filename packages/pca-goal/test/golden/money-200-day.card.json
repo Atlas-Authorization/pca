@@ -1,0 +1,28 @@
+{
+ "lines": [
+  "ALLOW \"pay\": every action that moves money [5 verb(s) in the pinned catalog: \"stripe.charge\", \"stripe.payout\", \"stripe.refund\", \"stripe.transfer\", \"travel.book\"]",
+  "LIMIT \"day\": over every action that moves money (5 grant(s))",
+  "Goal v1 for principal \"P\"; ontology \"o\"; request text digest \"n\"",
+  "ALLOW \"pay.stripe.charge\": verb \"stripe.charge\" on ANY RESOURCE (reason: \"test\") when param \"amount\" (USD minor units) <= 20000 USD minor units",
+  "ALLOW \"pay.stripe.payout\": verb \"stripe.payout\" on ANY RESOURCE (reason: \"test\") when param \"amount\" (USD minor units) <= 20000 USD minor units",
+  "ALLOW \"pay.stripe.refund\": verb \"stripe.refund\" on ANY RESOURCE (reason: \"test\") when param \"amount\" (USD minor units) <= 20000 USD minor units",
+  "ALLOW \"pay.stripe.transfer\": verb \"stripe.transfer\" on ANY RESOURCE (reason: \"test\") when param \"amount\" (USD minor units) <= 20000 USD minor units",
+  "ALLOW \"pay.travel.book\": verb \"travel.book\" on ANY RESOURCE (reason: \"test\") when param \"price\" (USD minor units) <= 20000 USD minor units",
+  "LIMIT \"day\": sum of param \"@money.amount\" (USD minor units) over grants [\"pay.stripe.charge\", \"pay.stripe.payout\", \"pay.stripe.refund\", \"pay.stripe.transfer\", \"pay.travel.book\"], in any 86400000 ms window, scope principal, at most 20000 USD minor units; beyond that: deny",
+  "VALID from 0 to 1000000000; idle limit none",
+  "DELEGATION depth at most 1, narrow only true, delegates may use grants []",
+  "Wildcard acknowledged for \"pay.stripe.charge\"",
+  "Wildcard acknowledged for \"pay.stripe.payout\"",
+  "Wildcard acknowledged for \"pay.stripe.refund\"",
+  "Wildcard acknowledged for \"pay.stripe.transfer\"",
+  "Wildcard acknowledged for \"pay.travel.book\""
+ ],
+ "warnings": [
+  "limit \"day\" sums a role the verbs carry on different parameters: the action must supply the role key",
+  "grant \"pay.stripe.charge\" applies to every resource (acknowledged)",
+  "grant \"pay.stripe.payout\" applies to every resource (acknowledged)",
+  "grant \"pay.stripe.refund\" applies to every resource (acknowledged)",
+  "grant \"pay.stripe.transfer\" applies to every resource (acknowledged)",
+  "grant \"pay.travel.book\" applies to every resource (acknowledged)"
+ ]
+}

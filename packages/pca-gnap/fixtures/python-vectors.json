@@ -1,0 +1,498 @@
+{
+  "generator": "crosscheck/crosscheck.py (hand-assembled detached JWS, pyca/cryptography Ed25519; key seed = SHA-256 of a fixed label)",
+  "now": 1700000000,
+  "uri": "https://as.example/gnap",
+  "htm": "POST",
+  "publicKey": "6sFArVESsLgfLTIFEIyKGt4LVERZn5-rZO91VpgaDLg",
+  "vectors": [
+    {
+      "name": "plain request",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMH0..JGZmVcnNGuguhj0fNyJ265gsaS9zKJT0v_F9FxEnYHXdaIH9vXPMycBAdcF_8Mnmsr4OSLYzHv2BL9JUz7XlAg",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "ok"
+    },
+    {
+      "name": "request bound to an access token",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMCwiYXRoIjoiTDh4a013OWZrN3lXTkk4ZVF2cE5kNW5ESDJKVTV6RXJxZzhkMmFROThhVSJ9..93HwhgmrwY7eDeACmAYxiJKqVhmLutLoAUAOYsimFJzEdeoimamW6vlRN3wGiubh1AzWopymbRpyKYMMxaXNAA",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "ok",
+      "accessTokenValue": "token-value-1"
+    },
+    {
+      "name": "lower-case method accepted",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoicG9zdCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMH0..VC8Wo9d4t7_0ag37luAj14Cnj8_lyMKuOBkA5SvKLc-HZsqAy8wyLKYpC6BpyiRZI5bnTPJuRQ_aKLdSaSqhBQ",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "ok"
+    },
+    {
+      "name": "kid header kept",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMCwia2lkIjoiazEifQ..rW6nAcK9Ye1yKmUId_1XcL4VoznZROMA3GrUP33tNHX52QQfgCL7sfRxG-R9Qc0T-11wAKaUOdAA7t3mpxENCw",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "ok"
+    },
+    {
+      "name": "wrong access token",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMCwiYXRoIjoiTDh4a013OWZrN3lXTkk4ZVF2cE5kNW5ESDJKVTV6RXJxZzhkMmFROThhVSJ9..93HwhgmrwY7eDeACmAYxiJKqVhmLutLoAUAOYsimFJzEdeoimamW6vlRN3wGiubh1AzWopymbRpyKYMMxaXNAA",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse",
+      "accessTokenValue": "another-token"
+    },
+    {
+      "name": "missing ath when a token is named",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMH0..JGZmVcnNGuguhj0fNyJ265gsaS9zKJT0v_F9FxEnYHXdaIH9vXPMycBAdcF_8Mnmsr4OSLYzHv2BL9JUz7XlAg",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse",
+      "accessTokenValue": "token-value-1"
+    },
+    {
+      "name": "body edited",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMH0..JGZmVcnNGuguhj0fNyJ265gsaS9zKJT0v_F9FxEnYHXdaIH9vXPMycBAdcF_8Mnmsr4OSLYzHv2BL9JUz7XlAg",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 8
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "signed by another key",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMH0..73zW_pfJOd_ltNFvl40wQofP74PoxDhFlcbBSbm4drK7cQJdY4R75pv0Tfi8Gy_-g3R2ce0UPzup7S2PShSVAA",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "wrong typ",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImh0bSI6IlBPU1QiLCJ1cmkiOiJodHRwczovL2FzLmV4YW1wbGUvZ25hcCIsImNyZWF0ZWQiOjE3MDAwMDAwMDB9..LPCfoN5HvfjgyBFz0Si-sPzoNmsFi6ToMvG4rvMEtTLgYC1RYARVPGUhdK5DDeg_aDOekaOyUAEsj5h4V_5tDw",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "wrong alg label",
+      "detachedJws": "eyJhbGciOiJFZDI1NTE5IiwidHlwIjoiZ25hcC1iaW5kaW5nLWp3c2QiLCJodG0iOiJQT1NUIiwidXJpIjoiaHR0cHM6Ly9hcy5leGFtcGxlL2duYXAiLCJjcmVhdGVkIjoxNzAwMDAwMDAwfQ..qDoGUds-1x0U0RFoFoOyI8JyWwXC4Eezwp_mVSkzBx_gzH8jB1CPXC7I_5Zf84QKBEpLRxeTctzTols3ufgGDQ",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "wrong method",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiR0VUIiwidXJpIjoiaHR0cHM6Ly9hcy5leGFtcGxlL2duYXAiLCJjcmVhdGVkIjoxNzAwMDAwMDAwfQ..80L1M6RaP4vDMzztfA7g7dsMugqivh9xyUE4P0My98tDWCaJjlAOt83Tuq5MDbUYVQDop86VJhbnlv0uP3YDBQ",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "wrong uri",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9vdGhlciIsImNyZWF0ZWQiOjE3MDAwMDAwMDB9..fswQ-K6GyKFi73l9eLK8CpxuyRWTK5SfA1ILb5QKOEZ8Q6UWMDT5Tpmxp3ARatHm8_4Lfq3hCofWTSbICdh4Aw",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "stale",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTY5OTk5OTY5OX0..6KYljvZyUIQVKN2zQ_9P4PKV1twFF9lsW7O0Zy3uoY6-vFRkuVaYA2fhw0eeuWK4OendMLAnX6WK5rTptr0DCg",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "from the future",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDA2MX0..xZPaXsLNPd9c2QpPYiFq9qlRIhfFeHj0rITyaWVYOikynEY7F_nhCLJ4BTf77qb8j4-h8D5GqBDRcNXDnjkvBg",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "created is a string",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6IjE3MDAwMDAwMDAifQ..IqPqjRUIWTrfw_NSsmH6QTUaVisligO8NvglJmf7DYddcpd55UVnPTUL_TgbDyEU4xD3zcfG-ooLiQmdUuDeBQ",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "content (not its digest) in the middle segment",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMH0.eyJhY2Nlc3NfdG9rZW4iOnsiYWNjZXNzIjpbeyJhY3Rpb25zIjpbInJlYWQiLCJ3cml0ZSJdLCJsb2NhdGlvbnMiOlsibWFpbiJdLCJ0eXBlIjoicmVwbyJ9XX0sImNsaWVudCI6eyJrZXkiOnsicHJvb2YiOiJqd3NkIn19LCJuIjo3fQ.JGZmVcnNGuguhj0fNyJ265gsaS9zKJT0v_F9FxEnYHXdaIH9vXPMycBAdcF_8Mnmsr4OSLYzHv2BL9JUz7XlAg",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    },
+    {
+      "name": "digest spelled out in the middle segment (as RFC 9635 prints its example)",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMH0.LKdJ6Q6qTeOhImwDgWKNZWvMk-jqHmPWm7C62NJ0cU4.JGZmVcnNGuguhj0fNyJ265gsaS9zKJT0v_F9FxEnYHXdaIH9vXPMycBAdcF_8Mnmsr4OSLYzHv2BL9JUz7XlAg",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "ok"
+    },
+    {
+      "name": "digest of another content in the middle segment",
+      "detachedJws": "eyJhbGciOiJFZERTQSIsInR5cCI6ImduYXAtYmluZGluZy1qd3NkIiwiaHRtIjoiUE9TVCIsInVyaSI6Imh0dHBzOi8vYXMuZXhhbXBsZS9nbmFwIiwiY3JlYXRlZCI6MTcwMDAwMDAwMH0._Ri89Vte5zZw-lieTtK_NSk-1mI64b-bBGkT7t7G6d0.JGZmVcnNGuguhj0fNyJ265gsaS9zKJT0v_F9FxEnYHXdaIH9vXPMycBAdcF_8Mnmsr4OSLYzHv2BL9JUz7XlAg",
+      "body": {
+        "access_token": {
+          "access": [
+            {
+              "type": "repo",
+              "actions": [
+                "read",
+                "write"
+              ],
+              "locations": [
+                "main"
+              ]
+            }
+          ]
+        },
+        "client": {
+          "key": {
+            "proof": "jwsd"
+          }
+        },
+        "n": 7
+      },
+      "expect": "refuse"
+    }
+  ]
+}

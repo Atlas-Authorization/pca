@@ -10,7 +10,7 @@ import * as net from 'node:net';
 import { FaultProxy, type FrameFault, type WireFault, tamperFor } from './faults';
 import type { TamperEvent } from './mesh';
 import { type Frame, FrameSplitter, encodeFrame, parseFrame } from './wire';
-import { reservePorts, until } from './test-timing';
+import { until } from './test-timing';
 
 const fr = (over: Partial<Frame> = {}): Frame => ({ v: 2, ty: 'msg', sid: 'sess', seq: 5, rd: 'mul0', d: { a: 1 }, ...over });
 const ev = (to = 1, f: Frame = fr()): TamperEvent => ({ to, frame: f, raw: encodeFrame(f) });
@@ -348,17 +348,17 @@ describe('FaultProxy connection lifecycle (scripted upstream)', () => {
 
 describe('FaultProxy over real sockets', () => {
   it('kind none relays both directions', async () => {
-    const [pp, tp] = await reservePorts(2);
     const got: number[] = [];
     const back: number[] = [];
     const server = net.createServer((s) => {
       s.on('data', (d) => got.push(...d));
       s.write(B(9, 8));
     });
-    await new Promise<void>((r) => server.listen(tp, '127.0.0.1', () => r()));
-    const proxy = new FaultProxy(pp!, { host: '127.0.0.1', port: tp! }, { kind: 'none', dir: 'c2s', afterBytes: 0 });
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
+    const tp = (server.address() as net.AddressInfo).port;
+    const proxy = new FaultProxy(0, { host: '127.0.0.1', port: tp }, { kind: 'none', dir: 'c2s', afterBytes: 0 });
     await proxy.listen();
-    const client = net.connect(pp!, '127.0.0.1');
+    const client = net.connect(proxy.port, '127.0.0.1');
     client.on('data', (d) => back.push(...d));
     client.write(B(1, 2, 3));
     await until(() => got.length === 3 && back.length === 2, 'both directions relayed');
@@ -369,32 +369,36 @@ describe('FaultProxy over real sockets', () => {
     server.close();
   });
   it('listen() rejects when the port is taken; close() stops accepting; it listens on loopback only', async () => {
-    const [pp, tp] = await reservePorts(2);
-    const p = new FaultProxy(pp!, { host: '127.0.0.1', port: tp! }, { kind: 'none', dir: 'c2s', afterBytes: 0 });
+    const tp = 1; // never dialed here
+    const p = new FaultProxy(0, { host: '127.0.0.1', port: tp }, { kind: 'none', dir: 'c2s', afterBytes: 0 });
     await p.listen();
+    const pp = p.port;
     expect(((p as unknown as { server: net.Server }).server.address() as net.AddressInfo).address).toBe('127.0.0.1');
-    const p2 = new FaultProxy(pp!, { host: '127.0.0.1', port: tp! }, { kind: 'none', dir: 'c2s', afterBytes: 0 });
+    const p2 = new FaultProxy(pp, { host: '127.0.0.1', port: tp }, { kind: 'none', dir: 'c2s', afterBytes: 0 });
     await expect(p2.listen()).rejects.toThrow(/EADDRINUSE/);
     const closed = new Promise<void>((r) => (p as unknown as { server: net.Server }).server.once('close', () => r()));
     p.close();
     await closed;
     await expect(
       new Promise((res, rej) => {
-        const c = net.connect(pp!, '127.0.0.1');
+        const c = net.connect(pp, '127.0.0.1');
         c.on('connect', () => res('connected'));
         c.on('error', rej);
       }),
     ).rejects.toThrow(/ECONNREFUSED/);
   });
   it('an upstream that refuses the connection closes the client side', async () => {
-    const [pp, tp] = await reservePorts(2);
-    const p = new FaultProxy(pp!, { host: '127.0.0.1', port: tp! }, { kind: 'none', dir: 'c2s', afterBytes: 0 });
+    // an upstream that accepts and resets: the proxy's upstream socket errors, which must close the client side
+    const up = net.createServer((s) => s.resetAndDestroy());
+    await new Promise<void>((r) => up.listen(0, '127.0.0.1', () => r()));
+    const p = new FaultProxy(0, { host: '127.0.0.1', port: (up.address() as net.AddressInfo).port }, { kind: 'none', dir: 'c2s', afterBytes: 0 });
     await p.listen();
     await new Promise<void>((res) => {
-      const c = net.connect(pp!, '127.0.0.1');
+      const c = net.connect(p.port, '127.0.0.1');
       c.on('error', () => undefined);
       c.on('close', () => res());
     });
     p.close();
+    up.close();
   });
 });

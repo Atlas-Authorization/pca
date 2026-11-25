@@ -53,7 +53,7 @@ for (const e of ledger.equivalents) {
   const k = siteKey(pkg, e.file, e.mutator, e.original, e.replacement, e.line, e.occurrence ?? 1);
   if (seen.has(k)) errors.push(`duplicate entry: ${label(e)}`);
   seen.add(k);
-  entries.push({ key: k, multiplicity: e.multiplicity, unit: `${pkg}\u0000${e.file}`, label: label(e, r.lineno) });
+  entries.push({ key: k, multiplicity: e.multiplicity, unit: `${pkg}\u0000${e.file}`, label: label(e, r.lineno), lineno: r.lineno });
 }
 const reports = args.filter((a) => !a.startsWith('--'));
 const pkg = opt('package') ?? 'pca';
@@ -62,10 +62,15 @@ if (reports.length) {
   const surv = [];
   const units = new Set();
   const timedOut = new Map();
+  const spans = new Map(); // a shard over a line range (file.ts:a-b) reports only that range: entries outside it are not stale here
   for (const r of reports) {
     const rep = JSON.parse(fs.readFileSync(r, 'utf8'));
     for (const [file, f] of Object.entries(rep.files)) {
       units.add(`${pkg}\u0000${file}`);
+      for (const m of f.mutants) {
+        const sp = spans.get(`${pkg}\u0000${file}`) ?? [Infinity, -Infinity];
+        spans.set(`${pkg}\u0000${file}`, [Math.min(sp[0], m.location.start.line), Math.max(sp[1], m.location.start.line)]);
+      }
       const src = f.source.split('\n');
       for (const m of f.mutants) {
         if (m.status !== 'Survived' && m.status !== 'NoCoverage' && m.status !== 'Timeout') continue;
@@ -86,6 +91,10 @@ if (reports.length) {
         });
       }
     }
+  }
+  for (const e of entries) {
+    const sp = spans.get(e.unit);
+    if (sp && e.lineno > 0 && (e.lineno < sp[0] || e.lineno > sp[1])) e.unit = `${e.unit}\u0000outside-the-shard`;
   }
   errors.push(...checkSites(entries, surv, units, timedOut));
 }

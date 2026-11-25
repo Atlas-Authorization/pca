@@ -177,7 +177,7 @@ describe('decision lists over box conditions contain the box class (spec §9.1a)
     return d.values.findIndex((v) => v.kind === 'exact' && v.value === name);
   };
   // amount ≤ 100 AND recipient ∉ {bob, carol}: one box, but its complement has THREE one-dimension pieces (a cap and two
-  // excluded values), so no list of 2 one-dimension rules expresses it (the R04 / BK05 / SA20 shape)
+  // excluded values), so no list of 2 one-dimension rules expresses it (the R04 / BBase / SA20 shape)
   const bob = rcpIdx('bob');
   const carol = rcpIdx('carol');
   const capBox = new Set<number>();

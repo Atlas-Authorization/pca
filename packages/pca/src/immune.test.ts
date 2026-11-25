@@ -5,6 +5,7 @@ import {
   adapt,
   assess,
   baselineStd,
+  noWidenViolation,
   observe,
   updateBaseline,
 } from './immune';
@@ -107,5 +108,32 @@ describe('adapt', () => {
     for (let i = 0; i < 40; i++) s = observe(s, { r: 0.1, at: 100_000 + (12 + i) * DEFAULT_IMMUNE_CONFIG.halfLifeMs });
     const calm = adapt(base, assess(s));
     expect(calm.policy.theta2).toBeGreaterThanOrEqual(hot.policy.theta2);
+  });
+});
+
+describe('the decay is defined by exactly reproducible operations', () => {
+  const H = DEFAULT_IMMUNE_CONFIG.halfLifeMs;
+  const after = (dt: number, n = 8) => observe({ ...INITIAL_IMMUNE_STATE, stepUps: n, seeded: true, lastAt: 0 }, { r: 0.1, at: dt }).stepUps;
+  it('a whole number of half-lives halves exactly (0.5 repeated, no pow)', () => {
+    expect(after(H)).toBe(4);
+    expect(after(2 * H)).toBe(2);
+    expect(after(3 * H)).toBe(1);
+  });
+  it('a fraction of a half-life is quantized down to 1/1024 and uses the literal step, so every platform gets the same bits', () => {
+    expect(after(H / 2)).toBeCloseTo(8 * Math.SQRT1_2, 9);
+    expect(after(H / 1024)).toBe(8 * 0.9993233275026507); // one step
+    expect(after((H / 1024) * 0.999)).toBe(8); // below one step: no decay yet
+  });
+});
+
+describe('noWidenViolation refuses values that are not numbers', () => {
+  const base = DEFAULT_RISK_POLICY;
+  it.each([null, true, false, '1', undefined])('theta1, theta2 or kappa of %j', (bad) => {
+    for (const k of ['kappa', 'theta1', 'theta2'] as const) {
+      expect(noWidenViolation(base, { ...base, [k]: bad } as unknown as RiskPolicy), k).toBe('kappa and theta must be numbers');
+    }
+  });
+  it('a tightened policy is still no violation', () => {
+    expect(noWidenViolation(base, { ...base, kappa: base.kappa * 2, theta1: base.theta1 / 2 })).toBeNull();
   });
 });

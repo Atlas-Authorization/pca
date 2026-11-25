@@ -1,20 +1,22 @@
 import {
   hashCanonical,
   pcactnDigest,
-  type AccReceipt,
-  type ActionSchema,
   type Capability,
-  type ClassifierVerdict,
   type InclusionProof,
   type PCActn,
+} from '@atlasauth/pca';
+import {
+  type AccReceipt,
+  type ActionSchema,
+  type ClassifierVerdict,
   type PcaFact,
   type PcaLabels,
   type PcaOfferSet,
   type SessionRevocationEvidence,
   type SessionRoot,
   type SignedIntentStatement,
-  type SignedTreeHead,
-} from '@atlasauth/pca';
+} from '@atlasauth/pca/ext/intent';
+import { type SignedTreeHead } from '@atlasauth/pca/ext/ledger';
 import type { IntentMap } from '@atlasauth/pca-intent';
 import type { SignedIntentAnswer } from '@atlasauth/pca-wallet';
 
@@ -156,7 +158,7 @@ const TOP_KEYS = [
 ] as const;
 
 const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
-const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v);
+const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0);
 const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
 function closed(o: unknown, keys: readonly string[], where: string): string | null {

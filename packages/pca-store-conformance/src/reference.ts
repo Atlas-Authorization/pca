@@ -32,10 +32,10 @@ export function durableFileAdapter(options: { dir?: string } = {}): StoreAdapter
       const st = await openDurableState({ dir });
       return {
         async consumeOnce(key, retainUntilMs, nowMs) {
-          if (!(retainUntilMs >= nowMs)) throw new RangeError('consumeOnce: retainUntilMs is before nowMs');
+          if (!(Number.isFinite(nowMs) && Number.isFinite(retainUntilMs) && retainUntilMs >= nowMs)) throw new RangeError('consumeOnce: retainUntilMs is before nowMs');
           let first = false;
           await st.update(`n:${key}`, (prev) => {
-            if (typeof prev === 'number' && prev >= nowMs) return undefined;
+            if (typeof prev === 'number' && !(Number.isFinite(nowMs) && prev < nowMs)) return undefined;
             first = true;
             // any old horizon is < now <= retainUntil here, so the new horizon is the larger one
             return retainUntilMs;
@@ -71,7 +71,7 @@ export function readThenWriteAdapter(): StoreAdapter {
       async consumeOnce(k, r, now) {
         const until = seen.get(k);
         await yieldTurn();
-        if (until !== undefined && until >= now) return false;
+        if (until !== undefined && !(Number.isFinite(now) && until < now)) return false;
         seen.set(k, r);
         return true;
       },
@@ -116,7 +116,7 @@ export function evictingAdapter(options: { capacity?: number | string } = {}): S
     open: async () => ({
       async consumeOnce(k, r, now) {
         const until = seen.get(k);
-        if (until !== undefined && until >= now) return false;
+        if (until !== undefined && !(Number.isFinite(now) && until < now)) return false;
         seen.set(k, r);
         evict(seen);
         return true;

@@ -387,6 +387,14 @@ describe('verifyDelegationChain: root', () => {
     expect(why(vchain(t({ iat: NOW + 5 }), k, { clockSkewSeconds: 5 }))).toBe('ACCEPTED');
     expect(why(vchain(t({ iat: NOW + 6 }), k, { clockSkewSeconds: 5 }))).toBe('root: iat is in the future');
     expect(why(vchain(t({ iat: 1.5 }), k))).toBe('root: iat must be an integer');
+    // a lenient JSON.parse reads the lexeme -0 as -0: the strict profile refuses it as a non-integer
+    const negZero = (claim: string) => {
+      const orig = JSON.stringify;
+      const spy = vi.spyOn(JSON, 'stringify').mockImplementation((...a: Parameters<typeof JSON.stringify>) => orig(...a).replace(`"${claim}":424242`, `"${claim}":-0`));
+      try { return t({ [claim]: 424242 }); } finally { spy.mockRestore(); }
+    };
+    expect(why(vchain(negZero('exp'), k))).toBe('root: exp must be an integer');
+    expect(why(vchain(negZero('iat'), k))).toBe('root: iat must be an integer');
   });
   it('root mandate times use the same bounds and the "root mandate" label', () => {
     const k = keys();
@@ -757,3 +765,23 @@ function hopWithoutClaims(prev: string, k: Keys, omit: string[]): string {
   for (const o of omit) delete payload[o];
   return `${prev}~${signSdJwt({ header: { typ: 'kb+sd-jwt' }, payload, disclosures: b.disclosures, privateKey: k.agent.privateKey })}`;
 }
+
+// An object that carries only `exp`, or only `iat`, reaches just one of the two time checks, so a guard that is weakened at that check
+// admits it: the other check cannot refuse in its place (an infinite skew or clock widens either window to any time).
+describe('verifyDelegationChain: a non-finite clock or skew is refused by the check of the time the mandate carries', () => {
+  const mandate = (k: Keys, times: { exp?: number; iat?: number }): JsonObject => ({ vct: 'mandate.payment.open.1', cnf: { jwk: JSON.parse(JSON.stringify(k.agent.publicJwk)) as JsonObject }, ...times });
+  const chainOf = (k: Keys, times: { exp?: number; iat?: number }): string => hop(root(k, { mandate: mandate(k, times) }), k.agent);
+  it('an expiry alone: an infinite skew does not admit it', () => {
+    const k = keys();
+    const t = chainOf(k, { exp: NOW_S + 1000 });
+    expect(why(vchain(t, k))).toBe('ACCEPTED');
+    expect(why(vchain(t, k, { clockSkewSeconds: Number.POSITIVE_INFINITY }))).toBe(`root mandate: expired at ${NOW_S + 1000}`);
+  });
+  it('an issued-at alone: an infinite skew or an infinite clock does not admit it', () => {
+    const k = keys();
+    const t = chainOf(k, { iat: NOW_S });
+    expect(why(vchain(t, k))).toBe('ACCEPTED');
+    expect(why(vchain(t, k, { clockSkewSeconds: Number.POSITIVE_INFINITY }))).toBe('root mandate: iat is in the future');
+    expect(why(vchain(t, k, { now: Number.POSITIVE_INFINITY }))).toBe('root mandate: iat is in the future');
+  });
+});

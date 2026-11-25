@@ -11,6 +11,10 @@ on:
     tags: ['*']
   workflow_dispatch:
     inputs:
+      force_full:
+        description: 'redo the work even when an earlier run passed on identical inputs'
+        type: boolean
+        default: false
       native_ref:
         description: 'Ref of the native verifier repos (default: the ref of this run)'
         required: false
@@ -32,7 +36,33 @@ env:
   NATIVE_REF: ${{ inputs.native_ref || github.ref_name }}
 
 jobs:
+  reuse:
+    name: reuse check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      skip: ${{ steps.reuse.outputs.skip }}
+      hash: ${{ steps.reuse.outputs.hash }}
+      source: ${{ steps.reuse.outputs.source }}
+    steps:
+      - uses: actions/checkout@v4
+      # input-hash reuse (ci-reuse.mjs): when an earlier run recorded the same input hash, every other job of this run is skipped.
+      # continue-on-error: a failing check can only mean "no reuse"; FORCE_FULL / force_full / [force-full] bypass it.
+      - id: reuse
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_FULL: ${{ inputs.force_full || inputs.full || vars.FORCE_FULL == '1' || contains(github.event.head_commit.message, '[force-full]') }}
+          GATE_FULL: ${{ inputs.full || (startsWith(github.ref_name, 'ci/') && endsWith(github.ref_name, '-rc') || startsWith(github.ref_name, 'ci/gate-')) || contains(github.event.head_commit.message, '[force-full]') }}
+          PARTIAL: ${{ false }}
+          EXTRA: fuzz=${{ inputs.fuzz || '3000' }}
+        run: node .github/scripts/ci-reuse.mjs check --workflow=cross-language --self=.github/workflows/cross-language.yml --exclude='docs/,examples/,*.md' --external=natives --ref="$NATIVE_REF" --extra="$EXTRA" --always-full
   gate:
+    if: ${{ needs.reuse.outputs.skip != 'true' }}
+    needs: reuse
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
@@ -69,6 +99,8 @@ jobs:
           # sdks/pca-less-c (libatlas_less for the FFI backends) ships in this repo.
           for r in go python ruby php dotnet java kotlin swift; do cp -R "$RUNNER_TEMP/native/pca-$r" "sdks/$r-pca"; done
           cp -R "$RUNNER_TEMP/native/pca-rust/crates/atlas-pca" sdks/rust-pca
+          # the crate's path dependencies are its sibling crates in the lane workspace (../pca-mpc-lwe-ot-wasm, ...): keep them next to it
+          for c in "$RUNNER_TEMP"/native/pca-rust/crates/*/; do n="$(basename "$c")"; [ "$n" = atlas-pca ] || cp -R "$c" "sdks/$n"; done
       - name: Select Xcode 26 (CryptoKit ML-DSA for the Swift verifier)
         if: runner.os == 'macOS'
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
@@ -89,7 +121,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: sodium, ffi
+          extensions: sodium, ffi, gmp
           ini-values: ffi.enable=true
           coverage: none
       - uses: actions/setup-dotnet@v4
@@ -116,6 +148,8 @@ jobs:
             ls "$home/lib" | grep -E "^$j.*\.jar$" >/dev/null || { echo "::error::no $j*.jar in $home/lib"; exit 1; }
           done
           echo "PCA_KOTLIN_LIB=$home/lib" >> "$GITHUB_ENV"
+      - name: Guard pnpm filters (a --filter that matches no project fails the job)
+        run: bash scripts/pnpm-filter-guard.sh
       - name: Install (reference implementation + corpus generator)
         run: pnpm install --frozen-lockfile --filter=. --filter=@atlasauth/pca... --filter=@atlasauth/pca-conformance...
       - name: Build (the reference loads its built workspace dependencies)
@@ -123,8 +157,39 @@ jobs:
       - name: BouncyCastle for the Java / Kotlin verifiers
         shell: bash
         run: |
-          curl -fsSL -o "$RUNNER_TEMP/bcprov.jar" "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/bcprov.jar" "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar"
           echo "PCA_BC_JAR=$RUNNER_TEMP/bcprov.jar" >> "$GITHUB_ENV"
+          m=https://repo1.maven.org/maven2
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/lazysodium.jar" "$m/com/goterl/lazysodium-java/5.2.0/lazysodium-java-5.2.0.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/jna.jar" "$m/net/java/dev/jna/jna/5.17.0/jna-5.17.0.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/icu4j.jar" "$m/com/ibm/icu/icu4j/78.3/icu4j-78.3.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/snakeyaml-engine.jar" "$m/org/snakeyaml/snakeyaml-engine/2.7/snakeyaml-engine-2.7.jar"
+          # lazysodium-java's runtime dependencies (its pom): the logger API and the resource loader
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/slf4j-api.jar" "$m/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/resource-loader.jar" "$m/com/goterl/resource-loader/2.1.0/resource-loader-2.1.0.jar"
+          # the servlet filter (Java) and the HTTP clients (Kotlin: okhttp 4.12 and the okio it needs) are part of the SDK sources the drivers compile
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/servlet-api.jar" "$m/jakarta/servlet/jakarta.servlet-api/6.0.0/jakarta.servlet-api-6.0.0.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/okhttp.jar" "$m/com/squareup/okhttp3/okhttp/4.12.0/okhttp-4.12.0.jar"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/okio.jar" "$m/com/squareup/okio/okio-jvm/3.6.0/okio-jvm-3.6.0.jar"
+          echo "PCA_EXTRA_CP=$RUNNER_TEMP/lazysodium.jar:$RUNNER_TEMP/jna.jar:$RUNNER_TEMP/icu4j.jar:$RUNNER_TEMP/snakeyaml-engine.jar:$RUNNER_TEMP/servlet-api.jar:$RUNNER_TEMP/okhttp.jar:$RUNNER_TEMP/okio.jar:$RUNNER_TEMP/slf4j-api.jar:$RUNNER_TEMP/resource-loader.jar" >> "$GITHUB_ENV"
+      # ML-DSA session-root vectors (adv1563-1569): PHP (ATLAS_PCA_LIBCRYPTO) and Ruby (LD_LIBRARY_PATH) reach ML-DSA only through an
+      # OpenSSL >= 3.5 libcrypto. scripts/pca-conformance-all.mjs points both drivers at /opt/openssl35 when it exists; build it once, cached.
+      - name: OpenSSL 3.5 (cached)
+        if: runner.os == 'Linux'
+        id: ossl
+        uses: actions/cache@v4
+        with:
+          path: /opt/openssl35
+          key: openssl-3.5.9-${{ matrix.os }}
+      - name: Build OpenSSL 3.5
+        if: runner.os == 'Linux' && steps.ossl.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz | tar xz
+          cd openssl-3.5.9 && ./Configure --prefix=/opt/openssl35 --libdir=lib shared no-tests > /dev/null
+          make -j4 > /dev/null && sudo make install_sw > /dev/null
+      - name: OpenSSL 3.5 present
+        if: runner.os == 'Linux'
+        run: LD_LIBRARY_PATH=/opt/openssl35/lib /opt/openssl35/bin/openssl version | grep -E '^OpenSSL 3\.[5-9]'
       - name: Python verifier backends
         run: python -m pip install cryptography dilithium-py
       - name: Corpus regenerates byte-identically
@@ -132,10 +197,19 @@ jobs:
       # the full adversarial set (.gz: fixed header, decompressed content compared, so Linux and macOS check the same bytes)
       - name: Adversarial vector set regenerates identically
         run: node --stack-size=4000 packages/pca/scripts/gen-conformance-adv.mjs --check
+      # Results are reported per layer (packages/pca/conformance/LAYERS.md). The policy layer's policy_decision vectors are
+      # REPORT-ONLY for the native SDKs (per-language pass / fail / unsupported, never failing this job) until they implement
+      # the policy decision; name a language in --policy-required to make it gating. The TypeScript reference must pass them.
       - name: Every language over the corpus (libatlas_less is built from sdks/pca-less-c for the FFI backends)
         run: >
           scripts/pca-conformance-all.sh --no-native --langs ${{ matrix.langs }} --require ${{ matrix.langs }}
           --fuzz ${{ inputs.fuzz || '3000' }} --out "$RUNNER_TEMP/pca-conformance-all"
+      - name: Per-layer results
+        if: always()
+        shell: bash
+        run: |
+          m="$RUNNER_TEMP/pca-conformance-all/MATRIX.md"
+          [ -f "$m" ] && sed -n '/^## Per-layer results/,/^## Per-category/p' "$m" | sed '$d' >> "$GITHUB_STEP_SUMMARY" || true
       - name: Upload matrix + report
         if: always()
         uses: actions/upload-artifact@v4
@@ -145,3 +219,23 @@ jobs:
             ${{ runner.temp }}/pca-conformance-all/MATRIX.md
             ${{ runner.temp }}/pca-conformance-all/report.json
           if-no-files-found: ignore
+
+  reuse-record:
+    name: reuse record
+    needs: [reuse, gate]
+    # only a run whose jobs all passed (skipped by their own conditions is fine), that was not partial and not itself a reuse, leaves a record
+    if: ${{ !cancelled() && needs.reuse.outputs.skip != 'true' && needs.reuse.outputs.hash != '' && !(false) && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.gate.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - id: rec
+        env:
+          GATE_FULL: ${{ inputs.full || (startsWith(github.ref_name, 'ci/') && endsWith(github.ref_name, '-rc') || startsWith(github.ref_name, 'ci/gate-')) || contains(github.event.head_commit.message, '[force-full]') }}
+          HASH: ${{ needs.reuse.outputs.hash }}
+        run: node .github/scripts/ci-reuse.mjs record --workflow=cross-language --hash="$HASH" --out="$RUNNER_TEMP/reuse-record" --always-full
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rec.outputs.artifact }}
+          path: ${{ runner.temp }}/reuse-record/
+          retention-days: 21

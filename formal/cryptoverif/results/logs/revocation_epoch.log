@@ -1,0 +1,360 @@
+File "revocation_epoch.cv", line 49, characters 14-16:
+Warning: Replication uses the same parameter NO with channel cO3 as replication at line 48, characters 14-16 with channel cO. Avoid reusing parameters for multiple replications with different channels to avoid losing precision in the probability bound.
+Doing expand get, insert and prove unique annotations... No change.
+Doing simplify (non-expanded game)... No change.
+Doing expand... No change.
+Doing remove assignments of findcond... No change.
+Doing simplify... Doing global dependency analysis on rkR inside simplify... At 27, returned message pkR depends on rkR.
+No change
+Run simplify 1 time(s). Fixpoint reached.
+No change.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proof of forall t: times_t, r: root_t, s: scope_t, i: inst_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t)) failed:
+  Found Accept(i_2, s_2, r_2, t_2) at 105
+  but could not prove event(PublishedR(i, s, r, t))
+Trying equivalence uf_cma(sign)... Failed.
+Doing remove assignments of binder pkR... Done.
+Doing remove assignments of binder skR... Done.
+Trying equivalence uf_cma(sign) with rkR... Transf. OK Proba. computed Transf. done Succeeded.
+Doing simplify (non-expanded game)... Done.
+Doing expand... Done.
+Doing remove assignments of findcond... Done.
+Doing simplify... Doing global dependency analysis on rkR inside simplify... At 21, returned message pkgen2(rkR) depends on rkR.
+No change
+Doing global dependency analysis on rkR inside simplify... At 21, returned message pkgen2(rkR) depends on rkR.
+No change
+Run simplify 2 time(s). Fixpoint reached.
+Done.
+Doing move all binders... No change.
+Doing SA rename new without array accesses and remove assignments of findcond... No change.
+Doing merge branches... No change.
+Proved query forall t: times_t, r: root_t, s: scope_t, i: inst_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t))
+===================== Proof starts =======================
+Initial state
+Game 1 is
+     c0() :=
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkQ <-R keyseed;
+     pkQ: pkey <- pkgen(rkQ);
+     skQ: skey <- skgen(rkQ);
+     rkR <-R keyseed;
+     pkR: pkey <- pkgen(rkR);
+     skR: skey <- skgen(rkR);
+     return(pkP, pkQ, skQ, pkR);
+     ((
+       foreach iP <= NP do
+       cR(i_1: inst_t, s_1: scope_t, r_1: root_t, t_1: times_t) :=
+       event PublishedR(i_1, s_1, r_1, t_1);
+       return(sign(mkepoch(i_1, s_1, r_1, t_1), skR))
+     ) | (
+       foreach iO <= NO do
+       cO(o_1: other_t) :=
+       return(sign(mkother(o_1), skP))
+     ) | (
+       foreach iO_1 <= NO do
+       cO3(o_2: other_t) :=
+       return(sign(mkother(o_2), skR))
+     ) | (
+       foreach iV <= NV do
+       cV(g: pkey, i_2: inst_t, s_2: scope_t, r_2: root_t, t_2: times_t, now: now_t, sg: signature) :=
+       if fresh(t_2, now) then
+       if g = pkR then
+       if check(mkepoch(i_2, s_2, r_2, t_2), g, sg) then
+       event Accept(i_2, s_2, r_2, t_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder pkR
+  - Remove assignments on pkR (definition removed, all usages removed)
+yields
+
+Game 2 is
+     c0() :=
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkQ <-R keyseed;
+     pkQ: pkey <- pkgen(rkQ);
+     skQ: skey <- skgen(rkQ);
+     rkR <-R keyseed;
+     skR: skey <- skgen(rkR);
+     return(pkP, pkQ, skQ, pkgen(rkR));
+     ((
+       foreach iP <= NP do
+       cR(i_1: inst_t, s_1: scope_t, r_1: root_t, t_1: times_t) :=
+       event PublishedR(i_1, s_1, r_1, t_1);
+       return(sign(mkepoch(i_1, s_1, r_1, t_1), skR))
+     ) | (
+       foreach iO <= NO do
+       cO(o_1: other_t) :=
+       return(sign(mkother(o_1), skP))
+     ) | (
+       foreach iO_1 <= NO do
+       cO3(o_2: other_t) :=
+       return(sign(mkother(o_2), skR))
+     ) | (
+       foreach iV <= NV do
+       cV(g: pkey, i_2: inst_t, s_2: scope_t, r_2: root_t, t_2: times_t, now: now_t, sg: signature) :=
+       if fresh(t_2, now) then
+       if g = pkgen(rkR) then
+       if check(mkepoch(i_2, s_2, r_2, t_2), g, sg) then
+       event Accept(i_2, s_2, r_2, t_2);
+       return()
+     ))
+
+
+Applying remove assignments of binder skR
+  - Remove assignments on skR (definition removed, all usages removed)
+yields
+
+Game 3 is
+     c0() :=
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkQ <-R keyseed;
+     pkQ: pkey <- pkgen(rkQ);
+     skQ: skey <- skgen(rkQ);
+     rkR <-R keyseed;
+     return(pkP, pkQ, skQ, pkgen(rkR));
+     ((
+       foreach iP <= NP do
+       cR(i_1: inst_t, s_1: scope_t, r_1: root_t, t_1: times_t) :=
+       event PublishedR(i_1, s_1, r_1, t_1);
+       return(sign(mkepoch(i_1, s_1, r_1, t_1), skgen(rkR)))
+     ) | (
+       foreach iO <= NO do
+       cO(o_1: other_t) :=
+       return(sign(mkother(o_1), skP))
+     ) | (
+       foreach iO_1 <= NO do
+       cO3(o_2: other_t) :=
+       return(sign(mkother(o_2), skgen(rkR)))
+     ) | (
+       foreach iV <= NV do
+       cV(g: pkey, i_2: inst_t, s_2: scope_t, r_2: root_t, t_2: times_t, now: now_t, sg: signature) :=
+       if fresh(t_2, now) then
+       if g = pkgen(rkR) then
+       if check(mkepoch(i_2, s_2, r_2, t_2), g, sg) then
+       event Accept(i_2, s_2, r_2, t_2);
+       return()
+     ))
+
+
+Applying equivalence uf_cma(sign) with rkR [probability Psign(time_1, NO + NP, max(length(mkother, maxlength(game 3: o_2)), length(mkepoch, maxlength(game 3: i_1), maxlength(game 3: s_1), maxlength(game 3: r_1), maxlength(game 3: t_1))))]
+  - Equivalence uf_cma(sign) with variables: rkR -> r_1
+yields
+
+Game 4 is
+     c0() :=
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkQ <-R keyseed;
+     pkQ: pkey <- pkgen(rkQ);
+     skQ: skey <- skgen(rkQ);
+     rkR <-R keyseed;
+     return(pkP, pkQ, skQ, pkgen2(rkR));
+     ((
+       foreach iP <= NP do
+       cR(i_1: inst_t, s_1: scope_t, r_1: root_t, t_1: times_t) :=
+       event PublishedR(i_1, s_1, r_1, t_1);
+       return((x: message <- mkepoch(i_1, s_1, r_1, t_1); sign2(x, skgen2(rkR))))
+     ) | (
+       foreach iO <= NO do
+       cO(o_1: other_t) :=
+       return(sign(mkother(o_1), skP))
+     ) | (
+       foreach iO_1 <= NO do
+       cO3(o_2: other_t) :=
+       return((x_1: message <- mkother(o_2); sign2(x_1, skgen2(rkR))))
+     ) | (
+       foreach iV <= NV do
+       cV(g: pkey, i_2: inst_t, s_2: scope_t, r_2: root_t, t_2: times_t, now: now_t, sg: signature) :=
+       if fresh(t_2, now) then
+       if g = pkgen2(rkR) then
+       if (m1: message <- mkepoch(i_2, s_2, r_2, t_2); si1: signature <- sg; {107}find u_1 = ri_1 <= NP suchthat defined(x[ri_1]) && (m1 = x[ri_1]) && check2(m1, pkgen2(rkR), si1) then true orfind u = ri <= NO suchthat defined(x_1[ri]) && {124}((m1 = x_1[ri]) && check2(m1, pkgen2(rkR), si1)) then true else false) then
+       event Accept(i_2, s_2, r_2, t_2);
+       return()
+     ))
+
+
+Applying simplify (non-expanded game)
+  - Simplification pass
+    - Replaced ((m1 = x_1[ri]) && check2(m1, pkgen2(rkR), si1)) with false at 124
+    - Remove branch 2 in find at 107
+yields
+
+Game 5 is
+     c0() :=
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkQ <-R keyseed;
+     pkQ: pkey <- pkgen(rkQ);
+     skQ: skey <- skgen(rkQ);
+     rkR <-R keyseed;
+     return(pkP, pkQ, skQ, pkgen2(rkR));
+     ((
+       foreach iP <= NP do
+       cR(i_1: inst_t, s_1: scope_t, r_1: root_t, t_1: times_t) :=
+       event PublishedR(i_1, s_1, r_1, t_1);
+       return((x: message <- mkepoch(i_1, s_1, r_1, t_1); sign2(x, skgen2(rkR))))
+     ) | (
+       foreach iO <= NO do
+       cO(o_1: other_t) :=
+       return(sign(mkother(o_1), skP))
+     ) | (
+       foreach iO_1 <= NO do
+       cO3(o_2: other_t) :=
+       return((x_1: message <- mkother(o_2); sign2(x_1, skgen2(rkR))))
+     ) | (
+       foreach iV <= NV do
+       cV(g: pkey, i_2: inst_t, s_2: scope_t, r_2: root_t, t_2: times_t, now: now_t, sg: signature) :=
+       if fresh(t_2, now) then
+       if g = pkgen2(rkR) then
+ {93}  if (m1: message <- mkepoch(i_2, s_2, r_2, t_2); si1: signature <- sg; find u_1 = ri_1 <= NP suchthat defined(x[ri_1]) && (m1 = x[ri_1]) && check2(m1, pkgen2(rkR), si1) then true else false) then
+       event Accept(i_2, s_2, r_2, t_2);
+       return()
+     ))
+
+
+Applying expand
+  - Expand if/find/let
+    - Test at 93 always false
+    - Test at 93 always true
+yields
+
+Game 6 is
+     c0() :=
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkQ <-R keyseed;
+     pkQ: pkey <- pkgen(rkQ);
+     skQ: skey <- skgen(rkQ);
+     rkR <-R keyseed;
+     return(pkP, pkQ, skQ, pkgen2(rkR));
+     ((
+       foreach iP <= NP do
+       cR(i_1: inst_t, s_1: scope_t, r_1: root_t, t_1: times_t) :=
+       event PublishedR(i_1, s_1, r_1, t_1);
+       x: message <- mkepoch(i_1, s_1, r_1, t_1);
+       return(sign2(x, skgen2(rkR)))
+     ) | (
+       foreach iO <= NO do
+       cO(o_1: other_t) :=
+       return(sign(mkother(o_1), skP))
+     ) | (
+       foreach iO_1 <= NO do
+       cO3(o_2: other_t) :=
+       x_1: message <- mkother(o_2);
+       return(sign2(x_1, skgen2(rkR)))
+     ) | (
+       foreach iV <= NV do
+       cV(g: pkey, i_2: inst_t, s_2: scope_t, r_2: root_t, t_2: times_t, now: now_t, sg: signature) :=
+       if fresh(t_2, now) then
+       if g = pkgen2(rkR) then
+       m1: message <- mkepoch(i_2, s_2, r_2, t_2);
+       si1: signature <- sg;
+       find u_1 = ri_1 <= NP suchthat defined(x[ri_1]) && (m1 = x[ri_1]) && check2(m1, pkgen2(rkR), si1) then
+       event Accept(i_2, s_2, r_2, t_2);
+       return()
+     ))
+
+
+Applying remove assignments of findcond
+  - Remove assignments on si1 (definition removed, all usages removed)
+yields
+
+Game 7 is
+     c0() :=
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkQ <-R keyseed;
+     pkQ: pkey <- pkgen(rkQ);
+     skQ: skey <- skgen(rkQ);
+     rkR <-R keyseed;
+     return(pkP, pkQ, skQ, pkgen2(rkR));
+     ((
+       foreach iP <= NP do
+       cR(i_1: inst_t, s_1: scope_t, r_1: root_t, t_1: times_t) :=
+       event PublishedR(i_1, s_1, r_1, t_1);
+       x: message <- mkepoch(i_1, s_1, r_1, t_1);
+       return(sign2(x, skgen2(rkR)))
+     ) | (
+       foreach iO <= NO do
+       cO(o_1: other_t) :=
+       return(sign(mkother(o_1), skP))
+     ) | (
+       foreach iO_1 <= NO do
+       cO3(o_2: other_t) :=
+       x_1: message <- mkother(o_2);
+       return(sign2(x_1, skgen2(rkR)))
+     ) | (
+       foreach iV <= NV do
+       cV(g: pkey, i_2: inst_t, s_2: scope_t, r_2: root_t, t_2: times_t, now: now_t, sg: signature) :=
+       if fresh(t_2, now) then
+       if g = pkgen2(rkR) then
+       m1: message <- mkepoch(i_2, s_2, r_2, t_2);
+{105}  find u_1 = ri_1 <= NP suchthat defined(x[ri_1]) && {107}((m1 = x[ri_1]) && check2(m1, pkgen2(rkR), sg)) then
+       event Accept(i_2, s_2, r_2, t_2);
+       return()
+     ))
+
+
+Applying simplify
+  - Simplification pass
+    - Replaced ((m1 = x[ri_1]) && check2(m1, pkgen2(rkR), sg)) with ((i_2 = i_1[ri_1]) && (s_2 = s_1[ri_1]) && (r_2 = r_1[ri_1]) && (t_2 = t_1[ri_1]) && check2(m1, pkgen2(rkR), sg)) at 107
+    - Replaced defined condition x[ri_1] with t_1[ri_1], r_1[ri_1], s_1[ri_1], i_1[ri_1] in find at 105
+yields
+
+Game 8 is
+     c0() :=
+     rkP <-R keyseed;
+     pkP: pkey <- pkgen(rkP);
+     skP: skey <- skgen(rkP);
+     rkQ <-R keyseed;
+     pkQ: pkey <- pkgen(rkQ);
+     skQ: skey <- skgen(rkQ);
+     rkR <-R keyseed;
+     return(pkP, pkQ, skQ, pkgen2(rkR));
+     ((
+       foreach iP <= NP do
+       cR(i_1: inst_t, s_1: scope_t, r_1: root_t, t_1: times_t) :=
+       event PublishedR(i_1, s_1, r_1, t_1);
+       x: message <- mkepoch(i_1, s_1, r_1, t_1);
+       return(sign2(x, skgen2(rkR)))
+     ) | (
+       foreach iO <= NO do
+       cO(o_1: other_t) :=
+       return(sign(mkother(o_1), skP))
+     ) | (
+       foreach iO_1 <= NO do
+       cO3(o_2: other_t) :=
+       x_1: message <- mkother(o_2);
+       return(sign2(x_1, skgen2(rkR)))
+     ) | (
+       foreach iV <= NV do
+       cV(g: pkey, i_2: inst_t, s_2: scope_t, r_2: root_t, t_2: times_t, now: now_t, sg: signature) :=
+       if fresh(t_2, now) then
+       if g = pkgen2(rkR) then
+       m1: message <- mkepoch(i_2, s_2, r_2, t_2);
+       find u_1 = ri_1 <= NP suchthat defined(t_1[ri_1], r_1[ri_1], s_1[ri_1], i_1[ri_1]) && (i_2 = i_1[ri_1]) && (s_2 = s_1[ri_1]) && (r_2 = r_1[ri_1]) && (t_2 = t_1[ri_1]) && check2(m1, pkgen2(rkR), sg) then
+       event Accept(i_2, s_2, r_2, t_2);
+       return()
+     ))
+
+
+Proved forall t: times_t, r: root_t, s: scope_t, i: inst_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t)) in game 8
+Adv[Game 1: forall t: times_t, r: root_t, s: scope_t, i: inst_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t))] <= Psign(time_1, NO + NP, max(length(mkother, maxlength(game 3: o_2)), length(mkepoch, maxlength(game 3: i_1), maxlength(game 3: s_1), maxlength(game 3: r_1), maxlength(game 3: t_1)))) + Adv[Game 8: forall t: times_t, r: root_t, s: scope_t, i: inst_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t))]
+Adv[Game 8: forall t: times_t, r: root_t, s: scope_t, i: inst_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t))] <= 0
+RESULT Proved forall t: times_t, r: root_t, s: scope_t, i: inst_t; event(Accept(i, s, r, t)) ==> event(PublishedR(i, s, r, t)) up to probability Psign(time_1, NO + NP, max(length(mkother, maxlength(game 3: o_2)), length(mkepoch, maxlength(game 3: i_1), maxlength(game 3: s_1), maxlength(game 3: r_1), maxlength(game 3: t_1))))
+RESULT time_1 = 2 * time(pkgen) + 2 * time(skgen) + NP * time(([1,NP])) + NP * time(mkepoch, maxlength(game 3: i_1), maxlength(game 3: s_1), maxlength(game 3: r_1), maxlength(game 3: t_1)) + NO * time(sign, length(mkother, maxlength(game 3: o_1))) + NO * time(mkother, maxlength(game 3: o_1)) + NO * time(mkother, maxlength(game 3: o_2)) + NV * time(fresh, maxlength(game 3: t_2), maxlength(game 3: now)) + NV * time(mkepoch, maxlength(game 3: i_2), maxlength(game 3: s_2), maxlength(game 3: r_2), maxlength(game 3: t_2)) + NV * time(([1,NV])) + time + (NV - 1) * time(check, length(mkepoch, maxlength(game 3: i_2), maxlength(game 3: s_2), maxlength(game 3: r_2), maxlength(game 3: t_2)), maxlength(game 3: sg))
+All queries proved.

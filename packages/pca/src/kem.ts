@@ -80,8 +80,26 @@ export function hybridKemKeygen(): HybridKemKeyPair {
   };
 }
 
+/** FIPS 203 §7.2 modulus check: every 12-bit coefficient of the 384*k-byte `t` part must be strictly below q = 3329. */
+function mlKemCoefficientsReduced(ek: Uint8Array, k: number): boolean {
+  for (let i = 0; i < 384 * k; i += 3) {
+    if ((ek[i]! | ((ek[i + 1]! & 0x0f) << 8)) >= 3329) return false;
+    if (((ek[i + 1]! >> 4) | (ek[i + 2]! << 4)) >= 3329) return false;
+  }
+  return true;
+}
+function requireReducedEk(ek: Uint8Array, k: number, who: string): void {
+  if (!mlKemCoefficientsReduced(ek, k)) throw new Error(`${who}: ML-KEM encapsulation key fails the FIPS 203 modulus check`);
+}
+
+/** A defined boundary for hostile input: a non-bytes argument is refused with a stable message, never a raw engine crash. */
+function needBytes(fn: string, what: string, v: unknown): void {
+  if (!(v instanceof Uint8Array)) throw new TypeError(`${fn}: ${what} must be a Uint8Array`);
+}
+
 /** Encapsulate to a recipient public key: returns the ciphertext (send it) + the shared secret (keep it). */
 export function hybridEncapsulate(recipientPublicKey: Uint8Array): HybridEncapsulation {
+  needBytes('hybridEncapsulate', 'public key', recipientPublicKey);
   if (recipientPublicKey.length !== HYBRID_PUBLIC_KEY_LEN) {
     throw new Error(`hybridEncapsulate: public key must be ${HYBRID_PUBLIC_KEY_LEN} bytes (got ${recipientPublicKey.length})`);
   }
@@ -92,6 +110,7 @@ export function hybridEncapsulate(recipientPublicKey: Uint8Array): HybridEncapsu
   const ephPub = x25519.getPublicKey(ephPriv);
   const ssX = x25519.getSharedSecret(ephPriv, recipX);
 
+  requireReducedEk(recipMlkem, 3, 'hybridEncapsulate');
   const { cipherText: mlkemCt, sharedSecret: ssMlkem } = ml_kem768.encapsulate(recipMlkem);
 
   return {
@@ -102,6 +121,8 @@ export function hybridEncapsulate(recipientPublicKey: Uint8Array): HybridEncapsu
 
 /** Decapsulate with the recipient secret key: recovers the same shared secret. */
 export function hybridDecapsulate(ciphertext: Uint8Array, secretKey: Uint8Array): Uint8Array {
+  needBytes('hybridDecapsulate', 'ciphertext', ciphertext);
+  needBytes('hybridDecapsulate', 'secret key', secretKey);
   if (ciphertext.length !== HYBRID_CIPHERTEXT_LEN) {
     throw new Error(`hybridDecapsulate: ciphertext must be ${HYBRID_CIPHERTEXT_LEN} bytes (got ${ciphertext.length})`);
   }
@@ -241,6 +262,8 @@ export function xwingKeygen(seed?: Uint8Array): XWingKeyPair {
  * encapsulation (HPKE-style vectors); production code should prefer {@link xwingEncapsulate}.
  */
 export function xwingEncapsulateDerand(recipientPublicKey: Uint8Array, eseed: Uint8Array): XWingEncapsulation {
+  needBytes('xwingEncapsulateDerand', 'public key', recipientPublicKey);
+  needBytes('xwingEncapsulateDerand', 'eseed', eseed);
   if (recipientPublicKey.length !== XWING_PUBLIC_KEY_LEN) {
     throw new Error(`xwingEncapsulateDerand: public key must be ${XWING_PUBLIC_KEY_LEN} bytes (got ${recipientPublicKey.length})`);
   }
@@ -252,6 +275,7 @@ export function xwingEncapsulateDerand(recipientPublicKey: Uint8Array, eseed: Ui
   const mlkemMsg = eseed.subarray(0, 32);
   const ekX = eseed.subarray(32, 64);
 
+  requireReducedEk(pkM, 3, 'xwingEncapsulateDerand');
   const { cipherText: ctM, sharedSecret: ssM } = ml_kem768.encapsulate(pkM, mlkemMsg);
   const ctX = x25519.getPublicKey(ekX);
   const ssX = x25519.getSharedSecret(ekX, pkX);
@@ -266,6 +290,8 @@ export function xwingEncapsulate(recipientPublicKey: Uint8Array): XWingEncapsula
 
 /** Decapsulate an X-Wing ciphertext with the 32-byte seed secret key: recovers the same shared secret. */
 export function xwingDecapsulate(ciphertext: Uint8Array, secretKey: Uint8Array): Uint8Array {
+  needBytes('xwingDecapsulate', 'ciphertext', ciphertext);
+  needBytes('xwingDecapsulate', 'secret key', secretKey);
   if (ciphertext.length !== XWING_CIPHERTEXT_LEN) {
     throw new Error(`xwingDecapsulate: ciphertext must be ${XWING_CIPHERTEXT_LEN} bytes (got ${ciphertext.length})`);
   }
@@ -318,6 +344,7 @@ export function hybridKem1024Keygen(): HybridKemKeyPair {
 
 /** Encapsulate to a hybrid X25519 + ML-KEM-1024 public key. */
 export function hybridEncapsulate1024(recipientPublicKey: Uint8Array): HybridEncapsulation {
+  needBytes('hybridEncapsulate1024', 'public key', recipientPublicKey);
   if (recipientPublicKey.length !== HYBRID1024_PUBLIC_KEY_LEN) {
     throw new Error(`hybridEncapsulate1024: public key must be ${HYBRID1024_PUBLIC_KEY_LEN} bytes (got ${recipientPublicKey.length})`);
   }
@@ -328,6 +355,7 @@ export function hybridEncapsulate1024(recipientPublicKey: Uint8Array): HybridEnc
   const ephPub = x25519.getPublicKey(ephPriv);
   const ssX = x25519.getSharedSecret(ephPriv, recipX);
 
+  requireReducedEk(recipMlkem, 4, 'hybridEncapsulate1024');
   const { cipherText: mlkemCt, sharedSecret: ssMlkem } = ml_kem1024.encapsulate(recipMlkem);
 
   return { ciphertext: cat(ephPub, mlkemCt), sharedSecret: combine1024(ssMlkem, ssX, ephPub, recipX) };
@@ -335,6 +363,8 @@ export function hybridEncapsulate1024(recipientPublicKey: Uint8Array): HybridEnc
 
 /** Decapsulate with a hybrid X25519 + ML-KEM-1024 secret key. */
 export function hybridDecapsulate1024(ciphertext: Uint8Array, secretKey: Uint8Array): Uint8Array {
+  needBytes('hybridDecapsulate1024', 'ciphertext', ciphertext);
+  needBytes('hybridDecapsulate1024', 'secret key', secretKey);
   if (ciphertext.length !== HYBRID1024_CIPHERTEXT_LEN) {
     throw new Error(`hybridDecapsulate1024: ciphertext must be ${HYBRID1024_CIPHERTEXT_LEN} bytes (got ${ciphertext.length})`);
   }
@@ -352,4 +382,34 @@ export function hybridDecapsulate1024(ciphertext: Uint8Array, secretKey: Uint8Ar
 
   const recipX = x25519.getPublicKey(xPriv);
   return combine1024(ssMlkem, ssX, ephPub, recipX);
+}
+
+// ==================================================================================================
+// FIPS 203 §7.2 / §7.3 input checks for ML-KEM keys that did not come from this process's own keygen
+// (a key read from storage or a peer). The hybrid and X-Wing entry points above do NOT run them on every call:
+// encapsulation enforces the §7.2 modulus check itself (it throws), while decapsulation
+// trusts a locally generated secret key. Call these before accepting an imported key.
+// ==================================================================================================
+
+const MLKEM_LEVELS = { 768: { k: 3, ml: ml_kem768 }, 1024: { k: 4, ml: ml_kem1024 } } as const;
+
+/** FIPS 203 §7.2 type and modulus check of an ML-KEM encapsulation key. Returns false for any wrong length or non-reduced coefficient; never throws. */
+export function mlKemEncapsulationKeyCheck(level: 768 | 1024, ek: Uint8Array): boolean {
+  if (!(level in MLKEM_LEVELS)) throw new RangeError(`mlKemEncapsulationKeyCheck: level must be 768 or 1024`);
+  const { k } = MLKEM_LEVELS[level];
+  if (!(ek instanceof Uint8Array) || ek.length !== 384 * k + 32) return false;
+  return mlKemCoefficientsReduced(ek, k);
+}
+
+/** FIPS 203 §7.3 check of an ML-KEM decapsulation key: length, embedded H(ek) and the embedded key's modulus check. Never throws. */
+export function mlKemDecapsulationKeyCheck(level: 768 | 1024, dk: Uint8Array): boolean {
+  if (!(level in MLKEM_LEVELS)) throw new RangeError(`mlKemDecapsulationKeyCheck: level must be 768 or 1024`);
+  const { k } = MLKEM_LEVELS[level];
+  if (!(dk instanceof Uint8Array) || dk.length !== 768 * k + 96) return false;
+  const ek = dk.subarray(384 * k, 768 * k + 32);
+  const h = dk.subarray(768 * k + 32, 768 * k + 64);
+  const want = sha3_256(ek);
+  let diff = 0;
+  for (let i = 0; i < 32; i++) diff |= want[i]! ^ h[i]!;
+  return diff === 0 && mlKemEncapsulationKeyCheck(level, ek);
 }
