@@ -2,8 +2,8 @@ name: Mutation testing (Stryker)
 
 # Stryker over every non-test source file of the audited TypeScript packages (the packages that appear in the
 # equivalent-mutant ledger tools/pca-audit/mutation-equivalents.json), with the audited configuration
-# (tools/pca-audit/stryker/run.sh: vitest runner, perTest coverage). The files are cut into 16 shards of about equal size
-# (.github/scripts/ts-stryker-plan.mjs); the merge job checks every report is present, prints the mutation score and runs
+# (tools/pca-audit/stryker/run.sh: vitest runner, perTest coverage). The files are cut into 138 shards, each predicted to finish in <= 40 minutes (by predicted wall time, big files in line
+# ranges: .github/scripts/ts-stryker-plan.mjs, .github/scripts/ts-stryker-cost.json; `ts-stryker-plan.mjs count` is the shard count: keep SHARDS and the matrix list equal to it); the merge job checks every report is present, prints the mutation score and runs
 # the ledger check: every survivor must be a listed, justified equivalent and no listed equivalent may be stale.
 # Heavy: manual dispatch, or a push to a ci/** branch (release-candidate checks).
 on:
@@ -18,11 +18,11 @@ on:
         type: boolean
         default: false
       only:
-        description: 'comma-separated shard numbers to run (empty = all 16)'
+        description: 'comma-separated shard numbers to run (empty = all 138)'
         default: ''
       shards:
-        description: 'number of shards to cut the plan into (default 48; a different count needs a full run: list every shard in only, no baselines)'
-        default: '48'
+        description: 'number of shards to cut the plan into (default 138; a different count needs a full run: list every shard in only, no baselines)'
+        default: '138'
       baseline_run:
         description: 'run id whose shard reports fill in the shards not run here (for the merge)'
         default: ''
@@ -45,7 +45,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 env:
-  SHARDS: ${{ inputs.shards || '48' }}
+  SHARDS: ${{ inputs.shards || '138' }}
 
 jobs:
   reuse:
@@ -70,7 +70,7 @@ jobs:
           FORCE_FULL: ${{ inputs.force_full || inputs.full || vars.FORCE_FULL == '1' || contains(github.event.head_commit.message, '[force-full]') }}
           GATE_FULL: ${{ inputs.full || (startsWith(github.ref_name, 'ci/') && endsWith(github.ref_name, '-rc') || startsWith(github.ref_name, 'ci/gate-')) || contains(github.event.head_commit.message, '[force-full]') }}
           PARTIAL: ${{ inputs.only != '' || inputs.baseline_run != '' || inputs.baseline_run_2 != '' || inputs.baseline_run_3 != '' || inputs.incremental }}
-          EXTRA: shards=${{ inputs.shards || '48' }}
+          EXTRA: shards=${{ inputs.shards || '138' }}
         run: node .github/scripts/ci-reuse.mjs check --workflow=stryker --self=.github/workflows/stryker.yml --exclude='docs/,examples/,*.md,formal/' --extra="$EXTRA" --always-full
   # incremental fix round (inputs.incremental): which shards / files to re-test, from the baseline run's manifest + shard reports
   # (ts-stryker-incremental.mjs). Rule: re-test every changed mutated source and every file with a survivor; ANY other change = full.
@@ -126,13 +126,13 @@ jobs:
     # runs after the incremental plan (skipped unless inputs.incremental); a failed plan fails the run, it never falls back silently
     if: ${{ !cancelled() && needs.reuse.outputs.skip != 'true' && needs.inc.result != 'failure' }}
     needs: [reuse, inc]
-    name: shard ${{ matrix.shard }}/${{ inputs.shards || '48' }}
+    name: shard ${{ matrix.shard }}/${{ inputs.shards || '138' }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(needs.inc.outputs.shards != '' && needs.inc.outputs.shards || inputs.only != '' && format('[{0}]', inputs.only) || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]') }}
+        shard: ${{ fromJSON(needs.inc.outputs.shards != '' && needs.inc.outputs.shards || inputs.only != '' && format('[{0}]', inputs.only) || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -141,6 +141,7 @@ jobs:
           node-version: 24
       - name: Shard plan
         run: |
+          [ -n "${{ inputs.shards }}" ] || [ "$(node .github/scripts/ts-stryker-plan.mjs count)" = "$SHARDS" ] || { echo "::error::the plan has $(node .github/scripts/ts-stryker-plan.mjs count) shards but SHARDS / the matrix say $SHARDS: update stryker.yml"; exit 1; }
           node .github/scripts/ts-stryker-plan.mjs ${{ matrix.shard }} $SHARDS | tee "$RUNNER_TEMP/plan.txt"
           f=""; for p in $(cut -d' ' -f1 "$RUNNER_TEMP/plan.txt"); do f="$f --filter={./packages/$p}..."; done
           echo "FILTER=$f" >> "$GITHUB_ENV"

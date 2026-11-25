@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // Regenerates every ref-*.json.gz oracle corpus from tools/pca-audit/oracles/*.mts and compares it with the copies the native
 // lanes commit (their test-data directories, fetched from the native repositories).
-//   node oracle-corpora.mjs --lanes=<dir with the pca-<lang> clones> --report=<dir> [--jobs=4]
+//   node oracle-corpora.mjs --lanes=<dir with the pca-<lang> clones> --report=<dir> [--jobs=4] [--shard=k/n | --list-generators]
+// --shard=k/n runs generator shard k of n (longest-first over the measured generator times, so no shard is much longer than the vdf generator
+// alone) and compares only the corpora those generators wrote; the shards together cover every generator (--list-generators prints them,
+// the workflow's merge job checks the union of the shards' lists).
 // Steps, as the generator headers say: tsx --tsconfig tools/pca-audit/oracles/tsconfig.json <generator>.mts (PCA_SEED_LOG names the
 // seed labels each generator derived), then the key strip (strip-corpus-keys.py with those labels, the corpus-specific *-strip-keys.py
 // and action-schema-strip.py) so no corpus carries raw key bytes, as the committed copies do. The -gen halves (cases carrying a
@@ -43,7 +46,19 @@ for (const [mod, owner] of [['jose', 'pca-oidc'], ['yaml', 'pca-actions'], ['@no
 
 // ---- 1. generators: every oracle that writes a corpus (the others emit source files or are imported helpers)
 const gens = readdirSync(OR).filter((f) => f.endsWith('.mts')).filter((f) => f !== 'attest-roots-kit.mts' && /\b(refWrite|refWriteBlobs|splitWrite)\(/.test(readFileSync(join(OR, f), 'utf8'))).sort();
+const allGens = gens.slice();
+if (process.argv.includes('--list-generators')) { console.log(allGens.join('\n')); process.exit(0); }
 const skipped = readdirSync(OR).filter((f) => f.endsWith('.mts') && !gens.includes(f));
+// measured seconds of one generator pass (run 45568594634); anything else is ~10 s. Longest first onto the lightest shard.
+const W = { 'vdf.mts': 459, 'abe-go.mts': 185, 'abe.mts': 179, 'analyzer.mts': 153, 'aggsig.mts': 93, 'frost-dkg.mts': 76, 'ratchet.mts': 74, 'attest-eat.mts': 60 };
+const SHARD = arg('shard', '1/1').split('/').map(Number);
+if (SHARD[1] > 1) {
+  const bins = Array.from({ length: SHARD[1] }, () => ({ w: 0, g: [] }));
+  for (const g of [...gens].sort((a, b) => (W[b] ?? 10) - (W[a] ?? 10) || a.localeCompare(b))) { const b = bins.reduce((m, x) => (x.w < m.w ? x : m)); b.w += W[g] ?? 10; b.g.push(g); }
+  gens.splice(0, gens.length, ...bins[SHARD[0] - 1].g.sort());
+  console.log(`shard ${SHARD[0]}/${SHARD[1]}: ${gens.length} of ${allGens.length} generators`);
+}
+writeFileSync(join(REPORT, 'generators.txt'), gens.join('\n') + '\n'); // the merge job checks the shards' union is every generator
 const run1 = (g, extraEnv = {}) => new Promise((done) => {
   const t0 = Date.now();
   const p = spawn(TSX, ['--tsconfig', join(OR, 'tsconfig.json'), join(OR, g)], { cwd: ROOT, env: { ...process.env, ...extraEnv, PCA_SEED_LOG: join(SEEDS, g.replace(/\.mts$/, '.txt')), NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import ${join(OR, 'determinism.mjs')}`.trim() }, stdio: ['ignore', 'pipe', 'pipe'], detached: true });

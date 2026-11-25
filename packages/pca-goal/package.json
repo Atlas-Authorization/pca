@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-goal",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Goal IR for PCA goal-to-decision: a typed, signed Goal compiled by a deterministic, machine-proved compiler (Dafny, extracted) into a policy with a witness for every Allow; lossless card render/parse.",
   "license": "MIT",
   "homepage": "https://github.com/Atlas-Authorization/pca#readme",

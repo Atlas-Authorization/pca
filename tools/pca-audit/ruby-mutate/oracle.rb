@@ -138,7 +138,27 @@ module Oracle
     # exactly that reason in run 39866841074).
     lib_text = src.call(LIB)
     exts = lib_text.scan(REQUIRE_RE).flatten.map { |rel| File.join(ROOT, 'lib', "#{rel}.rb") }
-    [[LIB, lib_text], *exts.map { |path| [path, src.call(path)] }, [MW, src.call(MW)], *@opt_in.map { |path| [path, src.call(path)] }].each do |path, text|
+    # A file whose body names a constant of a later-listed file (`J = GoalJs` in approval_channels.rb, goal_js.rb being listed
+    # 150 requires further down) works on the first load because its own `require_relative` loads the dependency first. Here
+    # the dependency is already in $LOADED_FEATURES, so that require is a no-op: evaluate each file's (own or opt-in)
+    # dependencies, read from the text being evaluated, before the file itself (the order a first load would use).
+    universe = [*exts, *@opt_in].uniq
+    seen = {}
+    ordered = []
+    visit = lambda do |path|
+      next if seen[path]
+
+      seen[path] = true
+      src.call(path).scan(/^\s*require_relative '([^']+)'/).flatten.each do |rel|
+        dep = File.expand_path("#{rel}.rb", File.dirname(path))
+        visit.call(dep) if universe.include?(dep)
+      end
+      ordered << path
+    end
+    exts.each { |path| visit.call(path) }
+    n_ext = ordered.length
+    @opt_in.each { |path| visit.call(path) }
+    [[LIB, lib_text], *ordered[0, n_ext].map { |path| [path, src.call(path)] }, [MW, src.call(MW)], *ordered[n_ext..].map { |path| [path, src.call(path)] }].each do |path, text|
       eval(text, TOPLEVEL_BINDING, path) # rubocop:disable Security/Eval
     end
   end

@@ -2158,17 +2158,6 @@
   {
    "package": "pca-sdjwt",
    "file": "src/index.ts",
-   "mutator": "StringLiteral",
-   "original": "''",
-   "replacement": "\"Stryker was here!\"",
-   "line": "payload = JSON.parse(Buffer.from(parsed.jwt.split('.')[1] ?? '', 'base64url').toString('utf8'));",
-   "occurrence": 1,
-   "lineno": 411,
-   "reason": "unreachable: parseSdJwt has already verified (assertCanonicalCompactJws) that the issuer JWT payload is a JSON object, and walk() of an object payload returns an object."
-  },
-  {
-   "package": "pca-sdjwt",
-   "file": "src/index.ts",
    "mutator": "BlockStatement",
    "original": "<multiline>",
    "replacement": "{}",
@@ -21927,61 +21916,6 @@
   {
    "package": "pca-ap2",
    "file": "src/sdjwt.ts",
-   "mutator": "ArrayDeclaration",
-   "original": "[]",
-   "replacement": "[\"Stryker was here\"]",
-   "line": "const stack: (Set<string> | null)[] = [];",
-   "occurrence": 1,
-   "lineno": 58,
-   "reason": "assertNoDuplicateKeys only ever sees text that JSON.parse already accepted, so the stack is balanced and the stray expectKey/stack/loop-bound states are never read before being reset."
-  },
-  {
-   "package": "pca-ap2",
-   "file": "src/sdjwt.ts",
-   "mutator": "BooleanLiteral",
-   "original": "false",
-   "replacement": "true",
-   "line": "let expectKey = false;",
-   "occurrence": 1,
-   "lineno": 59,
-   "reason": "assertNoDuplicateKeys only ever sees text that JSON.parse already accepted, so the stack is balanced and the stray expectKey/stack/loop-bound states are never read before being reset."
-  },
-  {
-   "package": "pca-ap2",
-   "file": "src/sdjwt.ts",
-   "mutator": "EqualityOperator",
-   "original": "i < text.length",
-   "replacement": "i <= text.length",
-   "line": "for (let i = 0; i < text.length; i++) {",
-   "occurrence": 1,
-   "lineno": 60,
-   "reason": "assertNoDuplicateKeys only ever sees text that JSON.parse already accepted, so the stack is balanced and the stray expectKey/stack/loop-bound states are never read before being reset."
-  },
-  {
-   "package": "pca-ap2",
-   "file": "src/sdjwt.ts",
-   "mutator": "BooleanLiteral",
-   "original": "false",
-   "replacement": "true",
-   "line": "expectKey = false;",
-   "occurrence": 2,
-   "lineno": 78,
-   "reason": "assertNoDuplicateKeys '[' branch: the top of stack becomes null, and expectKey is only read as expectKey && top, so true vs false is irrelevant until a '{' (sets true), ',' (recomputed), or ']' (reset) — the text already passed JSON.parse."
-  },
-  {
-   "package": "pca-ap2",
-   "file": "src/sdjwt.ts",
-   "mutator": "BooleanLiteral",
-   "original": "false",
-   "replacement": "true",
-   "line": "expectKey = false;",
-   "occurrence": 3,
-   "lineno": 81,
-   "reason": "assertNoDuplicateKeys '}'/']' branch: in text JSON.parse accepted, a closed container is followed only by ',', another closer, or end, all of which overwrite expectKey before any string is read, so the stray true is never observed."
-  },
-  {
-   "package": "pca-ap2",
-   "file": "src/sdjwt.ts",
    "mutator": "StringLiteral",
    "original": "'ascii'",
    "replacement": "\"\"",
@@ -23637,17 +23571,6 @@
   {
    "package": "pca-mpc",
    "file": "src/net/mesh.ts",
-   "mutator": "BooleanLiteral",
-   "original": "true",
-   "replacement": "false",
-   "line": "return resolve(true);",
-   "occurrence": 1,
-   "lineno": 251,
-   "reason": "The dial loop is also ended by this.failure, which connect() sets on the same deadline (and on an identity failure), so the clock comparison and the resolve value after a failure cannot change what happens next."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/mesh.ts",
    "mutator": "ConditionalExpression",
    "original": "!sock.authorized || id === undefined",
    "replacement": "false",
@@ -24407,83 +24330,6 @@
    "occurrence": 1,
    "lineno": 137,
    "reason": "No verdict field carries a bigint (results, link stats and NetAbort fields are numbers/strings), so the bigint-to-string replacer is never exercised; it only guards JSON.stringify against a future bigint field."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "StringLiteral",
-   "original": "'127.0.0.1'",
-   "replacement": "\"\"",
-   "line": "s.listen(0, '127.0.0.1', () => {",
-   "occurrence": 1,
-   "lineno": 48,
-   "reason": "freePort probes with an ephemeral port (0): listening on '' (all interfaces) instead of 127.0.0.1 picks a port that is equally free on loopback, and the probe socket is closed before the port is returned."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "StringLiteral",
-   "original": "'error'",
-   "replacement": "\"\"",
-   "line": "s.on('error', rej);",
-   "occurrence": 1,
-   "lineno": 52,
-   "reason": "Listening on port 0 cannot fail on a machine that can run the tests, so the rejection handler for a listen error is never reached."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "StringLiteral",
-   "original": "'127.0.0.1'",
-   "replacement": "\"\"",
-   "line": "proxy = new FaultProxy(proxyPort, { host: '127.0.0.1', port: ports[o.wireFault.target]! }, { ...o.wireFault.fault, ...(o.wireFault.fault.ms !== undefined ? { ms: T(o.wireFault.fault.ms) } : {}) });",
-   "occurrence": 1,
-   "lineno": 69,
-   "reason": "net.connect with host '' connects to localhost, which resolves to 127.0.0.1 on every farm box (checked: net.connect({host:''}) targets 127.0.0.1 on node v24.21.0); the proxy reaches the same target."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "ConditionalExpression",
-   "original": "o.wireFault.fault.ms !== undefined",
-   "replacement": "false",
-   "line": "proxy = new FaultProxy(proxyPort, { host: '127.0.0.1', port: ports[o.wireFault.target]! }, { ...o.wireFault.fault, ...(o.wireFault.fault.ms !== undefined ? { ms: T(o.wireFault.fault.ms) } : {}) });",
-   "occurrence": 1,
-   "lineno": 69,
-   "reason": "When a delay ms is given the launcher scales it with T(); at the default scale (PCA_MPC_TEST_TIMEOUT_SCALE unset, scale 1) T(ms) === ms, so dropping or always applying the scaling of a GIVEN ms is unobservable (a missing ms is covered by the one-second default test)."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "ObjectLiteral",
-   "original": "{ ms: T(o.wireFault.fault.ms) }",
-   "replacement": "{}",
-   "line": "proxy = new FaultProxy(proxyPort, { host: '127.0.0.1', port: ports[o.wireFault.target]! }, { ...o.wireFault.fault, ...(o.wireFault.fault.ms !== undefined ? { ms: T(o.wireFault.fault.ms) } : {}) });",
-   "occurrence": 1,
-   "lineno": 69,
-   "reason": "When a delay ms is given the launcher scales it with T(); at the default scale (PCA_MPC_TEST_TIMEOUT_SCALE unset, scale 1) T(ms) === ms, so dropping or always applying the scaling of a GIVEN ms is unobservable (a missing ms is covered by the one-second default test)."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "MethodExpression",
-   "original": "so.trim().split('\\n').filter(Boolean)",
-   "replacement": "so.trim().split('\\n')",
-   "line": "const line = so.trim().split('\\n').filter(Boolean).pop();",
-   "occurrence": 1,
-   "lineno": 111,
-   "reason": "In launchLocal's close handler, after trim() the segment after the last newline is non-empty unless the whole output is empty ([''] -> pop '' vs [] -> undefined, both falsy so json stays null); filtering empty lines cannot change the result."
-  },
-  {
-   "package": "pca-mpc",
-   "file": "src/net/launch-local.ts",
-   "mutator": "MethodExpression",
-   "original": "so.trim().split('\\n').filter(Boolean)",
-   "replacement": "so.trim().split('\\n')",
-   "line": "const line = so.trim().split('\\n').filter(Boolean).pop();",
-   "occurrence": 2,
-   "lineno": 170,
-   "reason": "In launchOtLocal's close handler, after trim() the segment after the last newline is non-empty unless the output is empty, where '' and undefined are both falsy and json stays null; filter(Boolean) cannot change the result."
   },
   {
    "package": "pca-mpc",
@@ -35156,72 +35002,6 @@
   {
    "package": "pca-intent",
    "file": "src/compilers.ts",
-   "mutator": "ConditionalExpression",
-   "original": "p <= 0 || p >= 1",
-   "replacement": "false",
-   "line": "return p <= 0 || p >= 1 ? 0 : -(p * Math.log2(p) + (1 - p) * Math.log2(1 - p));",
-   "occurrence": 1,
-   "lineno": 238,
-   "reason": "h2 has a single call site, guarded by vote > 0 && vote < 1, so p is strictly inside (0,1) and the early-return guard is never taken."
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/compilers.ts",
-   "mutator": "LogicalOperator",
-   "original": "p <= 0 || p >= 1",
-   "replacement": "p <= 0 && p >= 1",
-   "line": "return p <= 0 || p >= 1 ? 0 : -(p * Math.log2(p) + (1 - p) * Math.log2(1 - p));",
-   "occurrence": 1,
-   "lineno": 238,
-   "reason": "h2 is only called with 0 < p < 1 (caller guard vote > 0 && vote < 1): both operands are false there, so || and && agree."
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/compilers.ts",
-   "mutator": "ConditionalExpression",
-   "original": "p <= 0",
-   "replacement": "false",
-   "line": "return p <= 0 || p >= 1 ? 0 : -(p * Math.log2(p) + (1 - p) * Math.log2(1 - p));",
-   "occurrence": 1,
-   "lineno": 238,
-   "reason": "h2 is only called with 0 < p < 1, where p <= 0 is already false."
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/compilers.ts",
-   "mutator": "EqualityOperator",
-   "original": "p <= 0",
-   "replacement": "p < 0",
-   "line": "return p <= 0 || p >= 1 ? 0 : -(p * Math.log2(p) + (1 - p) * Math.log2(1 - p));",
-   "occurrence": 1,
-   "lineno": 238,
-   "reason": "h2 is only called with 0 < p < 1, where both p <= 0 and p < 0 are false."
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/compilers.ts",
-   "mutator": "ConditionalExpression",
-   "original": "p >= 1",
-   "replacement": "false",
-   "line": "return p <= 0 || p >= 1 ? 0 : -(p * Math.log2(p) + (1 - p) * Math.log2(1 - p));",
-   "occurrence": 1,
-   "lineno": 238,
-   "reason": "h2 is only called with 0 < p < 1, where p >= 1 is already false."
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/compilers.ts",
-   "mutator": "EqualityOperator",
-   "original": "p >= 1",
-   "replacement": "p > 1",
-   "line": "return p <= 0 || p >= 1 ? 0 : -(p * Math.log2(p) + (1 - p) * Math.log2(1 - p));",
-   "occurrence": 1,
-   "lineno": 238,
-   "reason": "h2 is only called with 0 < p < 1, where both p >= 1 and p > 1 are false."
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/compilers.ts",
    "mutator": "EqualityOperator",
    "original": "i < outputs.length",
    "replacement": "i <= outputs.length",
@@ -36924,17 +36704,6 @@
    "occurrence": 1,
    "lineno": 608,
    "reason": "the only classes whose decay is read are union and decision-list; for kind box the decay is validated but never used (raw = 1 when complexity is null), and the 0.25 fallback is valid"
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/learner.ts",
-   "mutator": "ArithmeticOperator",
-   "original": "m.complexity[h]! - 1",
-   "replacement": "m.complexity[h]! + 1",
-   "line": "const raw = m.complexity ? Math.pow(decay, m.complexity[h]! - 1) : 1;",
-   "occurrence": 1,
-   "lineno": 616,
-   "reason": "every raw weight is scaled by the same constant decay^2; w = (1-nm)*raw/z cancels it, so the prior is mathematically identical (and bit-identical up to rounding of the power)"
   },
   {
    "package": "pca-intent",
@@ -53514,28 +53283,6 @@
    "occurrence": 1,
    "lineno": 273,
    "reason": "harmonic is only called with n >= 0 (b + 1 > 0 and a >= lo >= 0 on the loguniform branch); for n = 0 the exact loop adds nothing and returns 0, the same as the early return."
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/omega.ts",
-   "mutator": "ArithmeticOperator",
-   "original": "Math.log(n) + EULER_GAMMA + 1 / (2 * n) - 1 / (12 * n2) + 1 / (120 * n2 * n2) - 1 / (252 * n2 * n2 * n2)",
-   "replacement": "Math.log(n) + EULER_GAMMA + 1 / (2 * n) - 1 / (12 * n2) + 1 / (120 * n2 * n2) + 1 / (252 * n2 * n2 * n2)",
-   "line": "return Math.log(n) + EULER_GAMMA + 1 / (2 * n) - 1 / (12 * n2) + 1 / (120 * n2 * n2) - 1 / (252 * n2 * n2 * n2);",
-   "occurrence": 1,
-   "lineno": 280,
-   "reason": "For n > EXACT_SPAN the 1/(120 n^4) and 1/(252 n^6) terms are below 3e-17, less than half an ulp of the running sum (>= 8.3, ulp 1.8e-15), so flipping their sign never changes the double result."
-  },
-  {
-   "package": "pca-intent",
-   "file": "src/omega.ts",
-   "mutator": "ArithmeticOperator",
-   "original": "Math.log(n) + EULER_GAMMA + 1 / (2 * n) - 1 / (12 * n2) + 1 / (120 * n2 * n2)",
-   "replacement": "Math.log(n) + EULER_GAMMA + 1 / (2 * n) - 1 / (12 * n2) - 1 / (120 * n2 * n2)",
-   "line": "return Math.log(n) + EULER_GAMMA + 1 / (2 * n) - 1 / (12 * n2) + 1 / (120 * n2 * n2) - 1 / (252 * n2 * n2 * n2);",
-   "occurrence": 1,
-   "lineno": 280,
-   "reason": "For n > EXACT_SPAN the 1/(120 n^4) and 1/(252 n^6) terms are below 3e-17, less than half an ulp of the running sum (>= 8.3, ulp 1.8e-15), so flipping their sign never changes the double result."
   },
   {
    "package": "pca-intent",

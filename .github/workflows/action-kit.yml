@@ -331,12 +331,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: authoring
-            files: src/author.ts src/build.ts src/lint.ts src/explain.ts src/test-runner.ts src/normalize.ts
-          # schema as one leg overran the 4 h cap (one mutant at a time, the most-tested modules): three legs
-          - name: schema-def
+          - name: authoring-1
+            files: src/author.ts:1-414
+          - name: authoring-2
+            files: src/author.ts:415-999999 src/build.ts src/lint.ts:1-275
+          - name: authoring-3
+            files: src/lint.ts:276-999999 src/explain.ts src/test-runner.ts src/normalize.ts
+          # schema as one leg overran the 4 h cap (one mutant at a time, the most-tested modules): three legs. Every leg is predicted to run <= 40 minutes: legs that measured longer (runs 45500400027 and 45679316426) are cut again (-1, -2, ...) at mutant-free lines, equal mutant counts
+          - name: schema-def-1
             sandbox: true
-            files: src/def.ts src/validate.ts
+            files: src/def.ts src/validate.ts:1-68
+          - name: schema-def-2
+            sandbox: true
+            files: src/validate.ts:69-166
+          - name: schema-def-3
+            sandbox: true
+            files: src/validate.ts:167-999999
           - name: schema-derive
             sandbox: true
             files: src/derive.ts
@@ -347,8 +357,10 @@ jobs:
             files: src/pack.ts src/registry.ts src/evolve.ts src/compat.ts src/diff.ts src/defdiff.ts src/selector.ts src/transparency.ts
           - name: catalog
             files: src/domain.ts src/builtin.ts src/builtin-review.ts src/facade-spec.ts
-          - name: importers
-            files: src/import/common.ts src/import/rules.ts src/import/pipeline.ts src/import/registry.ts src/import/mcp.ts src/import/jsonschema.ts src/import/openapi.ts src/import/asyncapi.ts src/import/graphql.ts src/import/grpc.ts src/import/eval.ts
+          - name: importers-1
+            files: src/import/common.ts src/import/rules.ts src/import/pipeline.ts src/import/registry.ts src/import/mcp.ts src/import/jsonschema.ts src/import/openapi.ts
+          - name: importers-2
+            files: src/import/asyncapi.ts src/import/graphql.ts src/import/grpc.ts src/import/eval.ts
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -393,30 +405,54 @@ jobs:
           # shard, each in a sandbox copy with 4 workers (run.sh links the sibling packages, so the relative ../pca-verified-core resolves)
           - name: compile-codec
             files: src/ir.ts src/codec.ts
-          - name: compile-rest
-            files: src/compiler.ts src/crc.ts src/digests.ts src/normalize.ts src/legacy.ts src/refsem.ts src/roundtrip.ts
+          - name: compile-rest-1
+            files: src/compiler.ts src/crc.ts src/digests.ts src/normalize.ts src/legacy.ts:1-25
+          - name: compile-rest-2
+            files: src/legacy.ts:26-999999 src/refsem.ts:1-123
+          - name: compile-rest-3
+            files: src/refsem.ts:124-999999 src/roundtrip.ts
           # ontology.ts carries 1,700 mutants (6.5 an hour per worker ran 67% in 4 h), examples.ts 650 with many timeouts: line-range shards
-          - name: interpret-ontology-a
-            files: src/ontology.ts:1-150
+          - name: interpret-ontology-a-1
+            files: src/ontology.ts:1-82
+          - name: interpret-ontology-a-2
+            files: src/ontology.ts:83-98
+          - name: interpret-ontology-a-3
+            files: src/ontology.ts:99-125
+          - name: interpret-ontology-a-4
+            files: src/ontology.ts:126-150
           - name: interpret-ontology-b
             files: src/ontology.ts:151-300
-          - name: interpret-ontology-c
-            files: src/ontology.ts:301-455
+          - name: interpret-ontology-c-1
+            files: src/ontology.ts:301-330
+          - name: interpret-ontology-c-2
+            files: src/ontology.ts:331-455
           # measured at ~4 workers: interpret-core and interpret-examples needed ~4.3 h and ~4 h, so each is two legs (Stryker line ranges)
-          - name: interpret-core-a
-            files: src/interpret.ts:1-180
-          - name: interpret-core-b
-            files: src/interpret.ts:181-400 src/disambiguate.ts
-          - name: interpret-examples-a
-            files: src/examples.ts:1-145
+          - name: interpret-core-a-1
+            files: src/interpret.ts:1-94
+          - name: interpret-core-a-2
+            files: src/interpret.ts:95-180
+          - name: interpret-core-b-1
+            files: src/interpret.ts:181-229
+          - name: interpret-core-b-2
+            files: src/interpret.ts:230-400
+          - name: interpret-core-b-3
+            files: src/disambiguate.ts
+          - name: interpret-examples-a-1
+            files: src/examples.ts:1-70
+          - name: interpret-examples-a-2
+            files: src/examples.ts:71-145
           - name: interpret-examples-b
             files: src/examples.ts:146-289
-          - name: interpret-precedent
-            files: src/precedent.ts src/nversion.ts src/drift.ts
+          - name: interpret-precedent-1
+            files: src/precedent.ts src/nversion.ts:1-34
+          - name: interpret-precedent-2
+            files: src/nversion.ts:35-999999 src/drift.ts
           - name: review-core
             files: src/review.ts
-          - name: review-rest
-            files: src/sign.ts src/card.ts src/fmt.ts src/bench.ts
+          - name: review-rest-1
+            files: src/sign.ts src/card.ts src/fmt.ts src/bench.ts:1-72
+          - name: review-rest-2
+            files: src/bench.ts:73-999999
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

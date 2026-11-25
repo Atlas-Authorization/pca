@@ -37,7 +37,7 @@ while read -r pkg files; do
   if [ "$pkg" = "pca-verified-core" ]; then
     merkle=""; regex=""; attest=""; extother=""; rest=""
     for f in $files; do
-      case "$f" in
+      case "${f%%:*}" in # a file cut into line ranges (file:a-b) keeps its group
         src/ext-merkle.ts) merkle="$merkle $f" ;;
         src/ext-attest.ts) attest="$attest $f" ;;
         src/ext-regex.ts) regex="$regex $f" ;;

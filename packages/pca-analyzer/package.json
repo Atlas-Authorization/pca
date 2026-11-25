@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-analyzer",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Static authority analyzer for Proof-Carrying Authority: a sound, bounded decision procedure over PCA's predicate/caveat policy (reachability, totality, subsumption, equivalence, intent conformance) plus analysis and authoring tools built on it: maximum exposure, escalation surface, semantic diff, residual policies and capability discovery, SQL data filters, least-privilege proposals, policy coverage, minimal-change repairs, schema validation and a policy test runner. Counterexamples are always re-checked by the real evaluator.",
   "keywords": [
     "static analysis",

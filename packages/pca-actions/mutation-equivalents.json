@@ -1379,17 +1379,6 @@
   {
    "package": "pca-actions",
    "file": "src/import/grpc.ts",
-   "mutator": "ArrayDeclaration",
-   "original": "[]",
-   "replacement": "[\"Stryker was here\"]",
-   "line": "const parts = scope === '' ? [] : scope.split('.');",
-   "occurrence": 1,
-   "lineno": 413,
-   "reason": "With an empty scope the walk only differs if a message or enum were literally named after the placeholder text joined to the looked-up name; protobuf identifiers cannot contain spaces and no .proto or realistic descriptor yields such a name. The k=0 candidate (the bare name) is tried either way."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/grpc.ts",
    "mutator": "EqualityOperator",
    "original": "k >= 0",
    "replacement": "k > 0",
@@ -1419,17 +1408,6 @@
    "occurrence": 1,
    "lineno": 418,
    "reason": "Reached only after the loop's k = 0 candidate (the bare name) failed the has() test for both maps, so both || and && are false here and undefined is returned either way."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/grpc.ts",
-   "mutator": "ArrayDeclaration",
-   "original": "[]",
-   "replacement": "[\"Stryker was here\"]",
-   "line": "const required: string[] = [];",
-   "occurrence": 1,
-   "lineno": 456,
-   "reason": "The seeded entry only matters for a field literally named after the placeholder text (a name with spaces), which a .proto identifier cannot be and no realistic descriptor carries."
   },
   {
    "package": "pca-actions",
@@ -2227,17 +2205,6 @@
   {
    "package": "pca-actions",
    "file": "src/traits.ts",
-   "mutator": "CallExpression",
-   "original": "visiting.delete(id);",
-   "replacement": ";",
-   "line": "visiting.delete(id);",
-   "occurrence": 1,
-   "lineno": 165,
-   "reason": "A finished node is memoised in depth before any later visit and the known-depth lookup returns first, so a stale visiting entry is never consulted; a cycle returns -1 immediately."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/traits.ts",
    "mutator": "EqualityOperator",
    "original": "d < 0",
    "replacement": "d <= 0",
@@ -2414,17 +2381,6 @@
   {
    "package": "pca-actions",
    "file": "src/import/common.ts",
-   "mutator": "ObjectLiteral",
-   "original": "{ type: 'string' as DefParamType }",
-   "replacement": "{}",
-   "line": "const base: ParamDef = { type: 'string' as DefParamType };",
-   "occurrence": 1,
-   "lineno": 350,
-   "reason": "`base.type` is always overwritten: every branch that returns a param spreads `base` and then sets its own `type`, so the initial `type` cannot be observed."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/common.ts",
    "mutator": "ConditionalExpression",
    "original": "typeof n === 'number'",
    "replacement": "true",
@@ -2476,17 +2432,6 @@
    "occurrence": 1,
    "lineno": 373,
    "reason": "`p.min > p.max` is false whenever either side is undefined (a comparison with undefined is false), so the undefined tests before it, or the `||` that replaces the `&&`, cannot change when the pair is dropped."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/common.ts",
-   "mutator": "ConditionalExpression",
-   "original": "typeof s.format === 'string'",
-   "replacement": "true",
-   "line": "const f = typeof s.format === 'string' ? s.format : '';",
-   "occurrence": 1,
-   "lineno": 378,
-   "reason": "A non-string format only reaches `hasOwnProperty.call(FORMATS, f)` and the string comparisons, none of which a non-string can satisfy, so reading it as the empty string or as itself gives the same result."
   },
   {
    "package": "pca-actions",
@@ -2667,73 +2612,6 @@
   {
    "package": "pca-actions",
    "file": "src/import/eval.ts",
-   "mutator": "OptionalChaining",
-   "original": "d.bindings?.openapi",
-   "replacement": "d.bindings.openapi",
-   "line": "const defKey = (d: ActionDef): string => (d.bindings?.openapi?.path ? `${d.bindings.openapi.method} ${d.bindings.openapi.path}` : undefined) ?? d.bindings?.openapi?.operationId ?? d.bindings?.mcp?.tool ?? d.bindings?.graphql?.field ?? (d.bindings?.grpc ? `${d.bindings.grpc.service.split('.').pop()}/${d.bindings.grpc.method}` : undefined) ?? d.bindings?.asyncapi?.channel ?? '';",
-   "occurrence": 1,
-   "lineno": 136,
-   "reason": "Every def the importers emit has a `bindings` object, so reading a member of it without `?.` cannot throw and gives the same value.",
-   "multiplicity": 2
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
-   "mutator": "OptionalChaining",
-   "original": "d.bindings?.mcp",
-   "replacement": "d.bindings.mcp",
-   "line": "const defKey = (d: ActionDef): string => (d.bindings?.openapi?.path ? `${d.bindings.openapi.method} ${d.bindings.openapi.path}` : undefined) ?? d.bindings?.openapi?.operationId ?? d.bindings?.mcp?.tool ?? d.bindings?.graphql?.field ?? (d.bindings?.grpc ? `${d.bindings.grpc.service.split('.').pop()}/${d.bindings.grpc.method}` : undefined) ?? d.bindings?.asyncapi?.channel ?? '';",
-   "occurrence": 1,
-   "lineno": 136,
-   "reason": "Every def the importers emit has a `bindings` object, so reading a member of it without `?.` cannot throw and gives the same value."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
-   "mutator": "OptionalChaining",
-   "original": "d.bindings?.graphql",
-   "replacement": "d.bindings.graphql",
-   "line": "const defKey = (d: ActionDef): string => (d.bindings?.openapi?.path ? `${d.bindings.openapi.method} ${d.bindings.openapi.path}` : undefined) ?? d.bindings?.openapi?.operationId ?? d.bindings?.mcp?.tool ?? d.bindings?.graphql?.field ?? (d.bindings?.grpc ? `${d.bindings.grpc.service.split('.').pop()}/${d.bindings.grpc.method}` : undefined) ?? d.bindings?.asyncapi?.channel ?? '';",
-   "occurrence": 1,
-   "lineno": 136,
-   "reason": "Every def the importers emit has a `bindings` object, so reading a member of it without `?.` cannot throw and gives the same value."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
-   "mutator": "OptionalChaining",
-   "original": "d.bindings?.grpc",
-   "replacement": "d.bindings.grpc",
-   "line": "const defKey = (d: ActionDef): string => (d.bindings?.openapi?.path ? `${d.bindings.openapi.method} ${d.bindings.openapi.path}` : undefined) ?? d.bindings?.openapi?.operationId ?? d.bindings?.mcp?.tool ?? d.bindings?.graphql?.field ?? (d.bindings?.grpc ? `${d.bindings.grpc.service.split('.').pop()}/${d.bindings.grpc.method}` : undefined) ?? d.bindings?.asyncapi?.channel ?? '';",
-   "occurrence": 1,
-   "lineno": 136,
-   "reason": "Every def the importers emit has a `bindings` object, so reading a member of it without `?.` cannot throw and gives the same value."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
-   "mutator": "OptionalChaining",
-   "original": "d.bindings?.asyncapi",
-   "replacement": "d.bindings.asyncapi",
-   "line": "const defKey = (d: ActionDef): string => (d.bindings?.openapi?.path ? `${d.bindings.openapi.method} ${d.bindings.openapi.path}` : undefined) ?? d.bindings?.openapi?.operationId ?? d.bindings?.mcp?.tool ?? d.bindings?.graphql?.field ?? (d.bindings?.grpc ? `${d.bindings.grpc.service.split('.').pop()}/${d.bindings.grpc.method}` : undefined) ?? d.bindings?.asyncapi?.channel ?? '';",
-   "occurrence": 1,
-   "lineno": 136,
-   "reason": "Every def the importers emit has a `bindings` object, so reading a member of it without `?.` cannot throw and gives the same value."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
-   "mutator": "StringLiteral",
-   "original": "''",
-   "replacement": "\"Stryker was here!\"",
-   "line": "const g = `${e.kind}|${e.spec ?? ''}`;",
-   "occurrence": 1,
-   "lineno": 144,
-   "reason": "The text only builds the grouping key of entries that carry no spec: all of them get the same key, with the placeholder or with the empty text, and the kind is read from before the '|'."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
    "mutator": "StringLiteral",
    "original": "''",
    "replacement": "\"Stryker was here!\"",
@@ -2741,39 +2619,6 @@
    "occurrence": 1,
    "lineno": 192,
    "reason": "realSplit only reads bit 7 of the FNV-1a hash, and the hash of the placeholder 'Stryker was here!' (0x8af454cb) has bit 7 set, as the empty-text seed 0x811c9dc5 does, so both give 'holdout'."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
-   "mutator": "MethodExpression",
-   "original": "closure(registry, hintTraits(sd)).filter((t) => t !== 'pca.unreviewed')",
-   "replacement": "closure(registry, hintTraits(sd))",
-   "line": "flagged.set(e.id, new Set(closure(registry, hintTraits(sd)).filter((t) => t !== 'pca.unreviewed').map((t) => t.replace(/^pca\\./, ''))));",
-   "occurrence": 1,
-   "lineno": 225,
-   "reason": "The set built here is only queried with the names in traitNames, which exclude 'unreviewed' (line 216), so whether 'unreviewed' is in the set is never observed."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
-   "mutator": "ConditionalExpression",
-   "original": "t !== 'pca.unreviewed'",
-   "replacement": "true",
-   "line": "flagged.set(e.id, new Set(closure(registry, hintTraits(sd)).filter((t) => t !== 'pca.unreviewed').map((t) => t.replace(/^pca\\./, ''))));",
-   "occurrence": 1,
-   "lineno": 225,
-   "reason": "The set built here is only queried with the names in traitNames, which exclude 'unreviewed' (line 216), so whether 'unreviewed' is in the set is never observed."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/eval.ts",
-   "mutator": "StringLiteral",
-   "original": "'pca.unreviewed'",
-   "replacement": "\"\"",
-   "line": "flagged.set(e.id, new Set(closure(registry, hintTraits(sd)).filter((t) => t !== 'pca.unreviewed').map((t) => t.replace(/^pca\\./, ''))));",
-   "occurrence": 1,
-   "lineno": 225,
-   "reason": "The set built here is only queried with the names in traitNames, which exclude 'unreviewed' (line 216), so whether 'unreviewed' is in the set is never observed."
   },
   {
    "package": "pca-actions",
@@ -3192,39 +3037,6 @@
    "occurrence": 1,
    "lineno": 198,
    "reason": "When m === n the other operand m.startsWith(n + '.') is false (a string never starts with itself plus a dot), so the guard m !== n never changes the outcome; with it fixed to true the refusal decision is the same for every input."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/graphql.ts",
-   "mutator": "StringLiteral",
-   "original": "''",
-   "replacement": "\"Stryker was here\"",
-   "line": "if (src[j] === '\\\\') { s += src[j + 1] ?? ''; j += 2; } else s += src[j++];",
-   "occurrence": 1,
-   "lineno": 48,
-   "reason": "the fallback only applies when a backslash is the last character of the source; the string is then unterminated (j >= n) and the lexer throws the same error right after, so the appended text is never observable"
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/import/suggest.ts",
-   "mutator": "ArithmeticOperator",
-   "original": "i + pat.length <= hay.length",
-   "replacement": "i - pat.length <= hay.length",
-   "line": "outer: for (let i = 0; i + pat.length <= hay.length; i++) {",
-   "occurrence": 1,
-   "lineno": 222,
-   "reason": "The mutant only runs extra iterations past the end of the haystack; there hay[i + j] is undefined and never equals a pattern token, so every extra iteration fails and the result is unchanged (the loop still terminates)."
-  },
-  {
-   "package": "pca-actions",
-   "file": "src/traits.ts",
-   "mutator": "CallExpression",
-   "original": "visiting.delete(id)",
-   "replacement": "",
-   "line": "visiting.delete(id);",
-   "occurrence": 1,
-   "lineno": 165,
-   "reason": "A finished node is memoised in depth before any later visit and the known-depth lookup returns first, so a stale visiting entry is never consulted; a cycle returns -1 immediately."
   }
  ]
 }

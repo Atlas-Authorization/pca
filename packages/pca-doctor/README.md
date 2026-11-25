@@ -7,7 +7,7 @@ warn / fail with a remediation for each check. The protocol can be correct while
 skewed clock, a replay store that is not atomic or not durable, a proxy configuration that trusts forged forwarding
 headers, or a suite / post-quantum pin policy that accepts more than intended.
 
-> Status: **0.5.0.** The doctor checks a deployment's wiring; it does not replace the verifier's own checks.
+> Status: **0.6.0.** The doctor checks a deployment's wiring; it does not replace the verifier's own checks.
 
 ## Install
 

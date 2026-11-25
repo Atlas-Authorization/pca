@@ -5,8 +5,8 @@ name: Oracle corpora
 # build or a forgotten regeneration goes unnoticed. This workflow builds every package fresh, runs every corpus generator the way its
 # header says (tsx with the oracles tsconfig, PCA_SEED_LOG for the seed labels), strips key material (strip-corpus-keys.py, the
 # corpus-specific *-strip-keys.py, action-schema-strip.py), then diffs each regenerated corpus (decompressed) against the copy in every
-# native repository at the same ref, prints the changed case names per corpus, uploads the whole regenerated set as the artifact
-# `oracle-corpora`, and FAILS on any difference (including lane copies that disagree with each other).
+# native repository at the same ref, prints the changed case names per corpus, uploads the whole regenerated set as the artifacts
+# `oracle-corpora-<shard>`, and FAILS on any difference (including lane copies that disagree with each other).
 # Generators read the public tree only: the withheld fixtures (packages/pca/fixtures/DISCLOSURE.md) are never an input.
 # To refresh the lanes: download oracle-corpora and copy each corpus over the lane copies that differ.
 on:
@@ -61,9 +61,15 @@ jobs:
   corpora:
     if: ${{ needs.reuse.outputs.skip != 'true' }}
     needs: reuse
-    name: regenerated corpora equal every lane's committed copy
+    name: regenerated corpora equal every lane's committed copy (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
+    # one pass of every generator took ~10 min at 4 jobs and the run does three (plain, same clock, clock + 5 years): 54 min as one job.
+    # Four shards (generators balanced by measured time; vdf alone is ~23 min of the three passes) bring each under 40.
     timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -94,7 +100,7 @@ jobs:
         run: pnpm -r run build
       - name: Regenerate, strip, compare
         id: gen
-        run: node .github/scripts/oracle-corpora.mjs --lanes="$RUNNER_TEMP/lanes" --report="$RUNNER_TEMP/oracle-report" --jobs=4
+        run: node .github/scripts/oracle-corpora.mjs --lanes="$RUNNER_TEMP/lanes" --report="$RUNNER_TEMP/oracle-report" --jobs=4 --shard=${{ matrix.shard }}/4
       - name: Keep the stripped set only, the -gen halves carry private keys and are never uploaded
         if: always()
         run: |
@@ -104,18 +110,42 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: oracle-corpora
+          name: oracle-corpora-${{ matrix.shard }}
           path: |
             ${{ runner.temp }}/oracle-report/corpora
             ${{ runner.temp }}/oracle-report/variants
             ${{ runner.temp }}/oracle-report/REPORT.md
+            ${{ runner.temp }}/oracle-report/generators.txt
           if-no-files-found: ignore
           retention-days: 14
 
+  # the shards together must have run every generator (a generator added to tools/pca-audit/oracles/ is in exactly one shard by construction;
+  # this proves no shard silently ran fewer than it was given)
+  corpora-complete:
+    if: ${{ !cancelled() && needs.reuse.outputs.skip != 'true' }}
+    needs: [reuse, corpora]
+    name: every generator ran in some shard
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-corpora-*
+          path: shards
+      - run: |
+          node .github/scripts/oracle-corpora.mjs --list-generators | sort > "$RUNNER_TEMP/all.txt"
+          cat shards/*/generators.txt | sort > "$RUNNER_TEMP/ran.txt"
+          [ -s "$RUNNER_TEMP/all.txt" ] || { echo "::error::no generators listed"; exit 1; }
+          diff "$RUNNER_TEMP/all.txt" "$RUNNER_TEMP/ran.txt" && echo "all $(wc -l < "$RUNNER_TEMP/all.txt") generators ran in exactly one shard"
+
   reuse-record:
     name: reuse record
-    needs: [reuse, corpora]
-    if: ${{ !cancelled() && needs.reuse.outputs.skip != 'true' && needs.reuse.outputs.hash != '' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.corpora.result == 'success' }}
+    needs: [reuse, corpora, corpora-complete]
+    if: ${{ !cancelled() && needs.reuse.outputs.skip != 'true' && needs.reuse.outputs.hash != '' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.corpora.result == 'success' && needs.corpora-complete.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

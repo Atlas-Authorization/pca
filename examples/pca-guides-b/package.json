@@ -14,13 +14,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@atlasauth/pca": "^0.5.0",
-    "@atlasauth/pca-connect": "^0.5.0",
-    "@atlasauth/pca-grants": "^0.5.0",
-    "@atlasauth/pca-mcp": "^0.5.0",
-    "@atlasauth/pca-mcp-rs": "^0.5.0",
-    "@atlasauth/pca-payments": "^0.5.0",
-    "@atlasauth/pca-sandbox": "^0.5.0"
+    "@atlasauth/pca": "^0.6.0",
+    "@atlasauth/pca-connect": "^0.6.0",
+    "@atlasauth/pca-grants": "^0.6.0",
+    "@atlasauth/pca-mcp": "^0.6.0",
+    "@atlasauth/pca-mcp-rs": "^0.6.0",
+    "@atlasauth/pca-payments": "^0.6.0",
+    "@atlasauth/pca-sandbox": "^0.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -136,7 +136,7 @@
    "crate": "kotlin-pca",
    "file": "src/main/kotlin/net/atlasauth/pca/verifier/Pca.kt",
    "mutant": "RemoveConditionalMutator_EQUAL_IF: removed conditional - replaced equality check with true",
-   "line": "return if (a != null && allowed.contains(a)) null else \"$label: signature suite is not allowed by this verifier's suite policy\"",
+   "line": "return if (a != null && allowed.contains(a)) null else \"$label: signature suite '${if (algPresent) IntentRevocation.jsText(IntentJs.normalize(alg), true) else \"ed25519\"}' is not allowed by this verifier's suite policy\"",
    "occurrence": 1,
    "fn": "suitePolicyError",
    "lineno": 482,
@@ -942,9 +942,9 @@
    "crate": "go-pca",
    "file": "pca.go",
    "mutant": "remove call statement",
-   "line": "fail(\"leaf_signature\", \"signature does not verify under the leaf holder key\")",
+   "line": "fail(\"leaf_signature\", \"signature does not verify under the leaf holder key / suite\")",
    "occurrence": 2,
-   "lineno": 1178,
+   "lineno": 1350,
    "reason": "Empty-chain branch: the chain check has already failed (failed=true) and leaf_signature is pre-initialised to false, so the call changes neither the verdict nor the first reason."
   },
   {
@@ -2992,7 +2992,7 @@
    "crate": "kotlin-pca",
    "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
    "mutant": "EmptyObjectReturnValsMutator: replaced return value with \"\" for net/atlasauth/pca/verifier/Json$Parser::getS",
-   "line": "private class Parser(val s: String?, val strict: Boolean) {",
+   "line": "private class Parser(val s: String?, val strict: Boolean, val noDup: Boolean = false) {",
    "occurrence": 1,
    "fn": "getS",
    "lineno": 120,
@@ -3002,7 +3002,7 @@
    "crate": "kotlin-pca",
    "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
    "mutant": "BooleanFalseReturnValsMutator: replaced boolean return with false for net/atlasauth/pca/verifier/Json$Parser::getStrict",
-   "line": "private class Parser(val s: String?, val strict: Boolean) {",
+   "line": "private class Parser(val s: String?, val strict: Boolean, val noDup: Boolean = false) {",
    "occurrence": 1,
    "fn": "getStrict",
    "lineno": 120,
@@ -3012,7 +3012,7 @@
    "crate": "kotlin-pca",
    "file": "src/main/kotlin/net/atlasauth/pca/verifier/Json.kt",
    "mutant": "BooleanTrueReturnValsMutator: replaced boolean return with true for net/atlasauth/pca/verifier/Json$Parser::getStrict",
-   "line": "private class Parser(val s: String?, val strict: Boolean) {",
+   "line": "private class Parser(val s: String?, val strict: Boolean, val noDup: Boolean = false) {",
    "occurrence": 1,
    "fn": "getStrict",
    "lineno": 120,
@@ -3597,17 +3597,6 @@
   {
    "crate": "python-pca",
    "file": "atlas_pca/pca.py",
-   "mutant": "_utf8_key: return s.encode(\"UTF-8\", \"surrogatepass\")",
-   "line": "return s.encode(\"utf-8\", \"surrogatepass\")",
-   "occurrence": 1,
-   "fn": "_utf8_key",
-   "lineno": 264,
-   "reason": "\"UTF-8\" / \"utf-8\" codec aliases resolve to the same utf_8 codec; the surrogatepass handler is unchanged, so every key encodes identically.",
-   "name": "atlas_pca.pca.x__utf8_key__mutmut_6"
-  },
-  {
-   "crate": "python-pca",
-   "file": "atlas_pca/pca.py",
    "mutant": "strict_number_error: if v == 0 and math.copysign(2.0, v) < 0:",
    "line": "if v == 0 and math.copysign(1.0, v) < 0:",
    "occurrence": 1,
@@ -3707,17 +3696,6 @@
   {
    "crate": "python-pca",
    "file": "atlas_pca/pca.py",
-   "mutant": "canonical_bytes: return canonicalize(v).encode(\"UTF-8\", \"surrogatepass\")",
-   "line": "return canonicalize(v).encode(\"utf-8\", \"surrogatepass\")",
-   "occurrence": 1,
-   "fn": "canonical_bytes",
-   "lineno": 370,
-   "reason": "\"UTF-8\" / \"utf-8\" codec aliases resolve to the same utf_8 codec; the surrogatepass handler is unchanged.",
-   "name": "atlas_pca.pca.x_canonical_bytes__mutmut_7"
-  },
-  {
-   "crate": "python-pca",
-   "file": "atlas_pca/pca.py",
    "mutant": "canonical_bytes_strict: return canonicalize_strict(v).encode(\"UTF-8\")",
    "line": "return canonicalize_strict(v).encode(\"utf-8\")",
    "occurrence": 1,
@@ -3729,33 +3707,33 @@
   {
    "crate": "python-pca",
    "file": "atlas_pca/pca.py",
-   "mutant": "_is_safe_int: if not (math.isfinite(v) and v == math.trunc(v)) or (v == 0 and math.copysign(2.0, v) < 0):",
-   "line": "if not (math.isfinite(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) < 0):",
+   "mutant": "_is_safe_int: if not (fin(v) and v == math.trunc(v)) or (v == 0 and math.copysign(2.0, v) < 0):",
+   "line": "if not (fin(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) < 0):",
    "occurrence": 1,
    "fn": "_is_safe_int",
-   "lineno": 436,
+   "lineno": 463,
    "reason": "copysign(2.0, v) has the same sign as copysign(1.0, v), so `< 0` is True exactly for -0.0 in both.",
    "name": "atlas_pca.pca.x__is_safe_int__mutmut_17"
   },
   {
    "crate": "python-pca",
    "file": "atlas_pca/pca.py",
-   "mutant": "_is_safe_int: if not (math.isfinite(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) <= 0):",
-   "line": "if not (math.isfinite(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) < 0):",
+   "mutant": "_is_safe_int: if not (fin(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) <= 0):",
+   "line": "if not (fin(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) < 0):",
    "occurrence": 1,
    "fn": "_is_safe_int",
-   "lineno": 436,
+   "lineno": 463,
    "reason": "copysign(1.0, v) is exactly +1.0 or -1.0, never 0, so `<= 0` and `< 0` agree.",
    "name": "atlas_pca.pca.x__is_safe_int__mutmut_18"
   },
   {
    "crate": "python-pca",
    "file": "atlas_pca/pca.py",
-   "mutant": "_is_safe_int: if not (math.isfinite(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) < 1):",
-   "line": "if not (math.isfinite(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) < 0):",
+   "mutant": "_is_safe_int: if not (fin(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) < 1):",
+   "line": "if not (fin(v) and v == math.trunc(v)) or (v == 0 and math.copysign(1.0, v) < 0):",
    "occurrence": 1,
    "fn": "_is_safe_int",
-   "lineno": 436,
+   "lineno": 463,
    "reason": "copysign(1.0, v) is exactly +1.0 or -1.0; `< 1` and `< 0` are both True only for -1.0 (v = -0.0).",
    "name": "atlas_pca.pca.x__is_safe_int__mutmut_19"
   },
@@ -11851,15 +11829,6 @@
   },
   {
    "crate": "php-pca",
-   "file": "src/BreakGlass.php",
-   "mutant": "CastFloat: if ($at < $e['uses'][0]['at'] || $at > K3Sig::num($now)) {",
-   "line": "if ($at < $e['uses'][0]['at'] || $at > (float)K3Sig::num($now)) {",
-   "occurrence": 1,
-   "lineno": 198,
-   "reason": "[same-function guard] K3Sig::num returns ?float; the same function returned early unless K3Sig::isSafeInt($now), which requires num($now) to be a finite non-null float, so (float) of that float is the identity."
-  },
-  {
-   "crate": "php-pca",
    "file": "src/MissingContext.php",
    "mutant": "GreaterThan: if (($path === $k || str_starts_with($path, $k . '.')) && ($best === null || strlen($k) >= strlen($best))) {",
    "line": "if (($path === $k || str_starts_with($path, $k . '.')) && ($best === null || strlen($k) > strlen($best))) {",
@@ -12100,15 +12069,6 @@
    "occurrence": 1,
    "lineno": 166,
    "reason": "[same-function guard] Same function (check): line 158 returns unless K3Sig::isSafeInt($now), which requires num($now) to be a finite non-null float; num() returns ?float, so (float) of that float is the identity."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Lease.php",
-   "mutant": "CastFloat: if (K3Sig::num($rec->get('expires_at')) > Lease::cap($rec)) {",
-   "line": "if ((float)K3Sig::num($rec->get('expires_at')) > Lease::cap($rec)) {",
-   "occurrence": 1,
-   "lineno": 242,
-   "reason": "[same-function guard] Same function (accept): line 232 returned unless Lease::verify($rec), whose wellFormed requires K3Sig::isSafeInt(expires_at), so num(expires_at) is a non-null float and the cast is the identity (nothing mutates $rec in between)."
   },
   {
    "crate": "php-pca",
@@ -12374,24 +12334,6 @@
   {
    "crate": "php-pca",
    "file": "src/Agent.php",
-   "mutant": "RoundingFamily: return new Num(ceil($v) === $v && abs($v) < 1000000000000000.0 ? sprintf('%.0f', $v) : json_encode($v, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR));",
-   "line": "return new Num(floor($v) === $v && abs($v) < 1e15 ? sprintf('%.0f', $v) : json_encode($v, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR));",
-   "occurrence": 1,
-   "lineno": 130,
-   "reason": "[floor==ceil==round on finite float] An is_finite guard earlier in the same branch of n() throws for non-finite floats, so $v is finite. For a finite float, floor($v)===$v, ceil($v)===$v and round($v)===$v are each true exactly when $v is integral (for -0.0 all return -0.0, and -0.0 === 0.0 anyway), so the condition and lexeme are identical for every input."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Agent.php",
-   "mutant": "RoundingFamily: return new Num(round($v) === $v && abs($v) < 1000000000000000.0 ? sprintf('%.0f', $v) : json_encode($v, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR));",
-   "line": "return new Num(floor($v) === $v && abs($v) < 1e15 ? sprintf('%.0f', $v) : json_encode($v, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR));",
-   "occurrence": 1,
-   "lineno": 130,
-   "reason": "[floor==ceil==round on finite float] An is_finite guard earlier in the same branch of n() throws for non-finite floats, so $v is finite. For a finite float, floor($v)===$v, ceil($v)===$v and round($v)===$v are each true exactly when $v is integral (for -0.0 all return -0.0, and -0.0 === 0.0 anyway), so the condition and lexeme are identical for every input."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Agent.php",
    "mutant": "TrueValue: $seen[$id] = false;",
    "line": "$seen[$id] = true;",
    "occurrence": 1,
@@ -12446,47 +12388,11 @@
   {
    "crate": "php-pca",
    "file": "src/Passport.php",
-   "mutant": "CastFloat: $skew = min(max((float) (self::f($skewIn) ?? 0.0), 0.0), self::MAX_SKEW_MS);",
-   "line": "$skew = min(max((float)(self::f($skewIn) ?? 0.0), 0.0), (float)self::MAX_SKEW_MS);",
-   "occurrence": 1,
-   "lineno": 163,
-   "reason": "[strict_types int->float] Without (float) on MAX_SKEW_MS (int 60000), min() may return the int 60000 instead of 60000.0. Every use is float arithmetic or comparison ($nowF + $skew, $nowF - $skew) or the `float $skew` parameter of hardware(), which strict_types widens from int; all give the same float values."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Passport.php",
-   "mutant": "CastFloat: $skew = min(max(self::f($skewIn) ?? 0.0, 0.0), (float) self::MAX_SKEW_MS);",
-   "line": "$skew = min(max((float)(self::f($skewIn) ?? 0.0), 0.0), (float)self::MAX_SKEW_MS);",
-   "occurrence": 1,
-   "lineno": 163,
-   "reason": "[same-function guard] f() is declared ?float and `?? 0.0` supplies a float, so the operand of the outer (float) is always a float and the cast is the identity."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Passport.php",
    "mutant": "LogicalAnd: $ev = $s->has('evidence') || $s->get('evidence') !== null ? $s->get('evidence') : new Obj();",
    "line": "$ev = $s->has('evidence') && $s->get('evidence') !== null ? $s->get('evidence') : new Obj();",
    "occurrence": 1,
    "lineno": 198,
    "reason": "[same-function guard] The two differ only when 'evidence' is present with value null (original new Obj(), mutant null); when absent both give new Obj(). The next statement g($ev, 'document') yields null for both null and an empty Obj, so the following check returns bad('hardware_evidence_missing') identically."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Passport.php",
-   "mutant": "CastFloat: if ($maxAge === null || $maxAge < 0 || $now - (float) self::f($at) > $maxAge || self::f($at) - $now > $skew) {",
-   "line": "if ($maxAge === null || $maxAge < 0 || $now - (float)self::f($at) > $maxAge || (float)self::f($at) - $now > $skew) {",
-   "occurrence": 1,
-   "lineno": 208,
-   "reason": "[same-function guard] The line above in hardware() returns 'hardware_evidence_missing' unless safeInt($at), so self::f($at) is a non-null float and the (float) cast is the identity."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Passport.php",
-   "mutant": "CastFloat: if ($maxAge === null || $maxAge < 0 || $now - self::f($at) > $maxAge || (float) self::f($at) - $now > $skew) {",
-   "line": "if ($maxAge === null || $maxAge < 0 || $now - (float)self::f($at) > $maxAge || (float)self::f($at) - $now > $skew) {",
-   "occurrence": 1,
-   "lineno": 208,
-   "reason": "[same-function guard] The line above in hardware() returns 'hardware_evidence_missing' unless safeInt($at), so self::f($at) is a non-null float and the (float) cast is the identity."
   },
   {
    "crate": "php-pca",
@@ -14030,15 +13936,6 @@
   {
    "crate": "php-pca",
    "file": "src/CaveatLang.php",
-   "mutant": "AssignCoalesce: $hashes[$h] = Pca::capHash($hops[$h]);",
-   "line": "$hashes[$h] ??= Pca::capHash($hops[$h]);",
-   "occurrence": 1,
-   "lineno": 218,
-   "reason": "[pure memoization] $hashes[$h] is written only on this line, always with Pca::capHash($hops[$h]); capHash is a pure deterministic function of an unmodified value, so recomputing (=) instead of memoizing (??=) stores the identical string; a throw would already have happened on the first computation for that $h."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/CaveatLang.php",
    "mutant": "DecrementInteger: if (!self::bounded($a->get('holder'), 63) || Pca::unb64u($a->get('holder'), 32) === null) {",
    "line": "if (!self::bounded($a->get('holder'), 64) || Pca::unb64u($a->get('holder'), 32) === null) {",
    "occurrence": 1,
@@ -15453,15 +15350,6 @@
   {
    "crate": "php-pca",
    "file": "src/Mesh.php",
-   "mutant": "CastFloat: if (!$a->has('amount') || self::f($amt) > $e['maxAmount']) {",
-   "line": "if (!$a->has('amount') || (float)self::f($amt) > $e['maxAmount']) {",
-   "occurrence": 1,
-   "lineno": 286,
-   "reason": "[private: all call sites pass X] admits() is private with exactly 1 call site in Mesh (verifyInner, `self::admits($prev, $action, ...)`), and verifyInner returned 'malformed action' earlier unless validAction($action) held, which requires num(amount) whenever has('amount'); $action is not reassigned between. So f($amt) is a non-null float wherever the operand is evaluated, and (float) on it is a no-op."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Mesh.php",
    "mutant": "CastFloat: if ($e['hasHops'] && $chainLen > $e['maxHops']) {",
    "line": "if ($e['hasHops'] && (float)$chainLen > $e['maxHops']) {",
    "occurrence": 1,
@@ -15848,15 +15736,6 @@
   },
   {
    "crate": "php-pca",
-   "file": "src/Operations.php",
-   "mutant": "CastFloat: if ($expMs !== null && $opts->clock() > $expMs) {",
-   "line": "if ($expMs !== null && (float)$opts->clock() > $expMs) {",
-   "occurrence": 1,
-   "lineno": 507,
-   "reason": "[int<=>float compares as double] $opts->clock() is int and $expMs float; PHP's int<=>float comparison already converts the int operand to double (ZEND_THREEWAY_COMPARE((double)lval, dval)), so (float)$x > $f and $x > $f are the same comparison for every int"
-  },
-  {
-   "crate": "php-pca",
    "file": "src/AtomicKv.php",
    "mutant": "PregMatchRemoveFlags: if (preg_match('/\\A[A-Za-z_][A-Za-z0-9_]{0,62}\\z/', $table) !== 1) {",
    "line": "if (preg_match('/\\A[A-Za-z_][A-Za-z0-9_]{0,62}\\z/D', $table) !== 1) {",
@@ -15890,15 +15769,6 @@
    "occurrence": 1,
    "lineno": 285,
    "reason": "[Error caught in same closure] When get() returns null the plain ->get() raises an Error, which the enclosing try (line 284) catches and answers 'unknown'; the original ?-> yields null ?? 'unknown' = 'unknown'. Same value on every input."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/PlanLifecycle.php",
-   "mutant": "CastFloat: if ($exp !== null && !($now < $exp)) {",
-   "line": "if ($exp !== null && !((float)$now < $exp)) {",
-   "occurrence": 1,
-   "lineno": 337,
-   "reason": "[int<=>float compares as double] $now is int and $exp float; PHP compares int with float by converting the int to double (the same conversion the (float) cast does), so (float)$now < $exp and $now < $exp agree for every int."
   },
   {
    "crate": "php-pca",
@@ -17725,33 +17595,6 @@
    "occurrence": 1,
    "lineno": 214,
    "reason": "[defence in depth, kept per BRIEF: a refusing guard stays] [same-function guard] boundCaveats (same function): the inner loop always assigns $h (at the latest at the leaf index, whose caveats list is $lc itself with count > p) before `if ($h < 0)` reads it, so the initial value (-1 vs 0) is never read."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/CaveatLang.php",
-   "mutant": "DecrementInteger: $h = count($hops) - 0;",
-   "line": "$h = count($hops) - 1;",
-   "occurrence": 1,
-   "lineno": 223,
-   "reason": "[defence in depth, kept per BRIEF: a refusing guard stays] [same-function guard] boundCaveats (same function): $h >= 0 always holds after the inner loop (the leaf hop's own list $lc is longer than p), so the `if ($h < 0)` body never runs; its assigned value is never computed."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/CaveatLang.php",
-   "mutant": "IncrementInteger: $h = count($hops) - 2;",
-   "line": "$h = count($hops) - 1;",
-   "occurrence": 1,
-   "lineno": 223,
-   "reason": "[defence in depth, kept per BRIEF: a refusing guard stays] [same-function guard] Unreachable: $h is always >= 0 after the inner loop (the leaf hop has a caveats list longer than p because p indexes $lc, the leaf's own list), so the `if ($h < 0)` body never runs."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/CaveatLang.php",
-   "mutant": "Minus: $h = count($hops) + 1;",
-   "line": "$h = count($hops) - 1;",
-   "occurrence": 1,
-   "lineno": 223,
-   "reason": "[defence in depth, kept per BRIEF: a refusing guard stays] [same-function guard] Unreachable: $h is always >= 0 after the inner loop (the leaf hop has a caveats list longer than p because p indexes $lc, the leaf's own list), so the `if ($h < 0)` body never runs."
   },
   {
    "crate": "php-pca",
@@ -20011,15 +19854,6 @@
    "occurrence": 1,
    "lineno": 345,
    "reason": "issuerIdx sentinel -1 -> -2: its only use is '$issuerIdx >= 0' (and array_slice behind that guard); assigned values in the loop are >= 0, so any negative sentinel behaves identically."
-  },
-  {
-   "crate": "php-pca",
-   "file": "src/Attest/Ocsp.php",
-   "mutant": "FunctionCallRemoval: ",
-   "line": "sort($required);",
-   "occurrence": 1,
-   "lineno": 521,
-   "reason": "sort($required): $required is filled by 'for ($i = 0; $i < $last; $i++) $required[] = $i' so it is already strictly ascending; sort is a no-op for every input."
   },
   {
    "crate": "php-pca",
