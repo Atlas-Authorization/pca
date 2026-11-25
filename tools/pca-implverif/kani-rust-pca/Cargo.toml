@@ -26,6 +26,19 @@ rsa = "0.9"
 sha1 = "0.10"
 # wipes secret key buffers on drop (agent.rs)
 zeroize = "1"
+# the remaining dependencies of sdks/rust-pca's default build (same versions and features): the harness crate compiles every module
+# build.sh copies, so a dependency added to the library must be added here (run 45568594863: regex, hmac, hkdf, url, p521, aes-gcm,
+# ml-kem, sha3, blst and yaml-rust2 were unresolved)
+url = "2"
+regex = "1"
+hmac = "0.12"
+hkdf = "0.12"
+p521 = { version = "0.13.3", features = ["ecdsa"] }
+aes-gcm = "0.10"
+ml-kem = { version = "0.2", features = ["deterministic"] }
+sha3 = "0.10"
+blst = "0.3"
+yaml-rust2 = { version = "0.13", default-features = false }
 
 [lints.rust]
 unexpected_cfgs = { level = "allow" }

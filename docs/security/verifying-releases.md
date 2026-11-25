@@ -60,7 +60,7 @@ Release:
 
 ```sh
 # the checksum Cargo enforces
-curl -s https://index.crates.io/at/la/atlas-pca | jq -r 'select(.vers == "0.5.0") | .cksum'
+curl -s https://index.crates.io/at/la/atlas-pca | jq -r 'select(.vers == "0.6.0") | .cksum'
 
 # the attested file from the GitHub Release
 gh release download v0.5.0 --repo Atlas-Authorization/pca-rust --pattern 'atlas-pca-0.5.0.crate'

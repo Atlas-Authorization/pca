@@ -24,10 +24,10 @@ importers:
   examples/pca-a2a:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
       '@atlasauth/pca-a2a':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-a2a
     devDependencies:
       '@types/node':
@@ -43,7 +43,7 @@ importers:
   examples/pca-attacks:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
     devDependencies:
       '@types/node':
@@ -59,7 +59,7 @@ importers:
   examples/pca-delegation:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
     devDependencies:
       '@types/node':
@@ -75,16 +75,16 @@ importers:
   examples/pca-demo:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
       '@atlasauth/pca-fetch':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-fetch
 
   examples/pca-goal:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
     devDependencies:
       '@types/node':
@@ -100,10 +100,10 @@ importers:
   examples/pca-guides-a:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
       '@atlasauth/pca-grants':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-grants
     devDependencies:
       '@types/node':
@@ -119,25 +119,25 @@ importers:
   examples/pca-guides-b:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
       '@atlasauth/pca-connect':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-connect
       '@atlasauth/pca-grants':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-grants
       '@atlasauth/pca-mcp':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-mcp
       '@atlasauth/pca-mcp-rs':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-mcp-rs
       '@atlasauth/pca-payments':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-payments
       '@atlasauth/pca-sandbox':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-sandbox
     devDependencies:
       '@types/node':
@@ -153,10 +153,10 @@ importers:
   examples/pca-payments:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
       '@atlasauth/pca-payments':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-payments
     devDependencies:
       '@types/node':
@@ -172,10 +172,10 @@ importers:
   examples/pca-quickstart:
     dependencies:
       '@atlasauth/pca':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca
       '@atlasauth/pca-express':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../../packages/pca-express
       express:
         specifier: ^5.0.0
@@ -6007,14 +6007,14 @@ snapshots:
       msw: 2.15.0(@types/node@22.20.1)(typescript@5.9.3)
       vite: 5.4.21(@types/node@22.20.1)(less@4.9.1)(lightningcss@1.33.0)(sass@1.104.1)(terser@5.49.0)
 
-  '@vitest/mocker@2.1.9(msw@2.15.0(@types/node@24.13.4)(typescript@5.9.3))(vite@5.4.21(@types/node@24.13.4)(less@4.9.1)(lightningcss@1.33.0)(sass@1.104.1)(terser@5.49.0))':
+  '@vitest/mocker@2.1.9(msw@2.15.0(@types/node@24.13.4)(typescript@5.9.3))(vite@5.4.21(@types/node@22.20.1)(less@4.9.1)(lightningcss@1.33.0)(sass@1.104.1)(terser@5.49.0))':
     dependencies:
       '@vitest/spy': 2.1.9
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.15.0(@types/node@24.13.4)(typescript@5.9.3)
-      vite: 5.4.21(@types/node@24.13.4)(less@4.9.1)(lightningcss@1.33.0)(sass@1.104.1)(terser@5.49.0)
+      vite: 5.4.21(@types/node@22.20.1)(less@4.9.1)(lightningcss@1.33.0)(sass@1.104.1)(terser@5.49.0)
 
   '@vitest/pretty-format@2.1.9':
     dependencies:
@@ -7942,7 +7942,7 @@ snapshots:
   vitest@2.1.9(@types/node@24.13.4)(happy-dom@15.11.7)(jsdom@25.0.1)(less@4.9.1)(lightningcss@1.33.0)(msw@2.15.0(@types/node@24.13.4)(typescript@5.9.3))(sass@1.104.1)(terser@5.49.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(msw@2.15.0(@types/node@24.13.4)(typescript@5.9.3))(vite@5.4.21(@types/node@24.13.4)(less@4.9.1)(lightningcss@1.33.0)(sass@1.104.1)(terser@5.49.0))
+      '@vitest/mocker': 2.1.9(msw@2.15.0(@types/node@24.13.4)(typescript@5.9.3))(vite@5.4.21(@types/node@22.20.1)(less@4.9.1)(lightningcss@1.33.0)(sass@1.104.1)(terser@5.49.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9

@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-grants",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "PCA operational plane: consistency tokens (fresh_at), list-authorized with signed list receipts, signed policy bundles and decision-record streaming, and the grant management resource (list, inspect, amend, revoke, incremental authorization) with a fetch client.",
   "keywords": [
     "proof-carrying authority",

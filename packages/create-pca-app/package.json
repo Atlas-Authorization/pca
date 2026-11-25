@@ -1,6 +1,6 @@
 {
   "name": "create-pca-app",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Scaffold a working Proof-Carrying Authority app in seconds: npm create pca-app@latest — mint a capability, build + sign a proof-carrying action, and verify it offline (valid passes, tampered fails).",
   "keywords": [
     "scaffold",

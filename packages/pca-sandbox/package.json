@@ -1,6 +1,6 @@
 {
   "name": "@atlasauth/pca-sandbox",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Optional runtime containment for Proof-Carrying Authority: a WebAssembly capability sandbox whose only authority is handles minted from verified PCActns, a default-deny egress proxy, and sandbox profiles (seccomp, Landlock, macOS) generated from what was authorized.",
   "keywords": [
     "sandbox",

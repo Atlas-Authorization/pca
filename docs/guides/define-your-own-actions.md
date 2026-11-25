@@ -326,7 +326,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Atlas-Authorization/pca/packages/pca-cli/github-action@v0.5.0
+      - uses: Atlas-Authorization/pca/packages/pca-cli/github-action@v0.6.0
         with:
           dir: actions
           mode: check
@@ -340,7 +340,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: pca
-        uses: Atlas-Authorization/pca/packages/pca-cli/github-action@v0.5.0
+        uses: Atlas-Authorization/pca/packages/pca-cli/github-action@v0.6.0
         with:
           dir: actions
           mode: sync

@@ -82,7 +82,7 @@ pca actions sync --check    # writes nothing; exit 1 when a source changed (for 
 The repository ships a composite action that runs `pca actions sync`. Check on pull requests, sync on a schedule:
 
 ```yaml
-- uses: Atlas-Authorization/pca/packages/pca-cli/github-action@v0.5.0
+- uses: Atlas-Authorization/pca/packages/pca-cli/github-action@v0.6.0
   with:
     dir: actions
     mode: check   # fails when a source changed; "sync" rewrites the generated files and sets the output `changed`

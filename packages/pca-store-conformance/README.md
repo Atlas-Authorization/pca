@@ -8,7 +8,7 @@ clients against **your** store adapter, with restarts and process crashes, recor
 linearizability against that contract. A store that lets the same nonce through twice under load, or forgets consumed
 nonces after a restart, fails here instead of in production.
 
-> Status: **0.5.0.** A store that passes the suite is checked against the behaviours listed here, not audited.
+> Status: **0.6.0.** A store that passes the suite is checked against the behaviours listed here, not audited.
 
 ## Install
 

@@ -2,6 +2,10 @@
 
 See the full release notes in [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
 
+## 0.6.0 (unreleased)
+
+Breaking: `bondAmount` power-curve gamma must be a multiple of 1/8 and at most 64; `proportionCutoff` and `healthTestBytes` pin their domain; immune decay is quantized. Security: an infinite maximum age (`verifySignedRequest`, `checkCosignedHead`), a non-finite settled amount (`reconcileSettlement`) and a non-finite clock (precedent answers) now refuse. Full notes: [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
+
 ## 0.5.0 (unreleased)
 
 Security (0.5, PQ pins): a classical (Ed25519) grant naming an issuer that has a `pqPins` entry is refused by `verifyPCActn`, `requirePCA`, `authorize` and `verifyPCActnCore` (`pq_pin: the grant issuer is pinned to a post-quantum key; a classical grant is refused`); 0.4.2 and 0.4.3 let it pass, so the pin did not stop an attacker holding the issuer's classical key. Issuers without a pin are unchanged.

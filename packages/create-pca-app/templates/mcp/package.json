@@ -11,9 +11,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@atlasauth/pca": "^0.5.0",
-    "@atlasauth/pca-mcp": "^0.5.0",
-    "@atlasauth/pca-mcp-rs": "^0.5.0",
+    "@atlasauth/pca": "^0.6.0",
+    "@atlasauth/pca-mcp": "^0.6.0",
+    "@atlasauth/pca-mcp-rs": "^0.6.0",
     "@modelcontextprotocol/sdk": "^1.32.0",
     "express": "^5.0.0",
     "zod": "^4.0.0"

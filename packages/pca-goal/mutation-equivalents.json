@@ -1990,34 +1990,56 @@
    "package": "pca-goal",
    "file": "src/interpret.ts",
    "mutator": "Regex",
-   "original": "/[\\d.,]$/",
-   "replacement": "/[\\d.,]/",
-   "line": "if (/[$€£¥]\\s?$/.test(text.slice(Math.max(0, idx - 2), idx)) || /[\\d.,]$/.test(text.slice(Math.max(0, idx - 1), idx))) continue;",
-   "occurrence": 1,
-   "lineno": 78,
-   "reason": "The tested string is `text.slice(Math.max(0, idx - 1), idx)`, at most one character long, so the class test gives the same answer with or without the end anchor."
-  },
-  {
-   "package": "pca-goal",
-   "file": "src/interpret.ts",
-   "mutator": "MethodExpression",
-   "original": "Math.max(0, idx - 1)",
-   "replacement": "Math.min(0, idx - 1)",
-   "line": "if (/[$€£¥]\\s?$/.test(text.slice(Math.max(0, idx - 2), idx)) || /[\\d.,]$/.test(text.slice(Math.max(0, idx - 1), idx))) continue;",
-   "occurrence": 1,
-   "lineno": 78,
-   "reason": "For idx >= 1 the mutant slices from 0 to idx, and the end-anchored one-character class only sees the last character, which is the same one the original slice holds; for idx = 0 both slices are the empty string."
-  },
-  {
-   "package": "pca-goal",
-   "file": "src/interpret.ts",
-   "mutator": "Regex",
    "original": "/^[A-Za-z0-9_-]/",
    "replacement": "/[A-Za-z0-9_-]/",
    "line": "if (/^[A-Za-z0-9_-]/.test(text.slice(idx + w.length, idx + w.length + 1)) && /\\d/.test(w)) continue;",
    "occurrence": 1,
    "lineno": 79,
    "reason": "The tested string is a slice of at most one character, so the start anchor is always satisfied whenever the class matches."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/ontology.ts",
+   "mutator": "ConditionalExpression",
+   "original": "s.kind === 'enum'",
+   "replacement": "false",
+   "line": "const okKind = p.kind === 'money' ? s.kind === 'money' : p.kind === s.kind || (p.kind === 'enum' && (s.kind === 'enum' || s.kind === 'enum_list')) || (p.kind === 'id' && (s.kind === 'id' || s.kind === 'id_list')) || (p.kind === 'text' && s.kind === 'text_list');",
+   "occurrence": 1,
+   "lineno": 267,
+   "reason": "In `okKind` the `(p.kind === 'enum' && (s.kind === 'enum' || s.kind === 'enum_list'))` disjunct is only evaluated, and only matters, when `p.kind === 'enum'`. If that holds and `s.kind === 'enum'`, the earlier disjunct `p.kind === s.kind` of the same `||` chain is already true, so `okKind` is true with or without the inner comparison; if `s.kind !== 'enum'`, the inner comparison is false in the original and the mutated form alike (a false or empty-string comparison is false). Only `s.kind === 'enum_list'` decides the disjunct, and it is untouched, so no input changes `okKind`."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/ontology.ts",
+   "mutator": "StringLiteral",
+   "original": "'enum'",
+   "replacement": "\"\"",
+   "line": "const okKind = p.kind === 'money' ? s.kind === 'money' : p.kind === s.kind || (p.kind === 'enum' && (s.kind === 'enum' || s.kind === 'enum_list')) || (p.kind === 'id' && (s.kind === 'id' || s.kind === 'id_list')) || (p.kind === 'text' && s.kind === 'text_list');",
+   "occurrence": 1,
+   "lineno": 267,
+   "reason": "In `okKind` the `(p.kind === 'enum' && (s.kind === 'enum' || s.kind === 'enum_list'))` disjunct is only evaluated, and only matters, when `p.kind === 'enum'`. If that holds and `s.kind === 'enum'`, the earlier disjunct `p.kind === s.kind` of the same `||` chain is already true, so `okKind` is true with or without the inner comparison; if `s.kind !== 'enum'`, the inner comparison is false in the original and the mutated form alike (a false or empty-string comparison is false). Only `s.kind === 'enum_list'` decides the disjunct, and it is untouched, so no input changes `okKind`."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/ontology.ts",
+   "mutator": "ConditionalExpression",
+   "original": "s.kind === 'id'",
+   "replacement": "false",
+   "line": "const okKind = p.kind === 'money' ? s.kind === 'money' : p.kind === s.kind || (p.kind === 'enum' && (s.kind === 'enum' || s.kind === 'enum_list')) || (p.kind === 'id' && (s.kind === 'id' || s.kind === 'id_list')) || (p.kind === 'text' && s.kind === 'text_list');",
+   "occurrence": 1,
+   "lineno": 267,
+   "reason": "In `okKind` the `(p.kind === 'id' && (s.kind === 'id' || s.kind === 'id_list'))` disjunct is only evaluated, and only matters, when `p.kind === 'id'`. If that holds and `s.kind === 'id'`, the earlier disjunct `p.kind === s.kind` of the same `||` chain is already true, so `okKind` is true with or without the inner comparison; if `s.kind !== 'id'`, the inner comparison is false in the original and the mutated form alike (a false or empty-string comparison is false). Only `s.kind === 'id_list'` decides the disjunct, and it is untouched, so no input changes `okKind`."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/ontology.ts",
+   "mutator": "StringLiteral",
+   "original": "'id'",
+   "replacement": "\"\"",
+   "line": "const okKind = p.kind === 'money' ? s.kind === 'money' : p.kind === s.kind || (p.kind === 'enum' && (s.kind === 'enum' || s.kind === 'enum_list')) || (p.kind === 'id' && (s.kind === 'id' || s.kind === 'id_list')) || (p.kind === 'text' && s.kind === 'text_list');",
+   "occurrence": 1,
+   "lineno": 267,
+   "reason": "In `okKind` the `(p.kind === 'id' && (s.kind === 'id' || s.kind === 'id_list'))` disjunct is only evaluated, and only matters, when `p.kind === 'id'`. If that holds and `s.kind === 'id'`, the earlier disjunct `p.kind === s.kind` of the same `||` chain is already true, so `okKind` is true with or without the inner comparison; if `s.kind !== 'id'`, the inner comparison is false in the original and the mutated form alike (a false or empty-string comparison is false). Only `s.kind === 'id_list'` decides the disjunct, and it is untouched, so no input changes `okKind`."
   }
  ]
 }
