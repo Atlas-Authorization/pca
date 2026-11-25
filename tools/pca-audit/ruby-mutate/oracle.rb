@@ -149,7 +149,9 @@ module Oracle
       next if seen[path]
 
       seen[path] = true
-      src.call(path).scan(/^\s*require_relative '([^']+)'/).flatten.each do |rel|
+      # only top-level (or directly in the outer module) requires are load-order edges: an indented one sits in a method body
+      # (actions.rb requires actions_confirmation lazily, and the confirmation file needs actions first: a false cycle)
+      src.call(path).scan(/^ {0,2}require_relative '([^']+)'/).flatten.each do |rel|
         dep = File.expand_path("#{rel}.rb", File.dirname(path))
         visit.call(dep) if universe.include?(dep)
       end

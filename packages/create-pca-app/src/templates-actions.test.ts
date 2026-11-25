@@ -35,10 +35,10 @@ describe('template actions', () => {
   }
   const cli = (...args: string[]): string => execFileSync(process.execPath, [join(REPO, 'packages', 'pca-cli', 'dist', 'cli.js'), ...args], { cwd: target, encoding: 'utf8' });
 
-  it('pins the toolchain to ^0.5.0 and names the project', () => {
+  it('pins the toolchain to ^0.6.0 and names the project', () => {
     const pkg = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8')) as { name: string; dependencies: Record<string, string> };
     expect(pkg.name).toBe('my-actions');
-    expect(pkg.dependencies).toEqual({ '@atlasauth/pca-actions': '^0.5.0', '@atlasauth/pca-cli': '^0.5.0' });
+    expect(pkg.dependencies).toEqual({ '@atlasauth/pca-actions': '^0.6.0', '@atlasauth/pca-cli': '^0.6.0' });
   });
   it('the scaffolded project lints (strict), passes its examples and builds', () => {
     expect(cli('actions', 'lint', '--strict')).toMatch(/0 errors, 0 warnings/);
