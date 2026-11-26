@@ -46,10 +46,21 @@ int atlas_less_cat1_keygen(uint8_t *pk, size_t pk_cap, uint8_t *sk, size_t sk_ca
 
 /*
  * Writes the detached signature of `msg` under `sk` to `sig` (capacity `sig_cap` >= atlas_less_cat1_signature_max_bytes) and its
- * length (1,153..1,329 in steps of 16) to `*sig_len`; `atlas_less_cat1_verify` accepts it under the matching public key.
+ * length (1,169..1,329 in steps of 16: at least one published seed) to `*sig_len`; `atlas_less_cat1_verify` accepts it under the
+ * matching public key. The reference's rare pivot failure (a zero-seed signature) is 0.
  */
 int atlas_less_cat1_sign(const uint8_t *sk, size_t sk_len, const uint8_t *msg, size_t msg_len, const uint8_t *seed, size_t seed_len,
                          uint8_t *sig, size_t sig_cap, size_t *sig_len);
+
+/*
+ * Test-only seams for this wrapper's own tests; never call them in production. Not thread-safe: set them while no other call
+ * runs. The allocator seam routes the wrapper's own buffer allocations and frees (not the reference's) through alloc_fn and
+ * free_fn; the sign seam replaces the reference crypto_sign that atlas_less_cat1_sign calls. NULL restores the default.
+ */
+typedef int (*atlas_less_sign_fn)(unsigned char *sm, unsigned long long *smlen, const unsigned char *m, unsigned long long mlen,
+                                  const unsigned char *sk);
+void atlas_less_test_set_allocator(void *(*alloc_fn)(size_t), void (*free_fn)(void *));
+void atlas_less_test_set_sign(atlas_less_sign_fn sign_fn);
 
 #ifdef __cplusplus
 }

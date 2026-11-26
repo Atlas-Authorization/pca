@@ -4,7 +4,7 @@ See the full release notes in [docs/pca/CHANGELOG.md](https://github.com/Atlas-A
 
 ## 0.6.0 (unreleased)
 
-Breaking: `bondAmount` power-curve gamma must be a multiple of 1/8 and at most 64; `proportionCutoff` and `healthTestBytes` pin their domain; immune decay is quantized. Security: an infinite maximum age (`verifySignedRequest`, `checkCosignedHead`), a non-finite settled amount (`reconcileSettlement`) and a non-finite clock (precedent answers) now refuse. Full notes: [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
+Breaking: `bondAmount` power-curve gamma must be a multiple of 1/8 and at most 64; `proportionCutoff` and `healthTestBytes` pin their domain; immune decay is quantized. Security: an infinite maximum age (`verifySignedRequest`, `checkCosignedHead`), a non-finite settled amount (`reconcileSettlement`) and a non-finite clock (precedent answers) now refuse. Security: LESS signing (`@atlasauth/pca-less-wasm`) refuses the reference signer's seedless failure output instead of returning it as a signature. Full notes: [docs/pca/CHANGELOG.md](https://github.com/Atlas-Authorization/pca/blob/main/docs/pca/CHANGELOG.md).
 
 ## 0.5.0 (unreleased)
 

@@ -19,5 +19,9 @@ rm -rf src/attest
 (cd ../../../sdks/rust-pca/src && find . -mindepth 2 -name '*.rs') | while read -r f; do
   mkdir -p "src/$(dirname "$f")"; perl -pe 's/\bcrate::/crate::pca::/g' "../../../sdks/rust-pca/src/$f" > "src/$f"
 done
+# the data files the library include_str!/include_bytes!s (tzdata, ontologies, circuit keys), byte-identical
+(cd ../../../sdks/rust-pca/src && find . -type f ! -name '*.rs') | while read -r f; do
+  mkdir -p "src/$(dirname "$f")"; cp "../../../sdks/rust-pca/src/$f" "src/$f"
+done
 cp ../../../sdks/rust-pca/Cargo.lock . 2>/dev/null || true
 echo "lib.rs sha256 (source): $(shasum -a 256 $SRC 2>/dev/null || sha256sum $SRC)"

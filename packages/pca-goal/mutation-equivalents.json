@@ -2040,6 +2040,50 @@
    "occurrence": 1,
    "lineno": 267,
    "reason": "In `okKind` the `(p.kind === 'id' && (s.kind === 'id' || s.kind === 'id_list'))` disjunct is only evaluated, and only matters, when `p.kind === 'id'`. If that holds and `s.kind === 'id'`, the earlier disjunct `p.kind === s.kind` of the same `||` chain is already true, so `okKind` is true with or without the inner comparison; if `s.kind !== 'id'`, the inner comparison is false in the original and the mutated form alike (a false or empty-string comparison is false). Only `s.kind === 'id_list'` decides the disjunct, and it is untouched, so no input changes `okKind`."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/normalize.ts",
+   "mutator": "ConditionalExpression",
+   "original": "f(a) > f(b)",
+   "replacement": "false",
+   "line": "const byId = <T>(f: (x: T) => string) => (a: T, b: T): number => (f(a) < f(b) ? -1 : f(a) > f(b) ? 1 : 0);",
+   "occurrence": 1,
+   "lineno": 11,
+   "reason": "byId's comparator is only ever passed to Array.prototype.sort (canonicalizeGoal's four sorts). V8's sort branches solely on `order < 0` (binary insertion, run detection, galloping and merging all test `order < 0` and treat every other value alike), so returning 0 or 1 for an element not before the other orders every input the same way."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/normalize.ts",
+   "mutator": "EqualityOperator",
+   "original": "f(a) > f(b)",
+   "replacement": "f(a) <= f(b)",
+   "line": "const byId = <T>(f: (x: T) => string) => (a: T, b: T): number => (f(a) < f(b) ? -1 : f(a) > f(b) ? 1 : 0);",
+   "occurrence": 1,
+   "lineno": 11,
+   "reason": "byId's comparator is only ever passed to Array.prototype.sort (canonicalizeGoal's four sorts). V8's sort branches solely on `order < 0` (binary insertion, run detection, galloping and merging all test `order < 0` and treat every other value alike), so returning 0 or 1 for an element not before the other orders every input the same way."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/interpret.ts",
+   "mutator": "MethodExpression",
+   "original": "Math.max(0, idx - 1)",
+   "replacement": "Math.min(0, idx - 1)",
+   "line": "if (/(?:[$€£¥]|\\b(?:usd|eur|gbp|jpy))\\s?$/i.test(text.slice(Math.max(0, idx - 5), idx)) || /[\\d.,]$/.test(text.slice(Math.max(0, idx - 1), idx))) continue;",
+   "occurrence": 1,
+   "lineno": 78,
+   "reason": "The slice is only tested by /[\\d.,]$/, which (no m flag) looks at its last character alone. For idx >= 1 both slice(idx - 1, idx) and the mutant's slice(0, idx) end in text[idx - 1]; for idx = 0 the original slice(0, 0) and the mutant's slice(-1, 0) are both empty. The test result is the same for every input."
+  },
+  {
+   "package": "pca-goal",
+   "file": "src/ontology.ts",
+   "mutator": "ConditionalExpression",
+   "original": "ccy !== undefined",
+   "replacement": "true",
+   "line": "return toIrOntology(o, { ...(ccy !== undefined ? { ccy } : {}), rels });",
+   "occurrence": 1,
+   "lineno": 111,
+   "reason": "With the guard forced true and no goal currency, toIrOntology receives { ccy: undefined, rels } instead of { rels }. toIrOntology reads opts.ccy only through paramTy, where an absent and an undefined ccy take the same branch (ccy !== undefined is false either way), and the opts object itself is not returned or stored, so the projection is identical for every goal."
   }
  ]
 }

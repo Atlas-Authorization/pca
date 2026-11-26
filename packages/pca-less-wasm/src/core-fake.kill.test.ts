@@ -7,6 +7,8 @@ const SEED = 16;
 const PK = 8;
 const SK = 4;
 const SIG_MAX = 2 * 32 + 34 * 32 + 11 * SEED + 1; // 1329
+const SIG_MIN = SIG_MAX - 11 * SEED; // zero published seeds: the reference's pivot-failure output
+const SIG_ONE = SIG_MIN + SEED; // the fake's default: one published seed
 
 interface OpenStep {
   rc: number;
@@ -18,6 +20,8 @@ interface Opts {
   autoseedRc?: number;
   keypairRc?: number;
   signRc?: number;
+  /** signature length less_sign writes after the message (default SIG_ONE) */
+  sigLen?: number;
   /** malloc call indexes (0-based, counted per fake) that return 0 */
   mallocFail?: number[];
   initialize?: boolean;
@@ -78,8 +82,9 @@ function makeFake(o: Opts = {}) {
       const n = Number(mlen);
       st.signs.push({ smlenPtr, mlen, sk: [...u8.slice(sk, sk + SK)], msg: [...u8.slice(m, m + n)], ptrs: [sm, smlenPtr, m, sk] });
       u8.set(u8.slice(m, m + n), sm);
-      u8.fill(0xee, sm + n, sm + n + 3);
-      dv.setBigUint64(smlenPtr, BigInt(n + 3), true);
+      const sl = o.sigLen ?? SIG_ONE;
+      u8.fill(0xee, sm + n, sm + n + sl);
+      dv.setBigUint64(smlenPtr, BigInt(n + sl), true);
       return o.signRc ?? 0;
     },
     less_open(out: number, mlenPtr: number, sm: number, smlen: unknown, pk: number) {
@@ -362,7 +367,7 @@ describe('sign', () => {
     const { core, fake } = await load();
     core.initLessSync(new Uint8Array(1));
     const out = core.sign(new Uint8Array([1, 2, 3, 4]), new Uint8Array([9, 8]));
-    expect(out).toEqual(new Uint8Array([9, 8, 0xee, 0xee, 0xee]));
+    expect(out).toEqual(new Uint8Array([9, 8, ...new Uint8Array(SIG_ONE).fill(0xee)]));
     expect(fake.st.mallocs.map((m) => m.n)).toEqual([SK, 2, 2 + SIG_MAX, 8]);
     const call = fake.st.signs[0]!;
     expect(call.sk).toEqual([1, 2, 3, 4]);
@@ -389,7 +394,28 @@ describe('sign', () => {
   it('signDetached strips the message prefix', async () => {
     const { core } = await load();
     core.initLessSync(new Uint8Array(1));
-    expect(core.signDetached(new Uint8Array(SK), new Uint8Array([9, 8]))).toEqual(new Uint8Array([0xee, 0xee, 0xee]));
+    expect(core.signDetached(new Uint8Array(SK), new Uint8Array([9, 8]))).toEqual(new Uint8Array(SIG_ONE).fill(0xee));
+  });
+  it('refuses the zero-seed (minimum-size) output the reference returns with rc 0 on a pivot failure, and frees all four buffers', async () => {
+    const { core, fake } = await load({ sigLen: SIG_MIN });
+    core.initLessSync(new Uint8Array(1));
+    expect(() => core.sign(new Uint8Array(SK), new Uint8Array(2))).toThrow('sign: wasm produced no valid signature');
+    expect(fake.st.frees).toEqual(fake.st.mallocs.map((m) => m.ptr));
+    expect(fake.st.frees).toHaveLength(4);
+  });
+  it('accepts exactly one-seed through maximum on the seed step, nothing shorter, longer or off-step', async () => {
+    for (const [sigLen, ok] of [
+      [SIG_MIN - SEED, false], [SIG_MIN, false], [SIG_MIN + 1, false], [SIG_ONE - 1, false], [SIG_ONE, true],
+      [SIG_ONE + 1, false], [SIG_MAX - SEED, true], [SIG_MAX - 1, false], [SIG_MAX, true], [SIG_MAX + SEED, false],
+    ] as const) {
+      for (const msgLen of [0, 2]) {
+        const { core } = await load({ sigLen });
+        core.initLessSync(new Uint8Array(1));
+        const run = () => core.sign(new Uint8Array(SK), new Uint8Array(msgLen));
+        if (ok) expect(run()).toHaveLength(msgLen + sigLen);
+        else expect(run, `sigLen ${sigLen} msgLen ${msgLen}`).toThrow('sign: wasm produced no valid signature');
+      }
+    }
   });
 });
 

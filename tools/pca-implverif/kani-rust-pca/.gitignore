@@ -4,3 +4,7 @@
 !/src/lib.rs
 !/src/proofs.rs
 /src/attest/
+/src/actions_kit/
+/src/actions_kit_ops/
+/src/goal/
+/src/zk_circuits/

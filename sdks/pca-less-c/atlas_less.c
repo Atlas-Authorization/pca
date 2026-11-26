@@ -27,6 +27,26 @@ size_t atlas_less_cat1_public_key_bytes(void) { return (size_t)CRYPTO_PUBLICKEYB
 size_t atlas_less_cat1_signature_min_bytes(void) { return SIG_MIN; }
 size_t atlas_less_cat1_signature_max_bytes(void) { return SIG_MAX; }
 
+/* ---- test-only seams (see atlas_less.h): the wrapper's own allocations and the reference signer it calls ---- */
+
+/* NULL hooks, resolved per call: a static initializer of malloc's address is not a constant with a DLL C runtime */
+static void *(*alloc_hook)(size_t) = NULL;
+static void (*free_hook)(void *) = NULL;
+static atlas_less_sign_fn sign_hook = NULL;
+
+static void *less_alloc(size_t n) { return alloc_hook != NULL ? alloc_hook(n) : malloc(n); }
+static void less_free(void *p) {
+    if (free_hook != NULL) free_hook(p);
+    else free(p);
+}
+
+void atlas_less_test_set_allocator(void *(*alloc_fn)(size_t), void (*free_fn)(void *)) {
+    alloc_hook = alloc_fn;
+    free_hook = free_fn;
+}
+
+void atlas_less_test_set_sign(atlas_less_sign_fn sign_fn) { sign_hook = sign_fn; }
+
 typedef struct {
     const uint8_t *pk;
     const uint8_t *sm;
@@ -82,8 +102,8 @@ int atlas_less_cat1_verify(const uint8_t *pk, size_t pk_len, const uint8_t *msg,
     if (sig_len < SIG_MIN || sig_len > SIG_MAX || (SIG_MAX - sig_len) % SEED_LENGTH_BYTES != 0) return 0;
     if (msg_len > (size_t)-1 - sig_len) return 0;
     const size_t smlen = msg_len + sig_len;
-    uint8_t *sm = (uint8_t *)malloc(smlen);
-    uint8_t *m = (uint8_t *)malloc(smlen);
+    uint8_t *sm = (uint8_t *)less_alloc(smlen);
+    uint8_t *m = (uint8_t *)less_alloc(smlen);
     int valid = 0;
     if (sm != NULL && m != NULL) {
         if (msg_len) memcpy(sm, msg, msg_len);
@@ -92,8 +112,8 @@ int atlas_less_cat1_verify(const uint8_t *pk, size_t pk_len, const uint8_t *msg,
         valid = on_big_stack(run_open, &j) && j.rc == 0 && j.mlen == (unsigned long long)msg_len &&
                 (msg_len == 0 || memcmp(m, msg, msg_len) == 0);
     }
-    free(sm);
-    free(m);
+    less_free(sm);
+    less_free(m);
     return valid;
 }
 
@@ -118,8 +138,8 @@ static void run_keygen(void *arg) {
 int atlas_less_cat1_keygen(uint8_t *pk, size_t pk_cap, uint8_t *sk, size_t sk_cap, const uint8_t *seed, size_t seed_len) {
     if (pk == NULL || sk == NULL || seed == NULL || seed_len < ATLAS_LESS_MIN_SEED_BYTES) return 0;
     if (pk_cap != (size_t)CRYPTO_PUBLICKEYBYTES || sk_cap != (size_t)CRYPTO_SECRETKEYBYTES) return 0;
-    uint8_t *tp = (uint8_t *)malloc(CRYPTO_PUBLICKEYBYTES);
-    uint8_t *ts = (uint8_t *)malloc(CRYPTO_SECRETKEYBYTES);
+    uint8_t *tp = (uint8_t *)less_alloc(CRYPTO_PUBLICKEYBYTES);
+    uint8_t *ts = (uint8_t *)less_alloc(CRYPTO_SECRETKEYBYTES);
     int ok = 0;
     if (tp != NULL && ts != NULL) {
         keygen_job j = {tp, ts, seed, seed_len, -1};
@@ -135,8 +155,8 @@ int atlas_less_cat1_keygen(uint8_t *pk, size_t pk_cap, uint8_t *sk, size_t sk_ca
         volatile uint8_t *z = ts;
         for (size_t i = 0; i < CRYPTO_SECRETKEYBYTES; i++) z[i] = 0;
     }
-    free(tp);
-    free(ts);
+    less_free(tp);
+    less_free(ts);
     return ok;
 }
 
@@ -154,7 +174,7 @@ typedef struct {
 static void run_sign(void *arg) {
     sign_job *j = (sign_job *)arg;
     init_randombytes(j->seed, j->seed_len);
-    j->rc = crypto_sign(j->sm, &j->smlen, j->msg, j->msg_len, j->sk);
+    j->rc = (sign_hook != NULL ? sign_hook : crypto_sign)(j->sm, &j->smlen, j->msg, j->msg_len, j->sk);
 }
 
 int atlas_less_cat1_sign(const uint8_t *sk, size_t sk_len, const uint8_t *msg, size_t msg_len, const uint8_t *seed, size_t seed_len,
@@ -164,22 +184,25 @@ int atlas_less_cat1_sign(const uint8_t *sk, size_t sk_len, const uint8_t *msg, s
     if (sk_len != (size_t)CRYPTO_SECRETKEYBYTES || seed_len < ATLAS_LESS_MIN_SEED_BYTES || sig_cap < SIG_MAX) return 0;
     if (msg_len > (size_t)-1 - sizeof(sign_t) - 16) return 0;
     const size_t cap = msg_len + sizeof(sign_t) + 16; /* the reference writes a whole sign_t after the message */
-    uint8_t *sm = (uint8_t *)calloc(cap, 1);
+    uint8_t *sm = (uint8_t *)less_alloc(cap);
     int ok = 0;
     if (sm != NULL) {
+        memset(sm, 0, cap);
         sign_job j = {sk, msg == NULL ? &none : msg, (unsigned long long)msg_len, seed, seed_len, sm, 0, -1};
         rng_acquire();
         ok = on_big_stack(run_sign, &j) && j.rc == 0;
         rng_release();
         if (ok) {
             const size_t n = j.smlen >= msg_len ? (size_t)j.smlen - msg_len : 0;
-            ok = j.smlen <= cap && n >= SIG_MIN && n <= SIG_MAX && (SIG_MAX - n) % SEED_LENGTH_BYTES == 0;
+            /* a valid signature publishes at least one seed (T - W = 11 leaves are revealed); crypto_sign reports LESS_sign's
+             * pivot failure only as a zero-seed (SIG_MIN) signature, still returning 0 */
+            ok = j.smlen <= cap && n > SIG_MIN && n <= SIG_MAX && (SIG_MAX - n) % SEED_LENGTH_BYTES == 0;
             if (ok) {
                 memcpy(sig, sm + msg_len, n);
                 *sig_len = n;
             }
         }
     }
-    free(sm);
+    less_free(sm);
     return ok;
 }

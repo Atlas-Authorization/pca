@@ -342,6 +342,13 @@ export function sign(secretKey: Uint8Array, message: Uint8Array): Uint8Array {
       throw new LessError('sign: wasm sign failed');
     }
     const smlen = Number(dv().getBigUint64(pSmlen, true));
+    // The reference returns 0 even on its pivot failure, signalling it only as a zero-seed (minimum-size) signature;
+    // a real one always publishes at least one seed, so accept only (min, max] on the seed step.
+    const sigLen = smlen - message.length;
+    const sigMin = s.signatureMax - MAX_PUBLISHED_SEEDS * s.seed;
+    if (!(sigLen > sigMin && sigLen <= s.signatureMax && (s.signatureMax - sigLen) % s.seed === 0)) {
+      throw new LessError('sign: wasm produced no valid signature');
+    }
     return mem().slice(pSm, pSm + smlen);
   } finally {
     c.free(pSk);

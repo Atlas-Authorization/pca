@@ -12,6 +12,7 @@ All notable changes to the `@atlasauth/pca*` packages and `create-pca-app`. Ever
 
 ### Security
 
+- **LESS signing could return a signature that never verifies (`@atlasauth/pca-less-wasm` and every native package).** The LESS reference signer reports success even when it fails internally, handing back a minimum-size signature with no published seeds. Signing now treats that output as an error; a real LESS signature always carries at least one seed.
 - **An infinite maximum age admitted any age (`@atlasauth/pca-webbotauth`, `@atlasauth/pca`).** `verifySignedRequest` with `maxAgeSec: Infinity` accepted a signature of any age, and `checkCosignedHead` with an infinite `maxHeadAgeMs` accepted a mesh head of any age. Both now refuse; a maximum age must be a finite number.
 - **A non-finite settled amount reconciled (`@atlasauth/pca-payments`).** `reconcileSettlement` read a settled amount of NaN or minus infinity as within the approved amount. A settled amount that is not a finite number never reconciles, so the grant is frozen.
 - **A precedent answer was live for a non-finite clock (`@atlasauth/pca-goal`).** A clock of minus infinity kept every unexpired precedent answer live. A clock that is not a finite number now finds none.

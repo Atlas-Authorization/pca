@@ -109,6 +109,10 @@ describe('refsem kills: bounds', () => {
     });
     expect(decide(g)).toBe(2);
   });
+  it('an exceeded escalate bound escalates, an exceeded deny bound denies', () => {
+    expect(decide(withBound({ agg: 'count', cap: { u: U, n: 0 }, onExceed: 'escalate' }))).toBe(1);
+    expect(decide(withBound({ agg: 'count', cap: { u: U, n: 0 }, onExceed: 'deny' }))).toBe(0);
+  });
 });
 
 describe('refsem kills: bound scope', () => {

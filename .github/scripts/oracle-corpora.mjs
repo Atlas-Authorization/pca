@@ -186,7 +186,10 @@ for (const f of corpusFiles()) { const g = genOf(join(CORPORA, f)); if (g) byGen
 const laneFiles = new Map(); // corpus -> [{lane, path}]
 const walk = (dir, depth, f) => { if (depth > 4) return; for (const e of readdirSync(dir, { withFileTypes: true })) { if (e.name === '.git' || e.name === 'node_modules') continue; const p = join(dir, e.name); if (e.isDirectory()) walk(p, depth + 1, f); else f(p); } };
 for (const d of laneDirs) walk(join(LANES, d), 0, (p) => { const b = basename(p); if (/^ref-.*\.json\.gz$/.test(b) && !/-gen\.json\.gz$/.test(b)) {
-  const c = byGen.get(genOf(p)) ?? [];
+  const g = genOf(p);
+  // another shard's generator wrote this copy (java's ref-ciba.json.gz is ciba-java.mts output): it is compared in that shard, never with a same-named corpus here
+  if (g && allGens.includes(g) && !gens.includes(g)) return;
+  const c = byGen.get(g) ?? [];
   const key = existsSync(join(CORPORA, b)) && (c.length === 0 || c.includes(b)) ? b : c.length === 1 ? c[0] : b; // same name first, else the one corpus its generator wrote
   if (!laneFiles.has(key)) laneFiles.set(key, []); laneFiles.get(key).push({ lane: d.replace(/^pca-/, ''), path: relative(join(LANES, d), p), file: p });
 } });
@@ -222,7 +225,7 @@ say(`## Summary`);
 say(`- corpora whose lane copy differs from the regenerated one: ${stale}`);
 say(`- corpora whose lane copies are not identical to each other: ${disagree}`);
 if (orphans.length) say(`- lane copies with no generator output (not regenerated here): ${orphans.join(', ')}`);
-const noLane = corpusFiles().filter((f) => !laneFiles.has(f));
+const noLane = corpusFiles().filter((f) => !laneFiles.has(f) && f !== 'ref-dpop-rsa.json.gz'); // dpop-rsa carries the RSA test private key: lanes generate it in CI, never commit it
 if (noLane.length) say(`- regenerated corpora no lane carries: ${noLane.join(', ')}`);
 if (stale) problems.push(`${stale} corpus/corpora differ from the committed lane copies`);
 if (!laneDirs.length) problems.push('no lane repositories found to compare with');

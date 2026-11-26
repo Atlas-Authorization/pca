@@ -7,7 +7,7 @@ import { TEMPLATES, scaffold } from './index';
 
 /**
  * The templates build and pass against the WORKSPACE packages (the 0.5.0 lineup, which carries requirePCA's operation binding, the `ext` subpaths,
- * allowedSuites / pqPins and the fail-closed deriveDecideInput), and every @atlasauth dependency range is ^0.5.0 so a
+ * allowedSuites / pqPins and the fail-closed deriveDecideInput), and every @atlasauth dependency range is ^0.6.0 so a
  * scaffolded app never resolves an older published release without those APIs.
  */
 const REPO = (() => {
@@ -25,8 +25,8 @@ const store = (prefix: RegExp, inner: string): string => {
   return join(STORE, hit, 'node_modules', inner);
 };
 
-describe('templates: ^0.5.0 and they build against the workspace packages', () => {
-  it('every template (and the examples it mirrors) pins @atlasauth/* to ^0.5.0', () => {
+describe('templates: ^0.6.0 and they build against the workspace packages', () => {
+  it('every template (and the examples it mirrors) pins @atlasauth/* to ^0.6.0', () => {
     expect(TEMPLATES).toHaveLength(11);
     expect(TEMPLATES).toContain('actions');
     const files = [...TEMPLATES.map((t) => join(__dirname, '..', 'templates', t, 'package.json')), join(REPO, 'examples/pca-quickstart/package.json'), join(REPO, 'examples/pca-demo/package.json')];
@@ -34,7 +34,7 @@ describe('templates: ^0.5.0 and they build against the workspace packages', () =
       const pkg = JSON.parse(readFileSync(f, 'utf8')) as { dependencies?: Record<string, string> };
       const deps = Object.entries(pkg.dependencies ?? {}).filter(([k]) => k.startsWith('@atlasauth/'));
       expect(deps.length, f).toBeGreaterThan(0);
-      for (const [k, v] of deps) expect(v, `${f} ${k}`).toBe('^0.5.0');
+      for (const [k, v] of deps) expect(v, `${f} ${k}`).toBe('^0.6.0');
     }
   });
 

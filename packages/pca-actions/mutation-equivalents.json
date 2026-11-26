@@ -3037,6 +3037,17 @@
    "occurrence": 1,
    "lineno": 198,
    "reason": "When m === n the other operand m.startsWith(n + '.') is false (a string never starts with itself plus a dot), so the guard m !== n never changes the outcome; with it fixed to true the refusal decision is the same for every input."
+  },
+  {
+   "package": "pca-actions",
+   "file": "src/traits.ts",
+   "mutator": "CallExpression",
+   "original": "visiting.delete(id);",
+   "replacement": ";",
+   "line": "visiting.delete(id);",
+   "occurrence": 1,
+   "lineno": 165,
+   "reason": "walk() consults depth.get(id) before visiting.has(id), and every node that finishes its walk gets depth.set(id, d) right after the delete. A node left in `visiting` by the mutant therefore always hits the memoised depth first and never reaches the cycle test; the only nodes that reach visiting.has(id) as true are those still on the current recursion stack (a real cycle) or ones whose walk returned -1, after which the whole check already returns the cycle refusal. Every input gets the same result."
   }
  ]
 }
