@@ -61,7 +61,7 @@ describe('create-pca-app attacks template', () => {
     const pkg = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8')) as { name: string; scripts: Record<string, string>; dependencies: Record<string, string> };
     expect(pkg.name).toBe('my-attacks');
     expect(pkg.scripts.start).toBe('tsx src/run.ts');
-    expect(pkg.dependencies).toEqual({ '@atlasauth/pca': '^0.5.0' });
+    expect(pkg.dependencies).toEqual({ '@atlasauth/pca': '^0.6.0' });
   });
 
   it('is byte-identical to examples/pca-attacks (apart from the name token)', () => {

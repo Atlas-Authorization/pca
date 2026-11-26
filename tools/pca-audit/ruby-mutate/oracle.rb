@@ -150,12 +150,22 @@ module Oracle
 
       seen[path] = true
       # only top-level (or directly in the outer module) requires are load-order edges: an indented one sits in a method body
-      # (actions.rb requires actions_confirmation lazily, and the confirmation file needs actions first: a false cycle)
-      src.call(path).scan(/^ {0,2}require_relative '([^']+)'/).flatten.each do |rel|
-        dep = File.expand_path("#{rel}.rb", File.dirname(path))
-        visit.call(dep) if universe.include?(dep)
+      # (actions.rb requires actions_confirmation lazily, and the confirmation file needs actions first: a false cycle).
+      # A column-0 require after the outer module's closing `end` runs after the whole body on a real load (policy_bridge.rb
+      # requires policy_bridge_cel there, and the cel file calls PolicyBridge.full at load): it is evaluated after the file.
+      text = src.call(path)
+      body_end = text.index(/^end\b/) || text.length
+      before, after = [], []
+      text.to_enum(:scan, /^ {0,2}require_relative '([^']+)'/).each do
+        md = Regexp.last_match
+        dep = File.expand_path("#{md[1]}.rb", File.dirname(path))
+        next unless universe.include?(dep)
+
+        (md.begin(0) > body_end && md[0].start_with?('require') ? after : before) << dep
       end
+      before.each { |dep| visit.call(dep) }
       ordered << path
+      after.each { |dep| visit.call(dep) }
     end
     exts.each { |path| visit.call(path) }
     n_ext = ordered.length
