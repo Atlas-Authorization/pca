@@ -51,7 +51,9 @@ function treeHash() {
   for (const f of [...walkFiles(path.join(pkg, 'Sources'), []), ...walkFiles(path.join(pkg, 'Tests'), []), path.join(pkg, 'Package.swift'), path.join(pkg, 'README.md')]) {
     if (fs.existsSync(f)) h.update(path.relative(pkg, f) + '\0').update(fs.readFileSync(f)).update('\0');
   }
+  // the VDF replay's case selection (ATLAS_VDF_*) decides which cases the oracle runs, so an oracle of one selection never vouches for another
   h.update(`${process.env.SWIFT_TEST_FLAGS ?? ''}\0${process.env.SWIFTMUT_FILTER ?? ''}\0${process.env.SWIFTMUT_APPLE ?? ''}\0${process.platform}`);
+  h.update(['ATLAS_VDF_FULL', 'ATLAS_VDF_SHARD', 'ATLAS_VDF_SOLO'].map((k) => `${k}=${process.env[k] ?? ''}`).join('\0'));
   return h.digest('hex');
 }
 // Static cost of ONE mutant of `file`, in units of "one run of the test classes named after the file". Every mutant pays that fail-fast run (plus the
@@ -415,12 +417,12 @@ if (cmd === 'run') {
   // contiguous slices (not round-robin): a shard then spans a file or two, so it verifies one or two oracle groups on the
   // unmutated sources instead of all ~40 (each a 2-3 min suite run). The workflow's count check uses the same formula.
   all = sliceMutants(all, every, offset, flags);
-  // --retry=a.json,b.json: only the mutants that SURVIVED in earlier result files (matched by file + source text + op +
+  // --retry=a.json,b.json: only the mutants that SURVIVED or TIMED OUT (no verdict) in earlier result files (matched by file + source text + op +
   // replacement, so line shifts from edits elsewhere in the file do not matter)
   const retry = flags.find((f) => f.startsWith('--retry='))?.slice(8);
   if (retry) {
     const want = new Set();
-    for (const f of retry.split(',')) for (const r of JSON.parse(fs.readFileSync(f, 'utf8'))) if (r.status === 'SURVIVED') want.add(`${r.file}#${r.orig}#${r.op}#${r.repl}`);
+    for (const f of retry.split(',')) for (const r of JSON.parse(fs.readFileSync(f, 'utf8'))) if (r.status === 'SURVIVED' || r.status === 'TIMEOUT') want.add(`${r.file}#${r.orig}#${r.op}#${r.repl}`);
     all = all.filter((m) => want.has(`${m.file}#${m.orig}#${m.op}#${m.repl}`));
   }
   const results = fs.existsSync(outFile) ? JSON.parse(fs.readFileSync(outFile, 'utf8')) : [];
@@ -451,6 +453,8 @@ if (cmd === 'run') {
   const save = () => fs.writeFileSync(outFile, JSON.stringify(results, null, 1));
   const MAX_RSS = (+process.env.SWIFTMUT_MAX_RSS_MB || 4096) * 1048576; // per worker (process group)
   const targetOf = targetOfFile;
+  // the suite a mutant of `file` faces: SWIFTMUT_FILTER when the job pins one (a module's own test classes), else the file's test target
+  const oracleOf = (file) => process.env.SWIFTMUT_FILTER || targetOf(file);
   // fail-fast phase: the test classes named after the mutated file (e.g. Actions.swift -> ActionsVectorTests, BaseActionsOracleTests).
   // Each passes on the unmutated sources (the full suite is green), so a failure there is the mutant's doing: KILLED without
   // paying for the rest of the suite. A mutant they do not kill still faces the WHOLE suite (phase 2), so no survivor is lost.
@@ -495,20 +499,26 @@ if (cmd === 'run') {
     return { toks: [...toks].sort(), opaque };
   })();
   // an unparsed requireCovers argument: every file is its own group (still correct, only slower)
-  const groupOf = (file) => coverTokens.opaque ? file : `${targetOf(file)}|${coverTokens.toks.filter((t) => file.includes(t)).join(',')}`;
+  // keyed by the suite that really runs (oracleOf), so the log and a baseline oracle.json name the filter a module job pins, not the default target
+  // A pinned SWIFTMUT_FILTER is one suite for every file (K042.requireCovers does not gate under it), so one group.
+  const groupOf = (file) => process.env.SWIFTMUT_FILTER ? `${oracleOf(file)}|*` : coverTokens.opaque ? `${oracleOf(file)}|${file}` : `${oracleOf(file)}|${coverTokens.toks.filter((t) => file.includes(t)).join(',')}`;
   const groups = new Map(); // group -> Promise<limit ms>
   const groupInfo = new Map(); // group -> { ms: the unmutated duration, limit }
   const verifyGroup = (w, file) => {
     const g = groupOf(file);
     if (!groups.has(g) && oracleIn?.groups[g]) { groupInfo.set(g, oracleIn.groups[g]); groups.set(g, Promise.resolve(oracleIn.groups[g].limit)); }
     if (!groups.has(g)) groups.set(g, (async () => {
-      const r = await exec(w, file, process.env.SWIFTMUT_FILTER || targetOf(file), false, 3_600_000);
+      const r = await exec(w, file, oracleOf(file), false, 3_600_000);
       if (r.timedOut || r.memKilled || r.compileErr || r.code !== 0 || r.sig !== '[]') {
         console.error(`worker ${w}: UNMUTATED ORACLE FAILED for group [${g}] (file ${file}): ${JSON.stringify({ code: r.code, ms: r.ms, memKilled: r.memKilled, timedOut: r.timedOut, compileErr: r.compileErr, sig: r.sig.slice(0, 400) })}\n${r.tail}\naborting`);
         process.exit(3);
       }
+      // a suite that ran no test (a filter matching nothing, a target the manifest left out) passes every mutant: no oracle at all
+      if (!r.passed.length) { console.error(`worker ${w}: UNMUTATED ORACLE RAN NO TEST for group [${g}] (filter ${oracleOf(file)}, file ${file}): aborting`); process.exit(3); }
       const lim = Math.max(DEFAULT_LIMIT, 2 * r.ms + 120_000); // margin for a slow runner; a timeout is then re-judged at twice this
-      console.error(`group [${g}]: unmutated ${Math.round(r.ms / 1000)} s, limit ${Math.round(lim / 1000)} s`);
+      console.error(`group [${g}]: unmutated ${Math.round(r.ms / 1000)} s, limit ${Math.round(lim / 1000)} s, ${r.passed.length} test(s) passed, ${r.skipped} skipped`);
+      // where the oracle's time goes (what a cheaper, equally strong oracle has to start from)
+      console.error(`group [${g}]: slowest: ${[...r.passed].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([n, sec]) => `${n} ${sec.toFixed(1)} s`).join('; ')}`);
       groupInfo.set(g, { ms: r.ms, limit: lim });
       return lim;
     })());
@@ -566,6 +576,8 @@ if (cmd === 'run') {
         // evidence for the audit: the first failing assertion's location and name, and the last test that had started (the one a hang sits in)
         killer: (lines.find((l) => /\/Tests\//.test(l)) ?? '').replace(/^.*\/Tests\//, 'Tests/').slice(0, 300),
         lastTest: [...out.matchAll(/Test Case '([^']+)' started/g)].pop()?.[1] ?? '',
+        passed: [...out.matchAll(/Test Case '([^']+)' passed \(([\d.]+) seconds\)/g)].map((x) => [x[1], +x[2]]),
+        skipped: [...out.matchAll(/Test Case '[^']+' skipped/g)].length,
         // the runtime's own message first; the last-match fallback must skip the backtracer's register dump, which can quote "Fatal error" from memory
         crash: `${/--dump-tests-json output:/.test(out) ? 'crashed listing the tests, no test ran: ' : ''}${(out.match(/Fatal error:[^\n]*/)?.[0] ?? out.split('\n').filter((l) => !/^\s*r\w+ 0x/.test(l) && /Fatal error|fatal error|Illegal instruction|Segmentation fault|Trace\/breakpoint|Aborted|signal|exited with|Bus error|stack overflow/i.test(l)).pop() ?? '').trim().slice(0, 300)}`,
         tail: out.split('\n').filter((l) => !/^\s*Executed \d+ tests?,/.test(l) && /error|fatal|signal|crash|killed|exited|illegal|segmentation|abort|unexpected|threw/i.test(l)).slice(-40).join('\n').slice(-6000),
@@ -614,11 +626,11 @@ if (cmd === 'run') {
       if (!r.timedOut && r.code !== 0) return crashed(r);
       if (!r.timedOut) built = true;
     }
-    let r = await run(w, m, process.env.SWIFTMUT_FILTER || targetOf(m.file), built, limit);
+    let r = await run(w, m, oracleOf(m.file), built, limit);
     // a timeout is no verdict: judge once more at twice the limit, so a slow runner or GC pause cannot leave a behaviour-preserving
     // mutant undecided. A second timeout is TIMEOUT, a run error that needs a ledger entry proving the mutant itself never ends.
     // up to three attempts in all (the second and third at 1.5x): a runner stall must not decide a verdict, a mutant that loops ends all three
-    for (let a = 0; a < 2 && r.timedOut; a++) r = await run(w, m, process.env.SWIFTMUT_FILTER || targetOf(m.file), built || r.started, Math.round(1.5 * limit));
+    for (let a = 0; a < 2 && r.timedOut; a++) r = await run(w, m, oracleOf(m.file), built || r.started, Math.round(1.5 * limit));
     if (r.memKilled) return { status: 'RUNERR', evidence: crashOf(r) };
     if (r.timedOut) return { status: 'TIMEOUT', evidence: `no verdict within ${limit} ms nor within ${Math.round(1.5 * limit)} ms, three attempts (the unmutated group passed well inside the first); last test started: ${r.lastTest || 'none'}` };
     if (r.compileErr) { lastCompileErr.set(w, r.compileErr); return { status: 'NONVIABLE' }; }
@@ -652,9 +664,13 @@ if (cmd === 'run') {
     for (const [l, t] of [['packages', path.join(root, 'packages')], ['tools/pca-diff-fuzz', path.join(root, 'tools/pca-diff-fuzz')]]) { try { fs.rmSync(path.join(wroot, l), { force: true }); fs.symlinkSync(t, path.join(wroot, l)); } catch {} }
     // README.md: AuthorizeTests.testReadmeSampleIsThisCode reads ../../README.md (missing => it throws, the unmutated suite fails)
     for (const d of ['Sources', 'Tests', 'test-data', 'Package.swift', 'README.md']) spawnSync('cp', ['-R', path.join(pkg, d), dir]);
-    // warm build
-    spawnSync('nice', ['-n', '19', 'swift', 'build', '--build-tests', ...(process.env.SWIFT_TEST_FLAGS ? process.env.SWIFT_TEST_FLAGS.split(/\s+/) : []), '--scratch-path', path.join(dir, '.b')], { cwd: dir, stdio: 'ignore' });
+    // warm build, asynchronous: a spawnSync here blocked the event loop for the whole build, so the other worker's unmutated oracle (already running)
+    // was timed across this build and stalled on its unread pipe; its limit, and the cost of every TIMEOUT judged against it, came out inflated
+    await new Promise((res) => spawn('nice', ['-n', '19', 'swift', 'build', '--build-tests', ...(process.env.SWIFT_TEST_FLAGS ? process.env.SWIFT_TEST_FLAGS.split(/\s+/) : []), '--scratch-path', path.join(dir, '.b')], { cwd: dir, stdio: 'ignore' }).on('close', res));
     }
+    // barrier: the unmutated oracles are timed (and the mutants judged) only once no worker is still building
+    if (--warmLeft === 0) warmRelease();
+    await warmAll;
     if (oracleOut) { // baseline job: verify every oracle group (one representative file each), run no mutant
       while (oracleFiles.length) await verifyGroup(w, oracleFiles.shift());
       return;
@@ -670,7 +686,10 @@ if (cmd === 'run') {
   // baseline job: the first file of every distinct oracle group
   const oracleFiles = oracleOut ? [...new Map(files.map((f) => [groupOf(f), f])).values()] : [];
   // nothing to run (everything carried): no worker copies, no warm build, no group verification
-  await Promise.all(Array.from({ length: oracleOut ? workers : Math.min(workers, queue.length) }, (_, w) => wk(w)));
+  const nWorkers = oracleOut ? workers : Math.min(workers, queue.length);
+  let warmLeft = nWorkers, warmRelease;
+  const warmAll = new Promise((res) => { warmRelease = res; });
+  await Promise.all(Array.from({ length: nWorkers }, (_, w) => wk(w)));
   if (oracleOut) {
     fs.mkdirSync(oracleOut, { recursive: true });
     fs.writeFileSync(path.join(oracleOut, 'oracle.json'), JSON.stringify({ tree, groups: Object.fromEntries(groupInfo) }, null, 1));
