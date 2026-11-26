@@ -48,6 +48,11 @@ if check:
     print(f"aggregate target: {len(files)} test files, each included once")
     sys.exit(0)
 
+# inside the aggregate `crate` is all_mutation.rs, not the test file: a test module must reach its root through super::
+for f in sorted(glob.glob(os.path.join(tests, "**", "*.rs"), recursive=True)):
+    if os.path.basename(f) != AGG and re.search(r"(?<![$\w])crate::", open(f, encoding="utf-8").read()):
+        sys.exit(f"{f} uses crate::, which names the aggregate target here: use super:: (valid in both layouts)")
+
 # a test that re-runs its own binary must name itself through test_name()
 for f in files:
     s = open(os.path.join(tests, f), encoding="utf-8").read()

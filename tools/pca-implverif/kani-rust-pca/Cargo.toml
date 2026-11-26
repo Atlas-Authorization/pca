@@ -3,6 +3,8 @@ name = "atlas-pca-kani"
 version = "0.0.0"
 edition = "2021"
 publish = false
+# build.sh copies the library's src/ tree, including src/bin: those are the SDK's binaries (they name the atlas_pca crate), not harness targets
+autobins = false
 
 [lib]
 path = "src/kroot.rs"
