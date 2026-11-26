@@ -46,11 +46,14 @@ export function plan(tool, pkg, exclude = '', file = '', features = ['--all-feat
   const mutants = all.filter((m) => !taken.has(`${m.file}:${m.line}`))
     .sort((a, b) => a.file.localeCompare(b.file) || a.start - b.start || a.end - b.end || a.desc.localeCompare(b.desc));
   for (const m of mutants) m.name = `${m.file}:${m.line}:${m.col}: ${m.desc}`;
-  return { files_list: files, count: mutants.length, generated: all.length, skipped_lines_with_a_cargo_mutant: all.length - mutants.length, cargo_mutants: cm.length, files: files.length, mutants };
+  return { cm, files_list: files, count: mutants.length, generated: all.length, skipped_lines_with_a_cargo_mutant: all.length - mutants.length, cargo_mutants: cm.length, files: files.length, mutants };
 }
 
 if (cmd === 'list') {
   const p = plan(opt('tool'), pkg, opt('exclude', ''), opt('file', ''), feat);
+  // --cm-out: cargo-mutants' list, trimmed to what the schema build needs (the same run, so both lists come from one source tree)
+  if (opt('cm-out')) fs.writeFileSync(opt('cm-out'), JSON.stringify(p.cm.map((m) => ({ name: m.name, file: m.file, genre: m.genre, span: m.span, replacement: m.replacement, fn: m.function?.function_name ?? '' }))));
+  delete p.cm;
   console.log(JSON.stringify(p));
   process.exit(0);
 }
@@ -59,7 +62,10 @@ if (cmd !== 'run') { console.error('usage: stmt-run.mjs list|run'); process.exit
 const inPlace = mine.includes('--in-place');
 const [k0, of, out, j] = [Number(opt('shard')), Number(opt('of')), path.resolve(opt('out')), inPlace ? 1 : Number(opt('j', '2'))];
 const P = plan(opt('tool'), pkg, opt('exclude', ''), opt('file', ''), feat);
-const shard = P.mutants.filter((_, i) => i % of === k0);
+// --names=<names.json>: exactly these statement mutants (the schema run's fallback and sample mutants)
+const names = opt('names') ? new Set(JSON.parse(fs.readFileSync(opt('names'), 'utf8'))) : null;
+const shard = names ? P.mutants.filter((m) => names.has(m.name)) : P.mutants.filter((_, i) => i % of === k0);
+if (names && shard.length !== names.size) { console.error(`::error::${names.size - shard.length} of the --names mutant(s) are not in the statement plan`); process.exit(1); }
 console.error(`stmt shard ${k0}/${of}: ${shard.length} mutant(s)`);
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(path.join(out, 'logs'), { recursive: true });
 const keyOf = (m) => `stmt|${m.file}|${m.fn}|${m.genre}|${m.desc}|${m.start}`;
@@ -126,10 +132,11 @@ async function work(w, wi) {
     fs.writeFileSync(f, Buffer.concat([b.subarray(0, m.start), Buffer.from(m.repl), b.subarray(m.end)]));
     const log = path.join(out, 'logs', `${status.size + runErrors.length}-${wi}-${Date.now()}.log`);
     fs.writeFileSync(log, `${m.name}\n`);
+    let bld, t;
     try {
-      const bld = await run(w.dir, w.target, [...base, '--no-run'], log);
+      bld = await run(w.dir, w.target, [...base, '--no-run'], log);
       if (bld.code !== 0) { status.set(m.name, 'unviable'); continue; }
-      const t = await run(w.dir, w.target, base, log, limit);
+      t = await run(w.dir, w.target, base, log, limit);
       if (t.timedOut) { status.set(m.name, 'timeout'); continue; }
       if (t.code === 0) { status.set(m.name, 'missed'); continue; }
       status.set(m.name, 'caught');
@@ -144,6 +151,8 @@ async function work(w, wi) {
       }
     } finally {
       fs.writeFileSync(f, orig);
+      // one line per mutant, as cargo-mutants' --caught/--unviable output: the per-mutant cost is measurable from the job log
+      console.error(`${status.get(m.name) ?? 'error'} ${m.name} in ${(bld?.s ?? 0).toFixed(0)}s build + ${(t?.s ?? 0).toFixed(0)}s test`);
     }
   }
 }

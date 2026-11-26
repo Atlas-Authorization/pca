@@ -2,6 +2,8 @@
 // Targeted-mode driver for cargo-mutants (pca-rust mutation workflow; scheme: ../mut-carry).
 //   node carry.mjs files   --pkg=<crate> [--exclude=<glob>]                  -> stdout: every source file holding a mutant (repo-relative)
 //   node carry.mjs run     --pkg=<crate> --shard=<k0> --of=<N> --out=<dir> [--carry=<pool.json>] [--dry] [-- <extra cargo-mutants args>]
+//   node carry.mjs run     --pkg=<crate> --names=<names.json> --out=<dir> [-- ...]   the shard is exactly these mutant names (the
+//                          schema run's fallback and sample mutants), selected by the verified name filter
 // `run` lists the shard's mutants (cargo-mutants' own `--shard k/N`), decides per mutant whether an earlier result stands, runs
 // cargo-mutants on ONLY the rest (a name filter, verified against `--list` before running), and writes <dir>/mutants.out/
 // {caught,missed,timeout,unviable}.txt for the COMPLETE shard (carried results included, current-source names) plus
@@ -39,7 +41,9 @@ if (cmd === 'files') {
 if (cmd !== 'run') { console.error('usage: carry.mjs files|run'); process.exit(2); }
 
 const [k0, of, out] = [Number(opt('shard')), Number(opt('of')), path.resolve(opt('out'))];
-const all = list(), shard = list(`${k0}/${of}`);
+const names = opt('names') ? new Set(JSON.parse(fs.readFileSync(opt('names'), 'utf8'))) : null;
+const all = list(), shard = names ? all.filter((m) => names.has(m.name)) : list(`${k0}/${of}`);
+if (names && shard.length !== names.size) { console.error(`::error::${names.size - shard.length} of the --names mutant(s) are not in cargo-mutants' list`); process.exit(1); }
 // ---- per-file identity
 const files = {};
 const fileInfo = (f) => files[f] ??= (() => {
@@ -86,16 +90,16 @@ if (toRun.length) {
   for (const m of toRun) sel.push('-F', `^${esc(m.name)}$`);
   // cargo-mutants 27 lets the StructField mutants (2 in this crate: `delete field .. from struct ..`) through ANY name filter, -F and
   // -E alike. They run as extras (their outcomes are ignored unless they belong to this shard).
-  const filt = pool ? sel : [];
+  const filt = pool || names ? sel : [];
   const quirk = all.filter((m) => m.genre === 'StructField').map((m) => m.name);
-  if (pool) {
+  if (pool || names) {
     const chk = spawnSync('cargo', [...base, '--list', '--json', ...filt], { encoding: 'utf8', maxBuffer: 1 << 29 });
     const got = JSON.parse(chk.stdout).map((m) => m.name).sort();
     const want = [...new Set([...runNames, ...quirk])].sort();
     if (JSON.stringify(got) !== JSON.stringify(want)) { console.error(`the name filter selects ${got.length} mutant(s), expected ${want.length} (selection plus the StructField quirk): refusing to guess`); process.exit(1); }
   }
   if (mine.includes('--dry')) { console.error(`dry run: the filter selects exactly the ${toRun.length} mutant(s) to run`); process.exit(0); }
-  const args = [...base, ...(pool ? filt : ['--shard', `${k0}/${of}`, '--sharding', 'round-robin']), ...extra, '--output', cmOut];
+  const args = [...base, ...(pool || names ? filt : ['--shard', `${k0}/${of}`, '--sharding', 'round-robin']), ...extra, '--output', cmOut];
   // CARRY_ULIMIT_KB: address-space cap for the mutants' processes only (a runaway allocation must die alone); not for this driver
   const kb = process.env.CARRY_ULIMIT_KB;
   rc = (kb ? spawnSync('bash', ['-c', `ulimit -v ${Number(kb)}; exec "$@"`, 'bash', 'cargo', ...args], { stdio: 'inherit' }) : spawnSync('cargo', args, { stdio: 'inherit' })).status ?? 1;
@@ -117,5 +121,5 @@ for (const m of shard) {
 fs.mkdirSync(path.join(out, 'mutants.out'), { recursive: true });
 for (const [k, v] of Object.entries(lists)) fs.writeFileSync(path.join(out, 'mutants.out', `${k}.txt`), v.length ? v.join('\n') + '\n' : '');
 fs.writeFileSync(path.join(out, 'results.json'), JSON.stringify(results));
-console.error(`shard ${k0}/${of}: ${shard.length} mutant(s): ${Object.entries(lists).map(([k, v]) => `${k} ${v.length}`).join(', ')}`);
+console.error(`shard ${names ? 'names' : `${k0}/${of}`}: ${shard.length} mutant(s): ${Object.entries(lists).map(([k, v]) => `${k} ${v.length}`).join(', ')}`);
 process.exit(0);

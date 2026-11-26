@@ -1,0 +1,15 @@
+[package]
+name = "schema-gen"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Compiles a group of mutants into one build behind a runtime switch (mutant schemata; pca-rust mutation workflow, driver: ../schema-build.mjs)"
+
+# standalone: never a member of the repo it is laid into
+[workspace]
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit", "visit-mut"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
+quote = "1"
+serde_json = "1"
