@@ -9,6 +9,9 @@
 //        duration and time limit) and mark the worker copies (<tmp>/swiftmut/wN) restorable. --oracle-in=<dir>: reuse that oracle.json (the groups are not
 //        verified again) and the worker copies restored from the baseline job's tarball (no copy, no warm build), only when its tree hash equals this
 //        tree's; otherwise the slice verifies and builds itself, with a warning.
+//        --oracle-part=K/N (with --oracle-out): verify only the oracle groups whose index (in plan order, over the files that have mutants) is K mod N, so
+//        N parallel jobs verify all of them; each writes its share plus the total group count (oracle-merge.mjs joins the shares and checks they are
+//        complete). --oracle-part=build: verify nothing, only build and mark the copies restorable (the build the parts and the slices restore).
 // Each worker owns a private copy of sdks/swift-pca under $TMPDIR/swiftmut/wN, applies one mutant, runs the oracle
 // (swift test: existing unit tests + core conformance + the FULL adversarial corpus via PCA_CONFORMANCE_ADV) under nice,
 // and records KILLED / SURVIVED / NONVIABLE (compile error) / TIMEOUT / TRAP / RUNERR. A mutant is KILLED iff a test assertion failed;
@@ -399,6 +402,10 @@ if (cmd === 'run') {
   fs.mkdirSync(tmp, { recursive: true });
   const flagVal = (n) => flags.find((f) => f.startsWith(`--${n}=`))?.slice(n.length + 3);
   const oracleOut = flagVal('oracle-out'), oracleInDir = flagVal('oracle-in');
+  const partFlag = flagVal('oracle-part') ?? '0/1';
+  const buildOnly = partFlag === 'build';
+  const [partK, partN] = buildOnly ? [0, 1] : partFlag.split('/').map(Number);
+  if (!buildOnly && !(Number.isInteger(partK) && Number.isInteger(partN) && partN >= 1 && partK >= 0 && partK < partN)) { console.error(`bad --oracle-part ${partFlag}`); process.exit(2); }
   const tree = treeHash();
   // the baseline job's oracle, accepted only for this exact tree (a stale one would vouch for sources it never ran)
   let oracleIn = null;
@@ -655,7 +662,9 @@ if (cmd === 'run') {
     const wroot = path.join(tmp, `w${w}`);
     const dir = path.join(wroot, 'sdks/swift-pca');
     // restored from the baseline job (same tree, same absolute paths, mtimes kept): its build products stay valid, so no copy and no warm build
-    const restored = oracleIn && fs.existsSync(path.join(wroot, '.oracle-ok'));
+    // (an oracle-part job restores the build job's copies the same way; the marker holds the tree hash it was built from)
+    const okFile = path.join(wroot, '.oracle-ok');
+    const restored = (oracleIn || oracleOut) && fs.existsSync(okFile) && fs.readFileSync(okFile, 'utf8') === tree;
     if (restored) console.error(`worker ${w}: baseline build restored`);
     if (!restored) {
     fs.rmSync(path.join(dir, 'Sources'), { recursive: true, force: true });
@@ -684,7 +693,10 @@ if (cmd === 'run') {
     }
   };
   // baseline job: the first file of every distinct oracle group
-  const oracleFiles = oracleOut ? [...new Map(files.map((f) => [groupOf(f), f])).values()] : [];
+  // only the files that have mutants need a verified group (the apple leg mutates 8 of ~480 files: its other groups are never consulted)
+  const withMutants = new Set(all.map((m) => m.file));
+  const groupFiles = oracleOut ? [...new Map(files.filter((f) => withMutants.has(f)).map((f) => [groupOf(f), f])).values()] : [];
+  const oracleFiles = buildOnly ? [] : groupFiles.filter((_, i) => i % partN === partK);
   // nothing to run (everything carried): no worker copies, no warm build, no group verification
   const nWorkers = oracleOut ? workers : Math.min(workers, queue.length);
   let warmLeft = nWorkers, warmRelease;
@@ -692,7 +704,7 @@ if (cmd === 'run') {
   await Promise.all(Array.from({ length: nWorkers }, (_, w) => wk(w)));
   if (oracleOut) {
     fs.mkdirSync(oracleOut, { recursive: true });
-    fs.writeFileSync(path.join(oracleOut, 'oracle.json'), JSON.stringify({ tree, groups: Object.fromEntries(groupInfo) }, null, 1));
+    fs.writeFileSync(path.join(oracleOut, 'oracle.json'), JSON.stringify({ tree, part: partFlag, all: groupFiles.length, assigned: buildOnly ? [] : groupFiles.filter((_, i) => i % partN === partK).map(groupOf), groups: Object.fromEntries(groupInfo) }, null, 1));
     for (let w = 0; w < workers; w++) fs.writeFileSync(path.join(tmp, `w${w}`, '.oracle-ok'), tree);
     console.error(`oracle: ${groupInfo.size} group(s) verified on tree ${tree.slice(0, 12)}`);
     process.exit(0);

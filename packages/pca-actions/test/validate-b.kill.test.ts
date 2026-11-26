@@ -112,6 +112,12 @@ describe('validateDef: head members', () => {
     expect(err({ aliases: [a(29)] })).toBeNull();
     expect(err({ aliases: [a(30)] })).toBe(MSG);
     expect(err({ aliases: ['acme.invoice.send'] })).toBe(MSG);
+    const names = (n: number): string[] => Array.from({ length: n }, (_, i) => `a${i}`);
+    expect(err({ aliases: names(16) })).toBeNull();
+    expect(err({ aliases: names(17) })).toBe(MSG);
+    // not strings, though each prints as an alias-shaped name
+    expect(err({ aliases: [true] })).toBe(MSG);
+    expect(err({ aliases: [['mail']] })).toBe(MSG);
   });
 });
 

@@ -73,7 +73,7 @@ function paramError(name: string, p: unknown, names: ReadonlySet<string>): strin
   if (!(PARAM_TYPES_V1 as readonly unknown[]).includes(p.type)) return `${name}: unknown type`;
   const t = p.type as string;
   if (p.role !== undefined && !isRole(p.role)) return `${name}: unknown role`;
-  if (typeof p.role === 'string' && INT_ROLES.has(p.role) && t !== 'integer') return `${name}: role ${p.role} requires an integer parameter`;
+  if (INT_ROLES.has(p.role as string) && t !== 'integer') return `${name}: role ${p.role} requires an integer parameter`; // the role check above leaves p.role absent or a role string
   if (p.required !== undefined && typeof p.required !== 'boolean') return `${name}: required must be a boolean`;
   if (p.values !== undefined) {
     if (!Array.isArray(p.values) || p.values.length === 0 || p.values.length > 256 || !p.values.every((x) => isStr(x))) return `${name}: values must be 1..256 non-empty strings`;
@@ -83,11 +83,11 @@ function paramError(name: string, p: unknown, names: ReadonlySet<string>): strin
   if (t === 'set' && p.values === undefined) return `${name}: a set needs values`;
   const intLike = t === 'integer' || t === 'duration' || (t === 'array' && p.items === 'integer');
   for (const k of ['min', 'max'] as const) if (p[k] !== undefined && (!isInt(p[k]) || !intLike)) return `${name}: ${k} must be a safe integer on an integer parameter`;
-  if (isInt(p.min) && isInt(p.max) && p.min > p.max) return `${name}: min > max`;
+  if ((p.min as number) > (p.max as number)) return `${name}: min > max`; // each bound is absent or a safe integer here, and a comparison with an absent one is false
   if (p.max_len !== undefined && (!isInt(p.max_len) || p.max_len < 1 || p.max_len > 16_777_216 || !['string', 'array', 'object_ref'].includes(t))) return `${name}: max_len must be 1..16777216 on a string or array`;
   if (p.items !== undefined && (t !== 'array' || !isStr(p.items, 64))) return `${name}: items applies to array only`;
   for (const k of ['min_items', 'max_items'] as const) if (p[k] !== undefined && (!isNonNeg(p[k]) || (t !== 'set' && t !== 'array'))) return `${name}: ${k} must be a non-negative integer on a set or array`;
-  if (isInt(p.min_items) && isInt(p.max_items) && p.min_items > p.max_items) return `${name}: min_items > max_items`;
+  if ((p.min_items as number) > (p.max_items as number)) return `${name}: min_items > max_items`; // as for min/max
   if (p.format !== undefined && (!isFormat(p.format) || (t !== 'string' && t !== 'object_ref'))) return `${name}: format must be a known format on a string parameter`;
   if (p.unit !== undefined) {
     const u = p.unit;

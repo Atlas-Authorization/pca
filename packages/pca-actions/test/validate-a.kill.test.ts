@@ -43,6 +43,7 @@ const cases: [string, unknown, string | null][] = [
   // min / max
   ['array of integers takes min', { type: 'array', items: 'integer', min: 1 }, null],
   ['array of strings refuses min', { type: 'array', items: 'string', min: 1 }, 'p: min must be a safe integer on an integer parameter'],
+  ['a string with integer items refuses min', { type: 'string', items: 'integer', min: 1 }, 'p: min must be a safe integer on an integer parameter'],
   ['array without items refuses max', { type: 'array', max: 1 }, 'p: max must be a safe integer on an integer parameter'],
   ['duration takes max', { type: 'duration', max: 5 }, null],
   ['min not an integer', { type: 'integer', min: 'x' }, 'p: min must be a safe integer on an integer parameter'],
