@@ -153,10 +153,12 @@ module Oracle
       # (actions.rb requires actions_confirmation lazily, and the confirmation file needs actions first: a false cycle).
       # A column-0 require after the outer module's closing `end` runs after the whole body on a real load (policy_bridge.rb
       # requires policy_bridge_cel there, and the cel file calls PolicyBridge.full at load): it is evaluated after the file.
-      text = src.call(path)
-      body_end = text.index(/^end\b/) || text.length
+      # NOT `text`: that is apply's parameter, which `src` returns for the target, so assigning it here replaced the mutated (or
+      # baseline) source with the last file visited and the target file was never evaluated (every non-library baseline failed)
+      body = src.call(path)
+      body_end = body.index(/^end\b/) || body.length
       before, after = [], []
-      text.to_enum(:scan, /^ {0,2}require_relative '([^']+)'/).each do
+      body.to_enum(:scan, /^ {0,2}require_relative '([^']+)'/).each do
         md = Regexp.last_match
         dep = File.expand_path("#{md[1]}.rb", File.dirname(path))
         next unless universe.include?(dep)
