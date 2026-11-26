@@ -6,6 +6,10 @@
 //   node stmt-run.mjs list --tool=<stmt-mut binary> --pkg=<crate> [--exclude=<glob>[,<glob>]] -> stdout: {count, files, mutants:[...]}
 //   node stmt-run.mjs run  --tool=<bin> --pkg=<crate> --shard=<k0> --of=<N> --out=<dir> --run-errors=<file> [-j=2]
 //                          [--min-timeout=60] [--multiplier=3] [--carry=<pool.json>] -- <extra cargo nextest run args>
+// Windows-only files (windows-latest): --file=<glob> limits the plan to that file (cargo-mutants' --file, so the cargo-mutants lines it
+// skips are that file's), --features=<list> builds and lists with those features instead of --all-features (several optional
+// features do not build on Windows), and --in-place mutates the checkout itself with one worker (no rsync there; one target/ keeps
+// the dependencies and the incremental cache); a timeout kills the test process tree with taskkill (no process groups there).
 // --carry: a statement mutant has no per-function identity, so an earlier `caught` / `unviable` result stands only when the WHOLE
 // production source (every file the cargo-mutants plan mutates) is byte-identical to the baseline's, and a `missed` one only when the
 // baseline's tests + corpus were identical too (mut-carry/lib.mjs mayCarry). Everything else, and `timeout` / `run_error`, runs again.
@@ -23,12 +27,17 @@ const dd = argv.indexOf('--');
 const mine = dd < 0 ? argv.slice(1) : argv.slice(1, dd), extra = dd < 0 ? [] : argv.slice(dd + 1);
 const opt = (n, d) => mine.find((a) => a.startsWith(`--${n}=`))?.slice(n.length + 3) ?? d;
 const pkg = opt('pkg');
+const win = process.platform === 'win32';
+// --features=<list> (possibly empty: the default features) in place of --all-features
+const feat = opt('features') === undefined ? ['--all-features'] : opt('features') ? ['--features', opt('features')] : [];
 
-export function plan(tool, pkg, exclude = '') {
+export function plan(tool, pkg, exclude = '', file = '', features = ['--all-features']) {
   const excl = exclude.split(',').filter(Boolean).flatMap((g) => ['--exclude', g]);
-  const r = spawnSync('cargo', ['mutants', '-p', pkg, '--all-features', '--no-shuffle', ...excl, '--list', '--json'], { encoding: 'utf8', maxBuffer: 1 << 29 });
+  const only = file ? ['--file', file] : [];
+  const r = spawnSync('cargo', ['mutants', '-p', pkg, ...features, '--no-shuffle', ...excl, ...only, '--list', '--json'], { encoding: 'utf8', maxBuffer: 1 << 29 });
   if (r.status !== 0) { console.error(r.stderr); throw new Error('cargo mutants --list failed'); }
-  const cm = JSON.parse(r.stdout);
+  // one spelling of the path on every OS (cargo-mutants' names use forward slashes)
+  const cm = JSON.parse(r.stdout).map((m) => ({ ...m, file: m.file.split('\\').join('/') }));
   const taken = new Set(cm.map((m) => { const p = /^(.+?):(\d+):\d+: /.exec(m.name); if (!p) throw new Error('unparsed: ' + m.name); return `${p[1]}:${p[2]}`; }));
   const files = [...new Set(cm.map((m) => m.file))].sort();
   const s = spawnSync(tool, files, { encoding: 'utf8', maxBuffer: 1 << 29 });
@@ -41,14 +50,15 @@ export function plan(tool, pkg, exclude = '') {
 }
 
 if (cmd === 'list') {
-  const p = plan(opt('tool'), pkg, opt('exclude', ''));
+  const p = plan(opt('tool'), pkg, opt('exclude', ''), opt('file', ''), feat);
   console.log(JSON.stringify(p));
   process.exit(0);
 }
 if (cmd !== 'run') { console.error('usage: stmt-run.mjs list|run'); process.exit(2); }
 
-const [k0, of, out, j] = [Number(opt('shard')), Number(opt('of')), path.resolve(opt('out')), Number(opt('j', '2'))];
-const P = plan(opt('tool'), pkg, opt('exclude', ''));
+const inPlace = mine.includes('--in-place');
+const [k0, of, out, j] = [Number(opt('shard')), Number(opt('of')), path.resolve(opt('out')), inPlace ? 1 : Number(opt('j', '2'))];
+const P = plan(opt('tool'), pkg, opt('exclude', ''), opt('file', ''), feat);
 const shard = P.mutants.filter((_, i) => i % of === k0);
 console.error(`stmt shard ${k0}/${of}: ${shard.length} mutant(s)`);
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(path.join(out, 'logs'), { recursive: true });
@@ -67,23 +77,29 @@ if (pool) {
 const todo = shard.filter((m) => !carried.has(m.name));
 const T = process.env.RUNNER_TEMP || '/tmp', kb = process.env.CARRY_ULIMIT_KB;
 const root = process.cwd();
-const base = ['nextest', 'run', '-p', pkg, '--all-features', ...extra];
+const base = ['nextest', 'run', '-p', pkg, ...feat, ...extra];
 
 // a command in its own process group (a timeout kills every test process), under the per-process memory cap
 function run(cwd, target, args, log, limitS) {
   return new Promise((res) => {
     const fd = fs.openSync(log, 'a'), t0 = Date.now();
-    const c = spawn('bash', ['-c', `${kb ? `ulimit -v ${Number(kb)}; ` : ''}exec "$@"`, 'bash', 'cargo', ...args],
-      { cwd, detached: true, stdio: ['ignore', fd, fd], env: { ...process.env, CARGO_TARGET_DIR: target } });
+    const env = { ...process.env, CARGO_TARGET_DIR: target };
+    const c = win
+      ? spawn('cargo', args, { cwd, stdio: ['ignore', fd, fd], env })
+      : spawn('bash', ['-c', `${kb ? `ulimit -v ${Number(kb)}; ` : ''}exec "$@"`, 'bash', 'cargo', ...args], { cwd, detached: true, stdio: ['ignore', fd, fd], env });
+    const killTree = () => {
+      if (win) spawnSync('taskkill', ['/T', '/F', '/PID', String(c.pid)], { stdio: 'ignore' });
+      else try { process.kill(-c.pid, 'SIGKILL'); } catch {}
+    };
     let timedOut = false;
-    const timer = limitS ? setTimeout(() => { timedOut = true; try { process.kill(-c.pid, 'SIGKILL'); } catch {} }, limitS * 1000) : null;
-    c.on('exit', (code, sig) => { if (timer) clearTimeout(timer); fs.closeSync(fd); try { process.kill(-c.pid, 'SIGKILL'); } catch {} res({ code: code ?? 128, sig, timedOut, s: (Date.now() - t0) / 1000 }); });
+    const timer = limitS ? setTimeout(() => { timedOut = true; killTree(); }, limitS * 1000) : null;
+    c.on('exit', (code, sig) => { if (timer) clearTimeout(timer); fs.closeSync(fd); if (!win) killTree(); res({ code: code ?? 128, sig, timedOut, s: (Date.now() - t0) / 1000 }); });
   });
 }
 
-// one copy of the tree per worker (cargo-mutants' scratch copies), each with its own target dir
-const workers = [];
-for (let w = 0; w < (todo.length ? j : 0); w++) {
+// one copy of the tree per worker (cargo-mutants' scratch copies), each with its own target dir; --in-place: the checkout itself
+const workers = inPlace && todo.length ? [{ dir: root, target: path.join(root, 'target') }] : [];
+for (let w = 0; w < (todo.length && !inPlace ? j : 0); w++) {
   const dir = path.join(T, `stmt-w${w}`);
   fs.rmSync(dir, { recursive: true, force: true });
   const cp = spawnSync('rsync', ['-a', '--exclude=/target', '--exclude=/.git', root + '/', dir + '/'], { stdio: 'inherit' });
