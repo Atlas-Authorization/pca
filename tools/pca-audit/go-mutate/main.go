@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"context"
 	"time"
@@ -31,6 +32,8 @@ type Mut struct {
 	Src    string `json:"line_text"`
 	start, end int
 	col        int // 1-based byte column of start (coverage block lookup)
+	// innermost function body around the mutant (line:col of its braces; fnL1 == 0: none, package level)
+	fnL1, fnC1, fnL2, fnC2 int
 	repl   string
 	Status string `json:"status"`
 	// carry-forward identity (targeted mode): Key is stable across runs while the mutant's function is unchanged, DefHash is
@@ -205,6 +208,19 @@ func gen(path string) []Mut {
 	lines := strings.Split(string(src), "\n")
 	var ms []Mut
 	spans, shell := tokenHashes(path, src, fs, f)
+	var bodies [][4]int
+	ast.Inspect(f, func(n ast.Node) bool {
+		var b *ast.BlockStmt
+		switch x := n.(type) {
+		case *ast.FuncDecl: b = x.Body
+		case *ast.FuncLit: b = x.Body
+		}
+		if b != nil {
+			l, r := fs.Position(b.Lbrace), fs.Position(b.Rbrace)
+			bodies = append(bodies, [4]int{l.Line, l.Column, r.Line, r.Column})
+		}
+		return true
+	})
 	occ := map[string]int{}
 	add := func(p, e token.Pos, repl, desc string) {
 		s, en := fs.Position(p).Offset, fs.Position(e).Offset
@@ -214,6 +230,11 @@ func gen(path string) []Mut {
 			if s >= sp.start && s < sp.end { label, dh = sp.label, sp.hash; break }
 		}
 		m := Mut{File: filepath.Base(path), Line: ln, Desc: desc, Src: strings.TrimSpace(lines[ln-1]), start: s, end: en, col: col, repl: repl, DefHash: dh, ShellHash: shell}
+		for _, b := range bodies { // the innermost body containing the mutant starts last
+			if (ln > b[0] || ln == b[0] && col > b[1]) && (ln < b[2] || ln == b[2] && col < b[3]) && (b[0] > m.fnL1 || b[0] == m.fnL1 && b[1] > m.fnC1) {
+				m.fnL1, m.fnC1, m.fnL2, m.fnC2 = b[0], b[1], b[2], b[3]
+			}
+		}
 		base := m.File + "|" + label + "|" + desc + "|" + m.Src
 		m.Key = fmt.Sprintf("%s|%d", base, occ[base])
 		occ[base]++
@@ -316,6 +337,146 @@ func gen(path string) []Mut {
 	return ms
 }
 
+// task: one mutant to run. tests nil = the full suite, empty = no test (a compile check); schema = run the prep's schema
+// test binary with GOMUT_ID instead of a standalone `go test -overlay` build.
+type task struct {
+	m      *Mut
+	tests  []string
+	lim    time.Duration
+	schema bool
+}
+
+type runOpts struct {
+	par                   int
+	abs, tmp, tags, runf  string
+	cov                   bool // coverage selection (non-coverage mode sets GOMUT_FILE for the heavy oracle tests)
+	timeout               time.Duration
+	schemaBin, execw      string
+}
+
+// limit: a timeout is not a kill (it needs a proof that the mutant itself loops), so GC pauses, parallel workers and slow
+// runners must never time out a behaviour-preserving mutant
+func limit(d time.Duration) time.Duration {
+	l := 5*d + 30*time.Second
+	if l < 60*time.Second { l = 60 * time.Second }
+	return l
+}
+
+func runRe(tests []string) string {
+	if len(tests) == 0 { return "^$" }
+	return "^(" + strings.Join(tests, "|") + ")$"
+}
+
+func runTasks(tasks []*task, o runOpts) {
+	var doneN int64
+	var doneMu sync.Mutex
+	t0 := time.Now()
+	// Every mutant's package build lands in GOCACHE (~100 MB for this package): ~150 mutants filled a runner's disk. Keep
+	// what the cache held before the mutants ran and drop the rest every 20 mutants, with no mutant in flight (gc).
+	var gc sync.RWMutex
+	cacheDir, keep := cacheSnapshot()
+	// at most 3 standalone builds at once (each compile of the root package takes several GiB; the old layout ran 3)
+	bsem := make(chan bool, 3)
+	ch := make(chan *task)
+	var wg sync.WaitGroup
+	for w := 0; w < o.par; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for t := range ch {
+				m := t.m
+				// no test executes this position (in the unmutated run): nothing can observe the mutant, so it only gets
+				// compiled (a mutant that does not compile is build-failed, not an uncovered survivor)
+				uncovered := t.tests != nil && len(t.tests) == 0
+				gc.RLock()
+				wt := filepath.Join(o.tmp, fmt.Sprintf("t%d", m.ID))
+				os.MkdirAll(wt, 0o755)
+				lim := t.lim
+				hard := lim + time.Minute
+				if o.timeout > hard { hard = o.timeout }
+				ctx, cancel := context.WithTimeout(context.Background(), hard)
+				var cmd *exec.Cmd
+				var mp, op string
+				if t.schema {
+					// the same test binary flags `go test -count=1 -failfast -timeout <lim> -run <re>` passes
+					args := []string{"-test.paniconexit0", "-test.count=1", "-test.failfast", "-test.timeout=" + lim.String()}
+					if t.tests != nil { args = append(args, "-test.run="+runRe(t.tests)) }
+					bin := o.schemaBin
+					if o.execw != "" { args = append([]string{bin}, args...); bin = o.execw }
+					cmd = exec.Command(bin, args...)
+					cmd.Env = append(os.Environ(), "GOMUT_ID="+strconv.Itoa(m.ID), "GOTMPDIR="+wt)
+				} else {
+					p := filepath.Join(o.abs, m.File)
+					src, _ := os.ReadFile(p)
+					mut := string(src[:m.start]) + m.repl + string(src[m.end:])
+					mp = filepath.Join(o.tmp, fmt.Sprintf("m%d.go", m.ID))
+					os.WriteFile(mp, []byte(mut), 0o644)
+					ov, _ := json.Marshal(map[string]any{"Replace": map[string]string{p: mp}})
+					op = filepath.Join(o.tmp, fmt.Sprintf("o%d.json", m.ID))
+					os.WriteFile(op, ov, 0o644)
+					targs := []string{"test", "-count=1", "-failfast", "-vet=off", "-timeout", lim.String(), "-overlay", op} // vet would turn a mutant such as `s == "a" && s == "b"` into a build failure no test decided
+					if o.tags != "" { targs = append(targs, "-tags", o.tags) }
+					if o.runf != "" { targs = append(targs, "-run", o.runf) }
+					if t.tests != nil { targs = append(targs, "-run", runRe(t.tests)) }
+					cmd = exec.Command("go", append(targs, ".")...)
+					// GOTMPDIR: a killed (timed-out) go test leaves its test binary behind; it goes with wt
+					cmd.Env = append(os.Environ(), "GOTMPDIR="+wt)
+					// non-coverage mode: the heavy oracle tests run only when they cover the mutated file (k042RequireCovers)
+					if !o.cov { cmd.Env = append(cmd.Env, "GOMUT_FILE="+m.File) }
+				}
+				cmd.Dir = o.abs
+				if !t.schema { bsem <- true }
+				setProcessGroup(cmd)
+				ob := &capOutput{}
+				cmd.Stdout, cmd.Stderr = ob, ob
+				if err := cmd.Start(); err != nil { cancel(); if !t.schema { <-bsem }; fmt.Fprintf(os.Stderr, "go-mutate: cannot start %s: %v\n", cmd.Path, err); os.Exit(1) }
+				done := make(chan error, 1)
+				go func() { done <- cmd.Wait() }()
+				var err error
+				timedOut := false
+				select {
+				case err = <-done:
+				case <-ctx.Done():
+					timedOut = true
+					killProcessGroup(cmd)
+					err = <-done
+				}
+				out := ob.String()
+				cancel()
+				if !t.schema { <-bsem }
+				switch {
+				case err == nil: m.Status = "SURVIVED"
+				case strings.Contains(out, "[build failed]") || strings.Contains(out, "[setup failed]"): m.Status = "build-failed"
+				case strings.Contains(out, "test timed out"): m.Status, m.Evidence = "killed-timeout", "go test -timeout "+lim.String()+" expired"
+				case timedOut: m.Status, m.Evidence = "killed-timeout", "hard limit "+hard.String()+" expired"
+				default:
+					m.Status = "killed"
+					if ev := runErrorEvidence(out); ev != "" { m.Status, m.Evidence = "run-error", ev } else { m.Evidence = killedBy(out) }
+				}
+				if mp != "" { os.Remove(mp); os.Remove(op) }
+				os.RemoveAll(wt)
+				gc.RUnlock()
+				if m.Status == "run-error" { fmt.Printf("RUN-ERROR %d %s:%d:%d %s | %s | %s\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src, m.Evidence) }
+				if m.Status == "SURVIVED" && uncovered { fmt.Printf("SURVIVED %d %s:%d:%d %s | %s (no test executes it)\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src) } else if m.Status == "SURVIVED" { fmt.Printf("SURVIVED %d %s:%d:%d %s | %s\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src) }
+				doneMu.Lock(); doneN++; n := doneN
+				if n%100 == 0 { fmt.Fprintf(os.Stderr, "go-mutate: %d/%d mutants run, %v\n", n, len(tasks), time.Since(t0).Round(time.Second)) }
+				doneMu.Unlock()
+				if n%20 == 0 { gc.Lock(); trimCache(cacheDir, keep); gc.Unlock() }
+			}
+		}()
+	}
+	for _, t := range tasks { ch <- t }
+	close(ch)
+	wg.Wait()
+}
+
+func finish(mine []*Mut, label, out string) {
+	cnt := map[string]int{}
+	for _, m := range mine { cnt[m.Status]++ }
+	fmt.Println("SUMMARY", label, cnt)
+	if out != "" { b, _ := json.MarshalIndent(mine, "", " "); os.WriteFile(out, b, 0o644) }
+}
+
 func main() {
 	dir := flag.String("dir", ".", "")
 	shard := flag.String("shard", "0/1", "")
@@ -328,6 +489,14 @@ func main() {
 	carry := flag.String("carry", "", "targeted mode: pool.json of earlier results (mut-carry/baseline.mjs); only mutants it cannot vouch for are run")
 	par := flag.Int("j", 1, "parallel workers within shard")
 	tags := flag.String("tags", "", "comma list of build tags passed to `go test -tags` (and used to select the mutated files)")
+	prep := flag.String("prep", "", "prep mode: coverage selection, type-check verdicts and the schema test binary once for the whole package; writes <dir>/schema.test and <dir>/plan/<i>.json (one per shard, balanced by measured cost)")
+	planf := flag.String("plan", "", "run the mutants of one prep plan file (with -schema-bin)")
+	schemaBin := flag.String("schema-bin", "", "the prep's schema test binary (-plan)")
+	execw := flag.String("exec", "", "program the schema test binary runs under, like go test -exec (-plan, -prep)")
+	budget := flag.Duration("budget", 40*time.Minute, "prep: estimated mutant work per shard and worker")
+	minShards := flag.Int("min-shards", 1, "prep: at least this many shards")
+	maxShards := flag.Int("max-shards", 512, "prep: refuse a plan that needs more shards")
+	verifyN := flag.Int("verify", 3, "prep: type-check verdicts per direction re-decided by a real build")
 	flag.Parse()
 	var si, sn int
 	fmt.Sscanf(*shard, "%d/%d", &si, &sn)
@@ -358,10 +527,22 @@ func main() {
 	if *list { for _, m := range all { fmt.Printf("%d %s:%d %s | %s\n", m.ID, m.File, m.Line, m.Desc, m.Src) }; fmt.Println("total", len(all)); return }
 	tmp, _ := os.MkdirTemp("", "gomut")
 	defer os.RemoveAll(tmp)
+	o := runOpts{par: *par, abs: abs, tmp: tmp, tags: *tags, runf: *runf, cov: *runf == "", timeout: *timeout, schemaBin: *schemaBin, execw: *execw}
+	if *planf != "" {
+		mine, tasks, err := loadPlan(*planf, all, srcHash)
+		if err != nil { fmt.Fprintf(os.Stderr, "go-mutate: %v\n", err); os.Exit(1) }
+		if *schemaBin == "" { for _, t := range tasks { if t.schema { fmt.Fprintln(os.Stderr, "go-mutate: the plan has schema mutants: -schema-bin is required"); os.Exit(1) } } }
+		fmt.Fprintf(os.Stderr, "go-mutate: plan %s: %d mutant(s), %d to run\n", *planf, len(mine), len(tasks))
+		runTasks(tasks, o)
+		finish(mine, *planf, *out)
+		return
+	}
 	var mine []*Mut
 	want := map[int]bool{}
 	for _, s := range strings.Split(*ids, ",") { var n int; if _, e := fmt.Sscanf(s, "%d", &n); e == nil { want[n] = true } }
-	for i := range all { if i%sn == si && (len(*ids) == 0 || want[i]) { mine = append(mine, &all[i]) } }
+	for i := range all {
+		if *prep != "" || i%sn == si && (len(*ids) == 0 || want[i]) { mine = append(mine, &all[i]) }
+	}
 	// Targeted mode. A pooled result is reused only when the mutant's function and the file's non-function code are token-identical
 	// (killed only: a killed-timeout and a run-error are never carried, so a new deadline test re-measures them), or the whole production source is identical (build-failed: another file may have made it compile). Survivors,
 	// unseen mutants and everything else run again. Tests/corpus changes were vetted by baseline.mjs before the pool was handed over.
@@ -387,18 +568,24 @@ func main() {
 		}
 		fmt.Fprintf(os.Stderr, "go-mutate: carry: %d result(s) carried, %d to run (%d unseen, %d function/file changed, %d earlier non-kills or uncompilable under changed sources)\n", len(mine)-len(toRun), len(toRun), unseen, changed, nonkill)
 	}
+	if *prep != "" {
+		if *runf != "" { fmt.Fprintln(os.Stderr, "go-mutate: -prep selects tests by coverage: no -run"); os.Exit(1) }
+		p := prepOpts{dir: *prep, budget: *budget, minShards: *minShards, maxShards: *maxShards, verify: *verifyN}
+		if err := doPrep(o, p, names, mine, toRun, srcHash); err != nil { fmt.Fprintf(os.Stderr, "go-mutate: prep: %v\n", err); os.Exit(1) }
+		return
+	}
 	// Coverage-guided test selection (default; -run turns it off for local dev). Every mutant used to run the WHOLE suite
 	// (~65 s) and every shard paid a ~1 min baseline per file (86 files), so shards hit the 5 h job limit. Instead: one
 	// coverage build, each top-level test run alone with a profile, and each mutant runs only the tests that execute its
 	// position. A test that never executes the mutated code cannot observe the mutant, so this never turns a kill into a
 	// survivor; a position outside every coverage block (package-level declarations, case expressions) runs the full suite.
-	cov := *runf == "" && len(toRun) > 0
-	var sel map[*Mut][]string // nil entry = full suite
+	cov := o.cov && len(toRun) > 0
+	var sel map[*Mut][]string // missing entry = full suite
 	durOf := map[string]time.Duration{}
 	var full time.Duration
 	if cov {
 		var err error
-		sel, full, err = coverageSelect(abs, tmp, *tags, *par, toRun, durOf)
+		sel, full, _, err = coverageSelect(abs, tmp, *tags, *par, toRun, durOf, false)
 		if err != nil { fmt.Fprintf(os.Stderr, "go-mutate: %v; refusing to mutate\n", err); os.Exit(1) }
 	}
 	// Baseline per mutated file (non-coverage mode; same flags and GOMUT_FILE as its mutants): it must PASS (a failing
@@ -422,105 +609,21 @@ func main() {
 		base[m.File] = time.Since(t0)
 		fmt.Fprintf(os.Stderr, "go-mutate: baseline %s %v\n", m.File, base[m.File].Round(time.Second))
 	}
-	limitOf := func(m *Mut) time.Duration {
+	var tasks []*task
+	for _, m := range toRun {
+		t := &task{m: m}
 		d := base[m.File]
 		if cov {
-			if names, ok := sel[m]; ok && names != nil {
+			names, ok := sel[m]
+			if ok && names != nil {
+				t.tests = names
 				d = 0
 				for _, n := range names { d += durOf[n] }
 			} else { d = full }
 		}
-		// margin: a timeout is not a kill (it needs a proof that the mutant itself loops), so GC pauses, -j 3 contention and
-		// slow runners must never time out a behaviour-preserving mutant
-		l := 5*d + 30*time.Second
-		if l < 60*time.Second { l = 60 * time.Second }
-		return l
+		t.lim = limit(d)
+		tasks = append(tasks, t)
 	}
-	var doneN int64
-	var doneMu sync.Mutex
-	t0 := time.Now()
-	// Every mutant's package build lands in GOCACHE (~100 MB for this package): ~150 mutants filled a runner's disk. Keep
-	// what the cache held before the mutants ran and drop the rest every 20 mutants, with no mutant in flight (gc).
-	var gc sync.RWMutex
-	cacheDir, keep := cacheSnapshot()
-	ch := make(chan *Mut)
-	var wg sync.WaitGroup
-	for w := 0; w < *par; w++ {
-		wg.Add(1)
-		go func(w int) {
-			defer wg.Done()
-			for m := range ch {
-				// no test executes this position (in the unmutated run): nothing can observe the mutant, so it only gets
-				// compiled (a mutant that does not compile is build-failed, not an uncovered survivor)
-				uncovered := false
-				if names, ok := sel[m]; cov && ok && len(names) == 0 { uncovered = true }
-				gc.RLock()
-				wt := filepath.Join(tmp, fmt.Sprintf("t%d", m.ID))
-				os.MkdirAll(wt, 0o755)
-				p := filepath.Join(abs, m.File)
-				src, _ := os.ReadFile(p)
-				mut := string(src[:m.start]) + m.repl + string(src[m.end:])
-				mp := filepath.Join(tmp, fmt.Sprintf("m%d.go", m.ID))
-				os.WriteFile(mp, []byte(mut), 0o644)
-				ov, _ := json.Marshal(map[string]any{"Replace": map[string]string{p: mp}})
-				op := filepath.Join(tmp, fmt.Sprintf("o%d.json", m.ID))
-				os.WriteFile(op, ov, 0o644)
-				lim := limitOf(m)
-				hard := lim + time.Minute
-				if *timeout > hard { hard = *timeout }
-				ctx, cancel := context.WithTimeout(context.Background(), hard)
-				targs := []string{"test", "-count=1", "-failfast", "-vet=off", "-timeout", lim.String(), "-overlay", op} // vet would turn a mutant such as `s == "a" && s == "b"` into a build failure no test decided
-				if *tags != "" { targs = append(targs, "-tags", *tags) }
-				if *runf != "" { targs = append(targs, "-run", *runf) }
-				if names := sel[m]; cov && names != nil { targs = append(targs, "-run", "^("+strings.Join(names, "|")+")$") }
-				if uncovered { targs = append(targs, "-run", "^$") }
-				cmd := exec.Command("go", append(targs, ".")...)
-				cmd.Dir = abs
-				// GOTMPDIR: a killed (timed-out) go test leaves its test binary behind; it goes with wt
-				cmd.Env = append(os.Environ(), "GOTMPDIR="+wt)
-				// non-coverage mode: the heavy oracle tests run only when they cover the mutated file (k042RequireCovers)
-				if !cov { cmd.Env = append(cmd.Env, "GOMUT_FILE="+m.File) }
-				setProcessGroup(cmd)
-				ob := &capOutput{}
-				cmd.Stdout, cmd.Stderr = ob, ob
-				cmd.Start()
-				done := make(chan error, 1)
-				go func() { done <- cmd.Wait() }()
-				var err error
-				timedOut := false
-				select {
-				case err = <-done:
-				case <-ctx.Done():
-					timedOut = true
-					killProcessGroup(cmd)
-					err = <-done
-				}
-				o := []byte(ob.String())
-				cancel()
-				switch {
-				case err == nil: m.Status = "SURVIVED"
-				case strings.Contains(string(o), "[build failed]") || strings.Contains(string(o), "[setup failed]"): m.Status = "build-failed"
-				case strings.Contains(string(o), "test timed out"): m.Status, m.Evidence = "killed-timeout", "go test -timeout "+lim.String()+" expired"
-				case timedOut: m.Status, m.Evidence = "killed-timeout", "hard limit "+hard.String()+" expired"
-				default:
-					m.Status = "killed"
-					if ev := runErrorEvidence(string(o)); ev != "" { m.Status, m.Evidence = "run-error", ev } else { m.Evidence = killedBy(string(o)) }
-				}
-				os.Remove(mp); os.Remove(op); os.RemoveAll(wt)
-				gc.RUnlock()
-				if m.Status == "run-error" { fmt.Printf("RUN-ERROR %d %s:%d:%d %s | %s | %s\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src, m.Evidence) }
-				if m.Status == "SURVIVED" && uncovered { fmt.Printf("SURVIVED %d %s:%d:%d %s | %s (no test executes it)\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src) } else if m.Status == "SURVIVED" { fmt.Printf("SURVIVED %d %s:%d:%d %s | %s\n", m.ID, m.File, m.Line, m.col, m.Desc, m.Src) }
-				doneMu.Lock(); doneN++; n := doneN
-				if n%100 == 0 { fmt.Fprintf(os.Stderr, "go-mutate: %d/%d mutants run, %v\n", n, len(toRun), time.Since(t0).Round(time.Second)) }
-				doneMu.Unlock()
-				if n%20 == 0 { gc.Lock(); trimCache(cacheDir, keep); gc.Unlock() }
-			}
-		}(w)
-	}
-	for _, m := range toRun { ch <- m }
-	close(ch); wg.Wait()
-	cnt := map[string]int{}
-	for _, m := range mine { cnt[m.Status]++ }
-	fmt.Println("SUMMARY", *shard, cnt)
-	if *out != "" { b, _ := json.MarshalIndent(mine, "", " "); os.WriteFile(*out, b, 0o644) }
+	runTasks(tasks, o)
+	finish(mine, *shard, *out)
 }

@@ -24,15 +24,17 @@ var profLine = regexp.MustCompile(`^(.+):(\d+)\.(\d+),(\d+)\.(\d+) \d+ (\d+)$`)
 // each mutant to the tests that execute its position: an empty (non-nil) list = no test executes it, no entry = the position
 // is outside every coverage block (run the full suite). Every test must pass on its own and the full suite must pass, or
 // the mutation run is refused (a failing test would turn mutants into bogus kills). durOf gets each test's run time; full
-// is the full suite's.
-func coverageSelect(abs, tmp, tags string, par int, muts []*Mut, durOf map[string]time.Duration) (map[*Mut][]string, time.Duration, error) {
+// is the full suite's. fnScope: a position inside a function body but outside every block (a case expression, ...) runs
+// the tests that execute any block of the innermost function around it (it can only be evaluated once that function is
+// entered, which executes its first block) instead of the full suite.
+func coverageSelect(abs, tmp, tags string, par int, muts []*Mut, durOf map[string]time.Duration, fnScope bool) (map[*Mut][]string, time.Duration, map[string]map[string]*covBlock, error) {
 	targs := []string{"test", "-count=1"}
 	if tags != "" { targs = append(targs, "-tags", tags) }
 	bc := exec.Command("go", append(targs, ".")...)
 	bc.Dir = abs
 	t0 := time.Now()
 	if out, err := bc.CombinedOutput(); err != nil {
-		return nil, 0, fmt.Errorf("the unmutated suite FAILS:\n%s", out)
+		return nil, 0, nil, fmt.Errorf("the unmutated suite FAILS:\n%s", out)
 	}
 	full := time.Since(t0)
 	fmt.Fprintf(os.Stderr, "go-mutate: baseline (full suite) %v\n", full.Round(time.Second))
@@ -42,22 +44,22 @@ func coverageSelect(abs, tmp, tags string, par int, muts []*Mut, durOf map[strin
 	if tags != "" { cargs = append(cargs, "-tags", tags) }
 	cc := exec.Command("go", append(cargs, ".")...)
 	cc.Dir = abs
-	if out, err := cc.CombinedOutput(); err != nil { return nil, 0, fmt.Errorf("coverage build failed:\n%s", out) }
+	if out, err := cc.CombinedOutput(); err != nil { return nil, 0, nil, fmt.Errorf("coverage build failed:\n%s", out) }
 	// a package without test files builds no binary: no test executes any mutant (all survive, as with any uncovered code)
 	if _, serr := os.Stat(bin); os.IsNotExist(serr) {
 		none := map[*Mut][]string{}
 		for _, m := range muts { none[m] = []string{} }
-		return none, full, nil
+		return none, full, nil, nil
 	}
 	lc := exec.Command(bin, "-test.list", ".")
 	lc.Dir = abs
 	lo, err := lc.Output()
-	if err != nil { return nil, 0, fmt.Errorf("-test.list failed: %v", err) }
+	if err != nil { return nil, 0, nil, fmt.Errorf("-test.list failed: %v", err) }
 	var names []string
 	for _, n := range strings.Fields(string(lo)) {
 		if strings.HasPrefix(n, "Test") || strings.HasPrefix(n, "Example") || strings.HasPrefix(n, "Fuzz") { names = append(names, n) }
 	}
-	if len(names) == 0 { return nil, 0, fmt.Errorf("the coverage binary lists no tests") }
+	if len(names) == 0 { return nil, 0, nil, fmt.Errorf("the coverage binary lists no tests") }
 
 	pdir := filepath.Join(tmp, "prof")
 	os.MkdirAll(pdir, 0o755)
@@ -98,21 +100,16 @@ func coverageSelect(abs, tmp, tags string, par int, muts []*Mut, durOf map[strin
 	wg.Wait()
 	if len(fails) > 0 {
 		sort.Strings(fails)
-		return nil, 0, fmt.Errorf("%d test(s) fail when run alone (fix the test's hidden dependency on another test):\n%s", len(fails), strings.Join(fails, "\n"))
+		return nil, 0, nil, fmt.Errorf("%d test(s) fail when run alone (fix the test's hidden dependency on another test):\n%s", len(fails), strings.Join(fails, "\n"))
 	}
 	fmt.Fprintf(os.Stderr, "go-mutate: coverage of %d tests in %v\n", len(names), time.Since(t1).Round(time.Second))
 
 	sel := map[*Mut][]string{}
-	fullN, none, tot := 0, 0, 0
+	fullN, none, tot, fnN := 0, 0, 0, 0
 	for _, m := range muts {
-		in := false
-		set := map[string]bool{}
-		for _, b := range blocks[m.File] {
-			// inclusive on both ends: a larger selection is always safe
-			if (m.Line > b.l1 || m.Line == b.l1 && m.col >= b.c1) && (m.Line < b.l2 || m.Line == b.l2 && m.col <= b.c2) {
-				in = true
-				for t := range b.tests { set[t] = true }
-			}
+		set, in := testsAt(blocks, m.File, m.Line, m.col)
+		if !in && fnScope && m.fnL1 > 0 {
+			if set, in = testsIn(blocks, m.File, m.fnL1, m.fnC1, m.fnL2, m.fnC2); in { fnN++ }
 		}
 		if !in { fullN++; continue }
 		ts := make([]string, 0, len(set))
@@ -122,9 +119,36 @@ func coverageSelect(abs, tmp, tags string, par int, muts []*Mut, durOf map[strin
 		if len(ts) == 0 { none++ }
 		tot += len(ts)
 	}
-	fmt.Fprintf(os.Stderr, "go-mutate: selection: %d mutants, %d outside every block (full suite), %d executed by no test, %.1f tests per mutant on average\n",
-		len(muts), fullN, none, float64(tot)/float64(max(1, len(muts)-fullN)))
-	return sel, full, nil
+	fmt.Fprintf(os.Stderr, "go-mutate: selection: %d mutants, %d outside every block (full suite), %d by their function's blocks, %d executed by no test, %.1f tests per mutant on average\n",
+		len(muts), fullN, fnN, none, float64(tot)/float64(max(1, len(muts)-fullN)))
+	return sel, full, blocks, nil
+}
+
+// testsAt: the tests that execute line:col (every block containing it; inclusive on both ends: a larger selection is
+// always safe) and whether any block contains it.
+func testsAt(blocks map[string]map[string]*covBlock, file string, line, col int) (map[string]bool, bool) {
+	in := false
+	set := map[string]bool{}
+	for _, b := range blocks[file] {
+		if (line > b.l1 || line == b.l1 && col >= b.c1) && (line < b.l2 || line == b.l2 && col <= b.c2) {
+			in = true
+			for t := range b.tests { set[t] = true }
+		}
+	}
+	return set, in
+}
+
+// testsIn: the tests that execute any block lying inside l1:c1..l2:c2, and whether any block does.
+func testsIn(blocks map[string]map[string]*covBlock, file string, l1, c1, l2, c2 int) (map[string]bool, bool) {
+	in := false
+	set := map[string]bool{}
+	for _, b := range blocks[file] {
+		if (b.l1 > l1 || b.l1 == l1 && b.c1 >= c1) && (b.l2 < l2 || b.l2 == l2 && b.c2 <= c2) {
+			in = true
+			for t := range b.tests { set[t] = true }
+		}
+	}
+	return set, in
 }
 
 // readProfile merges one test's profile into blocks (every block is recorded; the test only on blocks it executed).
