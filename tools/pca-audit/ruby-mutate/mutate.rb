@@ -49,9 +49,19 @@ SRC = File.read(FILE)
 Mutant = Struct.new(:id, :line, :op, :orig, :repl, :text, :fn, :col, :frange, :carried)
 DEF_RANGES = [] # the line range of every def / defs (carry-forward: which def a changed line belongs to)
 
-def parse_src(src)
-  buf = Parser::Source::Buffer.new(FILE, source: src)
-  Parser::CurrentRuby.new.parse(buf)
+# MRI accepts a byte escape that is not UTF-8 in a UTF-8 source ("\xF6".b: a CBOR or DER byte); the parser gem calls it an error
+# and returned nil, so the file got 0 mutants (and its literals were missing from looked_for). Keep the bytes as binary; any other
+# parse error stops the run rather than silently giving no mutants.
+def parse_src(src, path = FILE)
+  buf = Parser::Source::Buffer.new(path, source: src)
+  builder = Parser::Builders::Default.new
+  def builder.string_value(token) = token[0].valid_encoding? ? token[0] : token[0].b
+  parser = Parser::CurrentRuby.new(builder)
+  errors = []
+  parser.diagnostics.consumer = ->(d) { errors << d.render.join("\n") if %i[error fatal].include?(d.level) }
+  ast = parser.parse(buf)
+  abort("mutate.rb: #{path} does not parse:\n#{errors.first(3).join("\n")}") if errors.any?
+  ast
 end
 
 SWAP = {
@@ -125,7 +135,7 @@ def looked_for
       n.children.each(&scan)
     end
     root = FILE[%r{\A.*/lib/}] || "#{File.dirname(FILE)}/"
-    Dir.glob("#{root}**/*.rb").sort.each { |f| scan.call(parse_src(File.read(f))) }
+    Dir.glob("#{root}**/*.rb").sort.each { |f| scan.call(parse_src(File.read(f), f)) }
     found
   end
 end
@@ -441,6 +451,7 @@ base = fork do
   br.close
   $stdout.reopen('/dev/null', 'w')
   $VERBOSE = nil
+  $mn_verbose = true # the unmutated source: a failing replay test prints its message and backtrace (only the mutants stay quiet)
   Oracle.apply(SRC, FILE)
   Oracle.record_timings = true
   ok, n = stack_raises { Oracle.run }
@@ -479,6 +490,7 @@ end
 ord_pid = fork do
   $stdout.reopen('/dev/null', 'w')
   $VERBOSE = nil
+  $mn_verbose = true
   Oracle.apply(SRC, FILE)
   Oracle.record_timings = false
   Oracle.hint = Oracle.test_names.reverse
