@@ -18,7 +18,7 @@ const u8 = (s: string): number => enc.encode(s).length;
 
 export const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === 'object' && !Array.isArray(v) && [Object.prototype, null].includes(Object.getPrototypeOf(v));
-const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && !Object.is(v, -0);
+const isInt = (v: unknown): v is number => Number.isSafeInteger(v) && !Object.is(v, -0); // isSafeInteger is false for every non-number
 const isNonNeg = (v: unknown): v is number => isInt(v) && v >= 0;
 const isStr = (v: unknown, max = 256): v is string => typeof v === 'string' && v.length > 0 && u8(v) <= max;
 

@@ -23,6 +23,10 @@ describe('json profile and format guards', () => {
   it('refuses a value that is not JSON with the exact reason', () => {
     expect(jsonProfileError(new Date())).toBe('only JSON values are allowed');
   });
+  it('checks every element of an array, not only the first', () => {
+    expect(jsonProfileError([1, 1.5])).toBe('numbers must be safe integers (no floats, no -0)');
+    expect(jsonProfileError([1, 2])).toBeNull();
+  });
   it('a format must be a string, not something that prints like one', () => {
     expect(isFormat(['id:abc'])).toBe(false);
     expect(isFormat('id:abc')).toBe(true);

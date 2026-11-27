@@ -47,6 +47,8 @@ describe('refsem kills: comparison operators', () => {
   });
   it('comparing a quantity with text is unknown, not a crash', () => {
     expect(decide(withCond(cmp('eq', lit(q(1)), lit({ k: 's', s: 'a' }))))).toBe(1);
+    expect(decide(withCond(cmp('lt', lit(q(1)), lit({ k: 's', s: 'a' }))))).toBe(1);
+    expect(decide(withCond(cmp('lt', lit({ k: 's', s: 'a' }), lit(q(1)))))).toBe(1);
   });
   it('a history aggregate term reads as a quantity of its bound', () => {
     const c = withCond(cmp('lte', { k: 'hist', bid: 'b1', u: U }, lit(q(5))));
@@ -74,6 +76,16 @@ describe('refsem kills: resources, validity, depth', () => {
   it('a delegation depth past maxDepth is denied', () => {
     expect(decide(goal(), act({ depth: 1 }))).toBe(2);
     expect(decide(goal(), act({ depth: 2 }))).toBe(0);
+  });
+  it('a negative delegation depth is denied, even for a grant the delegate may touch', () => {
+    expect(decide(goal(), act({ depth: -1 }))).toBe(0);
+  });
+  it('validity is the closed interval [notBefore, notAfter]', () => {
+    const g = goal({ validity: { notBefore: 50, notAfter: 200, maxIdle: 0 } });
+    expect(decide(g, act({ t: 49 }))).toBe(0);
+    expect(decide(g, act({ t: 50 }))).toBe(2);
+    expect(decide(g, act({ t: 200 }))).toBe(2);
+    expect(decide(g, act({ t: 201 }))).toBe(0);
   });
 });
 
@@ -108,6 +120,15 @@ describe('refsem kills: bounds', () => {
       bounds: [bound({ sel: { k: 'effect', cls: 'other' }, cap: { u: U, n: 0 } })],
     });
     expect(decide(g)).toBe(2);
+  });
+  it('a gids bound selects by gid only: never by verb, whatever else the selector carries', () => {
+    const sel = { k: 'gids', gids: ['zz'], cls: 'c' } as unknown as Bound['sel'];
+    expect(decide(goal({ bounds: [bound({ sel, cap: { u: U, n: 0 } })] }))).toBe(2);
+    const g = goal({
+      grants: [{ gid: 'g', verb: 'Stryker was here', res: { k: 'any', reason: 'x' }, cond: { k: 'true' } }],
+      bounds: [bound({ sel: { k: 'gids', gids: ['zz'] }, cap: { u: U, n: 0 } })],
+    });
+    expect(decide(g, act({ verb: 'Stryker was here' }))).toBe(2);
   });
   it('an exceeded escalate bound escalates, an exceeded deny bound denies', () => {
     expect(decide(withBound({ agg: 'count', cap: { u: U, n: 0 }, onExceed: 'escalate' }))).toBe(1);

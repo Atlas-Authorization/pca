@@ -17,6 +17,8 @@ const err = (patch: Obj): string | null => validateDef({ ...base(), ...patch });
 const without = (o: Obj, key: string): Obj => Object.fromEntries(Object.entries(o).filter(([k]) => k !== key));
 // not a plain object (an array) yet carries the given members: shape checks that only look at keys cannot tell it apart
 const arrayWith = (o: Obj): Obj => Object.assign([] as unknown[], o);
+// four dotted segments, n characters in all (n in 100..131): within both the verb and the resource type patterns
+const name = (n: number): string => `${'a'.repeat(32)}.${'b'.repeat(32)}.${'c'.repeat(32)}.${'d'.repeat(n - 99)}`;
 const traitIds = (n: number): string[] => Array.from({ length: n }, (_, i) => `a.t${i}`);
 
 describe('validateDef: base', () => {
@@ -265,6 +267,13 @@ describe('validateDef: members the first pass missed', () => {
     expect(err({ resource: { ...r, extra: 1 } })).toBe(SHAPE);
     expect(err({ resource: { ...r, type: 'BAD' } })).toBe('resource.type is malformed');
     expect(err({ resource: { ...r, type: 5 } })).toBe('resource.type is malformed');
+    expect(err({ resource: { ...r, type: ['acme.invoice'] } })).toBe('resource.type is malformed'); // prints as a valid type
+    expect(err({ resource: { ...r, type: name(128) } })).toBeNull();
+    expect(err({ resource: { ...r, type: name(129) } })).toBe('resource.type is malformed');
+  });
+  it('a verb is at most 128 bytes', () => {
+    expect(err({ verb: name(128) })).toBeNull();
+    expect(err({ verb: name(129) })).toBe('verb must be <ns>.<noun...>.<action> (lowercase, 2..6 segments)');
   });
   it('context keys are distinct and known', () => {
     expect(err({ context: ['dry_run_first', 'session_taint_max:web'] })).toBeNull();

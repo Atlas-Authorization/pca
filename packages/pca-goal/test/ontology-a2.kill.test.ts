@@ -80,6 +80,48 @@ describe('goal currency and the IR projection', () => {
   });
 });
 
+describe('goal currency: every place a goal names money, the first one wins', () => {
+  const money = (ccy: string): unknown => ({ k: 'q', q: { u: { k: 'money', ccy }, n: 5 } });
+  const amount = { k: 'param', path: 'amount', ty: { k: 'q', u: { k: 'money', ccy: 'EUR' } } };
+  const litLeft = (v: unknown): unknown => ({ k: 'cmp', op: 'lte', l: { k: 'lit', v }, r: amount });
+  const litRight = (v: unknown, op = 'lte'): unknown => ({ k: 'cmp', op, l: amount, r: { k: 'lit', v } });
+  const T = { k: 'true' };
+  const grantIf = (cond: unknown): unknown => ({ gid: 'g', verb: 'refund', res: { k: 'any', reason: 'x' }, cond });
+  const capIn = (u: unknown): unknown => ({
+    bid: 'b', sel: { k: 'gids', gids: ['g'] }, agg: 'sum', value: amount, key: '', window: { k: 'lifetime' }, scope: { k: 'session' }, cap: { u, n: 9 }, onExceed: 'deny',
+  });
+  it('a literal on the left of a comparison', () => {
+    expect(goalCcy(goal({ grants: [grantIf(litLeft(money('EUR')))] }))).toBe('EUR');
+  });
+  it('the first member of a literal set, not the last', () => {
+    expect(goalCcy(goal({ grants: [grantIf(litRight({ k: 'set', items: [money('EUR'), money('GBP')] }, 'in'))] }))).toBe('EUR');
+  });
+  it('either side of and / or', () => {
+    expect(goalCcy(goal({ grants: [grantIf({ k: 'and', a: litRight(money('EUR')), b: T })] }))).toBe('EUR');
+    expect(goalCcy(goal({ grants: [grantIf({ k: 'or', a: T, b: litRight(money('GBP')) })] }))).toBe('GBP');
+  });
+  it('prohibitions and escalation conditions', () => {
+    const p = { pid: 'p', target: { k: 'verb', verb: 'refund' }, res: { k: 'any', reason: 'x' }, cond: litRight(money('EUR')) };
+    expect(goalCcy(goal({ prohibits: [p] }))).toBe('EUR');
+    expect(goalCcy(goal({ escalateOn: [litRight(money('GBP'))] }))).toBe('GBP');
+  });
+  it('a bound cap, only when no condition names a currency first', () => {
+    expect(goalCcy(goal({ bounds: [capIn({ k: 'money', ccy: 'GBP' })] }))).toBe('GBP');
+    expect(goalCcy(goal({ grants: [grantIf(litRight(money('EUR')))], bounds: [capIn({ k: 'money', ccy: 'GBP' })] }))).toBe('EUR');
+  });
+  it('a quantity of another unit never names the currency, even one carrying a ccy member', () => {
+    const count = { k: 'count', ccy: 'GBP' };
+    expect(goalCcy(goal({ grants: [grantIf(litRight({ k: 'q', q: { u: count, n: 1 } }))], bounds: [capIn({ k: 'money', ccy: 'EUR' })] }))).toBe('EUR');
+    expect(goalCcy(goal({ bounds: [capIn(count), capIn({ k: 'money', ccy: 'EUR' })] }))).toBe('EUR');
+  });
+  it('a currency list entry that is not a string never becomes the declared currency', () => {
+    const o = fresh();
+    const amt = o.verbs.find((v) => v.id === 'refund')!.params.amount!;
+    amt.ccys = [undefined as unknown as string, ...amt.ccys!];
+    expect(toIrOntology(o).verbs).toEqual(toIrOntology(fresh()).verbs);
+  });
+});
+
 describe('goalAnchors', () => {
   const x = related('a', 'bc');
   const y = related('ab', 'c');
