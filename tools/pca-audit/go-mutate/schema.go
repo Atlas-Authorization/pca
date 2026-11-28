@@ -278,7 +278,9 @@ func (a *analysis) verdict(m *Mut) (verdict, string) {
 	default:
 		return vUnknown, ""
 	}
-	// an import whose every use the mutant removes is "imported and not used"
+	// an import whose every use the mutant removes is "imported and not used" (a replacement that keeps the original text,
+	// such as if-cond -> "(cond) || true", removes none)
+	if strings.Contains(m.repl, string(fi.src[m.start:m.end])) { return vOK, "" }
 	for _, pn := range fi.pkgNms {
 		us, all := 0, true
 		for _, p := range a.uses[pn] {
@@ -429,6 +431,9 @@ func (a *analysis) siteFor(m *Mut) *site {
 	fi := a.files[m.File]
 	if fi == nil || fi.cgo { return nil }
 	P := a.pathTo(fi, m.start, m.end)
+	// a literal in a type (array length: [2]T{...}, x.([4]T), [3]byte(s), G[[2]T]) changes the type, which no run-time switch
+	// can do: such a mutant is a standalone build (its type-check verdict already made it build-failed when it cannot compile)
+	for _, n := range P[1:] { if a.isTypeExpr(n) { return nil } }
 	if m.Desc == "remove case body" {
 		for _, n := range P {
 			cc, ok := n.(*ast.CaseClause)
@@ -446,6 +451,15 @@ func (a *analysis) siteFor(m *Mut) *site {
 		return a.stmtSite(fi, m, P, i, st, child)
 	}
 	return a.pkgSite(fi, m, P)
+}
+
+func (a *analysis) isTypeExpr(n ast.Node) bool {
+	switch n.(type) {
+	case *ast.ArrayType, *ast.StructType, *ast.FuncType, *ast.MapType, *ast.ChanType, *ast.InterfaceType, *ast.Ellipsis:
+		return true
+	}
+	e, ok := n.(ast.Expr)
+	return ok && a.info.Types[e].IsType()
 }
 
 // listOf: the statement list holding st and st's index in it (a labelled statement is not a list element here).
@@ -1003,9 +1017,10 @@ func (a *analysis) buildSchema(sites map[string][]*site, tmp, tags, bin string) 
 			if fi == nil { return fmt.Errorf("the schema build fails in %s:\n%s", name, tail(string(o), 4000)) }
 			line, _ := strconv.Atoi(g[2])
 			hit := false
+			// a site already dropped (by an earlier error on the same line) still counts as the error's site
+			drop := func(s *site) { hit = true; if !s.dead { s.dead = true; dropped++ } }
 			for _, s := range ss {
-				if s.dead { continue }
-				if l1, l2 := fi.tf.Line(fi.tf.Pos(s.a)), fi.tf.Line(fi.tf.Pos(s.b)); l1 <= line && line <= l2 { s.dead, hit = true, true; dropped++ }
+				if l1, l2 := fi.tf.Line(fi.tf.Pos(s.a)), fi.tf.Line(fi.tf.Pos(s.b)); l1 <= line && line <= l2 { drop(s) }
 			}
 			if hit { continue }
 			// no site on that line (a missing return at a function's end, ...): every site of the enclosing function
@@ -1013,13 +1028,14 @@ func (a *analysis) buildSchema(sites map[string][]*site, tmp, tags, bin string) 
 				l1, l2 := fi.tf.Line(d.Pos()), fi.tf.Line(d.End())
 				if l1 > line || line > l2 { continue }
 				for _, s := range ss {
-					if !s.dead && a.off(fi, d.Pos()) <= s.a && s.b <= a.off(fi, d.End()) { s.dead, hit = true, true; dropped++ }
+					if a.off(fi, d.Pos()) <= s.a && s.b <= a.off(fi, d.End()) { drop(s) }
 				}
 			}
-			if !hit { for _, s := range ss { if !s.dead { s.dead = true; dropped++ } } }
+			if !hit { return fmt.Errorf("the schema build fails at %s:%d, where no guarded site is:\n%s", name, line, tail(string(o), 4000)) }
 		}
 		if dropped == 0 { return fmt.Errorf("the schema build fails and no error maps to a guarded site:\n%s", tail(string(o), 4000)) }
-		fmt.Fprintf(os.Stderr, "go-mutate: schema build: %d site(s) dropped to standalone builds:\n%s\n", dropped, tail(string(o), 1500))
+		// indented: CI problem matchers would turn bare file:line: lines into job error annotations, though nothing failed
+		fmt.Fprintf(os.Stderr, "go-mutate: schema build: %d site(s) dropped to standalone builds:\n  | %s\n", dropped, strings.ReplaceAll(tail(string(o), 1500), "\n", "\n  | "))
 	}
 }
 

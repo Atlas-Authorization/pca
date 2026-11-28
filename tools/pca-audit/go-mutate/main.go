@@ -389,7 +389,9 @@ func runTasks(tasks []*task, o runOpts) {
 				// compiled (a mutant that does not compile is build-failed, not an uncovered survivor)
 				uncovered := t.tests != nil && len(t.tests) == 0
 				gc.RLock()
+				// per mode: the cross-check runs one mutant both ways at once, and the first to finish removes its wt
 				wt := filepath.Join(o.tmp, fmt.Sprintf("t%d", m.ID))
+				if t.schema { wt += "s" }
 				os.MkdirAll(wt, 0o755)
 				lim := t.lim
 				hard := lim + time.Minute
