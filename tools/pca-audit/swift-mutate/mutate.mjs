@@ -12,6 +12,13 @@
 //        --oracle-part=K/N (with --oracle-out): verify only the oracle groups whose index (in plan order, over the files that have mutants) is K mod N, so
 //        N parallel jobs verify all of them; each writes its share plus the total group count (oracle-merge.mjs joins the shares and checks they are
 //        complete). --oracle-part=build: verify nothing, only build and mark the copies restorable (the build the parts and the slices restore).
+//        --items=<file> (item mode, the schema pipeline): instead of a slice, the items of one job of the mutation plan (schema-jobs.mjs):
+//          {mode: 'schema', bundle: <dir>, items: [{id, att?}]}: mutants of a schema build (schema-build.mjs), run from its prebuilt tree
+//            (restored at <tmp>/swiftmut/w0) with PCA_MUTANT=<id>: first only the test classes that reach the mutant, then the full suite
+//          {mode: 'real', items: [{key, att?, sample?}]}: real per-mutant builds (the fallback and the self-check samples), as in a slice
+//          att: 2 or 3 = one more full-suite attempt at 1.5x the limit for a mutant whose first full suite timed out
+//          --deadline=<epoch ms>: no item starts after it, and the runs still going are killed; --pending-out=<file> gets every item not
+//          decided here (not started, killed at the deadline, or a first full-suite timeout: then its attempts 2 and 3), for the next level.
 // Each worker owns a private copy of sdks/swift-pca under $TMPDIR/swiftmut/wN, applies one mutant, runs the oracle
 // (swift test: existing unit tests + core conformance + the FULL adversarial corpus via PCA_CONFORMANCE_ADV) under nice,
 // and records KILLED / SURVIVED / NONVIABLE (compile error) / TIMEOUT / TRAP / RUNERR. A mutant is KILLED iff a test assertion failed;
@@ -24,25 +31,10 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { sha, normText, mayCarry, loadPool } from '../mut-carry/lib.mjs';
+import { maskLine, maskAll, schemaFile } from './schema.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../..');
 const pkg = path.join(root, 'sdks/swift-pca');
-
-function maskLine(l) { // blank out string literals and // comments so operators inside them are ignored
-  let out = '', inStr = false;
-  for (let i = 0; i < l.length; i++) {
-    const c = l[i];
-    if (!inStr && c === '/' && l[i + 1] === '/') { out += ' '.repeat(l.length - i); break; }
-    if (!inStr && c === '/' && l[i + 1] === '*') { // same-line /* ... */ comment
-      const e = l.indexOf('*/', i + 2);
-      const end = e < 0 ? l.length : e + 2;
-      out += ' '.repeat(end - i); i = end - 1; continue;
-    }
-    if (c === '"' && l[i - 1] !== '\\') { inStr = !inStr; out += '"'; continue; }
-    out += inStr ? ' ' : c;
-  }
-  return out;
-}
 
 // ---- shared slicing + cost model ----
 const targetOfFile = (file) => file.includes('/AtlasPCASQLite/') ? 'AtlasPCASQLiteTests' : file.includes('/AtlasPCAStepUp/') ? 'AtlasPCAStepUpTests' : 'AtlasPCAVerifyTests';
@@ -157,10 +149,12 @@ function hasTopComma(c) {
   return false;
 }
 let UNREACHED = null; // plan-check collects the lines no runner compiles here
+const mutantText = (m) => m.lines.map((x, i) => (i === m.line - 1 ? m.raw : x)).join('\n');
 function mutantsFor(file) {
   const src = fs.readFileSync(file, 'utf8').split('\n');
   const out = [];
-  const add = (ln, repl, op) => { if (repl !== src[ln]) out.push({ line: ln + 1, op, orig: src[ln].trim(), repl: repl.trim(), text: src.map((x, i) => (i === ln ? repl : x)).join('\n') }); };
+  // raw: the mutant's whole line; the file text is built only when the mutant is written (mutantText), not kept per mutant
+  const add = (ln, repl, op) => { if (repl !== src[ln]) out.push({ line: ln + 1, op, orig: src[ln].trim(), repl: repl.trim(), raw: repl, lines: src }); };
   // Lines this platform does not compile (#if conditions evaluated for it). A mutant there changes nothing the oracle runs, so it
   // would only report a fake survivor. The Linux shards mutate what Linux compiles; the macOS leg (SWIFTMUT_APPLE=1) mutates
   // exactly the lines Linux does NOT compile (the Keychain store, the CryptoKit ML-DSA branch), so every line is mutated once.
@@ -227,29 +221,7 @@ function mutantsFor(file) {
 
 // ---- carry-forward identity (targeted mode, see ../mut-carry): every mutant gets a stable key, the hash of its enclosing
 // func/init/subscript ("def") and the hash of the file's code outside every def ("shell"; comments/blank lines ignored).
-// Source masked across lines: string literals (incl. multi-line """ and raw #"..."#), // and nested /* */ comments blanked
-// (newlines kept), so braces inside them never confuse the def scanner.
-function maskAll(src) {
-  const out = []; let i = 0; const n = src.length; let cmt = 0;
-  const put = (c) => out.push(c === '\n' ? '\n' : ' ');
-  while (i < n) {
-    const c = src[i];
-    if (cmt) { if (c === '*' && src[i + 1] === '/') { cmt--; put(c); put(src[i + 1]); i += 2; } else if (c === '/' && src[i + 1] === '*') { cmt++; put(c); put(src[i + 1]); i += 2; } else { put(c); i++; } continue; }
-    if (c === '/' && src[i + 1] === '/') { while (i < n && src[i] !== '\n') { put(src[i]); i++; } continue; }
-    if (c === '/' && src[i + 1] === '*') { cmt = 1; put(c); put(src[i + 1]); i += 2; continue; }
-    let hashes = 0, j = i; while (src[j] === '#') { hashes++; j++; }
-    if (src[j] === '"') {
-      const triple = src.startsWith('"""', j); const q = triple ? '"""' : '"'; const close = q + '#'.repeat(hashes);
-      for (let k = i; k < j + q.length; k++) put(' ');
-      i = j + q.length;
-      while (i < n && !src.startsWith(close, i)) { if (src[i] === '\\' && !hashes) { put(src[i]); i++; } if (!triple && src[i] === '\n') break; put(src[i]); i++; }
-      if (src.startsWith(close, i)) for (let k = 0; k < close.length; k++) { put(src[i]); i++; }
-      continue;
-    }
-    out.push(c); i++;
-  }
-  return out.join('');
-}
+// (maskAll, in schema.mjs, blanks strings and comments across lines, so braces inside them never confuse the def scanner.)
 const DEF_RE = /^\s*(?:(?:public|private|fileprivate|internal|open|static|class|final|override|mutating|nonmutating|required|convenience|@\w+(?:\([^)]*\))?)\s+)*(?:func|init[?!]?|deinit|subscript)\b/;
 function defRanges(rawText) {
   const masked = maskAll(rawText), lines = masked.split('\n'), raw = rawText.split('\n');
@@ -308,7 +280,73 @@ const trapOf = (out) => {
   return test ? { message: message.trim().slice(0, 300), test } : null;
 };
 
+// one result record (the shape every report, pool and carry decision reads)
+const recOf = (m, status, extra = {}) => ({ file: m.file, idx: m.idx, line: m.line, op: m.op, orig: m.orig, repl: m.repl, status, key: m.key, def_hash: m.def_hash, shell_hash: m.shell_hash, src_hash: m.src_hash, ...extra });
+const carryRule = { killed: ['KILLED'], uncompilable: ['NONVIABLE'], survived: ['SURVIVED'] };
+
 const [cmd, ...rest] = process.argv.slice(2);
+if (cmd === 'schema-plan') {
+  // node mutate.mjs schema-plan <pool.json|-> --groups=G <file.swift>... --out=<dir>
+  //   Every mutant of the files, with its key and carry decision exactly as `run --carry` makes them: a carried one keeps its pooled
+  //   result (<out>/carried.json, result records); every other one goes to one of G schema groups (files packed largest first into the
+  //   least loaded group), ids 1..n in the group in file order (PCA_MUTANT) -> <out>/plan.json (per group: files, n, sha of the keys).
+  //   Each group is ONE schema build (schema-build.mjs). Prints how many mutants the generator holds and why the others fall back.
+  // node mutate.mjs schema-plan <pool.json|-> --groups=G <file.swift>... --group=g --list=<file> [--plan=<plan.json>]
+  //   the same plan, recomputed; writes group g's mutants [{id, key, file, line, op, raw}] (and refuses when --plan disagrees)
+  const flags = rest.filter((a) => a.startsWith('--')), pos = rest.filter((a) => !a.startsWith('--'));
+  const fv = (n) => flags.find((f) => f.startsWith(`--${n}=`))?.slice(n.length + 3);
+  const G = +(fv('groups') ?? 0), out = fv('out'), only = fv('group'), list = fv('list');
+  if (!(G >= 1) || !(out || (only !== undefined && list))) { console.error('usage: schema-plan <pool|-> --groups=G <files> --out=<dir> | --group=g --list=<file>'); process.exit(2); }
+  const pool = pos[0] === '-' ? {} : loadPool(pos[0]); const files = pos.slice(1);
+  if (!pool) { console.error(`cannot read pool ${pos[0]}`); process.exit(1); }
+  const srcHash = sha(files.map((f) => f + '\0' + fs.readFileSync(path.join(pkg, f), 'utf8')).join('\0'));
+  const carried = [], per = new Map(), seen = new Set();
+  for (const f of files) {
+    const ms = mutantsFor(path.join(pkg, f)); annotate(path.join(pkg, f), ms, srcHash);
+    ms.forEach((m, i) => {
+      const x = { file: f, idx: i, ...m };
+      if (seen.has(x.key)) { console.error(`::error::two mutants share the key ${x.key}`); process.exit(1); }
+      seen.add(x.key);
+      const e = pool[x.key];
+      if (e && e.d === x.def_hash && e.h === x.shell_hash && mayCarry(e, x, carryRule)) carried.push(recOf(x, e.s, { carried: true }));
+      else { if (!per.has(f)) per.set(f, []); per.get(f).push(x); }
+    });
+  }
+  const gs = Array.from({ length: Math.min(G, per.size) }, () => ({ files: [], n: 0 }));
+  for (const [f, ms] of [...per].sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1))) {
+    const g = gs.reduce((best, x, i) => (x.n < gs[best].n ? i : best), 0);
+    gs[g].files.push(f); gs[g].n += ms.length;
+  }
+  const listOf = (g) => { let id = 0; return g.files.slice().sort().flatMap((f) => per.get(f).map((m) => ({ id: ++id, key: m.key, file: f, line: m.line, op: m.op, raw: m.raw }))); };
+  const keysSha = (ms) => sha(ms.map((m) => m.key).join('\n'));
+  if (only !== undefined) {
+    const g = gs[+only];
+    if (!g) { console.error(`::error::no schema group ${only} (${gs.length} groups)`); process.exit(1); }
+    const ms = listOf(g), want = fv('plan') ? JSON.parse(fs.readFileSync(fv('plan'), 'utf8')).groups[+only] : null;
+    if (want && (want.n !== ms.length || want.keys_sha !== keysSha(ms))) { console.error(`::error::group ${only} recomputed differs from the plan (${ms.length} vs ${want.n} mutants): another tree or pool`); process.exit(1); }
+    fs.writeFileSync(list, JSON.stringify(ms));
+    console.log(`group ${only}: ${g.files.length} file(s), ${ms.length} mutant(s)`);
+    process.exit(0);
+  }
+  let heldAll = 0; const why = {};
+  const groups = gs.map((g, gi) => {
+    const ms = listOf(g); let held = 0;
+    for (const f of g.files) {
+      const r = schemaFile(fs.readFileSync(path.join(pkg, f), 'utf8'), ms.filter((m) => m.file === f));
+      held += r.held.size;
+      for (const w of r.fallback.values()) why[w] = (why[w] ?? 0) + 1;
+    }
+    heldAll += held;
+    console.log(`group ${gi}: ${g.files.length} file(s), ${ms.length} mutant(s), ${held} held by the generator`);
+    return { g: gi, files: g.files.slice().sort(), n: ms.length, keys_sha: keysSha(ms) };
+  });
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(path.join(out, 'plan.json'), JSON.stringify({ tree: treeHash(), src_hash: srcHash, files, groups }));
+  fs.writeFileSync(path.join(out, 'carried.json'), JSON.stringify(carried));
+  const n = groups.reduce((a, g) => a + g.n, 0);
+  console.log(`schema plan: ${n + carried.length} mutant(s), ${carried.length} carried, ${n} to run in ${groups.length} group(s); the generator holds ${heldAll} (${n ? (100 * heldAll / n).toFixed(1) : 0}%); fallback before the build: ${JSON.stringify(why)}`);
+  process.exit(0);
+}
 if (cmd === 'plan-check') { // every source file must yield mutants on some platform, or be named in mutation-no-logic.json with a reason
   const named = new Map(JSON.parse(fs.readFileSync(path.join(pkg, 'mutation-no-logic.json'), 'utf8')).map((e) => [e.file, e.reason]));
   const files = fs.readdirSync(path.join(pkg, 'Sources'), { recursive: true }).map(String).filter((f) => f.endsWith('.swift')).sort().map((f) => `Sources/${f}`);
@@ -423,7 +461,22 @@ if (cmd === 'run') {
   for (const f of files) { const ms = mutantsFor(path.join(pkg, f)); annotate(path.join(pkg, f), ms, srcHash); ms.forEach((m, i) => all.push({ file: f, idx: i, ...m })); }
   // contiguous slices (not round-robin): a shard then spans a file or two, so it verifies one or two oracle groups on the
   // unmutated sources instead of all ~40 (each a 2-3 min suite run). The workflow's count check uses the same formula.
-  all = sliceMutants(all, every, offset, flags);
+  const itemsFile = flagVal('items'), items = itemsFile ? JSON.parse(fs.readFileSync(itemsFile, 'utf8')) : null;
+  const pendingOut = flagVal('pending-out'), deadline = +(flagVal('deadline') ?? 0);
+  const schema = items?.mode === 'schema' ? { meta: JSON.parse(fs.readFileSync(path.join(items.bundle, 'meta.json'), 'utf8')), reach: JSON.parse(fs.readFileSync(path.join(items.bundle, 'reach.json'), 'utf8')) } : null;
+  if (items) {
+    const byKey = new Map(all.map((m) => [m.key, m]));
+    const idKey = schema ? new Map(schema.meta.mutants.map((x) => [x.id, x])) : null;
+    const sel = [];
+    for (const it of items.items) {
+      const x = schema ? idKey.get(it.id) : null;
+      if (schema && (!x || x.st !== 'schema')) { console.error(`::error::item ${it.id} is no schema mutant of this bundle`); process.exit(2); }
+      const m = byKey.get(schema ? x.key : it.key);
+      if (!m) { console.error(`::error::item ${JSON.stringify(it)} names no mutant of this tree`); process.exit(2); }
+      sel.push({ ...m, item: it, sid: schema ? it.id : 0 });
+    }
+    all = sel;
+  } else all = sliceMutants(all, every, offset, flags);
   // --retry=a.json,b.json: only the mutants that SURVIVED or TIMED OUT (no verdict) in earlier result files (matched by file + source text + op +
   // replacement, so line shifts from edits elsewhere in the file do not matter)
   const retry = flags.find((f) => f.startsWith('--retry='))?.slice(8);
@@ -433,12 +486,12 @@ if (cmd === 'run') {
     all = all.filter((m) => want.has(`${m.file}#${m.orig}#${m.op}#${m.repl}`));
   }
   const results = fs.existsSync(outFile) ? JSON.parse(fs.readFileSync(outFile, 'utf8')) : [];
-  const rec = (m, status, extra = {}) => ({ file: m.file, idx: m.idx, line: m.line, op: m.op, orig: m.orig, repl: m.repl, status, key: m.key, def_hash: m.def_hash, shell_hash: m.shell_hash, src_hash: m.src_hash, ...extra });
+  const rec = (m, status, extra = {}) => recOf(m, status, { ...(m.item ? { via: schema ? 'schema' : 'real', ...(m.item.att ? { att: m.item.att } : {}), ...(m.item.sample ? { sample: true } : {}) } : {}), ...extra });
   // --carry=pool.json (targeted mode): a pooled result stands only when the mutant's def and the file's non-def code are
   // unchanged (KILLED/TIMEOUT), or the whole production source is (NONVIABLE); a SURVIVED one stands only when the baseline ran against
   // byte-identical tests + corpus and the whole production source is unchanged; unseen and changed mutants run again.
   const carryFile = flags.find((f) => f.startsWith('--carry='))?.slice(8);
-  if (carryFile) {
+  if (carryFile && !items) {
     const pool = loadPool(carryFile);
     if (!pool) { console.error(`cannot read --carry ${carryFile}`); process.exit(1); }
     const have = new Set(results.map((r) => `${r.file}#${r.idx}`));
@@ -453,8 +506,9 @@ if (cmd === 'run') {
     }
     console.error(`carry: ${c} result(s) carried, ${all.length - c} to run (${unseen} unseen, ${changed} def/file changed, ${nonkill} earlier survivors or uncompilable under changed sources)`);
   }
-  const done = new Set(results.map((r) => `${r.file}#${r.idx}`));
+  const done = new Set(items ? [] : results.map((r) => `${r.file}#${r.idx}`));
   const queue = all.filter((m) => !done.has(`${m.file}#${m.idx}`));
+  const pending = [];
   console.error(`mutants ${all.length}, remaining ${queue.length}`);
   const t0 = Date.now();
   const save = () => fs.writeFileSync(outFile, JSON.stringify(results, null, 1));
@@ -531,14 +585,23 @@ if (cmd === 'run') {
     })());
     return groups.get(g);
   };
-  const exec = (w, file, filter, skipBuild, limit) => new Promise((resolve) => {
+  // the runs going on (the deadline kills them: their items go to the next level undecided)
+  const active = new Set();
+  let stopping = false;
+  const stopAll = () => { stopping = true; for (const k of active) k(); };
+  if (deadline) { const ms = deadline - Date.now(); if (ms <= 0) stopping = true; else setTimeout(stopAll, ms).unref(); }
+  // the suite as `swift test --filter` runs: the core target in its four parts (as always), a list of regexes in turn, or one filter
+  const filtersOf = (filter) => Array.isArray(filter) ? filter : filter === 'AtlasPCAVerifyTests' ? ['A', '[B-K]', '[L-R]', '[^A-R]'].map((r) => `^AtlasPCAVerifyTests\\.${r}`) : [filter];
+  const exec = (w, file, filter, skipBuild, limit, env = {}) => new Promise((resolve) => {
     const dir = path.join(tmp, `w${w}`, 'sdks/swift-pca');
     // own process group, so a timeout / memory kill takes the compiler and the test binary down with the driver
     // ulimit -d: a hard per-process backstop, so a runaway allocation fails (the oracle crashes == detected) instead of
     // exhausting the job's cgroup before the watchdog below can react. RLIMIT_DATA counts VIRTUAL private mappings (malloc arenas,
     // reservations), so it sits at 3x the RSS cap: at 1x the unmutated base oracles (170 MB files read whole) crashed.
     const t0 = Date.now();
-    const p = spawn('bash', ['-c', `ulimit -d ${Math.floor(3 * MAX_RSS / 1024)}; S="nice -n 19 $(command -v stdbuf >/dev/null && echo stdbuf -oL) swift test $SWIFT_TEST_FLAGS"; if [ "$1" = AtlasPCAVerifyTests ]; then for r in A '[B-K]' '[L-R]' '[^A-R]'; do $S ${skipBuild ? '--skip-build ' : ''}--scratch-path "$0" --filter "^AtlasPCAVerifyTests\\.$r" || exit $?; done; else $S ${skipBuild ? '--skip-build ' : ''}--scratch-path "$0" --filter "$1"; fi`, path.join(dir, '.b'), filter], { cwd: dir, env: { ...process.env, PCA_CONFORMANCE_ADV: advPath, SWIFTMUT_FILE: file }, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    const penv = { ...process.env, PCA_CONFORMANCE_ADV: advPath, SWIFTMUT_FILE: file, ...env };
+    delete penv.PCA_SCHEMA_TRACE; if (!env.PCA_MUTANT) delete penv.PCA_MUTANT;
+    const p = spawn('bash', ['-c', `ulimit -d ${Math.floor(3 * MAX_RSS / 1024)}; S="nice -n 19 $(command -v stdbuf >/dev/null && echo stdbuf -oL) swift test $SWIFT_TEST_FLAGS"; b="$0"; for f in "$@"; do $S ${skipBuild ? '--skip-build ' : ''}--scratch-path "$b" --filter "$f" || exit $?; done`, path.join(dir, '.b'), ...filtersOf(filter)], { cwd: dir, env: penv, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
     let out = '';
     let early = false, tail = ''; // the first ordinary assertion failure decides the mutant: stop there, so a LATER test that hangs or crashes cannot turn the kill into a TIMEOUT/RUNERR
     const ASSERT = /: error: (-\[[\w.]+ \w+\]|[\w.]+\.\w+) : /m;
@@ -549,6 +612,10 @@ if (cmd === 'run') {
     p.stdout.on('data', add); p.stderr.on('data', add);
     const killGroup = () => { try { process.kill(-p.pid, 'SIGKILL'); } catch { try { p.kill('SIGKILL'); } catch {} } };
     const to = setTimeout(killGroup, limit);
+    let aborted = false;
+    const abort = () => { aborted = true; killGroup(); };
+    active.add(abort);
+    if (stopping) abort();
     // memory watchdog: a mutant that allocates without bound (e.g. a loop that keeps appending) would otherwise exhaust
     // the job's memory cap within seconds and the OOM kill would lose the whole run. Over the cap == detected (TIMEOUT).
     let memKilled = false;
@@ -570,10 +637,10 @@ if (cmd === 'run') {
       if (pages * 4096 > MAX_RSS) { memKilled = true; killGroup(); for (const t of tree) { try { process.kill(t, 'SIGKILL'); } catch {} } }
     }, 250);
     p.on('close', (code, sig) => {
-      clearTimeout(to); clearInterval(wd);
+      clearTimeout(to); clearInterval(wd); active.delete(abort);
       const lines = out.split('\n').filter((l) => /error:/.test(l));
       resolve({
-        code, ms: Date.now() - t0, memKilled, timedOut: sig === 'SIGKILL' && !memKilled && !early, signal: sig,
+        code, ms: Date.now() - t0, memKilled, aborted, timedOut: sig === 'SIGKILL' && !memKilled && !early && !aborted, signal: sig,
         // the build finished and the tests ran (SwiftPM flushes 'Build complete!'; the test binary's own output may sit in a pipe buffer)
         started: skipBuild || /Build complete!|Test Suite '/.test(out),
         // an ordinary XCTest failure (an assertion, or a test that threw): Linux `file:line: error: Class.test : msg`, Darwin
@@ -601,11 +668,11 @@ if (cmd === 'run') {
   const run = async (w, m, filter, skipBuild, limit) => {
     // a time limit hit while still BUILDING is no detection either (the limit is sized on the unmutated test run): retry with twice the time
     const ran = (r) => r.started || r.compileErr || r.memKilled;
-    let r = await exec(w, m.file, filter, skipBuild, limit);
-    if (ran(r)) return r;
+    let r = await exec(w, m.file, filter, skipBuild, limit, m.sid ? { PCA_MUTANT: String(m.sid) } : {});
+    if (r.aborted || ran(r)) return r;
     console.error(`worker ${w}: ${m.file}:${m.line} ${m.op}: the tests did not start (exit ${r.code}, timed out ${r.timedOut}), retrying\n${r.tail}`);
-    r = await exec(w, m.file, filter, false, 2 * limit);
-    if (ran(r)) return r;
+    r = await exec(w, m.file, filter, false, 2 * limit, m.sid ? { PCA_MUTANT: String(m.sid) } : {});
+    if (r.aborted || ran(r)) return r;
     // The BUILD never finished (swiftc ran past the time limit twice, or gave up on an expression: "unable to type-check this expression
     // in reasonable time"): the mutant was never compiled into a test binary, so no test saw it. It is NONVIABLE (not a kill), logged with why.
     if (r.timedOut || /unable to type-check this expression/.test(r.tail)) {
@@ -623,21 +690,63 @@ if (cmd === 'run') {
   // sdks/swift-pca/mutation-run-errors.json (BRIEF: crash / out-of-memory mutants are run errors, not kills).
   const crashOf = (r) => r.memKilled ? `memory cap (${MAX_RSS / 1048576} MiB RSS) exceeded` : `exit ${r.code}${r.signal ? ` signal ${r.signal}` : ''}: ${r.crash || 'no assertion failed'}`;
   const crashed = (r) => r.asserted ? { status: 'KILLED', killer: r.killer } : r.trap ? { status: 'TRAP', trap: r.trap } : { status: 'RUNERR', evidence: crashOf(r) };
+  // one more full-suite attempt (att 2 or 3) at 1.5x the limit, built first (a real mutant) so the limit times the tests alone
+  const attempt = async (w, m, limit) => {
+    if (!schema) {
+      const dir = path.join(tmp, `w${w}`, 'sdks/swift-pca');
+      const b = await new Promise((res) => { const c = spawn('nice', ['-n', '19', 'swift', 'build', '--build-tests', ...(process.env.SWIFT_TEST_FLAGS ? process.env.SWIFT_TEST_FLAGS.split(/\s+/) : []), '--scratch-path', path.join(dir, '.b')], { cwd: dir, stdio: 'ignore', detached: true }); const k = () => { try { process.kill(-c.pid, 'SIGKILL'); } catch {} }; active.add(k); if (stopping) k(); c.on('close', (code) => { active.delete(k); res(code); }); });
+      if (stopping) return { requeue: true };
+      if (b !== 0) return { status: 'NONVIABLE' };
+    }
+    const r = await run(w, m, oracleOf(m.file), true, Math.round(1.5 * limit));
+    if (r.aborted) return { requeue: true };
+    if (r.timedOut) return { status: 'TIMEOUT', ended: false, evidence: `no verdict within ${Math.round(1.5 * limit)} ms (attempt ${m.item.att}); last test started: ${r.lastTest || 'none'}` };
+    if (r.memKilled) return { status: 'RUNERR', evidence: crashOf(r) };
+    if (r.compileErr) { lastCompileErr.set(w, r.compileErr); return { status: 'NONVIABLE' }; }
+    if (r.code === 0 && r.sig === '[]') return { status: 'SURVIVED' };
+    return crashed(r);
+  };
+  // schema mutant: the test classes that reach it (the build's trace) first, when they are well under the full suite
+  const reachSets = schema ? (() => { const un = new Set(schema.reach.unattributed); return { un }; })() : null;
+  const subsetOf = (m, limit) => {
+    if (!schema || process.env.SWIFTMUT_FILTER || reachSets.un.has(m.sid)) return null;
+    const t = targetOf(m.file);
+    const cs = (schema.reach.sites[m.sid] ?? []).map((i) => schema.reach.classes[i]).filter((c) => c[0] === t);
+    if (!cs.length) return null;
+    const est = cs.reduce((a, c) => a + c[2], 0), full = (groupInfo.get(groupOf(m.file))?.ms ?? Infinity) / 1000;
+    if (est >= 0.6 * full) return null;
+    // the core target's classes in the same four parts as its full suite (one process each)
+    const parts = t === 'AtlasPCAVerifyTests' ? [/^A/, /^[B-K]/, /^[L-R]/, /^[^A-R]/] : [/./];
+    const filters = parts.map((re) => cs.filter((c) => re.test(c[1])).map((c) => c[1])).filter((x) => x.length).map((x) => `^${t}\\.(${x.join('|')})/`);
+    return { filters, limit: Math.min(limit, Math.max(180_000, 2000 * est + 120_000)), n: cs.length };
+  };
   const judge = async (w, m, limit) => {
-    let built = false;
-    const p1 = phase1(m.file);
+    if (m.item?.att) return attempt(w, m, limit);
+    let built = !!schema;
+    const sub = subsetOf(m, limit);
+    if (sub) {
+      const r = await run(w, m, sub.filters, true, sub.limit);
+      if (r.aborted) return { requeue: true };
+      if (r.memKilled) return { status: 'RUNERR', evidence: crashOf(r) };
+      if (!r.timedOut && r.code !== 0) return { ...crashed(r), by: `reaching classes (${sub.n})` };
+    }
+    const p1 = schema ? null : phase1(m.file);
     if (p1) {
       const r = await run(w, m, p1, false, Math.min(limit, 180_000)); // the matching classes only: a hang here falls through to the full suite, so cap its cost
+      if (r.aborted) return { requeue: true };
       if (r.memKilled) return { status: 'RUNERR', evidence: crashOf(r) };
       if (r.compileErr) { lastCompileErr.set(w, r.compileErr); return { status: 'NONVIABLE' }; }
       if (!r.timedOut && r.code !== 0) return crashed(r);
       if (!r.timedOut) built = true;
     }
     let r = await run(w, m, oracleOf(m.file), built, limit);
+    if (r.aborted) return { requeue: true };
+    // item mode: attempts 2 and 3 are items of the next level (each fits a job; three in a row may not)
+    if (pendingOut && r.timedOut) return { attempts: true };
     // a timeout is no verdict: judge once more at twice the limit, so a slow runner or GC pause cannot leave a behaviour-preserving
     // mutant undecided. A second timeout is TIMEOUT, a run error that needs a ledger entry proving the mutant itself never ends.
     // up to three attempts in all (the second and third at 1.5x): a runner stall must not decide a verdict, a mutant that loops ends all three
-    for (let a = 0; a < 2 && r.timedOut; a++) r = await run(w, m, oracleOf(m.file), built || r.started, Math.round(1.5 * limit));
+    for (let a = 0; a < 2 && r.timedOut; a++) { r = await run(w, m, oracleOf(m.file), built || r.started, Math.round(1.5 * limit)); if (r.aborted) return { requeue: true }; }
     if (r.memKilled) return { status: 'RUNERR', evidence: crashOf(r) };
     if (r.timedOut) return { status: 'TIMEOUT', evidence: `no verdict within ${limit} ms nor within ${Math.round(1.5 * limit)} ms, three attempts (the unmutated group passed well inside the first); last test started: ${r.lastTest || 'none'}` };
     if (r.compileErr) { lastCompileErr.set(w, r.compileErr); return { status: 'NONVIABLE' }; }
@@ -649,14 +758,14 @@ if (cmd === 'run') {
     const limit = await verifyGroup(w, m.file); // runs on the unmutated copy, before the mutant is written
     const target = path.join(tmp, `w${w}`, 'sdks/swift-pca', m.file);
     const orig = fs.readFileSync(path.join(pkg, m.file), 'utf8');
-    fs.writeFileSync(target, m.text);
+    if (!schema) fs.writeFileSync(target, mutantText(m)); // a schema mutant is already in the build, behind its switch
     try {
       const st = await judge(w, m, limit);
       // every uncompilable verdict and every run error is auditable in the log
       if (st.status === 'NONVIABLE') console.error(`NONVIABLE ${m.file}:${m.line} ${m.op}: ${String(lastCompileErr.get(w)).replace(/^.*\/Sources\//, 'Sources/').slice(0, 300)}`);
       if (st.status === 'RUNERR') console.error(`RUNERR ${m.file}:${m.line} ${m.op}: ${st.evidence}`);
       return st;
-    } finally { fs.writeFileSync(target, orig); }
+    } finally { if (!schema) fs.writeFileSync(target, orig); }
   };
   const wk = async (w) => {
     const wroot = path.join(tmp, `w${w}`);
@@ -666,7 +775,13 @@ if (cmd === 'run') {
     const okFile = path.join(wroot, '.oracle-ok');
     const restored = (oracleIn || oracleOut) && fs.existsSync(okFile) && fs.readFileSync(okFile, 'utf8') === tree;
     if (restored) console.error(`worker ${w}: baseline build restored`);
-    if (!restored) {
+    if (schema) {
+      // the schema build's tree (restored as w0, same absolute path as built); the other workers get hard-linked copies, each with its
+      // own SwiftPM lock (a shared lock would run the workers one after the other)
+      if (w > 0 && !fs.existsSync(wroot)) { const c = spawnSync('cp', ['-al', path.join(tmp, 'w0'), wroot]); if (c.status !== 0) { console.error(`worker ${w}: copying the schema tree failed`); process.exit(3); } }
+      fs.rmSync(path.join(dir, '.b', '.lock'), { force: true });
+      if (!fs.existsSync(path.join(dir, '.b'))) { console.error(`worker ${w}: no schema build at ${dir}`); process.exit(3); }
+    } else if (!restored) {
     fs.rmSync(path.join(dir, 'Sources'), { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
     fs.mkdirSync(path.join(wroot, 'tools'), { recursive: true });
@@ -685,9 +800,12 @@ if (cmd === 'run') {
       return;
     }
     // no separate baseline: runOne verifies each oracle group on the unmutated copy before judging its first mutant
-    while (queue.length && Date.now() - t0 < budget) {
+    while (queue.length && Date.now() - t0 < budget && !stopping) {
       const m = queue.shift();
       const st = await runOne(w, m);
+      if (st.requeue) { pending.push(m.item); continue; }
+      if (st.attempts) { pending.push({ ...m.item, att: 2 }, { ...m.item, att: 3 }); continue; }
+      if (m.item?.att) { results.push(rec(m, st.status, { ended: st.ended !== false, ...(st.evidence ? { evidence: st.evidence } : st.trap ? { trap: st.trap } : st.killer ? { killer: st.killer } : {}) })); continue; }
       results.push(rec(m, st.status, st.evidence ? { evidence: st.evidence } : st.trap ? { trap: st.trap } : st.killer ? { killer: st.killer } : {}));
       if (results.length % 5 === 0) save();
     }
@@ -710,6 +828,11 @@ if (cmd === 'run') {
     process.exit(0);
   }
   save();
+  if (pendingOut) {
+    for (const m of queue) pending.push(m.item);
+    fs.writeFileSync(pendingOut, JSON.stringify(pending));
+    console.error(`pending for the next level: ${pending.length} item(s)`);
+  }
   const by = {};
   for (const r of results) by[r.status] = (by[r.status] || 0) + 1;
   console.error(JSON.stringify(by));
