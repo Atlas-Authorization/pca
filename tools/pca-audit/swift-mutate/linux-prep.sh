@@ -58,6 +58,8 @@ for t in package.targets where (t.type == .regular || t.type == .executable || t
     open('Package.swift', 'w').write(s)
 PY
 [ "${LINUX_PREP_PATCH_ONLY:-0}" = 1 ] && exit 0
+# LINUX_PREP_NO_BUILD=1: toolchain + patch, no build (a job that restores a prebuilt tree, or builds it itself, skips the 5-minute warm build)
+if [ "${LINUX_PREP_NO_BUILD:-0}" = 1 ]; then [ -z "${GITHUB_ENV:-}" ] || echo "PCA_REQUIRE_PQ=1" >> "$GITHUB_ENV"; exit 0; fi
 # keep the whole log: the last 15 lines hide a compile error behind the warnings printed after it
 swift build --build-tests -c debug > "$HOME/swift-prep-build.log" 2>&1 && rc=0 || rc=$?
 tail -15 "$HOME/swift-prep-build.log"

@@ -715,8 +715,8 @@ if (cmd === 'run') {
     if (!cs.length) return null;
     const est = cs.reduce((a, c) => a + c[2], 0), full = (groupInfo.get(groupOf(m.file))?.ms ?? Infinity) / 1000;
     if (est >= 0.6 * full) return null;
-    // the core target's classes in the same four parts as its full suite (one process each)
-    const parts = t === 'AtlasPCAVerifyTests' ? [/^A/, /^[B-K]/, /^[L-R]/, /^[^A-R]/] : [/./];
+    // many classes of the core target: the same four parts as its full suite (one process each, as the suite's memory needs); a few: one process
+    const parts = t === 'AtlasPCAVerifyTests' && cs.length > 40 ? [/^A/, /^[B-K]/, /^[L-R]/, /^[^A-R]/] : [/./];
     const filters = parts.map((re) => cs.filter((c) => re.test(c[1])).map((c) => c[1])).filter((x) => x.length).map((x) => `^${t}\\.(${x.join('|')})/`);
     return { filters, limit: Math.min(limit, Math.max(180_000, 2000 * est + 120_000)), n: cs.length };
   };
