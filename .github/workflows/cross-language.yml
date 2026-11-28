@@ -110,7 +110,7 @@ jobs:
           node-version: 24
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26.11' # not the go.mod floor: 1.26.0 has Windows and compiler memory-corruption bugs fixed in later patches
+          go-version: '1.26.10' # not the go.mod floor 1.26.0 (memory-corruption bugs fixed in 1.26.2/1.26.9); shortcut: not 1.26.11, whose cgo check rejects wasmtime-go's bundled archive (golang/go#83126), move up once Go ships that fix
           cache: false
       - uses: actions/setup-python@v5
         with:
