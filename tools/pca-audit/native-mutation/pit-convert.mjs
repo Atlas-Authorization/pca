@@ -59,12 +59,22 @@ for (const m of xml.matchAll(/<mutation\b([^>]*)>([\s\S]*?)<\/mutation>/g)) {
   if (!fs.existsSync(path.join(root, 'sdks', crate, rel))) {
     const base = outer.split('.').pop().replace(/Kt$/, '');
     const ext = crate === 'kotlin-pca' ? 'kt' : 'java';
-    const own = `${dirOf(pkg, `${base}.${ext}`)}/${base}.${ext}`;
+    let own = `${dirOf(pkg, `${base}.${ext}`)}/${base}.${ext}`;
+    // a Kotlin file may hold several top-level declarations (object AttestNvidiaRim lives in AttestNvidiaApi.kt): find the one file of
+    // the package that declares the outer class, and look for the inlined call from that declaration on
+    const declRe = new RegExp(`^\\s*(?:(?:private|internal|public|data|sealed|abstract|open|enum|inner|value|fun)\\s+)*(?:class|object|interface)\\s+${base}\\b`, 'm');
+    if (!fs.existsSync(path.join(root, 'sdks', crate, own)) && crate === 'kotlin-pca') {
+      const d = path.dirname(own), abs = path.join(root, 'sdks', crate, d);
+      const hits = fs.existsSync(abs) ? fs.readdirSync(abs).filter((n) => n.endsWith('.kt') && declRe.test(fs.readFileSync(path.join(abs, n), 'utf8'))) : [];
+      if (hits.length === 1) own = `${d}/${hits[0]}`;
+      else if (hits.length > 1) throw new Error(`${cls}: ${base} is declared in ${hits.length} files of ${d}: ${hits.join(', ')}`);
+    }
     if (!fs.existsSync(path.join(root, 'sdks', crate, own))) throw new Error(`${cls}: source ${file} is not in the tree and neither is ${own}`);
     rel = own;
     srcLine(rel, 1);
     const all = lines.get(rel);
-    const decl = inl ? all.findIndex((l) => new RegExp(`\\bfun ${inl[1]}\\(`).test(l)) : -1;
+    const from = Math.max(0, all.findIndex((l) => declRe.test(l)));
+    const decl = inl ? all.findIndex((l, i) => i >= from && new RegExp(`\\bfun ${inl[1]}\\(`).test(l)) : -1;
     const call = decl >= 0 ? all.findIndex((l, i) => i >= decl && new RegExp(`\\.${inl[2]}\\b`).test(l)) : -1;
     inlinedAt = call >= 0 ? call + 1 : decl + 1;
     if (!inlinedAt) throw new Error(`${cls}: cannot locate the inlined ${inl ? inl[2] : '?'} call site in ${own}`);
